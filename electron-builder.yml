@@ -16,17 +16,22 @@ files:
   - "out/**/*"
 
 win:
+  icon: build/icon.ico
   target:
     - target: nsis
       arch: [x64]
 
 mac:
+  icon: build/icon.icns
   target:
     - target: dmg
       arch: [x64, arm64]
   hardenedRuntime: true
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
 
 linux:
+  icon: build/icon.png
   target:
     - target: AppImage
       arch: [x64]

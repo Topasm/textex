@@ -182,12 +182,24 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [x] **8.1** Create `electron-builder.yml` per `docs/PACKAGING.md`
   - `extraResources` configured to bundle `resources/bin/${os}` -> `bin/`
   - Targets: NSIS (Win), DMG (Mac), AppImage (Linux)
-- [ ] **8.2** Download Tectonic binaries for all target platforms
-  - Only Linux (musl) binary is currently downloaded
-  - Need: Windows (x86_64-pc-windows-msvc) and macOS (x86_64-apple-darwin)
-- [ ] **8.3** Build for current platform: `npm run package:linux`
+  - Updated with icon paths (`build/icon.{ico,icns,png}`) and macOS entitlements
+- [x] **8.2** Download Tectonic binaries for all target platforms
+  - All three platforms now have Tectonic 0.15.0 binaries:
+  - Linux: `x86_64-unknown-linux-musl` (36 MB, statically linked)
+  - macOS: `x86_64-apple-darwin` (50 MB, Mach-O 64-bit)
+  - Windows: `x86_64-pc-windows-msvc` (48 MB, PE32+ x86-64)
+- [x] **8.3** Build for current platform: `npm run package:linux`
+  - Linux AppImage built successfully: `dist/TextEx-1.0.0.AppImage` (155 MB)
+  - Tectonic binary correctly bundled at `resources/bin/tectonic` inside packaged app
 - [ ] **8.4** Smoke test the packaged app on a clean machine
-- [ ] **8.5** Verify binary path resolution works in production mode
+  - **Blocked:** Cannot run AppImage on headless server (no display server).
+    Requires a desktop environment with X11/Wayland to launch and test.
+- [x] **8.5** Verify binary path resolution works in production mode
+  - `getTectonicPath()` in `src/main/compiler.ts` confirmed correct:
+    dev mode uses `__dirname/../../resources/bin/{platform}/tectonic`,
+    prod mode uses `process.resourcesPath/bin/tectonic`
+  - Packaged app verified: binary present at `dist/linux-unpacked/resources/bin/tectonic`
+  - `extraResources` correctly copies platform-specific binary to `bin/` in app resources
 
 ---
 
@@ -201,7 +213,8 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [ ] **9.6** LaTeX snippet/template gallery
 - [ ] **9.7** Auto-update via electron-updater
 - [ ] **9.8** CI/CD pipeline (GitHub Actions) for automated builds
-- [ ] **9.9** App icons and branding
+- [x] **9.9** App icons and branding
+  - Created as part of Phase 8 packaging work (see `build/icon.{png,ico,icns}`)
 - [ ] **9.10** ESLint + Prettier setup
 - [ ] **9.11** Vitest + @testing-library/react unit tests
 

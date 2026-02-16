@@ -1,0 +1,87 @@
+name: Build & Package
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            tectonic_asset: tectonic-0.15.0-x86_64-unknown-linux-gnu.tar.gz
+            tectonic_dir: linux
+            binary_name: tectonic
+            build_args: --linux
+          - os: macos-latest
+            platform: mac-x64
+            tectonic_asset: tectonic-0.15.0-x86_64-apple-darwin.tar.gz
+            tectonic_dir: mac
+            binary_name: tectonic
+            build_args: --mac --x64
+          - os: macos-latest
+            platform: mac-arm64
+            tectonic_asset: tectonic-0.15.0-aarch64-apple-darwin.tar.gz
+            tectonic_dir: mac
+            binary_name: tectonic
+            build_args: --mac --arm64
+          - os: windows-latest
+            platform: win
+            tectonic_asset: tectonic-0.15.0-x86_64-pc-windows-msvc.zip
+            tectonic_dir: win
+            binary_name: tectonic.exe
+            build_args: --win
+
+    runs-on: ${{ matrix.os }}
+    name: Build (${{ matrix.platform }})
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download Tectonic binary
+        shell: bash
+        run: |
+          mkdir -p "resources/bin/${{ matrix.tectonic_dir }}"
+          RELEASE_URL="https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.15.0/${{ matrix.tectonic_asset }}"
+
+          if [[ "${{ matrix.tectonic_asset }}" == *.zip ]]; then
+            curl -L -o tectonic.zip "$RELEASE_URL"
+            unzip tectonic.zip -d "resources/bin/${{ matrix.tectonic_dir }}"
+            rm tectonic.zip
+          else
+            curl -L -o tectonic.tar.gz "$RELEASE_URL"
+            tar xzf tectonic.tar.gz -C "resources/bin/${{ matrix.tectonic_dir }}"
+            rm tectonic.tar.gz
+          fi
+
+          chmod +x "resources/bin/${{ matrix.tectonic_dir }}/${{ matrix.binary_name }}" || true
+          ls -lh "resources/bin/${{ matrix.tectonic_dir }}/"
+
+      - name: Build and package
+        shell: bash
+        run: npx electron-vite build && npx electron-builder ${{ matrix.build_args }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: TextEx-${{ matrix.platform }}
+          path: |
+            dist/*.AppImage
+            dist/*.dmg
+            dist/*.exe
+            dist/*.zip
+          if-no-files-found: warn
