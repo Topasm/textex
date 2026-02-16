@@ -381,7 +381,7 @@ function loadSyncTexForFile(texFile: string): PdfSyncObject | undefined {
 
   if (fs.existsSync(synctexPath)) {
     try {
-      const content = fs.readFileSync(synctexPath, 'binary')
+      const content = fs.readFileSync(synctexPath, 'utf-8')
       syncObject = parseSyncTex(content)
     } catch {
       // Failed to parse .synctex
@@ -390,7 +390,7 @@ function loadSyncTexForFile(texFile: string): PdfSyncObject | undefined {
     try {
       const data = fs.readFileSync(synctexGzPath)
       const decompressed = zlib.gunzipSync(data)
-      syncObject = parseSyncTex(decompressed.toString('binary'))
+      syncObject = parseSyncTex(decompressed.toString('utf-8'))
     } catch {
       // Failed to parse .synctex.gz
     }

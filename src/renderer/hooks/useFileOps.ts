@@ -8,7 +8,6 @@ interface FileOps {
 }
 
 export function useFileOps(): FileOps {
-  const setContent = useAppStore((s) => s.setContent)
   const setFilePath = useAppStore((s) => s.setFilePath)
   const setDirty = useAppStore((s) => s.setDirty)
   const appendLog = useAppStore((s) => s.appendLog)
@@ -18,12 +17,13 @@ export function useFileOps(): FileOps {
   const handleOpen = useCallback(async () => {
     const result = await window.api.openFile()
     if (result) {
-      setContent(result.content)
+      // openFileInTab must be called FIRST to switch activeFilePath,
+      // so that setContent doesn't corrupt the previously active file.
+      openFileInTab(result.filePath, result.content)
       setFilePath(result.filePath)
       setDirty(false)
-      openFileInTab(result.filePath, result.content)
     }
-  }, [setContent, setFilePath, setDirty, openFileInTab])
+  }, [setFilePath, setDirty, openFileInTab])
 
   const handleSave = useCallback(async () => {
     const { content, filePath } = useAppStore.getState()

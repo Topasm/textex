@@ -238,7 +238,11 @@ export const useAppStore = create<AppState>()(
     openFileInTab: (filePath, content) => {
       const state = get()
       const openFiles = { ...state.openFiles }
-      if (!openFiles[filePath]) {
+      // Always update content from disk (handles external edits and re-opens)
+      if (openFiles[filePath]) {
+        // Preserve cursor position but refresh content from disk
+        openFiles[filePath] = { ...openFiles[filePath], content, isDirty: false }
+      } else {
         openFiles[filePath] = { content, isDirty: false, cursorLine: 1, cursorColumn: 1 }
       }
       set({
@@ -284,11 +288,12 @@ export const useAppStore = create<AppState>()(
     },
     setActiveTab: (filePath) => {
       const state = get()
-      // Save current cursor position
+      // Save current content AND cursor position before switching
       if (state.activeFilePath && state.openFiles[state.activeFilePath]) {
         const openFiles = { ...state.openFiles }
         openFiles[state.activeFilePath] = {
           ...openFiles[state.activeFilePath],
+          content: state.content,
           cursorLine: state.cursorLine,
           cursorColumn: state.cursorColumn
         }
