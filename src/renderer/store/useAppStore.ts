@@ -17,6 +17,8 @@ interface AppState {
   logViewMode: 'raw' | 'structured'
   pendingJump: { line: number; column: number } | null
   synctexHighlight: { page: number; x: number; y: number; timestamp: number } | null
+  splitRatio: number
+  zoomLevel: number
 
   setContent: (content: string) => void
   setFilePath: (path: string | null) => void
@@ -33,6 +35,11 @@ interface AppState {
   requestJumpToLine: (line: number, column: number) => void
   clearPendingJump: () => void
   setSynctexHighlight: (highlight: { page: number; x: number; y: number } | null) => void
+  setSplitRatio: (ratio: number) => void
+  setZoomLevel: (level: number) => void
+  zoomIn: () => void
+  zoomOut: () => void
+  resetZoom: () => void
 }
 
 export const useAppStore = create<AppState>()(subscribeWithSelector((set) => ({
@@ -49,6 +56,8 @@ export const useAppStore = create<AppState>()(subscribeWithSelector((set) => ({
   logViewMode: 'structured',
   pendingJump: null,
   synctexHighlight: null,
+  splitRatio: 0.5,
+  zoomLevel: 100,
 
   setContent: (content) => set({ content, isDirty: true }),
   setFilePath: (filePath) => set({ filePath }),
@@ -65,5 +74,6 @@ export const useAppStore = create<AppState>()(subscribeWithSelector((set) => ({
   requestJumpToLine: (line, column) => set({ pendingJump: { line, column } }),
   clearPendingJump: () => set({ pendingJump: null }),
   setSynctexHighlight: (highlight) =>
-    set({ synctexHighlight: highlight ? { ...highlight, timestamp: Date.now() } : null })
+    set({ synctexHighlight: highlight ? { ...highlight, timestamp: Date.now() } : null }),
+  setSplitRatio: (splitRatio) => set({ splitRatio })
 })))

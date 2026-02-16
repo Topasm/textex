@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import Toolbar from './components/Toolbar'
 import EditorPane from './components/EditorPane'
 import PreviewPane from './components/PreviewPane'
@@ -12,6 +12,8 @@ function App(): JSX.Element {
   useAutoCompile()
   const { handleOpen, handleSave, handleSaveAs } = useFileOps()
   const toggleLogPanel = useAppStore((s) => s.toggleLogPanel)
+  const splitRatio = useAppStore((s) => s.splitRatio)
+  const setSplitRatio = useAppStore((s) => s.setSplitRatio)
   const filePath = useAppStore((s) => s.filePath)
   const setCompileStatus = useAppStore((s) => s.setCompileStatus)
   const setPdfBase64 = useAppStore((s) => s.setPdfBase64)
@@ -88,6 +90,39 @@ function App(): JSX.Element {
     return () => window.removeEventListener('keydown', handler)
   }, [handleOpen, handleSave, handleSaveAs, handleCompile, toggleLogPanel])
 
+  const mainContentRef = useRef<HTMLDivElement>(null)
+  const isDragging = useRef(false)
+
+  const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    isDragging.current = true
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+
+    const onMouseMove = (moveEvent: MouseEvent): void => {
+      if (!isDragging.current || !mainContentRef.current) return
+      const rect = mainContentRef.current.getBoundingClientRect()
+      const ratio = (moveEvent.clientX - rect.left) / rect.width
+      const clamped = Math.min(0.8, Math.max(0.2, ratio))
+      setSplitRatio(clamped)
+    }
+
+    const onMouseUp = (): void => {
+      isDragging.current = false
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+    }
+
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+  }, [setSplitRatio])
+
+  const handleDividerDoubleClick = useCallback(() => {
+    setSplitRatio(0.5)
+  }, [setSplitRatio])
+
   return (
     <div className="app-container">
       <Toolbar
@@ -97,11 +132,16 @@ function App(): JSX.Element {
         onCompile={handleCompile}
         onToggleLog={toggleLogPanel}
       />
-      <div className="main-content">
-        <div className="editor-pane">
+      <div className="main-content" ref={mainContentRef}>
+        <div className="editor-pane" style={{ width: `${splitRatio * 100}%` }}>
           <EditorPane />
         </div>
-        <div className="preview-pane">
+        <div
+          className="split-divider"
+          onMouseDown={handleDividerMouseDown}
+          onDoubleClick={handleDividerDoubleClick}
+        />
+        <div className="preview-pane" style={{ width: `${(1 - splitRatio) * 100}%` }}>
           <PreviewPane />
         </div>
       </div>
