@@ -13,7 +13,7 @@ jobs:
         include:
           - os: ubuntu-latest
             platform: linux
-            tectonic_asset: tectonic-0.15.0-x86_64-unknown-linux-gnu.tar.gz
+            tectonic_asset: tectonic-0.15.0-x86_64-unknown-linux-musl.tar.gz
             tectonic_dir: linux
             binary_name: tectonic
             build_args: --linux
