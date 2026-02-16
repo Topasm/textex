@@ -2,7 +2,7 @@
   "name": "neurotex",
   "version": "1.0.0",
   "description": "A self-contained desktop LaTeX editor built on Electron",
-  "main": "./out/main/main.js",
+  "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
@@ -13,5 +13,23 @@
   },
   "keywords": ["latex", "editor", "electron", "tectonic"],
   "author": "",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-pdf": "^10.3.0",
+    "pdfjs-dist": "^5.4.624",
+    "zustand": "^5.0.11"
+  },
+  "devDependencies": {
+    "electron": "^40.4.1",
+    "electron-builder": "^26.7.0",
+    "electron-vite": "^5.0.0",
+    "@vitejs/plugin-react": "^5.1.4",
+    "vite": "^7.3.1",
+    "typescript": "^5.9.3",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3"
+  }
 }

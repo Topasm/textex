@@ -114,7 +114,7 @@ isDev?
   └─ no  → process.resourcesPath/bin/<binary>
 
 process.platform
-  ├─ win32  → tectonic-win.exe
-  ├─ darwin → tectonic-mac
-  └─ linux  → tectonic-linux
+  ├─ win32  → win/tectonic.exe
+  ├─ darwin → mac/tectonic
+  └─ linux  → linux/tectonic
 ```

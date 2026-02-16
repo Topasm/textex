@@ -22,7 +22,8 @@ contextBridge.exposeInMainWorld('api', {
   compile:     (filePath: string)                  => ipcRenderer.invoke('latex:compile', filePath),
 
   // Event listeners (Main → Renderer)
-  onCompileLog: (cb: (log: string) => void)        => ipcRenderer.on('latex:log', (_, log) => cb(log)),
+  onCompileLog: (cb: (log: string) => void)        => ipcRenderer.on('latex:log', (_event, log) => cb(log)),
+  removeCompileLogListener: ()                      => ipcRenderer.removeAllListeners('latex:log'),
 });
 ```
 
@@ -136,6 +137,7 @@ interface ElectronAPI {
   saveFileAs(content: string):                 Promise<SaveAsResult | null>;
   compile(filePath: string):                   Promise<CompileResult>;
   onCompileLog(cb: (log: string) => void):     void;
+  removeCompileLogListener():                  void;
 }
 
 declare global {
@@ -143,4 +145,6 @@ declare global {
     api: ElectronAPI;
   }
 }
+
+export {}
 ```

@@ -10,7 +10,6 @@ function EditorPane(): JSX.Element {
 
   const handleEditorDidMount: OnMount = (editor) => {
     editorRef.current = editor
-
     editor.onDidChangeCursorPosition((e) => {
       setCursorPosition(e.position.lineNumber, e.position.column)
     })
@@ -23,7 +22,7 @@ function EditorPane(): JSX.Element {
   }
 
   return (
-    <div className="h-full">
+    <div style={{ height: '100%' }}>
       <Editor
         height="100%"
         defaultLanguage="latex"

@@ -114,6 +114,8 @@ interface AppState {
 
   // UI
   isLogPanelOpen: boolean;
+  cursorLine: number;
+  cursorColumn: number;
 
   // Actions
   setContent: (content: string) => void;
@@ -124,6 +126,8 @@ interface AppState {
   appendLog: (text: string) => void;
   clearLogs: () => void;
   toggleLogPanel: () => void;
+  setLogPanelOpen: (open: boolean) => void;
+  setCursorPosition: (line: number, column: number) => void;
 }
 ```
 
@@ -135,12 +139,14 @@ interface AppState {
 import { useEffect, useRef } from 'react';
 import { useAppStore } from '../store/useAppStore';
 
-export function useAutoCompile() {
+export function useAutoCompile(): void {
   const content = useAppStore((s) => s.content);
   const filePath = useAppStore((s) => s.filePath);
   const setCompileStatus = useAppStore((s) => s.setCompileStatus);
   const setPdfBase64 = useAppStore((s) => s.setPdfBase64);
   const appendLog = useAppStore((s) => s.appendLog);
+  const clearLogs = useAppStore((s) => s.clearLogs);
+  const setLogPanelOpen = useAppStore((s) => s.setLogPanelOpen);
   const timerRef = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
@@ -148,14 +154,24 @@ export function useAutoCompile() {
 
     clearTimeout(timerRef.current);
     timerRef.current = setTimeout(async () => {
+      // Save before compiling
+      try {
+        await window.api.saveFile(content, filePath);
+      } catch {
+        // Save failed silently, still attempt compile
+      }
+
       setCompileStatus('compiling');
+      clearLogs();
       try {
         const result = await window.api.compile(filePath);
         setPdfBase64(result.pdfBase64);
         setCompileStatus('success');
-      } catch (err: any) {
-        appendLog(err.message);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        appendLog(message);
         setCompileStatus('error');
+        setLogPanelOpen(true);
       }
     }, 1000); // 1-second debounce
 
@@ -182,7 +198,7 @@ export function useAutoCompile() {
 
 ## Styling Notes
 
-- Use Tailwind CSS utility classes.
+- Plain CSS (no Tailwind) in `src/renderer/styles/index.css`.
 - Dark theme by default (matches Monaco dark theme).
 - Color palette:
   - Background: `#1e1e1e` (VS Code dark)

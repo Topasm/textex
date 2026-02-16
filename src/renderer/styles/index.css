@@ -1,7 +1,3 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 * {
   margin: 0;
   padding: 0;
@@ -35,4 +31,207 @@ body,
 
 ::-webkit-scrollbar-thumb:hover {
   background: #555555;
+}
+
+/* Layout */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #1e1e1e;
+}
+
+.main-content {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.editor-pane {
+  width: 50%;
+  border-right: 1px solid #333333;
+  height: 100%;
+}
+
+.preview-pane {
+  width: 50%;
+  height: 100%;
+}
+
+/* Toolbar */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background-color: #333333;
+  border-bottom: 1px solid #252526;
+  user-select: none;
+}
+
+.toolbar button {
+  padding: 4px 12px;
+  font-size: 13px;
+  background-color: #252526;
+  color: #cccccc;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.toolbar button:hover {
+  background-color: #3c3c3c;
+}
+
+.toolbar .compile-btn {
+  background-color: #007acc;
+  color: white;
+}
+
+.toolbar .compile-btn:hover {
+  background-color: #005f99;
+}
+
+.toolbar .compile-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.toolbar .file-name {
+  margin-left: auto;
+  font-size: 13px;
+  color: #999999;
+}
+
+/* Preview */
+.preview-container {
+  height: 100%;
+  overflow: auto;
+  background-color: #2d2d2d;
+  padding: 16px;
+}
+
+.preview-center {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.preview-spinner {
+  width: 32px;
+  height: 32px;
+  border: 2px solid #007acc;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 12px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.preview-error {
+  color: #f44747;
+}
+
+.preview-empty {
+  color: #666666;
+}
+
+.preview-empty p:first-child {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+
+.preview-empty p:last-child {
+  font-size: 13px;
+}
+
+/* Log Panel */
+.log-panel {
+  border-top: 1px solid #333333;
+  background-color: #1e1e1e;
+}
+
+.log-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 12px;
+  background-color: #252526;
+  border-bottom: 1px solid #333333;
+}
+
+.log-panel-header span {
+  font-size: 11px;
+  color: #999999;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.log-panel-header .log-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.log-panel-header button {
+  background: none;
+  border: none;
+  font-size: 11px;
+  color: #999999;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.log-panel-header button:hover {
+  color: #cccccc;
+}
+
+.log-panel pre {
+  height: 160px;
+  overflow: auto;
+  padding: 12px;
+  font-size: 12px;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  color: #cccccc;
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+/* Status Bar */
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 12px;
+  background-color: #007acc;
+  color: white;
+  font-size: 12px;
+  user-select: none;
+}
+
+.status-bar .status-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-dot.green { background-color: #6a9955; }
+.status-dot.yellow { background-color: #cca700; }
+.status-dot.red { background-color: #f44747; }
+
+/* PDF Page styling */
+.react-pdf__Page {
+  margin-bottom: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
 }

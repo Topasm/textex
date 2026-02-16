@@ -22,11 +22,10 @@ function App(): JSX.Element {
   const handleCompile = async (): Promise<void> => {
     if (!filePath) return
     const content = useAppStore.getState().content
-    // Save first
     try {
       await window.api.saveFile(content, filePath)
     } catch {
-      // continue to compile
+      // continue
     }
     setCompileStatus('compiling')
     clearLogs()
@@ -42,7 +41,6 @@ function App(): JSX.Element {
     }
   }
 
-  // Register compile log listener
   useEffect(() => {
     window.api.onCompileLog((log: string) => {
       useAppStore.getState().appendLog(log)
@@ -52,7 +50,6 @@ function App(): JSX.Element {
     }
   }, [])
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
       const mod = e.ctrlKey || e.metaKey
@@ -80,7 +77,7 @@ function App(): JSX.Element {
   }, [handleOpen, handleSave, handleSaveAs, toggleLogPanel, filePath])
 
   return (
-    <div className="flex flex-col h-screen bg-[#1e1e1e]">
+    <div className="app-container">
       <Toolbar
         onOpen={handleOpen}
         onSave={handleSave}
@@ -88,11 +85,11 @@ function App(): JSX.Element {
         onCompile={handleCompile}
         onToggleLog={toggleLogPanel}
       />
-      <div className="flex flex-1 min-h-0">
-        <div className="w-1/2 border-r border-[#333333]">
+      <div className="main-content">
+        <div className="editor-pane">
           <EditorPane />
         </div>
-        <div className="w-1/2">
+        <div className="preview-pane">
           <PreviewPane />
         </div>
       </div>

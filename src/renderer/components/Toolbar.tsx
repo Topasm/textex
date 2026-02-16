@@ -17,48 +17,20 @@ function Toolbar({ onOpen, onSave, onSaveAs, onCompile, onToggleLog }: ToolbarPr
   const dirtyIndicator = isDirty ? ' *' : ''
 
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 bg-[#333333] border-b border-[#252526] select-none">
+    <div className="toolbar">
+      <button onClick={onOpen} title="Open (Ctrl+O)">Open</button>
+      <button onClick={onSave} title="Save (Ctrl+S)">Save</button>
+      <button onClick={onSaveAs} title="Save As (Ctrl+Shift+S)">Save As</button>
       <button
-        onClick={onOpen}
-        className="px-3 py-1 text-sm bg-[#252526] hover:bg-[#3c3c3c] text-[#cccccc] rounded transition-colors"
-        title="Open (Ctrl+O)"
-      >
-        Open
-      </button>
-      <button
-        onClick={onSave}
-        className="px-3 py-1 text-sm bg-[#252526] hover:bg-[#3c3c3c] text-[#cccccc] rounded transition-colors"
-        title="Save (Ctrl+S)"
-      >
-        Save
-      </button>
-      <button
-        onClick={onSaveAs}
-        className="px-3 py-1 text-sm bg-[#252526] hover:bg-[#3c3c3c] text-[#cccccc] rounded transition-colors"
-        title="Save As (Ctrl+Shift+S)"
-      >
-        Save As
-      </button>
-      <button
+        className="compile-btn"
         onClick={onCompile}
         disabled={compileStatus === 'compiling'}
-        className="px-3 py-1 text-sm bg-[#007acc] hover:bg-[#005f99] disabled:opacity-50 text-white rounded transition-colors"
         title="Compile (Ctrl+Enter)"
       >
         {compileStatus === 'compiling' ? 'Compiling...' : 'Compile'}
       </button>
-      <button
-        onClick={onToggleLog}
-        className="px-3 py-1 text-sm bg-[#252526] hover:bg-[#3c3c3c] text-[#cccccc] rounded transition-colors"
-        title="Toggle Log (Ctrl+L)"
-      >
-        Log
-      </button>
-
-      <div className="ml-auto text-sm text-[#999999]">
-        {fileName}
-        {dirtyIndicator}
-      </div>
+      <button onClick={onToggleLog} title="Toggle Log (Ctrl+L)">Log</button>
+      <span className="file-name">{fileName}{dirtyIndicator}</span>
     </div>
   )
 }

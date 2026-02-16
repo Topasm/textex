@@ -6,23 +6,21 @@ function StatusBar(): JSX.Element {
   const cursorColumn = useAppStore((s) => s.cursorColumn)
 
   const statusConfig = {
-    idle: { color: 'bg-[#6a9955]', label: 'Ready' },
-    compiling: { color: 'bg-[#cca700]', label: 'Compiling...' },
-    success: { color: 'bg-[#6a9955]', label: 'Success' },
-    error: { color: 'bg-[#f44747]', label: 'Error' }
+    idle: { dotClass: 'green', label: 'Ready' },
+    compiling: { dotClass: 'yellow', label: 'Compiling...' },
+    success: { dotClass: 'green', label: 'Success' },
+    error: { dotClass: 'red', label: 'Error' }
   }
 
-  const { color, label } = statusConfig[compileStatus]
+  const { dotClass, label } = statusConfig[compileStatus]
 
   return (
-    <div className="flex items-center justify-between px-3 py-0.5 bg-[#007acc] text-white text-xs select-none">
-      <div className="flex items-center gap-2">
-        <span className={`w-2 h-2 rounded-full ${color}`} />
+    <div className="status-bar">
+      <div className="status-left">
+        <span className={`status-dot ${dotClass}`} />
         <span>{label}</span>
       </div>
-      <div>
-        Ln {cursorLine}, Col {cursorColumn}
-      </div>
+      <div>Ln {cursorLine}, Col {cursorColumn}</div>
     </div>
   )
 }
