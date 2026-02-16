@@ -45,7 +45,8 @@ server.tool(
         onLog: (text: string) => {
           lastCompileLog += text
         },
-        synctex: false
+        synctex: false,
+        reruns: 2
       })
 
       const pdfPath = resolvedPath.replace(/\.tex$/, '.pdf')

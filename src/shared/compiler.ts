@@ -47,6 +47,7 @@ export interface CompileOptions {
   onLog?: (text: string) => void
   onDiagnostics?: (output: string, filePath: string) => void
   synctex?: boolean
+  reruns?: number
 }
 
 export async function compileLatex(
@@ -72,6 +73,9 @@ export async function compileLatex(
     const args = ['-X', 'compile']
     if (options.synctex !== false) {
       args.push('--synctex')
+    }
+    if (options.reruns !== undefined) {
+      args.push('--reruns', String(options.reruns))
     }
     args.push(filePath)
 
