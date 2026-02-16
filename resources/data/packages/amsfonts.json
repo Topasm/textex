@@ -1,0 +1,14 @@
+{
+  "deps": [],
+  "macros": {
+    "\\mathbb": {
+      "snippet": "mathbb{${1:char}}",
+      "detail": "Blackboard bold"
+    },
+    "\\mathfrak": {
+      "snippet": "mathfrak{${1:char}}",
+      "detail": "Fraktur font"
+    }
+  },
+  "envs": {}
+}

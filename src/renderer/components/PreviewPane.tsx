@@ -1,6 +1,7 @@
 import { useMemo, useRef, useCallback, useState, useEffect } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import { useAppStore } from '../store/useAppStore'
+import PdfSearchBar from './PdfSearchBar'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
 
@@ -30,6 +31,12 @@ function PreviewPane(): JSX.Element {
   const pageViewportsRef = useRef<Map<number, PageViewportInfo>>(new Map())
   const [highlightStyle, setHighlightStyle] = useState<React.CSSProperties | null>(null)
   const [pdfError, setPdfError] = useState<string | null>(null)
+
+  // PDF search state
+  const [searchVisible, setSearchVisible] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchMatches, setSearchMatches] = useState<HTMLElement[]>([])
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(0)
 
   // Track Ctrl key for crosshair cursor
   useEffect(() => {
@@ -226,6 +233,90 @@ function PreviewPane(): JSX.Element {
     [containerWidth]
   )
 
+  // Keyboard handler for Ctrl+F search toggle
+  useEffect(() => {
+    const handler = (e: KeyboardEvent): void => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        // Only handle if the preview pane is focused/hovered
+        const container = containerRef.current
+        if (!container) return
+        if (!container.matches(':hover') && !container.contains(document.activeElement)) return
+        e.preventDefault()
+        e.stopPropagation()
+        setSearchVisible(true)
+      }
+      if (e.key === 'Escape' && searchVisible) {
+        setSearchVisible(false)
+        setSearchQuery('')
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [searchVisible])
+
+  // Perform search in text layer spans
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    // Clear previous highlights
+    container.querySelectorAll('.pdf-search-highlight').forEach((el) => {
+      el.classList.remove('pdf-search-highlight', 'pdf-search-current')
+    })
+
+    if (!searchQuery || !searchVisible) {
+      setSearchMatches([])
+      setCurrentMatchIndex(0)
+      return
+    }
+
+    const query = searchQuery.toLowerCase()
+    const matches: HTMLElement[] = []
+
+    // Search in text layer spans
+    const spans = container.querySelectorAll('.react-pdf__Page__textContent span')
+    spans.forEach((span) => {
+      const text = span.textContent?.toLowerCase() || ''
+      if (text.includes(query)) {
+        const el = span as HTMLElement
+        el.classList.add('pdf-search-highlight')
+        matches.push(el)
+      }
+    })
+
+    setSearchMatches(matches)
+    setCurrentMatchIndex(0)
+
+    // Highlight first match as current
+    if (matches.length > 0) {
+      matches[0].classList.add('pdf-search-current')
+      matches[0].scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [searchQuery, searchVisible, numPages])
+
+  const handleSearchNext = useCallback(() => {
+    if (searchMatches.length === 0) return
+    searchMatches[currentMatchIndex]?.classList.remove('pdf-search-current')
+    const next = (currentMatchIndex + 1) % searchMatches.length
+    setCurrentMatchIndex(next)
+    searchMatches[next]?.classList.add('pdf-search-current')
+    searchMatches[next]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [searchMatches, currentMatchIndex])
+
+  const handleSearchPrev = useCallback(() => {
+    if (searchMatches.length === 0) return
+    searchMatches[currentMatchIndex]?.classList.remove('pdf-search-current')
+    const prev = (currentMatchIndex - 1 + searchMatches.length) % searchMatches.length
+    setCurrentMatchIndex(prev)
+    searchMatches[prev]?.classList.add('pdf-search-current')
+    searchMatches[prev]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [searchMatches, currentMatchIndex])
+
+  const handleSearchClose = useCallback(() => {
+    setSearchVisible(false)
+    setSearchQuery('')
+  }, [])
+
   // Show empty/error states only when there is no PDF data at all
   if (compileStatus === 'error' && !pdfBase64) {
     return (
@@ -268,6 +359,15 @@ function PreviewPane(): JSX.Element {
           Fit Width
         </button>
       </div>
+      <PdfSearchBar
+        visible={searchVisible}
+        onClose={handleSearchClose}
+        onSearch={setSearchQuery}
+        onNext={handleSearchNext}
+        onPrev={handleSearchPrev}
+        matchCount={searchMatches.length}
+        currentMatch={currentMatchIndex}
+      />
       {compileStatus === 'compiling' && (
         <div className="preview-compiling-overlay">
           <div className="preview-spinner" />

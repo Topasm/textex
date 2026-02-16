@@ -29,6 +29,32 @@ interface BibEntry {
   author: string
   year: string
   journal?: string
+  file?: string
+  line?: number
+}
+
+interface LabelInfo {
+  label: string
+  file: string
+  line: number
+  context: string
+}
+
+interface PackageMacro {
+  name: string
+  snippet?: string
+  detail?: string
+}
+
+interface PackageEnv {
+  name: string
+  argSnippet?: string
+}
+
+interface PackageData {
+  macros: PackageMacro[]
+  envs: PackageEnv[]
+  deps: string[]
 }
 
 interface GitFileStatus {
@@ -99,6 +125,12 @@ interface ElectronAPI {
   // BibTeX
   parseBibFile(filePath: string): Promise<BibEntry[]>
   findBibInProject(projectRoot: string): Promise<BibEntry[]>
+
+  // Labels
+  scanLabels(projectRoot: string): Promise<LabelInfo[]>
+
+  // Package Data
+  loadPackageData(packageNames: string[]): Promise<Record<string, PackageData>>
 
   // Spell Check
   spellInit(language: string): Promise<{ success: boolean }>

@@ -1,0 +1,61 @@
+{
+  "deps": [
+    "amsfonts"
+  ],
+  "macros": {
+    "\\mathbb": {
+      "snippet": "mathbb{${1:char}}",
+      "detail": "Blackboard bold"
+    },
+    "\\mathfrak": {
+      "snippet": "mathfrak{${1:char}}",
+      "detail": "Fraktur font"
+    },
+    "\\therefore": {
+      "snippet": "therefore",
+      "detail": "Therefore symbol"
+    },
+    "\\because": {
+      "snippet": "because",
+      "detail": "Because symbol"
+    },
+    "\\square": {
+      "snippet": "square",
+      "detail": "Square symbol"
+    },
+    "\\blacksquare": {
+      "snippet": "blacksquare",
+      "detail": "Filled square symbol"
+    },
+    "\\triangleq": {
+      "snippet": "triangleq",
+      "detail": "Triangle equals symbol"
+    },
+    "\\circledcirc": {
+      "snippet": "circledcirc",
+      "detail": "Circled circle symbol",
+      "unusual": true
+    },
+    "\\lesssim": {
+      "snippet": "lesssim",
+      "detail": "Less than or similar to",
+      "unusual": true
+    },
+    "\\gtrsim": {
+      "snippet": "gtrsim",
+      "detail": "Greater than or similar to",
+      "unusual": true
+    },
+    "\\leqslant": {
+      "snippet": "leqslant",
+      "detail": "Less than or slanted equal",
+      "unusual": true
+    },
+    "\\geqslant": {
+      "snippet": "geqslant",
+      "detail": "Greater than or slanted equal",
+      "unusual": true
+    }
+  },
+  "envs": {}
+}

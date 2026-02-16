@@ -17,6 +17,7 @@ import {
   isGitRepo
 } from './git'
 import { exportDocument, getPandocFormats } from './pandoc'
+import { scanLabels } from './labelscanner'
 
 function validateFilePath(filePath: unknown): string {
   if (typeof filePath !== 'string' || filePath.length === 0) {
@@ -297,6 +298,12 @@ export function registerIpcHandlers(win: BrowserWindow): void {
     } catch (err) {
       return { success: false, error: err instanceof Error ? err.message : String(err) }
     }
+  })
+
+  // ---- Labels ----
+  ipcMain.handle('latex:scan-labels', async (_event, projectRoot: string) => {
+    const validPath = validateFilePath(projectRoot)
+    return scanLabels(validPath)
   })
 
   // ---- Export ----

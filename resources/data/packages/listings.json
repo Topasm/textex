@@ -1,0 +1,30 @@
+{
+  "deps": [],
+  "macros": {
+    "\\lstinline": {
+      "snippet": "lstinline[${1:options}]",
+      "detail": "Inline code listing"
+    },
+    "\\lstinputlisting": {
+      "snippet": "lstinputlisting[${1:options}]{${2:file}}",
+      "detail": "Include external source file"
+    },
+    "\\lstset": {
+      "snippet": "lstset{${1:options}}",
+      "detail": "Set default listing options"
+    },
+    "\\lstdefinestyle": {
+      "snippet": "lstdefinestyle{${1:name}}{${2:options}}",
+      "detail": "Define a listing style"
+    },
+    "\\lstdefinelanguage": {
+      "snippet": "lstdefinelanguage[${1:dialect}]{${2:language}}{${3:options}}",
+      "detail": "Define a new language for listings"
+    }
+  },
+  "envs": {
+    "lstlisting": {
+      "snippet": "\\\\begin{lstlisting}\n\t$0\n\\\\end{lstlisting}"
+    }
+  }
+}

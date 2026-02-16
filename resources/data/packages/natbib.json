@@ -1,0 +1,46 @@
+{
+  "deps": [],
+  "macros": {
+    "\\citep": {
+      "snippet": "citep{${1:key}}",
+      "detail": "Parenthetical citation"
+    },
+    "\\citet": {
+      "snippet": "citet{${1:key}}",
+      "detail": "Textual citation"
+    },
+    "\\citep*": {
+      "snippet": "citep*{${1:key}}",
+      "detail": "Parenthetical citation with full author list"
+    },
+    "\\citet*": {
+      "snippet": "citet*{${1:key}}",
+      "detail": "Textual citation with full author list"
+    },
+    "\\citeauthor": {
+      "snippet": "citeauthor{${1:key}}",
+      "detail": "Cite author name only"
+    },
+    "\\citeyear": {
+      "snippet": "citeyear{${1:key}}",
+      "detail": "Cite year only"
+    },
+    "\\citealt": {
+      "snippet": "citealt{${1:key}}",
+      "detail": "Citation without parentheses"
+    },
+    "\\citealp": {
+      "snippet": "citealp{${1:key}}",
+      "detail": "Citation without parentheses (parenthetical form)"
+    },
+    "\\bibliographystyle": {
+      "snippet": "bibliographystyle{${1:style}}",
+      "detail": "Set bibliography style"
+    },
+    "\\setcitestyle": {
+      "snippet": "setcitestyle{${1:options}}",
+      "detail": "Customize citation style"
+    }
+  },
+  "envs": {}
+}

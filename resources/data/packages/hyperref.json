@@ -1,0 +1,74 @@
+{
+  "deps": [],
+  "macros": {
+    "\\href": {
+      "snippet": "href{${1:url}}{${2:text}}",
+      "detail": "Hyperlink with display text"
+    },
+    "\\url": {
+      "snippet": "url{${1:url}}",
+      "detail": "Typeset a URL"
+    },
+    "\\nolinkurl": {
+      "snippet": "nolinkurl{${1:url}}",
+      "detail": "Typeset URL without link"
+    },
+    "\\hyperbaseurl": {
+      "snippet": "hyperbaseurl{${1:url}}",
+      "detail": "Set base URL for relative links"
+    },
+    "\\hyperimage": {
+      "snippet": "hyperimage{${1:url}}{${2:text}}",
+      "detail": "Link to an image"
+    },
+    "\\hyperdef": {
+      "snippet": "hyperdef{${1:category}}{${2:name}}{${3:text}}",
+      "detail": "Define a hyperlink anchor"
+    },
+    "\\hyperref": {
+      "snippet": "hyperref[${1:label}]{${2:text}}",
+      "detail": "Reference with custom text"
+    },
+    "\\hyperlink": {
+      "snippet": "hyperlink{${1:name}}{${2:text}}",
+      "detail": "Internal hyperlink"
+    },
+    "\\hypertarget": {
+      "snippet": "hypertarget{${1:name}}{${2:text}}",
+      "detail": "Define hyperlink target"
+    },
+    "\\autoref": {
+      "snippet": "autoref{${1:label}}",
+      "detail": "Reference with automatic type name"
+    },
+    "\\nameref": {
+      "snippet": "nameref{${1:label}}",
+      "detail": "Reference by name"
+    },
+    "\\phantomsection": {
+      "snippet": "phantomsection",
+      "detail": "Create an anchor for hyperref"
+    },
+    "\\texorpdfstring": {
+      "snippet": "texorpdfstring{${1:tex-string}}{${2:pdf-string}}",
+      "detail": "Different strings for TeX and PDF"
+    },
+    "\\pdfbookmark": {
+      "snippet": "pdfbookmark[${1:level}]{${2:text}}{${3:name}}",
+      "detail": "Create PDF bookmark"
+    },
+    "\\currentpdfbookmark": {
+      "snippet": "currentpdfbookmark{${1:text}}{${2:name}}",
+      "detail": "PDF bookmark at current level"
+    },
+    "\\subpdfbookmark": {
+      "snippet": "subpdfbookmark{${1:text}}{${2:name}}",
+      "detail": "PDF sub-bookmark"
+    },
+    "\\belowpdfbookmark": {
+      "snippet": "belowpdfbookmark{${1:text}}{${2:name}}",
+      "detail": "PDF bookmark below current level"
+    }
+  },
+  "envs": {}
+}

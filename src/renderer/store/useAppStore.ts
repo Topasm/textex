@@ -54,6 +54,13 @@ interface AppState {
   // BibTeX
   bibEntries: BibEntry[]
 
+  // Labels
+  labels: LabelInfo[]
+
+  // Package data
+  packageData: Record<string, PackageData>
+  detectedPackages: string[]
+
   // Spell check
   spellCheckEnabled: boolean
 
@@ -124,6 +131,13 @@ interface AppState {
   // BibTeX
   setBibEntries: (entries: BibEntry[]) => void
 
+  // Labels
+  setLabels: (labels: LabelInfo[]) => void
+
+  // Package data
+  setPackageData: (data: Record<string, PackageData>) => void
+  setDetectedPackages: (packages: string[]) => void
+
   // Spell check
   setSpellCheckEnabled: (enabled: boolean) => void
 
@@ -185,6 +199,13 @@ export const useAppStore = create<AppState>()(
 
     // BibTeX
     bibEntries: [],
+
+    // Labels
+    labels: [],
+
+    // Package data
+    packageData: {},
+    detectedPackages: [],
 
     // Spell check
     spellCheckEnabled: false,
@@ -407,6 +428,13 @@ export const useAppStore = create<AppState>()(
 
     // BibTeX
     setBibEntries: (bibEntries) => set({ bibEntries }),
+
+    // Labels
+    setLabels: (labels) => set({ labels }),
+
+    // Package data
+    setPackageData: (packageData) => set({ packageData }),
+    setDetectedPackages: (detectedPackages) => set({ detectedPackages }),
 
     // Spell check
     setSpellCheckEnabled: (spellCheckEnabled) => {

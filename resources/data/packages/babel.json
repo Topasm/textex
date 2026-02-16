@@ -1,0 +1,22 @@
+{
+  "deps": [],
+  "macros": {
+    "\\selectlanguage": {
+      "snippet": "selectlanguage{${1:language}}",
+      "detail": "Switch document language"
+    },
+    "\\foreignlanguage": {
+      "snippet": "foreignlanguage{${1:language}}{${2:text}}",
+      "detail": "Typeset text in another language"
+    },
+    "\\otherlanguage": {
+      "snippet": "otherlanguage{${1:language}}",
+      "detail": "Switch to another language"
+    }
+  },
+  "envs": {
+    "otherlanguage": {
+      "snippet": "\\\\begin{otherlanguage}{${1:language}}\n\t$0\n\\\\end{otherlanguage}"
+    }
+  }
+}

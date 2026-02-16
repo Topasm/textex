@@ -55,6 +55,7 @@ function App(): JSX.Element {
   const setGitBranch = useAppStore((s) => s.setGitBranch)
   const setGitStatus = useAppStore((s) => s.setGitStatus)
   const setBibEntries = useAppStore((s) => s.setBibEntries)
+  const setLabels = useAppStore((s) => s.setLabels)
   const loadUserSettings = useAppStore((s) => s.loadUserSettings)
   const setTheme = useAppStore((s) => s.setTheme)
   const increaseFontSize = useAppStore((s) => s.increaseFontSize)
@@ -75,6 +76,13 @@ function App(): JSX.Element {
       const result = await window.api.compile(filePath)
       setPdfBase64(result.pdfBase64)
       setCompileStatus('success')
+      // Scan labels after successful compilation
+      const root = useAppStore.getState().projectRoot
+      if (root) {
+        window.api.scanLabels(root).then((labels) => {
+          useAppStore.getState().setLabels(labels)
+        }).catch(() => {})
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
       appendLog(message)
@@ -145,6 +153,14 @@ function App(): JSX.Element {
     } catch {
       // ignore
     }
+
+    // Scan labels
+    try {
+      const labels = await window.api.scanLabels(dirPath)
+      setLabels(labels)
+    } catch {
+      // ignore
+    }
   }, [
     setProjectRoot,
     setDirectoryTree,
@@ -153,7 +169,8 @@ function App(): JSX.Element {
     setIsGitRepo,
     setGitStatus,
     setGitBranch,
-    setBibEntries
+    setBibEntries,
+    setLabels
   ])
 
   const handleToggleTheme = useCallback((): void => {

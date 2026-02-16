@@ -1,0 +1,46 @@
+{
+  "deps": [],
+  "macros": {
+    "\\cref": {
+      "snippet": "cref{${1:label}}",
+      "detail": "Smart cross-reference"
+    },
+    "\\Cref": {
+      "snippet": "Cref{${1:label}}",
+      "detail": "Smart cross-reference (capitalized)"
+    },
+    "\\crefrange": {
+      "snippet": "crefrange{${1:label1}}{${2:label2}}",
+      "detail": "Reference a range of labels"
+    },
+    "\\Crefrange": {
+      "snippet": "Crefrange{${1:label1}}{${2:label2}}",
+      "detail": "Reference a range of labels (capitalized)"
+    },
+    "\\cpageref": {
+      "snippet": "cpageref{${1:label}}",
+      "detail": "Smart page reference"
+    },
+    "\\Cpageref": {
+      "snippet": "Cpageref{${1:label}}",
+      "detail": "Smart page reference (capitalized)"
+    },
+    "\\labelcref": {
+      "snippet": "labelcref{${1:label}}",
+      "detail": "Reference label number only"
+    },
+    "\\namecref": {
+      "snippet": "namecref{${1:label}}",
+      "detail": "Reference type name only"
+    },
+    "\\crefname": {
+      "snippet": "crefname{${1:type}}{${2:singular}}{${3:plural}}",
+      "detail": "Define cross-reference name"
+    },
+    "\\Crefname": {
+      "snippet": "Crefname{${1:type}}{${2:singular}}{${3:plural}}",
+      "detail": "Define cross-reference name (capitalized)"
+    }
+  },
+  "envs": {}
+}

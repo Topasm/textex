@@ -1,0 +1,26 @@
+{
+  "deps": [],
+  "macros": {
+    "\\geometry": {
+      "snippet": "geometry{${1:options}}",
+      "detail": "Set page geometry options"
+    },
+    "\\newgeometry": {
+      "snippet": "newgeometry{${1:options}}",
+      "detail": "Change geometry mid-document"
+    },
+    "\\restoregeometry": {
+      "snippet": "restoregeometry",
+      "detail": "Restore original page geometry"
+    },
+    "\\savegeometry": {
+      "snippet": "savegeometry{${1:name}}",
+      "detail": "Save current geometry settings"
+    },
+    "\\loadgeometry": {
+      "snippet": "loadgeometry{${1:name}}",
+      "detail": "Load saved geometry settings"
+    }
+  },
+  "envs": {}
+}

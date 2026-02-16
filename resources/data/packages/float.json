@@ -1,0 +1,22 @@
+{
+  "deps": [],
+  "macros": {
+    "\\floatstyle": {
+      "snippet": "floatstyle{${1:style}}",
+      "detail": "Set float style"
+    },
+    "\\restylefloat": {
+      "snippet": "restylefloat{${1:type}}",
+      "detail": "Restyle an existing float type"
+    },
+    "\\newfloat": {
+      "snippet": "newfloat{${1:type}}{${2:placement}}{${3:ext}}",
+      "detail": "Define a new float type"
+    },
+    "\\floatname": {
+      "snippet": "floatname{${1:type}}{${2:name}}",
+      "detail": "Set caption name for a float type"
+    }
+  },
+  "envs": {}
+}

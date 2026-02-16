@@ -1,0 +1,10 @@
+{
+  "deps": [],
+  "macros": {
+    "\\text": {
+      "snippet": "text{${1:text}}",
+      "detail": "Text in math mode"
+    }
+  },
+  "envs": {}
+}

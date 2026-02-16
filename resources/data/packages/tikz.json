@@ -1,0 +1,57 @@
+{
+  "deps": [],
+  "macros": {
+    "\\tikz": {
+      "snippet": "tikz[${1:options}]",
+      "detail": "Inline TikZ drawing"
+    },
+    "\\draw": {
+      "snippet": "draw",
+      "detail": "Draw a path"
+    },
+    "\\fill": {
+      "snippet": "fill",
+      "detail": "Fill a path"
+    },
+    "\\filldraw": {
+      "snippet": "filldraw",
+      "detail": "Fill and draw a path"
+    },
+    "\\path": {
+      "snippet": "path",
+      "detail": "Specify a path"
+    },
+    "\\node": {
+      "snippet": "node",
+      "detail": "Place a node"
+    },
+    "\\coordinate": {
+      "snippet": "coordinate",
+      "detail": "Define a coordinate"
+    },
+    "\\clip": {
+      "snippet": "clip",
+      "detail": "Clip subsequent drawings"
+    },
+    "\\usetikzlibrary": {
+      "snippet": "usetikzlibrary{${1:library}}",
+      "detail": "Load TikZ library"
+    },
+    "\\tikzset": {
+      "snippet": "tikzset{${1:options}}",
+      "detail": "Set TikZ options"
+    },
+    "\\pgfmathsetmacro": {
+      "snippet": "pgfmathsetmacro{${1:macro}}{${2:expression}}",
+      "detail": "Set macro to result of math expression"
+    }
+  },
+  "envs": {
+    "tikzpicture": {
+      "snippet": "\\\\begin{tikzpicture}\n\t$0\n\\\\end{tikzpicture}"
+    },
+    "scope": {
+      "snippet": "\\\\begin{scope}\n\t$0\n\\\\end{scope}"
+    }
+  }
+}

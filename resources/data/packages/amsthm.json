@@ -1,0 +1,30 @@
+{
+  "deps": [],
+  "macros": {
+    "\\newtheorem": {
+      "snippet": "newtheorem{${1:name}}{${2:heading}}",
+      "detail": "Define a theorem-like environment"
+    },
+    "\\newtheorem*": {
+      "snippet": "newtheorem*{${1:name}}{${2:heading}}",
+      "detail": "Define unnumbered theorem-like environment"
+    },
+    "\\theoremstyle": {
+      "snippet": "theoremstyle{${1:style}}",
+      "detail": "Set theorem style (plain, definition, remark)"
+    },
+    "\\qedhere": {
+      "snippet": "qedhere",
+      "detail": "Place QED symbol at current position"
+    },
+    "\\qedsymbol": {
+      "snippet": "qedsymbol",
+      "detail": "The QED symbol"
+    }
+  },
+  "envs": {
+    "proof": {
+      "snippet": "\\\\begin{proof}\n\t$0\n\\\\end{proof}"
+    }
+  }
+}

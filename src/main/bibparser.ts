@@ -8,6 +8,8 @@ export interface BibEntry {
   author: string
   year: string
   journal?: string
+  file?: string
+  line?: number
 }
 
 function extractField(block: string, field: string): string {
@@ -16,7 +18,7 @@ function extractField(block: string, field: string): string {
   return match ? match[1].trim() : ''
 }
 
-export function parseBibContent(content: string): BibEntry[] {
+export function parseBibContent(content: string, filePath?: string): BibEntry[] {
   const entries: BibEntry[] = []
   const entryRegex = /@(\w+)\s*\{\s*([^,\s]+)\s*,([^@]*)/g
   let match: RegExpExecArray | null
@@ -28,13 +30,19 @@ export function parseBibContent(content: string): BibEntry[] {
 
     if (type === 'comment' || type === 'string' || type === 'preamble') continue
 
+    // Calculate line number of the entry start
+    const beforeMatch = content.substring(0, match.index)
+    const line = beforeMatch.split('\n').length
+
     entries.push({
       key,
       type,
       title: extractField(block, 'title'),
       author: extractField(block, 'author'),
       year: extractField(block, 'year'),
-      journal: extractField(block, 'journal') || undefined
+      journal: extractField(block, 'journal') || undefined,
+      file: filePath,
+      line
     })
   }
 
@@ -43,7 +51,7 @@ export function parseBibContent(content: string): BibEntry[] {
 
 export async function parseBibFile(filePath: string): Promise<BibEntry[]> {
   const content = await fs.readFile(filePath, 'utf-8')
-  return parseBibContent(content)
+  return parseBibContent(content, filePath)
 }
 
 export async function findBibFilesInProject(projectRoot: string): Promise<BibEntry[]> {

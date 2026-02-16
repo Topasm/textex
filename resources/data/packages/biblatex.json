@@ -1,0 +1,46 @@
+{
+  "deps": [],
+  "macros": {
+    "\\autocite": {
+      "snippet": "autocite{${1:key}}",
+      "detail": "Automatic citation style"
+    },
+    "\\parencite": {
+      "snippet": "parencite{${1:key}}",
+      "detail": "Parenthetical citation"
+    },
+    "\\textcite": {
+      "snippet": "textcite{${1:key}}",
+      "detail": "Textual citation"
+    },
+    "\\citeauthor": {
+      "snippet": "citeauthor{${1:key}}",
+      "detail": "Cite author name only"
+    },
+    "\\citetitle": {
+      "snippet": "citetitle{${1:key}}",
+      "detail": "Cite title only"
+    },
+    "\\citeyear": {
+      "snippet": "citeyear{${1:key}}",
+      "detail": "Cite year only"
+    },
+    "\\cite*": {
+      "snippet": "cite*{${1:key}}",
+      "detail": "Citation variant without extra info"
+    },
+    "\\fullcite": {
+      "snippet": "fullcite{${1:key}}",
+      "detail": "Full bibliography entry in text"
+    },
+    "\\printbibliography": {
+      "snippet": "printbibliography",
+      "detail": "Print the bibliography"
+    },
+    "\\addbibresource": {
+      "snippet": "addbibresource{${1:file.bib}}",
+      "detail": "Add bibliography resource file"
+    }
+  },
+  "envs": {}
+}

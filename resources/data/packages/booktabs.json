@@ -1,0 +1,34 @@
+{
+  "deps": [],
+  "macros": {
+    "\\toprule": {
+      "snippet": "toprule",
+      "detail": "Top rule of a table"
+    },
+    "\\midrule": {
+      "snippet": "midrule",
+      "detail": "Middle rule of a table"
+    },
+    "\\bottomrule": {
+      "snippet": "bottomrule",
+      "detail": "Bottom rule of a table"
+    },
+    "\\cmidrule": {
+      "snippet": "cmidrule[${1:trim}]{${2:col-range}}",
+      "detail": "Partial horizontal rule"
+    },
+    "\\addlinespace": {
+      "snippet": "addlinespace[${1:width}]",
+      "detail": "Add extra space between rows"
+    },
+    "\\morecmidrules": {
+      "snippet": "morecmidrules",
+      "detail": "Add space between adjacent rules"
+    },
+    "\\specialrule": {
+      "snippet": "specialrule{${1:width}}{${2:above}}{${3:below}}",
+      "detail": "Rule with custom width and spacing"
+    }
+  },
+  "envs": {}
+}

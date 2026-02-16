@@ -1,0 +1,34 @@
+{
+  "deps": [],
+  "macros": {
+    "\\color": {
+      "snippet": "color{${1:name}}",
+      "detail": "Switch text color"
+    },
+    "\\textcolor": {
+      "snippet": "textcolor{${1:color}}{${2:text}}",
+      "detail": "Color a portion of text"
+    },
+    "\\colorbox": {
+      "snippet": "colorbox{${1:color}}{${2:text}}",
+      "detail": "Box with colored background"
+    },
+    "\\fcolorbox": {
+      "snippet": "fcolorbox{${1:frame-color}}{${2:bg-color}}{${3:text}}",
+      "detail": "Framed colored box"
+    },
+    "\\definecolor": {
+      "snippet": "definecolor{${1:name}}{${2:model}}{${3:spec}}",
+      "detail": "Define a new color"
+    },
+    "\\colorlet": {
+      "snippet": "colorlet{${1:name}}{${2:color-expr}}",
+      "detail": "Define color as alias or expression"
+    },
+    "\\rowcolors": {
+      "snippet": "rowcolors{${1:start-row}}{${2:odd-color}}{${3:even-color}}",
+      "detail": "Alternating row colors in tables"
+    }
+  },
+  "envs": {}
+}

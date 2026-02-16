@@ -1,0 +1,14 @@
+{
+  "deps": [],
+  "macros": {
+    "\\operatorname": {
+      "snippet": "operatorname{${1:name}}",
+      "detail": "Custom operator name"
+    },
+    "\\DeclareMathOperator": {
+      "snippet": "DeclareMathOperator{${1:cmd}}{${2:name}}",
+      "detail": "Declare a math operator"
+    }
+  },
+  "envs": {}
+}

@@ -1,0 +1,29 @@
+{
+  "deps": [],
+  "macros": {
+    "\\subcaption": {
+      "snippet": "subcaption{${1:text}}",
+      "detail": "Add a sub-caption"
+    },
+    "\\subcaptionbox": {
+      "snippet": "subcaptionbox{${1:caption}}{${2:content}}",
+      "detail": "Sub-caption with box"
+    },
+    "\\phantomcaption": {
+      "snippet": "phantomcaption",
+      "detail": "Invisible caption for numbering"
+    },
+    "\\phantomsubcaption": {
+      "snippet": "phantomsubcaption",
+      "detail": "Invisible sub-caption for numbering"
+    }
+  },
+  "envs": {
+    "subfigure": {
+      "snippet": "\\\\begin{subfigure}{${1:width}}\n\t$0\n\\\\end{subfigure}"
+    },
+    "subtable": {
+      "snippet": "\\\\begin{subtable}{${1:width}}\n\t$0\n\\\\end{subtable}"
+    }
+  }
+}

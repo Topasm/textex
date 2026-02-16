@@ -1,0 +1,14 @@
+{
+  "deps": [],
+  "macros": {
+    "\\boldsymbol": {
+      "snippet": "boldsymbol{${1:symbol}}",
+      "detail": "Bold math symbol"
+    },
+    "\\pmb": {
+      "snippet": "pmb{${1:symbol}}",
+      "detail": "Poor man's bold symbol"
+    }
+  },
+  "envs": {}
+}

@@ -2,9 +2,47 @@ import Editor, { OnMount } from '@monaco-editor/react'
 import { useEffect, useRef } from 'react'
 import { useAppStore } from '../store/useAppStore'
 import { snippets } from '../data/snippets'
+import { environments } from '../data/environments'
+import { registerHoverProvider } from '../providers/hoverProvider'
 import type { editor as monacoEditor } from 'monaco-editor'
 
 type MonacoInstance = typeof import('monaco-editor')
+
+/**
+ * Extract the specific argument under cursor for a LaTeX command.
+ * Handles comma-separated keys like \cite{k1,k2}.
+ * Returns the key under cursor or null.
+ */
+function findCommandArgAtPosition(
+  lineContent: string,
+  column: number,
+  cmdRegex: RegExp
+): string | null {
+  const col = column - 1
+  let match: RegExpExecArray | null
+  cmdRegex.lastIndex = 0
+  while ((match = cmdRegex.exec(lineContent)) !== null) {
+    const fullStart = match.index
+    const fullEnd = fullStart + match[0].length
+    if (col >= fullStart && col <= fullEnd) {
+      const argsStr = match[1]
+      const argsStart = match[0].indexOf(argsStr) + fullStart
+      const keys = argsStr.split(',')
+      let offset = argsStart
+      for (const key of keys) {
+        const trimmed = key.trim()
+        const keyStart = offset + key.indexOf(trimmed)
+        const keyEnd = keyStart + trimmed.length
+        if (col >= keyStart && col <= keyEnd) {
+          return trimmed
+        }
+        offset += key.length + 1
+      }
+      return keys[0]?.trim() || null
+    }
+  }
+  return null
+}
 
 function getMonacoTheme(theme: string): string {
   switch (theme) {
@@ -35,14 +73,65 @@ function EditorPane(): JSX.Element {
       setCursorPosition(e.position.lineNumber, e.position.column)
     })
 
-    // Ctrl+Click for forward SyncTeX
+    // Ctrl+Click: Go to Definition / Forward SyncTeX
     mouseDisposableRef.current = editor.onMouseDown((e) => {
       if (!(e.event.ctrlKey || e.event.metaKey)) return
       if (!e.target.position) return
-      const filePath = useAppStore.getState().filePath
-      if (!filePath) return
+      const state = useAppStore.getState()
+      const currentFilePath = state.filePath
+      if (!currentFilePath) return
+
+      const model = editor.getModel()
+      if (!model) return
+      const lineContent = model.getLineContent(e.target.position.lineNumber)
+      const col = e.target.position.column
+
+      // 1. \ref{label} → jump to label definition
+      const refKey = findCommandArgAtPosition(lineContent, col, /\\(?:ref|eqref|autoref|pageref|cref|Cref|nameref)\{([^}]+)\}/g)
+      if (refKey) {
+        const label = state.labels.find((l) => l.label === refKey)
+        if (label) {
+          window.api.readFile(label.file).then((result) => {
+            useAppStore.getState().openFileInTab(result.filePath, result.content)
+            setTimeout(() => useAppStore.getState().requestJumpToLine(label.line, 1), 50)
+          }).catch(() => {})
+          return
+        }
+      }
+
+      // 2. \cite{key} → jump to bib file
+      const citeKey = findCommandArgAtPosition(lineContent, col, /\\cite[tp]?\*?\{([^}]+)\}/g)
+      if (citeKey) {
+        const entry = state.bibEntries.find((b) => b.key === citeKey)
+        if (entry?.file) {
+          window.api.readFile(entry.file).then((result) => {
+            useAppStore.getState().openFileInTab(result.filePath, result.content)
+            if (entry.line) {
+              setTimeout(() => useAppStore.getState().requestJumpToLine(entry.line!, 1), 50)
+            }
+          }).catch(() => {})
+          return
+        }
+      }
+
+      // 3. \input{file} / \include{file} → open file
+      const inputFile = findCommandArgAtPosition(lineContent, col, /\\(?:input|include)\{([^}]+)\}/g)
+      if (inputFile && state.projectRoot) {
+        let resolvedPath = inputFile
+        if (!resolvedPath.endsWith('.tex')) resolvedPath += '.tex'
+        // Resolve relative to project root
+        const fullPath = resolvedPath.startsWith('/')
+          ? resolvedPath
+          : `${state.projectRoot}/${resolvedPath}`
+        window.api.readFile(fullPath).then((result) => {
+          useAppStore.getState().openFileInTab(result.filePath, result.content)
+        }).catch(() => {})
+        return
+      }
+
+      // 4. Fall through to SyncTeX forward
       const line = e.target.position.lineNumber
-      window.api.synctexForward(filePath, line).then((result) => {
+      window.api.synctexForward(currentFilePath, line).then((result) => {
         if (result) {
           useAppStore.getState().setSynctexHighlight(result)
         }
@@ -105,6 +194,82 @@ function EditorPane(): JSX.Element {
       }
     })
     completionDisposablesRef.current.push(citeDisposable)
+
+    // Register label completion provider (triggers inside \ref{}, \eqref{}, etc.)
+    const refDisposable = monaco.languages.registerCompletionItemProvider('latex', {
+      triggerCharacters: ['{', ','],
+      provideCompletionItems: (model, position) => {
+        const lineContent = model.getLineContent(position.lineNumber)
+        const textBefore = lineContent.substring(0, position.column - 1)
+        const refMatch = textBefore.match(/\\(?:ref|eqref|autoref|pageref|cref|Cref|nameref)\{([^}]*)$/)
+        if (!refMatch) return { suggestions: [] }
+
+        const labels = useAppStore.getState().labels
+        const word = model.getWordUntilPosition(position)
+        const range = {
+          startLineNumber: position.lineNumber,
+          endLineNumber: position.lineNumber,
+          startColumn: word.startColumn,
+          endColumn: word.endColumn
+        }
+
+        const suggestions = labels.map((info) => ({
+          label: info.label,
+          kind: monaco.languages.CompletionItemKind.Reference,
+          insertText: info.label,
+          documentation: `${info.file}:${info.line}\n${info.context}`,
+          detail: `Label (${info.file.split('/').pop()}:${info.line})`,
+          range
+        }))
+        return { suggestions }
+      }
+    })
+    completionDisposablesRef.current.push(refDisposable)
+
+    // Register environment completion provider (triggers on \begin{)
+    const envDisposable = monaco.languages.registerCompletionItemProvider('latex', {
+      triggerCharacters: ['{'],
+      provideCompletionItems: (model, position) => {
+        const lineContent = model.getLineContent(position.lineNumber)
+        const textBefore = lineContent.substring(0, position.column - 1)
+        if (!textBefore.match(/\\begin\{[^}]*$/)) return { suggestions: [] }
+
+        const word = model.getWordUntilPosition(position)
+        const range = {
+          startLineNumber: position.lineNumber,
+          endLineNumber: position.lineNumber,
+          startColumn: word.startColumn,
+          endColumn: word.endColumn
+        }
+
+        // Also merge package environments
+        const packageData = useAppStore.getState().packageData
+        const allEnvs = [...environments]
+        for (const pkg of Object.values(packageData)) {
+          for (const env of pkg.envs) {
+            if (!allEnvs.some((e) => e.name === env.name)) {
+              allEnvs.push(env)
+            }
+          }
+        }
+
+        const suggestions = allEnvs.map((env) => {
+          const argPart = env.argSnippet || ''
+          const snippet = `${env.name}}${argPart}\n\t$0\n\\\\end{${env.name}}`
+          return {
+            label: env.name,
+            kind: monaco.languages.CompletionItemKind.Module,
+            insertText: snippet,
+            insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+            documentation: `\\begin{${env.name}}...\\end{${env.name}}`,
+            detail: 'Environment',
+            range
+          }
+        })
+        return { suggestions }
+      }
+    })
+    completionDisposablesRef.current.push(envDisposable)
 
     // Register spell check code action provider
     const codeActionDisposable = monaco.languages.registerCodeActionProvider('latex', {
@@ -172,6 +337,13 @@ function EditorPane(): JSX.Element {
         runSpellCheck(editor, monaco)
       }
     })
+
+    // Register hover provider for math preview and citation info
+    const hoverDisposable = registerHoverProvider(monaco, {
+      getLabels: () => useAppStore.getState().labels,
+      getBibEntries: () => useAppStore.getState().bibEntries
+    })
+    completionDisposablesRef.current.push(hoverDisposable)
   }
 
   const runSpellCheck = async (

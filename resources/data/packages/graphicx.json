@@ -1,0 +1,38 @@
+{
+  "deps": [],
+  "macros": {
+    "\\includegraphics": {
+      "snippet": "includegraphics[${1:options}]{${2:file}}",
+      "detail": "Include an external graphic"
+    },
+    "\\rotatebox": {
+      "snippet": "rotatebox{${1:angle}}{${2:text}}",
+      "detail": "Rotate content by angle"
+    },
+    "\\scalebox": {
+      "snippet": "scalebox{${1:h-scale}}{${2:text}}",
+      "detail": "Scale content"
+    },
+    "\\reflectbox": {
+      "snippet": "reflectbox{${1:text}}",
+      "detail": "Reflect content horizontally"
+    },
+    "\\resizebox": {
+      "snippet": "resizebox{${1:width}}{${2:height}}{${3:text}}",
+      "detail": "Resize content to given dimensions"
+    },
+    "\\graphicspath": {
+      "snippet": "graphicspath{{${1:path}}}",
+      "detail": "Set graphics search path"
+    },
+    "\\DeclareGraphicsExtensions": {
+      "snippet": "DeclareGraphicsExtensions{${1:ext-list}}",
+      "detail": "Declare graphic file extensions"
+    },
+    "\\DeclareGraphicsRule": {
+      "snippet": "DeclareGraphicsRule{${1:ext}}{${2:type}}{${3:read-file}}{${4:command}}",
+      "detail": "Declare a graphics input rule"
+    }
+  },
+  "envs": {}
+}

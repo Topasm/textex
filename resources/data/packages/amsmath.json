@@ -1,0 +1,202 @@
+{
+  "deps": [
+    "amstext",
+    "amsbsy",
+    "amsopn"
+  ],
+  "macros": {
+    "\\binom": {
+      "snippet": "binom{${1:n}}{${2:k}}",
+      "detail": "Binomial coefficient"
+    },
+    "\\dfrac": {
+      "snippet": "dfrac{${1:num}}{${2:den}}",
+      "detail": "Display-style fraction"
+    },
+    "\\tfrac": {
+      "snippet": "tfrac{${1:num}}{${2:den}}",
+      "detail": "Text-style fraction"
+    },
+    "\\cfrac": {
+      "snippet": "cfrac{${1:num}}{${2:den}}",
+      "detail": "Continued fraction"
+    },
+    "\\text": {
+      "snippet": "text{${1:text}}",
+      "detail": "Text in math mode"
+    },
+    "\\intertext": {
+      "snippet": "intertext{${1:text}}",
+      "detail": "Text between aligned equations"
+    },
+    "\\boldsymbol": {
+      "snippet": "boldsymbol{${1:symbol}}",
+      "detail": "Bold math symbol"
+    },
+    "\\operatorname": {
+      "snippet": "operatorname{${1:name}}",
+      "detail": "Custom operator name"
+    },
+    "\\DeclareMathOperator": {
+      "snippet": "DeclareMathOperator{${1:cmd}}{${2:name}}",
+      "detail": "Declare a math operator"
+    },
+    "\\xleftarrow": {
+      "snippet": "xleftarrow[${1:below}]{${2:above}}",
+      "detail": "Extensible left arrow with optional subscript"
+    },
+    "\\xrightarrow": {
+      "snippet": "xrightarrow[${1:below}]{${2:above}}",
+      "detail": "Extensible right arrow with optional subscript"
+    },
+    "\\overset": {
+      "snippet": "overset{${1:above}}{${2:symbol}}",
+      "detail": "Place symbol over another"
+    },
+    "\\underset": {
+      "snippet": "underset{${1:below}}{${2:symbol}}",
+      "detail": "Place symbol under another"
+    },
+    "\\sideset": {
+      "snippet": "sideset{${1:left}}{${2:right}}{${3:symbol}}",
+      "detail": "Set subscripts/superscripts on sides"
+    },
+    "\\tag": {
+      "snippet": "tag{${1:label}}",
+      "detail": "Manual equation tag"
+    },
+    "\\notag": {
+      "snippet": "notag",
+      "detail": "Suppress equation numbering"
+    },
+    "\\iint": {
+      "snippet": "iint",
+      "detail": "Double integral"
+    },
+    "\\iiint": {
+      "snippet": "iiint",
+      "detail": "Triple integral"
+    },
+    "\\iiiint": {
+      "snippet": "iiiint",
+      "detail": "Quadruple integral"
+    },
+    "\\idotsint": {
+      "snippet": "idotsint",
+      "detail": "Integral with dots"
+    },
+    "\\lvert": {
+      "snippet": "lvert",
+      "detail": "Left vertical bar delimiter"
+    },
+    "\\rvert": {
+      "snippet": "rvert",
+      "detail": "Right vertical bar delimiter"
+    },
+    "\\lVert": {
+      "snippet": "lVert",
+      "detail": "Left double vertical bar delimiter"
+    },
+    "\\rVert": {
+      "snippet": "rVert",
+      "detail": "Right double vertical bar delimiter"
+    },
+    "\\dots": {
+      "snippet": "dots",
+      "detail": "General ellipsis dots"
+    },
+    "\\dotsc": {
+      "snippet": "dotsc",
+      "detail": "Dots with commas"
+    },
+    "\\dotsb": {
+      "snippet": "dotsb",
+      "detail": "Dots with binary operators"
+    },
+    "\\dotsm": {
+      "snippet": "dotsm",
+      "detail": "Dots with multiplication"
+    },
+    "\\dotsi": {
+      "snippet": "dotsi",
+      "detail": "Dots with integrals"
+    },
+    "\\dotso": {
+      "snippet": "dotso",
+      "detail": "Other dots"
+    },
+    "\\mathring": {
+      "snippet": "mathring{${1:symbol}}",
+      "detail": "Ring accent in math mode"
+    },
+    "\\nobreakdash": {
+      "snippet": "nobreakdash",
+      "detail": "Non-breaking dash"
+    }
+  },
+  "envs": {
+    "equation": {
+      "snippet": "\\\\begin{equation}\n\t$0\n\\\\end{equation}"
+    },
+    "equation*": {
+      "snippet": "\\\\begin{equation*}\n\t$0\n\\\\end{equation*}"
+    },
+    "align": {
+      "snippet": "\\\\begin{align}\n\t$0\n\\\\end{align}"
+    },
+    "align*": {
+      "snippet": "\\\\begin{align*}\n\t$0\n\\\\end{align*}"
+    },
+    "gather": {
+      "snippet": "\\\\begin{gather}\n\t$0\n\\\\end{gather}"
+    },
+    "gather*": {
+      "snippet": "\\\\begin{gather*}\n\t$0\n\\\\end{gather*}"
+    },
+    "multline": {
+      "snippet": "\\\\begin{multline}\n\t$0\n\\\\end{multline}"
+    },
+    "multline*": {
+      "snippet": "\\\\begin{multline*}\n\t$0\n\\\\end{multline*}"
+    },
+    "flalign": {
+      "snippet": "\\\\begin{flalign}\n\t$0\n\\\\end{flalign}"
+    },
+    "flalign*": {
+      "snippet": "\\\\begin{flalign*}\n\t$0\n\\\\end{flalign*}"
+    },
+    "alignat": {
+      "snippet": "\\\\begin{alignat}{${1:n}}\n\t$0\n\\\\end{alignat}"
+    },
+    "split": {
+      "snippet": "\\\\begin{split}\n\t$0\n\\\\end{split}"
+    },
+    "cases": {
+      "snippet": "\\\\begin{cases}\n\t$0\n\\\\end{cases}"
+    },
+    "matrix": {
+      "snippet": "\\\\begin{matrix}\n\t$0\n\\\\end{matrix}"
+    },
+    "pmatrix": {
+      "snippet": "\\\\begin{pmatrix}\n\t$0\n\\\\end{pmatrix}"
+    },
+    "bmatrix": {
+      "snippet": "\\\\begin{bmatrix}\n\t$0\n\\\\end{bmatrix}"
+    },
+    "Bmatrix": {
+      "snippet": "\\\\begin{Bmatrix}\n\t$0\n\\\\end{Bmatrix}"
+    },
+    "vmatrix": {
+      "snippet": "\\\\begin{vmatrix}\n\t$0\n\\\\end{vmatrix}"
+    },
+    "Vmatrix": {
+      "snippet": "\\\\begin{Vmatrix}\n\t$0\n\\\\end{Vmatrix}"
+    },
+    "smallmatrix": {
+      "snippet": "\\\\begin{smallmatrix}\n\t$0\n\\\\end{smallmatrix}"
+    },
+    "subequations": {
+      "snippet": "\\\\begin{subequations}\n\t$0\n\\\\end{subequations}"
+    }
+  }
+}
