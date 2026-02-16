@@ -2,6 +2,8 @@ import { spawn, ChildProcess } from 'child_process'
 import path from 'path'
 import fs from 'fs/promises'
 import { app, BrowserWindow } from 'electron'
+import { parseLatexLog } from './logparser'
+import { clearSyncTexCache } from './synctex'
 
 const isDev = !app.isPackaged
 
@@ -53,8 +55,11 @@ export async function compileLatex(
   // Kill any running compilation before starting a new one
   cancelCompilation()
 
+  // Invalidate SyncTeX cache so it's re-parsed after compilation
+  clearSyncTexCache()
+
   return new Promise((resolve, reject) => {
-    const args = ['-X', 'compile', filePath]
+    const args = ['-X', 'compile', '--synctex', filePath]
     const child: ChildProcess = spawn(binary, args, { cwd: workDir })
     activeProcess = child
 
@@ -79,6 +84,14 @@ export async function compileLatex(
 
     child.on('close', async (code, signal) => {
       activeProcess = null
+
+      // Parse and send diagnostics regardless of exit code
+      try {
+        const diagnostics = parseLatexLog(output, filePath)
+        win.webContents.send('latex:diagnostics', diagnostics)
+      } catch {
+        // Don't let diagnostic parsing failures affect compilation
+      }
 
       if (signal) {
         reject(new Error('Compilation was cancelled'))

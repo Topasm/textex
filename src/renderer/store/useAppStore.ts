@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { subscribeWithSelector } from 'zustand/middleware'
 
 export type CompileStatus = 'idle' | 'compiling' | 'success' | 'error'
 
@@ -12,6 +13,10 @@ interface AppState {
   isLogPanelOpen: boolean
   cursorLine: number
   cursorColumn: number
+  diagnostics: Diagnostic[]
+  logViewMode: 'raw' | 'structured'
+  pendingJump: { line: number; column: number } | null
+  synctexHighlight: { page: number; x: number; y: number; timestamp: number } | null
 
   setContent: (content: string) => void
   setFilePath: (path: string | null) => void
@@ -23,9 +28,14 @@ interface AppState {
   toggleLogPanel: () => void
   setLogPanelOpen: (open: boolean) => void
   setCursorPosition: (line: number, column: number) => void
+  setDiagnostics: (diagnostics: Diagnostic[]) => void
+  setLogViewMode: (mode: 'raw' | 'structured') => void
+  requestJumpToLine: (line: number, column: number) => void
+  clearPendingJump: () => void
+  setSynctexHighlight: (highlight: { page: number; x: number; y: number } | null) => void
 }
 
-export const useAppStore = create<AppState>((set) => ({
+export const useAppStore = create<AppState>()(subscribeWithSelector((set) => ({
   filePath: null,
   content: '',
   isDirty: false,
@@ -35,6 +45,10 @@ export const useAppStore = create<AppState>((set) => ({
   isLogPanelOpen: false,
   cursorLine: 1,
   cursorColumn: 1,
+  diagnostics: [],
+  logViewMode: 'structured',
+  pendingJump: null,
+  synctexHighlight: null,
 
   setContent: (content) => set({ content, isDirty: true }),
   setFilePath: (filePath) => set({ filePath }),
@@ -45,5 +59,11 @@ export const useAppStore = create<AppState>((set) => ({
   clearLogs: () => set({ logs: '' }),
   toggleLogPanel: () => set((state) => ({ isLogPanelOpen: !state.isLogPanelOpen })),
   setLogPanelOpen: (isLogPanelOpen) => set({ isLogPanelOpen }),
-  setCursorPosition: (cursorLine, cursorColumn) => set({ cursorLine, cursorColumn })
-}))
+  setCursorPosition: (cursorLine, cursorColumn) => set({ cursorLine, cursorColumn }),
+  setDiagnostics: (diagnostics) => set({ diagnostics }),
+  setLogViewMode: (logViewMode) => set({ logViewMode }),
+  requestJumpToLine: (line, column) => set({ pendingJump: { line, column } }),
+  clearPendingJump: () => set({ pendingJump: null }),
+  setSynctexHighlight: (highlight) =>
+    set({ synctexHighlight: highlight ? { ...highlight, timestamp: Date.now() } : null })
+})))

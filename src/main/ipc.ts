@@ -2,6 +2,7 @@ import { ipcMain, dialog, BrowserWindow } from 'electron'
 import path from 'path'
 import fs from 'fs/promises'
 import { compileLatex, cancelCompilation } from './compiler'
+import { forwardSync, inverseSync } from './synctex'
 
 function validateFilePath(filePath: unknown): string {
   if (typeof filePath !== 'string' || filePath.length === 0) {
@@ -62,5 +63,15 @@ export function registerIpcHandlers(win: BrowserWindow): void {
 
   ipcMain.handle('latex:cancel', () => {
     return cancelCompilation()
+  })
+
+  ipcMain.handle('synctex:forward', async (_event, texFile: string, line: number) => {
+    const validPath = validateFilePath(texFile)
+    return forwardSync(validPath, line)
+  })
+
+  ipcMain.handle('synctex:inverse', async (_event, texFile: string, page: number, x: number, y: number) => {
+    const validPath = validateFilePath(texFile)
+    return inverseSync(validPath, page, x, y)
   })
 }

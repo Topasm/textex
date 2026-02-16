@@ -52,6 +52,16 @@ function App(): JSX.Element {
     }
   }, [])
 
+  // Wire up diagnostics listener
+  useEffect(() => {
+    window.api.onDiagnostics((diagnostics: Diagnostic[]) => {
+      useAppStore.getState().setDiagnostics(diagnostics)
+    })
+    return () => {
+      window.api.removeDiagnosticsListener()
+    }
+  }, [])
+
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
       const mod = e.ctrlKey || e.metaKey

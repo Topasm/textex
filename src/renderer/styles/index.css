@@ -342,6 +342,103 @@ body,
   background-color: #005f99;
 }
 
+/* Structured Log Entries */
+.log-structured {
+  height: 200px;
+  overflow: auto;
+  padding: 4px 0;
+}
+
+.log-empty {
+  padding: 12px;
+  color: #666666;
+  font-size: 12px;
+}
+
+.log-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  cursor: pointer;
+  transition: background-color 0.1s;
+}
+
+.log-entry:hover {
+  background-color: #2a2d2e;
+}
+
+.log-entry-icon {
+  flex-shrink: 0;
+  width: 16px;
+  text-align: center;
+}
+
+.log-entry-error .log-entry-icon {
+  color: #f44747;
+}
+
+.log-entry-warning .log-entry-icon {
+  color: #cca700;
+}
+
+.log-entry-info .log-entry-icon {
+  color: #3794ff;
+}
+
+.log-entry-location {
+  flex-shrink: 0;
+  color: #569cd6;
+  min-width: 80px;
+}
+
+.log-entry-message {
+  color: #cccccc;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.log-tab-active {
+  color: #cccccc !important;
+  text-decoration: underline;
+}
+
+/* Status Bar Diagnostics */
+.status-diagnostics {
+  display: inline-flex;
+  gap: 10px;
+  margin-left: 8px;
+}
+
+.status-errors {
+  color: #f44747;
+}
+
+.status-warnings {
+  color: #cca700;
+}
+
+/* SyncTeX Indicator */
+.synctex-indicator {
+  position: absolute;
+  border-radius: 50%;
+  border: 3px solid #007acc;
+  background: rgba(0, 122, 204, 0.3);
+  pointer-events: none;
+  animation: synctex-fade 1.5s ease-out forwards;
+}
+
+@keyframes synctex-fade {
+  0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(2); }
+}
+
+.preview-synctex-cursor {
+  cursor: crosshair;
+}
+
 /* PDF Page styling */
 .react-pdf__Page {
   margin-bottom: 16px;
