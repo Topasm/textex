@@ -11,6 +11,15 @@ A self-contained desktop LaTeX editor built on Electron. Split-pane interface wi
 - **Compile log panel** — see Tectonic's stdout/stderr output, auto-opens on errors
 - **File operations** — open, save, save-as with native OS dialogs
 - **Cross-platform** — builds for Linux (AppImage), macOS (DMG), and Windows (NSIS installer)
+- **Theme toggle** — dark, light, and high-contrast themes with persistent settings
+- **Multi-file projects** — file tree sidebar and tabbed editing for working with multi-file LaTeX projects
+- **Snippet completion & templates** — ~50 LaTeX snippet completions and a template gallery with 5 document templates
+- **Custom font size** — adjustable editor font size with keyboard shortcuts
+- **Auto-update** — seamless in-app updates via electron-updater
+- **BibTeX bibliography panel** — dedicated panel for managing bibliography entries with citation auto-completion
+- **Git integration** — view status, stage files, and commit directly from a sidebar panel
+- **Spell checker** — inline spell checking with quick-fix suggestions
+- **Export formats** — export to HTML, DOCX, ODT, and EPUB via Pandoc
 
 ## Download
 
@@ -51,6 +60,13 @@ chmod +x TextEx-1.0.0.AppImage
 | `Ctrl/Cmd + Shift + S` | Save as |
 | `Ctrl/Cmd + Enter` | Manual compile |
 | `Ctrl/Cmd + L` | Toggle log panel |
+| `Ctrl/Cmd + Shift + =` | Increase font size |
+| `Ctrl/Cmd + Shift + -` | Decrease font size |
+| `Ctrl/Cmd + B` | Toggle sidebar |
+| `Ctrl/Cmd + W` | Close current tab |
+| `Ctrl/Cmd + Tab` | Next tab |
+| `Ctrl/Cmd + Shift + Tab` | Previous tab |
+| `Ctrl/Cmd + Shift + N` | New from template |
 
 ## Development
 
@@ -101,6 +117,9 @@ See [`docs/`](docs/) for detailed documentation:
 - **Tectonic 0.15.0** — LaTeX engine (bundled)
 - **electron-vite** — build tooling
 - **electron-builder** — packaging
+- **electron-updater** — auto-updates
+- **simple-git** — Git integration
+- **nspell** — spell checking
 
 ## License
 

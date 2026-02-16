@@ -68,20 +68,20 @@ installation required**.
 
 These are explicitly **out of scope** for the first release:
 
-- [ ] Draggable split-pane divider.
-- [ ] PDF zoom controls.
-- [ ] SyncTeX (click source <-> PDF jump).
-- [ ] Multi-file project support.
-- [ ] LaTeX snippet insertion / template gallery.
-- [ ] Dark/light theme toggle.
-- [ ] Custom font size setting.
-- [ ] Auto-update mechanism.
-- [ ] BibTeX / bibliography support UI.
-- [ ] Git integration.
-- [ ] Spell checker.
-- [ ] Export to other formats (HTML, DOCX via Pandoc).
-- [ ] ESLint + Prettier setup.
-- [ ] Unit tests (Vitest + @testing-library/react).
+- [x] Draggable split-pane divider.
+- [x] PDF zoom controls.
+- [x] SyncTeX (click source <-> PDF jump).
+- [x] Multi-file project support.
+- [x] LaTeX snippet insertion / template gallery.
+- [x] Dark/light theme toggle.
+- [x] Custom font size setting.
+- [x] Auto-update mechanism.
+- [x] BibTeX / bibliography support UI.
+- [x] Git integration.
+- [x] Spell checker.
+- [x] Export to other formats (HTML, DOCX via Pandoc).
+- [x] ESLint + Prettier setup.
+- [x] Unit tests (Vitest + @testing-library/react).
 
 ---
 

@@ -216,15 +216,19 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
   - Sticky zoom toolbar at top of preview pane: [-] [100%] [+] [Fit Width]
   - Keyboard shortcuts: `Ctrl/Cmd+=` zoom in, `Ctrl/Cmd+-` zoom out, `Ctrl/Cmd+0` reset
   - Zoom applies by multiplying base page width by `zoomLevel / 100`
-- [ ] **9.3** Dark/light theme toggle
+- [x] **9.3** Dark/light theme toggle
+  - Three themes (dark/light/high-contrast) with CSS custom properties. Settings persist to userData/settings.json.
 - [x] **9.4** SyncTeX support (click-to-jump between source and PDF)
   - Forward sync: `synctexForward` IPC from editor → highlights position in PDF
   - Inverse sync: `Ctrl+Click` on PDF → jumps to source line in editor
   - SyncTeX indicator with fade-out animation in preview pane
   - `synctexHighlight` and `pendingJump` state in Zustand store
-- [ ] **9.5** Multi-file project support (file tree sidebar)
-- [ ] **9.6** LaTeX snippet/template gallery
-- [ ] **9.7** Auto-update via electron-updater
+- [x] **9.5** Multi-file project support (file tree sidebar)
+  - FileTree.tsx with lazy directory loading, TabBar.tsx with multi-tab management, sidebar with 3 views (Files/Git/Bib), resizable width.
+- [x] **9.6** LaTeX snippet/template gallery
+  - ~50 LaTeX snippets via Monaco CompletionItemProvider, 5 document templates (Article, Report, Beamer, Letter, CV) in TemplateGallery.tsx modal.
+- [x] **9.7** Auto-update via electron-updater
+  - electron-updater integration in main.ts with UpdateNotification.tsx banner (available/downloading/ready states).
 - [x] **9.8** CI/CD pipeline (GitHub Actions) for automated builds
   - `.github/workflows/build.yml` with multi-platform matrix (Linux, macOS x64, macOS arm64, Windows)
   - Triggered on version tags (`v*`) and manual dispatch
@@ -244,6 +248,16 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
   - `src/__tests__/components/Toolbar.test.tsx` — 8 render + interaction tests
   - Test setup with mocked `window.api` for Electron IPC
   - npm scripts: `test`, `test:watch`
+- [x] **9.12** Custom font size setting
+  - `Ctrl+Shift+=/-` keyboard shortcuts, persisted to settings.json, range 8-32px
+- [x] **9.13** BibTeX / bibliography support
+  - bibparser.ts parses .bib files, BibPanel.tsx sidebar panel, citation completion inside \cite{} in editor
+- [x] **9.14** Git integration
+  - git.ts backend using child_process, GitPanel.tsx with stage/unstage/commit UI, branch in status bar, file tree decorations
+- [x] **9.15** Spell checker
+  - Dictionary-based spell checker (resources/dictionaries/en-US), Monaco markers + code action provider for suggestions, toggle in status bar
+- [x] **9.16** Export to other formats
+  - pandoc.ts export backend, toolbar dropdown for HTML/DOCX/ODT/EPUB formats
 
 ---
 
@@ -253,5 +267,5 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
 # All dependencies (run from project root)
 npm install electron react react-dom @monaco-editor/react react-pdf zustand \
   pdfjs-dist electron-vite electron-builder typescript @types/react \
-  @types/react-dom @vitejs/plugin-react vite
+  @types/react-dom @vitejs/plugin-react vite nspell simple-git electron-updater
 ```
