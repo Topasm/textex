@@ -46,7 +46,7 @@ export function registerIpcHandlers(win: BrowserWindow): void {
     const result = await dialog.showOpenDialog(currentWindow!, {
       properties: ['openFile'],
       filters: [
-        { name: 'LaTeX Files', extensions: ['tex'] },
+        { name: 'LaTeX Files', extensions: ['tex', 'sty', 'cls', 'bib', 'bst', 'dtx', 'ins'] },
         { name: 'All Files', extensions: ['*'] }
       ]
     })

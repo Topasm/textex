@@ -91,8 +91,9 @@ function App(): JSX.Element {
 
     setProjectRoot(dirPath)
 
+    let tree: DirectoryEntry[] = []
     try {
-      const tree = await window.api.readDirectory(dirPath)
+      tree = await window.api.readDirectory(dirPath)
       setDirectoryTree(tree)
     } catch {
       // ignore
@@ -103,6 +104,19 @@ function App(): JSX.Element {
       toggleSidebar()
     }
     setSidebarView('files')
+
+    // Auto-open the first .tex file found in the folder
+    const texFile = tree.find((e) => e.type === 'file' && e.name.endsWith('.tex'))
+    if (texFile) {
+      try {
+        const result = await window.api.readFile(texFile.path)
+        useAppStore.getState().openFileInTab(result.filePath, result.content)
+        useAppStore.getState().setFilePath(result.filePath)
+        useAppStore.getState().setDirty(false)
+      } catch {
+        // ignore
+      }
+    }
 
     // Start watching directory
     try {

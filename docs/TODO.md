@@ -265,33 +265,34 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
 ---
 
-## Phase 10: CLI (Planned)
+## Phase 10: CLI
 
-- [ ] **10.1** Create `src/cli/index.ts` with `commander` for arg parsing
-- [ ] **10.2** Add `bin` field to `package.json`, add build step for CLI
-- [ ] **10.3** Extract shared compiler logic to `src/shared/compiler.ts`
-  - Remove `app.isPackaged` and `BrowserWindow` deps from current `src/main/compiler.ts`
-  - Parameterize dev/prod detection (pass flag or env var instead of `!app.isPackaged`)
-  - Replace `win.webContents.send('latex:log', text)` with generic callback `(text: string) => void`
-- [ ] **10.4** Extract shared pandoc logic to `src/shared/pandoc.ts`
-  - Remove `app` dep from current `src/main/pandoc.ts`
-- [ ] **10.5** `textex compile <file.tex>` — flags: `--output <dir>`, `--watch`, `--quiet`
-- [ ] **10.6** `textex init [template]` — scaffold from 5 built-in templates (reuse `src/renderer/data/templates.ts`)
-- [ ] **10.7** `textex export <file.tex> --format <html|docx|odt|epub>` — reuse shared pandoc logic
-- [ ] **10.8** `textex templates` — list available templates to stdout
-- [ ] **10.9** Watch mode (`--watch`) via `chokidar`
+- [x] **10.1** Create `src/cli/index.ts` with `commander` for arg parsing
+- [x] **10.2** Add `bin` field to `package.json`, add build step for CLI
+- [x] **10.3** Extract shared compiler logic to `src/shared/compiler.ts`
+  - Removed `app.isPackaged` and `BrowserWindow` deps from `src/main/compiler.ts`
+  - Parameterized dev/prod detection via `isDev`/`resourcesPath`/`devBasePath` options
+  - Replaced `win.webContents.send('latex:log', text)` with generic `onLog` callback
+- [x] **10.4** Extract shared pandoc logic to `src/shared/pandoc.ts`
+  - Removed `app` dep from `src/main/pandoc.ts`
+- [x] **10.5** `textex compile <file.tex>` — flags: `--output <dir>`, `--watch`, `--quiet`
+- [x] **10.6** `textex init [template]` — scaffold from 5 built-in templates (shared via `src/shared/templates.ts`)
+- [x] **10.7** `textex export <file.tex> --format <html|docx|odt|epub>` — reuses shared pandoc logic
+- [x] **10.8** `textex templates` — list available templates to stdout
+- [x] **10.9** Watch mode (`--watch`) via `chokidar`
 - [ ] **10.10** CLI unit tests
   - Unblocks headless testing — cross-ref Phase 7 and Phase 8.4
 
 ---
 
-## Phase 11: MCP Server (Planned)
+## Phase 11: MCP Server
 
-- [ ] **11.1** Create `src/mcp/server.ts` with `@modelcontextprotocol/sdk`, stdio transport
-- [ ] **11.2** `compile_latex` tool — accepts file path, returns `{ success, pdfPath?, error? }`
-- [ ] **11.3** `get_compile_log` tool — returns last compile's stdout/stderr
-- [ ] **11.4** Add npm script `mcp` to start the server
-- [ ] **11.5** Document MCP config for Claude Desktop / other clients
+- [x] **11.1** Create `src/mcp/server.ts` with `@modelcontextprotocol/sdk`, stdio transport
+- [x] **11.2** `compile_latex` tool — accepts file path, returns `{ success, pdfPath?, error? }`
+- [x] **11.3** `get_compile_log` tool — returns last compile's stdout/stderr
+- [x] **11.4** Add npm script `mcp` to start the server
+- [x] **11.5** Document MCP config for Claude Desktop / other clients
+  - MCP usage section added to README.md with Claude Desktop config JSON
 
 ---
 
@@ -301,8 +302,6 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
 # All dependencies (run from project root)
 npm install electron react react-dom @monaco-editor/react react-pdf zustand \
   pdfjs-dist electron-vite electron-builder typescript @types/react \
-  @types/react-dom @vitejs/plugin-react vite nspell simple-git electron-updater
-
-# Planned (Phase 10 + 11)
-npm install commander chokidar @modelcontextprotocol/sdk
+  @types/react-dom @vitejs/plugin-react vite nspell simple-git electron-updater \
+  commander chokidar @modelcontextprotocol/sdk
 ```
