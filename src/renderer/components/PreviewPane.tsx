@@ -71,7 +71,7 @@ function PreviewPane(): JSX.Element {
     const binaryString = atob(pdfBase64)
     const bytes = new Uint8Array(binaryString.length)
     for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i)
+      bytes[i] = binaryString.charCodeAt(i) & 0xFF
     }
     return { data: bytes }
   }, [pdfBase64])

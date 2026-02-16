@@ -20,8 +20,8 @@ A self-contained desktop LaTeX editor built on Electron. Split-pane interface wi
 - **Git integration** — view status, stage files, and commit directly from a sidebar panel
 - **Spell checker** — inline spell checking with quick-fix suggestions
 - **Export formats** — export to HTML, DOCX, ODT, and EPUB via Pandoc
-- **CLI tools** (planned) — headless compile, init, export, and template listing via `textex` command
-- **MCP server** (planned) — `compile_latex` and `get_compile_log` tools for AI integration
+- **CLI tools** — headless compile, init, export, and template listing via `textex` command
+- **MCP server** — `compile_latex` and `get_compile_log` tools for AI integration
 
 ## Download
 
@@ -90,14 +90,23 @@ npm run package:win
 
 Requires Node.js 20+ and a Tectonic binary in `resources/bin/{linux,mac,win}/`. The Linux binary is included; see [PACKAGING.md](docs/PACKAGING.md) for downloading Windows/macOS binaries.
 
-### CLI (planned)
+### CLI
 
 ```bash
+# Build the CLI
+npm run build:cli
+
 # Compile a .tex file to PDF
 textex compile paper.tex
 
 # Compile with watch mode
 textex compile paper.tex --watch
+
+# Compile quietly (no log output)
+textex compile paper.tex --quiet
+
+# Output to a specific directory
+textex compile paper.tex --output build/
 
 # Scaffold a new project from a template
 textex init article
@@ -109,12 +118,39 @@ textex export paper.tex --format docx
 textex templates
 ```
 
-### MCP Server (planned)
+### MCP Server
+
+The MCP server exposes TextEx's LaTeX compilation as tools for AI assistants (Claude Desktop, etc.) via the [Model Context Protocol](https://modelcontextprotocol.io/).
 
 ```bash
+# Build the MCP server
+npm run build:mcp
+
 # Start the MCP server (stdio transport)
 npm run mcp
 ```
+
+**Tools provided:**
+
+| Tool | Description |
+|------|-------------|
+| `compile_latex` | Compile a `.tex` file. Input: `{ file_path: string }`. Returns `{ success, pdfPath }` or `{ success: false, error }`. |
+| `get_compile_log` | Returns stdout/stderr from the last compilation for diagnosing errors. |
+
+**Claude Desktop configuration** — add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+
+```json
+{
+  "mcpServers": {
+    "textex": {
+      "command": "node",
+      "args": ["/absolute/path/to/textex/out/mcp/mcp/server.js"]
+    }
+  }
+}
+```
+
+**Other MCP clients** — any client supporting stdio transport can connect by running `node out/mcp/mcp/server.js` from the project root.
 
 ## Architecture
 
@@ -123,8 +159,8 @@ Three-process Electron app with strict context isolation:
 - **Main process** — window management, file I/O, Tectonic compilation (`src/main/`)
 - **Preload** — secure context bridge exposing `window.api` (`src/preload/`)
 - **Renderer** — React UI with Zustand state management (`src/renderer/`)
-- **CLI** (planned) — headless commands via `src/cli/`, delegates to `src/shared/`
-- **MCP server** (planned) — stdio MCP server via `src/mcp/`, delegates to `src/shared/`
+- **CLI** — headless commands via `src/cli/`, delegates to `src/shared/`
+- **MCP server** — stdio MCP server via `src/mcp/`, delegates to `src/shared/`
 
 See [`docs/`](docs/) for detailed documentation:
 
@@ -150,9 +186,9 @@ See [`docs/`](docs/) for detailed documentation:
 - **electron-updater** — auto-updates
 - **simple-git** — Git integration
 - **nspell** — spell checking
-- **commander** (planned) — CLI argument parsing
-- **chokidar** (planned) — file watching for CLI `--watch` mode
-- **@modelcontextprotocol/sdk** (planned) — MCP server framework
+- **commander** — CLI argument parsing
+- **chokidar** — file watching for CLI `--watch` mode
+- **@modelcontextprotocol/sdk** — MCP server framework
 
 ## License
 

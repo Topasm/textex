@@ -28,6 +28,23 @@ function validateFilePath(filePath: unknown): string {
   return filePath
 }
 
+function readTextFileWithEncoding(buffer: Buffer): string {
+  // Check for BOM markers
+  if (buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF) {
+    return buffer.subarray(3).toString('utf-8')
+  }
+  if (buffer[0] === 0xFF && buffer[1] === 0xFE) {
+    return buffer.subarray(2).toString('utf16le')
+  }
+
+  // Try UTF-8 — if decoding produces replacement chars, fall back to latin1
+  const utf8 = buffer.toString('utf-8')
+  if (utf8.includes('\uFFFD')) {
+    return buffer.toString('latin1')
+  }
+  return utf8
+}
+
 let directoryWatcher: ReturnType<typeof fs.watch> | null = null
 
 let currentWindow: BrowserWindow | null = null
@@ -56,7 +73,8 @@ export function registerIpcHandlers(win: BrowserWindow): void {
     }
 
     const filePath = result.filePaths[0]
-    const content = await fs.readFile(filePath, 'utf-8')
+    const buffer = await fs.readFile(filePath)
+    const content = readTextFileWithEncoding(buffer)
     return { content, filePath }
   })
 
@@ -85,7 +103,8 @@ export function registerIpcHandlers(win: BrowserWindow): void {
 
   ipcMain.handle('fs:read-file', async (_event, filePath: string) => {
     const validPath = validateFilePath(filePath)
-    const content = await fs.readFile(validPath, 'utf-8')
+    const buffer = await fs.readFile(validPath)
+    const content = readTextFileWithEncoding(buffer)
     return { content, filePath: validPath }
   })
 
