@@ -75,5 +75,9 @@ export const useAppStore = create<AppState>()(subscribeWithSelector((set) => ({
   clearPendingJump: () => set({ pendingJump: null }),
   setSynctexHighlight: (highlight) =>
     set({ synctexHighlight: highlight ? { ...highlight, timestamp: Date.now() } : null }),
-  setSplitRatio: (splitRatio) => set({ splitRatio })
+  setSplitRatio: (splitRatio) => set({ splitRatio }),
+  setZoomLevel: (level) => set({ zoomLevel: Math.max(25, Math.min(400, level)) }),
+  zoomIn: () => set((state) => ({ zoomLevel: Math.min(400, state.zoomLevel + 25) })),
+  zoomOut: () => set((state) => ({ zoomLevel: Math.max(25, state.zoomLevel - 25) })),
+  resetZoom: () => set({ zoomLevel: 100 })
 })))
