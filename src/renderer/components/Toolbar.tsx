@@ -36,7 +36,8 @@ function Toolbar({ onOpen, onSave, onSaveAs, onCompile, onToggleLog }: ToolbarPr
         disabled={compileStatus === 'compiling'}
         title="Compile LaTeX (Ctrl+Enter)"
       >
-        {compileStatus === 'compiling' ? 'Compiling...' : 'Compile'}<kbd>Ctrl+Enter</kbd>
+        {compileStatus === 'compiling' ? 'Compiling...' : 'Compile'}
+        <kbd>Ctrl+Enter</kbd>
       </button>
       <button onClick={onToggleLog} title="Toggle log panel (Ctrl+L)">
         Log<kbd>Ctrl+L</kbd>

@@ -6,17 +6,21 @@ import type { Diagnostic, DiagnosticSeverity } from '../shared/types'
 const latexError = /^(?:(.*):(\d+):|!)(?:\s?(.+) [Ee]rror:)? (.+?)$/
 const latexOverfullBox = /^(Overfull \\[vh]box \([^)]*\)) in paragraph at lines (\d+)--(\d+)$/
 const latexOverfullBoxAlt = /^(Overfull \\[vh]box \([^)]*\)) detected at line (\d+)$/
-const latexOverfullBoxOutput = /^(Overfull \\[vh]box \([^)]*\)) has occurred while \\output is active(?: \[(\d+)\])?/
+const latexOverfullBoxOutput =
+  /^(Overfull \\[vh]box \([^)]*\)) has occurred while \\output is active(?: \[(\d+)\])?/
 const latexUnderfullBox = /^(Underfull \\[vh]box \([^)]*\)) in paragraph at lines (\d+)--(\d+)$/
 const latexUnderfullBoxAlt = /^(Underfull \\[vh]box \([^)]*\)) detected at line (\d+)$/
-const latexUnderfullBoxOutput = /^(Underfull \\[vh]box \([^)]*\)) has occurred while \\output is active(?: \[(\d+)\])?/
-const latexWarn = /^((?:(?:Class|Package|Module) \S*)|LaTeX(?: \S*)?|LaTeX3) (Warning|Info):\s+(.*?)(?: on(?: input)? line (\d+))?(\.|\?|)$/
+const latexUnderfullBoxOutput =
+  /^(Underfull \\[vh]box \([^)]*\)) has occurred while \\output is active(?: \[(\d+)\])?/
+const latexWarn =
+  /^((?:(?:Class|Package|Module) \S*)|LaTeX(?: \S*)?|LaTeX3) (Warning|Info):\s+(.*?)(?: on(?: input)? line (\d+))?(\.|\?|)$/
 const latexPackageWarningExtraLines = /^\((.*)\)\s+(.*?)(?: +on input line (\d+))?(\.)?$/
 const latexMissChar = /^\s*(Missing character:.*?!)/
 const latexNoPageOutput = /^No pages of output\.$/
 const bibEmpty = /^Empty `thebibliography' environment/
 const biberWarn = /^Biber warning:.*WARN - I didn't find a database entry for '([^']+)'/
-const UNDEFINED_REFERENCE = /^LaTeX Warning: (Reference|Citation) `(.*?)' on page (?:\d+) undefined on input line (\d+).$/
+const UNDEFINED_REFERENCE =
+  /^LaTeX Warning: (Reference|Citation) `(.*?)' on page (?:\d+) undefined on input line (\d+).$/
 const messageLine = /^l\.\d+\s(\.\.\.)?(.*)$/
 
 // --- Types ---
@@ -67,7 +71,7 @@ export function parseLatexLog(log: string, rootFile: string): Diagnostic[] {
     buildLog.push(state.currentResult)
   }
 
-  return buildLog.map(entry => ({
+  return buildLog.map((entry) => ({
     file: entry.file,
     line: entry.line,
     severity: mapSeverity(entry.type),
@@ -77,15 +81,21 @@ export function parseLatexLog(log: string, rootFile: string): Diagnostic[] {
 
 function mapSeverity(type: string): DiagnosticSeverity {
   switch (type) {
-    case 'error': return 'error'
-    case 'warning': return 'warning'
-    default: return 'info'
+    case 'error':
+      return 'error'
+    case 'warning':
+      return 'warning'
+    default:
+      return 'info'
   }
 }
 
 function parseLine(line: string, state: ParserState, buildLog: LogEntry[]): void {
   // Compose the current file
-  const filename = path.resolve(path.dirname(state.rootFile), state.fileStack[state.fileStack.length - 1])
+  const filename = path.resolve(
+    path.dirname(state.rootFile),
+    state.fileStack[state.fileStack.length - 1]
+  )
 
   // Skip the first line after a box warning, this is just garbage
   if (state.insideBoxWarn) {
@@ -102,8 +112,15 @@ function parseLine(line: string, state: ParserState, buildLog: LogEntry[]): void
     } else {
       const packageExtraLineResult = line.match(latexPackageWarningExtraLines)
       if (packageExtraLineResult) {
-        state.currentResult.text += '\n(' + packageExtraLineResult[1] + ')\t' + packageExtraLineResult[2] + (packageExtraLineResult[4] ? '.' : '')
-        state.currentResult.line = packageExtraLineResult[3] ? parseInt(packageExtraLineResult[3], 10) : 1
+        state.currentResult.text +=
+          '\n(' +
+          packageExtraLineResult[1] +
+          ')\t' +
+          packageExtraLineResult[2] +
+          (packageExtraLineResult[4] ? '.' : '')
+        state.currentResult.line = packageExtraLineResult[3]
+          ? parseInt(packageExtraLineResult[3], 10)
+          : 1
       } else if (state.insideError) {
         const match = messageLine.exec(line)
         if (match && match.length >= 2) {
@@ -197,7 +214,7 @@ function parseLine(line: string, state: ParserState, buildLog: LogEntry[]): void
     }
     state.currentResult = {
       type: 'error',
-      text: (result[3] && result[3] !== 'LaTeX') ? `${result[3]}: ${result[4]}` : result[4],
+      text: result[3] && result[3] !== 'LaTeX' ? `${result[3]}: ${result[4]}` : result[4],
       file: result[1] ? path.resolve(path.dirname(state.rootFile), result[1]) : filename,
       line: result[2] ? parseInt(result[2], 10) : 1
     }
@@ -212,7 +229,12 @@ function parseLine(line: string, state: ParserState, buildLog: LogEntry[]): void
   }
 }
 
-function parseUndefinedReference(line: string, filename: string, state: ParserState, buildLog: LogEntry[]): boolean {
+function parseUndefinedReference(
+  line: string,
+  filename: string,
+  state: ParserState,
+  buildLog: LogEntry[]
+): boolean {
   if (line === 'LaTeX Warning: There were undefined references.') {
     return true
   }
@@ -236,11 +258,20 @@ function parseUndefinedReference(line: string, filename: string, state: ParserSt
   return true
 }
 
-function parseBadBox(line: string, filename: string, state: ParserState, buildLog: LogEntry[]): boolean {
+function parseBadBox(
+  line: string,
+  filename: string,
+  state: ParserState,
+  buildLog: LogEntry[]
+): boolean {
   // Hardcoded to 'both' — show all badboxes
   const regexs = [
-    latexOverfullBox, latexOverfullBoxAlt, latexOverfullBoxOutput,
-    latexUnderfullBox, latexUnderfullBoxAlt, latexUnderfullBoxOutput
+    latexOverfullBox,
+    latexOverfullBoxAlt,
+    latexOverfullBoxOutput,
+    latexUnderfullBox,
+    latexUnderfullBoxAlt,
+    latexUnderfullBoxOutput
   ]
 
   for (const regex of regexs) {

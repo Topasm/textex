@@ -26,7 +26,12 @@ interface ElectronAPI {
   onDiagnostics(cb: (diagnostics: Diagnostic[]) => void): void
   removeDiagnosticsListener(): void
   synctexForward(texFile: string, line: number): Promise<SyncTeXForwardResult | null>
-  synctexInverse(texFile: string, page: number, x: number, y: number): Promise<SyncTeXInverseResult | null>
+  synctexInverse(
+    texFile: string,
+    page: number,
+    x: number,
+    y: number
+  ): Promise<SyncTeXInverseResult | null>
 }
 
 declare global {

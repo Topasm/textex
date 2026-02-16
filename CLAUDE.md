@@ -11,8 +11,12 @@ TextEx — a self-contained desktop LaTeX editor built on Electron. Split-pane i
 - `npm run dev` — Start development with HMR (electron-vite)
 - `npm run build` — Compile main/preload/renderer to `out/`
 - `npm run package:linux` / `package:mac` / `package:win` — Build + create platform installer via electron-builder
-
-No test runner or linter is currently configured.
+- `npm run test` — Run Vitest unit tests (53 tests)
+- `npm run test:watch` — Run tests in watch mode
+- `npm run lint` — Run ESLint on `src/`
+- `npm run lint:fix` — Auto-fix ESLint issues
+- `npm run format` — Format code with Prettier
+- `npm run format:check` — Check formatting without modifying files
 
 ## Architecture
 
@@ -31,7 +35,7 @@ Main Process (src/main/)          Preload (src/preload/)       Renderer (src/ren
 
 **IPC flow:** Renderer calls `window.api.*` → preload forwards via `ipcRenderer.invoke` → main process handles in `ipc.ts`. Compile logs stream back via `latex:log` channel.
 
-**State:** Single Zustand store (`src/renderer/store/useAppStore.ts`) holds file path, content, dirty flag, compile status, PDF data (Base64), logs, and cursor position.
+**State:** Single Zustand store (`src/renderer/store/useAppStore.ts`) holds file path, content, dirty flag, compile status, PDF data (Base64), logs, cursor position, split ratio, and zoom level.
 
 **Auto-compile:** `useAutoCompile` hook debounces content changes by 1000ms, auto-saves (with error reporting), then triggers Tectonic compilation. Cancellation errors from overlapping compiles are silently ignored.
 

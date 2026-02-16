@@ -27,9 +27,12 @@ function LogPanel(): JSX.Element | null {
 
   const severityIcon = (severity: DiagnosticSeverity): string => {
     switch (severity) {
-      case 'error': return '\u2716'   // heavy multiplication x
-      case 'warning': return '\u26A0' // warning sign
-      default: return '\u2139'        // info
+      case 'error':
+        return '\u2716' // heavy multiplication x
+      case 'warning':
+        return '\u26A0' // warning sign
+      default:
+        return '\u2139' // info
     }
   }
 
@@ -55,9 +58,7 @@ function LogPanel(): JSX.Element | null {
         </div>
       </div>
       {logViewMode === 'raw' ? (
-        <pre ref={scrollRef}>
-          {logs || 'No output yet.'}
-        </pre>
+        <pre ref={scrollRef}>{logs || 'No output yet.'}</pre>
       ) : (
         <div ref={listRef} className="log-structured">
           {diagnostics.length === 0 ? (

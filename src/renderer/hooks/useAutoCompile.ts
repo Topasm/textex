@@ -46,5 +46,14 @@ export function useAutoCompile(): void {
     }, 1000)
 
     return () => clearTimeout(timerRef.current)
-  }, [content, filePath, setCompileStatus, setPdfBase64, appendLog, clearLogs, setLogPanelOpen, setDirty])
+  }, [
+    content,
+    filePath,
+    setCompileStatus,
+    setPdfBase64,
+    appendLog,
+    clearLogs,
+    setLogPanelOpen,
+    setDirty
+  ])
 }

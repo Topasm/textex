@@ -205,18 +205,45 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
 ## Phase 9: Polish (Post-MVP)
 
-- [ ] **9.1** Draggable split-pane divider
-- [ ] **9.2** PDF zoom controls (+/- buttons)
+- [x] **9.1** Draggable split-pane divider
+  - `splitRatio` state in Zustand store (default 0.5, range 0.2–0.8)
+  - Vertical divider bar between editor and preview panes in `App.tsx`
+  - Mouse drag to resize, double-click to reset to 50/50
+  - CSS: 4px wide, `col-resize` cursor, highlights `#007acc` on hover
+- [x] **9.2** PDF zoom controls (+/- buttons)
+  - `zoomLevel` state in Zustand store (default 100, range 25–400, step 25)
+  - `zoomIn()`, `zoomOut()`, `resetZoom()` actions
+  - Sticky zoom toolbar at top of preview pane: [-] [100%] [+] [Fit Width]
+  - Keyboard shortcuts: `Ctrl/Cmd+=` zoom in, `Ctrl/Cmd+-` zoom out, `Ctrl/Cmd+0` reset
+  - Zoom applies by multiplying base page width by `zoomLevel / 100`
 - [ ] **9.3** Dark/light theme toggle
-- [ ] **9.4** SyncTeX support (click-to-jump between source and PDF)
+- [x] **9.4** SyncTeX support (click-to-jump between source and PDF)
+  - Forward sync: `synctexForward` IPC from editor → highlights position in PDF
+  - Inverse sync: `Ctrl+Click` on PDF → jumps to source line in editor
+  - SyncTeX indicator with fade-out animation in preview pane
+  - `synctexHighlight` and `pendingJump` state in Zustand store
 - [ ] **9.5** Multi-file project support (file tree sidebar)
 - [ ] **9.6** LaTeX snippet/template gallery
 - [ ] **9.7** Auto-update via electron-updater
-- [ ] **9.8** CI/CD pipeline (GitHub Actions) for automated builds
+- [x] **9.8** CI/CD pipeline (GitHub Actions) for automated builds
+  - `.github/workflows/build.yml` with multi-platform matrix (Linux, macOS x64, macOS arm64, Windows)
+  - Triggered on version tags (`v*`) and manual dispatch
+  - Downloads Tectonic binary per platform, builds with electron-vite + electron-builder
+  - Uploads artifacts (AppImage, DMG, EXE) to GitHub Actions
 - [x] **9.9** App icons and branding
   - Created as part of Phase 8 packaging work (see `build/icon.{png,ico,icns}`)
-- [ ] **9.10** ESLint + Prettier setup
-- [ ] **9.11** Vitest + @testing-library/react unit tests
+- [x] **9.10** ESLint + Prettier setup
+  - ESLint v9 flat config (`eslint.config.mjs`) with `typescript-eslint`, `eslint-plugin-react`, `eslint-plugin-react-hooks`, `eslint-config-prettier`
+  - Prettier config (`.prettierrc`): no semicolons, single quotes, 100 char width
+  - npm scripts: `lint`, `lint:fix`, `format`, `format:check`
+- [x] **9.11** Vitest + @testing-library/react unit tests
+  - Vitest v4 with jsdom environment (`vitest.config.ts`)
+  - 53 tests across 3 test files, all passing
+  - `src/__tests__/store/useAppStore.test.ts` — 38 tests covering all state mutations
+  - `src/__tests__/components/StatusBar.test.tsx` — 7 render tests
+  - `src/__tests__/components/Toolbar.test.tsx` — 8 render + interaction tests
+  - Test setup with mocked `window.api` for Electron IPC
+  - npm scripts: `test`, `test:watch`
 
 ---
 

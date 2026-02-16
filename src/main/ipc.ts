@@ -70,8 +70,11 @@ export function registerIpcHandlers(win: BrowserWindow): void {
     return forwardSync(validPath, line)
   })
 
-  ipcMain.handle('synctex:inverse', async (_event, texFile: string, page: number, x: number, y: number) => {
-    const validPath = validateFilePath(texFile)
-    return inverseSync(validPath, page, x, y)
-  })
+  ipcMain.handle(
+    'synctex:inverse',
+    async (_event, texFile: string, page: number, x: number, y: number) => {
+      const validPath = validateFilePath(texFile)
+      return inverseSync(validPath, page, x, y)
+    }
+  )
 }

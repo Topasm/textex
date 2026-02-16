@@ -88,21 +88,26 @@ function PreviewPane(): JSX.Element {
   }, [])
 
   // Capture viewport info when each page renders
-  const handlePageRenderSuccess = useCallback((pageNumber: number) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (page: any) => {
-      const container = containerRef.current
-      if (!container) return
-      const pageEl = container.querySelector(`[data-page-number="${pageNumber}"]`) as HTMLDivElement | null
-      if (!pageEl) return
-      // Calculate the actual scale from the rendered page (including zoom)
-      const pw = containerWidth ? (containerWidth - 32) * (zoomLevel / 100) : 612
-      const defaultWidth = 612 // default PDF point width for letter
-      const scale = pw / defaultWidth
-      const viewport = page.getViewport({ scale })
-      pageViewportsRef.current.set(pageNumber, { viewport, element: pageEl })
-    }
-  }, [containerWidth, zoomLevel])
+  const handlePageRenderSuccess = useCallback(
+    (pageNumber: number) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (page: any) => {
+        const container = containerRef.current
+        if (!container) return
+        const pageEl = container.querySelector(
+          `[data-page-number="${pageNumber}"]`
+        ) as HTMLDivElement | null
+        if (!pageEl) return
+        // Calculate the actual scale from the rendered page (including zoom)
+        const pw = containerWidth ? (containerWidth - 32) * (zoomLevel / 100) : 612
+        const defaultWidth = 612 // default PDF point width for letter
+        const scale = pw / defaultWidth
+        const viewport = page.getViewport({ scale })
+        pageViewportsRef.current.set(pageNumber, { viewport, element: pageEl })
+      }
+    },
+    [containerWidth, zoomLevel]
+  )
 
   // React to synctexHighlight changes — show indicator + scroll
   useEffect(() => {
@@ -117,7 +122,9 @@ function PreviewPane(): JSX.Element {
       // Page viewport not captured yet — try scrolling to page first
       const container = containerRef.current
       if (container) {
-        const pageEl = container.querySelector(`[data-page-number="${page}"]`) as HTMLDivElement | null
+        const pageEl = container.querySelector(
+          `[data-page-number="${page}"]`
+        ) as HTMLDivElement | null
         if (pageEl) {
           pageEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
         }
@@ -154,55 +161,62 @@ function PreviewPane(): JSX.Element {
   }, [synctexHighlight])
 
   // Ctrl+Click inverse SyncTeX handler
-  const handleContainerClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!(e.ctrlKey || e.metaKey)) return
+  const handleContainerClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!(e.ctrlKey || e.metaKey)) return
 
-    const filePath = useAppStore.getState().filePath
-    if (!filePath) return
+      const filePath = useAppStore.getState().filePath
+      if (!filePath) return
 
-    const container = containerRef.current
-    if (!container) return
+      const container = containerRef.current
+      if (!container) return
 
-    // Find which page was clicked
-    let targetPageNumber: number | null = null
-    let targetPageEl: HTMLDivElement | null = null
+      // Find which page was clicked
+      let targetPageNumber: number | null = null
+      let targetPageEl: HTMLDivElement | null = null
 
-    for (const [pageNum, info] of pageViewportsRef.current) {
-      const rect = info.element.getBoundingClientRect()
-      if (
-        e.clientX >= rect.left && e.clientX <= rect.right &&
-        e.clientY >= rect.top && e.clientY <= rect.bottom
-      ) {
-        targetPageNumber = pageNum
-        targetPageEl = info.element
-        break
+      for (const [pageNum, info] of pageViewportsRef.current) {
+        const rect = info.element.getBoundingClientRect()
+        if (
+          e.clientX >= rect.left &&
+          e.clientX <= rect.right &&
+          e.clientY >= rect.top &&
+          e.clientY <= rect.bottom
+        ) {
+          targetPageNumber = pageNum
+          targetPageEl = info.element
+          break
+        }
       }
-    }
 
-    if (targetPageNumber === null || targetPageEl === null) return
+      if (targetPageNumber === null || targetPageEl === null) return
 
-    const info = pageViewportsRef.current.get(targetPageNumber)
-    if (!info) return
+      const info = pageViewportsRef.current.get(targetPageNumber)
+      if (!info) return
 
-    // Get click position relative to the page element
-    const pageRect = targetPageEl.getBoundingClientRect()
-    const clickX = e.clientX - pageRect.left
-    const clickY = e.clientY - pageRect.top
+      // Get click position relative to the page element
+      const pageRect = targetPageEl.getBoundingClientRect()
+      const clickX = e.clientX - pageRect.left
+      const clickY = e.clientY - pageRect.top
 
-    // Convert screen coordinates to PDF coordinates
-    // We need to reverse the viewport transformation (including zoom)
-    const pw = containerWidth ? (containerWidth - 32) * (useAppStore.getState().zoomLevel / 100) : 612
-    const defaultWidth = 612
-    const scale = pw / defaultWidth
-    const pdfX = clickX / scale
-    const pdfY = clickY / scale
+      // Convert screen coordinates to PDF coordinates
+      // We need to reverse the viewport transformation (including zoom)
+      const pw = containerWidth
+        ? (containerWidth - 32) * (useAppStore.getState().zoomLevel / 100)
+        : 612
+      const defaultWidth = 612
+      const scale = pw / defaultWidth
+      const pdfX = clickX / scale
+      const pdfY = clickY / scale
 
-    window.api.synctexInverse(filePath, targetPageNumber, pdfX, pdfY).then((result) => {
-      if (result) {
-        useAppStore.getState().requestJumpToLine(result.line, result.column || 1)
-      }
-    })
-  }, [containerWidth])
+      window.api.synctexInverse(filePath, targetPageNumber, pdfX, pdfY).then((result) => {
+        if (result) {
+          useAppStore.getState().requestJumpToLine(result.line, result.column || 1)
+        }
+      })
+    },
+    [containerWidth]
+  )
 
   // Show empty/error states only when there is no PDF data at all
   if (compileStatus === 'error' && !pdfBase64) {
@@ -235,10 +249,16 @@ function PreviewPane(): JSX.Element {
       style={{ position: 'relative' }}
     >
       <div className="zoom-toolbar">
-        <button onClick={zoomOut} disabled={zoomLevel <= 25} title="Zoom Out">-</button>
+        <button onClick={zoomOut} disabled={zoomLevel <= 25} title="Zoom Out">
+          -
+        </button>
         <span>{zoomLevel}%</span>
-        <button onClick={zoomIn} disabled={zoomLevel >= 400} title="Zoom In">+</button>
-        <button onClick={resetZoom} title="Fit Width">Fit Width</button>
+        <button onClick={zoomIn} disabled={zoomLevel >= 400} title="Zoom In">
+          +
+        </button>
+        <button onClick={resetZoom} title="Fit Width">
+          Fit Width
+        </button>
       </div>
       {compileStatus === 'compiling' && (
         <div className="preview-compiling-overlay">
@@ -255,9 +275,7 @@ function PreviewPane(): JSX.Element {
           />
         ))}
       </Document>
-      {highlightStyle && (
-        <div className="synctex-indicator" style={highlightStyle} />
-      )}
+      {highlightStyle && <div className="synctex-indicator" style={highlightStyle} />}
     </div>
   )
 }

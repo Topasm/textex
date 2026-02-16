@@ -22,8 +22,7 @@ function getTectonicPath(): string {
   const platform = process.platform
   const binName = platform === 'win32' ? 'tectonic.exe' : 'tectonic'
 
-  const platformDir =
-    platform === 'win32' ? 'win' : platform === 'darwin' ? 'mac' : 'linux'
+  const platformDir = platform === 'win32' ? 'win' : platform === 'darwin' ? 'mac' : 'linux'
 
   const basePath = isDev
     ? path.join(__dirname, '../../resources/bin', platformDir)
@@ -36,10 +35,7 @@ export interface CompileResult {
   pdfBase64: string
 }
 
-export async function compileLatex(
-  filePath: string,
-  win: BrowserWindow
-): Promise<CompileResult> {
+export async function compileLatex(filePath: string, win: BrowserWindow): Promise<CompileResult> {
   const binary = getTectonicPath()
   const workDir = path.dirname(filePath)
 

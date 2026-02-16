@@ -80,9 +80,11 @@ function parseSyncTex(pdfsyncBody: string): PdfSyncObject | undefined {
   const offsetPattern = /(X|Y) Offset:([0-9]+)/
   const openPagePattern = /\{([0-9]+)$/
   const closePagePattern = /\}([0-9]+)$/
-  const verticalBlockPattern = /\[([0-9]+),([0-9]+):(-?[0-9]+),(-?[0-9]+):(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)/
+  const verticalBlockPattern =
+    /\[([0-9]+),([0-9]+):(-?[0-9]+),(-?[0-9]+):(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)/
   const closeverticalBlockPattern = /\]$/
-  const horizontalBlockPattern = /\(([0-9]+),([0-9]+):(-?[0-9]+),(-?[0-9]+):(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)/
+  const horizontalBlockPattern =
+    /\(([0-9]+),([0-9]+):(-?[0-9]+),(-?[0-9]+):(-?[0-9]+),(-?[0-9]+),(-?[0-9]+)/
   const closehorizontalBlockPattern = /\)$/
   const elementBlockPattern = /(.)([0-9]+),([0-9]+):(-?[0-9]+),(-?[0-9]+)(:?(-?[0-9]+))?/
 
@@ -158,7 +160,12 @@ function parseSyncTex(pdfsyncBody: string): PdfSyncObject | undefined {
     // close V block
     match = line.match(closeverticalBlockPattern)
     if (match) {
-      if (currentElement !== undefined && isBlock(currentElement) && isBlock(currentElement.parent) && currentElement.parent.blocks !== undefined) {
+      if (
+        currentElement !== undefined &&
+        isBlock(currentElement) &&
+        isBlock(currentElement.parent) &&
+        currentElement.parent.blocks !== undefined
+      ) {
         currentElement.parent.blocks.push(currentElement)
         currentElement = currentElement.parent
       }
@@ -195,7 +202,12 @@ function parseSyncTex(pdfsyncBody: string): PdfSyncObject | undefined {
     // close H block
     match = line.match(closehorizontalBlockPattern)
     if (match) {
-      if (currentElement !== undefined && isBlock(currentElement) && isBlock(currentElement.parent) && currentElement.parent.blocks !== undefined) {
+      if (
+        currentElement !== undefined &&
+        isBlock(currentElement) &&
+        isBlock(currentElement.parent) &&
+        currentElement.parent.blocks !== undefined
+      ) {
         currentElement.parent.blocks.push(currentElement)
         currentElement = currentElement.parent
       }
@@ -231,10 +243,14 @@ function parseSyncTex(pdfsyncBody: string): PdfSyncObject | undefined {
         continue
       }
       if (blockNumberLine[elem.file.path] === undefined) {
-        blockNumberLine[elem.file.path] = Object.create(null) as { [inputLineNum: number]: { [pageNum: number]: Block[] } }
+        blockNumberLine[elem.file.path] = Object.create(null) as {
+          [inputLineNum: number]: { [pageNum: number]: Block[] }
+        }
       }
       if (blockNumberLine[elem.file.path][lineNumber] === undefined) {
-        blockNumberLine[elem.file.path][lineNumber] = Object.create(null) as { [pageNum: number]: Block[] }
+        blockNumberLine[elem.file.path][lineNumber] = Object.create(null) as {
+          [pageNum: number]: Block[]
+        }
       }
       if (blockNumberLine[elem.file.path][lineNumber][elem.page] === undefined) {
         blockNumberLine[elem.file.path][lineNumber][elem.page] = []
@@ -265,7 +281,17 @@ class Rectangle {
   readonly left: number
   readonly right: number
 
-  constructor({ top, bottom, left, right }: { top: number; bottom: number; left: number; right: number }) {
+  constructor({
+    top,
+    bottom,
+    left,
+    right
+  }: {
+    top: number
+    bottom: number
+    left: number
+    right: number
+  }) {
     this.top = top
     this.bottom = bottom
     this.left = left
@@ -273,15 +299,25 @@ class Rectangle {
   }
 
   include(rect: Rectangle): boolean {
-    return this.left <= rect.left && this.right >= rect.right && this.bottom >= rect.bottom && this.top <= rect.top
+    return (
+      this.left <= rect.left &&
+      this.right >= rect.right &&
+      this.bottom >= rect.bottom &&
+      this.top <= rect.top
+    )
   }
 
   distanceFromCenter(x: number, y: number): number {
-    return Math.sqrt(Math.pow((this.left + this.right) / 2 - x, 2) + Math.pow((this.bottom + this.top) / 2 - y, 2))
+    return Math.sqrt(
+      Math.pow((this.left + this.right) / 2 - x, 2) + Math.pow((this.bottom + this.top) / 2 - y, 2)
+    )
   }
 }
 
-function getBlocks(linePageBlocks: { [inputLineNum: number]: { [pageNum: number]: Block[] } }, lineNum: number): Block[] {
+function getBlocks(
+  linePageBlocks: { [inputLineNum: number]: { [pageNum: number]: Block[] } },
+  lineNum: number
+): Block[] {
   const pageBlocks = linePageBlocks[lineNum]
   const pageNums = Object.keys(pageBlocks)
   if (pageNums.length === 0) {
@@ -374,14 +410,19 @@ function findInputFilePath(filePath: string, pdfSyncObject: PdfSyncObject): stri
       if (path.resolve(inputFilePath) === resolvedPath) {
         return inputFilePath
       }
-    } catch { /* skip */ }
+    } catch {
+      /* skip */
+    }
   }
   return undefined
 }
 
 // --- Public API ---
 
-export async function forwardSync(texFile: string, line: number): Promise<SyncTeXForwardResult | null> {
+export async function forwardSync(
+  texFile: string,
+  line: number
+): Promise<SyncTeXForwardResult | null> {
   const pdfSyncObject = loadSyncTexForFile(texFile)
   if (!pdfSyncObject) {
     return null
@@ -393,20 +434,26 @@ export async function forwardSync(texFile: string, line: number): Promise<SyncTe
   }
 
   const linePageBlocks = pdfSyncObject.blockNumberLine[inputFilePath]
-  const lineNums = Object.keys(linePageBlocks).map(x => Number(x)).sort((a, b) => a - b)
+  const lineNums = Object.keys(linePageBlocks)
+    .map((x) => Number(x))
+    .sort((a, b) => a - b)
 
   if (lineNums.length === 0) {
     return null
   }
 
-  const i = lineNums.findIndex(x => x >= line)
+  const i = lineNums.findIndex((x) => x >= line)
   if (i === -1) {
     // Line is beyond all known lines — use the last one
     const l = lineNums[lineNums.length - 1]
     const blocks = getBlocks(linePageBlocks, l)
     if (blocks.length === 0) return null
     const c = toRect(blocks)
-    return { page: blocks[0].page, x: c.left + pdfSyncObject.offset.x, y: c.bottom + pdfSyncObject.offset.y }
+    return {
+      page: blocks[0].page,
+      x: c.left + pdfSyncObject.offset.x,
+      y: c.bottom + pdfSyncObject.offset.y
+    }
   }
 
   if (i === 0 || lineNums[i] === line) {
@@ -414,7 +461,11 @@ export async function forwardSync(texFile: string, line: number): Promise<SyncTe
     const blocks = getBlocks(linePageBlocks, l)
     if (blocks.length === 0) return null
     const c = toRect(blocks)
-    return { page: blocks[0].page, x: c.left + pdfSyncObject.offset.x, y: c.bottom + pdfSyncObject.offset.y }
+    return {
+      page: blocks[0].page,
+      x: c.left + pdfSyncObject.offset.x,
+      y: c.bottom + pdfSyncObject.offset.y
+    }
   }
 
   const line0 = lineNums[i - 1]
@@ -427,15 +478,26 @@ export async function forwardSync(texFile: string, line: number): Promise<SyncTe
 
   let bottom: number
   if (c0.bottom < c1.bottom) {
-    bottom = c0.bottom * (line1 - line) / (line1 - line0) + c1.bottom * (line - line0) / (line1 - line0)
+    bottom =
+      (c0.bottom * (line1 - line)) / (line1 - line0) +
+      (c1.bottom * (line - line0)) / (line1 - line0)
   } else {
     bottom = c1.bottom
   }
 
-  return { page: blocks1[0].page, x: c1.left + pdfSyncObject.offset.x, y: bottom + pdfSyncObject.offset.y }
+  return {
+    page: blocks1[0].page,
+    x: c1.left + pdfSyncObject.offset.x,
+    y: bottom + pdfSyncObject.offset.y
+  }
 }
 
-export async function inverseSync(texFile: string, page: number, x: number, y: number): Promise<SyncTeXInverseResult | null> {
+export async function inverseSync(
+  texFile: string,
+  page: number,
+  x: number,
+  y: number
+): Promise<SyncTeXInverseResult | null> {
   const pdfSyncObject = loadSyncTexForFile(texFile)
   if (!pdfSyncObject) {
     return null
@@ -471,7 +533,10 @@ export async function inverseSync(texFile: string, page: number, x: number, y: n
           }
           const rect = toRect(block)
           const distFromCenter = rect.distanceFromCenter(x0, y0)
-          if (record.rect.include(rect) || (distFromCenter < record.distanceFromCenter && !rect.include(record.rect))) {
+          if (
+            record.rect.include(rect) ||
+            (distFromCenter < record.distanceFromCenter && !rect.include(record.rect))
+          ) {
             record.input = fileName
             record.line = Number(lineNum)
             record.distanceFromCenter = distFromCenter

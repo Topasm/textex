@@ -12,6 +12,9 @@ function App(): JSX.Element {
   useAutoCompile()
   const { handleOpen, handleSave, handleSaveAs } = useFileOps()
   const toggleLogPanel = useAppStore((s) => s.toggleLogPanel)
+  const zoomIn = useAppStore((s) => s.zoomIn)
+  const zoomOut = useAppStore((s) => s.zoomOut)
+  const resetZoom = useAppStore((s) => s.resetZoom)
   const splitRatio = useAppStore((s) => s.splitRatio)
   const setSplitRatio = useAppStore((s) => s.setSplitRatio)
   const filePath = useAppStore((s) => s.filePath)
@@ -84,40 +87,61 @@ function App(): JSX.Element {
       } else if (e.key === 'l') {
         e.preventDefault()
         toggleLogPanel()
+      } else if (e.key === '=' || e.key === '+') {
+        e.preventDefault()
+        zoomIn()
+      } else if (e.key === '-') {
+        e.preventDefault()
+        zoomOut()
+      } else if (e.key === '0') {
+        e.preventDefault()
+        resetZoom()
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [handleOpen, handleSave, handleSaveAs, handleCompile, toggleLogPanel])
+  }, [
+    handleOpen,
+    handleSave,
+    handleSaveAs,
+    handleCompile,
+    toggleLogPanel,
+    zoomIn,
+    zoomOut,
+    resetZoom
+  ])
 
   const mainContentRef = useRef<HTMLDivElement>(null)
   const isDragging = useRef(false)
 
-  const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    isDragging.current = true
-    document.body.style.cursor = 'col-resize'
-    document.body.style.userSelect = 'none'
+  const handleDividerMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault()
+      isDragging.current = true
+      document.body.style.cursor = 'col-resize'
+      document.body.style.userSelect = 'none'
 
-    const onMouseMove = (moveEvent: MouseEvent): void => {
-      if (!isDragging.current || !mainContentRef.current) return
-      const rect = mainContentRef.current.getBoundingClientRect()
-      const ratio = (moveEvent.clientX - rect.left) / rect.width
-      const clamped = Math.min(0.8, Math.max(0.2, ratio))
-      setSplitRatio(clamped)
-    }
+      const onMouseMove = (moveEvent: MouseEvent): void => {
+        if (!isDragging.current || !mainContentRef.current) return
+        const rect = mainContentRef.current.getBoundingClientRect()
+        const ratio = (moveEvent.clientX - rect.left) / rect.width
+        const clamped = Math.min(0.8, Math.max(0.2, ratio))
+        setSplitRatio(clamped)
+      }
 
-    const onMouseUp = (): void => {
-      isDragging.current = false
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-      window.removeEventListener('mousemove', onMouseMove)
-      window.removeEventListener('mouseup', onMouseUp)
-    }
+      const onMouseUp = (): void => {
+        isDragging.current = false
+        document.body.style.cursor = ''
+        document.body.style.userSelect = ''
+        window.removeEventListener('mousemove', onMouseMove)
+        window.removeEventListener('mouseup', onMouseUp)
+      }
 
-    window.addEventListener('mousemove', onMouseMove)
-    window.addEventListener('mouseup', onMouseUp)
-  }, [setSplitRatio])
+      window.addEventListener('mousemove', onMouseMove)
+      window.addEventListener('mouseup', onMouseUp)
+    },
+    [setSplitRatio]
+  )
 
   const handleDividerDoubleClick = useCallback(() => {
     setSplitRatio(0.5)

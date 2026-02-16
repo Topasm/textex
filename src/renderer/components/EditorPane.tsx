@@ -55,11 +55,12 @@ function EditorPane(): JSX.Element {
         if (!model) return
 
         const markers: monacoEditor.IMarkerData[] = diagnostics.map((d) => ({
-          severity: d.severity === 'error'
-            ? monaco.MarkerSeverity.Error
-            : d.severity === 'warning'
-              ? monaco.MarkerSeverity.Warning
-              : monaco.MarkerSeverity.Info,
+          severity:
+            d.severity === 'error'
+              ? monaco.MarkerSeverity.Error
+              : d.severity === 'warning'
+                ? monaco.MarkerSeverity.Warning
+                : monaco.MarkerSeverity.Info,
           startLineNumber: d.line,
           startColumn: d.column ?? 1,
           endLineNumber: d.line,

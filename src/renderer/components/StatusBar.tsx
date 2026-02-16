@@ -25,12 +25,22 @@ function StatusBar(): JSX.Element {
         <span>{label}</span>
         {(errorCount > 0 || warnCount > 0) && (
           <span className="status-diagnostics">
-            {errorCount > 0 && <span className="status-errors">{'\u2716'} {errorCount}</span>}
-            {warnCount > 0 && <span className="status-warnings">{'\u26A0'} {warnCount}</span>}
+            {errorCount > 0 && (
+              <span className="status-errors">
+                {'\u2716'} {errorCount}
+              </span>
+            )}
+            {warnCount > 0 && (
+              <span className="status-warnings">
+                {'\u26A0'} {warnCount}
+              </span>
+            )}
           </span>
         )}
       </div>
-      <div>Ln {cursorLine}, Col {cursorColumn}</div>
+      <div>
+        Ln {cursorLine}, Col {cursorColumn}
+      </div>
     </div>
   )
 }
