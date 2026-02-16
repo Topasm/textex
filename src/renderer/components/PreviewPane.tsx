@@ -29,6 +29,7 @@ function PreviewPane(): JSX.Element {
   const [ctrlHeld, setCtrlHeld] = useState(false)
   const pageViewportsRef = useRef<Map<number, PageViewportInfo>>(new Map())
   const [highlightStyle, setHighlightStyle] = useState<React.CSSProperties | null>(null)
+  const [pdfError, setPdfError] = useState<string | null>(null)
 
   // Track Ctrl key for crosshair cursor
   useEffect(() => {
@@ -78,6 +79,7 @@ function PreviewPane(): JSX.Element {
 
   const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
     setNumPages(numPages)
+    setPdfError(null)
     pageViewportsRef.current.clear()
     // Restore scroll position after new PDF renders
     requestAnimationFrame(() => {
@@ -85,6 +87,12 @@ function PreviewPane(): JSX.Element {
         containerRef.current.scrollTop = scrollPositionRef.current
       }
     })
+  }, [])
+
+  const onDocumentLoadError = useCallback((error: Error) => {
+    setPdfError(error.message || 'Unknown PDF loading error')
+    useAppStore.getState().appendLog(`PDF viewer error: ${error.message}\n`)
+    useAppStore.getState().setLogPanelOpen(true)
   }, [])
 
   // Capture viewport info when each page renders
@@ -265,7 +273,7 @@ function PreviewPane(): JSX.Element {
           <div className="preview-spinner" />
         </div>
       )}
-      <Document file={pdfData} onLoadSuccess={onDocumentLoadSuccess}>
+      <Document file={pdfData} onLoadSuccess={onDocumentLoadSuccess} onLoadError={onDocumentLoadError}>
         {Array.from({ length: numPages }, (_, i) => (
           <Page
             key={`page_${i + 1}`}
@@ -275,6 +283,12 @@ function PreviewPane(): JSX.Element {
           />
         ))}
       </Document>
+      {pdfError && (
+        <div className="preview-center preview-error" style={{ position: 'absolute', top: 40, left: 0, right: 0 }}>
+          <p>Failed to load PDF: {pdfError}</p>
+          <p>Check the log panel for details.</p>
+        </div>
+      )}
       {highlightStyle && <div className="synctex-indicator" style={highlightStyle} />}
     </div>
   )
