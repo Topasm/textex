@@ -8,7 +8,11 @@ const defaultProps = {
   onSave: vi.fn(),
   onSaveAs: vi.fn(),
   onCompile: vi.fn(),
-  onToggleLog: vi.fn()
+  onToggleLog: vi.fn(),
+  onOpenFolder: vi.fn(),
+  onToggleTheme: vi.fn(),
+  onNewFromTemplate: vi.fn(),
+  onExport: vi.fn()
 }
 
 beforeEach(() => {
@@ -23,10 +27,13 @@ beforeEach(() => {
 describe('Toolbar', () => {
   it('renders all action buttons', () => {
     render(<Toolbar {...defaultProps} />)
-    expect(screen.getByText(/Open/)).toBeInTheDocument()
+    expect(screen.getByTitle(/Open file/)).toBeInTheDocument()
+    expect(screen.getByTitle(/Open folder/)).toBeInTheDocument()
     expect(screen.getByText(/Save As/)).toBeInTheDocument()
     expect(screen.getByText(/Compile/)).toBeInTheDocument()
     expect(screen.getByText(/Log/)).toBeInTheDocument()
+    expect(screen.getByText(/Template/)).toBeInTheDocument()
+    expect(screen.getByTitle(/Toggle theme/)).toBeInTheDocument()
   })
 
   it('shows Untitled when no file is open', () => {

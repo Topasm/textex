@@ -1,3 +1,4 @@
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useAppStore } from '../store/useAppStore'
 
 interface ToolbarProps {
@@ -6,19 +7,70 @@ interface ToolbarProps {
   onSaveAs: () => void
   onCompile: () => void
   onToggleLog: () => void
+  onOpenFolder: () => void
+  onToggleTheme: () => void
+  onNewFromTemplate: () => void
+  onExport: (format: string) => void
 }
 
-function Toolbar({ onOpen, onSave, onSaveAs, onCompile, onToggleLog }: ToolbarProps): JSX.Element {
+const exportFormats = [
+  { name: 'HTML', ext: 'html' },
+  { name: 'Word (DOCX)', ext: 'docx' },
+  { name: 'OpenDocument (ODT)', ext: 'odt' },
+  { name: 'EPUB', ext: 'epub' }
+]
+
+function Toolbar({
+  onOpen,
+  onSave,
+  onSaveAs,
+  onCompile,
+  onToggleLog,
+  onOpenFolder,
+  onToggleTheme,
+  onNewFromTemplate,
+  onExport
+}: ToolbarProps): JSX.Element {
   const filePath = useAppStore((s) => s.filePath)
   const isDirty = useAppStore((s) => s.isDirty)
   const compileStatus = useAppStore((s) => s.compileStatus)
+  const theme = useAppStore((s) => s.theme)
+
+  const [isExportOpen, setIsExportOpen] = useState(false)
+  const exportRef = useRef<HTMLDivElement>(null)
 
   const fileName = filePath ? filePath.split(/[\\/]/).pop() : 'Untitled'
+
+  const themeLabel =
+    theme === 'dark' ? 'Dark' : theme === 'light' ? 'Light' : 'High Contrast'
+
+  const handleExportSelect = useCallback(
+    (ext: string) => {
+      onExport(ext)
+      setIsExportOpen(false)
+    },
+    [onExport]
+  )
+
+  // Close export dropdown when clicking outside
+  useEffect(() => {
+    if (!isExportOpen) return
+    const handleClickOutside = (e: MouseEvent): void => {
+      if (exportRef.current && !exportRef.current.contains(e.target as Node)) {
+        setIsExportOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isExportOpen])
 
   return (
     <div className="toolbar">
       <button onClick={onOpen} title="Open file (Ctrl+O)">
         Open<kbd>Ctrl+O</kbd>
+      </button>
+      <button onClick={onOpenFolder} title="Open folder">
+        Open Folder
       </button>
       <button
         className={isDirty ? 'save-btn-dirty' : undefined}
@@ -30,6 +82,9 @@ function Toolbar({ onOpen, onSave, onSaveAs, onCompile, onToggleLog }: ToolbarPr
       <button onClick={onSaveAs} title="Save As (Ctrl+Shift+S)">
         Save As<kbd>Ctrl+Shift+S</kbd>
       </button>
+
+      <span className="toolbar-separator" />
+
       <button
         className="compile-btn"
         onClick={onCompile}
@@ -42,6 +97,38 @@ function Toolbar({ onOpen, onSave, onSaveAs, onCompile, onToggleLog }: ToolbarPr
       <button onClick={onToggleLog} title="Toggle log panel (Ctrl+L)">
         Log<kbd>Ctrl+L</kbd>
       </button>
+
+      <span className="toolbar-separator" />
+
+      <button onClick={onNewFromTemplate} title="New from template (Ctrl+Shift+N)">
+        Template
+      </button>
+
+      <div className="export-dropdown" ref={exportRef}>
+        <button
+          onClick={() => setIsExportOpen(!isExportOpen)}
+          title="Export document"
+          disabled={!filePath}
+        >
+          Export {'\u25BE'}
+        </button>
+        {isExportOpen && (
+          <div className="export-dropdown-menu">
+            {exportFormats.map((fmt) => (
+              <button key={fmt.ext} onClick={() => handleExportSelect(fmt.ext)}>
+                {fmt.name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <span className="toolbar-separator" />
+
+      <button onClick={onToggleTheme} title="Toggle theme">
+        Theme: {themeLabel}
+      </button>
+
       <span className="file-name">
         {isDirty && <span className="dirty-dot" />}
         {fileName}

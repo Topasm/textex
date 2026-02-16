@@ -27,10 +27,13 @@
   "license": "MIT",
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
+    "electron-updater": "^6.3.9",
+    "nspell": "^2.1.5",
     "pdfjs-dist": "^5.4.624",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-pdf": "^10.3.0",
+    "simple-git": "^3.27.0",
     "zustand": "^5.0.11"
   },
   "devDependencies": {

@@ -13,6 +13,7 @@ export function useFileOps(): FileOps {
   const setDirty = useAppStore((s) => s.setDirty)
   const appendLog = useAppStore((s) => s.appendLog)
   const setLogPanelOpen = useAppStore((s) => s.setLogPanelOpen)
+  const openFileInTab = useAppStore((s) => s.openFileInTab)
 
   const handleOpen = useCallback(async () => {
     const result = await window.api.openFile()
@@ -20,8 +21,9 @@ export function useFileOps(): FileOps {
       setContent(result.content)
       setFilePath(result.filePath)
       setDirty(false)
+      openFileInTab(result.filePath, result.content)
     }
-  }, [setContent, setFilePath, setDirty])
+  }, [setContent, setFilePath, setDirty, openFileInTab])
 
   const handleSave = useCallback(async () => {
     const { content, filePath } = useAppStore.getState()

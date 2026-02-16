@@ -5,6 +5,10 @@ function StatusBar(): JSX.Element {
   const cursorLine = useAppStore((s) => s.cursorLine)
   const cursorColumn = useAppStore((s) => s.cursorColumn)
   const diagnostics = useAppStore((s) => s.diagnostics)
+  const isGitRepo = useAppStore((s) => s.isGitRepo)
+  const gitBranch = useAppStore((s) => s.gitBranch)
+  const spellCheckEnabled = useAppStore((s) => s.spellCheckEnabled)
+  const setSpellCheckEnabled = useAppStore((s) => s.setSpellCheckEnabled)
 
   const statusConfig = {
     idle: { dotClass: 'green', label: 'Ready' },
@@ -37,9 +41,31 @@ function StatusBar(): JSX.Element {
             )}
           </span>
         )}
+        {isGitRepo && gitBranch && (
+          <span className="status-git-branch" title={`Git branch: ${gitBranch}`}>
+            {'\u2387'} {gitBranch}
+          </span>
+        )}
       </div>
-      <div>
-        Ln {cursorLine}, Col {cursorColumn}
+      <div className="status-right">
+        <span
+          className="status-spellcheck"
+          onClick={() => setSpellCheckEnabled(!spellCheckEnabled)}
+          title="Toggle spell check"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              setSpellCheckEnabled(!spellCheckEnabled)
+            }
+          }}
+        >
+          Spell: {spellCheckEnabled ? 'On' : 'Off'}
+        </span>
+        <span>
+          Ln {cursorLine}, Col {cursorColumn}
+        </span>
       </div>
     </div>
   )

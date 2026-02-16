@@ -11,9 +11,18 @@ extraResources:
     to: "bin"
     filter:
       - "**/*"
+  - from: "resources/dictionaries"
+    to: "dictionaries"
+    filter:
+      - "**/*"
 
 files:
   - "out/**/*"
+
+publish:
+  - provider: github
+    owner: textex
+    repo: textex
 
 win:
   icon: build/icon.ico

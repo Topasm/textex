@@ -17,7 +17,30 @@ export function useAutoCompile(): void {
 
     clearTimeout(timerRef.current)
     timerRef.current = setTimeout(async () => {
-      // Save before compiling
+      // Save ALL dirty files before compiling (multi-file awareness)
+      const { openFiles } = useAppStore.getState()
+      for (const [path, fileData] of Object.entries(openFiles)) {
+        if (fileData.isDirty) {
+          try {
+            await window.api.saveFile(fileData.content, path)
+            // Mark this file as clean in the store
+            const current = useAppStore.getState().openFiles
+            if (current[path]) {
+              const updated = { ...current }
+              updated[path] = { ...updated[path], isDirty: false }
+              useAppStore.setState({ openFiles: updated })
+            }
+          } catch (err: unknown) {
+            const saveErr = err instanceof Error ? err.message : String(err)
+            appendLog(`Save failed for ${path}, skipping compile: ${saveErr}`)
+            setCompileStatus('error')
+            setLogPanelOpen(true)
+            return
+          }
+        }
+      }
+
+      // Save the active file content (which may have changed since openFiles snapshot)
       try {
         await window.api.saveFile(content, filePath)
         setDirty(false)

@@ -1,10 +1,22 @@
 import { app, BrowserWindow, shell } from 'electron'
 import path from 'path'
 import { registerIpcHandlers } from './ipc'
+import { loadSettings } from './settings'
 
 let mainWindow: BrowserWindow | null = null
 
-function createWindow(): void {
+function getBackgroundColor(theme: string): string {
+  switch (theme) {
+    case 'light':
+      return '#ffffff'
+    case 'high-contrast':
+      return '#000000'
+    default:
+      return '#1e1e1e'
+  }
+}
+
+function createWindow(backgroundColor: string): void {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -17,7 +29,7 @@ function createWindow(): void {
       contextIsolation: true,
       sandbox: false
     },
-    backgroundColor: '#1e1e1e'
+    backgroundColor
   })
 
   registerIpcHandlers(mainWindow)
@@ -39,14 +51,49 @@ function createWindow(): void {
   } else {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'))
   }
+
+  // Set up auto-update events, forwarding them to the renderer
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { autoUpdater } = require('electron-updater')
+
+    autoUpdater.on('checking-for-update', () => {
+      mainWindow?.webContents.send('update:checking')
+    })
+
+    autoUpdater.on('update-available', (info: { version: string }) => {
+      mainWindow?.webContents.send('update:available', info)
+    })
+
+    autoUpdater.on('update-not-available', () => {
+      mainWindow?.webContents.send('update:not-available')
+    })
+
+    autoUpdater.on('download-progress', (progress: { percent: number }) => {
+      mainWindow?.webContents.send('update:download-progress', progress)
+    })
+
+    autoUpdater.on('update-downloaded', (info: { version: string }) => {
+      mainWindow?.webContents.send('update:downloaded', info)
+    })
+
+    autoUpdater.on('error', (err: Error) => {
+      mainWindow?.webContents.send('update:error', err.message)
+    })
+  } catch {
+    // electron-updater is not installed — auto-update disabled
+  }
 }
 
-app.whenReady().then(() => {
-  createWindow()
+app.whenReady().then(async () => {
+  const settings = await loadSettings()
+  const backgroundColor = getBackgroundColor(settings.theme)
+
+  createWindow(backgroundColor)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow()
+      createWindow(backgroundColor)
     }
   })
 })
