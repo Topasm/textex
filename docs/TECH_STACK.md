@@ -25,14 +25,13 @@
 | `@types/react` | 19.2.14 | TypeScript types for React |
 | `@types/react-dom` | 19.2.3 | TypeScript types for ReactDOM |
 
-## Not Yet Installed (Post-MVP)
+## Planned Dependencies (Not Yet Installed)
 
 | Package | Purpose |
 |---|---|
-| `eslint` + `@typescript-eslint/*` | Linting |
-| `prettier` | Code formatting |
-| `vitest` | Unit tests (Vite-native) |
-| `@testing-library/react` | Component tests |
+| `commander` | CLI argument parsing (`textex compile`, `textex init`, etc.) |
+| `chokidar` | File watching for CLI `--watch` mode |
+| `@modelcontextprotocol/sdk` | MCP server framework (stdio transport) |
 
 ## Version Constraints
 

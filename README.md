@@ -20,6 +20,8 @@ A self-contained desktop LaTeX editor built on Electron. Split-pane interface wi
 - **Git integration** — view status, stage files, and commit directly from a sidebar panel
 - **Spell checker** — inline spell checking with quick-fix suggestions
 - **Export formats** — export to HTML, DOCX, ODT, and EPUB via Pandoc
+- **CLI tools** (planned) — headless compile, init, export, and template listing via `textex` command
+- **MCP server** (planned) — `compile_latex` and `get_compile_log` tools for AI integration
 
 ## Download
 
@@ -88,6 +90,32 @@ npm run package:win
 
 Requires Node.js 20+ and a Tectonic binary in `resources/bin/{linux,mac,win}/`. The Linux binary is included; see [PACKAGING.md](docs/PACKAGING.md) for downloading Windows/macOS binaries.
 
+### CLI (planned)
+
+```bash
+# Compile a .tex file to PDF
+textex compile paper.tex
+
+# Compile with watch mode
+textex compile paper.tex --watch
+
+# Scaffold a new project from a template
+textex init article
+
+# Export to another format
+textex export paper.tex --format docx
+
+# List available templates
+textex templates
+```
+
+### MCP Server (planned)
+
+```bash
+# Start the MCP server (stdio transport)
+npm run mcp
+```
+
 ## Architecture
 
 Three-process Electron app with strict context isolation:
@@ -95,6 +123,8 @@ Three-process Electron app with strict context isolation:
 - **Main process** — window management, file I/O, Tectonic compilation (`src/main/`)
 - **Preload** — secure context bridge exposing `window.api` (`src/preload/`)
 - **Renderer** — React UI with Zustand state management (`src/renderer/`)
+- **CLI** (planned) — headless commands via `src/cli/`, delegates to `src/shared/`
+- **MCP server** (planned) — stdio MCP server via `src/mcp/`, delegates to `src/shared/`
 
 See [`docs/`](docs/) for detailed documentation:
 
@@ -120,6 +150,9 @@ See [`docs/`](docs/) for detailed documentation:
 - **electron-updater** — auto-updates
 - **simple-git** — Git integration
 - **nspell** — spell checking
+- **commander** (planned) — CLI argument parsing
+- **chokidar** (planned) — file watching for CLI `--watch` mode
+- **@modelcontextprotocol/sdk** (planned) — MCP server framework
 
 ## License
 

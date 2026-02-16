@@ -3,9 +3,15 @@
   "version": "1.0.0",
   "description": "A self-contained desktop LaTeX editor built on Electron",
   "main": "./out/main/main.js",
+  "bin": {
+    "textex": "./out/cli/cli/index.js"
+  },
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
+    "build:cli": "tsc -p tsconfig.cli.json",
+    "build:mcp": "tsc -p tsconfig.mcp.json",
+    "mcp": "node out/mcp/mcp/server.js",
     "preview": "electron-vite preview",
     "package:win": "electron-vite build && electron-builder --win",
     "package:mac": "electron-vite build && electron-builder --mac",
@@ -26,7 +32,10 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.26.0",
     "@monaco-editor/react": "^4.7.0",
+    "chokidar": "^5.0.0",
+    "commander": "^14.0.3",
     "electron-updater": "^6.3.9",
     "nspell": "^2.1.5",
     "pdfjs-dist": "^5.4.624",
@@ -34,6 +43,7 @@
     "react-dom": "^19.2.4",
     "react-pdf": "^10.3.0",
     "simple-git": "^3.27.0",
+    "zod": "^4.3.6",
     "zustand": "^5.0.11"
   },
   "devDependencies": {

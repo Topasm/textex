@@ -6,3 +6,4 @@ dist/
 resources/bin/win/
 resources/bin/mac/
 resources/bin/linux/tectonic
+test/

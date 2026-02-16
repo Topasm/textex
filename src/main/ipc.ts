@@ -30,10 +30,20 @@ function validateFilePath(filePath: unknown): string {
 
 let directoryWatcher: ReturnType<typeof fs.watch> | null = null
 
+let currentWindow: BrowserWindow | null = null
+let handlersRegistered = false
+
 export function registerIpcHandlers(win: BrowserWindow): void {
+  currentWindow = win
+
+  if (handlersRegistered) {
+    return
+  }
+  handlersRegistered = true
+
   // ---- File System ----
   ipcMain.handle('fs:open', async () => {
-    const result = await dialog.showOpenDialog(win, {
+    const result = await dialog.showOpenDialog(currentWindow!, {
       properties: ['openFile'],
       filters: [
         { name: 'LaTeX Files', extensions: ['tex'] },
@@ -57,7 +67,7 @@ export function registerIpcHandlers(win: BrowserWindow): void {
   })
 
   ipcMain.handle('fs:save-as', async (_event, content: string) => {
-    const result = await dialog.showSaveDialog(win, {
+    const result = await dialog.showSaveDialog(currentWindow!, {
       defaultPath: 'untitled.tex',
       filters: [
         { name: 'LaTeX Files', extensions: ['tex'] },
@@ -80,7 +90,7 @@ export function registerIpcHandlers(win: BrowserWindow): void {
   })
 
   ipcMain.handle('fs:open-directory', async () => {
-    const result = await dialog.showOpenDialog(win, {
+    const result = await dialog.showOpenDialog(currentWindow!, {
       properties: ['openDirectory']
     })
     if (result.canceled || result.filePaths.length === 0) {
@@ -120,7 +130,7 @@ export function registerIpcHandlers(win: BrowserWindow): void {
         try {
           for await (const event of watcher) {
             if (event.filename) {
-              win.webContents.send('fs:directory-changed', {
+              currentWindow?.webContents.send('fs:directory-changed', {
                 type: event.eventType,
                 filename: event.filename
               })
@@ -144,7 +154,7 @@ export function registerIpcHandlers(win: BrowserWindow): void {
   // ---- LaTeX Compilation ----
   ipcMain.handle('latex:compile', async (_event, filePath: string) => {
     const validPath = validateFilePath(filePath)
-    return compileLatex(validPath, win)
+    return compileLatex(validPath, currentWindow!)
   })
 
   ipcMain.handle('latex:cancel', () => {
@@ -271,28 +281,19 @@ export function registerIpcHandlers(win: BrowserWindow): void {
   })
 
   // ---- Export ----
-  ipcMain.handle(
-    'export:convert',
-    async (_event, inputPath: string, format: string) => {
-      const validInput = validateFilePath(inputPath)
-      const ext =
-        format === 'html'
-          ? 'html'
-          : format === 'docx'
-            ? 'docx'
-            : format === 'odt'
-              ? 'odt'
-              : 'epub'
-      const result = await dialog.showSaveDialog(win, {
-        defaultPath: inputPath.replace(/\.tex$/, `.${ext}`),
-        filters: [{ name: format.toUpperCase(), extensions: [ext] }]
-      })
-      if (result.canceled || !result.filePath) {
-        return null
-      }
-      return exportDocument(validInput, result.filePath, format)
+  ipcMain.handle('export:convert', async (_event, inputPath: string, format: string) => {
+    const validInput = validateFilePath(inputPath)
+    const ext =
+      format === 'html' ? 'html' : format === 'docx' ? 'docx' : format === 'odt' ? 'odt' : 'epub'
+    const result = await dialog.showSaveDialog(currentWindow!, {
+      defaultPath: inputPath.replace(/\.tex$/, `.${ext}`),
+      filters: [{ name: format.toUpperCase(), extensions: [ext] }]
+    })
+    if (result.canceled || !result.filePath) {
+      return null
     }
-  )
+    return exportDocument(validInput, result.filePath, format)
+  })
 
   ipcMain.handle('export:formats', () => {
     return getPandocFormats()

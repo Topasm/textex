@@ -17,6 +17,8 @@ TextEx — a self-contained desktop LaTeX editor built on Electron. Split-pane i
 - `npm run lint:fix` — Auto-fix ESLint issues
 - `npm run format` — Format code with Prettier
 - `npm run format:check` — Check formatting without modifying files
+- `textex compile <file.tex>` — (planned) Headless LaTeX compilation via CLI
+- `npm run mcp` — (planned) Start the MCP server (stdio transport)
 
 ## Architecture
 
@@ -35,6 +37,15 @@ Main Process (src/main/)          Preload (src/preload/)       Renderer (src/ren
                                                                   ├── LogPanel
                                                                   ├── StatusBar (git branch, spell toggle)
                                                                   └── TemplateGallery (modal)
+
+CLI (src/cli/) [planned]          MCP Server (src/mcp/) [planned]
+  index.ts — commander setup        server.ts — stdio MCP server
+  commands/compile.ts                 compile_latex tool
+  commands/init.ts                    get_compile_log tool
+  commands/export.ts                     |
+  commands/templates.ts                  +-----> src/shared/
+       |                                         compiler.ts — Tectonic spawn (no Electron deps)
+       +-------> src/shared/                     pandoc.ts — export logic (no Electron deps)
 ```
 
 **IPC flow:** Renderer calls `window.api.*` → preload forwards via `ipcRenderer.invoke` → main process handles in `ipc.ts`. Compile logs stream back via `latex:log` channel.
@@ -53,3 +64,4 @@ Main Process (src/main/)          Preload (src/preload/)       Renderer (src/ren
 - Styling: CSS custom properties for theming (dark/light/high-contrast) in `src/renderer/styles/index.css`
 - Build outputs land in `out/main/`, `out/preload/`, `out/renderer/`
 - Detailed design docs are in `docs/` (architecture, IPC spec, compiler service, UI spec, packaging)
+- `src/shared/` (planned) — pure Node.js logic (compiler, pandoc) with no Electron imports; shared by `src/main/`, `src/cli/`, and `src/mcp/`

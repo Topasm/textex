@@ -45,6 +45,30 @@ Runs inside a sandboxed Chromium tab.
   cache (`~/.cache/Tectonic` on Linux/macOS, `%LOCALAPPDATA%\Tectonic` on Windows).
 - After the initial cache is populated, compilation works fully offline.
 
+### CLI Process (Planned)
+
+A standalone Node.js entry point (`src/cli/index.ts`) that reuses shared compiler
+and pandoc logic without any Electron dependencies.
+
+| Responsibility | Detail |
+|---|---|
+| Argument parsing | `commander` routes subcommands (compile, init, export, templates) |
+| Compilation | Delegates to `src/shared/compiler.ts` (no `BrowserWindow`, no `app`) |
+| File watching | `chokidar` for `--watch` mode |
+| Export | Delegates to `src/shared/pandoc.ts` |
+
+### MCP Server (Planned)
+
+A stdio-based [Model Context Protocol](https://modelcontextprotocol.io/) server
+(`src/mcp/server.ts`) that exposes TextEx compilation as AI-callable tools.
+
+| Responsibility | Detail |
+|---|---|
+| Transport | stdio (stdin/stdout JSON-RPC) via `@modelcontextprotocol/sdk` |
+| `compile_latex` tool | Accepts file path, returns `{ success, pdfPath?, error? }` |
+| `get_compile_log` tool | Returns last compile's stdout/stderr |
+| Compilation | Delegates to `src/shared/compiler.ts` |
+
 ---
 
 ## IPC Contract
@@ -98,6 +122,49 @@ All IPC channels and their payloads:
                                           Silently ignored
 ```
 
+### CLI Compile (Planned)
+
+```
+ textex compile <file.tex>
+        |
+        v
+ Resolve Tectonic binary (src/shared/compiler.ts)
+   - No app.isPackaged — uses env var or CLI flag for dev/prod detection
+        |
+        v
+ Spawn tectonic -X compile <file>
+        |                       |
+        v                       v
+ stdout/stderr              exit code
+ printed to terminal        0 = success, non-zero = error
+ (unless --quiet)
+        |
+        v
+ --watch? Re-run on file change (chokidar)
+```
+
+### MCP Compile (Planned)
+
+```
+ AI client sends JSON-RPC request
+        |
+        v
+ MCP server (src/mcp/server.ts) receives tool call
+        |
+        +-- compile_latex: file path
+        |       |
+        |       v
+        |   src/shared/compiler.ts — spawn Tectonic
+        |       |
+        |       v
+        |   Return { success: true, pdfPath } or { success: false, error }
+        |
+        +-- get_compile_log:
+                |
+                v
+            Return buffered stdout/stderr from last compile
+```
+
 ---
 
 ## Security Model
@@ -134,3 +201,9 @@ process.platform
   +- darwin -> platformDir: mac, binary: tectonic
   +- linux  -> platformDir: linux, binary: tectonic
 ```
+
+**CLI / MCP note (planned):** The shared compiler (`src/shared/compiler.ts`) needs
+a third resolution mode that does not depend on `app.isPackaged` (which requires
+Electron). The dev/prod flag will be passed in as a parameter or resolved from an
+environment variable, allowing the same binary resolution logic to work in
+Electron, CLI, and MCP contexts.

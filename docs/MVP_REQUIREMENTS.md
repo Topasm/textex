@@ -82,6 +82,8 @@ These are explicitly **out of scope** for the first release:
 - [x] Export to other formats (HTML, DOCX via Pandoc).
 - [x] ESLint + Prettier setup.
 - [x] Unit tests (Vitest + @testing-library/react).
+- [ ] CLI tools (compile, init, export, templates) for headless operation and testing.
+- [ ] MCP server (compile_latex, get_compile_log) for AI tool integration.
 
 ---
 

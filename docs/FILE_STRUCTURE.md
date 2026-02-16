@@ -53,6 +53,21 @@
 |       +-- styles/
 |           +-- index.css          # Plain CSS -- VS Code dark theme, flexbox layout
 |
+|   +-- cli/                         # CLI entry point (planned)
+|   |   +-- index.ts                 # commander setup, command routing
+|   |   +-- commands/
+|   |       +-- compile.ts           # textex compile <file.tex>
+|   |       +-- init.ts              # textex init [template]
+|   |       +-- export.ts            # textex export <file.tex> --format <fmt>
+|   |       +-- templates.ts         # textex templates
+|   |
+|   +-- mcp/                         # MCP server (planned)
+|   |   +-- server.ts                # stdio MCP server, tool definitions
+|   |
+|   +-- shared/                      # Shared logic, no Electron deps (planned)
+|       +-- compiler.ts              # Tectonic binary resolution + spawn
+|       +-- pandoc.ts                # Pandoc export
+|
 +-- out/                           # Build output (gitignored)
 |   +-- main/index.js              # Compiled main process
 |   +-- preload/index.js           # Compiled preload script
@@ -86,6 +101,18 @@
 
 - **`store/`** -- Single Zustand store. If the store grows large, split into
   slices (e.g., `createFileSlice`, `createCompilerSlice`).
+
+- **`src/cli/`** (planned) -- Standalone CLI entry point. Uses `commander` for
+  arg parsing. Imports only from `src/shared/`, never from `src/main/` or
+  `src/renderer/`. No Electron dependencies.
+
+- **`src/mcp/`** (planned) -- MCP server entry point. Uses
+  `@modelcontextprotocol/sdk` with stdio transport. Imports only from
+  `src/shared/`.
+
+- **`src/shared/`** (planned) -- Pure Node.js logic extracted from `src/main/`.
+  No Electron imports (`app`, `BrowserWindow`, `ipcMain`). Shared by
+  `src/main/`, `src/cli/`, and `src/mcp/`.
 
 ## Deviations from Original Plan
 

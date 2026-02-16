@@ -174,6 +174,8 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
 > **Note:** Integration testing requires a display server (X11/Wayland) to run
 > Electron. These tests should be performed on a desktop environment.
+> **See Phase 10 (CLI)** — the CLI enables headless compilation testing without
+> a display server, partially unblocking this phase.
 
 ---
 
@@ -194,6 +196,8 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [ ] **8.4** Smoke test the packaged app on a clean machine
   - **Blocked:** Cannot run AppImage on headless server (no display server).
     Requires a desktop environment with X11/Wayland to launch and test.
+  - **See Phase 10 (CLI)** — the CLI enables headless smoke testing of
+    compilation without launching the GUI.
 - [x] **8.5** Verify binary path resolution works in production mode
   - `getTectonicPath()` in `src/main/compiler.ts` confirmed correct:
     dev mode uses `__dirname/../../resources/bin/{platform}/tectonic`,
@@ -261,6 +265,36 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
 ---
 
+## Phase 10: CLI (Planned)
+
+- [ ] **10.1** Create `src/cli/index.ts` with `commander` for arg parsing
+- [ ] **10.2** Add `bin` field to `package.json`, add build step for CLI
+- [ ] **10.3** Extract shared compiler logic to `src/shared/compiler.ts`
+  - Remove `app.isPackaged` and `BrowserWindow` deps from current `src/main/compiler.ts`
+  - Parameterize dev/prod detection (pass flag or env var instead of `!app.isPackaged`)
+  - Replace `win.webContents.send('latex:log', text)` with generic callback `(text: string) => void`
+- [ ] **10.4** Extract shared pandoc logic to `src/shared/pandoc.ts`
+  - Remove `app` dep from current `src/main/pandoc.ts`
+- [ ] **10.5** `textex compile <file.tex>` — flags: `--output <dir>`, `--watch`, `--quiet`
+- [ ] **10.6** `textex init [template]` — scaffold from 5 built-in templates (reuse `src/renderer/data/templates.ts`)
+- [ ] **10.7** `textex export <file.tex> --format <html|docx|odt|epub>` — reuse shared pandoc logic
+- [ ] **10.8** `textex templates` — list available templates to stdout
+- [ ] **10.9** Watch mode (`--watch`) via `chokidar`
+- [ ] **10.10** CLI unit tests
+  - Unblocks headless testing — cross-ref Phase 7 and Phase 8.4
+
+---
+
+## Phase 11: MCP Server (Planned)
+
+- [ ] **11.1** Create `src/mcp/server.ts` with `@modelcontextprotocol/sdk`, stdio transport
+- [ ] **11.2** `compile_latex` tool — accepts file path, returns `{ success, pdfPath?, error? }`
+- [ ] **11.3** `get_compile_log` tool — returns last compile's stdout/stderr
+- [ ] **11.4** Add npm script `mcp` to start the server
+- [ ] **11.5** Document MCP config for Claude Desktop / other clients
+
+---
+
 ## Dependency Install Checklist
 
 ```bash
@@ -268,4 +302,7 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
 npm install electron react react-dom @monaco-editor/react react-pdf zustand \
   pdfjs-dist electron-vite electron-builder typescript @types/react \
   @types/react-dom @vitejs/plugin-react vite nspell simple-git electron-updater
+
+# Planned (Phase 10 + 11)
+npm install commander chokidar @modelcontextprotocol/sdk
 ```
