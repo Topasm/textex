@@ -126,6 +126,10 @@ contextBridge.exposeInMainWorld('api', {
   scanLabels: (projectRoot: string) =>
     ipcRenderer.invoke('latex:scan-labels', projectRoot),
 
+  // Package Data
+  loadPackageData: (packageNames: string[]) =>
+    ipcRenderer.invoke('latex:load-package-data', packageNames),
+
   // Export
   exportDocument: (inputPath: string, format: string) =>
     ipcRenderer.invoke('export:convert', inputPath, format),

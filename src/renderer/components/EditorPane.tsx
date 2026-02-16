@@ -1,4 +1,4 @@
-import Editor, { OnMount } from '@monaco-editor/react'
+import Editor, { BeforeMount, OnMount } from '@monaco-editor/react'
 import { useEffect, useRef } from 'react'
 import { useAppStore } from '../store/useAppStore'
 import { snippets } from '../data/snippets'
@@ -46,7 +46,7 @@ function findCommandArgAtPosition(
 
 function getMonacoTheme(theme: string): string {
   switch (theme) {
-    case 'light': return 'vs'
+    case 'light': return 'ivory-light'
     case 'high-contrast': return 'hc-black'
     default: return 'vs-dark'
   }
@@ -65,6 +65,42 @@ function EditorPane(): JSX.Element {
   const mouseDisposableRef = useRef<{ dispose(): void } | null>(null)
   const spellTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const completionDisposablesRef = useRef<{ dispose(): void }[]>([])
+
+  const handleEditorWillMount: BeforeMount = (monaco) => {
+    monaco.editor.defineTheme('ivory-light', {
+      base: 'vs',
+      inherit: true,
+      rules: [
+        { token: '', foreground: '3b3530', background: 'faf6f0' },
+        { token: 'comment', foreground: '8a7e6e', fontStyle: 'italic' },
+        { token: 'keyword', foreground: '7a4a2a' },
+        { token: 'string', foreground: '5a7a3a' },
+        { token: 'number', foreground: '6a5a8a' },
+        { token: 'delimiter', foreground: '6b6158' }
+      ],
+      colors: {
+        'editor.background': '#faf6f0',
+        'editor.foreground': '#3b3530',
+        'editor.lineHighlightBackground': '#f3ece2',
+        'editor.selectionBackground': '#ddd5c8',
+        'editor.inactiveSelectionBackground': '#eae3d8',
+        'editorCursor.foreground': '#7a6240',
+        'editorLineNumber.foreground': '#b0a698',
+        'editorLineNumber.activeForeground': '#7a6240',
+        'editorIndentGuide.background': '#e5ddd2',
+        'editorWidget.background': '#f3ece2',
+        'editorWidget.border': '#ddd5c8',
+        'editorSuggestWidget.background': '#f3ece2',
+        'editorSuggestWidget.border': '#ddd5c8',
+        'editorSuggestWidget.selectedBackground': '#ddd5c8',
+        'input.background': '#fdf9f4',
+        'input.border': '#ddd5c8',
+        'scrollbarSlider.background': '#c8bfb260',
+        'scrollbarSlider.hoverBackground': '#b0a698',
+        'scrollbarSlider.activeBackground': '#9a8e82'
+      }
+    })
+  }
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor
@@ -138,8 +174,9 @@ function EditorPane(): JSX.Element {
       })
     })
 
-    // Register LaTeX snippet completion provider
+    // Register LaTeX snippet + package macro completion provider
     const snippetDisposable = monaco.languages.registerCompletionItemProvider('latex', {
+      triggerCharacters: ['\\'],
       provideCompletionItems: (model, position) => {
         const word = model.getWordUntilPosition(position)
         const range = {
@@ -158,6 +195,31 @@ function EditorPane(): JSX.Element {
           range,
           filterText: s.prefix
         }))
+
+        // Merge package macros
+        const packageData = useAppStore.getState().packageData
+        const seenNames = new Set(snippets.map((s) => s.prefix))
+        for (const [pkgName, pkg] of Object.entries(packageData)) {
+          for (const macro of pkg.macros) {
+            if (seenNames.has(macro.name)) continue
+            seenNames.add(macro.name)
+            suggestions.push({
+              label: `\\${macro.name}`,
+              kind: monaco.languages.CompletionItemKind.Function,
+              insertText: macro.snippet
+                ? `\\\\${macro.snippet}`
+                : `\\\\${macro.name}`,
+              insertTextRules: macro.snippet
+                ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
+                : 0 as never,
+              documentation: macro.detail || `From package: ${pkgName}`,
+              detail: `[${pkgName}]`,
+              range,
+              filterText: macro.name
+            })
+          }
+        }
+
         return { suggestions }
       }
     })
@@ -460,6 +522,32 @@ function EditorPane(): JSX.Element {
     )
   }, [])
 
+  // Debounced package detection and loading
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const currentContent = useAppStore.getState().content
+      const pkgRegex = /\\usepackage(?:\[[^\]]*\])?\{([^}]+)\}/g
+      const packages = new Set<string>()
+      let pkgMatch: RegExpExecArray | null
+      while ((pkgMatch = pkgRegex.exec(currentContent)) !== null) {
+        pkgMatch[1].split(',').forEach((p) => packages.add(p.trim()))
+      }
+      const pkgArray = Array.from(packages).sort()
+      const current = useAppStore.getState().detectedPackages
+      if (JSON.stringify(pkgArray) !== JSON.stringify(current)) {
+        useAppStore.getState().setDetectedPackages(pkgArray)
+        if (pkgArray.length > 0) {
+          window.api.loadPackageData(pkgArray).then((data) => {
+            useAppStore.getState().setPackageData(data)
+          }).catch(() => {})
+        } else {
+          useAppStore.getState().setPackageData({})
+        }
+      }
+    }, 1500)
+    return () => clearTimeout(timer)
+  }, [content])
+
   // Debounced spell check on content change
   useEffect(() => {
     if (!spellCheckEnabled) return
@@ -486,6 +574,7 @@ function EditorPane(): JSX.Element {
         theme={getMonacoTheme(theme)}
         value={content}
         onChange={handleChange}
+        beforeMount={handleEditorWillMount}
         onMount={handleEditorDidMount}
         options={{
           wordWrap: 'on',

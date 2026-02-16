@@ -194,7 +194,7 @@ export const useAppStore = create<AppState>()(
     zoomLevel: 100,
 
     // Settings
-    theme: 'dark',
+    theme: 'light',
     fontSize: 14,
 
     // BibTeX

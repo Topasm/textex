@@ -18,6 +18,7 @@ import {
 } from './git'
 import { exportDocument, getPandocFormats } from './pandoc'
 import { scanLabels } from './labelscanner'
+import { loadPackageData } from './packageloader'
 
 function validateFilePath(filePath: unknown): string {
   if (typeof filePath !== 'string' || filePath.length === 0) {
@@ -304,6 +305,12 @@ export function registerIpcHandlers(win: BrowserWindow): void {
   ipcMain.handle('latex:scan-labels', async (_event, projectRoot: string) => {
     const validPath = validateFilePath(projectRoot)
     return scanLabels(validPath)
+  })
+
+  // ---- Package Data ----
+  ipcMain.handle('latex:load-package-data', async (_event, packageNames: string[]) => {
+    if (!Array.isArray(packageNames)) throw new Error('packageNames must be an array')
+    return loadPackageData(packageNames)
   })
 
   // ---- Export ----

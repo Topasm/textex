@@ -15,6 +15,10 @@ extraResources:
     to: "dictionaries"
     filter:
       - "**/*"
+  - from: "resources/data/packages"
+    to: "data/packages"
+    filter:
+      - "**/*"
 
 files:
   - "out/**/*"

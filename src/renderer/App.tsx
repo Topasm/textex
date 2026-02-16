@@ -10,6 +10,7 @@ import TemplateGallery from './components/TemplateGallery'
 import BibPanel from './components/BibPanel'
 import GitPanel from './components/GitPanel'
 import UpdateNotification from './components/UpdateNotification'
+import PreviewErrorBoundary from './components/PreviewErrorBoundary'
 import { useAutoCompile } from './hooks/useAutoCompile'
 import { useFileOps } from './hooks/useFileOps'
 import { useAppStore } from './store/useAppStore'
@@ -524,7 +525,9 @@ function App(): JSX.Element {
               onDoubleClick={handleDividerDoubleClick}
             />
             <div className="preview-pane" style={{ width: `${(1 - splitRatio) * 100}%` }}>
-              <PreviewPane />
+              <PreviewErrorBoundary>
+                <PreviewPane />
+              </PreviewErrorBoundary>
             </div>
           </div>
         </div>

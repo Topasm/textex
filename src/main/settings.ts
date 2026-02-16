@@ -13,7 +13,7 @@ export interface UserSettings {
 }
 
 const defaults: UserSettings = {
-  theme: 'dark',
+  theme: 'light',
   fontSize: 14,
   autoCompile: true,
   spellCheckEnabled: false,
