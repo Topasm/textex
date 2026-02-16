@@ -27,8 +27,7 @@ export function registerCompileCommand(program: commander.Command): void {
           await compileLatex(filePath, {
             tectonicPath: resolveTectonicPath(),
             onLog: opts.quiet ? undefined : (text: string) => process.stdout.write(text),
-            synctex: false,
-            reruns: 2
+            synctex: false
           })
 
           if (!opts.quiet) {

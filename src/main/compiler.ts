@@ -37,7 +37,6 @@ export async function compileLatex(filePath: string, win: BrowserWindow): Promis
         // Don't let diagnostic parsing failures affect compilation
       }
     },
-    synctex: true,
-    reruns: 2
+    synctex: true
   })
 }
