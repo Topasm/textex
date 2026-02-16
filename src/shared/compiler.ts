@@ -50,15 +50,6 @@ export interface CompileOptions {
   reruns?: number
 }
 
-async function hasBibFiles(dirPath: string): Promise<boolean> {
-  try {
-    const entries = await fs.readdir(dirPath)
-    return entries.some((e) => e.endsWith('.bib'))
-  } catch {
-    return false
-  }
-}
-
 export async function compileLatex(
   filePath: string,
   options: CompileOptions
@@ -78,16 +69,7 @@ export async function compileLatex(
   // Kill any running compilation before starting a new one
   cancelCompilation()
 
-  // Auto-detect reruns: if .bib files exist in the project directory,
-  // use --reruns 2 to prevent Tectonic's BibTeX rerun loop bug.
-  // Otherwise let Tectonic auto-detect needed reruns.
-  let reruns = options.reruns
-  if (reruns === undefined) {
-    const bibDetected = await hasBibFiles(workDir)
-    if (bibDetected) {
-      reruns = 2
-    }
-  }
+  const reruns = options.reruns
 
   return new Promise((resolve, reject) => {
     const args = ['-X', 'compile']

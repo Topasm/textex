@@ -13,25 +13,25 @@ jobs:
         include:
           - os: ubuntu-latest
             platform: linux
-            tectonic_asset: tectonic-0.15.0-x86_64-unknown-linux-musl.tar.gz
+            tectonic_asset: tectonic-0.15.0+20251006-x86_64-unknown-linux-musl.tar.gz
             tectonic_dir: linux
             binary_name: tectonic
             build_args: --linux
           - os: macos-latest
             platform: mac-x64
-            tectonic_asset: tectonic-0.15.0-x86_64-apple-darwin.tar.gz
+            tectonic_asset: tectonic-0.15.0+20251006-x86_64-apple-darwin.tar.gz
             tectonic_dir: mac
             binary_name: tectonic
             build_args: --mac --x64
           - os: macos-latest
             platform: mac-arm64
-            tectonic_asset: tectonic-0.15.0-aarch64-apple-darwin.tar.gz
+            tectonic_asset: tectonic-0.15.0+20251006-aarch64-apple-darwin.tar.gz
             tectonic_dir: mac
             binary_name: tectonic
             build_args: --mac --arm64
           - os: windows-latest
             platform: win
-            tectonic_asset: tectonic-0.15.0-x86_64-pc-windows-msvc.zip
+            tectonic_asset: tectonic-0.15.0+20251006-x86_64-pc-windows-msvc.zip
             tectonic_dir: win
             binary_name: tectonic.exe
             build_args: --win
@@ -54,7 +54,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p "resources/bin/${{ matrix.tectonic_dir }}"
-          RELEASE_URL="https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.15.0/${{ matrix.tectonic_asset }}"
+          RELEASE_URL="https://github.com/tectonic-typesetting/tectonic/releases/download/continuous/${{ matrix.tectonic_asset }}"
 
           if [[ "${{ matrix.tectonic_asset }}" == *.zip ]]; then
             curl -L -o tectonic.zip "$RELEASE_URL"
