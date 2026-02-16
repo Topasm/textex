@@ -1,4 +1,4 @@
-# NeuroTeX — Packaging & Distribution
+# TextEx — Packaging & Distribution
 
 ## Build Tool
 
@@ -9,9 +9,9 @@
 ## `electron-builder.yml`
 
 ```yaml
-appId: com.neurotex.app
-productName: NeuroTeX
-copyright: Copyright © 2026
+appId: com.textex.app
+productName: TextEx
+copyright: Copyright (c) 2026
 
 directories:
   output: dist
@@ -31,24 +31,29 @@ win:
   target:
     - target: nsis
       arch: [x64]
-  icon: build/icon.ico
 
 mac:
   target:
     - target: dmg
       arch: [x64, arm64]   # Universal binary support
-  icon: build/icon.icns
   hardenedRuntime: true
-  entitlements: build/entitlements.mac.plist
-  entitlementsInherit: build/entitlements.mac.plist
 
 linux:
   target:
     - target: AppImage
       arch: [x64]
-  icon: build/icon.png
   category: Office
 ```
+
+**TODO: Missing build assets:**
+- `build/icon.ico` -- Windows icon (not yet created)
+- `build/icon.icns` -- macOS icon (not yet created)
+- `build/icon.png` -- Linux icon (not yet created)
+- `build/entitlements.mac.plist` -- macOS entitlements (not yet created, needed
+  if `hardenedRuntime` and notarization are enabled)
+
+**Note:** The actual `electron-builder.yml` omits icon and entitlement paths
+since these files do not exist yet. Add them when the assets are created.
 
 ---
 
@@ -58,14 +63,17 @@ Before building, organize the `resources/bin/` directory:
 
 ```
 resources/
-└── bin/
-    ├── win/
-    │   └── tectonic.exe     # From Tectonic GitHub Releases (x86_64-pc-windows-msvc)
-    ├── mac/
-    │   └── tectonic          # From Tectonic GitHub Releases (x86_64-apple-darwin)
-    └── linux/
-        └── tectonic          # From Tectonic GitHub Releases (x86_64-unknown-linux-gnu)
++-- bin/
+    +-- win/
+    |   +-- tectonic.exe     # From Tectonic GitHub Releases (x86_64-pc-windows-msvc)
+    +-- mac/
+    |   +-- tectonic          # From Tectonic GitHub Releases (x86_64-apple-darwin)
+    +-- linux/
+        +-- tectonic          # From Tectonic GitHub Releases (x86_64-unknown-linux-musl)
 ```
+
+**Current status:** Only the Linux (musl) binary is downloaded. Windows and macOS
+binaries are still needed.
 
 The `${os}` variable in `electron-builder.yml` resolves to `win`, `mac`, or
 `linux` at build time, copying only the relevant binary.
@@ -74,20 +82,22 @@ The `${os}` variable in `electron-builder.yml` resolves to `win`, `mac`, or
 
 ## Build Commands
 
-Add these to `package.json` scripts:
+In `package.json`:
 
 ```json
 {
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
-    "package:win": "electron-builder --win",
-    "package:mac": "electron-builder --mac",
-    "package:linux": "electron-builder --linux",
-    "package:all": "electron-builder --win --mac --linux"
+    "package:win": "electron-vite build && electron-builder --win",
+    "package:mac": "electron-vite build && electron-builder --mac",
+    "package:linux": "electron-vite build && electron-builder --linux"
   }
 }
 ```
+
+**Note:** The package scripts run `electron-vite build` first to ensure compiled
+output in `out/` is up to date before packaging.
 
 ---
 
@@ -122,7 +132,7 @@ For distribution outside the Mac App Store:
 | Electron shell | ~80 MB |
 | Tectonic binary | ~25 MB |
 | React + Monaco + PDF.js | ~10 MB |
-| **Total installer** | **~115–130 MB** |
+| **Total installer** | **~115-130 MB** |
 
 ---
 

@@ -1,0 +1,47 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project
+
+TextEx — a self-contained desktop LaTeX editor built on Electron. Split-pane interface (Monaco code editor + react-pdf preview) with a bundled Tectonic engine. No external TeX installation required.
+
+## Commands
+
+- `npm run dev` — Start development with HMR (electron-vite)
+- `npm run build` — Compile main/preload/renderer to `out/`
+- `npm run package:linux` / `package:mac` / `package:win` — Build + create platform installer via electron-builder
+
+No test runner or linter is currently configured.
+
+## Architecture
+
+Three-process Electron app with strict context isolation:
+
+```
+Main Process (src/main/)          Preload (src/preload/)       Renderer (src/renderer/)
+  main.ts   — window setup         index.ts — contextBridge      main.tsx — ErrorBoundary + App
+  ipc.ts    — IPC handlers            exposes window.api          App.tsx — layout shell
+  compiler.ts — Tectonic spawn                                    ├── Toolbar
+                + cancellation                                    ├── EditorPane (Monaco)
+                                                                  ├── PreviewPane (react-pdf)
+                                                                  ├── LogPanel
+                                                                  └── StatusBar
+```
+
+**IPC flow:** Renderer calls `window.api.*` → preload forwards via `ipcRenderer.invoke` → main process handles in `ipc.ts`. Compile logs stream back via `latex:log` channel.
+
+**State:** Single Zustand store (`src/renderer/store/useAppStore.ts`) holds file path, content, dirty flag, compile status, PDF data (Base64), logs, and cursor position.
+
+**Auto-compile:** `useAutoCompile` hook debounces content changes by 1000ms, auto-saves (with error reporting), then triggers Tectonic compilation. Cancellation errors from overlapping compiles are silently ignored.
+
+**Tectonic binary resolution** (`src/main/compiler.ts`): In dev mode, uses `resources/bin/{platform}/tectonic`. In packaged mode, uses `process.resourcesPath/bin/tectonic`. The binary is invoked as `tectonic -X compile <filePath>`. Binary existence is verified before spawning. Active compilations are killed before starting new ones.
+
+## Key Conventions
+
+- `nodeIntegration: false`, `contextIsolation: true` — all Node access goes through the preload bridge
+- IPC channels: `fs:open`, `fs:save`, `fs:save-as`, `latex:compile`, `latex:cancel`, `latex:log`
+- Renderer types for the API bridge live in `src/renderer/types/api.d.ts`
+- Styling: Plain CSS with VS Code dark theme; global styles in `src/renderer/styles/index.css`
+- Build outputs land in `out/main/`, `out/preload/`, `out/renderer/`
+- Detailed design docs are in `docs/` (architecture, IPC spec, compiler service, UI spec, packaging)

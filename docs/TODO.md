@@ -1,4 +1,4 @@
-# NeuroTeX — Implementation TODO
+# TextEx — Implementation TODO
 
 Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
@@ -35,8 +35,8 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
   - Source: `tectonic-0.15.0-x86_64-unknown-linux-musl.tar.gz`
   - **Note:** The glibc variant required GLIBC_2.35; musl is statically linked
 - [x] **1.3** Set execute permission (`chmod +x`) on linux binary
-- [x] **1.4** Verify binary works standalone: `./tectonic -X compile test.tex` → success
-- [x] **1.5** Smoke test verified — Tectonic compiled a minimal `.tex` to PDF
+- [x] **1.4** Verify binary works standalone: `./tectonic -X compile test.tex` -> success
+- [x] **1.5** Smoke test verified -- Tectonic compiled a minimal `.tex` to PDF
 
 ---
 
@@ -44,17 +44,22 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
 - [x] **2.1** Create `src/main/compiler.ts`
   - `getTectonicPath()` with dev/prod and per-platform resolution
-  - `compileLatex(filePath, win)` → spawns tectonic, streams stderr, returns PDF Base64
+  - `compileLatex(filePath, win)` -> spawns tectonic, streams stdout+stderr, returns PDF Base64
   - Binary existence check with `fs.access` before spawn
+  - `cancelCompilation()` kills active process and tracks via `activeProcess` module variable
+  - `close` handler distinguishes signal (cancellation) from normal exit
 - [x] **2.2** Create `src/main/ipc.ts`
-  - `ipcMain.handle('fs:open')` — native file dialog, reads `.tex` file
-  - `ipcMain.handle('fs:save')` — writes content to path
-  - `ipcMain.handle('fs:save-as')` — save dialog + write
-  - `ipcMain.handle('latex:compile')` — delegates to `compileLatex()`
+  - `ipcMain.handle('fs:open')` -- native file dialog, reads `.tex` file
+  - `ipcMain.handle('fs:save')` -- writes content to path
+  - `ipcMain.handle('fs:save-as')` -- save dialog + write
+  - `ipcMain.handle('latex:compile')` -- delegates to `compileLatex()`
+  - `ipcMain.handle('latex:cancel')` -- delegates to `cancelCompilation()`
+  - `validateFilePath()` validates IPC input on `fs:save` and `latex:compile` (non-empty, absolute)
 - [x] **2.3** Create `src/main/main.ts`
   - BrowserWindow with `nodeIntegration: false`, `contextIsolation: true`, `sandbox: false`
   - Preload script path configured
   - IPC handlers registered via `registerIpcHandlers()`
+  - `setWindowOpenHandler` restricts `shell.openExternal` to http/https URLs only
   - Dev: loads `ELECTRON_RENDERER_URL`; Prod: loads `out/renderer/index.html`
 
 ---
@@ -64,6 +69,7 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [x] **3.1** Create `src/preload/index.ts`
   - Exposes: `openFile`, `saveFile`, `saveFileAs`, `compile`, `onCompileLog`,
     `removeCompileLogListener` via `contextBridge.exposeInMainWorld`
+  - Tracks single `compileLogHandler` reference to prevent listener leaks
 - [x] **3.2** Create `src/renderer/types/api.d.ts`
   - Full type declarations for `ElectronAPI` interface on `window.api`
 
@@ -82,62 +88,79 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
 ## Phase 5: UI Components
 
-- [x] **5.1** `App.tsx` — Main layout
+- [x] **5.1** `App.tsx` -- Main layout
   - Horizontal split: left (editor 50%) + right (preview 50%)
   - Bottom: collapsible log panel
   - Bottom bar: status bar
   - Pure CSS layout (flexbox)
+  - Keyboard shortcuts via `keydown` listener
+  - IPC log listener using `useAppStore.getState()` to avoid stale closures
 
 - [x] **5.2** `Toolbar.tsx`
   - Buttons: Open, Save, Save As, Compile, Log toggle
+  - Each button shows keyboard shortcut as `<kbd>` element
   - Compile button disabled during compilation, shows "Compiling..." state
-  - Displays current file name + dirty indicator (`*`)
+  - Displays current file name + dirty indicator (yellow dot)
+  - Save button highlights yellow when file is dirty
 
 - [x] **5.3** `EditorPane.tsx`
   - `@monaco-editor/react` with `language="latex"`, `theme="vs-dark"`
-  - `onChange` → updates store content + marks dirty
-  - Cursor position tracked via `onDidChangeCursorPosition`
+  - `onChange` -> updates store content + marks dirty
+  - Cursor position tracked via `onDidChangeCursorPosition` (disposable cleaned up on unmount)
   - Config: word wrap on, minimap off, font size 14, auto layout
 
 - [x] **5.4** `PreviewPane.tsx`
   - `react-pdf` `<Document>` + `<Page>` components
-  - Base64 → Uint8Array conversion for PDF.js
+  - Base64 -> Uint8Array conversion for PDF.js
   - PDF.js worker configured via `import.meta.url`
-  - Spinner during compilation, error message on failure, empty state placeholder
+  - Spinner overlay during compilation (over existing PDF)
+  - Error message on failure (only when no PDF exists), empty state placeholder
   - Multi-page support with dynamic page count
+  - Scroll position preservation via ref + `requestAnimationFrame`
+  - Responsive width via `ResizeObserver`
 
 - [x] **5.5** `LogPanel.tsx`
-  - Monospace `<pre>` showing logs from store
+  - Monospace `<pre>` showing logs from store (stdout+stderr)
   - Auto-scrolls to bottom on new content
   - Clear and Close buttons
   - Collapsible (controlled by `isLogPanelOpen`)
-  - Auto-opens on compile error (triggered from App.tsx)
+  - Auto-opens on compile error (triggered from App.tsx and useAutoCompile)
+  - 200px fixed height
 
 - [x] **5.6** `StatusBar.tsx`
   - Left: compile status dot (green/yellow/red) + label
   - Right: cursor position (Ln, Col) from Monaco
+  - Blue accent background with white text
+
+- [x] **5.7** `ErrorBoundary.tsx`
+  - Class component wrapping `<App>` in `main.tsx`
+  - Catches rendering errors via `getDerivedStateFromError`
+  - Displays error message and "Reload" button
 
 ---
 
 ## Phase 6: Auto-Compile & Keyboard Shortcuts
 
 - [x] **6.1** Create `src/renderer/hooks/useAutoCompile.ts`
-  - Watches `content` changes in store
-  - 1000ms debounce, saves file first, then compiles
+  - Watches `content` and `filePath` changes in store
+  - 1000ms debounce, saves file first (reports save failures), then compiles
+  - Clears dirty flag on successful save
+  - Silently ignores "Compilation was cancelled" errors
+  - Full dependency array for `useEffect`
   - Updates `compileStatus` and `pdfBase64` on success
   - Opens log panel and appends error on failure
 
 - [x] **6.2** Create `src/renderer/hooks/useFileOps.ts`
-  - `handleOpen()` → native dialog, loads content into store
-  - `handleSave()` → saves to disk, falls back to Save As if no path
-  - `handleSaveAs()` → save dialog, updates path in store
+  - `handleOpen()` -> native dialog, loads content into store
+  - `handleSave()` -> saves to disk, uses `getState()` for fresh content, falls back to Save As if no path
+  - `handleSaveAs()` -> save dialog, updates path in store
 
 - [x] **6.3** Register keyboard shortcuts (in App.tsx via `keydown` listener)
-  - `Ctrl/Cmd+O` → Open
-  - `Ctrl/Cmd+S` → Save
-  - `Ctrl/Cmd+Shift+S` → Save As
-  - `Ctrl/Cmd+Enter` → Manual compile
-  - `Ctrl/Cmd+L` → Toggle log panel
+  - `Ctrl/Cmd+O` -> Open
+  - `Ctrl/Cmd+S` -> Save
+  - `Ctrl/Cmd+Shift+S` -> Save As
+  - `Ctrl/Cmd+Enter` -> Manual compile
+  - `Ctrl/Cmd+L` -> Toggle log panel
 
 ---
 
@@ -157,7 +180,7 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
 ## Phase 8: Packaging
 
 - [x] **8.1** Create `electron-builder.yml` per `docs/PACKAGING.md`
-  - `extraResources` configured to bundle `resources/bin/${os}` → `bin/`
+  - `extraResources` configured to bundle `resources/bin/${os}` -> `bin/`
   - Targets: NSIS (Win), DMG (Mac), AppImage (Linux)
 - [ ] **8.2** Download Tectonic binaries for all target platforms
   - Only Linux (musl) binary is currently downloaded
@@ -181,7 +204,6 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [ ] **9.9** App icons and branding
 - [ ] **9.10** ESLint + Prettier setup
 - [ ] **9.11** Vitest + @testing-library/react unit tests
-- [ ] **9.12** PDF scroll position preservation across recompiles
 
 ---
 

@@ -11,6 +11,8 @@ export function useFileOps(): FileOps {
   const setContent = useAppStore((s) => s.setContent)
   const setFilePath = useAppStore((s) => s.setFilePath)
   const setDirty = useAppStore((s) => s.setDirty)
+  const appendLog = useAppStore((s) => s.appendLog)
+  const setLogPanelOpen = useAppStore((s) => s.setLogPanelOpen)
 
   const handleOpen = useCallback(async () => {
     const result = await window.api.openFile()
@@ -32,9 +34,15 @@ export function useFileOps(): FileOps {
       }
       return
     }
-    await window.api.saveFile(content, filePath)
-    setDirty(false)
-  }, [setFilePath, setDirty])
+    try {
+      await window.api.saveFile(content, filePath)
+      setDirty(false)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      appendLog(`Save failed: ${message}`)
+      setLogPanelOpen(true)
+    }
+  }, [setFilePath, setDirty, appendLog, setLogPanelOpen])
 
   const handleSaveAs = useCallback(async () => {
     const { content } = useAppStore.getState()

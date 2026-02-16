@@ -1,5 +1,5 @@
 {
-  "name": "neurotex",
+  "name": "textex",
   "version": "1.0.0",
   "description": "A self-contained desktop LaTeX editor built on Electron",
   "main": "./out/main/index.js",

@@ -10,7 +10,7 @@ function createWindow(): void {
     height: 900,
     minWidth: 800,
     minHeight: 600,
-    title: 'NeuroTeX',
+    title: 'TextEx',
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       nodeIntegration: false,
@@ -23,7 +23,14 @@ function createWindow(): void {
   registerIpcHandlers(mainWindow)
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url)
+    try {
+      const parsed = new URL(url)
+      if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
+        shell.openExternal(url)
+      }
+    } catch {
+      // Ignore malformed URLs
+    }
     return { action: 'deny' }
   })
 

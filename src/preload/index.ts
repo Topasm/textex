@@ -1,4 +1,6 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
+
+let compileLogHandler: ((_event: IpcRendererEvent, log: string) => void) | null = null
 
 contextBridge.exposeInMainWorld('api', {
   openFile: () => ipcRenderer.invoke('fs:open'),
@@ -6,10 +8,18 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.invoke('fs:save', content, filePath),
   saveFileAs: (content: string) => ipcRenderer.invoke('fs:save-as', content),
   compile: (filePath: string) => ipcRenderer.invoke('latex:compile', filePath),
+  cancelCompile: () => ipcRenderer.invoke('latex:cancel'),
   onCompileLog: (cb: (log: string) => void) => {
-    ipcRenderer.on('latex:log', (_event, log) => cb(log))
+    if (compileLogHandler) {
+      ipcRenderer.removeListener('latex:log', compileLogHandler)
+    }
+    compileLogHandler = (_event: IpcRendererEvent, log: string) => cb(log)
+    ipcRenderer.on('latex:log', compileLogHandler)
   },
   removeCompileLogListener: () => {
-    ipcRenderer.removeAllListeners('latex:log')
+    if (compileLogHandler) {
+      ipcRenderer.removeListener('latex:log', compileLogHandler)
+      compileLogHandler = null
+    }
   }
 })

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import Toolbar from './components/Toolbar'
 import EditorPane from './components/EditorPane'
 import PreviewPane from './components/PreviewPane'
@@ -19,8 +19,10 @@ function App(): JSX.Element {
   const clearLogs = useAppStore((s) => s.clearLogs)
   const setLogPanelOpen = useAppStore((s) => s.setLogPanelOpen)
 
-  const handleCompile = async (): Promise<void> => {
+  const handleCompile = useCallback(async (): Promise<void> => {
     if (!filePath) return
+    // getState() is intentional here: reads latest content at call time
+    // without subscribing the component to content changes.
     const content = useAppStore.getState().content
     try {
       await window.api.saveFile(content, filePath)
@@ -39,7 +41,7 @@ function App(): JSX.Element {
       setCompileStatus('error')
       setLogPanelOpen(true)
     }
-  }
+  }, [filePath, setCompileStatus, setPdfBase64, appendLog, clearLogs, setLogPanelOpen])
 
   useEffect(() => {
     window.api.onCompileLog((log: string) => {
@@ -74,7 +76,7 @@ function App(): JSX.Element {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [handleOpen, handleSave, handleSaveAs, toggleLogPanel, filePath])
+  }, [handleOpen, handleSave, handleSaveAs, handleCompile, toggleLogPanel])
 
   return (
     <div className="app-container">

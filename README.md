@@ -1,4 +1,4 @@
-# NeuroTeX
+# TextEx
 
 A self-contained desktop LaTeX editor built on Electron. Split-pane interface (code + PDF preview) with a bundled Tectonic engine — no TeX Live or MiKTeX installation required.
 

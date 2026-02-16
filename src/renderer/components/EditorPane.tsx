@@ -1,5 +1,5 @@
 import Editor, { OnMount } from '@monaco-editor/react'
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useAppStore } from '../store/useAppStore'
 
 function EditorPane(): JSX.Element {
@@ -7,13 +7,20 @@ function EditorPane(): JSX.Element {
   const setContent = useAppStore((s) => s.setContent)
   const setCursorPosition = useAppStore((s) => s.setCursorPosition)
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null)
+  const cursorDisposableRef = useRef<{ dispose(): void } | null>(null)
 
   const handleEditorDidMount: OnMount = (editor) => {
     editorRef.current = editor
-    editor.onDidChangeCursorPosition((e) => {
+    cursorDisposableRef.current = editor.onDidChangeCursorPosition((e) => {
       setCursorPosition(e.position.lineNumber, e.position.column)
     })
   }
+
+  useEffect(() => {
+    return () => {
+      cursorDisposableRef.current?.dispose()
+    }
+  }, [])
 
   const handleChange = (value: string | undefined): void => {
     if (value !== undefined) {

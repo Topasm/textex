@@ -1,4 +1,4 @@
-# NeuroTeX — Technology Stack
+# TextEx — Technology Stack
 
 ## Core Dependencies (Installed)
 
@@ -13,7 +13,7 @@
 | PDF | **react-pdf** | 10.3.0 | PDF display (wraps PDF.js) |
 | PDF Engine | **pdfjs-dist** | 5.4.624 | PDF rendering engine (Web Worker) |
 | State | **Zustand** | 5.0.11 | Global state management |
-| Styling | **Plain CSS** | — | VS Code dark theme, flexbox layout |
+| Styling | **Plain CSS** | -- | VS Code dark theme, flexbox layout |
 | LaTeX | **Tectonic** | 0.15.0 | Compilation (sidecar binary, musl) |
 | Packaging | **electron-builder** | 26.7.0 | Installers (NSIS / DMG / AppImage) |
 
@@ -36,7 +36,7 @@
 
 ## Version Constraints
 
-- Node.js: ≥ 18 (v20.20.0 used in development, installed via nvm)
+- Node.js: >= 18 (v20.20.0 used in development, installed via nvm)
 - Tectonic: 0.15.0 (musl variant for Linux compatibility)
 
 ## Why These Choices
@@ -64,7 +64,7 @@
 - No reliance on browser's native PDF plugin.
 
 ### Plain CSS over Tailwind CSS
-- Tailwind CSS v4 introduced breaking changes — the PostCSS plugin moved
+- Tailwind CSS v4 introduced breaking changes -- the PostCSS plugin moved
   to `@tailwindcss/postcss` and the v3 `@tailwind` directives are removed.
 - Plain CSS with VS Code color tokens keeps the styling simple and
   dependency-free, matching the editor's dark theme natively.

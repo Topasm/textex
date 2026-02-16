@@ -20,6 +20,7 @@ interface ElectronAPI {
   saveFile(content: string, filePath: string): Promise<SaveResult>
   saveFileAs(content: string): Promise<SaveAsResult | null>
   compile(filePath: string): Promise<CompileResult>
+  cancelCompile(): Promise<boolean>
   onCompileLog(cb: (log: string) => void): void
   removeCompileLogListener(): void
 }

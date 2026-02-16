@@ -1,4 +1,4 @@
-# NeuroTeX — IPC Specification
+# TextEx — IPC Specification
 
 ## Overview
 
@@ -12,20 +12,36 @@ a strictly typed API via `contextBridge.exposeInMainWorld`.
 
 ```typescript
 // src/preload/index.ts
+import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
+
+let compileLogHandler: ((_event: IpcRendererEvent, log: string) => void) | null = null
+
 contextBridge.exposeInMainWorld('api', {
-  // File operations
-  openFile:    ()                                  => ipcRenderer.invoke('fs:open'),
-  saveFile:    (content: string, filePath: string) => ipcRenderer.invoke('fs:save', content, filePath),
-  saveFileAs:  (content: string)                   => ipcRenderer.invoke('fs:save-as', content),
-
-  // Compilation
-  compile:     (filePath: string)                  => ipcRenderer.invoke('latex:compile', filePath),
-
-  // Event listeners (Main → Renderer)
-  onCompileLog: (cb: (log: string) => void)        => ipcRenderer.on('latex:log', (_event, log) => cb(log)),
-  removeCompileLogListener: ()                      => ipcRenderer.removeAllListeners('latex:log'),
-});
+  openFile: () => ipcRenderer.invoke('fs:open'),
+  saveFile: (content: string, filePath: string) =>
+    ipcRenderer.invoke('fs:save', content, filePath),
+  saveFileAs: (content: string) => ipcRenderer.invoke('fs:save-as', content),
+  compile: (filePath: string) => ipcRenderer.invoke('latex:compile', filePath),
+  onCompileLog: (cb: (log: string) => void) => {
+    if (compileLogHandler) {
+      ipcRenderer.removeListener('latex:log', compileLogHandler)
+    }
+    compileLogHandler = (_event: IpcRendererEvent, log: string) => cb(log)
+    ipcRenderer.on('latex:log', compileLogHandler)
+  },
+  removeCompileLogListener: () => {
+    if (compileLogHandler) {
+      ipcRenderer.removeListener('latex:log', compileLogHandler)
+      compileLogHandler = null
+    }
+  }
+})
 ```
+
+**Note:** The preload script tracks a single `compileLogHandler` reference and
+removes the previous listener before attaching a new one. This prevents listener
+leaks when `onCompileLog` is called multiple times (e.g., across React strict
+mode re-renders).
 
 ---
 
@@ -35,11 +51,11 @@ contextBridge.exposeInMainWorld('api', {
 
 | Field | Value |
 |---|---|
-| Direction | Renderer → Main |
+| Direction | Renderer -> Main |
 | Method | `ipcRenderer.invoke` / `ipcMain.handle` |
-| Request payload | — (none; Main opens a native file dialog) |
+| Request payload | -- (none; Main opens a native file dialog) |
 | Response | `{ content: string, filePath: string }` |
-| Errors | User cancels dialog → returns `null` |
+| Errors | User cancels dialog -> returns `null` |
 
 **Main handler logic:**
 1. Show `dialog.showOpenDialog` with filter `*.tex`.
@@ -52,13 +68,14 @@ contextBridge.exposeInMainWorld('api', {
 
 | Field | Value |
 |---|---|
-| Direction | Renderer → Main |
+| Direction | Renderer -> Main |
 | Request payload | `(content: string, filePath: string)` |
 | Response | `{ success: boolean }` |
-| Errors | Write failure → throw |
+| Errors | Invalid path -> throw. Write failure -> throw. |
 
 **Main handler logic:**
-1. Write `content` to `filePath` with `fs.promises.writeFile`.
+1. Validate `filePath` via `validateFilePath()` (must be non-empty absolute path).
+2. Write `content` to `filePath` with `fs.promises.writeFile`.
 
 ---
 
@@ -66,10 +83,10 @@ contextBridge.exposeInMainWorld('api', {
 
 | Field | Value |
 |---|---|
-| Direction | Renderer → Main |
+| Direction | Renderer -> Main |
 | Request payload | `(content: string)` |
 | Response | `{ filePath: string }` |
-| Errors | User cancels → returns `null` |
+| Errors | User cancels -> returns `null` |
 
 **Main handler logic:**
 1. Show `dialog.showSaveDialog` with default extension `.tex`.
@@ -82,17 +99,36 @@ contextBridge.exposeInMainWorld('api', {
 
 | Field | Value |
 |---|---|
-| Direction | Renderer → Main |
+| Direction | Renderer -> Main |
 | Request payload | `(filePath: string)` |
 | Response | `{ pdfBase64: string }` |
-| Errors | Non-zero exit code → reject with stderr logs |
+| Errors | Invalid path -> throw. Non-zero exit code -> reject with combined stdout+stderr logs. Signal (cancelled) -> reject with "Compilation was cancelled". |
 
 **Main handler logic:**
-1. Resolve tectonic binary path (see `compiler.ts`).
-2. Spawn `tectonic -X compile <filePath>`.
-3. Stream `stderr` lines to renderer via `latex:log` channel.
-4. On exit code 0: read `.pdf`, convert to Base64, resolve.
-5. On non-zero exit: reject with accumulated stderr.
+1. Validate `filePath` via `validateFilePath()` (must be non-empty absolute path).
+2. Resolve tectonic binary path (see `compiler.ts`).
+3. Verify binary exists with `fs.access`.
+4. Kill any running compilation via `cancelCompilation()`.
+5. Spawn `tectonic -X compile <filePath>`.
+6. Stream both `stdout` and `stderr` lines to renderer via `latex:log` channel.
+7. On exit code 0: read `.pdf`, convert to Base64, resolve.
+8. On signal (killed): reject with cancellation message.
+9. On non-zero exit: reject with accumulated output.
+
+---
+
+### `latex:cancel`
+
+| Field | Value |
+|---|---|
+| Direction | Renderer -> Main |
+| Method | `ipcRenderer.invoke` / `ipcMain.handle` |
+| Request payload | -- (none) |
+| Response | `boolean` (true if a running process was killed) |
+
+**Main handler logic:**
+1. If `activeProcess` exists, kill it and return `true`.
+2. Otherwise return `false`.
 
 ---
 
@@ -100,12 +136,13 @@ contextBridge.exposeInMainWorld('api', {
 
 | Field | Value |
 |---|---|
-| Direction | Main → Renderer |
+| Direction | Main -> Renderer |
 | Method | `webContents.send` |
-| Payload | `string` (one or more stderr lines) |
+| Payload | `string` (one or more stdout/stderr lines) |
 
 This channel streams compilation output in real time so the LogPanel can display
-progress during long compilations.
+progress during long compilations. Both stdout and stderr are sent through this
+channel.
 
 ---
 
@@ -115,34 +152,34 @@ progress during long compilations.
 // src/renderer/types/api.d.ts
 
 interface OpenFileResult {
-  content: string;
-  filePath: string;
+  content: string
+  filePath: string
 }
 
 interface SaveResult {
-  success: boolean;
+  success: boolean
 }
 
 interface SaveAsResult {
-  filePath: string;
+  filePath: string
 }
 
 interface CompileResult {
-  pdfBase64: string;
+  pdfBase64: string
 }
 
 interface ElectronAPI {
-  openFile():                                  Promise<OpenFileResult | null>;
-  saveFile(content: string, filePath: string): Promise<SaveResult>;
-  saveFileAs(content: string):                 Promise<SaveAsResult | null>;
-  compile(filePath: string):                   Promise<CompileResult>;
-  onCompileLog(cb: (log: string) => void):     void;
-  removeCompileLogListener():                  void;
+  openFile(): Promise<OpenFileResult | null>
+  saveFile(content: string, filePath: string): Promise<SaveResult>
+  saveFileAs(content: string): Promise<SaveAsResult | null>
+  compile(filePath: string): Promise<CompileResult>
+  onCompileLog(cb: (log: string) => void): void
+  removeCompileLogListener(): void
 }
 
 declare global {
   interface Window {
-    api: ElectronAPI;
+    api: ElectronAPI
   }
 }
 

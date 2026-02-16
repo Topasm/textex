@@ -5,6 +5,17 @@ import { app, BrowserWindow } from 'electron'
 
 const isDev = !app.isPackaged
 
+let activeProcess: ChildProcess | null = null
+
+export function cancelCompilation(): boolean {
+  if (activeProcess) {
+    activeProcess.kill()
+    activeProcess = null
+    return true
+  }
+  return false
+}
+
 function getTectonicPath(): string {
   const platform = process.platform
   const binName = platform === 'win32' ? 'tectonic.exe' : 'tectonic'
@@ -39,28 +50,41 @@ export async function compileLatex(
     )
   }
 
+  // Kill any running compilation before starting a new one
+  cancelCompilation()
+
   return new Promise((resolve, reject) => {
     const args = ['-X', 'compile', filePath]
     const child: ChildProcess = spawn(binary, args, { cwd: workDir })
+    activeProcess = child
 
-    let stderr = ''
+    let output = ''
 
     child.stderr?.on('data', (chunk: Buffer) => {
       const text = chunk.toString()
-      stderr += text
+      output += text
       win.webContents.send('latex:log', text)
     })
 
     child.stdout?.on('data', (chunk: Buffer) => {
       const text = chunk.toString()
+      output += text
       win.webContents.send('latex:log', text)
     })
 
     child.on('error', (err) => {
+      activeProcess = null
       reject(new Error(`Failed to start tectonic: ${err.message}`))
     })
 
-    child.on('close', async (code) => {
+    child.on('close', async (code, signal) => {
+      activeProcess = null
+
+      if (signal) {
+        reject(new Error('Compilation was cancelled'))
+        return
+      }
+
       if (code === 0) {
         const pdfPath = filePath.replace(/\.tex$/, '.pdf')
         try {
@@ -70,7 +94,7 @@ export async function compileLatex(
           reject(new Error(`Compilation succeeded but PDF not found at ${pdfPath}`))
         }
       } else {
-        reject(new Error(stderr || `tectonic exited with code ${code}`))
+        reject(new Error(output || `tectonic exited with code ${code}`))
       }
     })
   })

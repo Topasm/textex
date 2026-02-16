@@ -1,4 +1,4 @@
-import { useMemo, useRef, useCallback, useState } from 'react'
+import { useMemo, useRef, useCallback, useState, useEffect } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import { useAppStore } from '../store/useAppStore'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
@@ -13,7 +13,29 @@ function PreviewPane(): JSX.Element {
   const pdfBase64 = useAppStore((s) => s.pdfBase64)
   const compileStatus = useAppStore((s) => s.compileStatus)
   const containerRef = useRef<HTMLDivElement>(null)
+  const scrollPositionRef = useRef(0)
   const [numPages, setNumPages] = useState(0)
+  const [containerWidth, setContainerWidth] = useState<number | null>(null)
+
+  // Measure container width on mount and resize
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setContainerWidth(entry.contentRect.width)
+      }
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  // Track scroll position continuously
+  const handleScroll = useCallback(() => {
+    if (containerRef.current) {
+      scrollPositionRef.current = containerRef.current.scrollTop
+    }
+  }, [])
 
   const pdfData = useMemo(() => {
     if (!pdfBase64) return null
@@ -27,19 +49,15 @@ function PreviewPane(): JSX.Element {
 
   const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
     setNumPages(numPages)
+    // Restore scroll position after new PDF renders
+    requestAnimationFrame(() => {
+      if (containerRef.current) {
+        containerRef.current.scrollTop = scrollPositionRef.current
+      }
+    })
   }, [])
 
-  if (compileStatus === 'compiling') {
-    return (
-      <div className="preview-center">
-        <div>
-          <div className="preview-spinner" />
-          <p style={{ color: '#999999' }}>Compiling...</p>
-        </div>
-      </div>
-    )
-  }
-
+  // Show empty/error states only when there is no PDF data at all
   if (compileStatus === 'error' && !pdfBase64) {
     return (
       <div className="preview-center preview-error">
@@ -59,14 +77,21 @@ function PreviewPane(): JSX.Element {
     )
   }
 
+  const pageWidth = containerWidth ? containerWidth - 32 : undefined
+
   return (
-    <div ref={containerRef} className="preview-container">
+    <div ref={containerRef} className="preview-container" onScroll={handleScroll}>
+      {compileStatus === 'compiling' && (
+        <div className="preview-compiling-overlay">
+          <div className="preview-spinner" />
+        </div>
+      )}
       <Document file={pdfData} onLoadSuccess={onDocumentLoadSuccess}>
         {Array.from({ length: numPages }, (_, i) => (
           <Page
             key={`page_${i + 1}`}
             pageNumber={i + 1}
-            width={containerRef.current ? containerRef.current.clientWidth - 32 : 600}
+            width={pageWidth}
           />
         ))}
       </Document>

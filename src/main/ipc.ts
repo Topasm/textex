@@ -1,6 +1,17 @@
 import { ipcMain, dialog, BrowserWindow } from 'electron'
+import path from 'path'
 import fs from 'fs/promises'
-import { compileLatex } from './compiler'
+import { compileLatex, cancelCompilation } from './compiler'
+
+function validateFilePath(filePath: unknown): string {
+  if (typeof filePath !== 'string' || filePath.length === 0) {
+    throw new Error('Invalid file path')
+  }
+  if (!path.isAbsolute(filePath)) {
+    throw new Error('File path must be absolute')
+  }
+  return filePath
+}
 
 export function registerIpcHandlers(win: BrowserWindow): void {
   ipcMain.handle('fs:open', async () => {
@@ -22,7 +33,8 @@ export function registerIpcHandlers(win: BrowserWindow): void {
   })
 
   ipcMain.handle('fs:save', async (_event, content: string, filePath: string) => {
-    await fs.writeFile(filePath, content, 'utf-8')
+    const validPath = validateFilePath(filePath)
+    await fs.writeFile(validPath, content, 'utf-8')
     return { success: true }
   })
 
@@ -44,6 +56,11 @@ export function registerIpcHandlers(win: BrowserWindow): void {
   })
 
   ipcMain.handle('latex:compile', async (_event, filePath: string) => {
-    return compileLatex(filePath, win)
+    const validPath = validateFilePath(filePath)
+    return compileLatex(validPath, win)
+  })
+
+  ipcMain.handle('latex:cancel', () => {
+    return cancelCompilation()
   })
 }

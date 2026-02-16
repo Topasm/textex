@@ -14,23 +14,37 @@ function Toolbar({ onOpen, onSave, onSaveAs, onCompile, onToggleLog }: ToolbarPr
   const compileStatus = useAppStore((s) => s.compileStatus)
 
   const fileName = filePath ? filePath.split(/[\\/]/).pop() : 'Untitled'
-  const dirtyIndicator = isDirty ? ' *' : ''
 
   return (
     <div className="toolbar">
-      <button onClick={onOpen} title="Open (Ctrl+O)">Open</button>
-      <button onClick={onSave} title="Save (Ctrl+S)">Save</button>
-      <button onClick={onSaveAs} title="Save As (Ctrl+Shift+S)">Save As</button>
+      <button onClick={onOpen} title="Open file (Ctrl+O)">
+        Open<kbd>Ctrl+O</kbd>
+      </button>
+      <button
+        className={isDirty ? 'save-btn-dirty' : undefined}
+        onClick={onSave}
+        title="Save file (Ctrl+S)"
+      >
+        Save<kbd>Ctrl+S</kbd>
+      </button>
+      <button onClick={onSaveAs} title="Save As (Ctrl+Shift+S)">
+        Save As<kbd>Ctrl+Shift+S</kbd>
+      </button>
       <button
         className="compile-btn"
         onClick={onCompile}
         disabled={compileStatus === 'compiling'}
-        title="Compile (Ctrl+Enter)"
+        title="Compile LaTeX (Ctrl+Enter)"
       >
-        {compileStatus === 'compiling' ? 'Compiling...' : 'Compile'}
+        {compileStatus === 'compiling' ? 'Compiling...' : 'Compile'}<kbd>Ctrl+Enter</kbd>
       </button>
-      <button onClick={onToggleLog} title="Toggle Log (Ctrl+L)">Log</button>
-      <span className="file-name">{fileName}{dirtyIndicator}</span>
+      <button onClick={onToggleLog} title="Toggle log panel (Ctrl+L)">
+        Log<kbd>Ctrl+L</kbd>
+      </button>
+      <span className="file-name">
+        {isDirty && <span className="dirty-dot" />}
+        {fileName}
+      </span>
     </div>
   )
 }

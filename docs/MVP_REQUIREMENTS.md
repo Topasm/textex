@@ -1,8 +1,8 @@
-# NeuroTeX — MVP Requirements
+# TextEx — MVP Requirements
 
 ## Definition
 
-The MVP is the smallest functional version of NeuroTeX that delivers the core
+The MVP is the smallest functional version of TextEx that delivers the core
 value proposition: **edit LaTeX and see a PDF preview, with no external TeX
 installation required**.
 
@@ -26,21 +26,25 @@ installation required**.
 - [x] Bundled Tectonic binary resolved per platform (win/mac/linux).
 - [x] Manual compile via button or `Ctrl/Cmd+Enter`.
 - [x] Auto-compile on 1-second idle after typing.
-- [x] Compilation stderr streamed to a log panel in real time.
+- [x] Compilation stdout+stderr streamed to a log panel in real time.
+- [x] Compile cancellation: new compiles kill any running process.
 
 ### 4. PDF Preview
 - [x] Display compiled PDF in the right pane using react-pdf.
 - [x] Scroll through multi-page documents.
-- [ ] Re-render on successful recompile without losing scroll position.
-  - **Status:** PDF re-renders correctly on recompile. Scroll preservation
-    is not yet implemented (tracked as Phase 9.12).
+- [x] Re-render on successful recompile without losing scroll position.
 
 ### 5. Error Display
-- [x] Log panel shows Tectonic stderr output.
+- [x] Log panel shows Tectonic stdout+stderr output.
 - [x] Log panel auto-opens on compilation failure.
-- [x] Status bar shows current compile state (idle / compiling / error).
+- [x] Status bar shows current compile state (idle / compiling / success / error).
+- [x] Save failures during auto-compile are reported in the log panel.
 
-### 6. Packaging
+### 6. Error Recovery
+- [x] React ErrorBoundary wraps the app to catch rendering crashes.
+- [x] ErrorBoundary shows error details and a "Reload" button.
+
+### 7. Packaging
 - [~] Builds to a distributable installer for at least one platform.
   - **Status:** `electron-builder.yml` is configured. Actual packaging build
     has not been run yet (requires desktop environment for testing).
@@ -50,12 +54,13 @@ installation required**.
 
 ## Implementation Status
 
-**Code complete:** All MVP features have been implemented in code (Phases 0–6).
+**Code complete:** All MVP features have been implemented in code (Phases 0-6).
 
 **Pending:**
 - Integration testing on a desktop environment (Phase 7)
-- Packaging build + smoke test (Phase 8.3–8.5)
+- Packaging build + smoke test (Phase 8.3-8.5)
 - Download Tectonic binaries for Windows and macOS (Phase 8.2)
+- App icons and build assets (icons, entitlements)
 
 ---
 
@@ -65,7 +70,7 @@ These are explicitly **out of scope** for the first release:
 
 - [ ] Draggable split-pane divider.
 - [ ] PDF zoom controls.
-- [ ] SyncTeX (click source ↔ PDF jump).
+- [ ] SyncTeX (click source <-> PDF jump).
 - [ ] Multi-file project support.
 - [ ] LaTeX snippet insertion / template gallery.
 - [ ] Dark/light theme toggle.
@@ -77,7 +82,6 @@ These are explicitly **out of scope** for the first release:
 - [ ] Export to other formats (HTML, DOCX via Pandoc).
 - [ ] ESLint + Prettier setup.
 - [ ] Unit tests (Vitest + @testing-library/react).
-- [ ] PDF scroll position preservation across recompiles.
 
 ---
 
@@ -85,12 +89,12 @@ These are explicitly **out of scope** for the first release:
 
 All prerequisites have been satisfied:
 
-1. **Tectonic binary** — Downloaded v0.15.0 (musl) for Linux.
+1. **Tectonic binary** -- Downloaded v0.15.0 (musl) for Linux.
    Located at `resources/bin/linux/tectonic`. Verified working.
 
-2. **Node.js ≥ 18** — v20.20.0 installed via nvm.
+2. **Node.js >= 18** -- v20.20.0 installed via nvm.
 
-3. **Internet access** — Required for first compilation (Tectonic downloads
+3. **Internet access** -- Required for first compilation (Tectonic downloads
    LaTeX packages to `~/.cache/Tectonic/`). Verified working.
 
 ---

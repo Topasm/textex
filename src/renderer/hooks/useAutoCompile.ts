@@ -9,7 +9,8 @@ export function useAutoCompile(): void {
   const appendLog = useAppStore((s) => s.appendLog)
   const clearLogs = useAppStore((s) => s.clearLogs)
   const setLogPanelOpen = useAppStore((s) => s.setLogPanelOpen)
-  const timerRef = useRef<ReturnType<typeof setTimeout>>()
+  const setDirty = useAppStore((s) => s.setDirty)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   useEffect(() => {
     if (!filePath) return
@@ -19,8 +20,13 @@ export function useAutoCompile(): void {
       // Save before compiling
       try {
         await window.api.saveFile(content, filePath)
-      } catch {
-        // Save failed silently, still attempt compile
+        setDirty(false)
+      } catch (err: unknown) {
+        const saveErr = err instanceof Error ? err.message : String(err)
+        appendLog(`Save failed, skipping compile: ${saveErr}`)
+        setCompileStatus('error')
+        setLogPanelOpen(true)
+        return
       }
 
       setCompileStatus('compiling')
@@ -31,6 +37,8 @@ export function useAutoCompile(): void {
         setCompileStatus('success')
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err)
+        // Ignore cancellation errors — a new compile will follow
+        if (message === 'Compilation was cancelled') return
         appendLog(message)
         setCompileStatus('error')
         setLogPanelOpen(true)
@@ -38,5 +46,5 @@ export function useAutoCompile(): void {
     }, 1000)
 
     return () => clearTimeout(timerRef.current)
-  }, [content])
+  }, [content, filePath, setCompileStatus, setPdfBase64, appendLog, clearLogs, setLogPanelOpen, setDirty])
 }

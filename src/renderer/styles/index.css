@@ -78,15 +78,45 @@ body,
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .toolbar button:hover {
   background-color: #3c3c3c;
 }
 
+.toolbar button kbd {
+  font-family: inherit;
+  font-size: 10px;
+  color: #666666;
+  padding: 1px 4px;
+  background-color: #1e1e1e;
+  border-radius: 3px;
+}
+
+.toolbar button:hover kbd {
+  color: #888888;
+}
+
+.toolbar .save-btn-dirty {
+  background-color: #3c3c00;
+  color: #e8e8a0;
+}
+
+.toolbar .save-btn-dirty:hover {
+  background-color: #4a4a00;
+}
+
 .toolbar .compile-btn {
   background-color: #007acc;
   color: white;
+}
+
+.toolbar .compile-btn kbd {
+  color: rgba(255, 255, 255, 0.45);
+  background-color: rgba(0, 0, 0, 0.2);
 }
 
 .toolbar .compile-btn:hover {
@@ -102,6 +132,18 @@ body,
   margin-left: auto;
   font-size: 13px;
   color: #999999;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dirty-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #cca700;
+  display: inline-block;
+  flex-shrink: 0;
 }
 
 /* Preview */
@@ -132,6 +174,19 @@ body,
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+.preview-compiling-overlay {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  background-color: rgba(30, 30, 30, 0.7);
 }
 
 .preview-error {
@@ -192,7 +247,7 @@ body,
 }
 
 .log-panel pre {
-  height: 160px;
+  height: 200px;
   overflow: auto;
   padding: 12px;
   font-size: 12px;
@@ -229,6 +284,63 @@ body,
 .status-dot.green { background-color: #6a9955; }
 .status-dot.yellow { background-color: #cca700; }
 .status-dot.red { background-color: #f44747; }
+
+/* Error Boundary */
+.error-boundary {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #1e1e1e;
+  color: #cccccc;
+}
+
+.error-boundary-content {
+  text-align: center;
+  max-width: 480px;
+  padding: 32px;
+}
+
+.error-boundary-content h1 {
+  font-size: 20px;
+  margin-bottom: 8px;
+  color: #f44747;
+}
+
+.error-boundary-content p {
+  font-size: 14px;
+  margin-bottom: 16px;
+  color: #999999;
+}
+
+.error-boundary-details {
+  text-align: left;
+  padding: 12px;
+  margin-bottom: 16px;
+  background-color: #252526;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  color: #f44747;
+  white-space: pre-wrap;
+  overflow: auto;
+  max-height: 200px;
+}
+
+.error-boundary-reload {
+  padding: 8px 24px;
+  font-size: 14px;
+  background-color: #007acc;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.error-boundary-reload:hover {
+  background-color: #005f99;
+}
 
 /* PDF Page styling */
 .react-pdf__Page {

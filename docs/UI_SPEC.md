@@ -1,26 +1,27 @@
-# NeuroTeX — UI Specification
+# TextEx — UI Specification
 
 ## Layout
 
 The application uses a horizontal split-pane layout:
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│  Toolbar: [Open] [Save] [Compile] [Toggle Log]   file.tex │
-├────────────────────────────┬─────────────────────────────┤
-│                            │                             │
-│                            │                             │
-│     EditorPane             │      PreviewPane            │
-│     (Monaco Editor)        │      (react-pdf)            │
-│                            │                             │
-│                            │                             │
-│                            │                             │
-│                            │                             │
-├────────────────────────────┴─────────────────────────────┤
-│  LogPanel (collapsible): compilation output / errors      │
-├──────────────────────────────────────────────────────────┤
-│  StatusBar: Ready | Compiling... | Error   line:col       │
-└──────────────────────────────────────────────────────────┘
++----------------------------------------------------------+
+|  Toolbar: [Open Ctrl+O] [Save Ctrl+S] [Compile] [Log]   |
+|           file.tex (dot = dirty)                         |
++----------------------------+-----------------------------+
+|                            |                             |
+|                            |                             |
+|     EditorPane             |      PreviewPane            |
+|     (Monaco Editor)        |      (react-pdf)            |
+|                            |                             |
+|                            |                             |
+|                            |                             |
+|                            |                             |
++----------------------------+-----------------------------+
+|  LogPanel (collapsible): compilation output / errors      |
++----------------------------------------------------------+
+|  StatusBar: Ready | Compiling... | Error   Ln X, Col Y    |
++----------------------------------------------------------+
 ```
 
 ---
@@ -28,23 +29,32 @@ The application uses a horizontal split-pane layout:
 ## Component Tree
 
 ```
-App
-├── Toolbar
-├── SplitContainer
-│   ├── EditorPane
-│   └── PreviewPane
-├── LogPanel
-└── StatusBar
+ErrorBoundary
++-- App
+    +-- Toolbar
+    +-- SplitContainer
+    |   +-- EditorPane
+    |   +-- PreviewPane
+    +-- LogPanel
+    +-- StatusBar
 ```
 
 ---
 
 ## Component Specifications
 
+### `ErrorBoundary.tsx`
+- Class component wrapping the entire app (in `main.tsx`).
+- Catches render errors via `getDerivedStateFromError`.
+- Displays error message and a "Reload" button that calls `window.location.reload()`.
+
 ### `App.tsx`
-- Root layout using CSS Grid or Flexbox.
+- Root layout using Flexbox.
 - Manages the split ratio (default 50/50, draggable divider is a stretch goal).
 - Mounts all top-level components.
+- Registers keyboard shortcuts via a `keydown` event listener.
+- Sets up the `latex:log` IPC listener on mount (using `useAppStore.getState()` to
+  avoid stale closure issues).
 
 ### `Toolbar.tsx`
 | Button | Action | Shortcut |
@@ -55,45 +65,57 @@ App
 | Compile | Triggers manual compilation | `Ctrl/Cmd+Enter` |
 | Toggle Log | Shows/hides the LogPanel | `Ctrl/Cmd+L` |
 
-Displays the current file name (or "Untitled") and a dirty indicator (`*`).
+Each button displays its keyboard shortcut as a `<kbd>` element.
+
+Displays the current file name (or "Untitled"). The dirty indicator is a yellow
+dot next to the file name (replacing the previous `*` suffix). The Save button
+highlights with a yellow background when the file is dirty.
 
 ### `EditorPane.tsx`
 - Wraps `@monaco-editor/react`.
-- Language: `latex` (Monaco does not have built-in LaTeX; register a basic
-  TextMate grammar or use a community grammar).
-- Theme: VS Code dark (default), with option to switch to light.
+- Language: `latex` (Monaco built-in recognition).
+- Theme: VS Code dark (default).
 - `onChange` handler updates Zustand store and triggers debounced auto-compile.
+- Cursor position tracked via `onDidChangeCursorPosition` (disposable stored
+  in a ref and cleaned up on unmount).
 - Config:
   - `wordWrap: 'on'`
   - `minimap: { enabled: false }` (save space)
   - `fontSize: 14`
   - `lineNumbers: 'on'`
+  - `scrollBeyondLastLine: false`
+  - `automaticLayout: true`
+  - `padding: { top: 8 }`
 
 ### `PreviewPane.tsx`
 - Wraps `react-pdf`'s `<Document>` and `<Page>` components.
-- Accepts `pdfBase64` from the store; converts to a data URL or Blob for display.
+- Accepts `pdfBase64` from the store; converts to `Uint8Array` for PDF.js.
 - Features:
   - Scroll through pages continuously.
-  - Zoom controls (+/- buttons or Ctrl+scroll).
-  - **Preserve scroll position** on recompile (store `scrollTop` before update,
-    restore after render).
-- Loading state: spinner while compilation is in progress.
-- Error state: "Compilation failed. Check the log panel."
+  - Multi-page support with dynamic page count via `onDocumentLoadSuccess`.
+  - **Scroll position preservation** on recompile: tracks `scrollTop` via a ref
+    and restores it in `requestAnimationFrame` after the new PDF loads.
+  - Container width measured via `ResizeObserver` for responsive page sizing.
+- Loading state: semi-transparent overlay with spinner during compilation
+  (shown over the existing PDF so the previous output remains visible).
+- Error state: "Compilation failed. Check the log panel." (only when no PDF exists).
+- Empty state: "No PDF to display" placeholder.
 
 ### `LogPanel.tsx`
 - Collapsible panel at the bottom (default: hidden).
 - Auto-opens when a compilation error occurs.
-- Displays stderr output from Tectonic, streamed in real time.
-- Monospace font, dark background.
-- "Clear" button to reset log content.
+- Displays stdout+stderr output from Tectonic, streamed in real time.
+- Monospace font, dark background, 200px height.
+- "Clear" button to reset log content. "Close" button to collapse.
 - Auto-scrolls to bottom on new output.
 
 ### `StatusBar.tsx`
-- Fixed bar at the very bottom.
+- Fixed bar at the very bottom, styled with the VS Code blue accent color.
 - Left side: compilation status indicator.
-  - `Ready` (green dot)
-  - `Compiling...` (yellow spinner)
-  - `Error` (red dot)
+  - `Ready` (green dot) -- idle state
+  - `Compiling...` (yellow dot) -- compilation in progress
+  - `Success` (green dot) -- last compile succeeded
+  - `Error` (red dot) -- last compile failed
 - Right side: cursor position (`Ln X, Col Y`) from Monaco's `onDidChangeCursorPosition`.
 
 ---
@@ -101,33 +123,35 @@ Displays the current file name (or "Untitled") and a dirty indicator (`*`).
 ## Zustand Store Shape
 
 ```typescript
+export type CompileStatus = 'idle' | 'compiling' | 'success' | 'error'
+
 interface AppState {
   // File
-  filePath: string | null;
-  content: string;
-  isDirty: boolean;
+  filePath: string | null
+  content: string
+  isDirty: boolean
 
   // Compilation
-  compileStatus: 'idle' | 'compiling' | 'success' | 'error';
-  pdfBase64: string | null;
-  logs: string;
+  compileStatus: CompileStatus
+  pdfBase64: string | null
+  logs: string
 
   // UI
-  isLogPanelOpen: boolean;
-  cursorLine: number;
-  cursorColumn: number;
+  isLogPanelOpen: boolean
+  cursorLine: number
+  cursorColumn: number
 
   // Actions
-  setContent: (content: string) => void;
-  setFilePath: (path: string | null) => void;
-  setDirty: (dirty: boolean) => void;
-  setCompileStatus: (status: AppState['compileStatus']) => void;
-  setPdfBase64: (data: string | null) => void;
-  appendLog: (text: string) => void;
-  clearLogs: () => void;
-  toggleLogPanel: () => void;
-  setLogPanelOpen: (open: boolean) => void;
-  setCursorPosition: (line: number, column: number) => void;
+  setContent: (content: string) => void
+  setFilePath: (path: string | null) => void
+  setDirty: (dirty: boolean) => void
+  setCompileStatus: (status: CompileStatus) => void
+  setPdfBase64: (data: string | null) => void
+  appendLog: (text: string) => void
+  clearLogs: () => void
+  toggleLogPanel: () => void
+  setLogPanelOpen: (open: boolean) => void
+  setCursorPosition: (line: number, column: number) => void
 }
 ```
 
@@ -135,50 +159,23 @@ interface AppState {
 
 ## Auto-Compile Hook (`useAutoCompile.ts`)
 
-```typescript
-import { useEffect, useRef } from 'react';
-import { useAppStore } from '../store/useAppStore';
+- Watches `content` and `filePath` changes in store.
+- 1000ms debounce timer.
+- Saves file first; if save fails, logs the error and aborts (does not compile).
+- On save success, clears dirty flag.
+- Triggers compilation via `window.api.compile(filePath)`.
+- Silently ignores "Compilation was cancelled" errors (from compile cancellation).
+- Updates `compileStatus` and `pdfBase64` on success, opens log panel on error.
+- Full dependency array includes all store selectors used in the effect.
 
-export function useAutoCompile(): void {
-  const content = useAppStore((s) => s.content);
-  const filePath = useAppStore((s) => s.filePath);
-  const setCompileStatus = useAppStore((s) => s.setCompileStatus);
-  const setPdfBase64 = useAppStore((s) => s.setPdfBase64);
-  const appendLog = useAppStore((s) => s.appendLog);
-  const clearLogs = useAppStore((s) => s.clearLogs);
-  const setLogPanelOpen = useAppStore((s) => s.setLogPanelOpen);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+---
 
-  useEffect(() => {
-    if (!filePath) return;
+## File Operations Hook (`useFileOps.ts`)
 
-    clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(async () => {
-      // Save before compiling
-      try {
-        await window.api.saveFile(content, filePath);
-      } catch {
-        // Save failed silently, still attempt compile
-      }
-
-      setCompileStatus('compiling');
-      clearLogs();
-      try {
-        const result = await window.api.compile(filePath);
-        setPdfBase64(result.pdfBase64);
-        setCompileStatus('success');
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : String(err);
-        appendLog(message);
-        setCompileStatus('error');
-        setLogPanelOpen(true);
-      }
-    }, 1000); // 1-second debounce
-
-    return () => clearTimeout(timerRef.current);
-  }, [content]);
-}
-```
+- `handleOpen()` -- native dialog, loads content into store, clears dirty flag.
+- `handleSave()` -- saves to disk using `useAppStore.getState()` for fresh content.
+  Falls back to Save As if no file path exists.
+- `handleSaveAs()` -- save dialog, updates path in store, clears dirty flag.
 
 ---
 
@@ -191,8 +188,6 @@ export function useAutoCompile(): void {
 | `Ctrl/Cmd + Shift + S` | Save as |
 | `Ctrl/Cmd + Enter` | Manual compile |
 | `Ctrl/Cmd + L` | Toggle log panel |
-| `Ctrl/Cmd + +` | Zoom in PDF |
-| `Ctrl/Cmd + -` | Zoom out PDF |
 
 ---
 
@@ -207,3 +202,5 @@ export function useAutoCompile(): void {
   - Accent: `#007acc` (VS Code blue)
   - Error: `#f44747`
   - Success: `#6a9955`
+  - Dirty indicator: `#cca700` (yellow dot + save button highlight)
+  - Status bar: `#007acc` (blue bar with white text)
