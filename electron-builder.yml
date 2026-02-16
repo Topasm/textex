@@ -21,7 +21,7 @@ files:
 
 publish:
   - provider: github
-    owner: textex
+    owner: Topasm
     repo: textex
 
 win:
