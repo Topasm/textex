@@ -180,7 +180,7 @@ See [`docs/`](docs/) for detailed documentation:
 - **Monaco Editor** — code editor
 - **react-pdf / PDF.js** — PDF rendering
 - **Zustand** — state management
-- **Tectonic 0.15.0** — LaTeX engine (bundled)
+- **Tectonic 0.15.0** — LaTeX engine (bundled, [continuous build](https://github.com/tectonic-typesetting/tectonic/releases/tag/continuous))
 - **electron-vite** — build tooling
 - **electron-builder** — packaging
 - **electron-updater** — auto-updates
@@ -189,6 +189,29 @@ See [`docs/`](docs/) for detailed documentation:
 - **commander** — CLI argument parsing
 - **chokidar** — file watching for CLI `--watch` mode
 - **@modelcontextprotocol/sdk** — MCP server framework
+
+## Built With
+
+TextEx is built on these open-source projects:
+
+| Component | Source | License |
+|-----------|--------|---------|
+| [Electron](https://www.electronjs.org/) | Desktop application shell | MIT |
+| [Tectonic](https://tectonic-typesetting.github.io/) | Self-contained LaTeX engine (no TeX Live needed) | MIT |
+| [React](https://react.dev/) | UI framework | MIT |
+| [Monaco Editor](https://microsoft.github.io/monaco-editor/) | Code editor (same engine as VS Code) | MIT |
+| [react-pdf](https://github.com/wojtekmaj/react-pdf) / [PDF.js](https://mozilla.github.io/pdf.js/) | PDF rendering in the browser | Apache-2.0 |
+| [Zustand](https://github.com/pmndrs/zustand) | Lightweight state management | MIT |
+| [electron-vite](https://electron-vite.org/) | Build tooling for Electron + Vite | MIT |
+| [electron-builder](https://www.electron.build/) | Cross-platform packaging and distribution | MIT |
+| [electron-updater](https://www.electron.build/auto-update) | Seamless in-app auto-updates | MIT |
+| [simple-git](https://github.com/steveukx/git-js) | Git CLI wrapper for Node.js | MIT |
+| [nspell](https://github.com/wooorm/nspell) | Hunspell-compatible spell checker | MIT |
+| [Pandoc](https://pandoc.org/) | Universal document converter (for export) | GPL-2.0 |
+| [Commander.js](https://github.com/tj/commander.js) | CLI argument parsing | MIT |
+| [chokidar](https://github.com/paulmillr/chokidar) | File watching for CLI `--watch` mode | MIT |
+| [MCP SDK](https://github.com/modelcontextprotocol/sdk) | Model Context Protocol server framework | MIT |
+| [KaTeX](https://katex.org/) | Math typesetting for previews | MIT |
 
 ## License
 
