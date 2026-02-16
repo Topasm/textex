@@ -25,9 +25,11 @@ mac:
   icon: build/icon.icns
   target:
     - target: dmg
+    - target: zip
   hardenedRuntime: true
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
+  notarize: false
 
 linux:
   icon: build/icon.png

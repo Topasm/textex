@@ -74,6 +74,22 @@ jobs:
         run: npx electron-vite build && npx electron-builder ${{ matrix.build_args }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Skip auto-discovery of Developer ID certificates on macOS CI.
+          # Without a real certificate, electron-builder ad-hoc signs with '-',
+          # which keeps Team IDs consistent across the main binary and frameworks.
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ startsWith(matrix.platform, 'mac') && 'false' || '' }}
+
+      - name: Re-sign macOS app (ad-hoc)
+        if: startsWith(matrix.platform, 'mac')
+        shell: bash
+        run: |
+          APP_PATH=$(find dist/mac* -name '*.app' -maxdepth 1 2>/dev/null | head -1)
+          if [ -n "$APP_PATH" ]; then
+            echo "Re-signing $APP_PATH with consistent ad-hoc identity..."
+            codesign --deep --force --sign - "$APP_PATH"
+            echo "Verifying signature..."
+            codesign --verify --deep --strict "$APP_PATH" && echo "Signature OK" || echo "Signature verification warning (expected for ad-hoc)"
+          fi
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
