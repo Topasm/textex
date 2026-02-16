@@ -303,4 +303,125 @@ describe('useAppStore', () => {
       expect(useAppStore.getState().zoomLevel).toBe(100)
     })
   })
+
+  describe('openFileInTab', () => {
+    it('opens a new file and sets it as active', () => {
+      useAppStore.getState().openFileInTab('/path/a.tex', 'content A')
+      const state = useAppStore.getState()
+      expect(state.activeFilePath).toBe('/path/a.tex')
+      expect(state.filePath).toBe('/path/a.tex')
+      expect(state.content).toBe('content A')
+      expect(state.isDirty).toBe(false)
+      expect(state.openFiles['/path/a.tex']).toBeDefined()
+      expect(state.openFiles['/path/a.tex'].content).toBe('content A')
+    })
+
+    it('refreshes content when reopening an already-open file', () => {
+      // Open file with original content
+      useAppStore.getState().openFileInTab('/path/a.tex', 'original content')
+      // Edit it
+      useAppStore.getState().setContent('edited content')
+      expect(useAppStore.getState().openFiles['/path/a.tex'].content).toBe('edited content')
+
+      // Reopen with fresh content from disk
+      useAppStore.getState().openFileInTab('/path/a.tex', 'fresh from disk')
+      const state = useAppStore.getState()
+      expect(state.content).toBe('fresh from disk')
+      expect(state.openFiles['/path/a.tex'].content).toBe('fresh from disk')
+      expect(state.isDirty).toBe(false)
+    })
+
+    it('preserves cursor position when reopening an already-open file', () => {
+      useAppStore.getState().openFileInTab('/path/a.tex', 'content')
+      useAppStore.getState().setCursorPosition(10, 5)
+      // Simulate cursor being saved in openFiles via setActiveTab flow
+      useAppStore.setState({
+        openFiles: {
+          '/path/a.tex': { content: 'content', isDirty: false, cursorLine: 10, cursorColumn: 5 }
+        }
+      })
+
+      useAppStore.getState().openFileInTab('/path/a.tex', 'refreshed')
+      const state = useAppStore.getState()
+      expect(state.content).toBe('refreshed')
+      expect(state.cursorLine).toBe(10)
+      expect(state.cursorColumn).toBe(5)
+    })
+
+    it('does not corrupt other open files when opening a new file', () => {
+      // Open file A
+      useAppStore.getState().openFileInTab('/path/a.tex', 'content A')
+
+      // Open file B — this should NOT overwrite A's content
+      useAppStore.getState().openFileInTab('/path/b.tex', 'content B')
+      const state = useAppStore.getState()
+      expect(state.activeFilePath).toBe('/path/b.tex')
+      expect(state.content).toBe('content B')
+      expect(state.openFiles['/path/a.tex'].content).toBe('content A')
+      expect(state.openFiles['/path/b.tex'].content).toBe('content B')
+    })
+  })
+
+  describe('setActiveTab', () => {
+    it('persists current content when switching tabs', () => {
+      // Open file A and edit it
+      useAppStore.getState().openFileInTab('/path/a.tex', 'original A')
+      useAppStore.getState().setContent('edited A')
+
+      // Open file B
+      useAppStore.getState().openFileInTab('/path/b.tex', 'content B')
+
+      // Switch back to A — the edited content should be preserved
+      useAppStore.getState().setActiveTab('/path/a.tex')
+      const state = useAppStore.getState()
+      expect(state.activeFilePath).toBe('/path/a.tex')
+      expect(state.content).toBe('edited A')
+      expect(state.openFiles['/path/a.tex'].content).toBe('edited A')
+    })
+
+    it('saves content of current tab before switching away', () => {
+      // Open two files
+      useAppStore.getState().openFileInTab('/path/a.tex', 'content A')
+      useAppStore.getState().openFileInTab('/path/b.tex', 'content B')
+
+      // Edit B
+      useAppStore.getState().setContent('edited B')
+
+      // Switch to A — B's edited content should be saved in openFiles
+      useAppStore.getState().setActiveTab('/path/a.tex')
+      expect(useAppStore.getState().openFiles['/path/b.tex'].content).toBe('edited B')
+    })
+
+    it('preserves cursor position across tab switches', () => {
+      useAppStore.getState().openFileInTab('/path/a.tex', 'content A')
+      useAppStore.getState().setCursorPosition(15, 8)
+
+      useAppStore.getState().openFileInTab('/path/b.tex', 'content B')
+      useAppStore.getState().setCursorPosition(3, 12)
+
+      // Switch back to A
+      useAppStore.getState().setActiveTab('/path/a.tex')
+      expect(useAppStore.getState().cursorLine).toBe(15)
+      expect(useAppStore.getState().cursorColumn).toBe(8)
+
+      // Switch back to B
+      useAppStore.getState().setActiveTab('/path/b.tex')
+      expect(useAppStore.getState().cursorLine).toBe(3)
+      expect(useAppStore.getState().cursorColumn).toBe(12)
+    })
+  })
+
+  describe('setContent with multi-file', () => {
+    it('updates only the active file in openFiles', () => {
+      useAppStore.getState().openFileInTab('/path/a.tex', 'content A')
+      useAppStore.getState().openFileInTab('/path/b.tex', 'content B')
+
+      // Edit B (the active file)
+      useAppStore.getState().setContent('modified B')
+
+      const state = useAppStore.getState()
+      expect(state.openFiles['/path/b.tex'].content).toBe('modified B')
+      expect(state.openFiles['/path/a.tex'].content).toBe('content A')
+    })
+  })
 })
