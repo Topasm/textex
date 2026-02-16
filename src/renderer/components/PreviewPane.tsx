@@ -18,6 +18,10 @@ function PreviewPane(): JSX.Element {
   const pdfBase64 = useAppStore((s) => s.pdfBase64)
   const compileStatus = useAppStore((s) => s.compileStatus)
   const synctexHighlight = useAppStore((s) => s.synctexHighlight)
+  const zoomLevel = useAppStore((s) => s.zoomLevel)
+  const zoomIn = useAppStore((s) => s.zoomIn)
+  const zoomOut = useAppStore((s) => s.zoomOut)
+  const resetZoom = useAppStore((s) => s.resetZoom)
   const containerRef = useRef<HTMLDivElement>(null)
   const scrollPositionRef = useRef(0)
   const [numPages, setNumPages] = useState(0)
@@ -91,14 +95,14 @@ function PreviewPane(): JSX.Element {
       if (!container) return
       const pageEl = container.querySelector(`[data-page-number="${pageNumber}"]`) as HTMLDivElement | null
       if (!pageEl) return
-      // Calculate the actual scale from the rendered page
-      const pageWidth = containerWidth ? containerWidth - 32 : 612
+      // Calculate the actual scale from the rendered page (including zoom)
+      const pw = containerWidth ? (containerWidth - 32) * (zoomLevel / 100) : 612
       const defaultWidth = 612 // default PDF point width for letter
-      const scale = pageWidth / defaultWidth
+      const scale = pw / defaultWidth
       const viewport = page.getViewport({ scale })
       pageViewportsRef.current.set(pageNumber, { viewport, element: pageEl })
     }
-  }, [containerWidth])
+  }, [containerWidth, zoomLevel])
 
   // React to synctexHighlight changes — show indicator + scroll
   useEffect(() => {
@@ -186,10 +190,10 @@ function PreviewPane(): JSX.Element {
     const clickY = e.clientY - pageRect.top
 
     // Convert screen coordinates to PDF coordinates
-    // We need to reverse the viewport transformation
-    const pageWidth = containerWidth ? containerWidth - 32 : 612
+    // We need to reverse the viewport transformation (including zoom)
+    const pw = containerWidth ? (containerWidth - 32) * (useAppStore.getState().zoomLevel / 100) : 612
     const defaultWidth = 612
-    const scale = pageWidth / defaultWidth
+    const scale = pw / defaultWidth
     const pdfX = clickX / scale
     const pdfY = clickY / scale
 
@@ -220,7 +224,7 @@ function PreviewPane(): JSX.Element {
     )
   }
 
-  const pageWidth = containerWidth ? containerWidth - 32 : undefined
+  const pageWidth = containerWidth ? (containerWidth - 32) * (zoomLevel / 100) : undefined
 
   return (
     <div
@@ -230,6 +234,12 @@ function PreviewPane(): JSX.Element {
       onClick={handleContainerClick}
       style={{ position: 'relative' }}
     >
+      <div className="zoom-toolbar">
+        <button onClick={zoomOut} disabled={zoomLevel <= 25} title="Zoom Out">-</button>
+        <span>{zoomLevel}%</span>
+        <button onClick={zoomIn} disabled={zoomLevel >= 400} title="Zoom In">+</button>
+        <button onClick={resetZoom} title="Fit Width">Fit Width</button>
+      </div>
       {compileStatus === 'compiling' && (
         <div className="preview-compiling-overlay">
           <div className="preview-spinner" />

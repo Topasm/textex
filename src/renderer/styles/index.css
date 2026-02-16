@@ -48,14 +48,25 @@ body,
 }
 
 .editor-pane {
-  width: 50%;
-  border-right: 1px solid #333333;
   height: 100%;
+  min-width: 0;
+}
+
+.split-divider {
+  width: 4px;
+  flex-shrink: 0;
+  background-color: #333333;
+  cursor: col-resize;
+  transition: background-color 0.15s;
+}
+
+.split-divider:hover {
+  background-color: #007acc;
 }
 
 .preview-pane {
-  width: 50%;
   height: 100%;
+  min-width: 0;
 }
 
 /* Toolbar */
