@@ -58,7 +58,18 @@ function BibPanel() {
           }
 
           return (
-            <div key={entry.key} className="bib-entry" onClick={() => handleInsert(entry.key)} title={`Insert \\cite{${entry.key}}`}>
+            <div
+              key={entry.key}
+              className="bib-entry"
+              onClick={() => handleInsert(entry.key)}
+              title={`Insert \\cite{${entry.key}}`}
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData('text/plain', `\\cite{${entry.key}}`)
+                e.dataTransfer.effectAllowed = 'copy'
+              }}
+              style={{ cursor: 'grab' }}
+            >
               <div className="bib-entry-header">
                 <span className="bib-title">{cleanTitle}</span>
               </div>

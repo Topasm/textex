@@ -126,7 +126,32 @@ function EditorPane() {
   }
 
   return (
-    <div style={{ height: '100%' }}>
+    <div
+      style={{ height: '100%' }}
+      onDragOver={(e) => {
+        e.preventDefault()
+        e.dataTransfer.dropEffect = 'copy'
+      }}
+      onDrop={(e) => {
+        e.preventDefault()
+        const text = e.dataTransfer.getData('text/plain')
+        const editor = editorRef.current
+        const monaco = monacoRef.current
+        if (!text || !editor || !monaco) return
+
+        const target = editor.getTargetAtClientPoint(e.clientX, e.clientY)
+        if (target?.position) {
+          const pos = target.position
+          editor.executeEdits('bib-drop', [{
+            range: new monaco.Range(pos.lineNumber, pos.column, pos.lineNumber, pos.column),
+            text,
+            forceMoveMarkers: true,
+          }])
+          editor.setPosition(pos)
+          editor.focus()
+        }
+      }}
+    >
       <Editor
         height="100%"
         defaultLanguage="latex"
@@ -144,6 +169,7 @@ function EditorPane() {
           suggestOnTriggerCharacters: true,
           padding: { top: 8 },
           wordWrap: settings.wordWrap ? 'on' : 'off',
+          dropIntoEditor: { enabled: false },
         }}
       />
     </div>
