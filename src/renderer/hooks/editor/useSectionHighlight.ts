@@ -1,6 +1,5 @@
 import { useEffect, useRef, type MutableRefObject } from 'react'
 import { useAppStore } from '../../store/useAppStore'
-import type { DocumentSymbolNode } from '../../../shared/types'
 import type { editor as monacoEditor } from 'monaco-editor'
 
 type MonacoInstance = typeof import('monaco-editor')
@@ -11,84 +10,122 @@ interface UseSectionHighlightArgs {
 }
 
 /**
- * Applies subtle alternating background bands to top-level sections in the editor.
- * Each \section heading line also gets a colored left-border accent.
+ * Inject a <style> element with dynamic CSS classes generated from the
+ * user-chosen color palette. Each color gets heading, bar and band classes.
+ */
+function injectPaletteStyles(colors: string[]): HTMLStyleElement {
+  const id = 'sh-palette-styles'
+  let el = document.getElementById(id) as HTMLStyleElement | null
+  if (!el) {
+    el = document.createElement('style')
+    el.id = id
+    document.head.appendChild(el)
+  }
+
+  const hexToRgb = (hex: string): string => {
+    const h = hex.replace('#', '')
+    const r = parseInt(h.substring(0, 2), 16)
+    const g = parseInt(h.substring(2, 4), 16)
+    const b = parseInt(h.substring(4, 6), 16)
+    return `${r}, ${g}, ${b}`
+  }
+
+  const rules = colors.map((color, i) => {
+    const rgb = hexToRgb(color)
+    return `
+.sh-heading-c${i} { border-top-color: rgba(${rgb}, 0.6) !important; }
+.sh-bar-c${i}     { background: ${color} !important; }
+.sh-band-c${i}    { background: rgba(${rgb}, 0.10); }`
+  })
+
+  el.textContent = rules.join('\n')
+  return el
+}
+
+/**
+ * Highlights top-level \\section ranges with rainbow-colored bands.
+ * Colors are user-configurable in settings and cycle through the palette.
  */
 export function useSectionHighlight({ editorRef, monacoRef }: UseSectionHighlightArgs): void {
   const enabled = useAppStore((s) => s.settings.sectionHighlightEnabled)
+  const colors = useAppStore((s) => s.settings.sectionHighlightColors)
   const documentSymbols = useAppStore((s) => s.documentSymbols)
   const collectionRef = useRef<monacoEditor.IEditorDecorationsCollection | null>(null)
 
+  // Keep palette CSS in sync with colors
+  useEffect(() => {
+    if (enabled && colors.length > 0) {
+      injectPaletteStyles(colors)
+    }
+  }, [enabled, colors])
+
+  // Apply decorations
   useEffect(() => {
     const editor = editorRef.current
     const monaco = monacoRef.current
     if (!editor || !monaco) return
 
-    // Create collection on first use
     if (!collectionRef.current) {
       collectionRef.current = editor.createDecorationsCollection([])
     }
 
-    if (!enabled || documentSymbols.length === 0) {
+    if (!enabled || documentSymbols.length === 0 || colors.length === 0) {
       collectionRef.current.set([])
       return
     }
 
-    // Collect top-level section symbols (kind 2 = Module, kind 3 = Namespace)
-    const sections = flattenTopLevelSections(documentSymbols)
+    const sections = documentSymbols.filter((s) => s.kind === 2 || s.kind === 3)
 
     if (sections.length === 0) {
       collectionRef.current.set([])
       return
     }
 
+    const paletteSize = colors.length
     const decorations: monacoEditor.IModelDeltaDecoration[] = []
 
     sections.forEach((section, index) => {
-      const bandClass = index % 2 === 0 ? 'section-band-even' : 'section-band-odd'
+      const c = index % paletteSize
       const startLine = section.range.startLine
       const endLine = section.range.endLine
 
-      // Heading line: left-border accent
+      // Heading: top border divider
       decorations.push({
         range: new monaco.Range(startLine, 1, startLine, 1),
         options: {
           isWholeLine: true,
-          linesDecorationsClassName: 'section-heading-marker'
+          className: `sh-heading sh-heading-c${c}`
         }
       })
 
-      // Body band: alternating subtle background from heading to end
+      // Left accent bar spanning full section
       decorations.push({
         range: new monaco.Range(startLine, 1, endLine, 1),
         options: {
           isWholeLine: true,
-          className: bandClass
+          linesDecorationsClassName: `sh-bar sh-bar-c${c}`
+        }
+      })
+
+      // Background band spanning full section
+      decorations.push({
+        range: new monaco.Range(startLine, 1, endLine, 1),
+        options: {
+          isWholeLine: true,
+          className: `sh-band-c${c}`
         }
       })
     })
 
     collectionRef.current.set(decorations)
-  }, [enabled, documentSymbols, editorRef, monacoRef])
+  }, [enabled, documentSymbols, colors, editorRef, monacoRef])
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       collectionRef.current?.clear()
+      const el = document.getElementById('sh-palette-styles')
+      if (el) el.remove()
     }
   }, [])
-}
-
-/**
- * Extract top-level section symbols (kind 2 = Module or kind 3 = Namespace).
- * These correspond to \section, \chapter, \part in the LaTeX outline.
- */
-function flattenTopLevelSections(symbols: DocumentSymbolNode[]): DocumentSymbolNode[] {
-  const result: DocumentSymbolNode[] = []
-  for (const sym of symbols) {
-    if (sym.kind === 2 || sym.kind === 3) {
-      result.push(sym)
-    }
-  }
-  return result
 }

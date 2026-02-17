@@ -238,13 +238,16 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
                                         <div className="settings-row">
                                             <div>
                                                 <div className="settings-row-label">Section Highlight</div>
-                                                <div className="settings-row-description">Show alternating background bands for each section in the editor</div>
+                                                <div className="settings-row-description">Show colored bands for each \section in the editor</div>
                                             </div>
                                             <Toggle
                                                 checked={settings.sectionHighlightEnabled}
                                                 onChange={(checked) => updateSetting('sectionHighlightEnabled', checked)}
                                             />
                                         </div>
+                                        {settings.sectionHighlightEnabled && (
+                                            <SectionColorPalette />
+                                        )}
                                     </div>
                                 </div>
 
@@ -466,5 +469,65 @@ const ZoteroStatusProbe = ({ port }: { port: number }) => {
         <span className="settings-status-text error" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
             <span className="settings-status-dot error" />Disconnected
         </span>
+    );
+};
+
+const DEFAULT_RAINBOW: string[] = [
+    '#e06c75', '#e5c07b', '#98c379', '#61afef', '#c678dd', '#56b6c2', '#d19a66'
+];
+
+const SectionColorPalette = () => {
+    const colors = useAppStore((s) => s.settings.sectionHighlightColors);
+    const updateSetting = useAppStore((s) => s.updateSetting);
+
+    const setColor = (index: number, value: string) => {
+        const next = [...colors];
+        next[index] = value;
+        updateSetting('sectionHighlightColors', next);
+    };
+
+    const removeColor = (index: number) => {
+        if (colors.length <= 1) return;
+        const next = colors.filter((_, i) => i !== index);
+        updateSetting('sectionHighlightColors', next);
+    };
+
+    const addColor = () => {
+        updateSetting('sectionHighlightColors', [...colors, '#888888']);
+    };
+
+    const resetToDefault = () => {
+        updateSetting('sectionHighlightColors', [...DEFAULT_RAINBOW]);
+    };
+
+    return (
+        <div className="sh-palette-editor">
+            <div className="sh-palette-label">
+                <span>Section Colors</span>
+                <button className="sh-palette-reset" onClick={resetToDefault} title="Reset to default rainbow">
+                    Reset
+                </button>
+            </div>
+            <div className="sh-palette-swatches">
+                {colors.map((color, i) => (
+                    <div key={i} className="sh-swatch-wrap">
+                        <label className="sh-swatch" style={{ backgroundColor: color }} title={`Color ${i + 1}: ${color}`}>
+                            <input
+                                type="color"
+                                value={color}
+                                onChange={(e) => setColor(i, e.target.value)}
+                                className="sh-swatch-input"
+                            />
+                        </label>
+                        {colors.length > 1 && (
+                            <button className="sh-swatch-remove" onClick={() => removeColor(i)} title="Remove color">
+                                {'\u00d7'}
+                            </button>
+                        )}
+                    </div>
+                ))}
+                <button className="sh-swatch-add" onClick={addColor} title="Add color">+</button>
+            </div>
+        </div>
     );
 };

@@ -47,6 +47,7 @@ export interface UserSettings {
 
   // Section highlight
   sectionHighlightEnabled: boolean
+  sectionHighlightColors: string[]
 
   // LSP
   lspEnabled: boolean
@@ -83,6 +84,15 @@ const defaultSettings: UserSettings = {
   mathPreviewEnabled: true,
   spellCheckEnabled: false,
   sectionHighlightEnabled: false,
+  sectionHighlightColors: [
+    '#e06c75', // red
+    '#e5c07b', // orange/amber
+    '#98c379', // green
+    '#61afef', // blue
+    '#c678dd', // violet
+    '#56b6c2', // cyan
+    '#d19a66'  // warm orange
+  ],
   lspEnabled: true,
   zoteroEnabled: false,
   zoteroPort: 23119,
@@ -554,7 +564,7 @@ export const useAppStore = create<AppState>()(
       clearPendingJump: () => set({ pendingJump: null }),
       setSynctexHighlight: (highlight) =>
         set({ synctexHighlight: highlight ? { ...highlight, timestamp: Date.now() } : null }),
-      setSplitRatio: (splitRatio) => set({ splitRatio }),
+      setSplitRatio: (splitRatio) => set({ splitRatio: Math.max(0.2, Math.min(0.8, splitRatio)) }),
       setZoomLevel: (level) => set({ zoomLevel: Math.max(25, Math.min(400, level)) }),
       zoomIn: () => set((state) => ({ zoomLevel: Math.min(400, state.zoomLevel + 25) })),
       zoomOut: () => set((state) => ({ zoomLevel: Math.max(25, state.zoomLevel - 25) })),

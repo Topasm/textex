@@ -243,7 +243,8 @@ body,
   transition: background-color 0.15s;
 }
 
-.split-divider:hover {
+.split-divider:hover,
+.split-divider:active {
   background-color: var(--accent);
 }
 
@@ -995,28 +996,48 @@ body,
 .sidebar-content {
   flex: 1;
   overflow: auto;
-  transition: transform 0.15s ease-out, opacity 0.15s ease-out;
 }
 
-.sidebar-slide-left {
-  transform: translateX(-30px);
+.sidebar-exit-left {
+  transition: transform 100ms ease-in, opacity 100ms ease-in;
+  transform: translateX(-24px);
   opacity: 0;
 }
 
-.sidebar-slide-right {
-  transform: translateX(30px);
+.sidebar-exit-right {
+  transition: transform 100ms ease-in, opacity 100ms ease-in;
+  transform: translateX(24px);
   opacity: 0;
+}
+
+.sidebar-enter-left {
+  animation: sidebar-enter-from-left 120ms ease-out;
+}
+
+.sidebar-enter-right {
+  animation: sidebar-enter-from-right 120ms ease-out;
+}
+
+@keyframes sidebar-enter-from-left {
+  from { transform: translateX(-16px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes sidebar-enter-from-right {
+  from { transform: translateX(16px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
 }
 
 .sidebar-resize-handle {
   width: 4px;
   flex-shrink: 0;
-  background-color: transparent;
+  background-color: var(--border);
   cursor: col-resize;
   transition: background-color 0.15s;
 }
 
-.sidebar-resize-handle:hover {
+.sidebar-resize-handle:hover,
+.sidebar-resize-handle:active {
   background-color: var(--accent);
 }
 
@@ -1050,12 +1071,27 @@ body,
   background-color: var(--sidebar-bg);
 }
 
-/* Note: Removed .sidebar-wrapper.sidebar-auto-hide:hover { width: auto } 
-   to prevent layout shift of the editor area when opening. 
+.sidebar-wrapper.sidebar-auto-hide .sidebar-resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -4px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+/* Note: Removed .sidebar-wrapper.sidebar-auto-hide:hover { width: auto }
+   to prevent layout shift of the editor area when opening.
    Hovering the absolute sidebar child will maintain the :hover state on the wrapper. */
 
 .sidebar-wrapper.sidebar-auto-hide:hover .sidebar {
   transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sidebar-wrapper.sidebar-auto-hide:hover .sidebar-resize-handle {
   opacity: 1;
   pointer-events: auto;
 }
@@ -3537,37 +3573,125 @@ body,
   text-align: center;
 }
 
-/* Section Highlight Bands */
-.section-band-even {
-  background: rgba(0, 122, 204, 0.04);
-}
+/* ── Section Highlight Bands ─────────────────────────────────────── */
+/* Base structural styles only. Color classes (sh-heading-cN, sh-bar-cN,
+   sh-band-cN) are injected dynamically from the user's palette via
+   useSectionHighlight hook → <style id="sh-palette-styles">. */
 
-.section-band-odd {
-  background: rgba(106, 153, 85, 0.04);
+.sh-heading {
+  border-top: 2px solid transparent !important;
 }
-
-.section-heading-marker {
-  background: var(--accent);
-  width: 3px !important;
-  margin-left: 3px;
-}
-
-[data-theme='light'] .section-band-even {
-  background: rgba(122, 98, 64, 0.05);
-}
-
-[data-theme='light'] .section-band-odd {
-  background: rgba(74, 138, 58, 0.05);
-}
-
-[data-theme='high-contrast'] .section-band-even {
-  background: rgba(0, 122, 204, 0.08);
-}
-
-[data-theme='high-contrast'] .section-band-odd {
-  background: rgba(106, 153, 85, 0.08);
-}
-
-[data-theme='high-contrast'] .section-heading-marker {
+.sh-bar {
   width: 4px !important;
+  margin-left: 2px;
+}
+
+[data-theme='high-contrast'] .sh-heading {
+  border-top-width: 3px !important;
+}
+[data-theme='high-contrast'] .sh-bar {
+  width: 5px !important;
+}
+
+/* ── Section Color Palette Editor (Settings) ──────────────────── */
+
+.sh-palette-editor {
+  padding: 4px 0 4px 16px;
+}
+
+.sh-palette-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.sh-palette-reset {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.sh-palette-reset:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-hover);
+}
+
+.sh-palette-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.sh-swatch-wrap {
+  position: relative;
+}
+
+.sh-swatch {
+  display: block;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 2px solid var(--border);
+  cursor: pointer;
+  transition: border-color 0.12s, transform 0.1s;
+}
+.sh-swatch:hover {
+  border-color: var(--text-primary);
+  transform: scale(1.1);
+}
+
+.sh-swatch-input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+  pointer-events: none;
+}
+
+.sh-swatch-remove {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--error);
+  color: white;
+  border: none;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.sh-swatch-wrap:hover .sh-swatch-remove {
+  display: flex;
+}
+
+.sh-swatch-add {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 2px dashed var(--border);
+  background: none;
+  color: var(--text-secondary);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.12s, color 0.12s;
+}
+.sh-swatch-add:hover {
+  border-color: var(--accent);
+  color: var(--accent);
 }

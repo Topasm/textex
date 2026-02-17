@@ -581,34 +581,40 @@ function App() {
 
   // ---- Sidebar trackpad swipe to switch tabs ----
   const swipeLocked = useRef(false)
-  const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null)
+  const swipeEndTimer = useRef<ReturnType<typeof setTimeout>>()
+  const [slideAnim, setSlideAnim] = useState<'exit-left' | 'exit-right' | 'enter-left' | 'enter-right' | null>(null)
 
   const handleSidebarWheel = useCallback((e: React.WheelEvent) => {
-    if (swipeLocked.current) return
-    // Only respond to horizontal scroll (trackpad two-finger slide)
+    // While locked, keep resetting the end-of-gesture timer to absorb momentum
+    if (swipeLocked.current) {
+      clearTimeout(swipeEndTimer.current)
+      swipeEndTimer.current = setTimeout(() => { swipeLocked.current = false }, 300)
+      return
+    }
     if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return
-    if (Math.abs(e.deltaX) < 15) return
+    if (Math.abs(e.deltaX) < 20) return
 
     const direction = e.deltaX > 0 ? 1 : -1
     swipeLocked.current = true
+    swipeEndTimer.current = setTimeout(() => { swipeLocked.current = false }, 300)
 
     const s = useAppStore.getState()
     const tabs: SidebarView[] = ['files', 'bib', 'outline', 'todo', 'timeline', 'git']
     const idx = tabs.indexOf(s.sidebarView)
     const next = tabs[(idx + direction + tabs.length) % tabs.length]
 
-    setSlideDirection(direction > 0 ? 'left' : 'right')
-    // Small delay so the exit animation plays, then switch tab
+    // Phase 1: slide out
+    setSlideAnim(direction > 0 ? 'exit-left' : 'exit-right')
+    // Phase 2: switch tab + slide in from opposite side
     setTimeout(() => {
       s.setSidebarView(next)
-      setSlideDirection(null)
-    }, 150)
-
-    // Cooldown before next swipe is accepted
-    setTimeout(() => {
-      swipeLocked.current = false
-    }, 400)
+      setSlideAnim(direction > 0 ? 'enter-right' : 'enter-left')
+      // Phase 3: clear animation class
+      setTimeout(() => setSlideAnim(null), 120)
+    }, 100)
   }, [])
+
+  const sidebarRef = useRef<HTMLDivElement>(null)
 
   const handleSidebarDividerMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
@@ -616,9 +622,11 @@ function App() {
     document.body.style.cursor = 'col-resize'
     document.body.style.userSelect = 'none'
 
+    const sidebarLeft = sidebarRef.current?.getBoundingClientRect().left ?? 0
+
     const onMouseMove = (moveEvent: MouseEvent): void => {
       if (!isSidebarDragging.current) return
-      useAppStore.getState().setSidebarWidth(moveEvent.clientX)
+      useAppStore.getState().setSidebarWidth(moveEvent.clientX - sidebarLeft)
     }
 
     const onMouseUp = (): void => {
@@ -631,6 +639,10 @@ function App() {
 
     window.addEventListener('mousemove', onMouseMove)
     window.addEventListener('mouseup', onMouseUp)
+  }, [])
+
+  const handleSidebarDividerDoubleClick = useCallback(() => {
+    useAppStore.getState().setSidebarWidth(240)
   }, [])
 
   // ---- Sidebar tab definitions ----
@@ -686,7 +698,7 @@ function App() {
         <div className="workspace">
           {(isSidebarOpen || autoHideSidebar) && (
             <div className={`sidebar-wrapper${autoHideSidebar ? ' sidebar-auto-hide' : ''}`}>
-              <div className="sidebar" style={{ width: `${sidebarWidth}px` }} onWheel={handleSidebarWheel}>
+              <div className="sidebar" ref={sidebarRef} style={{ width: `${sidebarWidth}px` }} onWheel={handleSidebarWheel}>
                 <div className="sidebar-tabs">
                   {sidebarTabs.map((tab) => (
                     <button
@@ -718,7 +730,7 @@ function App() {
                     </svg>
                   </button>
                 </div>
-                <div className={`sidebar-content${slideDirection ? ` sidebar-slide-${slideDirection}` : ''}`}>
+                <div className={`sidebar-content${slideAnim ? ` sidebar-${slideAnim}` : ''}`}>
                   {sidebarView === 'files' && <FileTree />}
                   {sidebarView === 'git' && <GitPanel />}
                   {sidebarView === 'bib' && <BibPanel />}
@@ -727,12 +739,11 @@ function App() {
                   {sidebarView === 'timeline' && <TimelinePanel />}
                 </div>
               </div>
-              {!autoHideSidebar && (
-                <div
-                  className="sidebar-resize-handle"
-                  onMouseDown={handleSidebarDividerMouseDown}
-                />
-              )}
+              <div
+                className="sidebar-resize-handle"
+                onMouseDown={handleSidebarDividerMouseDown}
+                onDoubleClick={handleSidebarDividerDoubleClick}
+              />
             </div>
           )}
           <div className="editor-area">

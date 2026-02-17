@@ -151,6 +151,7 @@ export interface UserSettings {
   formatOnSave?: boolean
   showStatusBar?: boolean
   sectionHighlightEnabled?: boolean
+  sectionHighlightColors?: string[]
   recentProjects?: RecentProject[]
 }
 
