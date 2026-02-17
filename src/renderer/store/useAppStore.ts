@@ -1,4 +1,5 @@
-GitStatusResult
+import type {
+  GitStatusResult
 } from '../types/api'
 import type {
   BibEntry,
