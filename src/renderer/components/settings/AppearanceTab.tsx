@@ -1,7 +1,6 @@
-import React from 'react';
-import { useAppStore } from '../../store/useAppStore';
-import type { UserSettings } from '../../store/useAppStore';
-import { Moon, Sun, Monitor, Check } from 'lucide-react';
+import { useAppStore } from '../../store/useAppStore'
+import type { UserSettings } from '../../../shared/types'
+import { Moon, Sun, Monitor, Check } from 'lucide-react'
 import { Toggle } from './Toggle';
 
 export const AppearanceTab = () => {

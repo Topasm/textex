@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { FolderOpen, FileText } from 'lucide-react'
 import type { RecentProject } from '../../shared/types'
+import { logError } from '../utils/errorMessage'
 import { SearchBar } from './home/SearchBar'
 import { RecentProjectList } from './home/RecentProjectList'
 
@@ -17,7 +18,7 @@ function HomeScreen({ onOpenFolder, onNewFromTemplate, onAiDraft, onOpenSettings
   useEffect(() => {
     window.api.loadSettings().then((settings) => {
       setRecentProjects(settings.recentProjects ?? [])
-    }).catch(() => {})
+    }).catch((err) => logError('loadSettings', err))
   }, [])
 
   return (

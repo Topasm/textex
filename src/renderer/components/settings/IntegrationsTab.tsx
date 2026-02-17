@@ -1,6 +1,6 @@
-import React from 'react';
-import { useAppStore } from '../../store/useAppStore';
-import { Link, Check } from 'lucide-react';
+import React from 'react'
+import { useAppStore } from '../../store/useAppStore'
+import { Link } from 'lucide-react'
 import { Toggle } from './Toggle';
 
 const ZoteroStatusProbe = ({ port }: { port: number }) => {

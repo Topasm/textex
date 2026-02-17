@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { useAppStore } from '../store/useAppStore'
 import type { BibEntry, CitationGroup } from '../../shared/types'
+import { logError } from '../utils/errorMessage'
 
 type BibGroupMode = 'flat' | 'author' | 'year' | 'type' | 'custom'
 
@@ -49,7 +50,7 @@ export function useCitationGroupOps() {
     (groups: CitationGroup[]) => {
       setCitationGroups(groups)
       if (projectRoot) {
-        window.api.saveCitationGroups(projectRoot, groups).catch(() => {})
+        window.api.saveCitationGroups(projectRoot, groups).catch((err) => logError('saveCitationGroups', err))
       }
     },
     [setCitationGroups, projectRoot]

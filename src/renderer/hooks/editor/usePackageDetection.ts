@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useAppStore } from '../../store/useAppStore'
+import { logError } from '../../utils/errorMessage'
 
 export function usePackageDetection(content: string): void {
   useEffect(() => {
@@ -21,7 +22,7 @@ export function usePackageDetection(content: string): void {
         if (detected.length > 0) {
           window.api.loadPackageData(detected).then((data) => {
             useAppStore.getState().setPackageData(data)
-          }).catch(() => {})
+          }).catch((err) => logError('loadPackageData', err))
         } else {
           useAppStore.getState().setPackageData({})
         }

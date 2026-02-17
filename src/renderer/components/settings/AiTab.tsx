@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { useAppStore } from '../../store/useAppStore';
-import type { UserSettings } from '../../store/useAppStore';
-import { Bot, Check, Eye, EyeOff, Key, Brain, MessageSquare, ChevronDown, ChevronRight, RotateCcw } from 'lucide-react';
+import { useState, useEffect } from 'react'
+import { useAppStore } from '../../store/useAppStore'
+import type { UserSettings } from '../../../shared/types'
+import { Bot, Check, Eye, EyeOff, Key, Brain, MessageSquare, ChevronDown, ChevronRight, RotateCcw } from 'lucide-react'
 import { Toggle } from './Toggle';
 
 const MODEL_OPTIONS: Record<string, { value: string; label: string }[]> = {

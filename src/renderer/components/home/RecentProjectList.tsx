@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { FolderOpen, Clock, MoreVertical, Pin, Tag, Trash2 } from 'lucide-react'
 import type { RecentProject } from '../../../shared/types'
 import { openProject } from '../../utils/openProject'
+import { logError } from '../../utils/errorMessage'
 
 function formatRelativeDate(iso: string): string {
   const date = new Date(iso)
@@ -69,7 +70,7 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
     } catch {
       window.api.removeRecentProject(project.path).then((settings) => {
         setRecentProjects(settings.recentProjects ?? [])
-      }).catch(() => {})
+      }).catch((err) => logError('recentProject', err))
     }
   }, [setRecentProjects])
 
@@ -78,7 +79,7 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
     setMenuOpenPath(null)
     window.api.removeRecentProject(projectPath).then((settings) => {
       setRecentProjects(settings.recentProjects ?? [])
-    }).catch(() => {})
+    }).catch((err) => logError('recentProject', err))
   }, [setRecentProjects])
 
   const handleToggleMenu = useCallback((e: React.MouseEvent, projectPath: string) => {
@@ -92,7 +93,7 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
     setMenuOpenPath(null)
     window.api.updateRecentProject(project.path, { pinned: !project.pinned }).then((settings) => {
       setRecentProjects(settings.recentProjects ?? [])
-    }).catch(() => {})
+    }).catch((err) => logError('recentProject', err))
   }, [setRecentProjects])
 
   const handleEditTag = useCallback((e: React.MouseEvent, project: RecentProject) => {
@@ -106,7 +107,7 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
     const trimmed = tagInputValue.trim()
     window.api.updateRecentProject(projectPath, { tag: trimmed || undefined }).then((settings) => {
       setRecentProjects(settings.recentProjects ?? [])
-    }).catch(() => {})
+    }).catch((err) => logError('recentProject', err))
     setEditingTagPath(null)
   }, [tagInputValue, setRecentProjects])
 

@@ -3,6 +3,7 @@ import { FolderOpen, FileText, Search, X, Terminal, BookOpen, Settings } from 'l
 import type { RecentProject } from '../../../shared/types'
 import { templates } from '../../data/templates'
 import { openProject } from '../../utils/openProject'
+import { logError } from '../../utils/errorMessage'
 
 interface SlashCommand {
   command: string
@@ -126,7 +127,7 @@ export function SearchBar({
           .catch(() => {
             window.api.removeRecentProject(project.path).then((settings) => {
               setRecentProjects(settings.recentProjects ?? [])
-            }).catch(() => {})
+            }).catch((err) => logError('searchBar', err))
           })
         break
       }
