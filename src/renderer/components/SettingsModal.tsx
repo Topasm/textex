@@ -214,6 +214,16 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
                                                 onChange={(checked) => updateSetting('autoHideSidebar', checked)}
                                             />
                                         </div>
+                                        <div className="settings-row">
+                                            <div>
+                                                <div className="settings-row-label">Math Preview</div>
+                                                <div className="settings-row-description">Show interactive MathLive editor when cursor is inside a math expression</div>
+                                            </div>
+                                            <Toggle
+                                                checked={settings.mathPreviewEnabled !== false}
+                                                onChange={(checked) => updateSetting('mathPreviewEnabled', checked)}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
 

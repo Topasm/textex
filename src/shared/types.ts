@@ -144,6 +144,7 @@ export interface UserSettings {
   aiProvider: 'openai' | 'anthropic' | ''
   aiApiKey?: string
   aiModel: string
+  mathPreviewEnabled?: boolean
   pdfInvertMode?: boolean
   autoHideSidebar?: boolean
   wordWrap?: boolean

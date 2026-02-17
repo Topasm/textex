@@ -41,6 +41,7 @@
     "electron-updater": "^6.3.9",
     "katex": "^0.16.28",
     "lucide-react": "^0.564.0",
+    "mathlive": "^0.108.3",
     "monaco-editor": "^0.55.0",
     "nspell": "^2.1.5",
     "pdfjs-dist": "5.4.296",

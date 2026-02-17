@@ -10,7 +10,9 @@ import { useCompletion } from '../hooks/editor/useCompletion'
 import { useEditorDiagnostics } from '../hooks/editor/useEditorDiagnostics'
 import { usePendingJump } from '../hooks/editor/usePendingJump'
 import { usePackageDetection } from '../hooks/editor/usePackageDetection'
+import { useMathPreview } from '../hooks/editor/useMathPreview'
 import { TableEditorModal } from './TableEditorModal'
+import { MathPreviewWidget } from './MathPreviewWidget'
 import { HistoryPanel } from './HistoryPanel'
 import { HistoryItem } from '../../shared/types'
 import { DiffEditor } from '@monaco-editor/react'
@@ -34,6 +36,7 @@ function EditorPane() {
   const theme = settings.theme
   const fontSize = settings.fontSize
   const spellCheckEnabled = settings.spellCheckEnabled
+  const mathPreviewEnabled = settings.mathPreviewEnabled !== false
   const aiEnabled = !!settings.aiEnabled
   const editorRef = useRef<monacoEditor.IStandaloneCodeEditor | null>(null)
   const monacoRef = useRef<MonacoInstance | null>(null)
@@ -54,6 +57,20 @@ function EditorPane() {
   usePendingJump({ editorRef, monacoRef })
   usePendingJump({ editorRef, monacoRef })
   usePackageDetection(content)
+  const mathData = useMathPreview({ editorRef, enabled: mathPreviewEnabled })
+  const [showMathPreview, setShowMathPreview] = useState(true)
+  const prevMathRangeRef = useRef<string | null>(null)
+
+  // Re-show the preview when the cursor moves to a different math expression
+  useEffect(() => {
+    const rangeKey = mathData
+      ? `${mathData.range.startLineNumber}:${mathData.range.startColumn}-${mathData.range.endLineNumber}:${mathData.range.endColumn}`
+      : null
+    if (rangeKey !== prevMathRangeRef.current) {
+      setShowMathPreview(true)
+      prevMathRangeRef.current = rangeKey
+    }
+  }, [mathData])
 
   const [tableModal, setTableModal] = useState<{
     isOpen: boolean
@@ -515,6 +532,13 @@ function EditorPane() {
                 wordWrap: settings.wordWrap ? 'on' : 'off',
                 dropIntoEditor: { enabled: false },
               }}
+            />
+          )}
+          {mathPreviewEnabled && mathData && showMathPreview && (
+            <MathPreviewWidget
+              mathData={mathData}
+              editorRef={editorRef}
+              onClose={() => setShowMathPreview(false)}
             />
           )}
         </div>

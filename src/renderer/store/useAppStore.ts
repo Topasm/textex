@@ -37,6 +37,9 @@ export interface UserSettings {
   formatOnSave: boolean
   autoCompile: boolean
 
+  // Math Preview
+  mathPreviewEnabled: boolean
+
   // Spell check
   spellCheckEnabled: boolean
 
@@ -72,6 +75,7 @@ const defaultSettings: UserSettings = {
   vimMode: false,
   formatOnSave: true,
   autoCompile: true,
+  mathPreviewEnabled: true,
   spellCheckEnabled: false,
   lspEnabled: true,
   zoteroEnabled: false,
