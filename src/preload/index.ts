@@ -185,6 +185,13 @@ contextBridge.exposeInMainWorld('api', {
   saveCitationGroups: (projectRoot: string, groups: { id: string; name: string; citekeys: string[] }[]) =>
     ipcRenderer.invoke('citgroups:save', projectRoot, groups),
 
+  // AI Draft
+  aiGenerate: (input: string, provider: string, model: string) =>
+    ipcRenderer.invoke('ai:generate', input, provider, model),
+  aiSaveApiKey: (provider: string, apiKey: string) =>
+    ipcRenderer.invoke('ai:save-api-key', provider, apiKey),
+  aiHasApiKey: (provider: string) => ipcRenderer.invoke('ai:has-api-key', provider),
+
   // Shell
   openExternal: (url: string) => ipcRenderer.invoke('shell:open-external', url)
 })

@@ -47,6 +47,10 @@ export interface UserSettings {
   zoteroEnabled: boolean
   zoteroPort: number
 
+  // AI Draft
+  aiProvider: 'openai' | 'anthropic' | ''
+  aiModel: string
+
   // Bibliography grouping
   bibGroupMode: 'flat' | 'author' | 'year' | 'type' | 'custom'
 }
@@ -66,6 +70,8 @@ const defaultSettings: UserSettings = {
   lspEnabled: true,
   zoteroEnabled: false,
   zoteroPort: 23119,
+  aiProvider: '',
+  aiModel: '',
   bibGroupMode: 'flat'
 }
 
@@ -139,6 +145,9 @@ interface AppState {
   // Export
   exportStatus: ExportStatus
 
+  // AI Draft modal
+  isDraftModalOpen: boolean
+
   // Template gallery
   isTemplateGalleryOpen: boolean
 
@@ -148,6 +157,10 @@ interface AppState {
 
   // Document symbols
   documentSymbols: DocumentSymbolNode[]
+
+  // Session restore (persisted metadata — not live state)
+  _sessionOpenPaths: string[]
+  _sessionActiveFile: string | null
 
   // ---- Actions ----
 
@@ -220,6 +233,10 @@ interface AppState {
 
   // Export
   setExportStatus: (status: ExportStatus) => void
+
+  // AI Draft modal
+  setDraftModalOpen: (open: boolean) => void
+  toggleDraftModal: () => void
 
   // Template gallery
   toggleTemplateGallery: () => void
@@ -297,6 +314,9 @@ export const useAppStore = create<AppState>()(
       // Export
       exportStatus: 'idle',
 
+      // AI Draft modal
+      isDraftModalOpen: false,
+
       // Template gallery
       isTemplateGalleryOpen: false,
 
@@ -306,6 +326,10 @@ export const useAppStore = create<AppState>()(
 
       // Document symbols
       documentSymbols: [],
+
+      // Session restore metadata
+      _sessionOpenPaths: [],
+      _sessionActiveFile: null,
 
       // ---- Actions ----
 
@@ -510,6 +534,10 @@ export const useAppStore = create<AppState>()(
       // Export
       setExportStatus: (exportStatus) => set({ exportStatus }),
 
+      // AI Draft modal
+      setDraftModalOpen: (isDraftModalOpen) => set({ isDraftModalOpen }),
+      toggleDraftModal: () => set((state) => ({ isDraftModalOpen: !state.isDraftModalOpen })),
+
       // Template gallery
       toggleTemplateGallery: () =>
         set((state) => ({ isTemplateGalleryOpen: !state.isTemplateGalleryOpen })),
@@ -524,7 +552,15 @@ export const useAppStore = create<AppState>()(
     })),
     {
       name: 'textex-settings-storage', // key in localStorage
-      partialize: (state) => ({ settings: state.settings }), // Persist ONLY settings
+      partialize: (state) => ({
+        settings: state.settings,
+        projectRoot: state.projectRoot,
+        isSidebarOpen: state.isSidebarOpen,
+        sidebarView: state.sidebarView,
+        sidebarWidth: state.sidebarWidth,
+        _sessionOpenPaths: Object.keys(state.openFiles),
+        _sessionActiveFile: state.activeFilePath
+      }),
       onRehydrateStorage: () => (state) => {
         // Hydration callback - apply necessary side effects on load
         if (state && state.settings.theme) {

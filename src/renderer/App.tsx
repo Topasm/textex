@@ -16,6 +16,7 @@ import { useAutoCompile } from './hooks/useAutoCompile'
 import { useFileOps } from './hooks/useFileOps'
 import { SettingsModal } from './components/SettingsModal'
 import { ZoteroCiteModal } from './components/ZoteroCiteModal'
+import { DraftModal } from './components/DraftModal'
 import { useAppStore } from './store/useAppStore'
 import type { SidebarView, LspStatus, } from './store/useAppStore'
 import type { DirectoryEntry, Diagnostic } from './types/api'
@@ -45,6 +46,7 @@ function App() {
   const prevFilePathRef = useRef<string | null>(null)
 
   const [isZoteroModalOpen, setIsZoteroModalOpen] = useState(false)
+  const [isDraftModalOpen, setIsDraftModalOpen] = useState(false)
 
   const handleZoteroInsert = useCallback((citekeys: string[]) => {
     if (!citekeys.length) return
@@ -81,6 +83,10 @@ function App() {
       state.setContent(state.content + '\n' + citeCmd)
     }
     setIsZoteroModalOpen(false)
+  }, [])
+
+  const handleDraftInsert = useCallback((latex: string) => {
+    useAppStore.getState().setContent(latex)
   }, [])
 
   const handleZoteroCAYW = useCallback(async () => {
@@ -217,6 +223,73 @@ function App() {
       s2.appendLog(`Export failed: ${errorMessage(err)}`)
       s2.setExportStatus('error')
     }
+  }, [])
+
+  // ---- On-mount: restore last session ----
+  useEffect(() => {
+    const restoreSession = async (): Promise<void> => {
+      const state = useAppStore.getState()
+      const { projectRoot: savedRoot, _sessionOpenPaths, _sessionActiveFile } = state
+      if (!savedRoot || _sessionOpenPaths.length === 0) return
+
+      // Read directory tree
+      try {
+        const tree = await window.api.readDirectory(savedRoot)
+        useAppStore.getState().setDirectoryTree(tree)
+      } catch {
+        // Directory no longer exists — bail out
+        useAppStore.getState().setProjectRoot(null)
+        return
+      }
+
+      // Re-open each file from disk
+      for (const fp of _sessionOpenPaths) {
+        try {
+          const result = await window.api.readFile(fp)
+          useAppStore.getState().openFileInTab(result.filePath, result.content)
+        } catch {
+          // File may have been deleted — skip
+        }
+      }
+
+      // Restore active tab
+      if (_sessionActiveFile && useAppStore.getState().openFiles[_sessionActiveFile]) {
+        useAppStore.getState().setActiveTab(_sessionActiveFile)
+      }
+
+      // Watch directory
+      try {
+        await window.api.watchDirectory(savedRoot)
+      } catch { /* ignore */ }
+
+      // Git status
+      try {
+        const isRepo = await window.api.gitIsRepo(savedRoot)
+        const s = useAppStore.getState()
+        s.setIsGitRepo(isRepo)
+        if (isRepo) {
+          const status = await window.api.gitStatus(savedRoot)
+          s.setGitStatus(status)
+          s.setGitBranch(status.branch)
+        }
+      } catch {
+        useAppStore.getState().setIsGitRepo(false)
+      }
+
+      // Bib entries
+      try {
+        const entries = await window.api.findBibInProject(savedRoot)
+        useAppStore.getState().setBibEntries(entries)
+      } catch { /* ignore */ }
+
+      // Labels
+      try {
+        const labels = await window.api.scanLabels(savedRoot)
+        useAppStore.getState().setLabels(labels)
+      } catch { /* ignore */ }
+    }
+
+    restoreSession()
   }, [])
 
   // ---- On-mount: init spell check, check updates ----
@@ -479,6 +552,9 @@ function App() {
       } else if (e.key === 'n' && e.shiftKey) {
         e.preventDefault()
         s.toggleTemplateGallery()
+      } else if ((e.key === 'd' || e.key === 'D') && mod && e.shiftKey) {
+        e.preventDefault()
+        setIsDraftModalOpen(true)
       } else if ((e.key === 'z' || e.key === 'Z') && mod && e.shiftKey) {
         if (zoteroEnabled) {
           e.preventDefault()
@@ -573,6 +649,7 @@ function App() {
         onOpenFolder={handleOpenFolder}
 
         onNewFromTemplate={() => useAppStore.getState().toggleTemplateGallery()}
+        onAiDraft={() => setIsDraftModalOpen(true)}
         onExport={handleExport}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onZoteroSearch={() => setIsZoteroModalOpen(true)}
@@ -583,6 +660,11 @@ function App() {
         isOpen={isZoteroModalOpen}
         onClose={() => setIsZoteroModalOpen(false)}
         onInsert={handleZoteroInsert}
+      />
+      <DraftModal
+        isOpen={isDraftModalOpen}
+        onClose={() => setIsDraftModalOpen(false)}
+        onInsert={handleDraftInsert}
       />
       <UpdateNotification />
       <div className="workspace">

@@ -23,6 +23,7 @@ import { loadPackageData } from './packageloader'
 import { texLabManager } from './texlab'
 import { zoteroProbe, zoteroSearch, zoteroCiteCAYW, zoteroExportBibtex } from './zotero'
 import { loadCitationGroups, saveCitationGroups, CitationGroup } from './citgroups'
+import { generateLatex } from './ai'
 
 function validateFilePath(filePath: unknown): string {
   if (typeof filePath !== 'string' || filePath.length === 0) {
@@ -400,6 +401,29 @@ export function registerIpcHandlers(win: BrowserWindow): void {
       return { success: true }
     }
   )
+
+  // ---- AI Draft ----
+  ipcMain.handle(
+    'ai:generate',
+    async (_event, input: string, provider: string, model: string) => {
+      if (!input || typeof input !== 'string') throw new Error('Input text is required')
+      if (provider !== 'openai' && provider !== 'anthropic') {
+        throw new Error('Provider must be "openai" or "anthropic"')
+      }
+      const latex = await generateLatex({ input, provider, model: model || '' })
+      return { latex }
+    }
+  )
+
+  ipcMain.handle('ai:save-api-key', async (_event, provider: string, apiKey: string) => {
+    await saveSettings({ aiApiKey: apiKey, aiProvider: provider as 'openai' | 'anthropic' | '' })
+    return { success: true }
+  })
+
+  ipcMain.handle('ai:has-api-key', async (_event, provider: string) => {
+    const settings = await loadSettings()
+    return !!settings.aiApiKey && settings.aiProvider === provider
+  })
 
   // ---- Shell ----
   ipcMain.handle('shell:open-external', async (_event, url: string) => {

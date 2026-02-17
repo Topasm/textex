@@ -11,7 +11,7 @@ function TemplateGallery() {
       // Save as new file from template
       try {
         const settings = useAppStore.getState().settings
-        let finalContent = content
+        const finalContent = content
           .replace(/{{AUTHOR}}/g, settings.name || 'Author Name')
           .replace(/{{EMAIL}}/g, settings.email || 'your.email@example.com')
           .replace(/{{AFFILIATION}}/g, settings.affiliation || 'Institution')

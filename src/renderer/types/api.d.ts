@@ -89,6 +89,8 @@ export interface UserSettings {
   lspEnabled: boolean
   zoteroEnabled: boolean
   zoteroPort: number
+  aiProvider: 'openai' | 'anthropic' | ''
+  aiModel: string
 }
 
 export interface ElectronAPI {
@@ -185,6 +187,11 @@ export interface ElectronAPI {
   // Citation Groups
   loadCitationGroups(projectRoot: string): Promise<CitationGroup[]>
   saveCitationGroups(projectRoot: string, groups: CitationGroup[]): Promise<{ success: boolean }>
+
+  // AI Draft
+  aiGenerate(input: string, provider: string, model: string): Promise<{ latex: string }>
+  aiSaveApiKey(provider: string, apiKey: string): Promise<{ success: boolean }>
+  aiHasApiKey(provider: string): Promise<boolean>
 
   // Shell
   openExternal(url: string): Promise<{ success: boolean }>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../store/useAppStore'
 import type { UserSettings } from '../types/api';
 import { X, Moon, Sun, Monitor, Type, Zap, Link, Check, Palette, Settings as SettingsIcon, User } from 'lucide-react';
@@ -265,6 +265,8 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
                                         </div>
                                     </div>
                                 </div>
+
+                                <AiDraftSettings />
                             </div>
                         )}
 
@@ -335,6 +337,104 @@ const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (checked: b
         />
     </button>
 );
+
+const AiDraftSettings = () => {
+    const settings = useAppStore((state) => state.settings);
+    const updateSetting = useAppStore((state) => state.updateSetting);
+    const [apiKey, setApiKey] = useState('');
+    const [hasKey, setHasKey] = useState(false);
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        if (settings.aiProvider) {
+            window.api.aiHasApiKey(settings.aiProvider).then(setHasKey).catch(() => setHasKey(false));
+        } else {
+            setHasKey(false);
+        }
+    }, [settings.aiProvider]);
+
+    const handleSaveKey = async () => {
+        if (!apiKey.trim() || !settings.aiProvider) return;
+        setSaving(true);
+        try {
+            await window.api.aiSaveApiKey(settings.aiProvider, apiKey.trim());
+            setHasKey(true);
+            setApiKey('');
+        } catch {
+            // ignore
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const modelPlaceholder = settings.aiProvider === 'openai' ? 'gpt-4o' : settings.aiProvider === 'anthropic' ? 'claude-sonnet-4-5-20250929' : 'Select a provider first';
+
+    return (
+        <div className="p-4 bg-purple-50 dark:bg-purple-900/10 rounded-xl border border-purple-100 dark:border-purple-900/30">
+            <div className="flex items-start gap-4">
+                <div className="p-2 bg-white dark:bg-purple-900/30 rounded-lg text-purple-600 dark:text-purple-400 shadow-sm">
+                    <Zap size={24} />
+                </div>
+                <div className="flex-1">
+                    <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">AI Draft</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-4">
+                        Generate LaTeX documents from markdown or notes using OpenAI or Anthropic.
+                    </p>
+
+                    <div className="space-y-4 max-w-lg">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Provider</label>
+                            <select
+                                value={settings.aiProvider}
+                                onChange={(e) => updateSetting('aiProvider', e.target.value as 'openai' | 'anthropic' | '')}
+                                className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                            >
+                                <option value="">Select provider...</option>
+                                <option value="openai">OpenAI</option>
+                                <option value="anthropic">Anthropic</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Model</label>
+                            <input
+                                type="text"
+                                value={settings.aiModel}
+                                onChange={(e) => updateSetting('aiModel', e.target.value)}
+                                placeholder={modelPlaceholder}
+                                disabled={!settings.aiProvider}
+                                className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm disabled:opacity-50"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                                API Key {hasKey && <span className="text-green-500 text-xs font-normal ml-1">(configured)</span>}
+                            </label>
+                            <div className="flex gap-2">
+                                <input
+                                    type="password"
+                                    value={apiKey}
+                                    onChange={(e) => setApiKey(e.target.value)}
+                                    placeholder={hasKey ? 'Key saved — enter new key to replace' : 'Enter API key'}
+                                    disabled={!settings.aiProvider}
+                                    className="flex-1 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm disabled:opacity-50"
+                                />
+                                <button
+                                    onClick={handleSaveKey}
+                                    disabled={!apiKey.trim() || !settings.aiProvider || saving}
+                                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
+                                >
+                                    {saving ? 'Saving...' : 'Save'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const ZoteroStatusProbe = ({ port }: { port: number }) => {
     const [status, setStatus] = React.useState<'checking' | 'connected' | 'error'>('checking');

@@ -11,6 +11,9 @@ export interface UserSettings {
   gitEnabled: boolean
   autoUpdateEnabled: boolean
   lspEnabled: boolean
+  aiProvider: 'openai' | 'anthropic' | ''
+  aiApiKey: string
+  aiModel: string
 }
 
 const defaults: UserSettings = {
@@ -21,7 +24,10 @@ const defaults: UserSettings = {
   spellCheckLanguage: 'en-US',
   gitEnabled: true,
   autoUpdateEnabled: true,
-  lspEnabled: true
+  lspEnabled: true,
+  aiProvider: '',
+  aiApiKey: '',
+  aiModel: ''
 }
 
 function getSettingsPath(): string {

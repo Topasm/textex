@@ -11,6 +11,7 @@ interface ToolbarProps {
   onOpenFolder: () => void
 
   onNewFromTemplate: () => void
+  onAiDraft: () => void
   onExport: (format: string) => void
   onOpenSettings: () => void
   onZoteroSearch: () => void
@@ -32,6 +33,7 @@ function Toolbar({
   onToggleLog,
   onOpenFolder,
   onNewFromTemplate,
+  onAiDraft,
   onExport,
   onOpenSettings,
   onZoteroSearch,
@@ -105,6 +107,9 @@ function Toolbar({
 
       <button onClick={onNewFromTemplate} title="New from template (Ctrl+Shift+N)">
         Template
+      </button>
+      <button onClick={onAiDraft} title="AI Draft (Ctrl+Shift+D)">
+        AI Draft<kbd>Ctrl+Shift+D</kbd>
       </button>
 
       <div className="export-dropdown" ref={exportRef}>

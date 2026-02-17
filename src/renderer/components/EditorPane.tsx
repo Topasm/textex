@@ -191,7 +191,7 @@ function EditorPane() {
     tableEditorDisposablesRef.current.push(command)
 
     // Register Insert User Info Command
-    const insertUserInfoCommand = editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyI, () => {
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyI, () => {
       const settings = useAppStore.getState().settings
       const userInfo = `
 % User Information
