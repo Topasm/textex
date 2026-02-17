@@ -13,6 +13,12 @@ import type {
 } from '../../shared/types'
 import { create } from 'zustand'
 import { subscribeWithSelector, persist } from 'zustand/middleware'
+import {
+  ZOOM_MIN, ZOOM_MAX, ZOOM_STEP,
+  FONT_SIZE_MIN, FONT_SIZE_MAX,
+  SPLIT_RATIO_MIN, SPLIT_RATIO_MAX,
+  SIDEBAR_DEFAULT_WIDTH, SIDEBAR_WIDTH_MIN, SIDEBAR_WIDTH_MAX
+} from '../constants'
 
 // Re-export domain stores for gradual migration
 export { useEditorStore } from './useEditorStore'
@@ -310,7 +316,7 @@ export const useAppStore = create<AppState>()(
       directoryTree: null,
       isSidebarOpen: false,
       sidebarView: 'files',
-      sidebarWidth: 240,
+      sidebarWidth: SIDEBAR_DEFAULT_WIDTH,
 
       // Compile
       compileStatus: 'idle',
@@ -545,7 +551,7 @@ export const useAppStore = create<AppState>()(
       setDirectoryTree: (directoryTree) => set({ directoryTree }),
       toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
       setSidebarView: (sidebarView) => set({ sidebarView }),
-      setSidebarWidth: (sidebarWidth) => set({ sidebarWidth: Math.max(150, Math.min(500, sidebarWidth)) }),
+      setSidebarWidth: (sidebarWidth) => set({ sidebarWidth: Math.max(SIDEBAR_WIDTH_MIN, Math.min(SIDEBAR_WIDTH_MAX, sidebarWidth)) }),
 
       // Compile
       setCompileStatus: (compileStatus) => set({ compileStatus }),
@@ -565,10 +571,10 @@ export const useAppStore = create<AppState>()(
       clearPendingJump: () => set({ pendingJump: null }),
       setSynctexHighlight: (highlight) =>
         set({ synctexHighlight: highlight ? { ...highlight, timestamp: Date.now() } : null }),
-      setSplitRatio: (splitRatio) => set({ splitRatio: Math.max(0.2, Math.min(0.8, splitRatio)) }),
-      setZoomLevel: (level) => set({ zoomLevel: Math.max(25, Math.min(400, level)) }),
-      zoomIn: () => set((state) => ({ zoomLevel: Math.min(400, state.zoomLevel + 25) })),
-      zoomOut: () => set((state) => ({ zoomLevel: Math.max(25, state.zoomLevel - 25) })),
+      setSplitRatio: (splitRatio) => set({ splitRatio: Math.max(SPLIT_RATIO_MIN, Math.min(SPLIT_RATIO_MAX, splitRatio)) }),
+      setZoomLevel: (level) => set({ zoomLevel: Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, level)) }),
+      zoomIn: () => set((state) => ({ zoomLevel: Math.min(ZOOM_MAX, state.zoomLevel + ZOOM_STEP) })),
+      zoomOut: () => set((state) => ({ zoomLevel: Math.max(ZOOM_MIN, state.zoomLevel - ZOOM_STEP) })),
       resetZoom: () => set({ zoomLevel: 100 }),
 
       // Settings
@@ -586,13 +592,13 @@ export const useAppStore = create<AppState>()(
       increaseFontSize: () => {
         const state = get()
         const currentSize = state.settings.fontSize
-        const next = Math.min(32, currentSize + 1)
+        const next = Math.min(FONT_SIZE_MAX, currentSize + 1)
         set((state) => ({ settings: { ...state.settings, fontSize: next } }))
       },
       decreaseFontSize: () => {
         const state = get()
         const currentSize = state.settings.fontSize
-        const next = Math.max(8, currentSize - 1)
+        const next = Math.max(FONT_SIZE_MIN, currentSize - 1)
         set((state) => ({ settings: { ...state.settings, fontSize: next } }))
       },
 

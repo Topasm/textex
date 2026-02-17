@@ -3,6 +3,7 @@ import { Settings, Home, ChevronDown } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { ZoteroCiteSearch } from './ZoteroCiteSearch'
+import { isFeatureEnabled } from '../utils/featureFlags'
 
 interface ToolbarProps {
   onOpen: () => void
@@ -18,12 +19,7 @@ interface ToolbarProps {
   onOpenSettings: () => void
 }
 
-const exportFormats = [
-  { name: 'HTML', ext: 'html' },
-  { name: 'Word (DOCX)', ext: 'docx' },
-  { name: 'OpenDocument (ODT)', ext: 'odt' },
-  { name: 'EPUB', ext: 'epub' }
-]
+import { EXPORT_FORMATS, ZOOM_MIN, ZOOM_MAX } from '../constants'
 
 function Toolbar({
   onOpen,
@@ -41,7 +37,9 @@ function Toolbar({
   const filePath = useAppStore((s) => s.filePath)
   const isDirty = useAppStore((s) => s.isDirty)
   const compileStatus = useAppStore((s) => s.compileStatus)
-  const zoteroEnabled = useAppStore((s) => s.settings.zoteroEnabled)
+  const settings = useAppStore((s) => s.settings)
+  const aiEnabled = isFeatureEnabled(settings, 'ai')
+  const zoteroEnabled = isFeatureEnabled(settings, 'zotero')
   const zoomLevel = useAppStore((s) => s.zoomLevel)
   const projectRoot = useAppStore((s) => s.projectRoot)
 
@@ -71,7 +69,7 @@ function Toolbar({
   return (
     <div className="toolbar">
       {projectRoot && (
-        <button onClick={onReturnHome} title="Return to home screen">
+        <button onClick={onReturnHome} title="Return to home screen" aria-label="Return to home screen">
           <Home size={16} />
         </button>
       )}
@@ -95,14 +93,14 @@ function Toolbar({
             <button onClick={() => { onSaveAs(); setIsFileMenuOpen(false) }}>
               Save As <kbd>Ctrl+Shift+S</kbd>
             </button>
-            <div className="toolbar-separator" style={{ height: '1px', width: '100%', margin: '4px 0' }} />
+            <div className="toolbar-separator toolbar-separator-line" />
             <button onClick={() => { onNewFromTemplate(); setIsFileMenuOpen(false) }}>
               New from Template
             </button>
-            <div className="toolbar-separator" style={{ height: '1px', width: '100%', margin: '4px 0' }} />
-            <div style={{ padding: '4px 12px', fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Export</div>
-            {exportFormats.map(fmt => (
-              <button key={fmt.ext} onClick={() => { onExport(fmt.ext); setIsFileMenuOpen(false) }} style={{ paddingLeft: '24px' }}>
+            <div className="toolbar-separator toolbar-separator-line" />
+            <div className="toolbar-export-header">Export</div>
+            {EXPORT_FORMATS.map(fmt => (
+              <button key={fmt.ext} onClick={() => { onExport(fmt.ext); setIsFileMenuOpen(false) }} className="toolbar-export-item">
                 {fmt.name}
               </button>
             ))}
@@ -134,13 +132,13 @@ function Toolbar({
         Log
       </button>
 
-      {useAppStore((s) => !!s.settings.aiProvider) && (
+      {aiEnabled && (
         <button onClick={onAiDraft} title="AI Draft (Ctrl+Shift+D)">
           AI Draft
         </button>
       )}
 
-      <button onClick={onOpenSettings} title="Settings">
+      <button onClick={onOpenSettings} title="Settings" aria-label="Settings">
         <Settings size={16} />
       </button>
 
@@ -153,22 +151,22 @@ function Toolbar({
 
       {/* Right side: PDF Controls & File Info */}
       <div className="toolbar-group-right">
-        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-          <button onClick={handleSyncToCode} title="Sync PDF to Code (Ctrl+Click in PDF)" style={{ padding: '4px 8px' }}>
+        <div className="toolbar-pdf-controls">
+          <button className="toolbar-compact-btn" onClick={handleSyncToCode} title="Sync PDF to Code (Ctrl+Click in PDF)" aria-label="Sync PDF to Code">
             {'\u2190'}
           </button>
-          <button onClick={handleSyncToPdf} title="Sync Code to PDF" style={{ padding: '4px 8px' }}>
+          <button className="toolbar-compact-btn" onClick={handleSyncToPdf} title="Sync Code to PDF" aria-label="Sync Code to PDF">
             {'\u2192'}
           </button>
           <div className="toolbar-separator" />
-          <button onClick={() => useAppStore.getState().zoomOut()} disabled={zoomLevel <= 25} title="Zoom Out" style={{ padding: '4px 8px' }}>
+          <button className="toolbar-compact-btn" onClick={() => useAppStore.getState().zoomOut()} disabled={zoomLevel <= ZOOM_MIN} title="Zoom Out" aria-label="Zoom out">
             -
           </button>
-          <span style={{ fontSize: '12px', minWidth: '36px', textAlign: 'center' }}>{zoomLevel}%</span>
-          <button onClick={() => useAppStore.getState().zoomIn()} disabled={zoomLevel >= 400} title="Zoom In" style={{ padding: '4px 8px' }}>
+          <span className="toolbar-zoom-label">{zoomLevel}%</span>
+          <button className="toolbar-compact-btn" onClick={() => useAppStore.getState().zoomIn()} disabled={zoomLevel >= ZOOM_MAX} title="Zoom In" aria-label="Zoom in">
             +
           </button>
-          <button onClick={() => useAppStore.getState().resetZoom()} title="Fit Width" style={{ padding: '4px 8px' }}>
+          <button className="toolbar-compact-btn" onClick={() => useAppStore.getState().resetZoom()} title="Fit Width">
             Fit Width
           </button>
         </div>

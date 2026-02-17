@@ -1,8 +1,10 @@
 import { useEffect } from 'react'
 import { useAppStore } from '../store/useAppStore'
+import { GIT_REFRESH_INTERVAL_MS } from '../constants'
+import { logError } from '../utils/errorMessage'
 
 /**
- * Polls git status every 3 seconds while a git repo is open and git is enabled.
+ * Polls git status periodically while a git repo is open and git is enabled.
  */
 export function useGitAutoRefresh(projectRoot: string | null, isGitRepo: boolean, gitEnabled?: boolean): void {
   useEffect(() => {
@@ -13,10 +15,10 @@ export function useGitAutoRefresh(projectRoot: string | null, isGitRepo: boolean
         const s = useAppStore.getState()
         s.setGitStatus(status)
         s.setGitBranch(status.branch)
-      } catch {
-        // ignore
+      } catch (err) {
+        logError('gitAutoRefresh', err)
       }
-    }, 3000)
+    }, GIT_REFRESH_INTERVAL_MS)
     return () => clearInterval(interval)
   }, [projectRoot, isGitRepo, gitEnabled])
 }

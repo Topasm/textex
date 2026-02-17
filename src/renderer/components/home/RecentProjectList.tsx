@@ -67,7 +67,8 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
     try {
       await window.api.readDirectory(project.path)
       await openProject(project.path)
-    } catch {
+    } catch (err) {
+      logError('RecentProject:open', err)
       window.api.removeRecentProject(project.path).then((settings) => {
         setRecentProjects(settings.recentProjects ?? [])
       }).catch((err) => logError('recentProject', err))

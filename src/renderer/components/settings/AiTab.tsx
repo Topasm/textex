@@ -4,31 +4,7 @@ import type { UserSettings } from '../../../shared/types'
 import { Bot, Check, Eye, EyeOff, Key, Brain, MessageSquare, ChevronDown, ChevronRight, RotateCcw } from 'lucide-react'
 import { Toggle } from './Toggle';
 
-const MODEL_OPTIONS: Record<string, { value: string; label: string }[]> = {
-    openai: [
-        { value: 'gpt-4o', label: 'GPT-4o' },
-        { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
-        { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
-        { value: 'o1', label: 'o1' },
-        { value: 'o1-mini', label: 'o1 Mini' },
-    ],
-    anthropic: [
-        { value: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5' },
-        { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5' },
-        { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
-    ],
-    gemini: [
-        { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
-        { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
-        { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
-    ],
-};
-
-const PROVIDER_INFO: Record<string, { label: string; keyHint: string; keyUrl: string }> = {
-    openai: { label: 'OpenAI', keyHint: 'sk-...', keyUrl: 'https://platform.openai.com/api-keys' },
-    anthropic: { label: 'Anthropic', keyHint: 'sk-ant-...', keyUrl: 'https://console.anthropic.com/settings/keys' },
-    gemini: { label: 'Gemini', keyHint: 'AIza...', keyUrl: 'https://aistudio.google.com/apikey' },
-};
+import { AI_MODEL_OPTIONS, AI_PROVIDER_INFO } from '../../constants'
 
 const DEFAULT_PROMPTS: Record<string, { label: string; key: keyof UserSettings; placeholder: string }> = {
     generate: {
@@ -81,9 +57,9 @@ const AiPromptsEditor = () => {
 
     return (
         <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                <MessageSquare size={16} style={{ color: 'var(--text-secondary)' }} />
-                <h3 className="settings-heading" style={{ marginBottom: 0 }}>Custom Prompts</h3>
+            <div className="settings-flex-row-start">
+                <MessageSquare size={16} className="settings-icon-secondary" />
+                <h3 className="settings-heading settings-no-mb">Custom Prompts</h3>
             </div>
             <p className="settings-subheading">
                 Customize the system prompts used for each AI action. Leave empty to use the built-in defaults.
@@ -98,7 +74,7 @@ const AiPromptsEditor = () => {
                                 className="ai-prompt-header"
                                 onClick={() => setExpandedPrompt(isExpanded ? null : id)}
                             >
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <div className="settings-section-header-row">
                                     {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                                     <span>{prompt.label}</span>
                                     {isCustom && <span className="settings-configured-tag">Custom</span>}
@@ -143,8 +119,8 @@ export const AiTab = () => {
     const [hasKey, setHasKey] = useState(false);
 
     const provider = settings.aiProvider;
-    const providerInfo = provider ? PROVIDER_INFO[provider] : null;
-    const currentModels = provider ? MODEL_OPTIONS[provider] ?? [] : [];
+    const providerInfo = provider ? AI_PROVIDER_INFO[provider] : null;
+    const currentModels = provider ? AI_MODEL_OPTIONS[provider] ?? [] : [];
 
     // Check if API key exists for current provider
     useEffect(() => {
@@ -177,8 +153,8 @@ export const AiTab = () => {
                         <Bot size={24} />
                     </div>
                     <div className="settings-section-body">
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                            <h3 className="settings-section-title" style={{ marginBottom: 0 }}>AI Assistant</h3>
+                        <div className="settings-flex-row">
+                            <h3 className="settings-section-title settings-no-mb">AI Assistant</h3>
                             <Toggle
                                 checked={!!settings.aiEnabled}
                                 onChange={(checked) => updateSetting('aiEnabled', checked)}
@@ -199,7 +175,7 @@ export const AiTab = () => {
                     <div>
                         <h3 className="settings-heading">Provider</h3>
                         <p className="settings-subheading">Choose which AI service to use for text generation.</p>
-                        <div className="settings-theme-grid" style={{ marginTop: 12 }}>
+                        <div className="settings-theme-grid settings-field-mt-sm">
                             {(['openai', 'anthropic', 'gemini'] as const).map((p) => (
                                 <button
                                     key={p}
@@ -209,8 +185,8 @@ export const AiTab = () => {
                                     }}
                                     className={`settings-theme-card${provider === p ? ' selected' : ''}`}
                                 >
-                                    <span className="settings-theme-card-label" style={{ fontWeight: 500 }}>
-                                        {PROVIDER_INFO[p].label}
+                                    <span className="settings-theme-card-label">
+                                        {AI_PROVIDER_INFO[p].label}
                                     </span>
                                     {provider === p && (
                                         <div className="settings-theme-card-check">
@@ -231,7 +207,7 @@ export const AiTab = () => {
                             <div>
                                 <h3 className="settings-heading">Model</h3>
                                 <p className="settings-subheading">Select which model to use. Leave on Default for the recommended option.</p>
-                                <div className="settings-field-group" style={{ marginTop: 12 }}>
+                                <div className="settings-field-group settings-field-mt-sm">
                                     <select
                                         value={settings.aiModel}
                                         onChange={(e) => updateSetting('aiModel', e.target.value)}
@@ -249,14 +225,14 @@ export const AiTab = () => {
 
                             {/* API Key */}
                             <div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                                    <Key size={16} style={{ color: 'var(--text-secondary)' }} />
-                                    <h3 className="settings-heading" style={{ marginBottom: 0 }}>API Key</h3>
+                                <div className="settings-flex-row-start">
+                                    <Key size={16} className="settings-icon-secondary" />
+                                    <h3 className="settings-heading settings-no-mb">API Key</h3>
                                     {hasKey && !keySaved && (
                                         <span className="settings-configured-tag">Configured</span>
                                     )}
                                     {keySaved && (
-                                        <span className="settings-configured-tag" style={{ background: 'var(--success, #2ea043)', color: '#fff' }}>Saved</span>
+                                        <span className="settings-configured-tag settings-tag-saved">Saved</span>
                                     )}
                                 </div>
                                 <p className="settings-subheading">
@@ -264,39 +240,33 @@ export const AiTab = () => {
                                     <a
                                         href="#"
                                         onClick={(e) => { e.preventDefault(); window.api.openExternal(providerInfo.keyUrl); }}
-                                        style={{ color: 'var(--accent)' }}
+                                        className="settings-accent-link"
                                     >
                                         Get a key
                                     </a>
                                 </p>
-                                <div className="settings-key-row" style={{ marginTop: 12 }}>
-                                    <div style={{ position: 'relative', flex: 1 }}>
+                                <div className="settings-key-row settings-field-mt-sm">
+                                    <div className="settings-key-input-wrapper">
                                         <input
                                             type={showKey ? 'text' : 'password'}
                                             value={apiKey}
                                             onChange={(e) => setApiKey(e.target.value)}
                                             placeholder={hasKey ? 'Enter new key to replace...' : providerInfo.keyHint}
-                                            className="settings-input"
-                                            style={{ paddingRight: 36 }}
+                                            className="settings-input settings-input-pr"
                                             onKeyDown={(e) => { if (e.key === 'Enter') handleSaveKey(); }}
                                         />
                                         <button
+                                            className="settings-key-toggle-btn"
                                             onClick={() => setShowKey(!showKey)}
-                                            style={{
-                                                position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
-                                                background: 'none', border: 'none', cursor: 'pointer', padding: 2,
-                                                color: 'var(--text-secondary)', display: 'flex'
-                                            }}
                                             title={showKey ? 'Hide key' : 'Show key'}
                                         >
                                             {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
                                         </button>
                                     </div>
                                     <button
-                                        className="primary-button"
+                                        className="primary-button settings-nowrap"
                                         onClick={handleSaveKey}
                                         disabled={!apiKey.trim()}
-                                        style={{ whiteSpace: 'nowrap' }}
                                     >
                                         Save Key
                                     </button>
@@ -308,14 +278,14 @@ export const AiTab = () => {
                     {/* Thinking / Reasoning */}
                     <hr className="settings-divider" />
                     <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                            <Brain size={16} style={{ color: 'var(--text-secondary)' }} />
-                            <h3 className="settings-heading" style={{ marginBottom: 0 }}>Thinking / Reasoning</h3>
+                        <div className="settings-flex-row-start">
+                            <Brain size={16} className="settings-icon-secondary" />
+                            <h3 className="settings-heading settings-no-mb">Thinking / Reasoning</h3>
                         </div>
                         <p className="settings-subheading">
                             Enable extended thinking for deeper reasoning. Supported on Gemini 2.5, Claude Sonnet/Opus, and OpenAI o-series models.
                         </p>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        <div className="settings-column-group">
                             <div className="settings-row">
                                 <div>
                                     <div className="settings-row-label">Enable Thinking</div>
@@ -327,14 +297,13 @@ export const AiTab = () => {
                                 />
                             </div>
                             {settings.aiThinkingEnabled && (
-                                <div style={{ paddingLeft: 0, marginTop: 8 }}>
+                                <div className="settings-thinking-sub">
                                     <label className="settings-label">Thinking Budget (tokens)</label>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                    <div className="settings-thinking-budget-row">
                                         <select
                                             value={settings.aiThinkingBudget || 0}
                                             onChange={(e) => updateSetting('aiThinkingBudget', parseInt(e.target.value))}
-                                            className="settings-select"
-                                            style={{ maxWidth: 240 }}
+                                            className="settings-select settings-select-wide"
                                         >
                                             <option value={0}>Default (provider decides)</option>
                                             <option value={4096}>Light (4K tokens)</option>

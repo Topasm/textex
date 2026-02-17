@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useAppStore } from '../store/useAppStore'
 
 const STATUS_CONFIG = {
@@ -21,8 +22,8 @@ function StatusBar() {
 
   const { dotClass, label } = STATUS_CONFIG[compileStatus]
 
-  const errorCount = diagnostics.filter((d) => d.severity === 'error').length
-  const warnCount = diagnostics.filter((d) => d.severity === 'warning').length
+  const errorCount = useMemo(() => diagnostics.filter((d) => d.severity === 'error').length, [diagnostics])
+  const warnCount = useMemo(() => diagnostics.filter((d) => d.severity === 'warning').length, [diagnostics])
 
   return (
     <div className="status-bar">

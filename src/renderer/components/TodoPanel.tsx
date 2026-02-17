@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAppStore } from '../store/useAppStore'
+import { logError } from '../utils/errorMessage'
 
 interface TodoLine {
     raw: string
@@ -56,7 +57,8 @@ export function TodoPanel() {
             setRawContent(result.content)
             setLines(parseMarkdown(result.content))
             setExists(true)
-        } catch {
+        } catch (err) {
+            logError('TodoPanel:load', err)
             setExists(false)
             setRawContent('')
             setLines([])
@@ -93,8 +95,9 @@ export function TodoPanel() {
 
             try {
                 await window.api.saveFile(updated, filePath)
-            } catch {
+            } catch (err) {
                 // rollback on error
+                logError('TodoPanel:toggle', err)
                 setRawContent(rawContent)
                 setLines(parseMarkdown(rawContent))
             }
@@ -110,8 +113,8 @@ export function TodoPanel() {
             setRawContent(initial)
             setLines(parseMarkdown(initial))
             setExists(true)
-        } catch {
-            // ignore
+        } catch (err) {
+            logError('TodoPanel:create', err)
         }
     }, [filePath])
 
@@ -128,7 +131,8 @@ export function TodoPanel() {
 
         try {
             await window.api.saveFile(updated, filePath)
-        } catch {
+        } catch (err) {
+            logError('TodoPanel:addItem', err)
             // rollback or silent fail
         }
     }, [newItem, filePath, rawContent])
@@ -146,7 +150,8 @@ export function TodoPanel() {
 
         try {
             await window.api.saveFile(updated, filePath)
-        } catch {
+        } catch (err) {
+            logError('TodoPanel:addMemo', err)
             // rollback or silent fail
         }
     }, [newItem, filePath, rawContent])
@@ -164,8 +169,9 @@ export function TodoPanel() {
 
         try {
             await window.api.saveFile(updated, filePath)
-        } catch {
+        } catch (err) {
             // rollback
+            logError('TodoPanel:delete', err)
             setRawContent(rawContent)
             setLines(parseMarkdown(rawContent))
         }
@@ -236,6 +242,7 @@ export function TodoPanel() {
                                     handleDelete(idx)
                                 }}
                                 title="Delete item"
+                                aria-label="Delete item"
                             >
                                 ×
                             </button>
@@ -255,6 +262,7 @@ export function TodoPanel() {
                                 handleDelete(idx)
                             }}
                             title="Delete line"
+                            aria-label="Delete line"
                         >
                             ×
                         </button>

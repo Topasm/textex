@@ -1,5 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useAppStore } from '../store/useAppStore'
+import { getGitFileDecoration } from '../utils/gitStatus'
+import { logError } from '../utils/errorMessage'
 
 function GitPanel() {
   const projectRoot = useAppStore((s) => s.projectRoot)
@@ -15,8 +17,8 @@ function GitPanel() {
       const status = await window.api.gitStatus(projectRoot)
       useAppStore.getState().setGitStatus(status)
       useAppStore.getState().setGitBranch(status.branch)
-    } catch {
-      // ignore
+    } catch (err) {
+      logError('GitPanel:init', err)
     }
   }, [projectRoot])
 
@@ -26,8 +28,8 @@ function GitPanel() {
       await window.api.gitStage(projectRoot, filePath)
       const status = await window.api.gitStatus(projectRoot)
       useAppStore.getState().setGitStatus(status)
-    } catch {
-      // ignore
+    } catch (err) {
+      logError('GitPanel:stage', err)
     }
   }, [projectRoot])
 
@@ -37,8 +39,8 @@ function GitPanel() {
       await window.api.gitUnstage(projectRoot, filePath)
       const status = await window.api.gitStatus(projectRoot)
       useAppStore.getState().setGitStatus(status)
-    } catch {
-      // ignore
+    } catch (err) {
+      logError('GitPanel:unstage', err)
     }
   }, [projectRoot])
 
@@ -49,8 +51,8 @@ function GitPanel() {
       setCommitMsg('')
       const status = await window.api.gitStatus(projectRoot)
       useAppStore.getState().setGitStatus(status)
-    } catch {
-      // ignore
+    } catch (err) {
+      logError('GitPanel:commit', err)
     }
   }, [projectRoot, commitMsg])
 
@@ -82,14 +84,7 @@ function GitPanel() {
     ...(gitStatus?.not_added || [])
   ]
 
-  function getFileStatus(filePath: string): { cls: string; label: string } {
-    const file = gitStatus?.files.find((f) => f.path === filePath)
-    if (!file) return { cls: '', label: 'M' }
-    if (file.index === '?' && file.working_dir === '?') return { cls: 'untracked', label: 'U' }
-    if (file.index === 'A' || file.working_dir === 'A') return { cls: 'added', label: 'A' }
-    if (file.index === 'D' || file.working_dir === 'D') return { cls: 'deleted', label: 'D' }
-    return { cls: 'modified', label: 'M' }
-  }
+
 
   return (
     <div className="git-panel">
@@ -100,12 +95,12 @@ function GitPanel() {
             <span>{staged.length}</span>
           </div>
           {staged.map((fp) => {
-            const st = getFileStatus(fp)
+            const st = getGitFileDecoration(fp, gitStatus?.files, 'exact') || { className: '', label: 'M' }
             return (
               <div key={fp} className="git-file">
-                <span className={`git-file-status ${st.cls}`}>{st.label}</span>
+                <span className={`git-file-status ${st.className}`}>{st.label}</span>
                 <span className="git-file-name">{fp}</span>
-                <button className="git-file-action" onClick={() => handleUnstage(fp)} title="Unstage">
+                <button className="git-file-action" onClick={() => handleUnstage(fp)} title="Unstage" aria-label="Unstage file">
                   {'\u2212'}
                 </button>
               </div>
@@ -121,12 +116,12 @@ function GitPanel() {
             <span>{unstaged.length}</span>
           </div>
           {unstaged.map((fp) => {
-            const st = getFileStatus(fp)
+            const st = getGitFileDecoration(fp, gitStatus?.files, 'exact') || { className: '', label: 'M' }
             return (
               <div key={fp} className="git-file">
-                <span className={`git-file-status ${st.cls}`}>{st.label}</span>
+                <span className={`git-file-status ${st.className}`}>{st.label}</span>
                 <span className="git-file-name">{fp}</span>
-                <button className="git-file-action" onClick={() => handleStage(fp)} title="Stage">
+                <button className="git-file-action" onClick={() => handleStage(fp)} title="Stage" aria-label="Stage file">
                   +
                 </button>
               </div>

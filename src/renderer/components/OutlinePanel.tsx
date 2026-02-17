@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import React, { useState, useCallback } from 'react'
 import { useAppStore } from '../store/useAppStore'
 import type { DocumentSymbolNode } from '../../shared/types'
 
@@ -74,7 +74,7 @@ function getSymbolIcon(category: SymbolCategory): string {
   }
 }
 
-function OutlineNode({
+const OutlineNode = React.memo(function OutlineNode({
   node,
   depth
 }: {
@@ -140,7 +140,7 @@ function OutlineNode({
       )}
     </>
   )
-}
+})
 
 function OutlinePanel() {
   const documentSymbols = useAppStore((s) => s.documentSymbols)

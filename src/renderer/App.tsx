@@ -29,7 +29,8 @@ import { DraftModal } from './components/DraftModal'
 import { useAppStore } from './store/useAppStore'
 import type { SidebarView } from './store/useAppStore'
 import { openProject } from './utils/openProject'
-import { errorMessage } from './utils/errorMessage'
+import { errorMessage, logError } from './utils/errorMessage'
+import { isFeatureEnabled } from './utils/featureFlags'
 import { stopLspClient } from './lsp/lspClient'
 
 function App() {
@@ -45,9 +46,10 @@ function App() {
   const filePath = useAppStore((s) => s.filePath)
   const projectRoot = useAppStore((s) => s.projectRoot)
   const isGitRepo = useAppStore((s) => s.isGitRepo)
-  const lspEnabled = useAppStore((s) => s.settings.lspEnabled)
-  const zoteroEnabled = useAppStore((s) => s.settings.zoteroEnabled)
-  const gitEnabled = useAppStore((s) => s.settings.gitEnabled)
+  const settings = useAppStore((s) => s.settings)
+  const lspEnabled = settings.lspEnabled
+  const zoteroEnabled = settings.zoteroEnabled
+  const gitEnabled = isFeatureEnabled(settings, 'git')
   const autoHideSidebar = useAppStore((s) => s.settings.autoHideSidebar)
   const showStatusBar = useAppStore((s) => s.settings.showStatusBar)
 
@@ -70,8 +72,8 @@ function App() {
     if (!state.filePath.toLowerCase().endsWith('.tex')) return
     try {
       await window.api.saveFile(state.content, state.filePath)
-    } catch {
-      // continue
+    } catch (err) {
+      logError('App:preSave', err)
     }
     state.setCompileStatus('compiling')
     state.clearLogs()
@@ -83,7 +85,7 @@ function App() {
       if (root) {
         window.api.scanLabels(root).then((labels) => {
           useAppStore.getState().setLabels(labels)
-        }).catch(() => { })
+        }).catch((err) => { logError('App:scanLabels', err) })
       }
     } catch (err: unknown) {
       const s = useAppStore.getState()
@@ -102,7 +104,7 @@ function App() {
 
   // ---- Close project ----
   const handleCloseProject = useCallback(async (): Promise<void> => {
-    try { await window.api.unwatchDirectory() } catch { /* ignore */ }
+    try { await window.api.unwatchDirectory() } catch (err) { logError('App:unwatchDirectory', err) }
     stopLspClient()
     useAppStore.getState().closeProject()
   }, [])
@@ -144,7 +146,7 @@ function App() {
     { key: 'timeline', label: 'Timeline' },
     { key: 'git', label: 'Git' }
   ]
-  const sidebarTabs = gitEnabled !== false
+  const sidebarTabs = gitEnabled
     ? allSidebarTabs
     : allSidebarTabs.filter((t) => t.key !== 'git')
 

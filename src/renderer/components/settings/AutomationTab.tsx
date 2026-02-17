@@ -9,8 +9,8 @@ export const AutomationTab = () => {
     return (
         <div className="settings-tab-content settings-animate-in">
             <div>
-                <h3 className="settings-heading" style={{ marginBottom: 12 }}>Compiler &amp; Tools</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <h3 className="settings-heading settings-heading-mb">Compiler &amp; Tools</h3>
+                <div className="settings-column-group">
                     <div className="settings-row">
                         <div>
                             <div className="settings-row-label">Auto Compile</div>
@@ -32,7 +32,7 @@ export const AutomationTab = () => {
                         />
                     </div>
                     {settings.spellCheckEnabled && (
-                        <div style={{ paddingLeft: 0, marginTop: 4, marginBottom: 8 }}>
+                        <div className="settings-spellcheck-sub">
                             <label className="settings-label">Language</label>
                             <select
                                 value={settings.spellCheckLanguage ?? 'en-US'}
@@ -40,8 +40,7 @@ export const AutomationTab = () => {
                                     updateSetting('spellCheckLanguage', e.target.value);
                                     window.api.spellSetLanguage(e.target.value);
                                 }}
-                                className="settings-select"
-                                style={{ maxWidth: 200 }}
+                                className="settings-select settings-select-medium"
                             >
                                 <option value="en-US">English (US)</option>
                             </select>

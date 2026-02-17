@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { subscribeWithSelector, persist } from 'zustand/middleware'
+import { SIDEBAR_DEFAULT_WIDTH, SIDEBAR_WIDTH_MIN, SIDEBAR_WIDTH_MAX } from '../constants'
 import type {
   DirectoryEntry,
   BibEntry,
@@ -57,7 +58,7 @@ export const useProjectStore = create<ProjectState>()(
       directoryTree: null,
       isSidebarOpen: false,
       sidebarView: 'files',
-      sidebarWidth: 240,
+      sidebarWidth: SIDEBAR_DEFAULT_WIDTH,
 
       bibEntries: [],
       citationGroups: [],
@@ -72,7 +73,7 @@ export const useProjectStore = create<ProjectState>()(
       setDirectoryTree: (directoryTree) => set({ directoryTree }),
       toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
       setSidebarView: (sidebarView) => set({ sidebarView }),
-      setSidebarWidth: (sidebarWidth) => set({ sidebarWidth: Math.max(150, Math.min(500, sidebarWidth)) }),
+      setSidebarWidth: (sidebarWidth) => set({ sidebarWidth: Math.max(SIDEBAR_WIDTH_MIN, Math.min(SIDEBAR_WIDTH_MAX, sidebarWidth)) }),
       setBibEntries: (bibEntries) => set({ bibEntries }),
       setCitationGroups: (citationGroups) => set({ citationGroups }),
       setLabels: (labels) => set({ labels }),

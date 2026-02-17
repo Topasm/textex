@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useAppStore } from '../store/useAppStore'
+import { logError } from '../utils/errorMessage'
 
 function getFileIcon(name: string, type: 'file' | 'directory', expanded?: boolean): string {
   if (type === 'directory') return expanded ? '\u{1F4C2}' : '\u{1F4C1}'
@@ -20,17 +21,7 @@ interface FileTreeNodeProps {
   gitFiles?: GitFileStatus[]
 }
 
-function getGitDecoration(filePath: string, gitFiles?: GitFileStatus[]): { label: string; className: string } | null {
-  if (!gitFiles) return null
-  const relative = filePath
-  const file = gitFiles.find((f) => relative.endsWith(f.path))
-  if (!file) return null
-  if (file.index === '?' && file.working_dir === '?') return { label: 'U', className: 'untracked' }
-  if (file.index === 'A' || file.working_dir === 'A') return { label: 'A', className: 'added' }
-  if (file.index === 'M' || file.working_dir === 'M') return { label: 'M', className: 'modified' }
-  if (file.index === 'D' || file.working_dir === 'D') return { label: 'D', className: 'deleted' }
-  return null
-}
+import { getGitFileDecoration } from '../utils/gitStatus'
 
 interface InlineInputProps {
   depth: number
@@ -87,8 +78,8 @@ function FileTreeNode({ entry, depth, gitFiles }: FileTreeNodeProps) {
     try {
       const entries = await window.api.readDirectory(entry.path)
       setChildren(entries)
-    } catch {
-      // ignore
+    } catch (err) {
+      logError('FileTree:loadChildren', err)
     }
   }, [entry.path])
 
@@ -102,8 +93,8 @@ function FileTreeNode({ entry, depth, gitFiles }: FileTreeNodeProps) {
       try {
         const result = await window.api.readFile(entry.path)
         useAppStore.getState().openFileInTab(result.filePath, result.content)
-      } catch {
-        // ignore
+      } catch (err) {
+        logError('FileTree:readFile', err)
       }
     }
   }, [entry, expanded, children, loadChildren])
@@ -150,14 +141,14 @@ function FileTreeNode({ entry, depth, gitFiles }: FileTreeNodeProps) {
       }
       // Refresh children
       await loadChildren()
-    } catch {
-      // ignore
+    } catch (err) {
+      logError('FileTree:create', err)
     }
     setCreatingType(null)
   }, [entry.path, creatingType, loadChildren])
 
   const isSelected = entry.path === activeFilePath
-  const gitDeco = entry.type === 'file' ? getGitDecoration(entry.path, gitFiles) : null
+  const gitDeco = entry.type === 'file' ? getGitFileDecoration(entry.path, gitFiles) : null
 
   return (
     <>
@@ -177,6 +168,7 @@ function FileTreeNode({ entry, depth, gitFiles }: FileTreeNodeProps) {
               className="file-tree-action-btn"
               onClick={handleCreateFile}
               title="New File"
+              aria-label="New file"
             >
               +
             </button>
@@ -184,6 +176,7 @@ function FileTreeNode({ entry, depth, gitFiles }: FileTreeNodeProps) {
               className="file-tree-action-btn"
               onClick={handleCreateFolder}
               title="New Folder"
+              aria-label="New folder"
             >
               +&#x2395;
             </button>
@@ -230,8 +223,8 @@ function FileTree() {
         useAppStore.getState().openFileInTab(result.filePath, result.content)
       }
       // Tree refreshes via directory watcher
-    } catch {
-      // ignore
+    } catch (err) {
+      logError('FileTree:rootCreate', err)
     }
     setCreatingType(null)
   }, [projectRoot, creatingType])
@@ -251,6 +244,7 @@ function FileTree() {
           className="file-tree-header-btn"
           onClick={() => setCreatingType('file')}
           title="New File"
+          aria-label="New file"
         >
           +
         </button>
@@ -258,6 +252,7 @@ function FileTree() {
           className="file-tree-header-btn"
           onClick={() => setCreatingType('folder')}
           title="New Folder"
+          aria-label="New folder"
         >
           +&#x2395;
         </button>

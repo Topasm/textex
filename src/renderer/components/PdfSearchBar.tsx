@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import React, { useRef, useEffect } from 'react'
 
 interface PdfSearchBarProps {
   visible: boolean
@@ -10,7 +10,7 @@ interface PdfSearchBarProps {
   currentMatch: number
 }
 
-function PdfSearchBar({
+const PdfSearchBar = React.memo(function PdfSearchBar({
   visible,
   onClose,
   onSearch,
@@ -55,17 +55,17 @@ function PdfSearchBar({
       <span className="pdf-search-count">
         {matchCount > 0 ? `${currentMatch + 1}/${matchCount}` : 'No matches'}
       </span>
-      <button onClick={onPrev} disabled={matchCount === 0} title="Previous (Shift+Enter)">
+      <button onClick={onPrev} disabled={matchCount === 0} title="Previous (Shift+Enter)" aria-label="Previous match">
         &#x25B2;
       </button>
-      <button onClick={onNext} disabled={matchCount === 0} title="Next (Enter)">
+      <button onClick={onNext} disabled={matchCount === 0} title="Next (Enter)" aria-label="Next match">
         &#x25BC;
       </button>
-      <button onClick={onClose} title="Close (Escape)">
+      <button onClick={onClose} title="Close (Escape)" aria-label="Close search">
         &#x2715;
       </button>
     </div>
   )
-}
+})
 
 export default PdfSearchBar

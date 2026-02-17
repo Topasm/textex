@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
+import { ZOOM_MIN, ZOOM_MAX, ZOOM_STEP, SPLIT_RATIO_MIN, SPLIT_RATIO_MAX } from '../constants'
 
 interface PdfState {
   zoomLevel: number
@@ -34,10 +35,10 @@ export const usePdfStore = create<PdfState>()(
     pdfSearchQuery: '',
     syncToCodeRequest: null,
 
-    setSplitRatio: (splitRatio) => set({ splitRatio: Math.max(0.2, Math.min(0.8, splitRatio)) }),
-    setZoomLevel: (level) => set({ zoomLevel: Math.max(25, Math.min(400, level)) }),
-    zoomIn: () => set((state) => ({ zoomLevel: Math.min(400, state.zoomLevel + 25) })),
-    zoomOut: () => set((state) => ({ zoomLevel: Math.max(25, state.zoomLevel - 25) })),
+    setSplitRatio: (splitRatio) => set({ splitRatio: Math.max(SPLIT_RATIO_MIN, Math.min(SPLIT_RATIO_MAX, splitRatio)) }),
+    setZoomLevel: (level) => set({ zoomLevel: Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, level)) }),
+    zoomIn: () => set((state) => ({ zoomLevel: Math.min(ZOOM_MAX, state.zoomLevel + ZOOM_STEP) })),
+    zoomOut: () => set((state) => ({ zoomLevel: Math.max(ZOOM_MIN, state.zoomLevel - ZOOM_STEP) })),
     resetZoom: () => set({ zoomLevel: 100 }),
     setSynctexHighlight: (highlight) =>
       set({ synctexHighlight: highlight ? { ...highlight, timestamp: Date.now() } : null }),

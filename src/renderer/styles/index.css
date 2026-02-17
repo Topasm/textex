@@ -3821,3 +3821,163 @@ body,
   border-color: var(--accent);
   color: var(--accent);
 }
+
+/* ── Toolbar inline style replacements ────────────────────── */
+
+.toolbar-separator-line {
+  height: 1px;
+  width: 100%;
+  margin: 4px 0;
+}
+
+.toolbar-export-header {
+  padding: 4px 12px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.toolbar-export-item {
+  padding-left: 24px;
+}
+
+.toolbar-pdf-controls {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.toolbar-compact-btn {
+  padding: 4px 8px;
+}
+
+.toolbar-zoom-label {
+  font-size: 12px;
+  min-width: 36px;
+  text-align: center;
+}
+
+/* ── Settings shared inline style replacements ────────────── */
+
+.settings-flex-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.settings-flex-row-start {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.settings-flex-row-between {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.settings-section-header-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-key-input-wrapper {
+  position: relative;
+  flex: 1;
+}
+
+.settings-key-toggle-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  color: var(--text-secondary);
+  display: flex;
+}
+
+.settings-column-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-field-mt {
+  margin-top: 16px;
+}
+
+.settings-field-mt-sm {
+  margin-top: 12px;
+}
+
+.settings-heading-mb {
+  margin-bottom: 12px;
+}
+
+.settings-no-mb {
+  margin-bottom: 0;
+}
+
+.settings-thinking-budget-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-thinking-sub {
+  padding-left: 0;
+  margin-top: 8px;
+}
+
+.settings-spellcheck-sub {
+  padding-left: 0;
+  margin-top: 4px;
+  margin-bottom: 8px;
+}
+
+.settings-select-narrow {
+  max-width: 120px;
+}
+
+.settings-select-medium {
+  max-width: 200px;
+}
+
+.settings-select-wide {
+  max-width: 240px;
+}
+
+.settings-accent-link {
+  color: var(--accent);
+}
+
+.settings-icon-secondary {
+  color: var(--text-secondary);
+}
+
+.settings-tag-saved {
+  background: var(--success, #2ea043);
+  color: #fff;
+}
+
+.settings-input-pr {
+  padding-right: 36px;
+}
+
+.settings-nowrap {
+  white-space: nowrap;
+}
+
+.settings-status-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}

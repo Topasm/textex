@@ -24,12 +24,12 @@ const ZoteroStatusProbe = ({ port }: { port: number }) => {
 
     if (status === 'checking') return <span className="settings-status-text">Checking...</span>;
     if (status === 'connected') return (
-        <span className="settings-status-text connected" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+        <span className="settings-status-text connected settings-status-inline">
             <span className="settings-status-dot connected" />Connected
         </span>
     );
     return (
-        <span className="settings-status-text error" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+        <span className="settings-status-text error settings-status-inline">
             <span className="settings-status-dot error" />Disconnected
         </span>
     );
@@ -47,8 +47,8 @@ export const IntegrationsTab = () => {
                         <Link size={24} />
                     </div>
                     <div className="settings-section-body">
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                            <h3 className="settings-section-title" style={{ marginBottom: 0 }}>Zotero Integration</h3>
+                        <div className="settings-flex-row">
+                            <h3 className="settings-section-title settings-no-mb">Zotero Integration</h3>
                             <Toggle
                                 checked={settings.zoteroEnabled}
                                 onChange={(checked) => updateSetting('zoteroEnabled', checked)}
@@ -62,7 +62,7 @@ export const IntegrationsTab = () => {
                         {settings.zoteroEnabled && (
                             <div className="settings-inline-row">
                                 <div className="settings-inline-label">
-                                    <label className="settings-label" style={{ marginBottom: 0 }}>Port Number</label>
+                                    <label className="settings-label settings-no-mb">Port Number</label>
                                     <input
                                         type="number"
                                         value={settings.zoteroPort}
@@ -88,8 +88,8 @@ export const IntegrationsTab = () => {
                         <Link size={24} />
                     </div>
                     <div className="settings-section-body">
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                            <h3 className="settings-section-title" style={{ marginBottom: 0 }}>Git Integration</h3>
+                        <div className="settings-flex-row">
+                            <h3 className="settings-section-title settings-no-mb">Git Integration</h3>
                             <Toggle
                                 checked={settings.gitEnabled !== false}
                                 onChange={(checked) => updateSetting('gitEnabled', checked)}

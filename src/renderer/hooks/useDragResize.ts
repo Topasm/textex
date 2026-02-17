@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAppStore } from '../store/useAppStore'
 import type { SidebarView } from '../store/useAppStore'
+import { SWIPE_LOCK_MS } from '../constants'
 
 export type SlideAnim = 'exit-left' | 'exit-right' | 'enter-left' | 'enter-right' | null
 
@@ -124,7 +125,7 @@ export function useDragResize(): DragResizeHandlers {
 
     const direction = e.deltaX > 0 ? 1 : -1
     swipeLocked.current = true
-    swipeEndTimer.current = setTimeout(() => { swipeLocked.current = false }, 500)
+    swipeEndTimer.current = setTimeout(() => { swipeLocked.current = false }, SWIPE_LOCK_MS)
 
     // Clear any in-flight animation timers before starting new ones
     clearTimeout(slideAnimTimer.current)

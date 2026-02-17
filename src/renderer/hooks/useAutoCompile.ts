@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useAppStore } from '../store/useAppStore'
 import { errorMessage } from '../utils/errorMessage'
+import { AUTO_COMPILE_DELAY_MS } from '../constants'
 
 export function useAutoCompile(): void {
   const content = useAppStore((s) => s.content)
@@ -68,7 +69,7 @@ export function useAutoCompile(): void {
         useAppStore.getState().setCompileStatus('error')
         useAppStore.getState().setLogPanelOpen(true)
       }
-    }, 1000)
+    }, AUTO_COMPILE_DELAY_MS)
 
     return () => clearTimeout(timerRef.current)
   }, [content, filePath])

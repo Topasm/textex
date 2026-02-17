@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import React, { useCallback } from 'react'
 import type { BibEntry } from '../../../shared/types'
 
 interface BibEntryCardProps {
@@ -11,7 +11,7 @@ interface BibEntryCardProps {
   addTitle?: string
 }
 
-export function BibEntryCard({ entry, onInsert, onRemove, onAdd, addTitle }: BibEntryCardProps) {
+export const BibEntryCard = React.memo(function BibEntryCard({ entry, onInsert, onRemove, onAdd, addTitle }: BibEntryCardProps) {
   const cleanTitle = (entry.title || '(no title)').replace(/[{}]/g, '')
   let authors = entry.author || 'Unknown Author'
   if (authors.length > 50) authors = authors.slice(0, 50) + '...'
@@ -32,6 +32,14 @@ export function BibEntryCard({ entry, onInsert, onRemove, onAdd, addTitle }: Bib
       draggable
       onDragStart={handleDragStart}
       style={{ cursor: 'grab' }}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onInsert(`\\cite{${entry.key}}`)
+        }
+      }}
     >
       <div className="bib-entry-header">
         <span className="bib-title">{cleanTitle}</span>
@@ -61,4 +69,4 @@ export function BibEntryCard({ entry, onInsert, onRemove, onAdd, addTitle }: Bib
       </div>
     </div>
   )
-}
+})

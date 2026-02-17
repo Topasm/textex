@@ -3,6 +3,8 @@
  * Maps keyboard shortcuts to named commands with handlers.
  */
 
+import { HIDDEN_EDITOR_ACTIONS } from '../constants'
+
 interface KeyBinding {
   /** The key to match (e.g. 's', 'Enter', 'Tab') */
   key: string | string[]
@@ -60,3 +62,21 @@ export class CommandRegistry {
 }
 
 export const commandRegistry = new CommandRegistry()
+
+/**
+ * Set of command IDs that should be hidden from the command palette.
+ * Populated by registerHiddenCommands() during editor initialization.
+ */
+export const hiddenCommandIds = new Set<string>()
+
+/**
+ * Populates hiddenCommandIds from the HIDDEN_EDITOR_ACTIONS constant.
+ * Call once after the Monaco editor is mounted so that palette filtering
+ * can exclude irrelevant actions (go-to-definition, refactor, etc.).
+ */
+export function registerHiddenCommands(): void {
+  hiddenCommandIds.clear()
+  for (const id of HIDDEN_EDITOR_ACTIONS) {
+    hiddenCommandIds.add(id)
+  }
+}

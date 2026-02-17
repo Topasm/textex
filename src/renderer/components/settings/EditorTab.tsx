@@ -71,9 +71,9 @@ export const EditorTab = () => {
             <div>
                 <h3 className="settings-heading">Typography</h3>
 
-                <div style={{ marginTop: 16 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                        <label className="settings-label" style={{ marginBottom: 0 }}>Font Size</label>
+                <div className="settings-field-mt">
+                    <div className="settings-flex-row-between">
+                        <label className="settings-label settings-no-mb">Font Size</label>
                         <span className="settings-badge">{settings.fontSize}px</span>
                     </div>
                     <input
@@ -91,16 +91,15 @@ export const EditorTab = () => {
                     </div>
                 </div>
 
-                <div style={{ marginTop: 16 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                        <label className="settings-label" style={{ marginBottom: 0 }}>Tab Size</label>
+                <div className="settings-field-mt">
+                    <div className="settings-flex-row-between">
+                        <label className="settings-label settings-no-mb">Tab Size</label>
                         <span className="settings-badge">{settings.tabSize ?? 4} spaces</span>
                     </div>
                     <select
                         value={settings.tabSize ?? 4}
                         onChange={(e) => updateSetting('tabSize', parseInt(e.target.value))}
-                        className="settings-select"
-                        style={{ maxWidth: 120 }}
+                        className="settings-select settings-select-narrow"
                     >
                         <option value={2}>2</option>
                         <option value={4}>4</option>
@@ -112,8 +111,8 @@ export const EditorTab = () => {
             <hr className="settings-divider" />
 
             <div>
-                <h3 className="settings-heading" style={{ marginBottom: 12 }}>Behavior</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <h3 className="settings-heading settings-heading-mb">Behavior</h3>
+                <div className="settings-column-group">
                     <div className="settings-row">
                         <div>
                             <div className="settings-row-label">Word Wrap</div>
@@ -203,8 +202,8 @@ export const EditorTab = () => {
             <hr className="settings-divider" />
 
             <div>
-                <h3 className="settings-heading" style={{ marginBottom: 12 }}>Status Bar</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <h3 className="settings-heading settings-heading-mb">Status Bar</h3>
+                <div className="settings-column-group">
                     <div className="settings-row">
                         <div>
                             <div className="settings-row-label">Show Status Bar</div>

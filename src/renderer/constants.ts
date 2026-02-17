@@ -4,7 +4,7 @@ export const SYNCTEX_HIGHLIGHT_MS = 1500
 export const SETTINGS_SYNC_DELAY_MS = 500
 export const AUTO_COMPILE_DELAY_MS = 1000
 export const SWIPE_LOCK_MS = 500
-export const GIT_REFRESH_INTERVAL_MS = 3000
+export const GIT_REFRESH_INTERVAL_MS = 5000
 
 // ── Zoom ────────────────────────────────────────────────────
 export const ZOOM_MIN = 25

@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { useAppStore } from '../store/useAppStore'
+import { logError } from '../utils/errorMessage'
 import type { GitLogEntry, HistoryItem } from '../../shared/types'
 
 interface TimelineEntry {
@@ -63,7 +64,8 @@ export function TimelinePanel() {
         window.api.getHistoryList(activeFilePath)
       ])
       setEntries(mergeTimeline(commits, snapshots))
-    } catch {
+    } catch (err) {
+      logError('TimelinePanel:refresh', err)
       setEntries([])
     } finally {
       setLoading(false)
@@ -88,8 +90,8 @@ export function TimelinePanel() {
     if (entry.type === 'local' && entry.snapshotPath) {
       try {
         await window.api.loadHistorySnapshot(entry.snapshotPath)
-      } catch {
-        // ignore
+      } catch (err) {
+        logError('TimelinePanel:loadSnapshot', err)
       }
     }
   }
@@ -127,6 +129,12 @@ export function TimelinePanel() {
           onClick={() => handleEntryClick(entry)}
           role={entry.type === 'local' ? 'button' : undefined}
           tabIndex={entry.type === 'local' ? 0 : undefined}
+          onKeyDown={entry.type === 'local' ? (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              handleEntryClick(entry)
+            }
+          } : undefined}
         >
           <div className="timeline-icon">
             {entry.type === 'git' ? (
