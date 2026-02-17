@@ -995,38 +995,10 @@ body,
 
 .sidebar-content {
   flex: 1;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
-.sidebar-exit-left {
-  transition: transform 100ms ease-in, opacity 100ms ease-in;
-  transform: translateX(-24px);
-  opacity: 0;
-}
-
-.sidebar-exit-right {
-  transition: transform 100ms ease-in, opacity 100ms ease-in;
-  transform: translateX(24px);
-  opacity: 0;
-}
-
-.sidebar-enter-left {
-  animation: sidebar-enter-from-left 120ms ease-out;
-}
-
-.sidebar-enter-right {
-  animation: sidebar-enter-from-right 120ms ease-out;
-}
-
-@keyframes sidebar-enter-from-left {
-  from { transform: translateX(-16px); opacity: 0; }
-  to   { transform: translateX(0); opacity: 1; }
-}
-
-@keyframes sidebar-enter-from-right {
-  from { transform: translateX(16px); opacity: 0; }
-  to   { transform: translateX(0); opacity: 1; }
-}
 
 .sidebar-resize-handle {
   width: 4px;
@@ -1581,6 +1553,7 @@ body,
 .outline-panel {
   padding: 6px 0;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .outline-panel-header {
@@ -2072,6 +2045,7 @@ body,
 .bib-list {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 4px 0;
 }
 
@@ -3343,6 +3317,7 @@ body,
 .todo-panel {
   padding: 12px;
   overflow-y: auto;
+  overflow-x: hidden;
   height: 100%;
   font-size: 13px;
   line-height: 1.6;
@@ -3515,6 +3490,7 @@ body,
 /* ---- Timeline Panel ---- */
 .timeline-panel {
   overflow-y: auto;
+  overflow-x: hidden;
   height: 100%;
 }
 
