@@ -1,4 +1,4 @@
-import type { editor as monacoEditor, languages as monacoLanguages } from 'monaco-editor'
+import type { languages as monacoLanguages } from 'monaco-editor'
 import { MonacoInstance } from '../types'
 import { currentDocUri, sendRequest, isInitialized } from '../lspClient'
 

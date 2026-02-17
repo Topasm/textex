@@ -1,7 +1,5 @@
 import type {
   editor as monacoEditor,
-  languages as monacoLanguages,
-  IMarkdownString,
   MarkerSeverity
 } from 'monaco-editor'
 import { MonacoInstance } from './types'

@@ -2,7 +2,7 @@ import type { languages as monacoLanguages } from 'monaco-editor'
 import { MonacoInstance } from '../types'
 import { currentDocUri, sendRequest, isInitialized } from '../lspClient'
 
-export const createFormattingProvider = (monaco: MonacoInstance): monacoLanguages.DocumentFormattingEditProvider => {
+export const createFormattingProvider = (_monaco: MonacoInstance): monacoLanguages.DocumentFormattingEditProvider => {
     return {
         provideDocumentFormattingEdits: async (_model) => {
             if (!isInitialized()) return []
