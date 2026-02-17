@@ -1,5 +1,6 @@
-import { useEffect } from 'react'
 import { useAppStore } from '../store/useAppStore'
+import { toDisposable } from '../utils/disposable'
+import { useDisposable } from './useDisposable'
 import type { Diagnostic } from '../../shared/types'
 
 /**
@@ -11,7 +12,7 @@ import type { Diagnostic } from '../../shared/types'
  */
 export function useIpcListeners(projectRoot: string | null): void {
   // Update event listeners
-  useEffect(() => {
+  useDisposable((store) => {
     window.api.onUpdateEvent('available', (version: unknown) => {
       useAppStore.getState().setUpdateStatus('available')
       if (typeof version === 'string') {
@@ -30,33 +31,27 @@ export function useIpcListeners(projectRoot: string | null): void {
     window.api.onUpdateEvent('error', () => {
       useAppStore.getState().setUpdateStatus('error')
     })
-    return () => {
-      window.api.removeUpdateListeners()
-    }
+    store.add(toDisposable(() => window.api.removeUpdateListeners()))
   }, [])
 
   // Compile log listener
-  useEffect(() => {
+  useDisposable((store) => {
     window.api.onCompileLog((log: string) => {
       useAppStore.getState().appendLog(log)
     })
-    return () => {
-      window.api.removeCompileLogListener()
-    }
+    store.add(toDisposable(() => window.api.removeCompileLogListener()))
   }, [])
 
   // Diagnostics listener
-  useEffect(() => {
+  useDisposable((store) => {
     window.api.onDiagnostics((diagnostics: Diagnostic[]) => {
       useAppStore.getState().setDiagnostics(diagnostics)
     })
-    return () => {
-      window.api.removeDiagnosticsListener()
-    }
+    store.add(toDisposable(() => window.api.removeDiagnosticsListener()))
   }, [])
 
   // Directory watcher refresh
-  useEffect(() => {
+  useDisposable((store) => {
     if (!projectRoot) return
     window.api.onDirectoryChanged(async () => {
       try {
@@ -66,8 +61,6 @@ export function useIpcListeners(projectRoot: string | null): void {
         // ignore
       }
     })
-    return () => {
-      window.api.removeDirectoryChangedListener()
-    }
+    store.add(toDisposable(() => window.api.removeDirectoryChangedListener()))
   }, [projectRoot])
 }

@@ -44,6 +44,7 @@ export interface ElectronAPI {
   // File System
   openFile(): Promise<OpenFileResult | null>
   saveFile(content: string, filePath: string): Promise<SaveResult>
+  saveFileBatch(files: Array<{ content: string; filePath: string }>): Promise<SaveResult>
   saveFileAs(content: string): Promise<SaveAsResult | null>
   createTemplateProject(
     templateName: string,

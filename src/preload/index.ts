@@ -1,20 +1,42 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
 
-let compileLogHandler: ((_event: IpcRendererEvent, log: string) => void) | null = null
-let diagnosticsHandler: ((_event: IpcRendererEvent, diagnostics: unknown[]) => void) | null = null
-let directoryChangedHandler: (
-  (_event: IpcRendererEvent, change: { type: string; filename: string }) => void
-) | null = null
+/**
+ * Helper that manages a single IPC listener for a channel.
+ * Automatically removes the previous handler when a new one is set.
+ * Returns { on, remove } methods for use in the API bridge.
+ */
+function createIpcListener<TArgs extends unknown[]>(channel: string) {
+  let handler: ((_event: IpcRendererEvent, ...args: TArgs) => void) | null = null
+  return {
+    on(cb: (...args: TArgs) => void) {
+      if (handler) {
+        ipcRenderer.removeListener(channel, handler)
+      }
+      handler = (_event: IpcRendererEvent, ...args: TArgs) => cb(...args)
+      ipcRenderer.on(channel, handler)
+    },
+    remove() {
+      if (handler) {
+        ipcRenderer.removeListener(channel, handler)
+        handler = null
+      }
+    }
+  }
+}
+
+const compileLogListener = createIpcListener<[string]>('latex:log')
+const diagnosticsListener = createIpcListener<[unknown[]]>('latex:diagnostics')
+const directoryChangedListener = createIpcListener<[{ type: string; filename: string }]>('fs:directory-changed')
+const lspMessageListener = createIpcListener<[object]>('lsp:message')
+const lspStatusListener = createIpcListener<[string, string?]>('lsp:status-change')
+
 let updateHandlers: Record<string, ((_event: IpcRendererEvent, ...args: unknown[]) => void)> = {}
-let lspMessageHandler: ((_event: IpcRendererEvent, message: object) => void) | null = null
-let lspStatusHandler: (
-  (_event: IpcRendererEvent, status: string, error?: string) => void
-) | null = null
 
 contextBridge.exposeInMainWorld('api', {
   // File System
   openFile: () => ipcRenderer.invoke('fs:open'),
   saveFile: (content: string, filePath: string) => ipcRenderer.invoke('fs:save', content, filePath),
+  saveFileBatch: (files: Array<{ content: string; filePath: string }>) => ipcRenderer.invoke('fs:save-batch', files),
   saveFileAs: (content: string) => ipcRenderer.invoke('fs:save-as', content),
   createTemplateProject: (templateName: string, content: string) =>
     ipcRenderer.invoke('fs:create-template-project', templateName, content),
@@ -27,50 +49,26 @@ contextBridge.exposeInMainWorld('api', {
   watchDirectory: (dirPath: string) => ipcRenderer.invoke('fs:watch-directory', dirPath),
   unwatchDirectory: () => ipcRenderer.invoke('fs:unwatch-directory'),
   onDirectoryChanged: (cb: (change: { type: string; filename: string }) => void) => {
-    if (directoryChangedHandler) {
-      ipcRenderer.removeListener('fs:directory-changed', directoryChangedHandler)
-    }
-    directoryChangedHandler = (
-      _event: IpcRendererEvent,
-      change: { type: string; filename: string }
-    ) => cb(change)
-    ipcRenderer.on('fs:directory-changed', directoryChangedHandler)
+    directoryChangedListener.on(cb)
   },
   removeDirectoryChangedListener: () => {
-    if (directoryChangedHandler) {
-      ipcRenderer.removeListener('fs:directory-changed', directoryChangedHandler)
-      directoryChangedHandler = null
-    }
+    directoryChangedListener.remove()
   },
 
   // Compilation
   compile: (filePath: string) => ipcRenderer.invoke('latex:compile', filePath),
   cancelCompile: () => ipcRenderer.invoke('latex:cancel'),
   onCompileLog: (cb: (log: string) => void) => {
-    if (compileLogHandler) {
-      ipcRenderer.removeListener('latex:log', compileLogHandler)
-    }
-    compileLogHandler = (_event: IpcRendererEvent, log: string) => cb(log)
-    ipcRenderer.on('latex:log', compileLogHandler)
+    compileLogListener.on(cb)
   },
   removeCompileLogListener: () => {
-    if (compileLogHandler) {
-      ipcRenderer.removeListener('latex:log', compileLogHandler)
-      compileLogHandler = null
-    }
+    compileLogListener.remove()
   },
   onDiagnostics: (cb: (diagnostics: unknown[]) => void) => {
-    if (diagnosticsHandler) {
-      ipcRenderer.removeListener('latex:diagnostics', diagnosticsHandler)
-    }
-    diagnosticsHandler = (_event: IpcRendererEvent, diagnostics: unknown[]) => cb(diagnostics)
-    ipcRenderer.on('latex:diagnostics', diagnosticsHandler)
+    diagnosticsListener.on(cb)
   },
   removeDiagnosticsListener: () => {
-    if (diagnosticsHandler) {
-      ipcRenderer.removeListener('latex:diagnostics', diagnosticsHandler)
-      diagnosticsHandler = null
-    }
+    diagnosticsListener.remove()
   },
 
   // SyncTeX
@@ -158,31 +156,16 @@ contextBridge.exposeInMainWorld('api', {
   lspSend: (message: object) => ipcRenderer.invoke('lsp:send', message),
   lspStatus: () => ipcRenderer.invoke('lsp:status'),
   onLspMessage: (cb: (message: object) => void) => {
-    if (lspMessageHandler) {
-      ipcRenderer.removeListener('lsp:message', lspMessageHandler)
-    }
-    lspMessageHandler = (_event: IpcRendererEvent, message: object) => cb(message)
-    ipcRenderer.on('lsp:message', lspMessageHandler)
+    lspMessageListener.on(cb)
   },
   removeLspMessageListener: () => {
-    if (lspMessageHandler) {
-      ipcRenderer.removeListener('lsp:message', lspMessageHandler)
-      lspMessageHandler = null
-    }
+    lspMessageListener.remove()
   },
   onLspStatus: (cb: (status: string, error?: string) => void) => {
-    if (lspStatusHandler) {
-      ipcRenderer.removeListener('lsp:status-change', lspStatusHandler)
-    }
-    lspStatusHandler = (_event: IpcRendererEvent, status: string, error?: string) =>
-      cb(status, error)
-    ipcRenderer.on('lsp:status-change', lspStatusHandler)
+    lspStatusListener.on(cb)
   },
   removeLspStatusListener: () => {
-    if (lspStatusHandler) {
-      ipcRenderer.removeListener('lsp:status-change', lspStatusHandler)
-      lspStatusHandler = null
-    }
+    lspStatusListener.remove()
   },
 
   // Zotero

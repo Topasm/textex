@@ -8,7 +8,11 @@ export default defineConfig({
     build: {
       outDir: resolve(__dirname, 'out/main'),
       lib: {
-        entry: resolve(__dirname, 'src/main/main.ts')
+        entry: {
+          main: resolve(__dirname, 'src/main/main.ts'),
+          'workers/logParserWorker': resolve(__dirname, 'src/main/workers/logParserWorker.ts'),
+          'workers/spellWorker': resolve(__dirname, 'src/main/workers/spellWorker.ts')
+        }
       }
     }
   },

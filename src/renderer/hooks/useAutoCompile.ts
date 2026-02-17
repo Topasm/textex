@@ -19,23 +19,28 @@ export function useAutoCompile(): void {
         useAppStore.getState()
 
       // Save ALL dirty files before compiling (multi-file awareness)
+      // Use batch save IPC to write all dirty files concurrently in a single call
       const { openFiles } = useAppStore.getState()
-      for (const [path, fileData] of Object.entries(openFiles)) {
-        if (fileData.isDirty) {
-          try {
-            await window.api.saveFile(fileData.content, path)
-            const current = useAppStore.getState().openFiles
-            if (current[path]) {
-              const updated = { ...current }
-              updated[path] = { ...updated[path], isDirty: false }
-              useAppStore.setState({ openFiles: updated })
+      const dirtyEntries = Object.entries(openFiles).filter(([, fileData]) => fileData.isDirty)
+      if (dirtyEntries.length > 0) {
+        try {
+          await window.api.saveFileBatch(
+            dirtyEntries.map(([filePath, fileData]) => ({ content: fileData.content, filePath }))
+          )
+          // Mark all dirty files as clean
+          const current = useAppStore.getState().openFiles
+          const updated = { ...current }
+          for (const [filePath] of dirtyEntries) {
+            if (updated[filePath]) {
+              updated[filePath] = { ...updated[filePath], isDirty: false }
             }
-          } catch (err: unknown) {
-            appendLog(`Save failed for ${path}, skipping compile: ${errorMessage(err)}`)
-            setCompileStatus('error')
-            setLogPanelOpen(true)
-            return
           }
+          useAppStore.setState({ openFiles: updated })
+        } catch (err: unknown) {
+          appendLog(`Save failed, skipping compile: ${errorMessage(err)}`)
+          setCompileStatus('error')
+          setLogPanelOpen(true)
+          return
         }
       }
 

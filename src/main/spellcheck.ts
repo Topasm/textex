@@ -1,12 +1,13 @@
 import path from 'path'
-import fs from 'fs/promises'
 import { app } from 'electron'
-import nspell from 'nspell'
+import { Worker } from 'worker_threads'
 
 const isDev = !app.isPackaged
 
-let spell: ReturnType<typeof nspell> | null = null
+let worker: Worker | null = null
 let initialized = false
+let pendingCallbacks = new Map<number, { resolve: (value: unknown) => void; reject: (err: Error) => void }>()
+let nextId = 0
 
 function getDictionaryPath(language: string): { aff: string; dic: string } {
   const basePath = isDev
@@ -19,38 +20,86 @@ function getDictionaryPath(language: string): { aff: string; dic: string } {
   }
 }
 
+function ensureWorker(): Worker {
+  if (worker) return worker
+
+  const workerPath = path.join(__dirname, 'workers', 'spellWorker.js')
+  worker = new Worker(workerPath)
+
+  worker.on('message', (msg: { type: string; id?: number; [key: string]: unknown }) => {
+    // Route responses to pending callbacks
+    if (msg.id !== undefined) {
+      const cb = pendingCallbacks.get(msg.id)
+      if (cb) {
+        pendingCallbacks.delete(msg.id)
+        cb.resolve(msg)
+      }
+    }
+  })
+
+  worker.on('error', (err) => {
+    // Reject all pending callbacks
+    for (const cb of pendingCallbacks.values()) {
+      cb.reject(err)
+    }
+    pendingCallbacks.clear()
+    worker = null
+    initialized = false
+  })
+
+  return worker
+}
+
+function sendToWorker(msg: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const id = nextId++
+  const w = ensureWorker()
+  return new Promise((resolve, reject) => {
+    pendingCallbacks.set(id, {
+      resolve: resolve as (value: unknown) => void,
+      reject
+    })
+    w.postMessage({ ...msg, id })
+  })
+}
+
 export async function initSpellChecker(language: string): Promise<{ success: boolean; error?: string }> {
   try {
     const paths = getDictionaryPath(language)
-    const [affData, dicData] = await Promise.all([
-      fs.readFile(paths.aff, 'utf-8'),
-      fs.readFile(paths.dic, 'utf-8')
-    ])
-    spell = nspell(affData, dicData)
-    initialized = true
-    return { success: true }
+    const response = await sendToWorker({
+      type: 'init',
+      affPath: paths.aff,
+      dicPath: paths.dic
+    })
+    if ((response as { success: boolean }).success) {
+      initialized = true
+      return { success: true }
+    }
+    initialized = false
+    return { success: false, error: (response as { error?: string }).error }
   } catch (err) {
     initialized = false
-    spell = null
     const message = err instanceof Error ? err.message : String(err)
     return { success: false, error: `Failed to init spell checker for "${language}": ${message}` }
   }
 }
 
 export async function checkWords(words: string[]): Promise<string[]> {
-  if (!initialized || !spell) return []
-  return words.filter((w) => !spell!.correct(w))
+  if (!initialized || !worker) return []
+  // Deduplicate before sending to worker for efficiency
+  const uniqueWords = [...new Set(words)]
+  const response = await sendToWorker({ type: 'check', words: uniqueWords })
+  return (response as { misspelled: string[] }).misspelled
 }
 
 export async function getSuggestions(word: string): Promise<string[]> {
-  if (!initialized || !spell) return []
-  return spell.suggest(word).slice(0, 5)
+  if (!initialized || !worker) return []
+  const response = await sendToWorker({ type: 'suggest', word })
+  return (response as { suggestions: string[] }).suggestions
 }
 
 export async function addWord(word: string): Promise<{ success: boolean }> {
-  if (spell) {
-    spell.add(word)
-  }
+  if (!initialized || !worker) return { success: true }
+  await sendToWorker({ type: 'add', word })
   return { success: true }
 }
 
