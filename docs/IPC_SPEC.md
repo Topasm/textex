@@ -146,6 +146,91 @@ channel.
 
 ---
 
+---
+
+### `lsp:start`
+
+| Field | Value |
+|---|---|
+| Direction | Renderer -> Main |
+| Method | `ipcRenderer.invoke` / `ipcMain.handle` |
+| Request payload | `(workspaceRoot: string)` |
+| Response | `{ success: boolean }` |
+
+**Main handler logic:**
+1. Validate `workspaceRoot` via `validateFilePath()`.
+2. Call `texLabManager.start()` with callbacks for message and status forwarding.
+3. TexLab process spawns with `stdio: ['pipe', 'pipe', 'pipe']`, cwd = workspace root.
+4. Messages from TexLab stdout are parsed (Content-Length header protocol) and forwarded via `lsp:message`.
+5. Status changes are forwarded via `lsp:status-change`.
+
+---
+
+### `lsp:stop`
+
+| Field | Value |
+|---|---|
+| Direction | Renderer -> Main |
+| Method | `ipcRenderer.invoke` / `ipcMain.handle` |
+| Request payload | -- (none) |
+| Response | `{ success: boolean }` |
+
+**Main handler logic:**
+1. Call `texLabManager.stop()` — kills the TexLab child process.
+
+---
+
+### `lsp:send`
+
+| Field | Value |
+|---|---|
+| Direction | Renderer -> Main |
+| Method | `ipcRenderer.invoke` / `ipcMain.handle` |
+| Request payload | `(message: object)` — a JSON-RPC message |
+| Response | `{ success: boolean }` |
+
+**Main handler logic:**
+1. Serialize `message` to JSON, prepend `Content-Length` header, write to TexLab stdin.
+
+---
+
+### `lsp:status`
+
+| Field | Value |
+|---|---|
+| Direction | Renderer -> Main |
+| Method | `ipcRenderer.invoke` / `ipcMain.handle` |
+| Request payload | -- (none) |
+| Response | `{ status: 'stopped' \| 'starting' \| 'running' \| 'error' }` |
+
+---
+
+### `lsp:message`
+
+| Field | Value |
+|---|---|
+| Direction | Main -> Renderer |
+| Method | `webContents.send` |
+| Payload | `object` (JSON-RPC response or notification from TexLab) |
+
+This channel forwards parsed LSP messages from the TexLab process to the renderer's
+LSP client, which routes them to Monaco providers (diagnostics, completions, etc.).
+
+---
+
+### `lsp:status-change`
+
+| Field | Value |
+|---|---|
+| Direction | Main -> Renderer |
+| Method | `webContents.send` |
+| Payload | `(status: string, error?: string)` |
+
+Pushed when TexLab process status changes (starting, running, error, stopped).
+The renderer updates the StatusBar LSP indicator accordingly.
+
+---
+
 ## Type Declarations (Renderer Side)
 
 ```typescript

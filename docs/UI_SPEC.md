@@ -116,7 +116,12 @@ highlights with a yellow background when the file is dirty.
   - `Compiling...` (yellow dot) -- compilation in progress
   - `Success` (green dot) -- last compile succeeded
   - `Error` (red dot) -- last compile failed
-- Right side: cursor position (`Ln X, Col Y`) from Monaco's `onDidChangeCursorPosition`.
+  - Diagnostic counts (error/warning) from compilation
+  - Git branch indicator when in a git repo
+- Right side:
+  - LSP status: `Connected` / `Starting...` / `Error` / `Off` (shown when LSP enabled)
+  - Spell check toggle: `Spell: On/Off` (clickable)
+  - Cursor position (`Ln X, Col Y`) from Monaco's `onDidChangeCursorPosition`.
 
 ---
 

@@ -19,6 +19,7 @@ import {
 import { exportDocument, getPandocFormats } from './pandoc'
 import { scanLabels } from './labelscanner'
 import { loadPackageData } from './packageloader'
+import { texLabManager } from './texlab'
 
 function validateFilePath(filePath: unknown): string {
   if (typeof filePath !== 'string' || filePath.length === 0) {
@@ -330,5 +331,33 @@ export function registerIpcHandlers(win: BrowserWindow): void {
 
   ipcMain.handle('export:formats', () => {
     return getPandocFormats()
+  })
+
+  // ---- LSP (TexLab) ----
+  ipcMain.handle('lsp:start', async (_event, workspaceRoot: string) => {
+    const validPath = validateFilePath(workspaceRoot)
+    texLabManager.start(validPath, {
+      onMessage: (message) => {
+        currentWindow?.webContents.send('lsp:message', message)
+      },
+      onStatusChange: (status, error) => {
+        currentWindow?.webContents.send('lsp:status-change', status, error)
+      }
+    })
+    return { success: true }
+  })
+
+  ipcMain.handle('lsp:stop', () => {
+    texLabManager.stop()
+    return { success: true }
+  })
+
+  ipcMain.handle('lsp:send', (_event, message: object) => {
+    texLabManager.send(message)
+    return { success: true }
+  })
+
+  ipcMain.handle('lsp:status', () => {
+    return { status: texLabManager.getStatus() }
   })
 }

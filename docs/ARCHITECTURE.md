@@ -37,13 +37,36 @@ Runs inside a sandboxed Chromium tab.
 | PDF display | `react-pdf` (PDF.js wrapper) |
 | State | Zustand store: file path, dirty flag, compile status, logs |
 
-### Sidecar Binary (Tectonic)
+### Sidecar Binary: Tectonic (LaTeX Compiler)
 
 - Rust-compiled, single executable.
 - Stored in `resources/bin/{platform}`.
 - On first compile, Tectonic downloads any missing LaTeX packages to a local
   cache (`~/.cache/Tectonic` on Linux/macOS, `%LOCALAPPDATA%\Tectonic` on Windows).
 - After the initial cache is populated, compilation works fully offline.
+
+### Sidecar Binary: TexLab (Language Server)
+
+- Rust-compiled LaTeX language server implementing the Language Server Protocol.
+- **License:** GPL-3.0 — runs as a **separate process** communicating solely via
+  the standardized LSP protocol over stdio. This is an "aggregate" distribution;
+  TexLab's GPL does not apply to TextEx (MIT).
+- Stored in `resources/bin/{platform}` alongside Tectonic.
+- Provides: real-time diagnostics, completions, hover documentation, go-to-definition,
+  document symbols/outline, formatting, and rename across files.
+- Managed by `TexLabManager` singleton (`src/main/texlab.ts`) with auto-restart
+  (up to 3 retries with backoff).
+- Users can override the bundled binary via the `texlabPath` setting.
+- GPL license text and attribution bundled in `resources/licenses/`.
+
+**IPC flow for LSP:**
+```
+Renderer (Monaco + LSP client)
+    ↕ window.api.lsp*  (contextBridge)
+Main Process (TexLabManager)
+    ↕ stdio (Content-Length headers)
+TexLab child process
+```
 
 ### CLI Process (Planned)
 
@@ -83,6 +106,13 @@ All IPC channels and their payloads:
 | `latex:compile` | Renderer -> Main | `{ filePath: string }` | `{ pdfBase64: string }` or error |
 | `latex:cancel` | Renderer -> Main | -- | `boolean` (true if a process was killed) |
 | `latex:log` | Main -> Renderer | `string` (streamed stdout/stderr lines) | -- |
+| `latex:diagnostics` | Main -> Renderer | `Diagnostic[]` (parsed log diagnostics) | -- |
+| `lsp:start` | Renderer -> Main | `{ workspaceRoot: string }` | `{ success: boolean }` |
+| `lsp:stop` | Renderer -> Main | -- | `{ success: boolean }` |
+| `lsp:send` | Renderer -> Main | `object` (JSON-RPC message) | `{ success: boolean }` |
+| `lsp:status` | Renderer -> Main | -- | `{ status: string }` |
+| `lsp:message` | Main -> Renderer | `object` (JSON-RPC response/notification) | -- |
+| `lsp:status-change` | Main -> Renderer | `(status: string, error?: string)` | -- |
 
 ---
 
@@ -181,11 +211,14 @@ All IPC channels and their payloads:
 5. **Listener management** -- The preload script tracks the current `latex:log`
    listener and removes the previous one before attaching a new one, preventing
    listener leaks.
-6. **Binary integrity** -- Tectonic binary is shipped inside `extraResources`
-   and is not user-writable at runtime on macOS/Linux (packaged app is
-   read-only).
+6. **Binary integrity** -- Tectonic and TexLab binaries are shipped inside
+   `extraResources` and are not user-writable at runtime on macOS/Linux
+   (packaged app is read-only).
 7. **Error boundary** -- A React `ErrorBoundary` component wraps the entire app
    to catch rendering errors and display a recovery UI.
+8. **LSP isolation** -- TexLab runs as a separate child process communicating
+   via stdio. No network ports are opened. The LSP client gracefully degrades
+   if TexLab is unavailable.
 
 ---
 
@@ -197,13 +230,17 @@ isDev?
   +- no  -> process.resourcesPath/bin/<binary>
 
 process.platform
-  +- win32  -> platformDir: win, binary: tectonic.exe
-  +- darwin -> platformDir: mac, binary: tectonic
-  +- linux  -> platformDir: linux, binary: tectonic
+  +- win32  -> platformDir: win, binary: tectonic.exe / texlab.exe
+  +- darwin -> platformDir: mac, binary: tectonic / texlab
+  +- linux  -> platformDir: linux, binary: tectonic / texlab
 ```
 
-**CLI / MCP note (planned):** The shared compiler (`src/shared/compiler.ts`) needs
-a third resolution mode that does not depend on `app.isPackaged` (which requires
-Electron). The dev/prod flag will be passed in as a parameter or resolved from an
-environment variable, allowing the same binary resolution logic to work in
-Electron, CLI, and MCP contexts.
+**TexLab resolution order:**
+1. Custom user path (`texlabPath` setting)
+2. Bundled binary (`resources/bin/{platform}/texlab`)
+3. Fallback to system PATH (`texlab`)
+
+**CLI / MCP note:** The shared compiler (`src/shared/compiler.ts`) uses a
+parameterized dev/prod detection via `isDev`/`resourcesPath`/`devBasePath`
+options, allowing the same binary resolution logic to work in Electron, CLI,
+and MCP contexts.

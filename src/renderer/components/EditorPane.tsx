@@ -4,6 +4,7 @@ import { useAppStore } from '../store/useAppStore'
 import { snippets } from '../data/snippets'
 import { environments } from '../data/environments'
 import { registerHoverProvider } from '../providers/hoverProvider'
+import { stopLspClient } from '../lsp/lspClient'
 import type { editor as monacoEditor } from 'monaco-editor'
 
 type MonacoInstance = typeof import('monaco-editor')
@@ -473,6 +474,7 @@ function EditorPane(): JSX.Element {
       cursorDisposableRef.current?.dispose()
       mouseDisposableRef.current?.dispose()
       for (const d of completionDisposablesRef.current) d.dispose()
+      stopLspClient()
     }
   }, [])
 

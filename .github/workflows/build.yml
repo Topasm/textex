@@ -99,5 +99,4 @@ jobs:
             dist/*.AppImage
             dist/*.dmg
             dist/*.exe
-            dist/*.zip
           if-no-files-found: warn

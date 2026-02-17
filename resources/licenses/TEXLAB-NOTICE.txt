@@ -1,0 +1,22 @@
+TexLab — A LaTeX Language Server
+https://github.com/latex-lsp/texlab
+
+Copyright (c) 2018–2025 Eric Förster and contributors
+Licensed under the GNU General Public License v3.0 (GPL-3.0)
+
+TexLab is distributed as a separate, standalone binary that communicates with
+TextEx exclusively via the Language Server Protocol (LSP) over standard
+input/output (stdio). It is NOT linked into, compiled with, or otherwise
+combined with the TextEx source code.
+
+TextEx (MIT License) and TexLab (GPL-3.0) are separate programs forming an
+"aggregate" distribution as defined in GPL-3.0 Section 5. The inclusion of
+TexLab in the TextEx installer does not place TextEx under the GPL.
+
+The full text of the GNU General Public License v3.0 is provided in:
+  TEXLAB-GPL-3.0.txt (bundled alongside this notice)
+
+Source code for TexLab is available at:
+  https://github.com/latex-lsp/texlab
+
+Users may substitute their own TexLab binary via the "texlabPath" setting.

@@ -8,7 +8,7 @@ let mainWindow: BrowserWindow | null = null
 function getBackgroundColor(theme: string): string {
   switch (theme) {
     case 'light':
-      return '#ffffff'
+      return '#faf6f0'
     case 'high-contrast':
       return '#000000'
     default:

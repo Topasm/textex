@@ -6,6 +6,10 @@ let directoryChangedHandler: (
   (_event: IpcRendererEvent, change: { type: string; filename: string }) => void
 ) | null = null
 let updateHandlers: Record<string, ((_event: IpcRendererEvent, ...args: unknown[]) => void)> = {}
+let lspMessageHandler: ((_event: IpcRendererEvent, message: object) => void) | null = null
+let lspStatusHandler: (
+  (_event: IpcRendererEvent, status: string, error?: string) => void
+) | null = null
 
 contextBridge.exposeInMainWorld('api', {
   // File System
@@ -133,5 +137,38 @@ contextBridge.exposeInMainWorld('api', {
   // Export
   exportDocument: (inputPath: string, format: string) =>
     ipcRenderer.invoke('export:convert', inputPath, format),
-  getExportFormats: () => ipcRenderer.invoke('export:formats')
+  getExportFormats: () => ipcRenderer.invoke('export:formats'),
+
+  // LSP (TexLab)
+  lspStart: (workspaceRoot: string) => ipcRenderer.invoke('lsp:start', workspaceRoot),
+  lspStop: () => ipcRenderer.invoke('lsp:stop'),
+  lspSend: (message: object) => ipcRenderer.invoke('lsp:send', message),
+  lspStatus: () => ipcRenderer.invoke('lsp:status'),
+  onLspMessage: (cb: (message: object) => void) => {
+    if (lspMessageHandler) {
+      ipcRenderer.removeListener('lsp:message', lspMessageHandler)
+    }
+    lspMessageHandler = (_event: IpcRendererEvent, message: object) => cb(message)
+    ipcRenderer.on('lsp:message', lspMessageHandler)
+  },
+  removeLspMessageListener: () => {
+    if (lspMessageHandler) {
+      ipcRenderer.removeListener('lsp:message', lspMessageHandler)
+      lspMessageHandler = null
+    }
+  },
+  onLspStatus: (cb: (status: string, error?: string) => void) => {
+    if (lspStatusHandler) {
+      ipcRenderer.removeListener('lsp:status-change', lspStatusHandler)
+    }
+    lspStatusHandler = (_event: IpcRendererEvent, status: string, error?: string) =>
+      cb(status, error)
+    ipcRenderer.on('lsp:status-change', lspStatusHandler)
+  },
+  removeLspStatusListener: () => {
+    if (lspStatusHandler) {
+      ipcRenderer.removeListener('lsp:status-change', lspStatusHandler)
+      lspStatusHandler = null
+    }
+  }
 })

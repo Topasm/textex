@@ -15,19 +15,37 @@
 |   +-- TODO.md                    # Implementation task list with phases
 |
 +-- resources/
-|   +-- bin/                       # *** Tectonic binaries (per-platform) ***
-|       +-- win/                   # (empty -- needs Windows binary)
-|       |   +-- tectonic.exe
-|       +-- mac/                   # (empty -- needs macOS binary)
-|       |   +-- tectonic
-|       +-- linux/
-|           +-- tectonic           # v0.15.0 (musl, statically linked)
+|   +-- bin/                       # *** Sidecar binaries (per-platform) ***
+|   |   +-- win/
+|   |   |   +-- tectonic.exe       # Tectonic LaTeX compiler
+|   |   |   +-- texlab.exe         # TexLab language server (GPL-3.0)
+|   |   +-- mac/
+|   |   |   +-- tectonic
+|   |   |   +-- texlab
+|   |   +-- linux/
+|   |       +-- tectonic
+|   |       +-- texlab
+|   +-- licenses/                  # Third-party license files
+|   |   +-- TEXLAB-GPL-3.0.txt    # Full GPL-3.0 license text
+|   |   +-- TEXLAB-NOTICE.txt     # Attribution & aggregate notice
+|   +-- dictionaries/             # Spell check dictionaries
+|   +-- data/packages/            # LaTeX package metadata (macros, envs)
 |
 +-- src/
 |   +-- main/                      # Electron Main process
 |   |   +-- main.ts                # App entry: BrowserWindow creation, IPC init
-|   |   +-- ipc.ts                 # IPC handler registration (fs + compile + cancel)
+|   |   +-- ipc.ts                 # IPC handler registration (fs, compile, lsp, etc.)
 |   |   +-- compiler.ts            # Tectonic binary resolution, spawn, cancellation, PDF read
+|   |   +-- texlab.ts              # TexLab process manager (singleton, stdio LSP, auto-restart)
+|   |   +-- settings.ts            # User settings (theme, font, lspEnabled, texlabPath, etc.)
+|   |   +-- bibparser.ts           # BibTeX file parsing
+|   |   +-- spellcheck.ts          # Dictionary-based spell checking
+|   |   +-- git.ts                 # Git CLI wrapper
+|   |   +-- pandoc.ts              # Pandoc export
+|   |   +-- synctex.ts             # SyncTeX forward/inverse navigation
+|   |   +-- logparser.ts           # LaTeX compile log parsing
+|   |   +-- labelscanner.ts        # \label{} extraction from project
+|   |   +-- packageloader.ts       # LaTeX package data loading
 |   |
 |   +-- preload/                   # Context Bridge
 |   |   +-- index.ts               # exposeInMainWorld: openFile, saveFile, compile, etc.
@@ -43,15 +61,24 @@
 |       |   +-- LogPanel.tsx       # Collapsible compilation output (stdout+stderr)
 |       |   +-- StatusBar.tsx      # Compile status dot + cursor position
 |       |   +-- ErrorBoundary.tsx  # React error boundary with reload UI
+|       +-- lsp/                   # Language Server Protocol client
+|       |   +-- lspClient.ts       # LSP client (initialize, providers, notifications)
+|       |   +-- ipcTransport.ts    # vscode-jsonrpc MessageReader/Writer over IPC
 |       +-- store/
-|       |   +-- useAppStore.ts     # Zustand store (file, compile, UI state)
+|       |   +-- useAppStore.ts     # Zustand store (file, compile, lsp, UI state)
 |       +-- hooks/
 |       |   +-- useAutoCompile.ts  # 1s debounced auto-compile on content change
 |       |   +-- useFileOps.ts      # Open / save / save-as wrappers
+|       +-- providers/
+|       |   +-- hoverProvider.ts   # Math preview (KaTeX) & citation hover
+|       +-- data/
+|       |   +-- snippets.ts        # ~50 LaTeX snippets for completion
+|       |   +-- environments.ts    # LaTeX environments list
+|       |   +-- templates.ts       # Document templates
 |       +-- types/
 |       |   +-- api.d.ts           # Type declarations for window.api (ElectronAPI)
 |       +-- styles/
-|           +-- index.css          # Plain CSS -- VS Code dark theme, flexbox layout
+|           +-- index.css          # Plain CSS -- theme variables, flexbox layout
 |
 |   +-- cli/                         # CLI entry point (planned)
 |   |   +-- index.ts                 # commander setup, command routing

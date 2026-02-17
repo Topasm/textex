@@ -6,6 +6,7 @@ export type Theme = 'dark' | 'light' | 'high-contrast'
 export type SidebarView = 'files' | 'git' | 'bib'
 export type UpdateStatus = 'idle' | 'available' | 'downloading' | 'ready' | 'error'
 export type ExportStatus = 'idle' | 'exporting' | 'success' | 'error'
+export type LspStatus = 'stopped' | 'starting' | 'running' | 'error'
 
 interface OpenFileData {
   content: string
@@ -79,6 +80,11 @@ interface AppState {
 
   // Template gallery
   isTemplateGalleryOpen: boolean
+
+  // LSP
+  lspStatus: LspStatus
+  lspError: string | null
+  lspEnabled: boolean
 
   // ---- Actions ----
 
@@ -157,6 +163,11 @@ interface AppState {
   // Template gallery
   toggleTemplateGallery: () => void
   setTemplateGalleryOpen: (open: boolean) => void
+
+  // LSP
+  setLspStatus: (status: LspStatus) => void
+  setLspError: (error: string | null) => void
+  setLspEnabled: (enabled: boolean) => void
 }
 
 export const useAppStore = create<AppState>()(
@@ -225,6 +236,11 @@ export const useAppStore = create<AppState>()(
 
     // Template gallery
     isTemplateGalleryOpen: false,
+
+    // LSP
+    lspStatus: 'stopped',
+    lspError: null,
+    lspEnabled: true,
 
     // ---- Actions ----
 
@@ -422,7 +438,8 @@ export const useAppStore = create<AppState>()(
       set({
         theme: settings.theme,
         fontSize: settings.fontSize,
-        spellCheckEnabled: settings.spellCheckEnabled
+        spellCheckEnabled: settings.spellCheckEnabled,
+        lspEnabled: settings.lspEnabled ?? true
       })
     },
 
@@ -458,6 +475,14 @@ export const useAppStore = create<AppState>()(
     // Template gallery
     toggleTemplateGallery: () =>
       set((state) => ({ isTemplateGalleryOpen: !state.isTemplateGalleryOpen })),
-    setTemplateGalleryOpen: (isTemplateGalleryOpen) => set({ isTemplateGalleryOpen })
+    setTemplateGalleryOpen: (isTemplateGalleryOpen) => set({ isTemplateGalleryOpen }),
+
+    // LSP
+    setLspStatus: (lspStatus) => set({ lspStatus }),
+    setLspError: (lspError) => set({ lspError }),
+    setLspEnabled: (lspEnabled) => {
+      set({ lspEnabled })
+      window.api.saveSettings({ lspEnabled })
+    }
   }))
 )

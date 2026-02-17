@@ -86,6 +86,8 @@ interface UserSettings {
   spellCheckLanguage: string
   gitEnabled: boolean
   autoUpdateEnabled: boolean
+  lspEnabled: boolean
+  texlabPath: string
 }
 
 interface ElectronAPI {
@@ -162,6 +164,16 @@ interface ElectronAPI {
     format: string
   ): Promise<{ success: boolean; outputPath: string } | null>
   getExportFormats(): Promise<{ name: string; ext: string }[]>
+
+  // LSP (TexLab)
+  lspStart(workspaceRoot: string): Promise<{ success: boolean }>
+  lspStop(): Promise<{ success: boolean }>
+  lspSend(message: object): Promise<{ success: boolean }>
+  lspStatus(): Promise<{ status: string }>
+  onLspMessage(cb: (message: object) => void): void
+  removeLspMessageListener(): void
+  onLspStatus(cb: (status: string, error?: string) => void): void
+  removeLspStatusListener(): void
 }
 
 declare global {

@@ -14,7 +14,9 @@ import PreviewErrorBoundary from './components/PreviewErrorBoundary'
 import { useAutoCompile } from './hooks/useAutoCompile'
 import { useFileOps } from './hooks/useFileOps'
 import { useAppStore } from './store/useAppStore'
-import type { SidebarView } from './store/useAppStore'
+import type { SidebarView, LspStatus } from './store/useAppStore'
+import { startLspClient, stopLspClient, lspNotifyDidOpen, lspNotifyDidChange } from './lsp/lspClient'
+import { loader } from '@monaco-editor/react'
 
 function App(): JSX.Element {
   useAutoCompile()
@@ -61,6 +63,8 @@ function App(): JSX.Element {
   const setTheme = useAppStore((s) => s.setTheme)
   const increaseFontSize = useAppStore((s) => s.increaseFontSize)
   const decreaseFontSize = useAppStore((s) => s.decreaseFontSize)
+  const lspEnabled = useAppStore((s) => s.lspEnabled)
+  const setLspStatus = useAppStore((s) => s.setLspStatus)
 
   // ---- Compile handler (existing) ----
   const handleCompile = useCallback(async (): Promise<void> => {
@@ -304,6 +308,78 @@ function App(): JSX.Element {
         // ignore
       })
   }, [projectRoot])
+
+  // ---- LSP lifecycle ----
+  useEffect(() => {
+    if (!projectRoot || !lspEnabled) {
+      stopLspClient()
+      setLspStatus('stopped')
+      return
+    }
+
+    let cancelled = false
+    loader.init().then((monacoInstance) => {
+      if (cancelled) return
+      startLspClient(
+        projectRoot,
+        monacoInstance,
+        () => useAppStore.getState().filePath,
+        () => useAppStore.getState().content
+      ).then(() => {
+        if (cancelled) return
+        const state = useAppStore.getState()
+        if (state.filePath) {
+          lspNotifyDidOpen(state.filePath, state.content)
+        }
+      }).catch(() => {
+        // start failed
+      })
+    })
+
+    return () => {
+      cancelled = true
+      stopLspClient()
+    }
+  }, [projectRoot, lspEnabled, setLspStatus])
+
+  // ---- LSP status listener ----
+  useEffect(() => {
+    window.api.onLspStatus((status: string, error?: string) => {
+      useAppStore.getState().setLspStatus(status as LspStatus)
+      useAppStore.getState().setLspError(error || null)
+    })
+    return () => {
+      window.api.removeLspStatusListener()
+    }
+  }, [])
+
+  // ---- Notify LSP of document changes (debounced via store subscription) ----
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const unsub = useAppStore.subscribe(
+      (state) => state.content,
+      (newContent) => {
+        clearTimeout(timer)
+        timer = setTimeout(() => {
+          const state = useAppStore.getState()
+          if (state.filePath && state.lspEnabled) {
+            lspNotifyDidChange(state.filePath, newContent)
+          }
+        }, 300)
+      }
+    )
+    return () => {
+      clearTimeout(timer)
+      unsub()
+    }
+  }, [])
+
+  // ---- Notify LSP when switching files ----
+  useEffect(() => {
+    if (filePath) {
+      lspNotifyDidOpen(filePath, useAppStore.getState().content)
+    }
+  }, [filePath])
 
   // ---- Keyboard shortcuts ----
   useEffect(() => {

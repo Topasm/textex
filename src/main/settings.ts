@@ -10,6 +10,8 @@ export interface UserSettings {
   spellCheckLanguage: string
   gitEnabled: boolean
   autoUpdateEnabled: boolean
+  lspEnabled: boolean
+  texlabPath: string
 }
 
 const defaults: UserSettings = {
@@ -19,7 +21,9 @@ const defaults: UserSettings = {
   spellCheckEnabled: false,
   spellCheckLanguage: 'en-US',
   gitEnabled: true,
-  autoUpdateEnabled: true
+  autoUpdateEnabled: true,
+  lspEnabled: true,
+  texlabPath: ''
 }
 
 function getSettingsPath(): string {

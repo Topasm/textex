@@ -206,9 +206,17 @@ graphicx, etc.) downloads ~50-150 MB. Subsequent compiles are fully offline.
 
 ---
 
+## Implemented Enhancements
+
+- **SyncTeX support** -- Tectonic compiles with `--synctex` flag. Forward sync
+  (`synctexForward`) jumps from editor line to PDF position. Inverse sync
+  (`Ctrl+Click` on PDF) jumps to source line. Implemented in `src/main/synctex.ts`.
+- **TexLab LSP integration** -- Real-time diagnostics, completions, hover docs,
+  go-to-definition, document symbols, formatting, and rename — without requiring
+  a full compile cycle. Managed by `TexLabManager` in `src/main/texlab.ts`.
+  See `docs/ARCHITECTURE.md` for the IPC proxy architecture.
+
 ## Future Enhancements
 
-- **SyncTeX support** -- Pass `--synctex` flag, parse the `.synctex.gz` output
-  to enable click-to-jump between source and PDF.
 - **Incremental compilation** -- Keep intermediates and only recompile changed
   files in multi-file projects.

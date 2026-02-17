@@ -296,6 +296,85 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
 ---
 
+## Phase 12: TexLab LSP Integration
+
+- [x] **12.1** Create `src/main/texlab.ts` — TexLab process manager
+  - Singleton `TexLabManager` with binary resolution (bundled/custom/PATH)
+  - stdio LSP parsing (Content-Length header protocol)
+  - Auto-restart with up to 3 retries and exponential backoff
+  - Lifecycle: `start(workspaceRoot, callbacks)`, `send(message)`, `stop()`
+- [x] **12.2** Add LSP IPC handlers in `src/main/ipc.ts`
+  - `lsp:start`, `lsp:stop`, `lsp:send`, `lsp:status` (invoke handlers)
+  - `lsp:message`, `lsp:status-change` (push channels via `webContents.send`)
+- [x] **12.3** Extend preload bridge in `src/preload/index.ts`
+  - `lspMessageHandler`, `lspStatusHandler` module-level variables
+  - 8 methods: `lspStart`, `lspStop`, `lspSend`, `lspStatus`, `onLspMessage`,
+    `removeLspMessageListener`, `onLspStatus`, `removeLspStatusListener`
+- [x] **12.4** Add TypeScript declarations in `src/renderer/types/api.d.ts`
+  - LSP methods on `ElectronAPI` interface
+  - `lspEnabled`, `texlabPath` on `UserSettings` interface
+- [x] **12.5** Extend settings in `src/main/settings.ts`
+  - `lspEnabled: true` (on by default), `texlabPath: ''` (auto-detect)
+- [x] **12.6** Add LSP state to Zustand store
+  - State: `lspStatus`, `lspError`, `lspEnabled`
+  - Actions: `setLspStatus`, `setLspError`, `setLspEnabled`
+  - Updated `loadUserSettings` to include `lspEnabled`
+- [x] **12.7** Create `src/renderer/lsp/ipcTransport.ts`
+  - `IpcMessageReader` (extends `AbstractMessageReader`) and `IpcMessageWriter`
+    (extends `AbstractMessageWriter`) using `vscode-jsonrpc` base classes
+- [x] **12.8** Create `src/renderer/lsp/lspClient.ts`
+  - Lightweight LSP client (not `monaco-languageclient` — avoids compatibility
+    issues with `@monaco-editor/react`)
+  - Handles LSP initialize/initialized handshake
+  - Registers Monaco providers based on server capabilities: completions, hover,
+    definition, document symbols, rename, formatting
+  - Routes `textDocument/publishDiagnostics` to Monaco markers (owner: `texlab`)
+  - Exports: `startLspClient`, `stopLspClient`, `isLspRunning`,
+    `lspNotifyDidOpen`, `lspNotifyDidChange`, `lspNotifyDidSave`, `lspNotifyDidClose`
+- [x] **12.9** Install `vscode-jsonrpc` dependency
+- [x] **12.10** Wire up LSP lifecycle in `App.tsx`
+  - Effect: start LSP when `projectRoot` is set and `lspEnabled`, stop on cleanup
+  - Effect: subscribe to `lsp:status-change` push channel
+  - Effect: debounced content change notifications (300ms via store subscription)
+  - Effect: file switch notifications (`lspNotifyDidOpen`)
+- [x] **12.11** Add LSP cleanup in `EditorPane.tsx`
+  - `stopLspClient()` in unmount effect
+- [x] **12.12** Add LSP indicator to `StatusBar.tsx`
+  - "LSP: Connected / Starting... / Error / Off" in right section
+- [x] **12.13** GPL compliance: license files and packaging
+  - `resources/licenses/TEXLAB-NOTICE.txt` — attribution, source link, aggregate notice
+  - `resources/licenses/TEXLAB-GPL-3.0.txt` — full GPL-3.0 text (to be placed)
+  - `electron-builder.yml` updated to include `resources/licenses` in `extraResources`
+- [ ] **12.14** Download and place TexLab binaries for all platforms
+  - `resources/bin/linux/texlab`
+  - `resources/bin/mac/texlab`
+  - `resources/bin/win/texlab.exe`
+- [ ] **12.15** Place full GPL-3.0 license text
+  - `resources/licenses/TEXLAB-GPL-3.0.txt`
+
+### Feature Coexistence
+
+| Feature | Source | Notes |
+|---------|--------|-------|
+| Snippet completions (~50) | **Custom** | Hand-crafted tab stops, richer than LSP |
+| `\cite{}` completions | **Custom** | Uses TextEx's parsed BibTeX entries |
+| `\ref{}` completions | **Custom** | Uses TextEx's label scanner |
+| `\begin{}` completions | **Custom** | Uses TextEx's env list + snippets |
+| Package macro completions | **Custom** | From bundled JSON data |
+| General LSP completions | **TexLab** | Additional commands not covered by custom |
+| Real-time diagnostics | **TexLab** | Syntax errors without full compile |
+| Compilation diagnostics | **Existing** | From Tectonic log parsing (marker owner `'latex'`) |
+| Math hover (KaTeX) | **Custom** | TexLab doesn't do this |
+| Citation hover | **Custom** | Rich BibTeX display |
+| Command documentation hover | **TexLab** | Monaco merges multiple hover providers |
+| Go-to-definition | **Hybrid** | Existing Ctrl+Click first, LSP fallback |
+| Document symbols/outline | **TexLab** | Not previously available |
+| Formatting | **TexLab** | Not previously available |
+| Rename across files | **TexLab** | Not previously available |
+| Spell check | **Existing** | TexLab doesn't do this |
+
+---
+
 ## Dependency Install Checklist
 
 ```bash
@@ -303,5 +382,5 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
 npm install electron react react-dom @monaco-editor/react react-pdf zustand \
   pdfjs-dist electron-vite electron-builder typescript @types/react \
   @types/react-dom @vitejs/plugin-react vite nspell simple-git electron-updater \
-  commander chokidar @modelcontextprotocol/sdk
+  commander chokidar @modelcontextprotocol/sdk katex zod vscode-jsonrpc
 ```

@@ -17,10 +17,22 @@ directories:
   output: dist
   buildResources: build    # icons, etc.
 
-# Bundle Tectonic binary for the target platform
+# Bundle Tectonic + TexLab binaries for the target platform
 extraResources:
   - from: "resources/bin/${os}"
     to: "bin"
+    filter:
+      - "**/*"
+  - from: "resources/dictionaries"
+    to: "dictionaries"
+    filter:
+      - "**/*"
+  - from: "resources/data/packages"
+    to: "data/packages"
+    filter:
+      - "**/*"
+  - from: "resources/licenses"
+    to: "licenses"
     filter:
       - "**/*"
 
@@ -65,24 +77,52 @@ Before building, organize the `resources/bin/` directory:
 ```
 resources/
 +-- bin/
-    +-- win/
-    |   +-- tectonic.exe     # From Tectonic GitHub Releases (x86_64-pc-windows-msvc)
-    +-- mac/
-    |   +-- tectonic          # From Tectonic GitHub Releases (x86_64-apple-darwin)
-    +-- linux/
-        +-- tectonic          # From Tectonic GitHub Releases (x86_64-unknown-linux-musl)
+|   +-- win/
+|   |   +-- tectonic.exe     # From Tectonic GitHub Releases
+|   |   +-- texlab.exe       # From TexLab GitHub Releases
+|   +-- mac/
+|   |   +-- tectonic          # From Tectonic GitHub Releases
+|   |   +-- texlab            # From TexLab GitHub Releases
+|   +-- linux/
+|       +-- tectonic          # From Tectonic GitHub Releases
+|       +-- texlab            # From TexLab GitHub Releases
++-- licenses/
+|   +-- TEXLAB-GPL-3.0.txt   # Full GPL-3.0 license text
+|   +-- TEXLAB-NOTICE.txt    # Attribution and aggregate notice
++-- dictionaries/            # Spell check dictionaries
++-- data/packages/           # LaTeX package metadata
 ```
 
-**Status:** All three platform binaries are present (Tectonic 0.15.0):
+**Tectonic binaries** (latest):
 
-| Platform | File | Variant | Size |
-|---|---|---|---|
-| Linux | `resources/bin/linux/tectonic` | `x86_64-unknown-linux-musl` (statically linked) | 36 MB |
-| macOS | `resources/bin/mac/tectonic` | `x86_64-apple-darwin` (Mach-O 64-bit) | 50 MB |
-| Windows | `resources/bin/win/tectonic.exe` | `x86_64-pc-windows-msvc` (PE32+ x86-64) | 48 MB |
+| Platform | File | Variant |
+|---|---|---|
+| Linux | `resources/bin/linux/tectonic` | `x86_64-unknown-linux-musl` (statically linked) |
+| macOS | `resources/bin/mac/tectonic` | `x86_64-apple-darwin` (Mach-O 64-bit) |
+| Windows | `resources/bin/win/tectonic.exe` | `x86_64-pc-windows-msvc` (PE32+ x86-64) |
+
+**TexLab binaries** (latest, GPL-3.0):
+
+| Platform | File |
+|---|---|
+| Linux | `resources/bin/linux/texlab` |
+| macOS | `resources/bin/mac/texlab` |
+| Windows | `resources/bin/win/texlab.exe` |
 
 The `${os}` variable in `electron-builder.yml` resolves to `win`, `mac`, or
-`linux` at build time, copying only the relevant binary.
+`linux` at build time, copying only the relevant binaries.
+
+### GPL-3.0 Compliance (TexLab)
+
+TexLab is GPL-3.0 licensed. TextEx is MIT. They communicate exclusively via the
+standardized LSP protocol over stdio (separate processes). This constitutes an
+"aggregate" distribution under GPL-3.0 Section 5.
+
+Required files bundled in `resources/licenses/`:
+- `TEXLAB-GPL-3.0.txt` — Full GPL-3.0 license text
+- `TEXLAB-NOTICE.txt` — Attribution, source code link, aggregate notice
+
+Users can substitute their own TexLab binary via the `texlabPath` setting.
 
 ---
 

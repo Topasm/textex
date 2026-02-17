@@ -5,10 +5,10 @@ import PdfSearchBar from './PdfSearchBar'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
 
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url
-).toString()
+// Use ?url import for reliable URL resolution in Vite/Electron
+// The new URL() pattern can fail for node_modules dependencies
+import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
+pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl
 
 interface PageViewportInfo {
   viewport: { convertToViewportPoint(x: number, y: number): [number, number] }
@@ -97,8 +97,10 @@ function PreviewPane(): JSX.Element {
   }, [])
 
   const onDocumentLoadError = useCallback((error: Error) => {
-    setPdfError(error.message || 'Unknown PDF loading error')
-    useAppStore.getState().appendLog(`PDF viewer error: ${error.message}\n`)
+    const msg = error.message || 'Unknown PDF loading error'
+    console.error('PDF load error:', msg, error)
+    setPdfError(msg)
+    useAppStore.getState().appendLog(`PDF viewer error: ${msg}\n`)
     useAppStore.getState().setLogPanelOpen(true)
   }, [])
 
@@ -373,7 +375,19 @@ function PreviewPane(): JSX.Element {
           <div className="preview-spinner" />
         </div>
       )}
-      <Document file={pdfData} onLoadSuccess={onDocumentLoadSuccess} onLoadError={onDocumentLoadError}>
+      <Document
+        file={pdfData}
+        onLoadSuccess={onDocumentLoadSuccess}
+        onLoadError={onDocumentLoadError}
+        loading={
+          <div className="preview-center">
+            <div>
+              <div className="preview-spinner" />
+              <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Loading PDF...</p>
+            </div>
+          </div>
+        }
+      >
         {Array.from({ length: numPages }, (_, i) => (
           <Page
             key={`page_${i + 1}`}

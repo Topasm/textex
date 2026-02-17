@@ -9,6 +9,8 @@ function StatusBar(): JSX.Element {
   const gitBranch = useAppStore((s) => s.gitBranch)
   const spellCheckEnabled = useAppStore((s) => s.spellCheckEnabled)
   const setSpellCheckEnabled = useAppStore((s) => s.setSpellCheckEnabled)
+  const lspStatus = useAppStore((s) => s.lspStatus)
+  const lspEnabled = useAppStore((s) => s.lspEnabled)
 
   const statusConfig = {
     idle: { dotClass: 'green', label: 'Ready' },
@@ -48,6 +50,21 @@ function StatusBar(): JSX.Element {
         )}
       </div>
       <div className="status-right">
+        {lspEnabled && (
+          <span
+            className={`status-lsp${lspStatus === 'error' ? ' status-lsp-error' : ''}`}
+            title={lspStatus === 'error' ? 'TexLab LSP error' : `TexLab LSP: ${lspStatus}`}
+          >
+            LSP:{' '}
+            {lspStatus === 'running'
+              ? 'Connected'
+              : lspStatus === 'starting'
+                ? 'Starting...'
+                : lspStatus === 'error'
+                  ? 'Error'
+                  : 'Off'}
+          </span>
+        )}
         <span
           className="status-spellcheck"
           onClick={() => setSpellCheckEnabled(!spellCheckEnabled)}
