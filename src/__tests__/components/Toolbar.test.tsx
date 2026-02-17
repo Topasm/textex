@@ -12,6 +12,7 @@ const defaultProps = {
   onOpenFolder: vi.fn(),
   onToggleTheme: vi.fn(),
   onNewFromTemplate: vi.fn(),
+  onAiDraft: vi.fn(),
   onExport: vi.fn(),
   onOpenSettings: vi.fn(),
   onZoteroSearch: vi.fn(),
