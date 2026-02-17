@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
+    "typecheck": "tsc --noEmit",
     "build:cli": "tsc -p tsconfig.cli.json",
     "build:mcp": "tsc -p tsconfig.mcp.json",
     "mcp": "node out/mcp/mcp/server.js",
