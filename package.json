@@ -45,6 +45,7 @@
     "pdfjs-dist": "5.4.296",
     "prettier-plugin-latex": "^2.0.1",
     "react": "^19.2.4",
+    "react-data-grid": "^7.0.0-beta.59",
     "react-dom": "^19.2.4",
     "react-pdf": "^10.3.0",
     "simple-git": "^3.27.0",

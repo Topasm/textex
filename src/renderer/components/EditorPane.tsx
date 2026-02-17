@@ -1,5 +1,5 @@
 import Editor, { BeforeMount, OnMount } from '@monaco-editor/react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { formatLatex } from '../utils/formatter'
 import { useAppStore } from '../store/useAppStore'
 import { stopLspClient } from '../lsp/lspClient'
@@ -10,7 +10,8 @@ import { useCompletion } from '../hooks/editor/useCompletion'
 import { useEditorDiagnostics } from '../hooks/editor/useEditorDiagnostics'
 import { usePendingJump } from '../hooks/editor/usePendingJump'
 import { usePackageDetection } from '../hooks/editor/usePackageDetection'
-import type { editor as monacoEditor } from 'monaco-editor'
+import { TableEditorModal } from './TableEditorModal'
+import type { editor as monacoEditor, IDisposable, IRange } from 'monaco-editor'
 
 type MonacoInstance = typeof import('monaco-editor')
 
@@ -46,7 +47,21 @@ function EditorPane() {
   useDocumentSymbols(content)
   useEditorDiagnostics({ editorRef, monacoRef })
   usePendingJump({ editorRef, monacoRef })
+  usePendingJump({ editorRef, monacoRef })
   usePackageDetection(content)
+
+  const [tableModal, setTableModal] = useState<{
+    isOpen: boolean
+    latex: string
+    range: IRange | null
+  }>({
+    isOpen: false,
+    latex: '',
+    range: null
+  })
+
+  // Disposables for CodeLens and Commands
+  const tableEditorDisposablesRef = useRef<IDisposable[]>([])
 
   const handleEditorWillMount: BeforeMount = (monaco) => {
     monaco.editor.defineTheme('ivory-light', {
@@ -107,6 +122,73 @@ function EditorPane() {
         forceMoveMarkers: true
       }])
     })
+
+    // Register CodeLens Provider for Table Editor
+    const codeLensProvider = monaco.languages.registerCodeLensProvider('latex', {
+      provideCodeLenses: (model: monacoEditor.ITextModel) => {
+        const text = model.getValue()
+        const lenses = []
+        const regex = /\\begin{tabular}/g
+        let match
+
+        while ((match = regex.exec(text)) !== null) {
+          const position = model.getPositionAt(match.index)
+          lenses.push({
+            range: {
+              startLineNumber: position.lineNumber,
+              startColumn: 1,
+              endLineNumber: position.lineNumber,
+              endColumn: 1
+            },
+            command: {
+              id: 'textex.openTableEditor',
+              title: '📊 Edit Table Visually',
+              arguments: [match.index]
+            }
+          })
+        }
+        return { lenses, dispose: () => { } }
+      }
+    })
+    tableEditorDisposablesRef.current.push(codeLensProvider)
+
+    // Register Command for Opening Table Editor
+    // We use a unique command ID to avoid conflicts if multiple editors were present,
+    // though here we assume 'textex.openTableEditor' is fine for the singleton editor pane.
+    // If it already exists, it might warn, but we dispose it on unmount.
+
+    // Check if command exists to avoid error on remount if not disposed properly (though we do dispose)
+    // Monaco doesn't expose hasCommand easily, so we just try to register.
+    // However, registerCommand is global. If we have multiple instances, this is tricky.
+    // For now, simple registration.
+    const command = monaco.editor.registerCommand('textex.openTableEditor', (_: any, startIndex: number) => {
+      const model = editor.getModel()
+      if (!model) return
+
+      const text = model.getValue()
+      // Find the end of the tabular environment
+      // Simple heuristic: matching end{tabular} after startIndex
+      const tail = text.slice(startIndex)
+      const endMatch = tail.match(/\\end{tabular}/)
+
+      if (endMatch && endMatch.index !== undefined) {
+        const endIndex = startIndex + endMatch.index + endMatch[0].length
+        const range = {
+          startLineNumber: model.getPositionAt(startIndex).lineNumber,
+          startColumn: model.getPositionAt(startIndex).column,
+          endLineNumber: model.getPositionAt(endIndex).lineNumber,
+          endColumn: model.getPositionAt(endIndex).column
+        }
+        const tableLatex = text.slice(startIndex, endIndex)
+
+        setTableModal({
+          isOpen: true,
+          latex: tableLatex,
+          range
+        })
+      }
+    })
+    tableEditorDisposablesRef.current.push(command)
   }
 
   useEffect(() => {
@@ -115,6 +197,7 @@ function EditorPane() {
       cursorDisposableRef.current?.dispose()
       mouseDisposableRef.current?.dispose()
       for (const d of completionDisposables.current) d.dispose()
+      for (const d of tableEditorDisposablesRef.current) d.dispose()
       stopLspClient()
     }
   }, [])
@@ -126,53 +209,71 @@ function EditorPane() {
   }
 
   return (
-    <div
-      style={{ height: '100%' }}
-      onDragOver={(e) => {
-        e.preventDefault()
-        e.dataTransfer.dropEffect = 'copy'
-      }}
-      onDrop={(e) => {
-        e.preventDefault()
-        const text = e.dataTransfer.getData('text/plain')
-        const editor = editorRef.current
-        const monaco = monacoRef.current
-        if (!text || !editor || !monaco) return
-
-        const target = editor.getTargetAtClientPoint(e.clientX, e.clientY)
-        if (target?.position) {
-          const pos = target.position
-          editor.executeEdits('bib-drop', [{
-            range: new monaco.Range(pos.lineNumber, pos.column, pos.lineNumber, pos.column),
-            text,
-            forceMoveMarkers: true,
-          }])
-          editor.setPosition(pos)
-          editor.focus()
-        }
-      }}
-    >
-      <Editor
-        height="100%"
-        defaultLanguage="latex"
-        theme={getMonacoTheme(theme === 'system' ? 'light' : theme)} // Fallback for system theme logic
-        value={content}
-        onChange={handleChange}
-        beforeMount={handleEditorWillMount}
-        onMount={handleEditorDidMount}
-        options={{
-          fontSize,
-          lineNumbers: 'on',
-          scrollBeyondLastLine: false,
-          automaticLayout: true,
-          quickSuggestions: true,
-          suggestOnTriggerCharacters: true,
-          padding: { top: 8 },
-          wordWrap: settings.wordWrap ? 'on' : 'off',
-          dropIntoEditor: { enabled: false },
+    <>
+      <div
+        style={{ height: '100%' }}
+        onDragOver={(e) => {
+          e.preventDefault()
+          e.dataTransfer.dropEffect = 'copy'
         }}
-      />
-    </div>
+        onDrop={(e) => {
+          e.preventDefault()
+          const text = e.dataTransfer.getData('text/plain')
+          const editor = editorRef.current
+          const monaco = monacoRef.current
+          if (!text || !editor || !monaco) return
+
+          const target = editor.getTargetAtClientPoint(e.clientX, e.clientY)
+          if (target?.position) {
+            const pos = target.position
+            editor.executeEdits('bib-drop', [{
+              range: new monaco.Range(pos.lineNumber, pos.column, pos.lineNumber, pos.column),
+              text,
+              forceMoveMarkers: true,
+            }])
+            editor.setPosition(pos)
+            editor.focus()
+          }
+        }}
+      >
+        <Editor
+          height="100%"
+          defaultLanguage="latex"
+          theme={getMonacoTheme(theme === 'system' ? 'light' : theme)} // Fallback for system theme logic
+          value={content}
+          onChange={handleChange}
+          beforeMount={handleEditorWillMount}
+          onMount={handleEditorDidMount}
+          options={{
+            fontSize,
+            lineNumbers: 'on',
+            scrollBeyondLastLine: false,
+            automaticLayout: true,
+            quickSuggestions: true,
+            suggestOnTriggerCharacters: true,
+            padding: { top: 8 },
+            wordWrap: settings.wordWrap ? 'on' : 'off',
+            dropIntoEditor: { enabled: false },
+          }}
+        />
+      </div>
+      {tableModal.isOpen && (
+        <TableEditorModal
+          initialLatex={tableModal.latex}
+          onClose={() => setTableModal(prev => ({ ...prev, isOpen: false }))}
+          onApply={(newLatex) => {
+            if (editorRef.current && tableModal.range) {
+              editorRef.current.executeEdits('table-editor', [{
+                range: tableModal.range,
+                text: newLatex,
+                forceMoveMarkers: true
+              }])
+              setTableModal(prev => ({ ...prev, isOpen: false }))
+            }
+          }}
+        />
+      )}
+    </>
   )
 }
 

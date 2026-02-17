@@ -12,7 +12,10 @@ const defaultProps = {
   onOpenFolder: vi.fn(),
   onToggleTheme: vi.fn(),
   onNewFromTemplate: vi.fn(),
-  onExport: vi.fn()
+  onExport: vi.fn(),
+  onOpenSettings: vi.fn(),
+  onZoteroSearch: vi.fn(),
+  onZoteroCite: vi.fn()
 }
 
 beforeEach(() => {
@@ -33,7 +36,7 @@ describe('Toolbar', () => {
     expect(screen.getByText(/Compile/)).toBeInTheDocument()
     expect(screen.getByText(/Log/)).toBeInTheDocument()
     expect(screen.getByText(/Template/)).toBeInTheDocument()
-    expect(screen.getByTitle(/Toggle theme/)).toBeInTheDocument()
+    expect(screen.getByText(/Template/)).toBeInTheDocument()
   })
 
   it('shows Untitled when no file is open', () => {

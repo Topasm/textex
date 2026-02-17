@@ -1,6 +1,22 @@
-# TextEx — Zotero Citation Import Integration Plan
+## Implementation Status
 
-## Scope
+**Status: Complete** (as of 2026-02-17)
+
+### Implemented Features
+- [x] **BBT HTTP Client**: `src/main/zotero.ts` (Probe, Search, CAYW)
+- [x] **IPC Channels**: `zotero:probe`, `zotero:search`, `zotero:cite-cayw`
+- [x] **Settings**: Toggle enable/disable, configure port (default 23119)
+- [x] **Search Modal**: `Ctrl+Shift+Z` with debounced search
+- [x] **Native Picker**: `Ctrl+Shift+C` for Zotero CAYW
+- [x] **Show in Zotero**: Button in search results to open paper in Zotero
+- [x] **Drag & Drop**: Drag citations from BibPanel to editor
+- [ ] **Auto-export to .bib**: *Descoped/Not implemented* (Manual export or Zotero auto-export preferred)
+
+---
+
+## Detailed Implementation Steps
+...
+
 
 Add Zotero integration to TextEx **for citation import only**. Users will be able to search their Zotero library and insert `\cite{citekey}` commands (and optionally export matching BibTeX entries) directly from the editor. This requires [Better BibTeX for Zotero](https://retorque.re/zotero-better-bibtex/) (BBT) to be installed in the user's Zotero.
 

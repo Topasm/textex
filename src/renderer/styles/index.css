@@ -1713,14 +1713,17 @@ body,
   background-color: var(--sidebar-bg);
 }
 
-.bib-search {
+.bib-panel-header {
+  display: flex;
+  gap: 6px;
   padding: 8px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
-.bib-search input {
-  width: 100%;
+.bib-panel-header input {
+  flex: 1;
+  min-width: 0;
   padding: 6px 8px;
   border-radius: 4px;
   border: 1px solid var(--border);
@@ -1729,7 +1732,23 @@ body,
   font-size: 13px;
 }
 
-.bib-search input:focus {
+.bib-panel-header input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.bib-panel-header select {
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.bib-panel-header select:focus {
   outline: none;
   border-color: var(--accent);
 }
@@ -1740,11 +1759,70 @@ body,
   padding: 4px 0;
 }
 
+/* Group header row */
+.bib-group-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: grab;
+  user-select: none;
+  border-bottom: 1px solid var(--border);
+  background-color: var(--bg-secondary);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.bib-group-header:hover {
+  background-color: var(--sidebar-hover);
+}
+
+.bib-group-header:active {
+  opacity: 0.7;
+  cursor: grabbing;
+}
+
+.bib-group-chevron {
+  width: 12px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.bib-group-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+.bib-group-count {
+  color: var(--text-secondary);
+  font-weight: 400;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
 .bib-entry {
   padding: 8px 12px;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
   transition: background-color 0.15s;
+}
+
+/* Indent entries under a group header */
+.bib-group .bib-group-header + .bib-entry,
+.bib-group .bib-entry {
+  padding-left: 24px;
+}
+
+/* No indent in flat mode (group has no header) */
+.bib-group:only-child .bib-entry {
+  padding-left: 12px;
 }
 
 .bib-entry:hover {

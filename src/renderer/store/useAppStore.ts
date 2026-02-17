@@ -40,6 +40,9 @@ export interface UserSettings {
   // Zotero
   zoteroEnabled: boolean
   zoteroPort: number
+
+  // Bibliography grouping
+  bibGroupMode: 'flat' | 'author' | 'year' | 'type'
 }
 
 const defaultSettings: UserSettings = {
@@ -53,7 +56,8 @@ const defaultSettings: UserSettings = {
   spellCheckEnabled: false,
   lspEnabled: true,
   zoteroEnabled: false,
-  zoteroPort: 23119
+  zoteroPort: 23119,
+  bibGroupMode: 'flat'
 }
 
 interface OpenFileData {

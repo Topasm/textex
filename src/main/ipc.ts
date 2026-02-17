@@ -22,6 +22,7 @@ import { scanLabels } from './labelscanner'
 import { loadPackageData } from './packageloader'
 import { texLabManager } from './texlab'
 import { zoteroProbe, zoteroSearch, zoteroCiteCAYW, zoteroExportBibtex } from './zotero'
+import { loadCitationGroups, saveCitationGroups, CitationGroup } from './citgroups'
 
 function validateFilePath(filePath: unknown): string {
   if (typeof filePath !== 'string' || filePath.length === 0) {
@@ -385,6 +386,21 @@ export function registerIpcHandlers(win: BrowserWindow): void {
   ipcMain.handle('zotero:export-bibtex', (_e, citekeys: string[], port?: number) =>
     zoteroExportBibtex(citekeys, port)
   )
+  // ---- Citation Groups ----
+  ipcMain.handle('citgroups:load', async (_event, projectRoot: string) => {
+    const validPath = validateFilePath(projectRoot)
+    return loadCitationGroups(validPath)
+  })
+
+  ipcMain.handle(
+    'citgroups:save',
+    async (_event, projectRoot: string, groups: CitationGroup[]) => {
+      const validPath = validateFilePath(projectRoot)
+      await saveCitationGroups(validPath, groups)
+      return { success: true }
+    }
+  )
+
   // ---- Shell ----
   ipcMain.handle('shell:open-external', async (_event, url: string) => {
     await shell.openExternal(url)

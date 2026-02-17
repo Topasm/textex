@@ -1,6 +1,6 @@
 # TextEx — Implementation Status
 
-**79 / 86 tasks complete** across 16 phases.
+**83 / 90 tasks complete** across 16 phases.
 
 ---
 
@@ -76,17 +76,19 @@ electron-builder config (NSIS/DMG/AppImage), Tectonic binaries for all platforms
 - **Enhanced Problems Panel** — diagnostics grouped by file with collapsible headers, severity filter buttons, problem count in tab label
 - **Semantic Highlighting** — `semanticTokens` LSP capability for rich syntax coloring (macros, environments, math)
 
-### Phase 14: Preferences & Formatting (5/5)
+### Phase 14: Preferences & Formatting (6/6)
 - **Settings Store** — `localStorage` persistence, typed settings object, immediate apply
-- **Settings Modal** — UI for theme, font size, editor options, system toggles
+- **Settings Modal** — Redesigned with tabs (Appearance, Editor, Integrations, Automation)
 - **Prettier Integration** — `prettier/standalone` + `prettier-plugin-latex` for code formatting
 - **Format on Save** — auto-format on save based on settings
 - **Editor Integration** — dynamic font size/word wrap/theme updates
 
-### Phase 15: Zotero Integration (3/3)
+### Phase 15: Zotero Integration (5/5)
 - **Settings** — toggle enable/disable, configure port (default 23119)
 - **Search Modal** — `Ctrl+Shift+Z` to search library, insert citation `\cite{key}`
 - **CAYW Picker** — `Ctrl+Shift+C` to open native Zotero picker
+- **Show in Zotero** — Open selected paper in Zotero app from search results
+- **Drag and Drop** — Drag references from BibPanel directly to editor
 
 ### Phase 16: CI/CD Improvements (2/2)
 - **GitHub Actions** — `build.yml` for Linux/macOS/Windows, lint/typecheck steps
@@ -96,8 +98,8 @@ electron-builder config (NSIS/DMG/AppImage), Tectonic binaries for all platforms
 
 ## Remaining (7 tasks)
 
-| Task | Status | Blocker |
-|------|--------|---------|
-| **7.1–7.5** Integration tests (5 tasks) | Pending | Requires display server (X11/Wayland) |
-| **8.4** Smoke test packaged app | Pending | Requires desktop environment |
-| **10.10** CLI unit tests | Pending | — |
+| Task | Status | Priority | Description |
+|------|--------|----------|-------------|
+| **7.1–7.5** Integration tests | Pending | Medium | Requires display server (X11/Wayland) for UI testing |
+| **8.4** Smoke test packaged app | Pending | High | Manual verification of packaged build install/run |
+| **10.10** CLI unit tests | Pending | Low | Test CLI command parsing and execution |
