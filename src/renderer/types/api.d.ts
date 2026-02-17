@@ -11,7 +11,8 @@ import {
   PackageData,
   CitationGroup,
   ZoteroSearchResult,
-  HistoryItem
+  HistoryItem,
+  SectionNode
 } from '../../shared/types'
 
 export interface OpenFileResult {
@@ -146,6 +147,9 @@ export interface ElectronAPI {
   aiSaveApiKey(provider: string, apiKey: string): Promise<{ success: boolean }>
   aiHasApiKey(provider: string): Promise<boolean>
   aiProcess(action: 'fix' | 'academic' | 'summarize' | 'longer' | 'shorter', text: string): Promise<string>
+
+  // Document Structure (fallback outline)
+  getDocumentOutline(filePath: string): Promise<SectionNode[]>
 
   // Shell
   openExternal(url: string): Promise<{ success: boolean }>

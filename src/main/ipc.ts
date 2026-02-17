@@ -19,6 +19,7 @@ import {
   isGitRepo
 } from './git'
 import { exportDocument, getPandocFormats } from './pandoc'
+import { parseDocumentStructure } from '../shared/structure'
 import { scanLabels } from './labelscanner'
 import { loadPackageData } from './packageloader'
 import { texLabManager } from './texlab'
@@ -506,5 +507,12 @@ export function registerIpcHandlers(win: BrowserWindow): void {
   ipcMain.handle('history:load', async (_event, snapshotPath: string) => {
     // snapshotPath is absolute within .textex/history
     return loadSnapshot(snapshotPath)
+  })
+
+  // ---- Document Structure (fallback when LSP unavailable) ----
+  ipcMain.handle('structure:outline', async (_event, filePath: string) => {
+    const validPath = validateFilePath(filePath)
+    const structure = await parseDocumentStructure(validPath)
+    return structure.outline
   })
 }

@@ -72,7 +72,6 @@ function StructureNode({
 function StructurePanel() {
   const documentSymbols = useAppStore((s) => s.documentSymbols)
   const filePath = useAppStore((s) => s.filePath)
-  const lspStatus = useAppStore((s) => s.lspStatus)
 
   if (!filePath) {
     return (
@@ -82,18 +81,10 @@ function StructurePanel() {
     )
   }
 
-  if (lspStatus !== 'running') {
-    return (
-      <div className="structure-panel">
-        <div className="git-empty">LSP not running.</div>
-      </div>
-    )
-  }
-
   if (documentSymbols.length === 0) {
     return (
       <div className="structure-panel">
-        <div className="git-empty">No document symbols found.</div>
+        <div className="git-empty">No document structure found.</div>
       </div>
     )
   }
