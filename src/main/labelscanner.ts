@@ -1,12 +1,6 @@
 import fs from 'fs/promises'
 import path from 'path'
-
-export interface LabelInfo {
-  label: string
-  file: string
-  line: number
-  context: string
-}
+import { LabelInfo } from '../shared/types'
 
 export async function scanLabels(projectRoot: string): Promise<LabelInfo[]> {
   const labels: LabelInfo[] = []

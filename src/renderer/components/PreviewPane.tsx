@@ -64,6 +64,24 @@ function PreviewPane() {
     return () => observer.disconnect()
   }, [])
 
+  // Ctrl+scroll wheel zoom
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const handler = (e: WheelEvent): void => {
+      if (!(e.ctrlKey || e.metaKey)) return
+      e.preventDefault()
+      const s = useAppStore.getState()
+      if (e.deltaY < 0) {
+        s.zoomIn()
+      } else if (e.deltaY > 0) {
+        s.zoomOut()
+      }
+    }
+    el.addEventListener('wheel', handler, { passive: false })
+    return () => el.removeEventListener('wheel', handler)
+  }, [])
+
   // Track scroll position continuously
   const handleScroll = useCallback(() => {
     if (containerRef.current) {
@@ -316,28 +334,10 @@ function PreviewPane() {
     setSearchQuery('')
   }, [])
 
-  // Show empty/error states only when there is no PDF data at all
-  if (compileStatus === 'error' && !pdfBase64) {
-    return (
-      <div className="preview-center preview-error">
-        <p>Compilation failed. Check the log panel.</p>
-      </div>
-    )
-  }
-
-  if (!pdfData) {
-    return (
-      <div className="preview-center preview-empty">
-        <div>
-          <p>No PDF to display</p>
-          <p>Open a .tex file and compile to see the preview</p>
-        </div>
-      </div>
-    )
-  }
-
   const pageWidth = containerWidth ? (containerWidth - 32) * (zoomLevel / 100) : undefined
 
+  // Always render the container so the ResizeObserver can attach and measure width.
+  // Conditional content is rendered inside it.
   return (
     <div
       ref={containerRef}
@@ -346,61 +346,76 @@ function PreviewPane() {
       onClick={handleContainerClick}
       style={{ position: 'relative' }}
     >
-      <div className="zoom-toolbar">
-        <button onClick={() => useAppStore.getState().zoomOut()} disabled={zoomLevel <= 25} title="Zoom Out">
-          -
-        </button>
-        <span>{zoomLevel}%</span>
-        <button onClick={() => useAppStore.getState().zoomIn()} disabled={zoomLevel >= 400} title="Zoom In">
-          +
-        </button>
-        <button onClick={() => useAppStore.getState().resetZoom()} title="Fit Width">
-          Fit Width
-        </button>
-      </div>
-      <PdfSearchBar
-        visible={searchVisible}
-        onClose={handleSearchClose}
-        onSearch={setSearchQuery}
-        onNext={handleSearchNext}
-        onPrev={handleSearchPrev}
-        matchCount={searchMatches.length}
-        currentMatch={currentMatchIndex}
-      />
-      {compileStatus === 'compiling' && (
-        <div className="preview-compiling-overlay">
-          <div className="preview-spinner" />
+      {compileStatus === 'error' && !pdfBase64 ? (
+        <div className="preview-center preview-error">
+          <p>Compilation failed. Check the log panel.</p>
         </div>
-      )}
-      <Document
-        file={pdfData}
-        onLoadSuccess={onDocumentLoadSuccess}
-        onLoadError={onDocumentLoadError}
-        loading={
-          <div className="preview-center">
-            <div>
-              <div className="preview-spinner" />
-              <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Loading PDF...</p>
-            </div>
+      ) : !pdfData ? (
+        <div className="preview-center preview-empty">
+          <div>
+            <p>No PDF to display</p>
+            <p>Open a .tex file and compile to see the preview</p>
           </div>
-        }
-      >
-        {Array.from({ length: numPages }, (_, i) => (
-          <Page
-            key={`page_${i + 1}`}
-            pageNumber={i + 1}
-            width={pageWidth}
-            onRenderSuccess={handlePageRenderSuccess(i + 1)}
-          />
-        ))}
-      </Document>
-      {pdfError && (
-        <div className="preview-center preview-error" style={{ position: 'absolute', top: 40, left: 0, right: 0 }}>
-          <p>Failed to load PDF: {pdfError}</p>
-          <p>Check the log panel for details.</p>
         </div>
+      ) : (
+        <>
+          <div className="zoom-toolbar">
+            <button onClick={() => useAppStore.getState().zoomOut()} disabled={zoomLevel <= 25} title="Zoom Out">
+              -
+            </button>
+            <span>{zoomLevel}%</span>
+            <button onClick={() => useAppStore.getState().zoomIn()} disabled={zoomLevel >= 400} title="Zoom In">
+              +
+            </button>
+            <button onClick={() => useAppStore.getState().resetZoom()} title="Fit Width">
+              Fit Width
+            </button>
+          </div>
+          <PdfSearchBar
+            visible={searchVisible}
+            onClose={handleSearchClose}
+            onSearch={setSearchQuery}
+            onNext={handleSearchNext}
+            onPrev={handleSearchPrev}
+            matchCount={searchMatches.length}
+            currentMatch={currentMatchIndex}
+          />
+          {compileStatus === 'compiling' && (
+            <div className="preview-compiling-overlay">
+              <div className="preview-spinner" />
+            </div>
+          )}
+          <Document
+            file={pdfData}
+            onLoadSuccess={onDocumentLoadSuccess}
+            onLoadError={onDocumentLoadError}
+            loading={
+              <div className="preview-center">
+                <div>
+                  <div className="preview-spinner" />
+                  <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Loading PDF...</p>
+                </div>
+              </div>
+            }
+          >
+            {Array.from({ length: numPages }, (_, i) => (
+              <Page
+                key={`page_${i + 1}`}
+                pageNumber={i + 1}
+                width={pageWidth}
+                onRenderSuccess={handlePageRenderSuccess(i + 1)}
+              />
+            ))}
+          </Document>
+          {pdfError && (
+            <div className="preview-center preview-error" style={{ position: 'absolute', top: 40, left: 0, right: 0 }}>
+              <p>Failed to load PDF: {pdfError}</p>
+              <p>Check the log panel for details.</p>
+            </div>
+          )}
+          {highlightStyle && <div className="synctex-indicator" style={highlightStyle} />}
+        </>
       )}
-      {highlightStyle && <div className="synctex-indicator" style={highlightStyle} />}
     </div>
   )
 }

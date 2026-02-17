@@ -1,20 +1,7 @@
 import { app } from 'electron'
 import path from 'path'
 import fs from 'fs/promises'
-
-export interface UserSettings {
-  theme: 'dark' | 'light' | 'high-contrast'
-  fontSize: number
-  autoCompile: boolean
-  spellCheckEnabled: boolean
-  spellCheckLanguage: string
-  gitEnabled: boolean
-  autoUpdateEnabled: boolean
-  lspEnabled: boolean
-  aiProvider: 'openai' | 'anthropic' | ''
-  aiApiKey: string
-  aiModel: string
-}
+import { UserSettings } from '../shared/types'
 
 const defaults: UserSettings = {
   theme: 'light',
@@ -25,6 +12,8 @@ const defaults: UserSettings = {
   gitEnabled: true,
   autoUpdateEnabled: true,
   lspEnabled: true,
+  zoteroEnabled: false,
+  zoteroPort: 23119,
   aiProvider: '',
   aiApiKey: '',
   aiModel: ''

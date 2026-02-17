@@ -1,3 +1,19 @@
+import {
+  Diagnostic,
+  SyncTeXForwardResult,
+  SyncTeXInverseResult,
+  DirectoryEntry,
+  BibEntry,
+  GitFileStatus,
+  GitLogEntry,
+  UserSettings,
+  LabelInfo,
+  PackageData,
+  CitationGroup,
+  ZoteroSearchResult,
+  DocumentSymbolNode
+} from '../../shared/types'
+
 export interface OpenFileResult {
   content: string
   filePath: string
@@ -15,82 +31,12 @@ export interface CompileResult {
   pdfBase64: string
 }
 
-export interface DirectoryEntry {
-  name: string
-  path: string
-  type: 'file' | 'directory'
-  children?: DirectoryEntry[]
-}
-
-export interface BibEntry {
-  key: string
-  type: string
-  title: string
-  author: string
-  year: string
-  journal?: string
-  file?: string
-  line?: number
-}
-
-export interface LabelInfo {
-  label: string
-  file: string
-  line: number
-  context: string
-}
-
-export interface PackageMacro {
-  name: string
-  snippet?: string
-  detail?: string
-}
-
-export interface PackageEnv {
-  name: string
-  argSnippet?: string
-}
-
-export interface PackageData {
-  macros: PackageMacro[]
-  envs: PackageEnv[]
-  deps: string[]
-}
-
-export interface GitFileStatus {
-  path: string
-  index: string
-  working_dir: string
-}
-
 export interface GitStatusResult {
   branch: string
   files: GitFileStatus[]
   staged: string[]
   modified: string[]
   not_added: string[]
-}
-
-export interface GitLogEntry {
-  hash: string
-  date: string
-  message: string
-  author: string
-}
-
-export interface UserSettings {
-  theme: 'dark' | 'light' | 'high-contrast'
-  fontSize: number
-  autoCompile: boolean
-  spellCheckEnabled: boolean
-  spellCheckLanguage: string
-  gitEnabled: boolean
-  autoUpdateEnabled: boolean
-  lspEnabled: boolean
-  zoteroEnabled: boolean
-  zoteroPort: number
-  aiProvider: 'openai' | 'anthropic' | ''
-  aiModel: string
 }
 
 export interface ElectronAPI {
@@ -195,51 +141,6 @@ export interface ElectronAPI {
 
   // Shell
   openExternal(url: string): Promise<{ success: boolean }>
-}
-
-export interface CitationGroup {
-  id: string
-  name: string
-  citekeys: string[]
-}
-
-export interface ZoteroSearchResult {
-  citekey: string
-  title: string
-  author: string
-  year: string
-  type: string
-}
-
-export type DiagnosticSeverity = 'error' | 'warning' | 'info'
-
-export interface Diagnostic {
-  file: string
-  line: number
-  column?: number
-  severity: DiagnosticSeverity
-  message: string
-}
-
-export interface SyncTeXForwardResult {
-  page: number
-  x: number
-  y: number
-}
-
-export interface SyncTeXInverseResult {
-  file: string
-  line: number
-  column: number
-}
-
-export interface DocumentSymbolNode {
-  name: string
-  detail: string
-  kind: number
-  range: { startLine: number; startColumn: number; endLine: number; endColumn: number }
-  selectionRange: { startLine: number; startColumn: number; endLine: number; endColumn: number }
-  children: DocumentSymbolNode[]
 }
 
 declare global {

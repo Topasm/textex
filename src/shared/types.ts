@@ -95,3 +95,60 @@ export interface PaperInfo {
   title: string
   documentClass: string
 }
+
+export interface LabelInfo {
+  label: string
+  file: string
+  line: number
+  context: string
+}
+
+export interface PackageMacro {
+  name: string
+  snippet?: string
+  detail?: string
+}
+
+export interface PackageEnv {
+  name: string
+  argSnippet?: string
+}
+
+export interface PackageData {
+  macros: PackageMacro[]
+  envs: PackageEnv[]
+  deps: string[]
+}
+
+export interface UserSettings {
+  theme: 'dark' | 'light' | 'high-contrast'
+  fontSize: number
+  autoCompile: boolean
+  spellCheckEnabled: boolean
+  spellCheckLanguage: string
+  gitEnabled: boolean
+  autoUpdateEnabled: boolean
+  lspEnabled: boolean
+  zoteroEnabled: boolean
+  zoteroPort: number
+  aiProvider: 'openai' | 'anthropic' | ''
+  aiApiKey?: string
+  aiModel: string
+  pdfInvertMode?: boolean
+  wordWrap?: boolean
+  formatOnSave?: boolean
+}
+
+export interface CitationGroup {
+  id: string
+  name: string
+  citekeys: string[]
+}
+
+export interface ZoteroSearchResult {
+  citekey: string
+  title: string
+  author: string
+  year: string
+  type: string
+}

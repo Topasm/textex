@@ -2,12 +2,7 @@ import { app } from 'electron'
 import path from 'path'
 import fs from 'fs/promises'
 import crypto from 'crypto'
-
-export interface CitationGroup {
-  id: string
-  name: string
-  citekeys: string[]
-}
+import { CitationGroup } from '../shared/types'
 
 interface ProjectCitationData {
   groups: CitationGroup[]

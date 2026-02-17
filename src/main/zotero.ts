@@ -1,12 +1,6 @@
 
 
-interface ZoteroSearchResult {
-    citekey: string
-    title: string
-    author: string
-    year: string
-    type: string
-}
+import { ZoteroSearchResult } from '../shared/types'
 
 interface ZoteroCreator {
     creatorType: string
@@ -127,7 +121,8 @@ export async function zoteroExportBibtex(
             throw new Error(`Export failed: ${response.status} ${response.statusText}`)
         }
 
-        const data = await response.json()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const data = await response.json() as any
         return data.result || ''
     } catch (error) {
         console.error('Zotero export error:', error)

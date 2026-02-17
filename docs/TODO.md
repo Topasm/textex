@@ -1,6 +1,6 @@
 # TextEx — Implementation Status
 
-**83 / 90 tasks complete** across 16 phases.
+**86 / 93 tasks complete** across 17 phases.
 
 ---
 
@@ -93,6 +93,11 @@ electron-builder config (NSIS/DMG/AppImage), Tectonic binaries for all platforms
 ### Phase 16: CI/CD Improvements (2/2)
 - **GitHub Actions** — `build.yml` for Linux/macOS/Windows, lint/typecheck steps
 - **Artifacts** — proper upload of AppImage/DMG/Exe setup
+
+### Phase 17: User Experience Enhancements (3/3)
+- **User Info Settings** — Configure Name, Email, Affiliation for templates
+- **AI Draft** — "Bring Your Own Key" integration for OpenAI/Anthropic content generation
+- **Citation Groups** — Organize bibliography entries into custom groups
 
 ---
 

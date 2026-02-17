@@ -1,23 +1,7 @@
 import fs from 'fs/promises'
 import path from 'path'
 import { app } from 'electron'
-
-export interface PackageMacro {
-  name: string
-  snippet?: string
-  detail?: string
-}
-
-export interface PackageEnv {
-  name: string
-  argSnippet?: string
-}
-
-export interface PackageData {
-  macros: PackageMacro[]
-  envs: PackageEnv[]
-  deps: string[]
-}
+import { PackageMacro, PackageEnv, PackageData } from '../shared/types'
 
 function getPackageDataDir(): string {
   if (app.isPackaged) {
