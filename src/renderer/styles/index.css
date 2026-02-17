@@ -999,6 +999,36 @@ body,
   overflow-x: hidden;
 }
 
+.sidebar-exit-left {
+  transition: transform 100ms ease-in, opacity 100ms ease-in;
+  transform: translateX(-24px);
+  opacity: 0;
+}
+
+.sidebar-exit-right {
+  transition: transform 100ms ease-in, opacity 100ms ease-in;
+  transform: translateX(24px);
+  opacity: 0;
+}
+
+.sidebar-enter-left {
+  animation: sidebar-enter-from-left 120ms ease-out;
+}
+
+.sidebar-enter-right {
+  animation: sidebar-enter-from-right 120ms ease-out;
+}
+
+@keyframes sidebar-enter-from-left {
+  from { transform: translateX(-16px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes sidebar-enter-from-right {
+  from { transform: translateX(16px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
 
 .sidebar-resize-handle {
   width: 4px;

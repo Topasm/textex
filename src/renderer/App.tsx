@@ -582,6 +582,41 @@ function App() {
     useAppStore.getState().setSidebarWidth(240)
   }, [])
 
+  // ---- Sidebar trackpad swipe to switch tabs ----
+  const swipeLocked = useRef(false)
+  const swipeEndTimer = useRef<ReturnType<typeof setTimeout>>()
+  const [slideAnim, setSlideAnim] = useState<'exit-left' | 'exit-right' | 'enter-left' | 'enter-right' | null>(null)
+
+  const handleSidebarWheel = useCallback((e: React.WheelEvent) => {
+    // While locked, keep resetting the end-of-gesture timer to absorb momentum
+    if (swipeLocked.current) {
+      clearTimeout(swipeEndTimer.current)
+      swipeEndTimer.current = setTimeout(() => { swipeLocked.current = false }, 300)
+      return
+    }
+    if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return
+    if (Math.abs(e.deltaX) < 20) return
+
+    const direction = e.deltaX > 0 ? 1 : -1
+    swipeLocked.current = true
+    swipeEndTimer.current = setTimeout(() => { swipeLocked.current = false }, 300)
+
+    const s = useAppStore.getState()
+    const tabs: SidebarView[] = ['files', 'bib', 'outline', 'todo', 'timeline', 'git']
+    const idx = tabs.indexOf(s.sidebarView)
+    const next = tabs[(idx + direction + tabs.length) % tabs.length]
+
+    // Phase 1: slide out
+    setSlideAnim(direction > 0 ? 'exit-left' : 'exit-right')
+    // Phase 2: switch tab + slide in from opposite side
+    setTimeout(() => {
+      s.setSidebarView(next)
+      setSlideAnim(direction > 0 ? 'enter-right' : 'enter-left')
+      // Phase 3: clear animation class
+      setTimeout(() => setSlideAnim(null), 120)
+    }, 100)
+  }, [])
+
   // ---- Sidebar tab definitions ----
   const sidebarTabs: { key: SidebarView; label: string }[] = [
     { key: 'files', label: 'Files' },
@@ -634,7 +669,7 @@ function App() {
         <div className="workspace">
           {(isSidebarOpen || autoHideSidebar) && (
             <div className={`sidebar-wrapper${autoHideSidebar ? ' sidebar-auto-hide' : ''}`}>
-              <div className="sidebar" ref={sidebarRef} style={{ width: `${sidebarWidth}px` }}>
+              <div className="sidebar" ref={sidebarRef} style={{ width: `${sidebarWidth}px` }} onWheel={handleSidebarWheel}>
                 <div className="sidebar-tabs">
                   {sidebarTabs.map((tab) => (
                     <button
@@ -671,7 +706,7 @@ function App() {
                     </svg>
                   </button>
                 </div>
-                <div className="sidebar-content">
+                <div className={`sidebar-content${slideAnim ? ` sidebar-${slideAnim}` : ''}`}>
                   {sidebarView === 'files' && <FileTree />}
                   {sidebarView === 'git' && <GitPanel />}
                   {sidebarView === 'bib' && <BibPanel />}
