@@ -39,7 +39,7 @@ function EditorPane() {
   const fontSize = settings.fontSize
   const spellCheckEnabled = settings.spellCheckEnabled
   const mathPreviewEnabled = settings.mathPreviewEnabled !== false
-  const aiEnabled = !!settings.aiProvider
+  const aiEnabled = !!settings.aiEnabled && !!settings.aiProvider
   const editorRef = useRef<monacoEditor.IStandaloneCodeEditor | null>(null)
   const monacoRef = useRef<MonacoInstance | null>(null)
   const cursorDisposableRef = useRef<{ dispose(): void } | null>(null)

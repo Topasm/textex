@@ -2874,9 +2874,12 @@ body,
 
 .settings-configured-tag {
   font-size: 11px;
-  font-weight: normal;
-  color: var(--success);
-  margin-left: 6px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--surface-hover, rgba(128, 128, 128, 0.12));
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: 4px;
 }
 
 .settings-field-group {
@@ -2924,6 +2927,90 @@ body,
 
 .settings-animate-in {
   animation: settingsFadeIn 0.2s ease-out;
+}
+
+/* ---- AI Prompts Editor ---- */
+.ai-prompts-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ai-prompt-item {
+  border-bottom: 1px solid var(--border);
+}
+
+.ai-prompt-item:last-child {
+  border-bottom: none;
+}
+
+.ai-prompt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  text-align: left;
+}
+
+.ai-prompt-header:hover {
+  background: var(--bg-hover);
+}
+
+.ai-prompt-body {
+  padding: 0 12px 12px;
+}
+
+.ai-prompt-textarea {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+  line-height: 1.5;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  resize: vertical;
+  min-height: 60px;
+  box-sizing: border-box;
+}
+
+.ai-prompt-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.ai-prompt-textarea::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+.ai-prompt-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.ai-prompt-reset:hover {
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
 }
 
 /* ---- Home Screen ---- */

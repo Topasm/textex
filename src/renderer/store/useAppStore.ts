@@ -57,8 +57,17 @@ export interface UserSettings {
   zoteroPort: number
 
   // AI Draft
+  aiEnabled: boolean
   aiProvider: 'openai' | 'anthropic' | 'gemini' | ''
   aiModel: string
+  aiThinkingEnabled: boolean
+  aiThinkingBudget: number
+  aiPromptGenerate: string
+  aiPromptFix: string
+  aiPromptAcademic: string
+  aiPromptSummarize: string
+  aiPromptLonger: string
+  aiPromptShorter: string
 
   // Sidebar
   autoHideSidebar: boolean
@@ -96,8 +105,17 @@ const defaultSettings: UserSettings = {
   lspEnabled: true,
   zoteroEnabled: false,
   zoteroPort: 23119,
+  aiEnabled: false,
   aiProvider: '',
   aiModel: '',
+  aiThinkingEnabled: false,
+  aiThinkingBudget: 0,
+  aiPromptGenerate: '',
+  aiPromptFix: '',
+  aiPromptAcademic: '',
+  aiPromptSummarize: '',
+  aiPromptLonger: '',
+  aiPromptShorter: '',
   autoHideSidebar: false,
   showStatusBar: true,
   bibGroupMode: 'flat'

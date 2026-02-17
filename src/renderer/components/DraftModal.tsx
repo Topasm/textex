@@ -33,7 +33,7 @@ export const DraftModal: React.FC<DraftModalProps> = ({ isOpen, onClose, onInser
   const handleGenerate = useCallback(async () => {
     if (!input.trim()) return
     if (!aiProvider) {
-      setError('No AI provider configured. Go to Settings > Integrations to set up.')
+      setError('No AI provider configured. Go to Settings > AI to set up.')
       return
     }
 
@@ -72,8 +72,9 @@ export const DraftModal: React.FC<DraftModalProps> = ({ isOpen, onClose, onInser
 
   if (!isOpen) return null
 
-  const providerLabel =
-    aiProvider === 'openai' ? 'OpenAI' : aiProvider === 'anthropic' ? 'Anthropic' : aiProvider === 'gemini' ? 'Gemini' : 'Not configured'
+  const providerName =
+    aiProvider === 'openai' ? 'OpenAI' : aiProvider === 'anthropic' ? 'Anthropic' : aiProvider === 'gemini' ? 'Gemini' : ''
+  const providerLabel = providerName ? (aiModel ? `${providerName} / ${aiModel}` : providerName) : 'Not configured'
 
   return (
     <div className="modal-overlay" onClick={onClose} onKeyDown={handleKeyDown}>

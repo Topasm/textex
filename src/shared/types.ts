@@ -144,6 +144,14 @@ export interface UserSettings {
   aiProvider: 'openai' | 'anthropic' | 'gemini' | ''
   aiApiKey?: string
   aiModel: string
+  aiThinkingEnabled?: boolean
+  aiThinkingBudget?: number
+  aiPromptGenerate?: string
+  aiPromptFix?: string
+  aiPromptAcademic?: string
+  aiPromptSummarize?: string
+  aiPromptLonger?: string
+  aiPromptShorter?: string
   mathPreviewEnabled?: boolean
   pdfInvertMode?: boolean
   autoHideSidebar?: boolean

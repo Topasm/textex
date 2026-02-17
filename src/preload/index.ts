@@ -204,7 +204,7 @@ contextBridge.exposeInMainWorld('api', {
   aiSaveApiKey: (provider: string, apiKey: string) =>
     ipcRenderer.invoke('ai:save-api-key', provider, apiKey),
   aiHasApiKey: (provider: string) => ipcRenderer.invoke('ai:has-api-key', provider),
-  aiProcess: (action: 'fix' | 'academic' | 'summarize', text: string) =>
+  aiProcess: (action: 'fix' | 'academic' | 'summarize' | 'longer' | 'shorter', text: string) =>
     ipcRenderer.invoke('ai:process', action, text),
 
   // Document Structure (fallback outline)

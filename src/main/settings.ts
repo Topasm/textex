@@ -19,6 +19,14 @@ const defaults: UserSettings = {
   aiProvider: '',
   aiApiKey: '',
   aiModel: '',
+  aiThinkingEnabled: false,
+  aiThinkingBudget: 0,
+  aiPromptGenerate: '',
+  aiPromptFix: '',
+  aiPromptAcademic: '',
+  aiPromptSummarize: '',
+  aiPromptLonger: '',
+  aiPromptShorter: '',
   recentProjects: []
 }
 

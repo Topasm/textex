@@ -1,4 +1,5 @@
 import { loadSettings } from './settings'
+import { UserSettings } from '../shared/types'
 
 interface GenerateLatexOptions {
   input: string
@@ -6,38 +7,89 @@ interface GenerateLatexOptions {
   model: string
 }
 
-const GENERATE_SYSTEM_PROMPT = `You are a LaTeX document generator. Given markdown, plain text notes, or an outline, produce a complete, compilable LaTeX document. Output ONLY the LaTeX source code — no explanations, no commentary. The document must include \\documentclass, \\begin{document}, and \\end{document}. Use appropriate packages for the content (e.g., amsmath for equations, graphicx for figures, hyperref for links). Structure the document with proper sections, subsections, and formatting.`
+interface ThinkingConfig {
+  enabled: boolean
+  budget: number // 0 = provider default, >0 = token budget
+}
+
+// ---- Default prompts (used when user hasn't customized) ----
+
+const DEFAULT_GENERATE_PROMPT = `You are a LaTeX document generator. Given markdown, plain text notes, or an outline, produce a complete, compilable LaTeX document. Output ONLY the LaTeX source code — no explanations, no commentary. The document must include \\documentclass, \\begin{document}, and \\end{document}. Use appropriate packages for the content (e.g., amsmath for equations, graphicx for figures, hyperref for links). Structure the document with proper sections, subsections, and formatting.`
+
+const DEFAULT_ACTION_SYSTEM = 'You are a helpful academic assistant expert in LaTeX.'
+
+const DEFAULT_PROMPTS: Record<string, string> = {
+  fix: 'Fix grammar and spelling in the following LaTeX text. Do not remove LaTeX commands. Return ONLY the fixed text.',
+  academic: 'Rewrite the following text to be more formal and academic suitable for a research paper. Preserve LaTeX commands. Return ONLY the rewritten text.',
+  summarize: 'Summarize the following text briefly. Return ONLY the summary.',
+  longer: 'Paraphrase the following text to be longer and more detailed, expanding on the key points. Preserve all LaTeX commands. Return ONLY the paraphrased text.',
+  shorter: 'Paraphrase the following text to be shorter and more concise, keeping only the essential points. Preserve all LaTeX commands. Return ONLY the paraphrased text.'
+}
+
+// ---- Helpers ----
 
 export function stripCodeFences(text: string): string {
   let result = text.trim()
-  // Remove opening fence: ```latex or ```tex or ```
   result = result.replace(/^```(?:latex|tex)?\s*\n?/, '')
-  // Remove closing fence
   result = result.replace(/\n?```\s*$/, '')
   return result.trim()
 }
 
-async function callOpenAI(input: string, model: string, apiKey: string, systemPrompt: string): Promise<string> {
+function getThinkingConfig(settings: UserSettings): ThinkingConfig {
+  return {
+    enabled: !!settings.aiThinkingEnabled,
+    budget: settings.aiThinkingBudget ?? 0
+  }
+}
+
+function getActionPrompt(action: string, settings: UserSettings): string {
+  const customMap: Record<string, string | undefined> = {
+    fix: settings.aiPromptFix,
+    academic: settings.aiPromptAcademic,
+    summarize: settings.aiPromptSummarize,
+    longer: settings.aiPromptLonger,
+    shorter: settings.aiPromptShorter
+  }
+  return customMap[action]?.trim() || DEFAULT_PROMPTS[action] || ''
+}
+
+// ---- Provider calls ----
+
+async function callOpenAI(
+  input: string, model: string, apiKey: string,
+  systemPrompt: string, thinking: ThinkingConfig
+): Promise<string> {
+  const modelId = model || 'gpt-4o'
+  const isReasoning = /^(o1|o3|o4)/.test(modelId)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const body: Record<string, any> = {
+    model: modelId,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: input }
+    ]
+  }
+
+  if (isReasoning && thinking.enabled) {
+    body.reasoning_effort = 'high'
+  } else {
+    body.temperature = 0.3
+  }
+
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`
     },
-    body: JSON.stringify({
-      model: model || 'gpt-4o',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: input }
-      ],
-      temperature: 0.3
-    }),
-    signal: AbortSignal.timeout(120_000)
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(180_000)
   })
 
   if (!response.ok) {
-    const body = await response.text().catch(() => '')
-    throw new Error(`OpenAI API error ${response.status}: ${body}`)
+    const text = await response.text().catch(() => '')
+    throw new Error(`OpenAI API error ${response.status}: ${text}`)
   }
 
   const data = (await response.json()) as {
@@ -48,27 +100,44 @@ async function callOpenAI(input: string, model: string, apiKey: string, systemPr
   return stripCodeFences(content)
 }
 
-async function callAnthropic(input: string, model: string, apiKey: string, systemPrompt: string): Promise<string> {
+async function callAnthropic(
+  input: string, model: string, apiKey: string,
+  systemPrompt: string, thinking: ThinkingConfig
+): Promise<string> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const body: Record<string, any> = {
+    model: model || 'claude-sonnet-4-5-20250929',
+    system: systemPrompt,
+    messages: [{ role: 'user', content: input }]
+  }
+
+  if (thinking.enabled) {
+    const budgetTokens = thinking.budget > 0 ? thinking.budget : 10240
+    body.thinking = {
+      type: 'enabled',
+      budget_tokens: budgetTokens
+    }
+    body.max_tokens = budgetTokens + 8192
+    // Anthropic requires temperature=1 when thinking is enabled (omit temperature)
+  } else {
+    body.max_tokens = 4096
+    body.temperature = 0.3
+  }
+
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01'
+      'anthropic-version': '2025-04-15'
     },
-    body: JSON.stringify({
-      model: model || 'claude-sonnet-4-5-20250929',
-      max_tokens: 4096,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: input }],
-      temperature: 0.3
-    }),
-    signal: AbortSignal.timeout(120_000)
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(180_000)
   })
 
   if (!response.ok) {
-    const body = await response.text().catch(() => '')
-    throw new Error(`Anthropic API error ${response.status}: ${body}`)
+    const text = await response.text().catch(() => '')
+    throw new Error(`Anthropic API error ${response.status}: ${text}`)
   }
 
   const data = (await response.json()) as {
@@ -79,8 +148,23 @@ async function callAnthropic(input: string, model: string, apiKey: string, syste
   return stripCodeFences(text)
 }
 
-async function callGemini(input: string, model: string, apiKey: string, systemPrompt: string): Promise<string> {
+async function callGemini(
+  input: string, model: string, apiKey: string,
+  systemPrompt: string, thinking: ThinkingConfig
+): Promise<string> {
   const modelId = model || 'gemini-2.5-flash'
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const generationConfig: Record<string, any> = {
+    temperature: 0.3
+  }
+
+  if (thinking.enabled) {
+    generationConfig.thinkingConfig = {
+      thinkingBudget: thinking.budget > 0 ? thinking.budget : 8192
+    }
+  }
+
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${encodeURIComponent(apiKey)}`,
     {
@@ -89,15 +173,15 @@ async function callGemini(input: string, model: string, apiKey: string, systemPr
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: systemPrompt }] },
         contents: [{ role: 'user', parts: [{ text: input }] }],
-        generationConfig: { temperature: 0.3 }
+        generationConfig
       }),
-      signal: AbortSignal.timeout(120_000)
+      signal: AbortSignal.timeout(180_000)
     }
   )
 
   if (!response.ok) {
-    const body = await response.text().catch(() => '')
-    throw new Error(`Gemini API error ${response.status}: ${body}`)
+    const text = await response.text().catch(() => '')
+    throw new Error(`Gemini API error ${response.status}: ${text}`)
   }
 
   const data = (await response.json()) as {
@@ -108,26 +192,38 @@ async function callGemini(input: string, model: string, apiKey: string, systemPr
   return stripCodeFences(text)
 }
 
+// ---- Dispatch helpers ----
+
+function callProvider(
+  provider: string, input: string, model: string,
+  apiKey: string, systemPrompt: string, thinking: ThinkingConfig
+): Promise<string> {
+  switch (provider) {
+    case 'openai': return callOpenAI(input, model, apiKey, systemPrompt, thinking)
+    case 'anthropic': return callAnthropic(input, model, apiKey, systemPrompt, thinking)
+    case 'gemini': return callGemini(input, model, apiKey, systemPrompt, thinking)
+    default: throw new Error(`Unknown AI provider: ${provider}`)
+  }
+}
+
+// ---- Public API ----
+
 export async function generateLatex(options: GenerateLatexOptions): Promise<string> {
   const settings = await loadSettings()
   const apiKey = settings.aiApiKey
-  if (!apiKey) {
-    throw new Error(`No API key configured for ${options.provider}`)
-  }
+  if (!apiKey) throw new Error(`No API key configured for ${options.provider}`)
 
-  if (options.provider === 'openai') {
-    return callOpenAI(options.input, options.model, apiKey, GENERATE_SYSTEM_PROMPT)
-  } else if (options.provider === 'anthropic') {
-    return callAnthropic(options.input, options.model, apiKey, GENERATE_SYSTEM_PROMPT)
-  } else if (options.provider === 'gemini') {
-    return callGemini(options.input, options.model, apiKey, GENERATE_SYSTEM_PROMPT)
-  }
-  throw new Error(`Unknown AI provider: ${options.provider}`)
+  const systemPrompt = settings.aiPromptGenerate?.trim() || DEFAULT_GENERATE_PROMPT
+  const thinking = getThinkingConfig(settings)
+
+  return callProvider(options.provider, options.input, options.model, apiKey, systemPrompt, thinking)
 }
 
-export async function processText(action: 'fix' | 'academic' | 'summarize' | 'longer' | 'shorter', text: string, provider?: string, model?: string): Promise<string> {
+export async function processText(
+  action: 'fix' | 'academic' | 'summarize' | 'longer' | 'shorter',
+  text: string, provider?: string, model?: string
+): Promise<string> {
   const settings = await loadSettings()
-  // Use passed provider/model or fallback to settings
   const activeProvider = provider || settings.aiProvider
   const activeModel = model || settings.aiModel
 
@@ -136,23 +232,9 @@ export async function processText(action: 'fix' | 'academic' | 'summarize' | 'lo
   const apiKey = settings.aiApiKey
   if (!apiKey) throw new Error(`No API key configured for ${activeProvider}`)
 
-  const prompts = {
-    fix: "Fix grammar and spelling in the following LaTeX text. Do not remove LaTeX commands. Return ONLY the fixed text.",
-    academic: "Rewrite the following text to be more formal and academic suitable for a research paper. Preserve LaTeX commands. Return ONLY the rewritten text.",
-    summarize: "Summarize the following text briefly. Return ONLY the summary.",
-    longer: "Paraphrase the following text to be longer and more detailed, expanding on the key points. Preserve all LaTeX commands. Return ONLY the paraphrased text.",
-    shorter: "Paraphrase the following text to be shorter and more concise, keeping only the essential points. Preserve all LaTeX commands. Return ONLY the paraphrased text."
-  };
+  const actionPrompt = getActionPrompt(action, settings)
+  const userPrompt = `${actionPrompt}:\n\n${text}`
+  const thinking = getThinkingConfig(settings)
 
-  const systemPrompt = "You are a helpful academic assistant expert in LaTeX."
-  const userPrompt = `${prompts[action]}:\n\n${text}`
-
-  if (activeProvider === 'openai') {
-    return callOpenAI(userPrompt, activeModel, apiKey, systemPrompt)
-  } else if (activeProvider === 'anthropic') {
-    return callAnthropic(userPrompt, activeModel, apiKey, systemPrompt)
-  } else if (activeProvider === 'gemini') {
-    return callGemini(userPrompt, activeModel, apiKey, systemPrompt)
-  }
-  throw new Error(`Unknown AI provider: ${activeProvider}`)
+  return callProvider(activeProvider, userPrompt, activeModel, apiKey, DEFAULT_ACTION_SYSTEM, thinking)
 }
