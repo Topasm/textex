@@ -1,6 +1,6 @@
 # TextEx — Implementation Status
 
-**74 / 81 tasks complete** across 14 phases.
+**79 / 86 tasks complete** across 16 phases.
 
 ---
 
@@ -82,6 +82,15 @@ electron-builder config (NSIS/DMG/AppImage), Tectonic binaries for all platforms
 - **Prettier Integration** — `prettier/standalone` + `prettier-plugin-latex` for code formatting
 - **Format on Save** — auto-format on save based on settings
 - **Editor Integration** — dynamic font size/word wrap/theme updates
+
+### Phase 15: Zotero Integration (3/3)
+- **Settings** — toggle enable/disable, configure port (default 23119)
+- **Search Modal** — `Ctrl+Shift+Z` to search library, insert citation `\cite{key}`
+- **CAYW Picker** — `Ctrl+Shift+C` to open native Zotero picker
+
+### Phase 16: CI/CD Improvements (2/2)
+- **GitHub Actions** — `build.yml` for Linux/macOS/Windows, lint/typecheck steps
+- **Artifacts** — proper upload of AppImage/DMG/Exe setup
 
 ---
 

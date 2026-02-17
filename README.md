@@ -1,5 +1,7 @@
 # TextEx
 
+[![Build Status](https://github.com/Topasm/textex/actions/workflows/build.yml/badge.svg)](https://github.com/Topasm/textex/actions/workflows/build.yml)
+
 A self-contained desktop LaTeX editor built on Electron. TextEx provides a split-pane interface with a Monaco code editor on the left and live PDF preview on the right. It comes with a bundled [Tectonic](https://tectonic-typesetting.github.io/) engine, so you **do not** need to install TeX Live, MiKTeX, or any other TeX distribution.
 
 ## Features
@@ -9,6 +11,7 @@ A self-contained desktop LaTeX editor built on Electron. TextEx provides a split
 - **Modern Editor:** Syntax highlighting, auto-completion, and snippets.
 - **Multi-File Projects:** Manage complex documents with a sidebar file tree.
 - **Bibliography Management:** Built-in BibTeX support with citation auto-completion.
+- **Zotero Integration:** Seamlessly search your Zotero library and insert citations (`Ctrl+Shift+Z`).
 - **Export Options:** Convert your work to Word, HTML, and more.
 - **Cross-Platform:** Works on Windows, macOS, and Linux.
 - **Git Integration:** Version control built right in.
@@ -62,6 +65,7 @@ For advanced usage and development:
 
 - [Development Guide](docs/DEVELOPMENT.md) — Build instructions and dev workflow.
 - [CLI Reference](docs/CLI.md) — Headless compilation and project tools.
+- [Zotero Integration](docs/ZOTERO.md) — Setup and usage guide for citation management.
 - [MCP Server](docs/MCP.md) — AI assistant integration details.
 - [Architecture](docs/ARCHITECTURE.md) — System design and implementation details.
 - [Licenses](docs/LICENSES.md) — Third-party license information.

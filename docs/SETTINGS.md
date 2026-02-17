@@ -24,6 +24,8 @@ TextEx uses a "Zero-Friction" configuration system where settings are applied in
 | `gitEnabled` | `boolean` | `true` | Enable Git integration features. |
 | `autoUpdateEnabled` | `boolean` | `true` | Check for updates on startup. |
 | `lspEnabled` | `boolean` | `true` | Enable TexLab language server. |
+| `zoteroEnabled` | `boolean` | `false` | Enable Zotero/Better BibTeX integration. |
+| `zoteroPort` | `number` | `23119` | Better BibTeX JSON-RPC port. |
 
 ### Settings Modal
 The `SettingsModal` component provides a user-friendly interface for modifying these values. It is accessible via the gear icon in the Toolbar.
