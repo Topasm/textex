@@ -135,10 +135,19 @@ highlights with a yellow background when the file is dirty.
   - Cursor position (`Ln X, Col Y`) from Monaco's `onDidChangeCursorPosition`.
 
 ### `SettingsModal.tsx`
-- Modal overlay for application settings.
-- **Appearance**: Theme selection (System/Light/Dark), Font Size slider.
-- **Editor**: Format on Save, Word Wrap, Mimimap toggles.
-- **System**: Auto-Compile, Spell Check, LSP, Git toggles.
+- Modal overlay (800×500) for application settings, using shared `.modal-overlay` /
+  `.modal-content` / `.modal-header` / `.modal-footer` CSS classes.
+- Left sidebar with five icon tabs; right scrollable content area.
+- **General**: User information card (Name, Email, Affiliation) for templates/metadata.
+- **Appearance**: Theme selector cards (Light/Dark/System) with checkmark, PDF Night Mode toggle.
+- **Editor**: Font Size range slider with monospace badge, behavior toggles (Word Wrap,
+  Format on Save, Auto-hide Sidebar).
+- **Integrations**: Zotero card (enable/disable toggle, port input, live connection probe),
+  AI Draft card (provider select, model input, API key with save button).
+- **Automation**: Compiler & Tools toggles (Auto Compile, Spell Check, Language Server).
+- All styling uses `settings-*` CSS classes referencing CSS custom properties
+  (`--accent`, `--bg-input`, `--card-bg`, etc.) — fully themed across dark/light/high-contrast.
+- Toggle component uses `aria-checked` attribute with CSS-only animation (no JS class toggling).
 - Persistence: Updates `settings` slice in Zustand store, saved to `localStorage`.
 
 ---
@@ -221,13 +230,19 @@ interface AppState {
 ## Styling Notes
 
 - Plain CSS (no Tailwind) in `src/renderer/styles/index.css`.
-- Dark theme by default (matches Monaco dark theme).
-- Color palette:
-  - Background: `#1e1e1e` (VS Code dark)
-  - Editor gutter: `#252526`
+- Three themes via CSS custom properties: dark (default), light, high-contrast.
+- Color palette (dark defaults shown):
+  - Background: `#1e1e1e` (`--bg-primary`)
+  - Editor gutter / sidebar: `#252526` (`--bg-secondary`)
   - Toolbar: `#333333`
-  - Accent: `#007acc` (VS Code blue)
-  - Error: `#f44747`
-  - Success: `#6a9955`
+  - Accent: `#007acc` (`--accent`)
+  - Error: `#f44747` (`--error`)
+  - Success: `#6a9955` (`--success`)
   - Dirty indicator: `#cca700` (yellow dot + save button highlight)
   - Status bar: `#007acc` (blue bar with white text)
+- Shared modal classes: `.modal-overlay`, `.modal-content`, `.modal-header`,
+  `.modal-body`, `.modal-footer`, `.close-button`, `.primary-button`.
+- Settings-specific classes: `.settings-modal`, `.settings-layout`, `.settings-sidebar`,
+  `.settings-tab`, `.settings-content`, `.settings-section`, `.settings-row`,
+  `.settings-input`, `.settings-select`, `.settings-toggle-track`, `.settings-theme-card`,
+  `.settings-range`, `.settings-badge`, `.settings-status-badge`, etc.

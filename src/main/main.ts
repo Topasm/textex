@@ -58,27 +58,39 @@ function createWindow(backgroundColor: string): void {
     const { autoUpdater } = require('electron-updater')
 
     autoUpdater.on('checking-for-update', () => {
-      mainWindow?.webContents.send('update:checking')
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update:checking')
+      }
     })
 
     autoUpdater.on('update-available', (info: { version: string }) => {
-      mainWindow?.webContents.send('update:available', info)
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update:available', info)
+      }
     })
 
     autoUpdater.on('update-not-available', () => {
-      mainWindow?.webContents.send('update:not-available')
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update:not-available')
+      }
     })
 
     autoUpdater.on('download-progress', (progress: { percent: number }) => {
-      mainWindow?.webContents.send('update:download-progress', progress)
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update:download-progress', progress)
+      }
     })
 
     autoUpdater.on('update-downloaded', (info: { version: string }) => {
-      mainWindow?.webContents.send('update:downloaded', info)
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update:downloaded', info)
+      }
     })
 
     autoUpdater.on('error', (err: Error) => {
-      mainWindow?.webContents.send('update:error', err.message)
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('update:error', err.message)
+      }
     })
   } catch {
     // electron-updater is not installed — auto-update disabled

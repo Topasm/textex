@@ -60,6 +60,7 @@
 |       |   +-- Toolbar.tsx        # File actions + compile button + keyboard hints
 |       |   +-- LogPanel.tsx       # Collapsible compilation output (stdout+stderr)
 |       |   +-- StatusBar.tsx      # Compile status dot + cursor position
+|       |   +-- SettingsModal.tsx  # Tabbed settings (General/Appearance/Editor/Integrations/Automation)
 |       |   +-- ErrorBoundary.tsx  # React error boundary with reload UI
 |       +-- lsp/                   # Language Server Protocol client
 |       |   +-- lspClient.ts       # LSP client (initialize, providers, notifications)
@@ -86,7 +87,8 @@
 |       +-- types/
 |       |   +-- api.d.ts           # Type declarations for window.api (ElectronAPI)
 |       +-- styles/
-|           +-- index.css          # Plain CSS -- theme variables, flexbox layout
+|           +-- index.css          # Plain CSS -- theme variables, flexbox layout,
+|                                  #   modal classes, settings-* component styles
 |
 |   +-- cli/                         # CLI entry point (planned)
 |   |   +-- index.ts                 # commander setup, command routing

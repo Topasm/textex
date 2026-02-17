@@ -1,6 +1,6 @@
 # TextEx — Implementation Status
 
-**86 / 93 tasks complete** across 17 phases.
+**90 / 97 tasks complete** across 18 phases.
 
 ---
 
@@ -94,10 +94,16 @@ electron-builder config (NSIS/DMG/AppImage), Tectonic binaries for all platforms
 - **GitHub Actions** — `build.yml` for Linux/macOS/Windows, lint/typecheck steps
 - **Artifacts** — proper upload of AppImage/DMG/Exe setup
 
-### Phase 17: User Experience Enhancements (3/3)
+### Phase 17: User Experience Enhancements (4/4)
 - **User Info Settings** — Configure Name, Email, Affiliation for templates
 - **AI Draft** — "Bring Your Own Key" integration for OpenAI/Anthropic content generation
 - **Citation Groups** — Organize bibliography entries into custom groups
+- **Settings Modal Theming** — Replaced non-functional Tailwind classes with `settings-*` CSS classes using CSS custom properties; fully themed across dark/light/high-contrast
+
+### Phase 18: Killer Features (3/3)
+- **Visual Table Editor** — WYSIWYG table editing with `react-data-grid` via CodeLens
+- **Local History** — Automated file snapshots with diff view and restoration
+- **AI Writing Assistant** — Context menu integration for grammar fixing, rewriting, and summarization
 
 ---
 

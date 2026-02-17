@@ -5,11 +5,12 @@ interface DraftModalProps {
   isOpen: boolean
   onClose: () => void
   onInsert: (latex: string) => void
+  initialPrompt?: string
 }
 
 type Phase = 'input' | 'generating' | 'preview'
 
-export const DraftModal: React.FC<DraftModalProps> = ({ isOpen, onClose, onInsert }) => {
+export const DraftModal: React.FC<DraftModalProps> = ({ isOpen, onClose, onInsert, initialPrompt }) => {
   const [phase, setPhase] = useState<Phase>('input')
   const [input, setInput] = useState('')
   const [generatedLatex, setGeneratedLatex] = useState('')
@@ -22,12 +23,12 @@ export const DraftModal: React.FC<DraftModalProps> = ({ isOpen, onClose, onInser
   useEffect(() => {
     if (isOpen) {
       setPhase('input')
-      setInput('')
+      setInput(initialPrompt || '')
       setGeneratedLatex('')
       setError(null)
       setTimeout(() => inputRef.current?.focus(), 100)
     }
-  }, [isOpen])
+  }, [isOpen, initialPrompt])
 
   const handleGenerate = useCallback(async () => {
     if (!input.trim()) return

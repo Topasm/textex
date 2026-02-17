@@ -26,9 +26,23 @@ TextEx uses a "Zero-Friction" configuration system where settings are applied in
 | `lspEnabled` | `boolean` | `true` | Enable TexLab language server. |
 | `zoteroEnabled` | `boolean` | `false` | Enable Zotero/Better BibTeX integration. |
 | `zoteroPort` | `number` | `23119` | Better BibTeX JSON-RPC port. |
+| `pdfInvertMode` | `boolean` | `false` | Invert PDF colors for dark environments. |
+| `autoHideSidebar` | `boolean` | `false` | Sidebar slides away and reappears on hover. |
+| `name` | `string` | `''` | User's full name (for templates/metadata). |
+| `email` | `string` | `''` | User's email address (for templates/metadata). |
+| `affiliation` | `string` | `''` | User's institution (for templates/metadata). |
+| `aiProvider` | `'' \| 'openai' \| 'anthropic'` | `''` | AI Draft provider. |
+| `aiModel` | `string` | `''` | AI Draft model name. |
 
 ### Settings Modal
-The `SettingsModal` component provides a user-friendly interface for modifying these values. It is accessible via the gear icon in the Toolbar.
+The `SettingsModal` component provides a tabbed interface (800×500) for modifying these values. It is accessible via the gear icon in the Toolbar. The modal uses shared `.modal-*` CSS classes for chrome and `settings-*` CSS classes for layout/form elements, all themed via CSS custom properties.
+
+**Tabs:**
+- **General** — User information (name, email, affiliation)
+- **Appearance** — Theme cards (Light/Dark/System), PDF Night Mode toggle
+- **Editor** — Font Size slider, Word Wrap / Format on Save / Auto-hide Sidebar toggles
+- **Integrations** — Zotero connection (enable, port, live status probe), AI Draft (provider, model, API key)
+- **Automation** — Auto Compile, Spell Check, Language Server toggles
 
 ## Code Formatting
 

@@ -17,6 +17,8 @@ A self-contained desktop LaTeX editor built on Electron. TextEx provides a split
 - **Git Integration:** Version control built right in.
 - **AI Writing Assistant:** Draft content using your own OpenAI/Anthropic keys.
 - **User Profiles:** Automatically fill templates with your name, email, and affiliation.
+- **Visual Table Editor:** Edit LaTeX tables with a spreadsheet-like interface.
+- **Local History:** Simplified "Time Machine" for file versioning with diff view.
 
 ## Download
 

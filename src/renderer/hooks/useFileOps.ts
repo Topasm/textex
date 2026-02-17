@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { useAppStore } from '../store/useAppStore'
 import { formatLatex } from '../utils/formatter'
+import { openProject } from '../utils/openProject'
 
 function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err)
@@ -16,6 +17,11 @@ export function useFileOps(): FileOps {
   const handleOpen = useCallback(async () => {
     const result = await window.api.openFile()
     if (result) {
+      // Derive parent directory and open it as the project so the workspace renders
+      const parentDir = result.filePath.replace(/[/\\][^/\\]+$/, '')
+      await openProject(parentDir)
+
+      // Open the specific file the user selected (overrides openProject's auto-open)
       const { openFileInTab, setFilePath, setDirty } = useAppStore.getState()
       openFileInTab(result.filePath, result.content)
       setFilePath(result.filePath)

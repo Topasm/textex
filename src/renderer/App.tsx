@@ -51,6 +51,12 @@ function App() {
 
   const [isZoteroModalOpen, setIsZoteroModalOpen] = useState(false)
   const [isDraftModalOpen, setIsDraftModalOpen] = useState(false)
+  const [draftPrefill, setDraftPrefill] = useState<string | undefined>(undefined)
+
+  const handleAiDraft = useCallback((prefill?: string) => {
+    setDraftPrefill(prefill)
+    setIsDraftModalOpen(true)
+  }, [])
 
   const handleZoteroInsert = useCallback((citekeys: string[]) => {
     if (!citekeys.length) return
@@ -515,7 +521,7 @@ function App() {
         s.toggleTemplateGallery()
       } else if ((e.key === 'd' || e.key === 'D') && mod && e.shiftKey) {
         e.preventDefault()
-        setIsDraftModalOpen(true)
+        handleAiDraft()
       } else if ((e.key === 'z' || e.key === 'Z') && mod && e.shiftKey) {
         if (zoteroEnabled) {
           e.preventDefault()
@@ -530,7 +536,7 @@ function App() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [handleOpen, handleSave, handleSaveAs, handleCompile, handleZoteroCAYW, zoteroEnabled])
+  }, [handleOpen, handleSave, handleSaveAs, handleCompile, handleAiDraft, handleZoteroCAYW, zoteroEnabled])
 
   // ---- Split divider drag logic ----
   const mainContentRef = useRef<HTMLDivElement>(null)
@@ -612,7 +618,7 @@ function App() {
         onOpenFolder={handleOpenFolder}
         onReturnHome={handleCloseProject}
         onNewFromTemplate={() => useAppStore.getState().toggleTemplateGallery()}
-        onAiDraft={() => setIsDraftModalOpen(true)}
+        onAiDraft={() => handleAiDraft()}
         onExport={handleExport}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onZoteroSearch={() => setIsZoteroModalOpen(true)}
@@ -626,18 +632,21 @@ function App() {
       />
       <DraftModal
         isOpen={isDraftModalOpen}
-        onClose={() => setIsDraftModalOpen(false)}
+        onClose={() => { setIsDraftModalOpen(false); setDraftPrefill(undefined) }}
         onInsert={handleDraftInsert}
+        initialPrompt={draftPrefill}
       />
       <UpdateNotification />
       {showHomeScreen ? (
         <HomeScreen
           onOpenFolder={handleOpenFolder}
           onNewFromTemplate={() => useAppStore.getState().toggleTemplateGallery()}
+          onAiDraft={handleAiDraft}
+          onOpenSettings={() => setIsSettingsOpen(true)}
         />
       ) : (
         <div className="workspace">
-          {isSidebarOpen && (
+          {(isSidebarOpen || autoHideSidebar) && (
             <div className={`sidebar-wrapper${autoHideSidebar ? ' sidebar-auto-hide' : ''}`}>
               <div className="sidebar" style={{ width: `${sidebarWidth}px` }}>
                 <div className="sidebar-tabs">

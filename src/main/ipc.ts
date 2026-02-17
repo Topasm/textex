@@ -160,10 +160,12 @@ export function registerIpcHandlers(win: BrowserWindow): void {
           try {
             for await (const event of watcher) {
               if (event.filename) {
-                currentWindow?.webContents.send('fs:directory-changed', {
-                  type: event.eventType,
-                  filename: event.filename
-                })
+                if (currentWindow && !currentWindow.isDestroyed()) {
+                  currentWindow.webContents.send('fs:directory-changed', {
+                    type: event.eventType,
+                    filename: event.filename
+                  })
+                }
               }
             }
           } catch {
@@ -373,10 +375,14 @@ export function registerIpcHandlers(win: BrowserWindow): void {
     const validPath = validateFilePath(workspaceRoot)
     texLabManager.start(validPath, {
       onMessage: (message) => {
-        currentWindow?.webContents.send('lsp:message', message)
+        if (currentWindow && !currentWindow.isDestroyed()) {
+          currentWindow.webContents.send('lsp:message', message)
+        }
       },
       onStatusChange: (status, error) => {
-        currentWindow?.webContents.send('lsp:status-change', status, error)
+        if (currentWindow && !currentWindow.isDestroyed()) {
+          currentWindow.webContents.send('lsp:status-change', status, error)
+        }
       }
     })
     return { success: true }

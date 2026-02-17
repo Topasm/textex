@@ -29,7 +29,7 @@ export const TableEditorModal: React.FC<Props> = ({ initialLatex, onApply, onClo
         });
     });
 
-    const [columns, setColumns] = useState<Column<Row>[]>(() => {
+    const [columns] = useState<Column<Row>[]>(() => {
         if (initialData.rows.length === 0) return [];
         // Determine max columns
         const maxCols = Math.max(...initialData.rows.map(r => r.length));

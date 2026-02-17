@@ -27,12 +27,16 @@ export async function compileLatex(filePath: string, win: BrowserWindow): Promis
   return sharedCompileLatex(filePath, {
     tectonicPath: getTectonicPath(),
     onLog: (text: string) => {
-      win.webContents.send('latex:log', text)
+      if (!win.isDestroyed()) {
+        win.webContents.send('latex:log', text)
+      }
     },
     onDiagnostics: (output: string, file: string) => {
       try {
-        const diagnostics = parseLatexLog(output, file)
-        win.webContents.send('latex:diagnostics', diagnostics)
+        if (!win.isDestroyed()) {
+          const diagnostics = parseLatexLog(output, file)
+          win.webContents.send('latex:diagnostics', diagnostics)
+        }
       } catch {
         // Don't let diagnostic parsing failures affect compilation
       }
