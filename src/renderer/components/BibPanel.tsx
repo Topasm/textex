@@ -48,17 +48,29 @@ function BibPanel() {
           onChange={(e) => setFilter(e.target.value)}
         />
       </div>
-      {filtered.map((entry) => (
-        <div key={entry.key} className="bib-entry" onClick={() => handleInsert(entry.key)}>
-          <span className="bib-key">{entry.key}</span>
-          <div className="bib-details">
-            <div className="bib-title">{entry.title || '(no title)'}</div>
-            <div className="bib-meta">
-              {entry.author}{entry.year ? `, ${entry.year}` : ''}
+      <div className="bib-list">
+        {filtered.map((entry) => {
+          const cleanTitle = (entry.title || '(no title)').replace(/[{}]/g, '')
+          // Truncate authors if too long
+          let authors = entry.author || 'Unknown Author'
+          if (authors.length > 50) {
+            authors = authors.slice(0, 50) + '...'
+          }
+
+          return (
+            <div key={entry.key} className="bib-entry" onClick={() => handleInsert(entry.key)} title={`Insert \\cite{${entry.key}}`}>
+              <div className="bib-entry-header">
+                <span className="bib-title">{cleanTitle}</span>
+              </div>
+              <div className="bib-authors">{authors}</div>
+              <div className="bib-meta-row">
+                <span className="bib-key">@{entry.key}</span>
+                {entry.year && <span className="bib-year">{entry.year}</span>}
+              </div>
             </div>
-          </div>
-        </div>
-      ))}
+          )
+        })}
+      </div>
     </div>
   )
 }
