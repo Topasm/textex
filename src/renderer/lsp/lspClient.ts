@@ -188,7 +188,11 @@ async function doInitialize(workspaceRoot: string): Promise<void> {
         documentSymbol: { dynamicRegistration: false, hierarchicalDocumentSymbolSupport: true },
         formatting: { dynamicRegistration: false },
         rename: { dynamicRegistration: false },
-        publishDiagnostics: { relatedInformation: false }
+        publishDiagnostics: { relatedInformation: false },
+        foldingRange: {
+          dynamicRegistration: false,
+          lineFoldingOnly: true
+        }
       },
       workspace: {
         workspaceFolders: false
@@ -479,6 +483,34 @@ function registerProviders(monaco: MonacoInstance): void {
               endColumn: edit.range.end.character + 1
             },
             text: edit.newText
+          }))
+        } catch {
+          return []
+        }
+      }
+    })
+    disposables.push(d)
+  }
+
+  // Folding range provider
+  if (serverCapabilities.foldingRangeProvider) {
+    const d = monaco.languages.registerFoldingRangeProvider('latex', {
+      provideFoldingRanges: async (model) => {
+        if (!initialized) return []
+        try {
+          const result = (await sendRequest('textDocument/foldingRange', {
+            textDocument: { uri: model.uri.toString() }
+          })) as Array<{ startLine: number; endLine: number; kind?: string }> | null
+
+          if (!result) return []
+          return result.map((r) => ({
+            start: r.startLine + 1,
+            end: r.endLine + 1,
+            kind: r.kind === 'comment'
+              ? monaco.languages.FoldingRangeKind.Comment
+              : r.kind === 'imports'
+                ? monaco.languages.FoldingRangeKind.Imports
+                : monaco.languages.FoldingRangeKind.Region
           }))
         } catch {
           return []

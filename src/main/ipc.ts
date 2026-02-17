@@ -5,6 +5,7 @@ import { compileLatex, cancelCompilation } from './compiler'
 import { forwardSync, inverseSync } from './synctex'
 import { loadSettings, saveSettings } from './settings'
 import { parseBibFile, findBibFilesInProject } from '../shared/bibparser'
+import { findRootFile } from '../shared/magicComments'
 import { checkWords, getSuggestions, initSpellChecker, addWord, setLanguage } from './spellcheck'
 import {
   initGit,
@@ -181,7 +182,17 @@ export function registerIpcHandlers(win: BrowserWindow): void {
   // ---- LaTeX Compilation ----
   ipcMain.handle('latex:compile', async (_event, filePath: string) => {
     const validPath = validateFilePath(filePath)
-    return compileLatex(validPath, currentWindow!)
+
+    // Resolve magic comment (%! TeX root = ...) to compile the root file
+    let compilePath = validPath
+    try {
+      const content = await fs.readFile(validPath, 'utf-8')
+      compilePath = findRootFile(content, validPath)
+    } catch {
+      // If we can't read the file, compile the original path
+    }
+
+    return compileLatex(compilePath, currentWindow!)
   })
 
   ipcMain.handle('latex:cancel', () => {

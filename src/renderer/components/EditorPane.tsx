@@ -43,7 +43,7 @@ function EditorPane() {
   const registerCompletionProviders = useCompletion(runSpellCheck)
   useDocumentSymbols(content)
   useEditorDiagnostics({ editorRef, monacoRef })
-  usePendingJump({ editorRef })
+  usePendingJump({ editorRef, monacoRef })
   usePackageDetection(content)
 
   const handleEditorWillMount: BeforeMount = (monaco) => {

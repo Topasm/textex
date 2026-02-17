@@ -221,6 +221,15 @@ body,
   flex-direction: column;
 }
 
+@keyframes fadeOutBackground {
+  from { background-color: rgba(255, 255, 0, 0.3); }
+  to { background-color: transparent; }
+}
+
+.editor-flash-line {
+  animation: fadeOutBackground 1s ease-out forwards;
+}
+
 .split-divider {
   width: 4px;
   flex-shrink: 0;
@@ -706,6 +715,91 @@ body,
 .log-tab-active {
   color: var(--text-primary) !important;
   text-decoration: underline;
+}
+
+/* Problems Panel: filter buttons */
+.log-filters {
+  display: flex;
+  gap: 4px;
+  padding: 4px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.log-filter-btn {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  font-size: 11px;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 2px 6px;
+  opacity: 0.5;
+  transition: opacity 0.15s, border-color 0.15s;
+}
+
+.log-filter-btn.active {
+  opacity: 1;
+  border-color: var(--border);
+}
+
+.log-filter-btn:hover {
+  opacity: 1;
+}
+
+.log-filter-error.active { color: var(--error); }
+.log-filter-warning.active { color: var(--warning); }
+.log-filter-info.active { color: var(--info); }
+
+/* Problems Panel: file groups */
+.log-file-group {
+  border-bottom: 1px solid var(--border);
+}
+
+.log-file-group:last-child {
+  border-bottom: none;
+}
+
+.log-file-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+  background-color: var(--bg-secondary);
+}
+
+.log-file-header:hover {
+  background-color: var(--log-entry-hover);
+}
+
+.log-file-chevron {
+  font-size: 8px;
+  width: 12px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.log-file-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.log-file-counts {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.log-file-count-error {
+  color: var(--error);
+}
+
+.log-file-count-warning {
+  color: var(--warning);
 }
 
 /* Status Bar Diagnostics */

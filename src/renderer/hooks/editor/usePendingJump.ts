@@ -3,11 +3,14 @@ import type { MutableRefObject } from 'react'
 import type { editor as monacoEditor } from 'monaco-editor'
 import { useAppStore } from '../../store/useAppStore'
 
+type MonacoInstance = typeof import('monaco-editor')
+
 interface UsePendingJumpParams {
   editorRef: MutableRefObject<monacoEditor.IStandaloneCodeEditor | null>
+  monacoRef: MutableRefObject<MonacoInstance | null>
 }
 
-export function usePendingJump({ editorRef }: UsePendingJumpParams): void {
+export function usePendingJump({ editorRef, monacoRef }: UsePendingJumpParams): void {
   useEffect(() => {
     return useAppStore.subscribe(
       (state) => state.pendingJump,
@@ -15,13 +18,24 @@ export function usePendingJump({ editorRef }: UsePendingJumpParams): void {
         if (!pendingJump) return
 
         const editor = editorRef.current
-        if (!editor) return
+        const monaco = monacoRef.current
+        if (!editor || !monaco) return
 
         editor.revealLineInCenter(pendingJump.line)
         editor.setPosition({ lineNumber: pendingJump.line, column: pendingJump.column })
         editor.focus()
+
+        // Flash the target line to draw attention
+        const collection = editor.createDecorationsCollection([
+          {
+            range: new monaco.Range(pendingJump.line, 1, pendingJump.line, 1),
+            options: { isWholeLine: true, className: 'editor-flash-line' }
+          }
+        ])
+        setTimeout(() => collection.clear(), 1000)
+
         useAppStore.getState().clearPendingJump()
       }
     )
-  }, [editorRef])
+  }, [editorRef, monacoRef])
 }
