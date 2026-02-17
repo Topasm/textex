@@ -1,7 +1,7 @@
 import { useCallback } from 'react'
 import { useAppStore } from '../store/useAppStore'
 
-function TabBar(): JSX.Element {
+function TabBar() {
   const openFiles = useAppStore((s) => s.openFiles)
   const activeFilePath = useAppStore((s) => s.activeFilePath)
 

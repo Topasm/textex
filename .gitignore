@@ -3,7 +3,6 @@ out/
 dist/
 *.log
 .DS_Store
-resources/bin/win/
-resources/bin/mac/
-resources/bin/linux/tectonic
+resources/bin/*/tectonic
+resources/bin/*/tectonic.exe
 test/

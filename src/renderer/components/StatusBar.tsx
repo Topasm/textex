@@ -7,7 +7,7 @@ const STATUS_CONFIG = {
   error: { dotClass: 'red', label: 'Error' }
 } as const
 
-function StatusBar(): JSX.Element {
+function StatusBar() {
   const compileStatus = useAppStore((s) => s.compileStatus)
   const cursorLine = useAppStore((s) => s.cursorLine)
   const cursorColumn = useAppStore((s) => s.cursorColumn)

@@ -21,7 +21,7 @@ function getMonacoTheme(theme: string): string {
   }
 }
 
-function EditorPane(): JSX.Element {
+function EditorPane() {
   const content = useAppStore((s) => s.content)
   const setContent = useAppStore((s) => s.setContent)
   const setCursorPosition = useAppStore((s) => s.setCursorPosition)

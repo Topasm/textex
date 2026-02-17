@@ -15,7 +15,7 @@ interface PageViewportInfo {
   element: HTMLDivElement
 }
 
-function PreviewPane(): JSX.Element {
+function PreviewPane() {
   const pdfBase64 = useAppStore((s) => s.pdfBase64)
   const compileStatus = useAppStore((s) => s.compileStatus)
   const synctexHighlight = useAppStore((s) => s.synctexHighlight)

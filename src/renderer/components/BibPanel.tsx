@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useAppStore } from '../store/useAppStore'
 
-function BibPanel(): JSX.Element {
+function BibPanel() {
   const bibEntries = useAppStore((s) => s.bibEntries)
   const [filter, setFilter] = useState('')
 

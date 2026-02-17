@@ -1,6 +1,6 @@
 import { useAppStore } from '../store/useAppStore'
 
-function UpdateNotification(): JSX.Element | null {
+function UpdateNotification() {
   const status = useAppStore((s) => s.updateStatus)
   const version = useAppStore((s) => s.updateVersion)
   const progress = useAppStore((s) => s.updateProgress)

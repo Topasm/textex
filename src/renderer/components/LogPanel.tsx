@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useAppStore } from '../store/useAppStore'
 
-function LogPanel(): JSX.Element | null {
+function LogPanel() {
   const isLogPanelOpen = useAppStore((s) => s.isLogPanelOpen)
   const logs = useAppStore((s) => s.logs)
   const diagnostics = useAppStore((s) => s.diagnostics)

@@ -343,14 +343,14 @@ Status legend: `[ ]` pending · `[~]` in progress · `[x]` done
   - "LSP: Connected / Starting... / Error / Off" in right section
 - [x] **12.13** GPL compliance: license files and packaging
   - `resources/licenses/TEXLAB-NOTICE.txt` — attribution, source link, aggregate notice
-  - `resources/licenses/TEXLAB-GPL-3.0.txt` — full GPL-3.0 text (to be placed)
+  - `resources/licenses/TEXLAB-GPL-3.0.txt` — full GPL-3.0 text
   - `electron-builder.yml` updated to include `resources/licenses` in `extraResources`
-- [ ] **12.14** Download and place TexLab binaries for all platforms
-  - `resources/bin/linux/texlab`
-  - `resources/bin/mac/texlab`
-  - `resources/bin/win/texlab.exe`
-- [ ] **12.15** Place full GPL-3.0 license text
-  - `resources/licenses/TEXLAB-GPL-3.0.txt`
+- [x] **12.14** Download and place TexLab binaries for all platforms
+  - `resources/bin/linux/texlab` (v5.25.1, ELF x86_64, 17 MB)
+  - `resources/bin/mac/texlab` (v5.25.1, Mach-O x86_64, 15 MB)
+  - `resources/bin/win/texlab.exe` (v5.25.1, PE32+ x86_64, 15 MB)
+- [x] **12.15** Place full GPL-3.0 license text
+  - `resources/licenses/TEXLAB-GPL-3.0.txt` (35 KB, GNU GPL v3.0 June 2007)
 
 ### Feature Coexistence
 

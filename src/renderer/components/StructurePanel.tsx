@@ -25,7 +25,7 @@ function StructureNode({
 }: {
   node: DocumentSymbolNode
   depth: number
-}): JSX.Element {
+}) {
   const [expanded, setExpanded] = useState(true)
 
   const handleClick = useCallback(() => {
@@ -69,7 +69,7 @@ function StructureNode({
   )
 }
 
-function StructurePanel(): JSX.Element {
+function StructurePanel() {
   const documentSymbols = useAppStore((s) => s.documentSymbols)
   const filePath = useAppStore((s) => s.filePath)
   const lspStatus = useAppStore((s) => s.lspStatus)

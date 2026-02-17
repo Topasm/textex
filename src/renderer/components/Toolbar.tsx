@@ -30,7 +30,7 @@ function Toolbar({
   onToggleTheme,
   onNewFromTemplate,
   onExport
-}: ToolbarProps): JSX.Element {
+}: ToolbarProps) {
   const filePath = useAppStore((s) => s.filePath)
   const isDirty = useAppStore((s) => s.isDirty)
   const compileStatus = useAppStore((s) => s.compileStatus)

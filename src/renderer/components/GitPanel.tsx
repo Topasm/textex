@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useAppStore } from '../store/useAppStore'
 
-function GitPanel(): JSX.Element {
+function GitPanel() {
   const projectRoot = useAppStore((s) => s.projectRoot)
   const isRepo = useAppStore((s) => s.isGitRepo)
   const gitStatus = useAppStore((s) => s.gitStatus)

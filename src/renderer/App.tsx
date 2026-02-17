@@ -16,14 +16,14 @@ import { useAutoCompile } from './hooks/useAutoCompile'
 import { useFileOps } from './hooks/useFileOps'
 import { useAppStore } from './store/useAppStore'
 import type { SidebarView, LspStatus } from './store/useAppStore'
-import { startLspClient, stopLspClient, lspNotifyDidOpen, lspNotifyDidChange, lspRequestDocumentSymbols } from './lsp/lspClient'
+import { startLspClient, stopLspClient, lspNotifyDidOpen, lspNotifyDidClose, lspNotifyDidChange, lspRequestDocumentSymbols } from './lsp/lspClient'
 import { loader } from '@monaco-editor/react'
 
 function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err)
 }
 
-function App(): JSX.Element {
+function App() {
   useAutoCompile()
   const { handleOpen, handleSave, handleSaveAs } = useFileOps()
 
@@ -36,6 +36,7 @@ function App(): JSX.Element {
   const projectRoot = useAppStore((s) => s.projectRoot)
   const isGitRepo = useAppStore((s) => s.isGitRepo)
   const lspEnabled = useAppStore((s) => s.lspEnabled)
+  const prevFilePathRef = useRef<string | null>(null)
 
   // ---- Compile handler ----
   const handleCompile = useCallback(async (): Promise<void> => {
@@ -269,13 +270,7 @@ function App(): JSX.Element {
         monacoInstance,
         () => useAppStore.getState().filePath,
         () => useAppStore.getState().content
-      ).then(() => {
-        if (cancelled) return
-        const state = useAppStore.getState()
-        if (state.filePath) {
-          lspNotifyDidOpen(state.filePath, state.content)
-        }
-      }).catch(() => {})
+      ).catch(() => {})
     })
 
     return () => {
@@ -318,6 +313,13 @@ function App(): JSX.Element {
 
   // ---- Notify LSP when switching files ----
   useEffect(() => {
+    const prevFile = prevFilePathRef.current
+    prevFilePathRef.current = filePath
+
+    if (prevFile && prevFile !== filePath) {
+      lspNotifyDidClose(prevFile)
+    }
+
     if (filePath) {
       lspNotifyDidOpen(filePath, useAppStore.getState().content)
       const state = useAppStore.getState()

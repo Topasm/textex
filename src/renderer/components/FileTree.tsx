@@ -32,7 +32,7 @@ function getGitDecoration(filePath: string, gitFiles?: GitFileStatus[]): { label
   return null
 }
 
-function FileTreeNode({ entry, depth, gitFiles }: FileTreeNodeProps): JSX.Element {
+function FileTreeNode({ entry, depth, gitFiles }: FileTreeNodeProps) {
   const [expanded, setExpanded] = useState(depth < 1)
   const [children, setChildren] = useState<DirectoryEntry[] | null>(null)
   const activeFilePath = useAppStore((s) => s.activeFilePath)
@@ -85,7 +85,7 @@ function FileTreeNode({ entry, depth, gitFiles }: FileTreeNodeProps): JSX.Elemen
   )
 }
 
-function FileTree(): JSX.Element {
+function FileTree() {
   const directoryTree = useAppStore((s) => s.directoryTree)
   const gitStatus = useAppStore((s) => s.gitStatus)
 

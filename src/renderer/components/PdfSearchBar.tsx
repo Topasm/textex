@@ -18,7 +18,7 @@ function PdfSearchBar({
   onPrev,
   matchCount,
   currentMatch
-}: PdfSearchBarProps): JSX.Element | null {
+}: PdfSearchBarProps) {
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {

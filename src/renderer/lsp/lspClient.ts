@@ -236,6 +236,11 @@ function notifyDidClose(filePath: string): void {
   })
 }
 
+function currentDocUri(): string {
+  const filePath = options?.getDocumentUri()
+  return filePath ? filePathToUri(filePath) : ''
+}
+
 function registerProviders(monaco: MonacoInstance): void {
   // Completion provider
   if (serverCapabilities.completionProvider) {
@@ -245,7 +250,7 @@ function registerProviders(monaco: MonacoInstance): void {
         if (!initialized) return { suggestions: [] }
         try {
           const result = (await sendRequest('textDocument/completion', {
-            textDocument: { uri: model.uri.toString() },
+            textDocument: { uri: currentDocUri() },
             position: { line: position.lineNumber - 1, character: position.column - 1 }
           })) as { items?: unknown[] } | unknown[] | null
 
@@ -293,7 +298,7 @@ function registerProviders(monaco: MonacoInstance): void {
         if (!initialized) return null
         try {
           const result = (await sendRequest('textDocument/hover', {
-            textDocument: { uri: model.uri.toString() },
+            textDocument: { uri: currentDocUri() },
             position: { line: position.lineNumber - 1, character: position.column - 1 }
           })) as { contents: unknown; range?: { start: { line: number; character: number }; end: { line: number; character: number } } } | null
 
@@ -323,7 +328,7 @@ function registerProviders(monaco: MonacoInstance): void {
         if (!initialized) return null
         try {
           const result = (await sendRequest('textDocument/definition', {
-            textDocument: { uri: model.uri.toString() },
+            textDocument: { uri: currentDocUri() },
             position: { line: position.lineNumber - 1, character: position.column - 1 }
           })) as Array<{ uri: string; range: { start: { line: number; character: number }; end: { line: number; character: number } } }> | { uri: string; range: { start: { line: number; character: number }; end: { line: number; character: number } } } | null
 
@@ -353,7 +358,7 @@ function registerProviders(monaco: MonacoInstance): void {
         if (!initialized) return []
         try {
           const result = (await sendRequest('textDocument/documentSymbol', {
-            textDocument: { uri: model.uri.toString() }
+            textDocument: { uri: currentDocUri() }
           })) as Array<Record<string, unknown>> | null
 
           if (!result) return []
@@ -394,7 +399,7 @@ function registerProviders(monaco: MonacoInstance): void {
         if (!initialized) return null
         try {
           const result = (await sendRequest('textDocument/rename', {
-            textDocument: { uri: model.uri.toString() },
+            textDocument: { uri: currentDocUri() },
             position: { line: position.lineNumber - 1, character: position.column - 1 },
             newName
           })) as { changes?: Record<string, Array<{ range: { start: { line: number; character: number }; end: { line: number; character: number } }; newText: string }>> } | null
@@ -427,7 +432,7 @@ function registerProviders(monaco: MonacoInstance): void {
         if (!initialized) return { range: { startLineNumber: 1, startColumn: 1, endLineNumber: 1, endColumn: 1 }, text: '' }
         try {
           const result = (await sendRequest('textDocument/prepareRename', {
-            textDocument: { uri: model.uri.toString() },
+            textDocument: { uri: currentDocUri() },
             position: { line: position.lineNumber - 1, character: position.column - 1 }
           })) as { range: { start: { line: number; character: number }; end: { line: number; character: number } }; placeholder?: string } | null
 
@@ -461,7 +466,7 @@ function registerProviders(monaco: MonacoInstance): void {
         if (!initialized) return []
         try {
           const result = (await sendRequest('textDocument/formatting', {
-            textDocument: { uri: model.uri.toString() },
+            textDocument: { uri: currentDocUri() },
             options: { tabSize: 2, insertSpaces: true }
           })) as Array<{ range: { start: { line: number; character: number }; end: { line: number; character: number } }; newText: string }> | null
 
@@ -491,7 +496,7 @@ function registerProviders(monaco: MonacoInstance): void {
         if (!initialized) return { suggestions: [] }
         try {
           const result = (await sendRequest('textDocument/completion', {
-            textDocument: { uri: model.uri.toString() },
+            textDocument: { uri: currentDocUri() },
             position: { line: position.lineNumber - 1, character: position.column - 1 }
           })) as { items?: unknown[] } | unknown[] | null
 
@@ -578,7 +583,7 @@ function formatHoverContents(contents: unknown): monacoEditor.IMarkdownString[] 
 
 // ---- Public API ----
 
-let documentVersion = 0
+const documentVersions = new Map<string, number>()
 
 export async function startLspClient(
   workspaceRoot: string,
@@ -609,19 +614,14 @@ export async function startLspClient(
 
   // Register Monaco providers based on server capabilities
   registerProviders(monacoInstance)
-
-  // Notify about currently open document
-  const docUri = getDocUri()
-  if (docUri) {
-    notifyDidOpen(docUri, getDocContent())
-  }
 }
 
 export function stopLspClient(): void {
   if (initialized) {
     try {
-      sendNotification('shutdown', null)
-      sendNotification('exit', null)
+      sendRequest('shutdown', null)
+        .then(() => sendNotification('exit', null))
+        .catch(() => sendNotification('exit', null))
     } catch {
       // ignore
     }
@@ -631,7 +631,7 @@ export function stopLspClient(): void {
   serverCapabilities = {}
   pendingRequests.clear()
   nextRequestId = 1
-  documentVersion = 0
+  documentVersions.clear()
   options = null
 
   for (const d of disposables) d.dispose()
@@ -646,13 +646,15 @@ export function isLspRunning(): boolean {
 }
 
 export function lspNotifyDidOpen(filePath: string, content: string): void {
-  documentVersion = 1
+  const version = (documentVersions.get(filePath) || 0) + 1
+  documentVersions.set(filePath, version)
   notifyDidOpen(filePath, content)
 }
 
 export function lspNotifyDidChange(filePath: string, content: string): void {
-  documentVersion++
-  notifyDidChange(filePath, content, documentVersion)
+  const version = (documentVersions.get(filePath) || 0) + 1
+  documentVersions.set(filePath, version)
+  notifyDidChange(filePath, content, version)
 }
 
 export function lspNotifyDidSave(filePath: string): void {

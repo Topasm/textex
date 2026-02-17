@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 import { useAppStore } from '../store/useAppStore'
 import { templates } from '../data/templates'
 
-function TemplateGallery(): JSX.Element | null {
+function TemplateGallery() {
   const isOpen = useAppStore((s) => s.isTemplateGalleryOpen)
   const setOpen = useAppStore((s) => s.setTemplateGalleryOpen)
 
