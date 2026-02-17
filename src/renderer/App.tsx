@@ -8,10 +8,9 @@ import FileTree from './components/FileTree'
 import TabBar from './components/TabBar'
 import TemplateGallery from './components/TemplateGallery'
 import BibPanel from './components/BibPanel'
-import StructurePanel from './components/StructurePanel'
+import OutlinePanel from './components/OutlinePanel'
 import GitPanel from './components/GitPanel'
 import { TodoPanel } from './components/TodoPanel'
-import { MemoPanel } from './components/MemoPanel'
 import UpdateNotification from './components/UpdateNotification'
 import PreviewErrorBoundary from './components/PreviewErrorBoundary'
 import HomeScreen from './components/HomeScreen'
@@ -590,7 +589,7 @@ function App() {
       const direction = sidebarSwipeAccum.current > 0 ? 1 : -1
       sidebarSwipeAccum.current = 0
       const s = useAppStore.getState()
-      const tabs: SidebarView[] = ['files', 'git', 'bib', 'structure', 'todo', 'memo']
+      const tabs: SidebarView[] = ['files', 'git', 'bib', 'outline', 'todo']
       const idx = tabs.indexOf(s.sidebarView)
       const next = tabs[(idx + direction + tabs.length) % tabs.length]
       s.setSidebarView(next)
@@ -625,9 +624,8 @@ function App() {
     { key: 'files', label: 'Files' },
     { key: 'git', label: 'Git' },
     { key: 'bib', label: 'Bib' },
-    { key: 'structure', label: 'Structure' },
-    { key: 'todo', label: 'TODO' },
-    { key: 'memo', label: 'Memo' }
+    { key: 'outline', label: 'Outline' },
+    { key: 'todo', label: 'Notes' }
   ]
 
   const showHomeScreen = sessionRestored && !projectRoot
@@ -709,9 +707,8 @@ function App() {
                   {sidebarView === 'files' && <FileTree />}
                   {sidebarView === 'git' && <GitPanel />}
                   {sidebarView === 'bib' && <BibPanel />}
-                  {sidebarView === 'structure' && <StructurePanel />}
+                  {sidebarView === 'outline' && <OutlinePanel />}
                   {sidebarView === 'todo' && <TodoPanel />}
-                  {sidebarView === 'memo' && <MemoPanel />}
                 </div>
               </div>
               {!autoHideSidebar && (

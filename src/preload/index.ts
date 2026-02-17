@@ -21,6 +21,8 @@ contextBridge.exposeInMainWorld('api', {
   readFile: (filePath: string) => ipcRenderer.invoke('fs:read-file', filePath),
   openDirectory: () => ipcRenderer.invoke('fs:open-directory'),
   readDirectory: (dirPath: string) => ipcRenderer.invoke('fs:read-directory', dirPath),
+  createFile: (filePath: string) => ipcRenderer.invoke('fs:create-file', filePath),
+  createDirectory: (dirPath: string) => ipcRenderer.invoke('fs:create-directory', dirPath),
   watchDirectory: (dirPath: string) => ipcRenderer.invoke('fs:watch-directory', dirPath),
   unwatchDirectory: () => ipcRenderer.invoke('fs:unwatch-directory'),
   onDirectoryChanged: (cb: (change: { type: string; filename: string }) => void) => {

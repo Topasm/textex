@@ -51,6 +51,8 @@ export interface ElectronAPI {
   ): Promise<{ projectPath: string; filePath: string } | null>
   readFile(filePath: string): Promise<OpenFileResult>
   openDirectory(): Promise<string | null>
+  createFile(filePath: string): Promise<{ success: boolean }>
+  createDirectory(dirPath: string): Promise<{ success: boolean }>
   readDirectory(dirPath: string): Promise<DirectoryEntry[]>
   watchDirectory(dirPath: string): Promise<{ success: boolean }>
   unwatchDirectory(): Promise<{ success: boolean }>

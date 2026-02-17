@@ -119,7 +119,24 @@ export function TodoPanel() {
         if (!newItem.trim() || !filePath) return
 
         const lineToAdd = `- [ ] ${newItem.trim()}`
-        // Ensure there's a newline before if the file isn't empty and doesn't end with one
+        const prefix = rawContent && !rawContent.endsWith('\n') ? '\n' : ''
+        const updated = rawContent + prefix + lineToAdd + '\n'
+
+        setRawContent(updated)
+        setLines(parseMarkdown(updated))
+        setNewItem('')
+
+        try {
+            await window.api.saveFile(updated, filePath)
+        } catch {
+            // rollback or silent fail
+        }
+    }, [newItem, filePath, rawContent])
+
+    const handleAddMemo = useCallback(async () => {
+        if (!newItem.trim() || !filePath) return
+
+        const lineToAdd = newItem.trim()
         const prefix = rawContent && !rawContent.endsWith('\n') ? '\n' : ''
         const updated = rawContent + prefix + lineToAdd + '\n'
 
@@ -252,9 +269,14 @@ export function TodoPanel() {
                     value={newItem}
                     onChange={(e) => setNewItem(e.target.value)}
                     onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleAddItem()
+                        if (e.key === 'Enter' && e.shiftKey) {
+                            e.preventDefault()
+                            handleAddItem()
+                        } else if (e.key === 'Enter') {
+                            handleAddMemo()
+                        }
                     }}
-                    placeholder="Add a new task..."
+                    placeholder="Enter: note · Shift+Enter: task"
                 />
                 <button className="todo-panel__add-btn" onClick={handleAddItem}>
                     Add

@@ -4,7 +4,7 @@ import { useAppStore } from '../../store/useAppStore'
 import type { DocumentSymbolNode, SectionNode } from '../../../shared/types'
 
 /**
- * Convert SectionNode[] (from regex parser) to DocumentSymbolNode[] (used by StructurePanel).
+ * Convert SectionNode[] (from regex parser) to DocumentSymbolNode[] (used by OutlinePanel).
  */
 function sectionNodesToSymbols(nodes: SectionNode[]): DocumentSymbolNode[] {
   return nodes.map((node) => ({
@@ -67,5 +67,5 @@ function fetchFallbackOutline(currentFile: string, content: string): void {
         useAppStore.getState().setDocumentSymbols(sectionNodesToSymbols(sectionNodes))
       }
     })
-    .catch(() => {})
+    .catch(() => { })
 }

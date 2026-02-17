@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useAppStore } from '../store/useAppStore'
+import type { DocumentSymbolNode } from '../../shared/types'
 
 type SymbolCategory = 'section' | 'env' | 'math' | 'label' | 'default'
 
@@ -37,7 +38,7 @@ function getSymbolIcon(category: SymbolCategory): string {
   }
 }
 
-function StructureNode({
+function OutlineNode({
   node,
   depth
 }: {
@@ -63,7 +64,7 @@ function StructureNode({
   return (
     <>
       <div
-        className={`structure-item structure-depth-${Math.min(depth, 4)}`}
+        className={`outline-item outline-depth-${Math.min(depth, 4)}`}
         style={{ paddingLeft: `${10 + depth * 18}px` }}
         onClick={handleClick}
         title={node.detail || undefined}
@@ -73,31 +74,31 @@ function StructureNode({
           Array.from({ length: depth }).map((_, i) => (
             <span
               key={i}
-              className="structure-indent-guide"
+              className="outline-indent-guide"
               style={{ left: `${10 + i * 18}px` }}
             />
           ))}
 
         {hasChildren ? (
           <button
-            className={`structure-toggle ${expanded ? 'structure-toggle-expanded' : ''}`}
+            className={`outline-toggle ${expanded ? 'outline-toggle-expanded' : ''}`}
             onClick={handleToggle}
           >
             &#x25B6;
           </button>
         ) : (
-          <span className="structure-toggle-spacer" />
+          <span className="outline-toggle-spacer" />
         )}
-        <span className={`structure-icon structure-icon-${category}`}>
+        <span className={`outline-icon outline-icon-${category}`}>
           {getSymbolIcon(category)}
         </span>
-        <span className="structure-name">{node.name}</span>
-        {node.detail && <span className="structure-detail">{node.detail}</span>}
+        <span className="outline-name">{node.name}</span>
+        {node.detail && <span className="outline-detail">{node.detail}</span>}
       </div>
       {hasChildren && expanded && (
-        <div className="structure-children">
+        <div className="outline-children">
           {node.children.map((child, i) => (
-            <StructureNode key={`${child.name}-${i}`} node={child} depth={depth + 1} />
+            <OutlineNode key={`${child.name}-${i}`} node={child} depth={depth + 1} />
           ))}
         </div>
       )}
@@ -105,13 +106,13 @@ function StructureNode({
   )
 }
 
-function StructurePanel() {
+function OutlinePanel() {
   const documentSymbols = useAppStore((s) => s.documentSymbols)
   const filePath = useAppStore((s) => s.filePath)
 
   if (!filePath) {
     return (
-      <div className="structure-panel">
+      <div className="outline-panel">
         <div className="git-empty">No file open.</div>
       </div>
     )
@@ -119,19 +120,19 @@ function StructurePanel() {
 
   if (documentSymbols.length === 0) {
     return (
-      <div className="structure-panel">
-        <div className="git-empty">No document structure found.</div>
+      <div className="outline-panel">
+        <div className="git-empty">No document outline found.</div>
       </div>
     )
   }
 
   return (
-    <div className="structure-panel">
+    <div className="outline-panel">
       {documentSymbols.map((sym, i) => (
-        <StructureNode key={`${sym.name}-${i}`} node={sym} depth={0} />
+        <OutlineNode key={`${sym.name}-${i}`} node={sym} depth={0} />
       ))}
     </div>
   )
 }
 
-export default StructurePanel
+export default OutlinePanel

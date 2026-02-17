@@ -1110,6 +1110,70 @@ body,
   color: var(--git-untracked);
 }
 
+.file-tree-header {
+  display: flex;
+  justify-content: flex-end;
+  gap: 2px;
+  padding: 2px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.file-tree-header-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  padding: 1px 6px;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.file-tree-header-btn:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.file-tree-actions {
+  margin-left: auto;
+  display: none;
+  gap: 1px;
+  flex-shrink: 0;
+}
+
+.file-tree-item:hover .file-tree-actions {
+  display: flex;
+}
+
+.file-tree-action-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 11px;
+  padding: 0 3px;
+  cursor: pointer;
+  line-height: 1;
+  border-radius: 2px;
+}
+
+.file-tree-action-btn:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.file-tree-name-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-input);
+  border: 1px solid var(--accent);
+  border-radius: 2px;
+  color: var(--text-primary);
+  font-size: 13px;
+  padding: 1px 4px;
+  outline: none;
+  font-family: inherit;
+}
+
 /* Tab Bar */
 .tab-bar {
   display: flex;
@@ -3369,34 +3433,3 @@ body,
   background-color: var(--accent-hover);
 }
 
-/* ===== Memo Panel ===== */
-.memo-panel {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.memo-panel--empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: var(--text-secondary);
-  font-size: 13px;
-  gap: 12px;
-}
-
-.memo-panel__textarea {
-  flex: 1;
-  width: 100%;
-  padding: 12px;
-  font-size: 13px;
-  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-  line-height: 1.6;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  border: none;
-  outline: none;
-  resize: none;
-}

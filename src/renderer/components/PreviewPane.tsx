@@ -82,7 +82,7 @@ function PreviewPane() {
       e.preventDefault()
 
       const s = useAppStore.getState()
-      const step = 10
+      const step = 5
       // Use pending zoom as base if we're mid-scroll, otherwise current store value
       const baseZoom = pendingZoomRef.current ?? s.zoomLevel
       const newZoom =

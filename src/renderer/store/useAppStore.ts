@@ -1,3 +1,5 @@
+GitStatusResult
+} from '../types/api'
 import type {
   BibEntry,
   CitationGroup,
@@ -5,15 +7,14 @@ import type {
   LabelInfo,
   Diagnostic,
   PackageData,
-  GitStatusResult,
   DocumentSymbolNode
-} from '../types/api'
+} from '../../shared/types'
 import { create } from 'zustand'
 import { subscribeWithSelector, persist } from 'zustand/middleware'
 
 export type CompileStatus = 'idle' | 'compiling' | 'success' | 'error'
 export type Theme = 'system' | 'dark' | 'light' | 'high-contrast'
-export type SidebarView = 'files' | 'git' | 'bib' | 'structure' | 'todo' | 'memo'
+export type SidebarView = 'files' | 'git' | 'bib' | 'outline' | 'todo'
 export type UpdateStatus = 'idle' | 'available' | 'downloading' | 'ready' | 'error'
 export type ExportStatus = 'idle' | 'exporting' | 'success' | 'error'
 export type LspStatus = 'stopped' | 'starting' | 'running' | 'error'
@@ -622,6 +623,13 @@ export const useAppStore = create<AppState>()(
         // Hydration callback - apply necessary side effects on load
         if (state && state.settings.theme) {
           document.documentElement.dataset.theme = state.settings.theme
+        }
+        // Migrate removed 'memo' sidebar view to 'todo'
+        if (state && (state.sidebarView as string) === 'memo') {
+          state.sidebarView = 'todo'
+        }
+        if (state && (state.sidebarView as string) === 'structure') {
+          state.sidebarView = 'outline'
         }
       }
     }

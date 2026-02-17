@@ -200,6 +200,18 @@ export function registerIpcHandlers(win: BrowserWindow): void {
     return { success: true }
   })
 
+  ipcMain.handle('fs:create-file', async (_event, filePath: string) => {
+    const validPath = validateFilePath(filePath)
+    await fs.writeFile(validPath, '', 'utf-8')
+    return { success: true }
+  })
+
+  ipcMain.handle('fs:create-directory', async (_event, dirPath: string) => {
+    const validPath = validateFilePath(dirPath)
+    await fs.mkdir(validPath, { recursive: true })
+    return { success: true }
+  })
+
   ipcMain.handle('fs:unwatch-directory', () => {
     if (watcherAbort) {
       watcherAbort.abort()
