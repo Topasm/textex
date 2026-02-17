@@ -15,7 +15,6 @@ interface ToolbarProps {
   onExport: (format: string) => void
   onOpenSettings: () => void
   onZoteroSearch: () => void
-  onZoteroCite: () => void
 }
 
 const exportFormats = [
@@ -37,8 +36,7 @@ function Toolbar({
   onAiDraft,
   onExport,
   onOpenSettings,
-  onZoteroSearch,
-  onZoteroCite
+  onZoteroSearch
 }: ToolbarProps) {
   const filePath = useAppStore((s) => s.filePath)
   const isDirty = useAppStore((s) => s.isDirty)
@@ -162,10 +160,7 @@ function Toolbar({
       {zoteroEnabled && (
         <>
           <span className="toolbar-separator" />
-          <button onClick={onZoteroSearch} title="Search Zotero (Ctrl+Shift+Z)">
-            Zotero
-          </button>
-          <button onClick={onZoteroCite} title="Zotero Classic Picker (Ctrl+Shift+C)">
+          <button onClick={onZoteroSearch} title="Insert Citation (Ctrl+Shift+Z)">
             Cite
           </button>
         </>

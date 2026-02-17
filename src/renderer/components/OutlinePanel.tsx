@@ -2,20 +2,42 @@ import { useState, useCallback } from 'react'
 import { useAppStore } from '../store/useAppStore'
 import type { DocumentSymbolNode } from '../../shared/types'
 
-type SymbolCategory = 'section' | 'env' | 'math' | 'label' | 'default'
+type SymbolCategory =
+  | 'section'
+  | 'subsection'
+  | 'subsubsection'
+  | 'figure'
+  | 'table'
+  | 'list'
+  | 'equation'
+  | 'algorithm'
+  | 'env'
+  | 'math'
+  | 'label'
+  | 'default'
 
-function getSymbolCategory(kind: number): SymbolCategory {
+function getSymbolCategory(kind: number, name: string, depth: number): SymbolCategory {
   switch (kind) {
     case 2: // Module (section)
     case 3: // Namespace
+      if (depth >= 2) return 'subsubsection'
+      if (depth === 1) return 'subsection'
       return 'section'
-    case 5: // Class (environment)
+    case 5: { // Class (environment)
+      const n = name.toLowerCase()
+      if (/^(figure\*?|wrapfigure|subfigure|graphic)$/.test(n)) return 'figure'
+      if (/^(table\*?|tabular x?|tabularx|longtable)$/.test(n)) return 'table'
+      if (/^(itemize|enumerate|description|list)$/.test(n)) return 'list'
+      if (/^(equation|align|gather|multline|eqnarray|displaymath|flalign)\*?$/.test(n))
+        return 'equation'
+      if (/^(algorithm|algorithm2e|algorithmic|lstlisting|verbatim|minted)$/.test(n))
+        return 'algorithm'
       return 'env'
+    }
     case 6: // Method (equation / math env)
-      return 'math'
+      return 'equation'
     case 13: // Variable (label)
     case 14: // Constant
-      return 'label'
     case 15: // String
       return 'label'
     default:

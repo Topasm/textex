@@ -1960,6 +1960,13 @@ body,
   color: var(--error);
 }
 
+.zotero-hint {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
 .zotero-status {
   font-size: 13px;
   color: var(--text-secondary);

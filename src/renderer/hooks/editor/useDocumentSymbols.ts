@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { lspRequestDocumentSymbols } from '../../lsp/lspClient'
 import { useAppStore } from '../../store/useAppStore'
 import type { DocumentSymbolNode, SectionNode } from '../../../shared/types'
@@ -27,44 +27,51 @@ function sectionNodesToSymbols(nodes: SectionNode[]): DocumentSymbolNode[] {
   }))
 }
 
+function fetchOutline(currentFile: string, content: string): void {
+  const state = useAppStore.getState()
+  const lspAvailable =
+    state.settings.lspEnabled && state.lspStatus === 'running'
+
+  if (lspAvailable) {
+    lspRequestDocumentSymbols(currentFile)
+      .then((symbols) => {
+        if (useAppStore.getState().filePath === currentFile) {
+          useAppStore.getState().setDocumentSymbols(symbols)
+        }
+      })
+      .catch(() => {
+        fetchFallbackOutline(currentFile, content)
+      })
+  } else {
+    fetchFallbackOutline(currentFile, content)
+  }
+}
+
 export function useDocumentSymbols(content: string): void {
   const filePath = useAppStore((s) => s.filePath)
   const lspStatus = useAppStore((s) => s.lspStatus)
+  const prevFilePathRef = useRef<string | null>(null)
 
+  // Immediate outline fetch when file changes (open / tab switch / startup)
+  useEffect(() => {
+    if (!filePath || !content) return
+    // Only trigger on actual file path changes, not content edits
+    if (filePath === prevFilePathRef.current) return
+    prevFilePathRef.current = filePath
+
+    fetchOutline(filePath, content)
+  }, [filePath, content])
+
+  // Debounced outline refresh on content edits (typing) and LSP status changes
   useEffect(() => {
     const timer = setTimeout(() => {
-      // Use the values from closure or store? 
-      // The original code used useAppStore.getState(), which gets fresh values. 
-      // But we want to re-run the effect when these change.
-      // So accessing them via hooks (above) triggers re-render, thus re-scheduling the effect.
-
       const state = useAppStore.getState()
       if (!state.filePath) return
-
-      const currentFile = state.filePath
-      const lspAvailable =
-        state.settings.lspEnabled && state.lspStatus === 'running'
-
-      if (lspAvailable) {
-        // Primary path: use LSP
-        lspRequestDocumentSymbols(currentFile)
-          .then((symbols) => {
-            if (useAppStore.getState().filePath === currentFile) {
-              useAppStore.getState().setDocumentSymbols(symbols)
-            }
-          })
-          .catch(() => {
-            // LSP request failed — try fallback
-            fetchFallbackOutline(currentFile, content)
-          })
-      } else {
-        // Fallback: use regex-based parser via IPC with live editor content
-        fetchFallbackOutline(currentFile, content)
-      }
+      fetchOutline(state.filePath, content)
     }, 2000)
 
     return () => clearTimeout(timer)
-  }, [content, filePath, lspStatus])
+  }, [content, lspStatus])
 }
 
 function fetchFallbackOutline(currentFile: string, content: string): void {

@@ -86,7 +86,7 @@ electron-builder config (NSIS/DMG/AppImage), Tectonic binaries for all platforms
 ### Phase 15: Zotero Integration (5/5)
 - **Settings** — toggle enable/disable, configure port (default 23119)
 - **Search Modal** — `Ctrl+Shift+Z` to search library, insert citation `\cite{key}`
-- **CAYW Picker** — `Ctrl+Shift+C` to open native Zotero picker
+- ~~**CAYW Picker** — `Ctrl+Shift+C` to open native Zotero picker~~ *(removed — merged into Search Modal)*
 - **Show in Zotero** — Open selected paper in Zotero app from search results
 - **Drag and Drop** — Drag references from BibPanel directly to editor
 

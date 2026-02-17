@@ -47,7 +47,6 @@ function App() {
   const isGitRepo = useAppStore((s) => s.isGitRepo)
   const lspEnabled = useAppStore((s) => s.settings.lspEnabled)
   const zoteroEnabled = useAppStore((s) => s.settings.zoteroEnabled)
-  const zoteroPort = useAppStore((s) => s.settings.zoteroPort)
   const autoHideSidebar = useAppStore((s) => s.settings.autoHideSidebar)
   const showStatusBar = useAppStore((s) => s.settings.showStatusBar)
   const prevFilePathRef = useRef<string | null>(null)
@@ -101,29 +100,6 @@ function App() {
   const handleDraftInsert = useCallback((latex: string) => {
     useAppStore.getState().setContent(latex)
   }, [])
-
-  const handleZoteroCAYW = useCallback(async () => {
-    try {
-      const citeCmd = await window.api.zoteroCiteCAYW(zoteroPort)
-      if (citeCmd) {
-        // Same insertion logic
-        const state = useAppStore.getState()
-        const lines = state.content.split('\n')
-        const lineIdx = state.cursorLine - 1
-        const colIdx = state.cursorColumn - 1
-
-        if (lineIdx >= 0 && lineIdx < lines.length) {
-          const line = lines[lineIdx]
-          const before = line.slice(0, colIdx)
-          const after = line.slice(colIdx)
-          lines[lineIdx] = before + citeCmd + after
-          state.setContent(lines.join('\n'))
-        }
-      }
-    } catch (err) {
-      useAppStore.getState().appendLog(`Zotero CAYW Error: ${errorMessage(err)}`)
-    }
-  }, [zoteroPort])
 
   // ---- Compile handler ----
   const handleCompile = useCallback(async (): Promise<void> => {
@@ -532,16 +508,11 @@ function App() {
           e.preventDefault()
           setIsZoteroModalOpen(true)
         }
-      } else if ((e.key === 'c' || e.key === 'C') && mod && e.shiftKey) {
-        if (zoteroEnabled) {
-          e.preventDefault()
-          handleZoteroCAYW()
-        }
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [handleOpen, handleSave, handleSaveAs, handleCompile, handleAiDraft, handleZoteroCAYW, zoteroEnabled])
+  }, [handleOpen, handleSave, handleSaveAs, handleCompile, handleAiDraft, zoteroEnabled])
 
   // ---- Split divider drag logic ----
   const mainContentRef = useRef<HTMLDivElement>(null)
@@ -638,7 +609,6 @@ function App() {
         onExport={handleExport}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onZoteroSearch={() => setIsZoteroModalOpen(true)}
-        onZoteroCite={handleZoteroCAYW}
       />
       {isSettingsOpen && <SettingsModal onClose={() => setIsSettingsOpen(false)} />}
       <ZoteroCiteModal

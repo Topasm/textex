@@ -7,7 +7,7 @@
 - [x] **IPC Channels**: `zotero:probe`, `zotero:search`, `zotero:cite-cayw`
 - [x] **Settings**: Toggle enable/disable, configure port (default 23119)
 - [x] **Search Modal**: `Ctrl+Shift+Z` with debounced search
-- [x] **Native Picker**: `Ctrl+Shift+C` for Zotero CAYW
+- [x] ~~**Native Picker**: `Ctrl+Shift+C` for Zotero CAYW~~ *(removed — merged into Search Modal)*
 - [x] **Show in Zotero**: Button in search results to open paper in Zotero
 - [x] **Drag & Drop**: Drag citations from BibPanel to editor
 - [ ] **Auto-export to .bib**: *Descoped/Not implemented* (Manual export or Zotero auto-export preferred)

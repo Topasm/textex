@@ -124,6 +124,9 @@ export const ZoteroCiteModal: React.FC<ZoteroCiteModalProps> = ({ isOpen, onClos
                     <div className="zotero-results-list">
                         {loading && <div className="zotero-loading">Searching...</div>}
                         {error && !loading && <div className="zotero-error">{error}</div>}
+                        {!loading && !error && results.length === 0 && searchTerm.length <= 2 && (
+                            <div className="zotero-hint">Type at least 3 characters to search your Zotero library</div>
+                        )}
 
                         {!loading && results.map((item, index) => (
                             <div
@@ -165,7 +168,9 @@ export const ZoteroCiteModal: React.FC<ZoteroCiteModalProps> = ({ isOpen, onClos
 
                 <div className="modal-footer">
                     <div className="zotero-status">
-                        {selectedKeys.size} selected (Ctrl+Enter to insert)
+                        {selectedKeys.size === 0
+                            ? 'Enter to select, Ctrl+Enter to insert'
+                            : `${selectedKeys.size} selected — Ctrl+Enter to insert`}
                     </div>
                     <div className="modal-actions">
                         <button onClick={onClose}>Cancel</button>

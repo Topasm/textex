@@ -30,10 +30,5 @@ To configure this:
 5.  **Show in Zotero:** Hover over a result and click **Show in Zotero ↗** to open the paper in your Zotero library.
 6.  **Drag and Drop:** You can also drag a reference from the "Bib" panel in the sidebar directly into the editor to insert its citation.
 
-### Inserting Citations (Zotero Picker)
-1.  Press `Ctrl+Shift+C` to open the native "Cite as You Write" (CAYW) picker window from Zotero.
-2.  Select your references in the Zotero popup.
-3.  Click OK to insert them into TextEx.
-
 ### Exporting to .bib
 TextEx automatically manages your `.bib` file, but you can also manually trigger a sync if needed. When you compile, TextEx ensures the bibliography is updated.

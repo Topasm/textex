@@ -15,8 +15,7 @@ const defaultProps = {
   onAiDraft: vi.fn(),
   onExport: vi.fn(),
   onOpenSettings: vi.fn(),
-  onZoteroSearch: vi.fn(),
-  onZoteroCite: vi.fn()
+  onZoteroSearch: vi.fn()
 }
 
 beforeEach(() => {
