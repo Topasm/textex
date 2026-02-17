@@ -9,6 +9,10 @@ interface UseSectionHighlightArgs {
   monacoRef: MutableRefObject<MonacoInstance | null>
 }
 
+const DEFAULT_COLORS = [
+  '#e06c75', '#e5c07b', '#98c379', '#61afef', '#c678dd', '#56b6c2', '#d19a66'
+]
+
 /**
  * Inject a <style> element with dynamic CSS classes generated from the
  * user-chosen color palette. Each color gets heading, bar and band classes.
@@ -48,7 +52,7 @@ function injectPaletteStyles(colors: string[]): HTMLStyleElement {
  */
 export function useSectionHighlight({ editorRef, monacoRef }: UseSectionHighlightArgs): void {
   const enabled = useAppStore((s) => s.settings.sectionHighlightEnabled)
-  const colors = useAppStore((s) => s.settings.sectionHighlightColors)
+  const colors = useAppStore((s) => s.settings.sectionHighlightColors) ?? DEFAULT_COLORS
   const documentSymbols = useAppStore((s) => s.documentSymbols)
   const collectionRef = useRef<monacoEditor.IEditorDecorationsCollection | null>(null)
 

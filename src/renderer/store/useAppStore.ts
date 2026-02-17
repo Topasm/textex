@@ -664,6 +664,12 @@ export const useAppStore = create<AppState>()(
         if (state && (state.sidebarView as string) === 'structure') {
           state.sidebarView = 'outline'
         }
+        // Backfill sectionHighlightColors for pre-existing settings
+        if (state && !state.settings.sectionHighlightColors) {
+          state.settings.sectionHighlightColors = [
+            '#e06c75', '#e5c07b', '#98c379', '#61afef', '#c678dd', '#56b6c2', '#d19a66'
+          ]
+        }
       }
     }
   )

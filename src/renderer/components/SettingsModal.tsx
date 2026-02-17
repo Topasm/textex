@@ -477,7 +477,7 @@ const DEFAULT_RAINBOW: string[] = [
 ];
 
 const SectionColorPalette = () => {
-    const colors = useAppStore((s) => s.settings.sectionHighlightColors);
+    const colors = useAppStore((s) => s.settings.sectionHighlightColors) ?? DEFAULT_RAINBOW;
     const updateSetting = useAppStore((s) => s.updateSetting);
 
     const setColor = (index: number, value: string) => {
