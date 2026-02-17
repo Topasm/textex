@@ -2,7 +2,7 @@
  * Backward-compatible wrapper around the LspClient class.
  * All 30+ import sites continue working without changes.
  */
-import { lspClient } from './LspClient'
+import { lspClient } from './LspServiceImpl'
 import type { MonacoInstance } from './types'
 import type { DocumentSymbolNode } from '../../shared/types'
 
