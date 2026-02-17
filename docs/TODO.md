@@ -2,6 +2,16 @@
 
 **91 / 98 tasks complete** across 18 phases.
 
+## Acceptance Criteria
+
+The MVP is complete when:
+
+1. A user can install the app on their OS without any prior TeX installation. *(Pending: packaging smoke test)*
+2. [x] They can open or create a `.tex` file.
+3. [x] They can type LaTeX and see a PDF preview update within a few seconds.
+4. [x] Compilation errors are displayed clearly.
+5. [x] They can save their work.
+
 ---
 
 ## Completed

@@ -5,14 +5,19 @@
 |
 +-- docs/                          # Project documentation
 |   +-- ARCHITECTURE.md            # System architecture & data flow
-|   +-- TECH_STACK.md              # Technology choices & rationale
+|   +-- CLI.md                     # CLI usage reference
+|   +-- COMPILER_SERVICE.md        # Tectonic integration details
+|   +-- DEVELOPMENT.md             # Setup, build, and dev commands
 |   +-- FILE_STRUCTURE.md          # This file
 |   +-- IPC_SPEC.md                # IPC channels, payloads, type definitions
-|   +-- COMPILER_SERVICE.md        # Tectonic integration details
-|   +-- UI_SPEC.md                 # Component layout & behavior
+|   +-- LICENSES.md                # Third-party license summary
+|   +-- MCP.md                     # MCP server tools & config
 |   +-- PACKAGING.md               # Build & distribution config
-|   +-- MVP_REQUIREMENTS.md        # Feature scope & acceptance criteria
-|   +-- TODO.md                    # Implementation task list with phases
+|   +-- SETTINGS.md                # Settings schema & formatting
+|   +-- TECH_STACK.md              # Technology choices & rationale
+|   +-- TODO.md                    # Implementation status & remaining tasks
+|   +-- UI_SPEC.md                 # Component layout & behavior
+|   +-- ZOTERO.md                  # Zotero/Better BibTeX integration
 |
 +-- resources/
 |   +-- bin/                       # *** Sidecar binaries (per-platform) ***

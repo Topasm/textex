@@ -96,23 +96,11 @@ A stdio-based [Model Context Protocol](https://modelcontextprotocol.io/) server
 
 ## IPC Contract
 
-All IPC channels and their payloads:
+See [IPC_SPEC.md](IPC_SPEC.md) for the full channel reference with payloads, handler
+logic, and type declarations.
 
-| Channel | Direction | Payload | Response |
-|---|---|---|---|
-| `fs:open` | Renderer -> Main | -- | `{ content: string, filePath: string }` |
-| `fs:save` | Renderer -> Main | `{ content: string, filePath: string }` | `{ success: boolean }` |
-| `fs:save-as` | Renderer -> Main | `{ content: string }` | `{ filePath: string }` |
-| `latex:compile` | Renderer -> Main | `{ filePath: string }` | `{ pdfBase64: string }` or error |
-| `latex:cancel` | Renderer -> Main | -- | `boolean` (true if a process was killed) |
-| `latex:log` | Main -> Renderer | `string` (streamed stdout/stderr lines) | -- |
-| `latex:diagnostics` | Main -> Renderer | `Diagnostic[]` (parsed log diagnostics) | -- |
-| `lsp:start` | Renderer -> Main | `{ workspaceRoot: string }` | `{ success: boolean }` |
-| `lsp:stop` | Renderer -> Main | -- | `{ success: boolean }` |
-| `lsp:send` | Renderer -> Main | `object` (JSON-RPC message) | `{ success: boolean }` |
-| `lsp:status` | Renderer -> Main | -- | `{ status: string }` |
-| `lsp:message` | Main -> Renderer | `object` (JSON-RPC response/notification) | -- |
-| `lsp:status-change` | Main -> Renderer | `(status: string, error?: string)` | -- |
+Channel namespaces: `fs:*`, `latex:*`, `lsp:*`, `synctex:*`, `settings:*`,
+`bib:*`, `spell:*`, `git:*`, `update:*`, `export:*`, `zotero:*`.
 
 ---
 

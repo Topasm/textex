@@ -14,7 +14,10 @@ interface BibEntryCardProps {
 export const BibEntryCard = React.memo(function BibEntryCard({ entry, onInsert, onRemove, onAdd, addTitle }: BibEntryCardProps) {
   const cleanTitle = (entry.title || '(no title)').replace(/[{}]/g, '')
   let authors = entry.author || 'Unknown Author'
-  if (authors.length > 50) authors = authors.slice(0, 50) + '...'
+  const authorList = authors.split(/\s+and\s+/)
+  if (authorList.length > 1) {
+    authors = authorList[0].trim() + ' et al.'
+  }
 
   const handleDragStart = useCallback(
     (e: React.DragEvent) => {
