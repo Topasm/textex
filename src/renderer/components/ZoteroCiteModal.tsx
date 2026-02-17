@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useAppStore } from '../store/useAppStore'
+import type { ZoteroSearchResult } from '../types/api'
 // No need to import styles if they are global or handled by a CSS file.
 // Assuming basic styles are needed or global styles are used.
 
@@ -66,6 +67,8 @@ export const ZoteroCiteModal: React.FC<ZoteroCiteModalProps> = ({ isOpen, onClos
         } else if (e.key === 'ArrowUp') {
             e.preventDefault()
             setHighlightedIndex((prev) => (prev - 1 + results.length) % results.length)
+        } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+            confirmInsert()
         } else if (e.key === 'Enter') {
             e.preventDefault()
             if (results.length > 0) {
@@ -74,8 +77,6 @@ export const ZoteroCiteModal: React.FC<ZoteroCiteModalProps> = ({ isOpen, onClos
         } else if (e.key === ' ' && e.ctrlKey) { // Example: Ctrl+Space to confirm insertion, or just a button
             // Logic for inserting selected keys
             // But let's make it simpler: Enter selects/deselects. A separate button or Ctrl+Enter inserts.
-        } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-            confirmInsert()
         }
     }
 

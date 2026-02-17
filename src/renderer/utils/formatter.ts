@@ -1,6 +1,6 @@
 
 import prettier from 'prettier/standalone';
-// @ts-ignore
+// @ts-expect-error: prettier-plugin-latex types are not fully compatible with current setup
 import * as latexPlugin from 'prettier-plugin-latex';
 
 export interface FormatOptions {

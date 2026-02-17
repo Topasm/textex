@@ -1,28 +1,28 @@
-interface OpenFileResult {
+export interface OpenFileResult {
   content: string
   filePath: string
 }
 
-interface SaveResult {
+export interface SaveResult {
   success: boolean
 }
 
-interface SaveAsResult {
+export interface SaveAsResult {
   filePath: string
 }
 
-interface CompileResult {
+export interface CompileResult {
   pdfBase64: string
 }
 
-interface DirectoryEntry {
+export interface DirectoryEntry {
   name: string
   path: string
   type: 'file' | 'directory'
   children?: DirectoryEntry[]
 }
 
-interface BibEntry {
+export interface BibEntry {
   key: string
   type: string
   title: string
@@ -33,37 +33,37 @@ interface BibEntry {
   line?: number
 }
 
-interface LabelInfo {
+export interface LabelInfo {
   label: string
   file: string
   line: number
   context: string
 }
 
-interface PackageMacro {
+export interface PackageMacro {
   name: string
   snippet?: string
   detail?: string
 }
 
-interface PackageEnv {
+export interface PackageEnv {
   name: string
   argSnippet?: string
 }
 
-interface PackageData {
+export interface PackageData {
   macros: PackageMacro[]
   envs: PackageEnv[]
   deps: string[]
 }
 
-interface GitFileStatus {
+export interface GitFileStatus {
   path: string
   index: string
   working_dir: string
 }
 
-interface GitStatusResult {
+export interface GitStatusResult {
   branch: string
   files: GitFileStatus[]
   staged: string[]
@@ -71,14 +71,14 @@ interface GitStatusResult {
   not_added: string[]
 }
 
-interface GitLogEntry {
+export interface GitLogEntry {
   hash: string
   date: string
   message: string
   author: string
 }
 
-interface UserSettings {
+export interface UserSettings {
   theme: 'dark' | 'light' | 'high-contrast'
   fontSize: number
   autoCompile: boolean
@@ -87,9 +87,11 @@ interface UserSettings {
   gitEnabled: boolean
   autoUpdateEnabled: boolean
   lspEnabled: boolean
+  zoteroEnabled: boolean
+  zoteroPort: number
 }
 
-interface ElectronAPI {
+export interface ElectronAPI {
   // File System
   openFile(): Promise<OpenFileResult | null>
   saveFile(content: string, filePath: string): Promise<SaveResult>
@@ -181,7 +183,7 @@ interface ElectronAPI {
   zoteroExportBibtex(citekeys: string[], port?: number): Promise<string>
 }
 
-interface ZoteroSearchResult {
+export interface ZoteroSearchResult {
   citekey: string
   title: string
   author: string
@@ -189,9 +191,9 @@ interface ZoteroSearchResult {
   type: string
 }
 
-type DiagnosticSeverity = 'error' | 'warning' | 'info'
+export type DiagnosticSeverity = 'error' | 'warning' | 'info'
 
-interface Diagnostic {
+export interface Diagnostic {
   file: string
   line: number
   column?: number
@@ -199,19 +201,19 @@ interface Diagnostic {
   message: string
 }
 
-interface SyncTeXForwardResult {
+export interface SyncTeXForwardResult {
   page: number
   x: number
   y: number
 }
 
-interface SyncTeXInverseResult {
+export interface SyncTeXInverseResult {
   file: string
   line: number
   column: number
 }
 
-interface DocumentSymbolNode {
+export interface DocumentSymbolNode {
   name: string
   detail: string
   kind: number
@@ -220,6 +222,8 @@ interface DocumentSymbolNode {
   children: DocumentSymbolNode[]
 }
 
-interface Window {
-  api: ElectronAPI
+declare global {
+  interface Window {
+    api: ElectronAPI
+  }
 }

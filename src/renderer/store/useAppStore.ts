@@ -1,4 +1,12 @@
-/// <reference path="../types/api.d.ts" />
+import type {
+  BibEntry,
+  DirectoryEntry,
+  LabelInfo,
+  Diagnostic,
+  PackageData,
+  GitStatusResult,
+  DocumentSymbolNode
+} from '../types/api'
 import { create } from 'zustand'
 import { subscribeWithSelector, persist } from 'zustand/middleware'
 
