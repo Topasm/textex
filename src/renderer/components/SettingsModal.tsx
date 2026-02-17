@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../store/useAppStore'
 import type { UserSettings } from '../types/api';
-import { X, Moon, Sun, Monitor, Type, Zap, Link, Check, Palette, Settings as SettingsIcon } from 'lucide-react';
+import { X, Moon, Sun, Monitor, Type, Zap, Link, Check, Palette, Settings as SettingsIcon, User } from 'lucide-react';
 
 export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
     const settings = useAppStore((state) => state.settings);
     const updateSetting = useAppStore((state) => state.updateSetting);
-    const [activeTab, setActiveTab] = useState<'appearance' | 'editor' | 'integrations' | 'automation'>('appearance');
+    const [activeTab, setActiveTab] = useState<'general' | 'appearance' | 'editor' | 'integrations' | 'automation'>('general');
 
     const tabs = [
+        { id: 'general', label: 'General', icon: User },
         { id: 'appearance', label: 'Appearance', icon: Palette },
         { id: 'editor', label: 'Editor', icon: Type },
         { id: 'integrations', label: 'Integrations', icon: Link },
@@ -58,6 +59,59 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
 
                     {/* Content */}
                     <div className="flex-1 overflow-y-auto p-8 bg-white dark:bg-[#1e1e1e]">
+                        {activeTab === 'general' && (
+                            <div className="space-y-6 animate-fadeIn">
+                                <div className="p-4 bg-gray-50 dark:bg-blue-900/10 rounded-xl border border-gray-100 dark:border-blue-900/30">
+                                    <div className="flex items-start gap-4">
+                                        <div className="p-2 bg-white dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400 shadow-sm">
+                                            <User size={24} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1">User Information</h3>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-6">
+                                                These details will be used in templates and document metadata.
+                                            </p>
+
+                                            <div className="space-y-4 max-w-lg">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Full Name</label>
+                                                    <div className="relative">
+                                                        <input
+                                                            type="text"
+                                                            value={settings.name}
+                                                            onChange={(e) => updateSetting('name', e.target.value)}
+                                                            placeholder="e.g. Jane Doe"
+                                                            className="w-full pl-3 pr-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition-all"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Email Address</label>
+                                                    <input
+                                                        type="email"
+                                                        value={settings.email}
+                                                        onChange={(e) => updateSetting('email', e.target.value)}
+                                                        placeholder="e.g. jane@example.com"
+                                                        className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition-all"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Affiliation</label>
+                                                    <input
+                                                        type="text"
+                                                        value={settings.affiliation}
+                                                        onChange={(e) => updateSetting('affiliation', e.target.value)}
+                                                        placeholder="e.g. University of Technology"
+                                                        className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition-all"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {activeTab === 'appearance' && (
                             <div className="space-y-8 animate-fadeIn">
                                 <div>

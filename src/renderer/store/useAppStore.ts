@@ -1,5 +1,6 @@
 import type {
   BibEntry,
+  CitationGroup,
   DirectoryEntry,
   LabelInfo,
   Diagnostic,
@@ -22,6 +23,11 @@ export interface UserSettings {
   theme: Theme
   pdfInvertMode: boolean // For "Night Mode" reading
 
+  // User Info
+  name: string
+  email: string
+  affiliation: string
+
   // Editor
   fontSize: number
   wordWrap: boolean
@@ -42,12 +48,15 @@ export interface UserSettings {
   zoteroPort: number
 
   // Bibliography grouping
-  bibGroupMode: 'flat' | 'author' | 'year' | 'type'
+  bibGroupMode: 'flat' | 'author' | 'year' | 'type' | 'custom'
 }
 
 const defaultSettings: UserSettings = {
   theme: 'system',
   pdfInvertMode: false,
+  name: '',
+  email: '',
+  affiliation: '',
   fontSize: 14,
   wordWrap: true,
   vimMode: false,
@@ -106,6 +115,9 @@ interface AppState {
 
   // BibTeX
   bibEntries: BibEntry[]
+
+  // Citation Groups
+  citationGroups: CitationGroup[]
 
   // Labels
   labels: LabelInfo[]
@@ -186,6 +198,9 @@ interface AppState {
   // BibTeX
   setBibEntries: (entries: BibEntry[]) => void
 
+  // Citation Groups
+  setCitationGroups: (groups: CitationGroup[]) => void
+
   // Labels
   setLabels: (labels: LabelInfo[]) => void
 
@@ -258,6 +273,9 @@ export const useAppStore = create<AppState>()(
 
       // BibTeX
       bibEntries: [],
+
+      // Citation Groups
+      citationGroups: [],
 
       // Labels
       labels: [],
@@ -468,6 +486,9 @@ export const useAppStore = create<AppState>()(
 
       // BibTeX
       setBibEntries: (bibEntries) => set({ bibEntries }),
+
+      // Citation Groups
+      setCitationGroups: (citationGroups) => set({ citationGroups }),
 
       // Labels
       setLabels: (labels) => set({ labels }),

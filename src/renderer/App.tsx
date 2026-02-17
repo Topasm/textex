@@ -320,6 +320,13 @@ function App() {
         useAppStore.getState().setBibEntries(entries)
       })
       .catch(() => { })
+    // Also load citation groups
+    window.api
+      .loadCitationGroups(projectRoot)
+      .then((groups) => {
+        useAppStore.getState().setCitationGroups(groups)
+      })
+      .catch(() => { })
   }, [projectRoot])
 
   // ---- LSP lifecycle ----

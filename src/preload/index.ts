@@ -179,6 +179,12 @@ contextBridge.exposeInMainWorld('api', {
   zoteroExportBibtex: (citekeys: string[], port?: number) =>
     ipcRenderer.invoke('zotero:export-bibtex', citekeys, port),
 
+  // Citation Groups
+  loadCitationGroups: (projectRoot: string) =>
+    ipcRenderer.invoke('citgroups:load', projectRoot),
+  saveCitationGroups: (projectRoot: string, groups: { id: string; name: string; citekeys: string[] }[]) =>
+    ipcRenderer.invoke('citgroups:save', projectRoot, groups),
+
   // Shell
   openExternal: (url: string) => ipcRenderer.invoke('shell:open-external', url)
 })

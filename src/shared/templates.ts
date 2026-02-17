@@ -18,7 +18,7 @@ export const templates: Template[] = [
 \\usepackage[margin=1in]{geometry}
 
 \\title{Your Title Here}
-\\author{Author Name}
+\\author{{{AUTHOR}}}
 \\date{\\today}
 
 \\begin{document}
@@ -57,7 +57,7 @@ Start writing your introduction here.
 \\usepackage[margin=1in]{geometry}
 
 \\title{Report Title}
-\\author{Author Name}
+\\author{{{AUTHOR}}}
 \\date{\\today}
 
 \\begin{document}
@@ -97,8 +97,8 @@ Begin your report here.
 
 \\title{Presentation Title}
 \\subtitle{Subtitle}
-\\author{Author Name}
-\\institute{Institution}
+\\author{{{AUTHOR}}}
+\\institute{{{AFFILIATION}}}
 \\date{\\today}
 
 \\begin{document}
@@ -149,7 +149,7 @@ Your content here.
 \\usepackage[utf8]{inputenc}
 \\usepackage[margin=1in]{geometry}
 
-\\signature{Your Name}
+\\signature{{{AUTHOR}}}
 \\address{Your Address \\\\ City, State ZIP}
 
 \\begin{document}
@@ -188,8 +188,8 @@ Write your letter content here.
 \\begin{document}
 
 \\begin{center}
-  {\\Huge\\bfseries Your Name}\\\\[4pt]
-  your.email@example.com \\quad | \\quad +1 (555) 000-0000 \\quad | \\quad City, Country
+  {\\Huge\\bfseries {{AUTHOR}}}\\\\[4pt]
+  {{EMAIL}} \\quad | \\quad +1 (555) 000-0000 \\quad | \\quad City, Country
 \\end{center}
 
 \\cvSection{Education}

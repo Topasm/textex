@@ -1868,3 +1868,122 @@ body,
 .bib-year {
   color: var(--text-secondary);
 }
+
+/* Custom citation groups */
+.bib-custom-toolbar {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.bib-new-group-btn {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.bib-new-group-btn:hover {
+  background-color: var(--bg-hover);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.bib-custom-group-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bib-group-delete-btn {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s, background-color 0.15s;
+}
+
+.bib-group-header:hover .bib-group-delete-btn {
+  opacity: 1;
+}
+
+.bib-group-delete-btn:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.bib-rename-input {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 4px;
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  outline: none;
+}
+
+.bib-entry-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.bib-entry-action-btn {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s, background-color 0.15s;
+}
+
+.bib-entry:hover .bib-entry-action-btn {
+  opacity: 1;
+}
+
+.bib-entry-action-btn:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.bib-entry-add-btn {
+  color: var(--accent);
+}
+
+.bib-ungrouped-header {
+  border-top: 2px solid var(--border);
+  margin-top: 4px;
+  cursor: pointer;
+  font-style: italic;
+}
+
+.bib-ungrouped-header .bib-group-label {
+  color: var(--text-secondary);
+}

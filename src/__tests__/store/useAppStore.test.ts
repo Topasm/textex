@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useAppStore } from '../../renderer/store/useAppStore'
+import { useAppStore, Theme, UserSettings } from '../../renderer/store/useAppStore'
+import type { Diagnostic, DocumentSymbolNode } from '../../shared/types'
 
 const initialState = {
   filePath: null,
@@ -17,7 +18,24 @@ const initialState = {
   synctexHighlight: null,
   splitRatio: 0.5,
   zoomLevel: 100,
-  documentSymbols: []
+  documentSymbols: [],
+  settings: {
+    theme: 'system' as Theme,
+    pdfInvertMode: false,
+    name: '',
+    email: '',
+    affiliation: '',
+    fontSize: 14,
+    wordWrap: true,
+    vimMode: false,
+    formatOnSave: true,
+    autoCompile: true,
+    spellCheckEnabled: false,
+    lspEnabled: true,
+    zoteroEnabled: false,
+    zoteroPort: 23119,
+    bibGroupMode: 'flat'
+  } as UserSettings
 }
 
 beforeEach(() => {
@@ -464,6 +482,24 @@ describe('useAppStore', () => {
       const state = useAppStore.getState()
       expect(state.openFiles['/path/b.tex'].content).toBe('modified B')
       expect(state.openFiles['/path/a.tex'].content).toBe('content A')
+    })
+  })
+
+  describe('updateSetting', () => {
+    it('updates user info settings', () => {
+      useAppStore.getState().updateSetting('name', 'John Doe')
+      useAppStore.getState().updateSetting('email', 'john@example.com')
+      useAppStore.getState().updateSetting('affiliation', 'OpenAI')
+
+      const settings = useAppStore.getState().settings
+      expect(settings.name).toBe('John Doe')
+      expect(settings.email).toBe('john@example.com')
+      expect(settings.affiliation).toBe('OpenAI')
+    })
+
+    it('updates other settings', () => {
+      useAppStore.getState().updateSetting('fontSize', 20)
+      expect(useAppStore.getState().settings.fontSize).toBe(20)
     })
   })
 })

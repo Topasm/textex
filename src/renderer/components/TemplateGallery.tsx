@@ -10,9 +10,15 @@ function TemplateGallery() {
     async (content: string) => {
       // Save as new file from template
       try {
-        const result = await window.api.saveFileAs(content)
+        const settings = useAppStore.getState().settings
+        let finalContent = content
+          .replace(/{{AUTHOR}}/g, settings.name || 'Author Name')
+          .replace(/{{EMAIL}}/g, settings.email || 'your.email@example.com')
+          .replace(/{{AFFILIATION}}/g, settings.affiliation || 'Institution')
+
+        const result = await window.api.saveFileAs(finalContent)
         if (result) {
-          useAppStore.getState().openFileInTab(result.filePath, content)
+          useAppStore.getState().openFileInTab(result.filePath, finalContent)
           useAppStore.getState().setDirty(false)
         }
       } catch {

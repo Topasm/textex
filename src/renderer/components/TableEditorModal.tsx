@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DataGrid } from 'react-data-grid';
+import { DataGrid, Column } from 'react-data-grid';
 import 'react-data-grid/lib/styles.css';
 import { parseLatexTable, generateLatexTable, TableData } from '../../shared/tableParser';
 
@@ -15,7 +15,7 @@ interface GridRow {
 
 export const TableEditorModal = ({ initialLatex, onApply, onClose }: Props) => {
     const [data, setData] = useState<TableData>({ rows: [], alignment: '' });
-    const [columns, setColumns] = useState<any[]>([]);
+    const [columns, setColumns] = useState<Column<GridRow>[]>([]);
     const [rows, setRows] = useState<GridRow[]>([]);
 
     useEffect(() => {

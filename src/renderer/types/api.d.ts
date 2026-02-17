@@ -182,8 +182,18 @@ export interface ElectronAPI {
   zoteroCiteCAYW(port?: number): Promise<string>
   zoteroExportBibtex(citekeys: string[], port?: number): Promise<string>
 
+  // Citation Groups
+  loadCitationGroups(projectRoot: string): Promise<CitationGroup[]>
+  saveCitationGroups(projectRoot: string, groups: CitationGroup[]): Promise<{ success: boolean }>
+
   // Shell
   openExternal(url: string): Promise<{ success: boolean }>
+}
+
+export interface CitationGroup {
+  id: string
+  name: string
+  citekeys: string[]
 }
 
 export interface ZoteroSearchResult {

@@ -161,7 +161,7 @@ function EditorPane() {
     // Monaco doesn't expose hasCommand easily, so we just try to register.
     // However, registerCommand is global. If we have multiple instances, this is tricky.
     // For now, simple registration.
-    const command = monaco.editor.registerCommand('textex.openTableEditor', (_: any, startIndex: number) => {
+    const command = monaco.editor.registerCommand('textex.openTableEditor', (_: unknown, startIndex: number) => {
       const model = editor.getModel()
       if (!model) return
 
@@ -189,15 +189,37 @@ function EditorPane() {
       }
     })
     tableEditorDisposablesRef.current.push(command)
+
+    // Register Insert User Info Command
+    const insertUserInfoCommand = editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyI, () => {
+      const settings = useAppStore.getState().settings
+      const userInfo = `
+% User Information
+% Name: ${settings.name}
+% Email: ${settings.email}
+% Affiliation: ${settings.affiliation}
+\\author{${settings.name}${settings.affiliation ? ` \\\\ ${settings.affiliation}` : ''}${settings.email ? ` \\\\ \\texttt{${settings.email}}` : ''}}
+`
+      const position = editor.getPosition()
+      if (position) {
+        editor.executeEdits('insert-user-info', [{
+          range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+          text: userInfo,
+          forceMoveMarkers: true
+        }])
+      }
+    })
+    // We don't need to dispose addCommand results usually, but good to keep track if we detached
   }
 
   useEffect(() => {
     const completionDisposables = completionDisposablesRef
+    const tableEditorDisposables = tableEditorDisposablesRef.current
     return () => {
       cursorDisposableRef.current?.dispose()
       mouseDisposableRef.current?.dispose()
       for (const d of completionDisposables.current) d.dispose()
-      for (const d of tableEditorDisposablesRef.current) d.dispose()
+      for (const d of tableEditorDisposables) d.dispose()
       stopLspClient()
     }
   }, [])
