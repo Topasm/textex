@@ -1468,27 +1468,47 @@ body,
 
 /* Structure Panel */
 .structure-panel {
-  padding: 4px 0;
+  padding: 6px 0;
   overflow-y: auto;
 }
+
 
 .structure-item {
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 2px 8px;
+  gap: 4px;
+  padding: 4px 10px;
   font-size: 13px;
   cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  transition: background-color 0.1s;
+  transition: background-color 0.12s;
+  position: relative;
+  min-height: 26px;
+  border-left: 2px solid transparent;
 }
 
 .structure-item:hover {
   background-color: var(--sidebar-hover);
 }
 
+.structure-item:active {
+  border-left-color: var(--accent);
+}
+
+/* Indent guide lines */
+.structure-indent-guide {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: var(--file-tree-indent);
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+/* Toggle chevron */
 .structure-toggle {
   display: inline-flex;
   align-items: center;
@@ -1501,7 +1521,19 @@ body,
   color: var(--text-secondary);
   cursor: pointer;
   padding: 0;
-  font-size: 10px;
+  font-size: 8px;
+  transition: transform 0.15s ease, color 0.1s;
+  transform: rotate(0deg);
+  border-radius: 3px;
+}
+
+.structure-toggle:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-hover);
+}
+
+.structure-toggle-expanded {
+  transform: rotate(90deg);
 }
 
 .structure-toggle-spacer {
@@ -1510,14 +1542,39 @@ body,
   flex-shrink: 0;
 }
 
+/* Icon base */
 .structure-icon {
   flex-shrink: 0;
-  width: 16px;
+  width: 18px;
   text-align: center;
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* Color-coded icons per symbol kind */
+.structure-icon-section {
+  color: var(--accent);
+}
+
+.structure-icon-env {
+  color: var(--success);
+}
+
+.structure-icon-math {
+  color: var(--warning);
+}
+
+.structure-icon-label {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.structure-icon-default {
   color: var(--text-secondary);
 }
 
+/* Name */
 .structure-name {
   flex: 1;
   overflow: hidden;
@@ -1525,11 +1582,20 @@ body,
   color: var(--text-primary);
 }
 
+/* Detail badge (label name, e.g. sec:intro) */
 .structure-detail {
   flex-shrink: 0;
-  font-size: 11px;
-  color: var(--text-secondary);
-  margin-left: 8px;
+  font-size: 10px;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  color: var(--text-kbd);
+  margin-left: 6px;
+  padding: 1px 6px;
+  background-color: var(--bg-hover);
+  border-radius: 8px;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Update Notification */

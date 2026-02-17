@@ -577,6 +577,26 @@ function App() {
   // ---- Sidebar resize drag logic ----
   const isSidebarDragging = useRef(false)
 
+  // ---- Sidebar trackpad swipe to switch tabs ----
+  const sidebarSwipeAccum = useRef(0)
+  const SWIPE_THRESHOLD = 50
+
+  const handleSidebarWheel = useCallback((e: React.WheelEvent) => {
+    // Only respond to horizontal scroll (trackpad two-finger slide)
+    if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return
+
+    sidebarSwipeAccum.current += e.deltaX
+    if (Math.abs(sidebarSwipeAccum.current) >= SWIPE_THRESHOLD) {
+      const direction = sidebarSwipeAccum.current > 0 ? 1 : -1
+      sidebarSwipeAccum.current = 0
+      const s = useAppStore.getState()
+      const tabs: SidebarView[] = ['files', 'git', 'bib', 'structure', 'todo', 'memo']
+      const idx = tabs.indexOf(s.sidebarView)
+      const next = tabs[(idx + direction + tabs.length) % tabs.length]
+      s.setSidebarView(next)
+    }
+  }, [])
+
   const handleSidebarDividerMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     isSidebarDragging.current = true
@@ -653,7 +673,7 @@ function App() {
         <div className="workspace">
           {(isSidebarOpen || autoHideSidebar) && (
             <div className={`sidebar-wrapper${autoHideSidebar ? ' sidebar-auto-hide' : ''}`}>
-              <div className="sidebar" style={{ width: `${sidebarWidth}px` }}>
+              <div className="sidebar" style={{ width: `${sidebarWidth}px` }} onWheel={handleSidebarWheel}>
                 <div className="sidebar-tabs">
                   {sidebarTabs.map((tab) => (
                     <button

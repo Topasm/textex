@@ -119,7 +119,18 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
                                         ].map((mode) => (
                                             <button
                                                 key={mode.id}
-                                                onClick={() => updateSetting('theme', mode.id as UserSettings['theme'])}
+                                                onClick={() => {
+                                                    const newTheme = mode.id as UserSettings['theme'];
+                                                    updateSetting('theme', newTheme);
+                                                    if (newTheme === 'dark') {
+                                                        updateSetting('pdfInvertMode', true);
+                                                    } else if (newTheme === 'light') {
+                                                        updateSetting('pdfInvertMode', false);
+                                                    } else if (newTheme === 'system') {
+                                                        const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                                                        updateSetting('pdfInvertMode', isSystemDark);
+                                                    }
+                                                }}
                                                 className={`settings-theme-card${settings.theme === mode.id ? ' selected' : ''}`}
                                             >
                                                 <div className="settings-theme-card-icon">
