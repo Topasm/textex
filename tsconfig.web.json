@@ -4,15 +4,22 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "target": "ESNext",
-    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "jsx": "react-jsx",
     "outDir": "./out",
-    "rootDir": "./src/renderer",
+    "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true
   },
-  "include": ["src/renderer/**/*"]
+  "include": [
+    "src/renderer/**/*",
+    "src/shared/**/*"
+  ]
 }

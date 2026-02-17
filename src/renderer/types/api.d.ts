@@ -175,41 +175,37 @@ interface ElectronAPI {
   removeLspStatusListener(): void
 }
 
-declare global {
-  type DiagnosticSeverity = 'error' | 'warning' | 'info'
+type DiagnosticSeverity = 'error' | 'warning' | 'info'
 
-  interface Diagnostic {
-    file: string
-    line: number
-    column?: number
-    severity: DiagnosticSeverity
-    message: string
-  }
-
-  interface SyncTeXForwardResult {
-    page: number
-    x: number
-    y: number
-  }
-
-  interface SyncTeXInverseResult {
-    file: string
-    line: number
-    column: number
-  }
-
-  interface DocumentSymbolNode {
-    name: string
-    detail: string
-    kind: number
-    range: { startLine: number; startColumn: number; endLine: number; endColumn: number }
-    selectionRange: { startLine: number; startColumn: number; endLine: number; endColumn: number }
-    children: DocumentSymbolNode[]
-  }
-
-  interface Window {
-    api: ElectronAPI
-  }
+interface Diagnostic {
+  file: string
+  line: number
+  column?: number
+  severity: DiagnosticSeverity
+  message: string
 }
 
-export {}
+interface SyncTeXForwardResult {
+  page: number
+  x: number
+  y: number
+}
+
+interface SyncTeXInverseResult {
+  file: string
+  line: number
+  column: number
+}
+
+interface DocumentSymbolNode {
+  name: string
+  detail: string
+  kind: number
+  range: { startLine: number; startColumn: number; endLine: number; endColumn: number }
+  selectionRange: { startLine: number; startColumn: number; endLine: number; endColumn: number }
+  children: DocumentSymbolNode[]
+}
+
+interface Window {
+  api: ElectronAPI
+}

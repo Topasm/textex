@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { Settings } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 
 interface ToolbarProps {
@@ -11,6 +12,7 @@ interface ToolbarProps {
   onToggleTheme: () => void
   onNewFromTemplate: () => void
   onExport: (format: string) => void
+  onOpenSettings: () => void
 }
 
 const exportFormats = [
@@ -29,12 +31,13 @@ function Toolbar({
   onOpenFolder,
   onToggleTheme,
   onNewFromTemplate,
-  onExport
+  onExport,
+  onOpenSettings
 }: ToolbarProps) {
   const filePath = useAppStore((s) => s.filePath)
   const isDirty = useAppStore((s) => s.isDirty)
   const compileStatus = useAppStore((s) => s.compileStatus)
-  const theme = useAppStore((s) => s.theme)
+  const theme = useAppStore((s) => s.settings.theme)
 
   const [isExportOpen, setIsExportOpen] = useState(false)
   const exportRef = useRef<HTMLDivElement>(null)
@@ -127,6 +130,12 @@ function Toolbar({
 
       <button onClick={onToggleTheme} title="Toggle theme">
         Theme: {themeLabel}
+      </button>
+
+      <span className="toolbar-separator" />
+
+      <button onClick={onOpenSettings} title="Settings" className="p-1">
+        <Settings size={16} />
       </button>
 
       <span className="file-name">

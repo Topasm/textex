@@ -31,8 +31,7 @@ export class IpcMessageWriter extends AbstractMessageWriter implements MessageWr
       await window.api.lspSend(msg as object)
     } catch (err) {
       this.fireError(
-        [err instanceof Error ? err : new Error(String(err)), msg, undefined],
-        0
+        err instanceof Error ? err : new Error(String(err))
       )
     }
   }

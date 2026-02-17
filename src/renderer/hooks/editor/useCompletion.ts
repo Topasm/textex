@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import type { editor as monacoEditor } from 'monaco-editor'
+import type { editor as monacoEditor, languages as monacoLanguages } from 'monaco-editor'
 import { snippets } from '../../data/snippets'
 import { environments } from '../../data/environments'
 import { registerHoverProvider } from '../../providers/hoverProvider'
@@ -175,9 +175,9 @@ export function useCompletion(
     const codeActionDisposable = monaco.languages.registerCodeActionProvider('latex', {
       provideCodeActions: async (model, range, context) => {
         const spellMarkers = context.markers.filter((m) => m.source === 'spellcheck')
-        if (spellMarkers.length === 0) return { actions: [], dispose: () => {} }
+        if (spellMarkers.length === 0) return { actions: [], dispose: () => { } }
 
-        const actions: monacoEditor.ICodeAction[] = []
+        const actions: monacoLanguages.CodeAction[] = []
         for (const marker of spellMarkers) {
           const word = model.getValueInRange({
             startLineNumber: marker.startLineNumber,
@@ -225,7 +225,7 @@ export function useCompletion(
             // ignore
           }
         }
-        return { actions, dispose: () => {} }
+        return { actions, dispose: () => { } }
       }
     })
     disposables.push(codeActionDisposable)

@@ -61,7 +61,7 @@ export function useClickNavigation(): (editor: monacoEditor.IStandaloneCodeEdito
           window.api.readFile(label.file).then((result) => {
             useAppStore.getState().openFileInTab(result.filePath, result.content)
             setTimeout(() => useAppStore.getState().requestJumpToLine(label.line, 1), 50)
-          }).catch(() => {})
+          }).catch(() => { })
           return
         }
       }
@@ -73,9 +73,10 @@ export function useClickNavigation(): (editor: monacoEditor.IStandaloneCodeEdito
           window.api.readFile(entry.file).then((result) => {
             useAppStore.getState().openFileInTab(result.filePath, result.content)
             if (entry.line) {
-              setTimeout(() => useAppStore.getState().requestJumpToLine(entry.line, 1), 50)
+              const line = entry.line
+              setTimeout(() => useAppStore.getState().requestJumpToLine(line, 1), 50)
             }
-          }).catch(() => {})
+          }).catch(() => { })
           return
         }
       }
@@ -89,7 +90,7 @@ export function useClickNavigation(): (editor: monacoEditor.IStandaloneCodeEdito
           : `${state.projectRoot}/${resolvedPath}`
         window.api.readFile(fullPath).then((result) => {
           useAppStore.getState().openFileInTab(result.filePath, result.content)
-        }).catch(() => {})
+        }).catch(() => { })
         return
       }
 

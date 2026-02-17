@@ -14,9 +14,9 @@ function StatusBar() {
   const diagnostics = useAppStore((s) => s.diagnostics)
   const isGitRepo = useAppStore((s) => s.isGitRepo)
   const gitBranch = useAppStore((s) => s.gitBranch)
-  const spellCheckEnabled = useAppStore((s) => s.spellCheckEnabled)
+  const spellCheckEnabled = useAppStore((s) => s.settings.spellCheckEnabled)
   const lspStatus = useAppStore((s) => s.lspStatus)
-  const lspEnabled = useAppStore((s) => s.lspEnabled)
+  const lspEnabled = useAppStore((s) => s.settings.lspEnabled)
 
   const { dotClass, label } = STATUS_CONFIG[compileStatus]
 
@@ -66,14 +66,14 @@ function StatusBar() {
         )}
         <span
           className="status-spellcheck"
-          onClick={() => useAppStore.getState().setSpellCheckEnabled(!spellCheckEnabled)}
+          onClick={() => useAppStore.getState().updateSetting('spellCheckEnabled', !spellCheckEnabled)}
           title="Toggle spell check"
           role="button"
           tabIndex={0}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault()
-              useAppStore.getState().setSpellCheckEnabled(!spellCheckEnabled)
+              useAppStore.getState().updateSetting('spellCheckEnabled', !spellCheckEnabled)
             }
           }}
         >

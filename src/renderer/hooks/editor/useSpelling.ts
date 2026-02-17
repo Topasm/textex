@@ -25,7 +25,7 @@ export function useSpelling({ content, enabled, editorRef, monacoRef }: UseSpell
     const model = editor.getModel()
     if (!model) return
 
-    if (!useAppStore.getState().spellCheckEnabled) {
+    if (!useAppStore.getState().settings.spellCheckEnabled) {
       const existing = monaco.editor.getModelMarkers({ owner: 'spellcheck' })
       if (existing.length > 0) {
         monaco.editor.setModelMarkers(model, 'spellcheck', [])

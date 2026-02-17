@@ -1,5 +1,6 @@
 import Editor, { BeforeMount, OnMount } from '@monaco-editor/react'
 import { useEffect, useRef } from 'react'
+import { formatLatex } from '../utils/formatter'
 import { useAppStore } from '../store/useAppStore'
 import { stopLspClient } from '../lsp/lspClient'
 import { useClickNavigation } from '../hooks/editor/useClickNavigation'
@@ -25,9 +26,10 @@ function EditorPane() {
   const content = useAppStore((s) => s.content)
   const setContent = useAppStore((s) => s.setContent)
   const setCursorPosition = useAppStore((s) => s.setCursorPosition)
-  const theme = useAppStore((s) => s.theme)
-  const fontSize = useAppStore((s) => s.fontSize)
-  const spellCheckEnabled = useAppStore((s) => s.spellCheckEnabled)
+  const settings = useAppStore((s) => s.settings)
+  const theme = settings.theme
+  const fontSize = settings.fontSize
+  const spellCheckEnabled = settings.spellCheckEnabled
   const editorRef = useRef<monacoEditor.IStandaloneCodeEditor | null>(null)
   const monacoRef = useRef<MonacoInstance | null>(null)
   const cursorDisposableRef = useRef<{ dispose(): void } | null>(null)
@@ -91,6 +93,20 @@ function EditorPane() {
 
     mouseDisposableRef.current = registerClickNavigation(editor)
     completionDisposablesRef.current.push(...registerCompletionProviders(editor, monaco))
+
+    // Register Format Command
+    editor.addCommand(monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyF, async () => {
+      const model = editor.getModel()
+      if (!model) return
+      const text = model.getValue()
+      const formatted = await formatLatex(text)
+
+      editor.executeEdits('prettier', [{
+        range: model.getFullModelRange(),
+        text: formatted,
+        forceMoveMarkers: true
+      }])
+    })
   }
 
   useEffect(() => {
@@ -114,21 +130,20 @@ function EditorPane() {
       <Editor
         height="100%"
         defaultLanguage="latex"
-        theme={getMonacoTheme(theme)}
+        theme={getMonacoTheme(theme === 'system' ? 'light' : theme)} // Fallback for system theme logic
         value={content}
         onChange={handleChange}
         beforeMount={handleEditorWillMount}
         onMount={handleEditorDidMount}
         options={{
-          wordWrap: 'on',
-          minimap: { enabled: false },
           fontSize,
           lineNumbers: 'on',
           scrollBeyondLastLine: false,
           automaticLayout: true,
           quickSuggestions: true,
           suggestOnTriggerCharacters: true,
-          padding: { top: 8 }
+          padding: { top: 8 },
+          wordWrap: settings.wordWrap ? 'on' : 'off',
         }}
       />
     </div>

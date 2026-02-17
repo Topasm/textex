@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Toolbar from './components/Toolbar'
 import EditorPane from './components/EditorPane'
 import PreviewPane from './components/PreviewPane'
@@ -14,6 +14,7 @@ import UpdateNotification from './components/UpdateNotification'
 import PreviewErrorBoundary from './components/PreviewErrorBoundary'
 import { useAutoCompile } from './hooks/useAutoCompile'
 import { useFileOps } from './hooks/useFileOps'
+import { SettingsModal } from './components/SettingsModal'
 import { useAppStore } from './store/useAppStore'
 import type { SidebarView, LspStatus } from './store/useAppStore'
 import { startLspClient, stopLspClient, lspNotifyDidOpen, lspNotifyDidClose, lspNotifyDidChange, lspRequestDocumentSymbols } from './lsp/lspClient'
@@ -24,6 +25,7 @@ function errorMessage(err: unknown): string {
 }
 
 function App() {
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   useAutoCompile()
   const { handleOpen, handleSave, handleSaveAs } = useFileOps()
 
@@ -35,7 +37,7 @@ function App() {
   const filePath = useAppStore((s) => s.filePath)
   const projectRoot = useAppStore((s) => s.projectRoot)
   const isGitRepo = useAppStore((s) => s.isGitRepo)
-  const lspEnabled = useAppStore((s) => s.lspEnabled)
+  const lspEnabled = useAppStore((s) => s.settings.lspEnabled)
   const prevFilePathRef = useRef<string | null>(null)
 
   // ---- Compile handler ----
@@ -57,7 +59,7 @@ function App() {
       if (root) {
         window.api.scanLabels(root).then((labels) => {
           useAppStore.getState().setLabels(labels)
-        }).catch(() => {})
+        }).catch(() => { })
       }
     } catch (err: unknown) {
       const s = useAppStore.getState()
@@ -137,8 +139,9 @@ function App() {
 
   const handleToggleTheme = useCallback((): void => {
     const s = useAppStore.getState()
-    const next = s.theme === 'dark' ? 'light' : s.theme === 'light' ? 'high-contrast' : 'dark'
-    s.setTheme(next)
+    const currentTheme = s.settings.theme
+    const next = currentTheme === 'dark' ? 'light' : currentTheme === 'light' ? 'high-contrast' : 'dark'
+    s.updateSetting('theme', next)
   }, [])
 
   const handleExport = useCallback(async (format: string): Promise<void> => {
@@ -155,14 +158,18 @@ function App() {
     }
   }, [])
 
-  // ---- On-mount: load settings, init spell check, check updates ----
+  // ---- On-mount: init spell check, check updates ----
   useEffect(() => {
-    window.api.loadSettings().then((settings) => {
-      useAppStore.getState().loadUserSettings(settings)
-      if (settings.spellCheckEnabled) {
-        window.api.spellInit(settings.spellCheckLanguage)
-      }
-    })
+    // Settings are loaded via persist middleware automatically
+    // Initialize spell check if enabled
+    const settings = useAppStore.getState().settings
+    if (settings.spellCheckEnabled) {
+      window.api.loadSettings().then((s) => {
+        // If we still need to load language setting from backend which might not be in our new store yet
+        // Assuming spellInit takes a language code
+        window.api.spellInit(s.spellCheckLanguage || 'en-US')
+      }).catch(() => { })
+    }
     window.api.updateCheck()
   }, [])
 
@@ -251,7 +258,7 @@ function App() {
       .then((entries) => {
         useAppStore.getState().setBibEntries(entries)
       })
-      .catch(() => {})
+      .catch(() => { })
   }, [projectRoot])
 
   // ---- LSP lifecycle ----
@@ -270,7 +277,7 @@ function App() {
         monacoInstance,
         () => useAppStore.getState().filePath,
         () => useAppStore.getState().content
-      ).catch(() => {})
+      ).catch(() => { })
     })
 
     return () => {
@@ -299,7 +306,7 @@ function App() {
         clearTimeout(timer)
         timer = setTimeout(() => {
           const state = useAppStore.getState()
-          if (state.filePath && state.lspEnabled) {
+          if (state.filePath && state.settings.lspEnabled) {
             lspNotifyDidChange(state.filePath, newContent)
           }
         }, 300)
@@ -323,7 +330,7 @@ function App() {
     if (filePath) {
       lspNotifyDidOpen(filePath, useAppStore.getState().content)
       const state = useAppStore.getState()
-      if (state.lspEnabled && state.lspStatus === 'running') {
+      if (state.settings.lspEnabled && state.lspStatus === 'running') {
         const switchedFile = filePath
         const timer = setTimeout(() => {
           if (useAppStore.getState().filePath === switchedFile) {
@@ -489,7 +496,9 @@ function App() {
         onToggleTheme={handleToggleTheme}
         onNewFromTemplate={() => useAppStore.getState().toggleTemplateGallery()}
         onExport={handleExport}
+        onOpenSettings={() => setIsSettingsOpen(true)}
       />
+      {isSettingsOpen && <SettingsModal onClose={() => setIsSettingsOpen(false)} />}
       <UpdateNotification />
       <div className="workspace">
         {isSidebarOpen && (

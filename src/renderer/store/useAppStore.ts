@@ -1,12 +1,46 @@
+/// <reference path="../types/api.d.ts" />
 import { create } from 'zustand'
-import { subscribeWithSelector } from 'zustand/middleware'
+import { subscribeWithSelector, persist } from 'zustand/middleware'
 
 export type CompileStatus = 'idle' | 'compiling' | 'success' | 'error'
-export type Theme = 'dark' | 'light' | 'high-contrast'
+export type Theme = 'system' | 'dark' | 'light' | 'high-contrast'
 export type SidebarView = 'files' | 'git' | 'bib' | 'structure'
 export type UpdateStatus = 'idle' | 'available' | 'downloading' | 'ready' | 'error'
 export type ExportStatus = 'idle' | 'exporting' | 'success' | 'error'
 export type LspStatus = 'stopped' | 'starting' | 'running' | 'error'
+
+export interface UserSettings {
+  // Appearance
+  theme: Theme
+  pdfInvertMode: boolean // For "Night Mode" reading
+
+  // Editor
+  fontSize: number
+  wordWrap: boolean
+  vimMode: boolean
+
+  // Automation
+  formatOnSave: boolean
+  autoCompile: boolean
+
+  // Spell check
+  spellCheckEnabled: boolean
+
+  // LSP
+  lspEnabled: boolean
+}
+
+const defaultSettings: UserSettings = {
+  theme: 'system',
+  pdfInvertMode: false,
+  fontSize: 14,
+  wordWrap: true,
+  vimMode: false,
+  formatOnSave: true,
+  autoCompile: true,
+  spellCheckEnabled: false,
+  lspEnabled: true
+}
 
 interface OpenFileData {
   content: string
@@ -49,8 +83,8 @@ interface AppState {
   zoomLevel: number
 
   // Settings
-  theme: Theme
-  fontSize: number
+  settings: UserSettings
+  updateSetting: <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => void
 
   // BibTeX
   bibEntries: BibEntry[]
@@ -61,9 +95,6 @@ interface AppState {
   // Package data
   packageData: Record<string, PackageData>
   detectedPackages: string[]
-
-  // Spell check
-  spellCheckEnabled: boolean
 
   // Git
   isGitRepo: boolean
@@ -84,7 +115,6 @@ interface AppState {
   // LSP
   lspStatus: LspStatus
   lspError: string | null
-  lspEnabled: boolean
 
   // Document symbols
   documentSymbols: DocumentSymbolNode[]
@@ -129,11 +159,11 @@ interface AppState {
   zoomOut: () => void
   resetZoom: () => void
 
-  // Settings
-  setTheme: (theme: Theme) => void
+  // Settings Actions
+  // Note: Individual setters are replaced by updateSetting, but helper methods
+  // like increaseFontSize might still be useful, updated to use updateSetting.
   increaseFontSize: () => void
   decreaseFontSize: () => void
-  loadUserSettings: (settings: UserSettings) => void
 
   // BibTeX
   setBibEntries: (entries: BibEntry[]) => void
@@ -144,9 +174,6 @@ interface AppState {
   // Package data
   setPackageData: (data: Record<string, PackageData>) => void
   setDetectedPackages: (packages: string[]) => void
-
-  // Spell check
-  setSpellCheckEnabled: (enabled: boolean) => void
 
   // Git
   setIsGitRepo: (isRepo: boolean) => void
@@ -168,314 +195,303 @@ interface AppState {
   // LSP
   setLspStatus: (status: LspStatus) => void
   setLspError: (error: string | null) => void
-  setLspEnabled: (enabled: boolean) => void
 
   // Document symbols
   setDocumentSymbols: (symbols: DocumentSymbolNode[]) => void
 }
 
 export const useAppStore = create<AppState>()(
-  subscribeWithSelector((set, get) => ({
-    // File state
-    filePath: null,
-    content: '',
-    isDirty: false,
+  persist(
+    subscribeWithSelector((set, get) => ({
+      // File state
+      filePath: null,
+      content: '',
+      isDirty: false,
 
-    // Multi-file
-    projectRoot: null,
-    openFiles: {},
-    activeFilePath: null,
-    directoryTree: null,
-    isSidebarOpen: false,
-    sidebarView: 'files',
-    sidebarWidth: 240,
+      // Multi-file
+      projectRoot: null,
+      openFiles: {},
+      activeFilePath: null,
+      directoryTree: null,
+      isSidebarOpen: false,
+      sidebarView: 'files',
+      sidebarWidth: 240,
 
-    // Compile
-    compileStatus: 'idle',
-    pdfBase64: null,
-    logs: '',
-    isLogPanelOpen: false,
-    diagnostics: [],
-    logViewMode: 'structured',
+      // Compile
+      compileStatus: 'idle',
+      pdfBase64: null,
+      logs: '',
+      isLogPanelOpen: false,
+      diagnostics: [],
+      logViewMode: 'structured',
 
-    // Cursor
-    cursorLine: 1,
-    cursorColumn: 1,
+      // Cursor
+      cursorLine: 1,
+      cursorColumn: 1,
 
-    // Navigation
-    pendingJump: null,
-    synctexHighlight: null,
-    splitRatio: 0.5,
-    zoomLevel: 100,
+      // Navigation
+      pendingJump: null,
+      synctexHighlight: null,
+      splitRatio: 0.5,
+      zoomLevel: 100,
 
-    // Settings
-    theme: 'light',
-    fontSize: 14,
+      // Settings
+      settings: defaultSettings,
 
-    // BibTeX
-    bibEntries: [],
+      // BibTeX
+      bibEntries: [],
 
-    // Labels
-    labels: [],
+      // Labels
+      labels: [],
 
-    // Package data
-    packageData: {},
-    detectedPackages: [],
+      // Package data
+      packageData: {},
+      detectedPackages: [],
 
-    // Spell check
-    spellCheckEnabled: false,
+      // Git
+      isGitRepo: false,
+      gitBranch: '',
+      gitStatus: null,
 
-    // Git
-    isGitRepo: false,
-    gitBranch: '',
-    gitStatus: null,
+      // Auto-update
+      updateStatus: 'idle',
+      updateVersion: '',
+      updateProgress: 0,
 
-    // Auto-update
-    updateStatus: 'idle',
-    updateVersion: '',
-    updateProgress: 0,
+      // Export
+      exportStatus: 'idle',
 
-    // Export
-    exportStatus: 'idle',
+      // Template gallery
+      isTemplateGalleryOpen: false,
 
-    // Template gallery
-    isTemplateGalleryOpen: false,
+      // LSP
+      lspStatus: 'stopped',
+      lspError: null,
 
-    // LSP
-    lspStatus: 'stopped',
-    lspError: null,
-    lspEnabled: true,
+      // Document symbols
+      documentSymbols: [],
 
-    // Document symbols
-    documentSymbols: [],
+      // ---- Actions ----
 
-    // ---- Actions ----
-
-    setContent: (content) => {
-      const state = get()
-      const activeFile = state.activeFilePath
-      if (activeFile) {
-        const openFiles = { ...state.openFiles }
-        if (openFiles[activeFile]) {
-          openFiles[activeFile] = { ...openFiles[activeFile], content, isDirty: true }
-        }
-        set({ content, isDirty: true, openFiles })
-      } else {
-        set({ content, isDirty: true })
-      }
-    },
-    setFilePath: (filePath) => set({ filePath }),
-    setDirty: (isDirty) => {
-      const state = get()
-      const activeFile = state.activeFilePath
-      if (activeFile && state.openFiles[activeFile]) {
-        const openFiles = { ...state.openFiles }
-        openFiles[activeFile] = { ...openFiles[activeFile], isDirty }
-        set({ isDirty, openFiles })
-      } else {
-        set({ isDirty })
-      }
-    },
-
-    // Multi-file
-    setProjectRoot: (projectRoot) => set({ projectRoot }),
-    openFileInTab: (filePath, content) => {
-      const state = get()
-      const openFiles = { ...state.openFiles }
-      // Save outgoing file's content and cursor before switching
-      if (state.activeFilePath && openFiles[state.activeFilePath]) {
-        openFiles[state.activeFilePath] = {
-          ...openFiles[state.activeFilePath],
-          content: state.content,
-          cursorLine: state.cursorLine,
-          cursorColumn: state.cursorColumn
-        }
-      }
-      // Always update content from disk (handles external edits and re-opens)
-      if (openFiles[filePath]) {
-        // Preserve cursor position but refresh content from disk
-        openFiles[filePath] = { ...openFiles[filePath], content, isDirty: false }
-      } else {
-        openFiles[filePath] = { content, isDirty: false, cursorLine: 1, cursorColumn: 1 }
-      }
-      set({
-        openFiles,
-        activeFilePath: filePath,
-        filePath,
-        content: openFiles[filePath].content,
-        isDirty: openFiles[filePath].isDirty,
-        cursorLine: openFiles[filePath].cursorLine,
-        cursorColumn: openFiles[filePath].cursorColumn
-      })
-    },
-    closeTab: (filePath) => {
-      const state = get()
-      const openFiles = { ...state.openFiles }
-      delete openFiles[filePath]
-      const remaining = Object.keys(openFiles)
-
-      if (state.activeFilePath === filePath) {
-        if (remaining.length > 0) {
-          const next = remaining[remaining.length - 1]
-          set({
-            openFiles,
-            activeFilePath: next,
-            filePath: next,
-            content: openFiles[next].content,
-            isDirty: openFiles[next].isDirty,
-            cursorLine: openFiles[next].cursorLine,
-            cursorColumn: openFiles[next].cursorColumn
-          })
+      setContent: (content) => {
+        const state = get()
+        const activeFile = state.activeFilePath
+        if (activeFile) {
+          const openFiles = { ...state.openFiles }
+          if (openFiles[activeFile]) {
+            openFiles[activeFile] = { ...openFiles[activeFile], content, isDirty: true }
+          }
+          set({ content, isDirty: true, openFiles })
         } else {
-          set({
-            openFiles,
-            activeFilePath: null,
-            filePath: null,
-            content: '',
-            isDirty: false
-          })
+          set({ content, isDirty: true })
         }
-      } else {
-        set({ openFiles })
-      }
-    },
-    setActiveTab: (filePath) => {
-      const state = get()
-      // Save current content AND cursor position before switching
-      if (state.activeFilePath && state.openFiles[state.activeFilePath]) {
+      },
+      setFilePath: (filePath) => set({ filePath }),
+      setDirty: (isDirty) => {
+        const state = get()
+        const activeFile = state.activeFilePath
+        if (activeFile && state.openFiles[activeFile]) {
+          const openFiles = { ...state.openFiles }
+          openFiles[activeFile] = { ...openFiles[activeFile], isDirty }
+          set({ isDirty, openFiles })
+        } else {
+          set({ isDirty })
+        }
+      },
+
+      // Multi-file
+      setProjectRoot: (projectRoot) => set({ projectRoot }),
+      openFileInTab: (filePath, content) => {
+        const state = get()
         const openFiles = { ...state.openFiles }
-        openFiles[state.activeFilePath] = {
-          ...openFiles[state.activeFilePath],
-          content: state.content,
-          cursorLine: state.cursorLine,
-          cursorColumn: state.cursorColumn
+        // Save outgoing file's content and cursor before switching
+        if (state.activeFilePath && openFiles[state.activeFilePath]) {
+          openFiles[state.activeFilePath] = {
+            ...openFiles[state.activeFilePath],
+            content: state.content,
+            cursorLine: state.cursorLine,
+            cursorColumn: state.cursorColumn
+          }
         }
-        const fileData = openFiles[filePath]
-        if (fileData) {
-          set({
-            openFiles,
-            activeFilePath: filePath,
-            filePath,
-            content: fileData.content,
-            isDirty: fileData.isDirty,
-            cursorLine: fileData.cursorLine,
-            cursorColumn: fileData.cursorColumn
-          })
+        // Always update content from disk (handles external edits and re-opens)
+        if (openFiles[filePath]) {
+          // Preserve cursor position but refresh content from disk
+          openFiles[filePath] = { ...openFiles[filePath], content, isDirty: false }
+        } else {
+          openFiles[filePath] = { content, isDirty: false, cursorLine: 1, cursorColumn: 1 }
         }
-      } else {
-        const fileData = state.openFiles[filePath]
-        if (fileData) {
-          set({
-            activeFilePath: filePath,
-            filePath,
-            content: fileData.content,
-            isDirty: fileData.isDirty,
-            cursorLine: fileData.cursorLine,
-            cursorColumn: fileData.cursorColumn
-          })
+        set({
+          openFiles,
+          activeFilePath: filePath,
+          filePath,
+          content: openFiles[filePath].content,
+          isDirty: openFiles[filePath].isDirty,
+          cursorLine: openFiles[filePath].cursorLine,
+          cursorColumn: openFiles[filePath].cursorColumn
+        })
+      },
+      closeTab: (filePath) => {
+        const state = get()
+        const openFiles = { ...state.openFiles }
+        delete openFiles[filePath]
+        const remaining = Object.keys(openFiles)
+
+        if (state.activeFilePath === filePath) {
+          if (remaining.length > 0) {
+            const next = remaining[remaining.length - 1]
+            set({
+              openFiles,
+              activeFilePath: next,
+              filePath: next,
+              content: openFiles[next].content,
+              isDirty: openFiles[next].isDirty,
+              cursorLine: openFiles[next].cursorLine,
+              cursorColumn: openFiles[next].cursorColumn
+            })
+          } else {
+            set({
+              openFiles,
+              activeFilePath: null,
+              filePath: null,
+              content: '',
+              isDirty: false
+            })
+          }
+        } else {
+          set({ openFiles })
+        }
+      },
+      setActiveTab: (filePath) => {
+        const state = get()
+        // Save current content AND cursor position before switching
+        if (state.activeFilePath && state.openFiles[state.activeFilePath]) {
+          const openFiles = { ...state.openFiles }
+          openFiles[state.activeFilePath] = {
+            ...openFiles[state.activeFilePath],
+            content: state.content,
+            cursorLine: state.cursorLine,
+            cursorColumn: state.cursorColumn
+          }
+          const fileData = openFiles[filePath]
+          if (fileData) {
+            set({
+              openFiles,
+              activeFilePath: filePath,
+              filePath,
+              content: fileData.content,
+              isDirty: fileData.isDirty,
+              cursorLine: fileData.cursorLine,
+              cursorColumn: fileData.cursorColumn
+            })
+          }
+        } else {
+          const fileData = state.openFiles[filePath]
+          if (fileData) {
+            set({
+              activeFilePath: filePath,
+              filePath,
+              content: fileData.content,
+              isDirty: fileData.isDirty,
+              cursorLine: fileData.cursorLine,
+              cursorColumn: fileData.cursorColumn
+            })
+          }
+        }
+      },
+      setDirectoryTree: (directoryTree) => set({ directoryTree }),
+      toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
+      setSidebarView: (sidebarView) => set({ sidebarView }),
+      setSidebarWidth: (sidebarWidth) => set({ sidebarWidth: Math.max(150, Math.min(500, sidebarWidth)) }),
+
+      // Compile
+      setCompileStatus: (compileStatus) => set({ compileStatus }),
+      setPdfBase64: (pdfBase64) => set({ pdfBase64 }),
+      appendLog: (text) => set((state) => ({ logs: state.logs + text })),
+      clearLogs: () => set({ logs: '' }),
+      toggleLogPanel: () => set((state) => ({ isLogPanelOpen: !state.isLogPanelOpen })),
+      setLogPanelOpen: (isLogPanelOpen) => set({ isLogPanelOpen }),
+      setDiagnostics: (diagnostics) => set({ diagnostics }),
+      setLogViewMode: (logViewMode) => set({ logViewMode }),
+
+      // Cursor
+      setCursorPosition: (cursorLine, cursorColumn) => set({ cursorLine, cursorColumn }),
+
+      // Navigation
+      requestJumpToLine: (line, column) => set({ pendingJump: { line, column } }),
+      clearPendingJump: () => set({ pendingJump: null }),
+      setSynctexHighlight: (highlight) =>
+        set({ synctexHighlight: highlight ? { ...highlight, timestamp: Date.now() } : null }),
+      setSplitRatio: (splitRatio) => set({ splitRatio }),
+      setZoomLevel: (level) => set({ zoomLevel: Math.max(25, Math.min(400, level)) }),
+      zoomIn: () => set((state) => ({ zoomLevel: Math.min(400, state.zoomLevel + 25) })),
+      zoomOut: () => set((state) => ({ zoomLevel: Math.max(25, state.zoomLevel - 25) })),
+      resetZoom: () => set({ zoomLevel: 100 }),
+
+      // Settings
+      updateSetting: (key, value) => {
+        set((state) => ({ settings: { ...state.settings, [key]: value } }))
+        // Handle side effects of specific settings
+        if (key === 'theme') {
+          document.documentElement.dataset.theme = value as string
+        }
+      },
+      increaseFontSize: () => {
+        const state = get()
+        const currentSize = state.settings.fontSize
+        const next = Math.min(32, currentSize + 1)
+        set((state) => ({ settings: { ...state.settings, fontSize: next } }))
+      },
+      decreaseFontSize: () => {
+        const state = get()
+        const currentSize = state.settings.fontSize
+        const next = Math.max(8, currentSize - 1)
+        set((state) => ({ settings: { ...state.settings, fontSize: next } }))
+      },
+
+      // BibTeX
+      setBibEntries: (bibEntries) => set({ bibEntries }),
+
+      // Labels
+      setLabels: (labels) => set({ labels }),
+
+      // Package data
+      setPackageData: (packageData) => set({ packageData }),
+      setDetectedPackages: (detectedPackages) => set({ detectedPackages }),
+
+      // Git
+      setIsGitRepo: (isGitRepo) => set({ isGitRepo }),
+      setGitBranch: (gitBranch) => set({ gitBranch }),
+      setGitStatus: (gitStatus) => set({ gitStatus }),
+
+      // Auto-update
+      setUpdateStatus: (updateStatus) => set({ updateStatus }),
+      setUpdateVersion: (updateVersion) => set({ updateVersion }),
+      setUpdateProgress: (updateProgress) => set({ updateProgress }),
+
+      // Export
+      setExportStatus: (exportStatus) => set({ exportStatus }),
+
+      // Template gallery
+      toggleTemplateGallery: () =>
+        set((state) => ({ isTemplateGalleryOpen: !state.isTemplateGalleryOpen })),
+      setTemplateGalleryOpen: (isTemplateGalleryOpen) => set({ isTemplateGalleryOpen }),
+
+      // LSP
+      setLspStatus: (lspStatus) => set({ lspStatus }),
+      setLspError: (lspError) => set({ lspError }),
+
+      // Document symbols
+      setDocumentSymbols: (documentSymbols) => set({ documentSymbols })
+    })),
+    {
+      name: 'textex-settings-storage', // key in localStorage
+      partialize: (state) => ({ settings: state.settings }), // Persist ONLY settings
+      onRehydrateStorage: () => (state) => {
+        // Hydration callback - apply necessary side effects on load
+        if (state && state.settings.theme) {
+          document.documentElement.dataset.theme = state.settings.theme
         }
       }
-    },
-    setDirectoryTree: (directoryTree) => set({ directoryTree }),
-    toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
-    setSidebarView: (sidebarView) => set({ sidebarView }),
-    setSidebarWidth: (sidebarWidth) => set({ sidebarWidth: Math.max(150, Math.min(500, sidebarWidth)) }),
-
-    // Compile
-    setCompileStatus: (compileStatus) => set({ compileStatus }),
-    setPdfBase64: (pdfBase64) => set({ pdfBase64 }),
-    appendLog: (text) => set((state) => ({ logs: state.logs + text })),
-    clearLogs: () => set({ logs: '' }),
-    toggleLogPanel: () => set((state) => ({ isLogPanelOpen: !state.isLogPanelOpen })),
-    setLogPanelOpen: (isLogPanelOpen) => set({ isLogPanelOpen }),
-    setDiagnostics: (diagnostics) => set({ diagnostics }),
-    setLogViewMode: (logViewMode) => set({ logViewMode }),
-
-    // Cursor
-    setCursorPosition: (cursorLine, cursorColumn) => set({ cursorLine, cursorColumn }),
-
-    // Navigation
-    requestJumpToLine: (line, column) => set({ pendingJump: { line, column } }),
-    clearPendingJump: () => set({ pendingJump: null }),
-    setSynctexHighlight: (highlight) =>
-      set({ synctexHighlight: highlight ? { ...highlight, timestamp: Date.now() } : null }),
-    setSplitRatio: (splitRatio) => set({ splitRatio }),
-    setZoomLevel: (level) => set({ zoomLevel: Math.max(25, Math.min(400, level)) }),
-    zoomIn: () => set((state) => ({ zoomLevel: Math.min(400, state.zoomLevel + 25) })),
-    zoomOut: () => set((state) => ({ zoomLevel: Math.max(25, state.zoomLevel - 25) })),
-    resetZoom: () => set({ zoomLevel: 100 }),
-
-    // Settings
-    setTheme: (theme) => {
-      document.documentElement.dataset.theme = theme
-      set({ theme })
-      window.api.saveSettings({ theme })
-    },
-    increaseFontSize: () => {
-      const state = get()
-      const next = Math.min(32, state.fontSize + 1)
-      set({ fontSize: next })
-      window.api.saveSettings({ fontSize: next })
-    },
-    decreaseFontSize: () => {
-      const state = get()
-      const next = Math.max(8, state.fontSize - 1)
-      set({ fontSize: next })
-      window.api.saveSettings({ fontSize: next })
-    },
-    loadUserSettings: (settings) => {
-      document.documentElement.dataset.theme = settings.theme
-      set({
-        theme: settings.theme,
-        fontSize: settings.fontSize,
-        spellCheckEnabled: settings.spellCheckEnabled,
-        lspEnabled: settings.lspEnabled ?? true
-      })
-    },
-
-    // BibTeX
-    setBibEntries: (bibEntries) => set({ bibEntries }),
-
-    // Labels
-    setLabels: (labels) => set({ labels }),
-
-    // Package data
-    setPackageData: (packageData) => set({ packageData }),
-    setDetectedPackages: (detectedPackages) => set({ detectedPackages }),
-
-    // Spell check
-    setSpellCheckEnabled: (spellCheckEnabled) => {
-      set({ spellCheckEnabled })
-      window.api.saveSettings({ spellCheckEnabled })
-    },
-
-    // Git
-    setIsGitRepo: (isGitRepo) => set({ isGitRepo }),
-    setGitBranch: (gitBranch) => set({ gitBranch }),
-    setGitStatus: (gitStatus) => set({ gitStatus }),
-
-    // Auto-update
-    setUpdateStatus: (updateStatus) => set({ updateStatus }),
-    setUpdateVersion: (updateVersion) => set({ updateVersion }),
-    setUpdateProgress: (updateProgress) => set({ updateProgress }),
-
-    // Export
-    setExportStatus: (exportStatus) => set({ exportStatus }),
-
-    // Template gallery
-    toggleTemplateGallery: () =>
-      set((state) => ({ isTemplateGalleryOpen: !state.isTemplateGalleryOpen })),
-    setTemplateGalleryOpen: (isTemplateGalleryOpen) => set({ isTemplateGalleryOpen }),
-
-    // LSP
-    setLspStatus: (lspStatus) => set({ lspStatus }),
-    setLspError: (lspError) => set({ lspError }),
-    setLspEnabled: (lspEnabled) => {
-      set({ lspEnabled })
-      window.api.saveSettings({ lspEnabled })
-    },
-
-    // Document symbols
-    setDocumentSymbols: (documentSymbols) => set({ documentSymbols })
-  }))
+    }
+  )
 )

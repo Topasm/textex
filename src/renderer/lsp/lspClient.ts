@@ -1,4 +1,9 @@
-import type { editor as monacoEditor } from 'monaco-editor'
+import type {
+  editor as monacoEditor,
+  languages as monacoLanguages,
+  IMarkdownString,
+  MarkerSeverity
+} from 'monaco-editor'
 
 type MonacoInstance = typeof import('monaco-editor')
 
@@ -133,7 +138,7 @@ function applyDiagnostics(params: Record<string, unknown>): void {
   if (!model) return
 
   const markers: monacoEditor.IMarkerData[] = diagnostics.map((d) => {
-    let severity: monacoEditor.MarkerSeverity
+    let severity: MarkerSeverity
     switch (d.severity) {
       case 1:
         severity = monaco.MarkerSeverity.Error
@@ -310,11 +315,11 @@ function registerProviders(monaco: MonacoInstance): void {
           const contents = formatHoverContents(result.contents)
           const range = result.range
             ? {
-                startLineNumber: result.range.start.line + 1,
-                startColumn: result.range.start.character + 1,
-                endLineNumber: result.range.end.line + 1,
-                endColumn: result.range.end.character + 1
-              }
+              startLineNumber: result.range.start.line + 1,
+              startColumn: result.range.start.character + 1,
+              endLineNumber: result.range.end.line + 1,
+              endColumn: result.range.end.character + 1
+            }
             : undefined
           return { contents, range }
         } catch {
@@ -409,7 +414,7 @@ function registerProviders(monaco: MonacoInstance): void {
           })) as { changes?: Record<string, Array<{ range: { start: { line: number; character: number }; end: { line: number; character: number } }; newText: string }>> } | null
 
           if (!result?.changes) return null
-          const edits: monacoEditor.IWorkspaceTextEdit[] = []
+          const edits: monacoLanguages.IWorkspaceTextEdit[] = []
           for (const [uri, changes] of Object.entries(result.changes)) {
             for (const change of changes) {
               edits.push({
@@ -557,8 +562,8 @@ function registerProviders(monaco: MonacoInstance): void {
   }
 }
 
-function lspCompletionKindToMonaco(monaco: MonacoInstance, kind: number | undefined): monacoEditor.languages.CompletionItemKind {
-  const map: Record<number, monacoEditor.languages.CompletionItemKind> = {
+function lspCompletionKindToMonaco(monaco: MonacoInstance, kind: number | undefined): monacoLanguages.CompletionItemKind {
+  const map: Record<number, monacoLanguages.CompletionItemKind> = {
     1: monaco.languages.CompletionItemKind.Text,
     2: monaco.languages.CompletionItemKind.Method,
     3: monaco.languages.CompletionItemKind.Function,
@@ -576,8 +581,8 @@ function lspCompletionKindToMonaco(monaco: MonacoInstance, kind: number | undefi
   return map[kind || 1] || monaco.languages.CompletionItemKind.Text
 }
 
-function lspSymbolKindToMonaco(monaco: MonacoInstance, kind: number): monacoEditor.languages.SymbolKind {
-  const map: Record<number, monacoEditor.languages.SymbolKind> = {
+function lspSymbolKindToMonaco(monaco: MonacoInstance, kind: number): monacoLanguages.SymbolKind {
+  const map: Record<number, monacoLanguages.SymbolKind> = {
     1: monaco.languages.SymbolKind.File,
     2: monaco.languages.SymbolKind.Module,
     3: monaco.languages.SymbolKind.Namespace,
@@ -592,7 +597,7 @@ function lspSymbolKindToMonaco(monaco: MonacoInstance, kind: number): monacoEdit
   return map[kind] || monaco.languages.SymbolKind.Variable
 }
 
-function formatHoverContents(contents: unknown): monacoEditor.IMarkdownString[] {
+function formatHoverContents(contents: unknown): IMarkdownString[] {
   if (typeof contents === 'string') {
     return [{ value: contents }]
   }

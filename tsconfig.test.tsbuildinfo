@@ -1,0 +1,1 @@
+{"root":["./src/__tests__/shared/magicComments.test.ts","./src/__tests__/shared/structure.test.ts","./src/__tests__/store/useAppStore.test.ts","./src/__tests__/components/StatusBar.test.tsx","./src/__tests__/components/Toolbar.test.tsx","./src/__tests__/setup.ts"],"errors":true,"version":"5.9.3"}
