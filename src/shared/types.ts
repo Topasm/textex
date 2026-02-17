@@ -124,6 +124,7 @@ export interface RecentProject {
   path: string
   name: string
   lastOpened: string
+  title?: string
   tag?: string
   pinned?: boolean
 }

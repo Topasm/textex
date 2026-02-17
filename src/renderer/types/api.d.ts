@@ -78,6 +78,7 @@ export interface ElectronAPI {
   saveSettings(partial: Partial<UserSettings>): Promise<UserSettings>
   addRecentProject(projectPath: string): Promise<UserSettings>
   removeRecentProject(projectPath: string): Promise<UserSettings>
+  updateRecentProject(projectPath: string, updates: { tag?: string; pinned?: boolean }): Promise<UserSettings>
 
   // BibTeX
   parseBibFile(filePath: string): Promise<BibEntry[]>

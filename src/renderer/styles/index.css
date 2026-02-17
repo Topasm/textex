@@ -2882,65 +2882,120 @@ body,
   letter-spacing: 0.5px;
 }
 
-.home-recent-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 12px;
-}
-
-.home-recent-tile {
-  position: relative;
+/* Recent projects list */
+.home-recent-list {
   display: flex;
   flex-direction: column;
+  gap: 2px;
+}
+
+.home-recent-item {
+  position: relative;
+  display: flex;
   align-items: center;
-  padding: 20px 16px;
+  gap: 12px;
+  padding: 10px 12px;
   background-color: var(--card-bg, var(--bg-secondary));
   border: 1px solid var(--card-border, var(--border));
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
+  transition: background-color 0.15s, border-color 0.15s;
 }
 
-.home-recent-tile:hover {
+.home-recent-item:hover {
   background-color: var(--card-hover, var(--bg-hover));
   border-color: var(--accent);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.home-recent-tile-icon {
+.home-recent-item.pinned {
+  border-left: 3px solid var(--accent);
+}
+
+.home-recent-item-icon {
   color: var(--accent);
-  margin-bottom: 10px;
+  flex-shrink: 0;
 }
 
-.home-recent-tile-name {
+.home-recent-item-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.home-recent-item-title {
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-primary);
-  text-align: center;
-  word-break: break-word;
-  margin-bottom: 4px;
-}
-
-.home-recent-tile-path {
-  font-size: 11px;
-  color: var(--text-secondary);
-  text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 100%;
-  margin-bottom: 4px;
 }
 
-.home-recent-tile-date {
+.home-recent-item-folder {
   font-size: 11px;
   color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.home-recent-tile-remove {
+.home-recent-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.home-recent-item-date {
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* Pin indicator */
+.home-recent-item-pin-indicator {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: 50%;
+  left: -1px;
+  transform: translateY(-50%);
+  color: var(--accent);
+  opacity: 0;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.home-recent-item.pinned .home-recent-item-pin-indicator {
+  /* Pin is indicated by the left border — hide the icon */
+  display: none;
+}
+
+/* Tag badge */
+.home-recent-item-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 9999px;
+  background-color: var(--accent);
+  color: white;
+  white-space: nowrap;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+/* Kebab menu wrapper */
+.home-recent-item-menu-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.home-recent-item-menu-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2955,11 +3010,99 @@ body,
   transition: opacity 0.15s, background-color 0.15s, color 0.15s;
 }
 
-.home-recent-tile:hover .home-recent-tile-remove {
+.home-recent-item:hover .home-recent-item-menu-btn {
   opacity: 1;
 }
 
-.home-recent-tile-remove:hover {
+.home-recent-item-menu-btn:hover {
   background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* Kebab dropdown */
+.home-recent-item-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  min-width: 140px;
+  background-color: var(--modal-bg, var(--bg-secondary));
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  z-index: 60;
+  padding: 4px;
+}
+
+.home-recent-item-dropdown button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 13px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background-color 0.1s;
+}
+
+.home-recent-item-dropdown button:hover {
+  background-color: var(--bg-hover);
+}
+
+.home-recent-item-dropdown button.danger {
   color: var(--error);
+}
+
+.home-recent-item-dropdown button.danger:hover {
+  background-color: rgba(244, 71, 71, 0.1);
+}
+
+/* Tag edit popover */
+.home-recent-item-tag-editor {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+  background-color: var(--modal-bg, var(--bg-secondary));
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  z-index: 60;
+}
+
+.home-recent-item-tag-input {
+  width: 140px;
+  padding: 4px 8px;
+  font-size: 13px;
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  outline: none;
+}
+
+.home-recent-item-tag-input:focus {
+  border-color: var(--accent);
+}
+
+.home-recent-item-tag-save {
+  padding: 4px 10px;
+  font-size: 12px;
+  background-color: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.home-recent-item-tag-save:hover {
+  background-color: var(--accent-hover);
 }

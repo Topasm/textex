@@ -3,7 +3,7 @@ import path from 'path'
 import fs from 'fs/promises'
 import { compileLatex, cancelCompilation } from './compiler'
 import { forwardSync, inverseSync } from './synctex'
-import { loadSettings, saveSettings, addRecentProject, removeRecentProject } from './settings'
+import { loadSettings, saveSettings, addRecentProject, removeRecentProject, updateRecentProject } from './settings'
 import { parseBibFile, findBibFilesInProject } from '../shared/bibparser'
 import { findRootFile } from '../shared/magicComments'
 import { checkWords, getSuggestions, initSpellChecker, addWord, setLanguage } from './spellcheck'
@@ -263,6 +263,16 @@ export function registerIpcHandlers(win: BrowserWindow): void {
     }
     return removeRecentProject(projectPath)
   })
+
+  ipcMain.handle(
+    'settings:update-recent-project',
+    async (_event, projectPath: string, updates: { tag?: string; pinned?: boolean }) => {
+      if (typeof projectPath !== 'string' || projectPath.length === 0) {
+        throw new Error('Invalid project path')
+      }
+      return updateRecentProject(projectPath, updates)
+    }
+  )
 
   // ---- BibTeX ----
   ipcMain.handle('bib:parse', async (_event, filePath: string) => {

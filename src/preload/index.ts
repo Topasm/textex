@@ -84,6 +84,8 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.invoke('settings:add-recent-project', projectPath),
   removeRecentProject: (projectPath: string) =>
     ipcRenderer.invoke('settings:remove-recent-project', projectPath),
+  updateRecentProject: (projectPath: string, updates: { tag?: string; pinned?: boolean }) =>
+    ipcRenderer.invoke('settings:update-recent-project', projectPath, updates),
 
   // BibTeX
   parseBibFile: (filePath: string) => ipcRenderer.invoke('bib:parse', filePath),

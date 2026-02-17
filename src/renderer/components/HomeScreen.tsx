@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { FolderOpen, Clock, Trash2, FileText, Search, X, Terminal, BookOpen, Settings } from 'lucide-react'
+import { FolderOpen, Clock, FileText, Search, X, Terminal, BookOpen, Settings, MoreVertical, Pin, Tag, Trash2 } from 'lucide-react'
 import type { RecentProject } from '../../shared/types'
 import { templates } from '../data/templates'
 import { openProject } from '../utils/openProject'
@@ -62,6 +62,14 @@ function HomeScreen({ onOpenFolder, onNewFromTemplate, onAiDraft, onOpenSettings
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // Kebab menu & tag editor state
+  const [menuOpenPath, setMenuOpenPath] = useState<string | null>(null)
+  const [editingTagPath, setEditingTagPath] = useState<string | null>(null)
+  const [tagInputValue, setTagInputValue] = useState('')
+  const menuRef = useRef<HTMLDivElement>(null)
+  const tagEditorRef = useRef<HTMLDivElement>(null)
+  const tagInputRef = useRef<HTMLInputElement>(null)
+
   useEffect(() => {
     window.api.loadSettings().then((settings) => {
       setRecentProjects(settings.recentProjects ?? [])
@@ -72,6 +80,34 @@ function HomeScreen({ onOpenFolder, onNewFromTemplate, onAiDraft, onOpenSettings
   useEffect(() => {
     setTimeout(() => inputRef.current?.focus(), 100)
   }, [])
+
+  // Click-outside handler for kebab menu and tag editor
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuOpenPath && menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpenPath(null)
+      }
+      if (editingTagPath && tagEditorRef.current && !tagEditorRef.current.contains(e.target as Node)) {
+        setEditingTagPath(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [menuOpenPath, editingTagPath])
+
+  // Focus tag input when editor opens
+  useEffect(() => {
+    if (editingTagPath) {
+      setTimeout(() => tagInputRef.current?.focus(), 50)
+    }
+  }, [editingTagPath])
+
+  // Sort projects: pinned first, then original order
+  const sortedProjects = useMemo(() => {
+    const pinned = recentProjects.filter((p) => p.pinned)
+    const unpinned = recentProjects.filter((p) => !p.pinned)
+    return [...pinned, ...unpinned]
+  }, [recentProjects])
 
   const filteredResults = useMemo<SearchResult[]>(() => {
     const q = query.trim()
@@ -100,12 +136,14 @@ function HomeScreen({ onOpenFolder, onNewFromTemplate, onAiDraft, onOpenSettings
     for (const project of recentProjects) {
       if (
         project.name.toLowerCase().includes(lower) ||
-        project.path.toLowerCase().includes(lower)
+        project.path.toLowerCase().includes(lower) ||
+        (project.title && project.title.toLowerCase().includes(lower)) ||
+        (project.tag && project.tag.toLowerCase().includes(lower))
       ) {
         results.push({
           kind: 'project',
-          label: project.name,
-          detail: project.path,
+          label: project.title || project.name,
+          detail: project.tag ? `${project.path} — ${project.tag}` : project.path,
           badge: 'Recent',
           data: project
         })
@@ -207,10 +245,40 @@ function HomeScreen({ onOpenFolder, onNewFromTemplate, onAiDraft, onOpenSettings
 
   const handleRemoveRecent = useCallback((e: React.MouseEvent, projectPath: string) => {
     e.stopPropagation()
+    setMenuOpenPath(null)
     window.api.removeRecentProject(projectPath).then((settings) => {
       setRecentProjects(settings.recentProjects ?? [])
     }).catch(() => {})
   }, [])
+
+  const handleToggleMenu = useCallback((e: React.MouseEvent, projectPath: string) => {
+    e.stopPropagation()
+    setMenuOpenPath((prev) => (prev === projectPath ? null : projectPath))
+    setEditingTagPath(null)
+  }, [])
+
+  const handleTogglePin = useCallback((e: React.MouseEvent, project: RecentProject) => {
+    e.stopPropagation()
+    setMenuOpenPath(null)
+    window.api.updateRecentProject(project.path, { pinned: !project.pinned }).then((settings) => {
+      setRecentProjects(settings.recentProjects ?? [])
+    }).catch(() => {})
+  }, [])
+
+  const handleEditTag = useCallback((e: React.MouseEvent, project: RecentProject) => {
+    e.stopPropagation()
+    setMenuOpenPath(null)
+    setTagInputValue(project.tag ?? '')
+    setEditingTagPath(project.path)
+  }, [])
+
+  const handleSaveTag = useCallback((projectPath: string) => {
+    const trimmed = tagInputValue.trim()
+    window.api.updateRecentProject(projectPath, { tag: trimmed || undefined }).then((settings) => {
+      setRecentProjects(settings.recentProjects ?? [])
+    }).catch(() => {})
+    setEditingTagPath(null)
+  }, [tagInputValue])
 
   const resultIcon = (result: SearchResult): React.ReactNode => {
     switch (result.kind) {
@@ -282,30 +350,91 @@ function HomeScreen({ onOpenFolder, onNewFromTemplate, onAiDraft, onOpenSettings
         </button>
       </div>
 
-      {recentProjects.length > 0 && (
+      {sortedProjects.length > 0 && (
         <div className="home-recent">
           <h2 className="home-recent-title">
             <Clock size={16} />
             Recent Projects
           </h2>
-          <div className="home-recent-grid">
-            {recentProjects.map((project) => (
+          <div className="home-recent-list">
+            {sortedProjects.map((project) => (
               <div
                 key={project.path}
-                className="home-recent-tile"
+                className={`home-recent-item${project.pinned ? ' pinned' : ''}`}
                 onClick={() => handleOpenRecent(project)}
               >
-                <FolderOpen size={28} className="home-recent-tile-icon" />
-                <span className="home-recent-tile-name">{project.name}</span>
-                <span className="home-recent-tile-path">{project.path}</span>
-                <span className="home-recent-tile-date">{formatRelativeDate(project.lastOpened)}</span>
-                <button
-                  className="home-recent-tile-remove"
-                  onClick={(e) => handleRemoveRecent(e, project.path)}
-                  title="Remove from recent projects"
-                >
-                  <Trash2 size={14} />
-                </button>
+                {project.pinned && (
+                  <span className="home-recent-item-pin-indicator">
+                    <Pin size={12} />
+                  </span>
+                )}
+                <FolderOpen size={20} className="home-recent-item-icon" />
+                <div className="home-recent-item-info">
+                  <span className="home-recent-item-title">{project.title || project.name}</span>
+                  <span className="home-recent-item-folder">{project.name}</span>
+                </div>
+                <div className="home-recent-item-meta">
+                  <span className="home-recent-item-date">{formatRelativeDate(project.lastOpened)}</span>
+                  {project.tag && (
+                    <span className="home-recent-item-tag">{project.tag}</span>
+                  )}
+                </div>
+
+                {/* Kebab menu */}
+                <div className="home-recent-item-menu-wrapper" ref={menuOpenPath === project.path ? menuRef : undefined}>
+                  <button
+                    className="home-recent-item-menu-btn"
+                    onClick={(e) => handleToggleMenu(e, project.path)}
+                    title="More actions"
+                  >
+                    <MoreVertical size={14} />
+                  </button>
+
+                  {menuOpenPath === project.path && (
+                    <div className="home-recent-item-dropdown">
+                      <button onClick={(e) => handleTogglePin(e, project)}>
+                        <Pin size={14} />
+                        {project.pinned ? 'Unpin' : 'Pin'}
+                      </button>
+                      <button onClick={(e) => handleEditTag(e, project)}>
+                        <Tag size={14} />
+                        Edit Tag
+                      </button>
+                      <button className="danger" onClick={(e) => handleRemoveRecent(e, project.path)}>
+                        <Trash2 size={14} />
+                        Remove
+                      </button>
+                    </div>
+                  )}
+
+                  {editingTagPath === project.path && (
+                    <div className="home-recent-item-tag-editor" ref={tagEditorRef} onClick={(e) => e.stopPropagation()}>
+                      <input
+                        ref={tagInputRef}
+                        className="home-recent-item-tag-input"
+                        type="text"
+                        placeholder="e.g. NeurIPS 2025"
+                        value={tagInputValue}
+                        onChange={(e) => setTagInputValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            handleSaveTag(project.path)
+                          } else if (e.key === 'Escape') {
+                            e.preventDefault()
+                            setEditingTagPath(null)
+                          }
+                        }}
+                      />
+                      <button
+                        className="home-recent-item-tag-save"
+                        onClick={() => handleSaveTag(project.path)}
+                      >
+                        Save
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             ))}
           </div>
