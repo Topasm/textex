@@ -186,6 +186,23 @@ graphicx, etc.) downloads ~50-150 MB. Subsequent compiles are fully offline.
 
 ---
 
+## Magic Comment Resolution (Multi-file Projects)
+
+When the `latex:compile` IPC handler receives a file path, it reads the file
+content and checks the first 5 lines for a **magic comment**:
+
+```
+%! TeX root = ./main.tex
+```
+
+If found, the relative path is resolved against the current file's directory,
+and the **root file** is compiled instead of the active file. This allows users
+to edit `chapter1.tex` and have compilation target `main.tex` automatically.
+
+Implementation: `src/shared/magicComments.ts` (pure Node.js, no Electron deps).
+
+---
+
 ## Error Handling Strategy
 
 1. **Invalid file path** -- `validateFilePath()` in `ipc.ts` rejects non-string,

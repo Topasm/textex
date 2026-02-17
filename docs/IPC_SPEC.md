@@ -106,10 +106,11 @@ mode re-renders).
 
 **Main handler logic:**
 1. Validate `filePath` via `validateFilePath()` (must be non-empty absolute path).
-2. Resolve tectonic binary path (see `compiler.ts`).
-3. Verify binary exists with `fs.access`.
-4. Kill any running compilation via `cancelCompilation()`.
-5. Spawn `tectonic -X compile <filePath>`.
+2. Read file content and resolve magic comment (`%! TeX root = ...`) via `findRootFile()`.
+3. Resolve tectonic binary path (see `compiler.ts`).
+4. Verify binary exists with `fs.access`.
+5. Kill any running compilation via `cancelCompilation()`.
+6. Spawn `tectonic -X compile <resolvedPath>`.
 6. Stream both `stdout` and `stderr` lines to renderer via `latex:log` channel.
 7. On exit code 0: read `.pdf`, convert to Base64, resolve.
 8. On signal (killed): reject with cancellation message.

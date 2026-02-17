@@ -53,7 +53,7 @@ Runs inside a sandboxed Chromium tab.
   TexLab's GPL does not apply to TextEx (MIT).
 - Stored in `resources/bin/{platform}` alongside Tectonic.
 - Provides: real-time diagnostics, completions, hover documentation, go-to-definition,
-  document symbols/outline, formatting, and rename across files.
+  document symbols/outline, formatting, rename, and **code folding** across files.
 - Managed by `TexLabManager` singleton (`src/main/texlab.ts`) with auto-restart
   (up to 3 retries with backoff).
 - Users can override the bundled binary via the `texlabPath` setting.
@@ -133,7 +133,10 @@ All IPC channels and their payloads:
  Renderer sends `latex:compile` via IPC
         |
         v
- Main kills any active compile, spawns `tectonic -X compile <file>`
+ Main reads file, resolves magic comment (%! TeX root = ...)
+        |
+        v
+ Main kills any active compile, spawns `tectonic -X compile <rootFile>`
         |                                        |
         |                  +---------------------+
         |                  v                     v

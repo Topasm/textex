@@ -74,14 +74,18 @@ highlights with a yellow background when the file is dirty.
 ### `EditorPane.tsx`
 - Wraps `@monaco-editor/react`.
 - Language: `latex` (Monaco built-in recognition).
-- Theme: VS Code dark (default).
+- Theme: VS Code dark (default), ivory-light (light), hc-black (high-contrast).
 - `onChange` handler updates Zustand store and triggers debounced auto-compile.
 - Cursor position tracked via `onDidChangeCursorPosition` (disposable stored
   in a ref and cleaned up on unmount).
+- **Code folding:** LSP-powered via `textDocument/foldingRange` — fold arrows appear
+  in the gutter for sections, environments, and comment blocks.
+- **Inverse search flash:** When jumping to a line (from PDF click or Problems panel),
+  a yellow fade-out highlight draws attention to the target line (1s animation).
 - Config:
   - `wordWrap: 'on'`
   - `minimap: { enabled: false }` (save space)
-  - `fontSize: 14`
+  - `fontSize: from store (8–32px)`
   - `lineNumbers: 'on'`
   - `scrollBeyondLastLine: false`
   - `automaticLayout: true`
@@ -104,10 +108,15 @@ highlights with a yellow background when the file is dirty.
 ### `LogPanel.tsx`
 - Collapsible panel at the bottom (default: hidden).
 - Auto-opens when a compilation error occurs.
-- Displays stdout+stderr output from Tectonic, streamed in real time.
-- Monospace font, dark background, 200px height.
+- Two tabs: **Problems** (structured) and **Output** (raw).
+- **Output tab:** stdout+stderr from Tectonic, streamed in real time, auto-scroll.
+- **Problems tab:**
+  - Diagnostics grouped by file with collapsible headers and per-file error/warning counts.
+  - Severity filter buttons (errors/warnings/info) to toggle visibility.
+  - Problem count shown in tab label: `Problems (5)`.
+  - Click any diagnostic to jump editor to that line.
+- Monospace font, 200px height.
 - "Clear" button to reset log content. "Close" button to collapse.
-- Auto-scrolls to bottom on new output.
 
 ### `StatusBar.tsx`
 - Fixed bar at the very bottom, styled with the VS Code blue accent color.

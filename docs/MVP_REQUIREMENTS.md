@@ -84,7 +84,11 @@ These are explicitly **out of scope** for the first release:
 - [x] Unit tests (Vitest + @testing-library/react).
 - [x] CLI tools (compile, init, export, templates) for headless operation and testing.
 - [x] MCP server (compile_latex, get_compile_log) for AI tool integration.
-- [x] TexLab LSP integration (diagnostics, completions, hover, definition, symbols, rename, formatting).
+- [x] TexLab LSP integration (diagnostics, completions, hover, definition, symbols, rename, formatting, folding).
+- [x] Multi-file project support via magic comments (`%! TeX root = ...`).
+- [x] Code folding for LaTeX sections, environments, and comments.
+- [x] Inverse search flash animation (yellow highlight on jump-to-line).
+- [x] Enhanced Problems Panel (file grouping, severity filters, counts).
 
 ---
 

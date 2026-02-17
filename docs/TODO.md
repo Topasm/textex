@@ -1,6 +1,6 @@
 # TextEx — Implementation Status
 
-**70 / 77 tasks complete** across 13 phases.
+**74 / 81 tasks complete** across 14 phases.
 
 ---
 
@@ -64,10 +64,16 @@ electron-builder config (NSIS/DMG/AppImage), Tectonic binaries for all platforms
 - **TexLabManager** — binary resolution (bundled/custom/PATH), stdio LSP parsing, auto-restart with backoff
 - **IPC bridge** — `lsp:start/stop/send/status` handlers, `lsp:message/status-change` push channels
 - **Preload** — 8 LSP methods on `window.api`
-- **LSP client** — lightweight JSON-RPC client, initialize handshake, Monaco providers (completion, hover, definition, symbols, rename, formatting), diagnostics routing
+- **LSP client** — lightweight JSON-RPC client, initialize handshake, Monaco providers (completion, hover, definition, symbols, rename, formatting, folding range), diagnostics routing
 - **App lifecycle** — start/stop on projectRoot change, debounced didChange, didOpen/didClose on file switch
 - **GPL compliance** — TEXLAB-NOTICE.txt, TEXLAB-GPL-3.0.txt, extraResources in builder
 - **Binaries** — TexLab v5.25.1 for Linux/macOS/Windows (x86_64)
+
+### Phase 13: IDE Features (4/4)
+- **Magic comment parsing** — `%! TeX root = ./main.tex` support in `src/shared/magicComments.ts`; IPC handler resolves root file before compiling
+- **LSP code folding** — `foldingRange` capability + provider registration in `lspClient.ts`; folds sections, environments, comments
+- **Inverse search flash** — yellow fade-out line decoration in `usePendingJump.ts` on PDF→source jumps
+- **Enhanced Problems Panel** — diagnostics grouped by file with collapsible headers, severity filter buttons, problem count in tab label
 
 ---
 

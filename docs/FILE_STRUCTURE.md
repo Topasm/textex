@@ -69,6 +69,14 @@
 |       +-- hooks/
 |       |   +-- useAutoCompile.ts  # 1s debounced auto-compile on content change
 |       |   +-- useFileOps.ts      # Open / save / save-as wrappers
+|       |   +-- editor/
+|       |       +-- useEditorDiagnostics.ts  # Monaco marker integration
+|       |       +-- usePendingJump.ts        # Jump to line + flash animation
+|       |       +-- useClickNavigation.ts    # Ctrl+Click navigation
+|       |       +-- useCompletion.ts         # Monaco completion providers
+|       |       +-- useSpelling.ts           # Spell check integration
+|       |       +-- useDocumentSymbols.ts    # LSP symbols request
+|       |       +-- usePackageDetection.ts   # Package extraction
 |       +-- providers/
 |       |   +-- hoverProvider.ts   # Math preview (KaTeX) & citation hover
 |       +-- data/
@@ -91,9 +99,24 @@
 |   +-- mcp/                         # MCP server (planned)
 |   |   +-- server.ts                # stdio MCP server, tool definitions
 |   |
-|   +-- shared/                      # Shared logic, no Electron deps (planned)
+|   +-- __tests__/                   # Unit tests (Vitest)
+|   |   +-- shared/
+|   |   |   +-- structure.test.ts
+|   |   |   +-- magicComments.test.ts
+|   |   +-- store/
+|   |   |   +-- useAppStore.test.ts
+|   |   +-- components/
+|   |       +-- StatusBar.test.tsx
+|   |       +-- Toolbar.test.tsx
+|   |
+|   +-- shared/                      # Shared logic, no Electron deps
 |       +-- compiler.ts              # Tectonic binary resolution + spawn
 |       +-- pandoc.ts                # Pandoc export
+|       +-- magicComments.ts         # %! TeX root magic comment parser
+|       +-- bibparser.ts             # BibTeX file parsing
+|       +-- structure.ts             # Document structure analysis
+|       +-- templates.ts             # Template management
+|       +-- types.ts                 # Shared type definitions
 |
 +-- out/                           # Build output (gitignored)
 |   +-- main/index.js              # Compiled main process
@@ -137,9 +160,10 @@
   `@modelcontextprotocol/sdk` with stdio transport. Imports only from
   `src/shared/`.
 
-- **`src/shared/`** (planned) -- Pure Node.js logic extracted from `src/main/`.
-  No Electron imports (`app`, `BrowserWindow`, `ipcMain`). Shared by
-  `src/main/`, `src/cli/`, and `src/mcp/`.
+- **`src/shared/`** -- Pure Node.js logic with no Electron imports
+  (`app`, `BrowserWindow`, `ipcMain`). Shared by `src/main/`, `src/cli/`,
+  and `src/mcp/`. Contains compiler, pandoc, bibparser, magic comments,
+  document structure, templates, and shared types.
 
 ## Deviations from Original Plan
 
