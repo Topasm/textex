@@ -1,6 +1,10 @@
 import { useCallback } from 'react'
 import { useAppStore } from '../store/useAppStore'
 
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err)
+}
+
 interface FileOps {
   handleOpen: () => Promise<void>
   handleSave: () => Promise<void>
@@ -8,27 +12,20 @@ interface FileOps {
 }
 
 export function useFileOps(): FileOps {
-  const setFilePath = useAppStore((s) => s.setFilePath)
-  const setDirty = useAppStore((s) => s.setDirty)
-  const appendLog = useAppStore((s) => s.appendLog)
-  const setLogPanelOpen = useAppStore((s) => s.setLogPanelOpen)
-  const openFileInTab = useAppStore((s) => s.openFileInTab)
-
   const handleOpen = useCallback(async () => {
     const result = await window.api.openFile()
     if (result) {
-      // openFileInTab must be called FIRST to switch activeFilePath,
-      // so that setContent doesn't corrupt the previously active file.
+      const { openFileInTab, setFilePath, setDirty } = useAppStore.getState()
       openFileInTab(result.filePath, result.content)
       setFilePath(result.filePath)
       setDirty(false)
     }
-  }, [setFilePath, setDirty, openFileInTab])
+  }, [])
 
   const handleSave = useCallback(async () => {
-    const { content, filePath } = useAppStore.getState()
+    const { content, filePath, setFilePath, setDirty, appendLog, setLogPanelOpen } =
+      useAppStore.getState()
     if (!filePath) {
-      // No file path, do save-as
       const result = await window.api.saveFileAs(content)
       if (result) {
         setFilePath(result.filePath)
@@ -40,20 +37,19 @@ export function useFileOps(): FileOps {
       await window.api.saveFile(content, filePath)
       setDirty(false)
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err)
-      appendLog(`Save failed: ${message}`)
+      appendLog(`Save failed: ${errorMessage(err)}`)
       setLogPanelOpen(true)
     }
-  }, [setFilePath, setDirty, appendLog, setLogPanelOpen])
+  }, [])
 
   const handleSaveAs = useCallback(async () => {
-    const { content } = useAppStore.getState()
+    const { content, setFilePath, setDirty } = useAppStore.getState()
     const result = await window.api.saveFileAs(content)
     if (result) {
       setFilePath(result.filePath)
       setDirty(false)
     }
-  }, [setFilePath, setDirty])
+  }, [])
 
   return { handleOpen, handleSave, handleSaveAs }
 }

@@ -19,70 +19,39 @@ import type { SidebarView, LspStatus } from './store/useAppStore'
 import { startLspClient, stopLspClient, lspNotifyDidOpen, lspNotifyDidChange, lspRequestDocumentSymbols } from './lsp/lspClient'
 import { loader } from '@monaco-editor/react'
 
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err)
+}
+
 function App(): JSX.Element {
   useAutoCompile()
   const { handleOpen, handleSave, handleSaveAs } = useFileOps()
 
-  // Existing store selectors
-  const toggleLogPanel = useAppStore((s) => s.toggleLogPanel)
-  const zoomIn = useAppStore((s) => s.zoomIn)
-  const zoomOut = useAppStore((s) => s.zoomOut)
-  const resetZoom = useAppStore((s) => s.resetZoom)
+  // Only subscribe to state needed for rendering
   const splitRatio = useAppStore((s) => s.splitRatio)
-  const setSplitRatio = useAppStore((s) => s.setSplitRatio)
-  const filePath = useAppStore((s) => s.filePath)
-  const setCompileStatus = useAppStore((s) => s.setCompileStatus)
-  const setPdfBase64 = useAppStore((s) => s.setPdfBase64)
-  const appendLog = useAppStore((s) => s.appendLog)
-  const clearLogs = useAppStore((s) => s.clearLogs)
-  const setLogPanelOpen = useAppStore((s) => s.setLogPanelOpen)
-
-  // New store selectors
   const isSidebarOpen = useAppStore((s) => s.isSidebarOpen)
-  const toggleSidebar = useAppStore((s) => s.toggleSidebar)
   const sidebarView = useAppStore((s) => s.sidebarView)
-  const setSidebarView = useAppStore((s) => s.setSidebarView)
   const sidebarWidth = useAppStore((s) => s.sidebarWidth)
-  const setSidebarWidth = useAppStore((s) => s.setSidebarWidth)
+  const filePath = useAppStore((s) => s.filePath)
   const projectRoot = useAppStore((s) => s.projectRoot)
-  const setProjectRoot = useAppStore((s) => s.setProjectRoot)
-  const setDirectoryTree = useAppStore((s) => s.setDirectoryTree)
-  const closeTab = useAppStore((s) => s.closeTab)
-  const setActiveTab = useAppStore((s) => s.setActiveTab)
-  const toggleTemplateGallery = useAppStore((s) => s.toggleTemplateGallery)
-  const setExportStatus = useAppStore((s) => s.setExportStatus)
-  const setUpdateStatus = useAppStore((s) => s.setUpdateStatus)
-  const setUpdateVersion = useAppStore((s) => s.setUpdateVersion)
-  const setUpdateProgress = useAppStore((s) => s.setUpdateProgress)
   const isGitRepo = useAppStore((s) => s.isGitRepo)
-  const setIsGitRepo = useAppStore((s) => s.setIsGitRepo)
-  const setGitBranch = useAppStore((s) => s.setGitBranch)
-  const setGitStatus = useAppStore((s) => s.setGitStatus)
-  const setBibEntries = useAppStore((s) => s.setBibEntries)
-  const setLabels = useAppStore((s) => s.setLabels)
-  const loadUserSettings = useAppStore((s) => s.loadUserSettings)
-  const setTheme = useAppStore((s) => s.setTheme)
-  const increaseFontSize = useAppStore((s) => s.increaseFontSize)
-  const decreaseFontSize = useAppStore((s) => s.decreaseFontSize)
   const lspEnabled = useAppStore((s) => s.lspEnabled)
-  const setLspStatus = useAppStore((s) => s.setLspStatus)
 
-  // ---- Compile handler (existing) ----
+  // ---- Compile handler ----
   const handleCompile = useCallback(async (): Promise<void> => {
-    if (!filePath) return
-    const content = useAppStore.getState().content
+    const state = useAppStore.getState()
+    if (!state.filePath) return
     try {
-      await window.api.saveFile(content, filePath)
+      await window.api.saveFile(state.content, state.filePath)
     } catch {
       // continue
     }
-    setCompileStatus('compiling')
-    clearLogs()
+    state.setCompileStatus('compiling')
+    state.clearLogs()
     try {
-      const result = await window.api.compile(filePath)
-      setPdfBase64(result.pdfBase64)
-      setCompileStatus('success')
-      // Scan labels after successful compilation
+      const result = await window.api.compile(state.filePath)
+      useAppStore.getState().setPdfBase64(result.pdfBase64)
+      useAppStore.getState().setCompileStatus('success')
       const root = useAppStore.getState().projectRoot
       if (root) {
         window.api.scanLabels(root).then((labels) => {
@@ -90,163 +59,138 @@ function App(): JSX.Element {
         }).catch(() => {})
       }
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err)
-      appendLog(message)
-      setCompileStatus('error')
-      setLogPanelOpen(true)
+      const s = useAppStore.getState()
+      s.appendLog(errorMessage(err))
+      s.setCompileStatus('error')
+      s.setLogPanelOpen(true)
     }
-  }, [filePath, setCompileStatus, setPdfBase64, appendLog, clearLogs, setLogPanelOpen])
+  }, [])
 
-  // ---- New handlers ----
-
+  // ---- Open folder handler ----
   const handleOpenFolder = useCallback(async (): Promise<void> => {
     const dirPath = await window.api.openDirectory()
     if (!dirPath) return
 
-    setProjectRoot(dirPath)
+    useAppStore.getState().setProjectRoot(dirPath)
 
     let tree: DirectoryEntry[] = []
     try {
       tree = await window.api.readDirectory(dirPath)
-      setDirectoryTree(tree)
+      useAppStore.getState().setDirectoryTree(tree)
     } catch {
       // ignore
     }
 
-    // Open sidebar to files view
     if (!useAppStore.getState().isSidebarOpen) {
-      toggleSidebar()
+      useAppStore.getState().toggleSidebar()
     }
-    setSidebarView('files')
+    useAppStore.getState().setSidebarView('files')
 
-    // Auto-open the first .tex file found in the folder
+    // Auto-open first .tex file
     const texFile = tree.find((e) => e.type === 'file' && e.name.endsWith('.tex'))
     if (texFile) {
       try {
         const result = await window.api.readFile(texFile.path)
-        useAppStore.getState().openFileInTab(result.filePath, result.content)
-        useAppStore.getState().setFilePath(result.filePath)
-        useAppStore.getState().setDirty(false)
+        const s = useAppStore.getState()
+        s.openFileInTab(result.filePath, result.content)
+        s.setFilePath(result.filePath)
+        s.setDirty(false)
       } catch {
         // ignore
       }
     }
 
-    // Start watching directory
     try {
       await window.api.watchDirectory(dirPath)
     } catch {
       // ignore
     }
 
-    // Check if git repo
     try {
       const isRepo = await window.api.gitIsRepo(dirPath)
-      setIsGitRepo(isRepo)
+      const s = useAppStore.getState()
+      s.setIsGitRepo(isRepo)
       if (isRepo) {
         const status = await window.api.gitStatus(dirPath)
-        setGitStatus(status)
-        setGitBranch(status.branch)
+        s.setGitStatus(status)
+        s.setGitBranch(status.branch)
       }
     } catch {
-      setIsGitRepo(false)
+      useAppStore.getState().setIsGitRepo(false)
     }
 
-    // Load bib entries
     try {
       const entries = await window.api.findBibInProject(dirPath)
-      setBibEntries(entries)
+      useAppStore.getState().setBibEntries(entries)
     } catch {
       // ignore
     }
 
-    // Scan labels
     try {
       const labels = await window.api.scanLabels(dirPath)
-      setLabels(labels)
+      useAppStore.getState().setLabels(labels)
     } catch {
       // ignore
     }
-  }, [
-    setProjectRoot,
-    setDirectoryTree,
-    toggleSidebar,
-    setSidebarView,
-    setIsGitRepo,
-    setGitStatus,
-    setGitBranch,
-    setBibEntries,
-    setLabels
-  ])
+  }, [])
 
   const handleToggleTheme = useCallback((): void => {
-    const current = useAppStore.getState().theme
-    const next = current === 'dark' ? 'light' : current === 'light' ? 'high-contrast' : 'dark'
-    setTheme(next)
-  }, [setTheme])
+    const s = useAppStore.getState()
+    const next = s.theme === 'dark' ? 'light' : s.theme === 'light' ? 'high-contrast' : 'dark'
+    s.setTheme(next)
+  }, [])
 
-  const handleNewFromTemplate = useCallback((): void => {
-    toggleTemplateGallery()
-  }, [toggleTemplateGallery])
-
-  const handleExport = useCallback(
-    async (format: string): Promise<void> => {
-      const currentFilePath = useAppStore.getState().filePath
-      if (!currentFilePath) return
-      setExportStatus('exporting')
-      try {
-        const result = await window.api.exportDocument(currentFilePath, format)
-        if (result && result.success) {
-          setExportStatus('success')
-        } else {
-          setExportStatus('error')
-        }
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : String(err)
-        appendLog(`Export failed: ${message}`)
-        setExportStatus('error')
-      }
-    },
-    [setExportStatus, appendLog]
-  )
+  const handleExport = useCallback(async (format: string): Promise<void> => {
+    const s = useAppStore.getState()
+    if (!s.filePath) return
+    s.setExportStatus('exporting')
+    try {
+      const result = await window.api.exportDocument(s.filePath, format)
+      useAppStore.getState().setExportStatus(result?.success ? 'success' : 'error')
+    } catch (err: unknown) {
+      const s2 = useAppStore.getState()
+      s2.appendLog(`Export failed: ${errorMessage(err)}`)
+      s2.setExportStatus('error')
+    }
+  }, [])
 
   // ---- On-mount: load settings, init spell check, check updates ----
   useEffect(() => {
     window.api.loadSettings().then((settings) => {
-      loadUserSettings(settings)
+      useAppStore.getState().loadUserSettings(settings)
       if (settings.spellCheckEnabled) {
         window.api.spellInit(settings.spellCheckLanguage)
       }
     })
     window.api.updateCheck()
-  }, [loadUserSettings])
+  }, [])
 
   // ---- Update event listeners ----
   useEffect(() => {
     window.api.onUpdateEvent('available', (version: unknown) => {
-      setUpdateStatus('available')
+      useAppStore.getState().setUpdateStatus('available')
       if (typeof version === 'string') {
-        setUpdateVersion(version)
+        useAppStore.getState().setUpdateVersion(version)
       }
     })
     window.api.onUpdateEvent('download-progress', (progress: unknown) => {
-      setUpdateStatus('downloading')
+      useAppStore.getState().setUpdateStatus('downloading')
       if (typeof progress === 'number') {
-        setUpdateProgress(progress)
+        useAppStore.getState().setUpdateProgress(progress)
       }
     })
     window.api.onUpdateEvent('downloaded', () => {
-      setUpdateStatus('ready')
+      useAppStore.getState().setUpdateStatus('ready')
     })
     window.api.onUpdateEvent('error', () => {
-      setUpdateStatus('error')
+      useAppStore.getState().setUpdateStatus('error')
     })
     return () => {
       window.api.removeUpdateListeners()
     }
-  }, [setUpdateStatus, setUpdateVersion, setUpdateProgress])
+  }, [])
 
-  // ---- Compile log listener (existing) ----
+  // ---- Compile log listener ----
   useEffect(() => {
     window.api.onCompileLog((log: string) => {
       useAppStore.getState().appendLog(log)
@@ -256,7 +200,7 @@ function App(): JSX.Element {
     }
   }, [])
 
-  // ---- Diagnostics listener (existing) ----
+  // ---- Diagnostics listener ----
   useEffect(() => {
     window.api.onDiagnostics((diagnostics: Diagnostic[]) => {
       useAppStore.getState().setDiagnostics(diagnostics)
@@ -288,8 +232,9 @@ function App(): JSX.Element {
     const interval = setInterval(async () => {
       try {
         const status = await window.api.gitStatus(projectRoot)
-        useAppStore.getState().setGitStatus(status)
-        useAppStore.getState().setGitBranch(status.branch)
+        const s = useAppStore.getState()
+        s.setGitStatus(status)
+        s.setGitBranch(status.branch)
       } catch {
         // ignore
       }
@@ -305,16 +250,14 @@ function App(): JSX.Element {
       .then((entries) => {
         useAppStore.getState().setBibEntries(entries)
       })
-      .catch(() => {
-        // ignore
-      })
+      .catch(() => {})
   }, [projectRoot])
 
   // ---- LSP lifecycle ----
   useEffect(() => {
     if (!projectRoot || !lspEnabled) {
       stopLspClient()
-      setLspStatus('stopped')
+      useAppStore.getState().setLspStatus('stopped')
       return
     }
 
@@ -332,16 +275,14 @@ function App(): JSX.Element {
         if (state.filePath) {
           lspNotifyDidOpen(state.filePath, state.content)
         }
-      }).catch(() => {
-        // start failed
-      })
+      }).catch(() => {})
     })
 
     return () => {
       cancelled = true
       stopLspClient()
     }
-  }, [projectRoot, lspEnabled, setLspStatus])
+  }, [projectRoot, lspEnabled])
 
   // ---- LSP status listener ----
   useEffect(() => {
@@ -379,7 +320,6 @@ function App(): JSX.Element {
   useEffect(() => {
     if (filePath) {
       lspNotifyDidOpen(filePath, useAppStore.getState().content)
-      // Fetch symbols after LSP processes didOpen
       const state = useAppStore.getState()
       if (state.lspEnabled && state.lspStatus === 'running') {
         const switchedFile = filePath
@@ -431,6 +371,8 @@ function App(): JSX.Element {
       const mod = e.ctrlKey || e.metaKey
       if (!mod) return
 
+      const s = useAppStore.getState()
+
       if (e.key === 'o') {
         e.preventDefault()
         handleOpen()
@@ -445,145 +387,111 @@ function App(): JSX.Element {
         handleCompile()
       } else if (e.key === 'l') {
         e.preventDefault()
-        toggleLogPanel()
+        s.toggleLogPanel()
       } else if ((e.key === '=' || e.key === '+') && e.shiftKey) {
-        // Ctrl+Shift+= -> increase font size
         e.preventDefault()
-        increaseFontSize()
+        s.increaseFontSize()
       } else if (e.key === '-' && e.shiftKey) {
-        // Ctrl+Shift+- -> decrease font size
         e.preventDefault()
-        decreaseFontSize()
+        s.decreaseFontSize()
       } else if (e.key === '=' || e.key === '+') {
-        // Ctrl+= -> zoom in (no shift)
         e.preventDefault()
-        zoomIn()
+        s.zoomIn()
       } else if (e.key === '-') {
-        // Ctrl+- -> zoom out (no shift)
         e.preventDefault()
-        zoomOut()
+        s.zoomOut()
       } else if (e.key === '0') {
         e.preventDefault()
-        resetZoom()
+        s.resetZoom()
       } else if (e.key === 'b') {
         e.preventDefault()
-        toggleSidebar()
+        s.toggleSidebar()
       } else if (e.key === 'w') {
         e.preventDefault()
-        const currentActive = useAppStore.getState().activeFilePath
-        if (currentActive) {
-          closeTab(currentActive)
+        if (s.activeFilePath) {
+          s.closeTab(s.activeFilePath)
         }
       } else if (e.key === 'Tab' && e.shiftKey) {
-        // Ctrl+Shift+Tab -> prev tab
         e.preventDefault()
-        const state = useAppStore.getState()
-        const paths = Object.keys(state.openFiles)
-        if (paths.length > 1 && state.activeFilePath) {
-          const idx = paths.indexOf(state.activeFilePath)
-          const prev = (idx - 1 + paths.length) % paths.length
-          setActiveTab(paths[prev])
+        const paths = Object.keys(s.openFiles)
+        if (paths.length > 1 && s.activeFilePath) {
+          const idx = paths.indexOf(s.activeFilePath)
+          s.setActiveTab(paths[(idx - 1 + paths.length) % paths.length])
         }
       } else if (e.key === 'Tab') {
-        // Ctrl+Tab -> next tab
         e.preventDefault()
-        const state = useAppStore.getState()
-        const paths = Object.keys(state.openFiles)
-        if (paths.length > 1 && state.activeFilePath) {
-          const idx = paths.indexOf(state.activeFilePath)
-          const next = (idx + 1) % paths.length
-          setActiveTab(paths[next])
+        const paths = Object.keys(s.openFiles)
+        if (paths.length > 1 && s.activeFilePath) {
+          const idx = paths.indexOf(s.activeFilePath)
+          s.setActiveTab(paths[(idx + 1) % paths.length])
         }
       } else if (e.key === 'n' && e.shiftKey) {
-        // Ctrl+Shift+N -> template gallery
         e.preventDefault()
-        toggleTemplateGallery()
+        s.toggleTemplateGallery()
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [
-    handleOpen,
-    handleSave,
-    handleSaveAs,
-    handleCompile,
-    toggleLogPanel,
-    zoomIn,
-    zoomOut,
-    resetZoom,
-    increaseFontSize,
-    decreaseFontSize,
-    toggleSidebar,
-    closeTab,
-    setActiveTab,
-    toggleTemplateGallery
-  ])
+  }, [handleOpen, handleSave, handleSaveAs, handleCompile])
 
-  // ---- Split divider drag logic (existing) ----
+  // ---- Split divider drag logic ----
   const mainContentRef = useRef<HTMLDivElement>(null)
   const isDragging = useRef(false)
 
-  const handleDividerMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault()
-      isDragging.current = true
-      document.body.style.cursor = 'col-resize'
-      document.body.style.userSelect = 'none'
+  const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    isDragging.current = true
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
 
-      const onMouseMove = (moveEvent: MouseEvent): void => {
-        if (!isDragging.current || !mainContentRef.current) return
-        const rect = mainContentRef.current.getBoundingClientRect()
-        const ratio = (moveEvent.clientX - rect.left) / rect.width
-        const clamped = Math.min(0.8, Math.max(0.2, ratio))
-        setSplitRatio(clamped)
-      }
+    const onMouseMove = (moveEvent: MouseEvent): void => {
+      if (!isDragging.current || !mainContentRef.current) return
+      const rect = mainContentRef.current.getBoundingClientRect()
+      const ratio = (moveEvent.clientX - rect.left) / rect.width
+      useAppStore.getState().setSplitRatio(Math.min(0.8, Math.max(0.2, ratio)))
+    }
 
-      const onMouseUp = (): void => {
-        isDragging.current = false
-        document.body.style.cursor = ''
-        document.body.style.userSelect = ''
-        window.removeEventListener('mousemove', onMouseMove)
-        window.removeEventListener('mouseup', onMouseUp)
-      }
+    const onMouseUp = (): void => {
+      isDragging.current = false
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+    }
 
-      window.addEventListener('mousemove', onMouseMove)
-      window.addEventListener('mouseup', onMouseUp)
-    },
-    [setSplitRatio]
-  )
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+  }, [])
 
   const handleDividerDoubleClick = useCallback(() => {
-    setSplitRatio(0.5)
-  }, [setSplitRatio])
+    useAppStore.getState().setSplitRatio(0.5)
+  }, [])
 
   // ---- Sidebar resize drag logic ----
   const isSidebarDragging = useRef(false)
 
-  const handleSidebarDividerMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault()
-      isSidebarDragging.current = true
-      document.body.style.cursor = 'col-resize'
-      document.body.style.userSelect = 'none'
+  const handleSidebarDividerMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    isSidebarDragging.current = true
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
 
-      const onMouseMove = (moveEvent: MouseEvent): void => {
-        if (!isSidebarDragging.current) return
-        setSidebarWidth(moveEvent.clientX)
-      }
+    const onMouseMove = (moveEvent: MouseEvent): void => {
+      if (!isSidebarDragging.current) return
+      useAppStore.getState().setSidebarWidth(moveEvent.clientX)
+    }
 
-      const onMouseUp = (): void => {
-        isSidebarDragging.current = false
-        document.body.style.cursor = ''
-        document.body.style.userSelect = ''
-        window.removeEventListener('mousemove', onMouseMove)
-        window.removeEventListener('mouseup', onMouseUp)
-      }
+    const onMouseUp = (): void => {
+      isSidebarDragging.current = false
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+    }
 
-      window.addEventListener('mousemove', onMouseMove)
-      window.addEventListener('mouseup', onMouseUp)
-    },
-    [setSidebarWidth]
-  )
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+  }, [])
 
   // ---- Sidebar tab definitions ----
   const sidebarTabs: { key: SidebarView; label: string }[] = [
@@ -600,10 +508,10 @@ function App(): JSX.Element {
         onSave={handleSave}
         onSaveAs={handleSaveAs}
         onCompile={handleCompile}
-        onToggleLog={toggleLogPanel}
+        onToggleLog={() => useAppStore.getState().toggleLogPanel()}
         onOpenFolder={handleOpenFolder}
         onToggleTheme={handleToggleTheme}
-        onNewFromTemplate={handleNewFromTemplate}
+        onNewFromTemplate={() => useAppStore.getState().toggleTemplateGallery()}
         onExport={handleExport}
       />
       <UpdateNotification />
@@ -616,7 +524,7 @@ function App(): JSX.Element {
                   <button
                     key={tab.key}
                     className={`sidebar-tab${sidebarView === tab.key ? ' active' : ''}`}
-                    onClick={() => setSidebarView(tab.key)}
+                    onClick={() => useAppStore.getState().setSidebarView(tab.key)}
                   >
                     {tab.label}
                   </button>

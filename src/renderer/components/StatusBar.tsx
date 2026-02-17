@@ -1,5 +1,12 @@
 import { useAppStore } from '../store/useAppStore'
 
+const STATUS_CONFIG = {
+  idle: { dotClass: 'green', label: 'Ready' },
+  compiling: { dotClass: 'yellow', label: 'Compiling...' },
+  success: { dotClass: 'green', label: 'Success' },
+  error: { dotClass: 'red', label: 'Error' }
+} as const
+
 function StatusBar(): JSX.Element {
   const compileStatus = useAppStore((s) => s.compileStatus)
   const cursorLine = useAppStore((s) => s.cursorLine)
@@ -8,18 +15,10 @@ function StatusBar(): JSX.Element {
   const isGitRepo = useAppStore((s) => s.isGitRepo)
   const gitBranch = useAppStore((s) => s.gitBranch)
   const spellCheckEnabled = useAppStore((s) => s.spellCheckEnabled)
-  const setSpellCheckEnabled = useAppStore((s) => s.setSpellCheckEnabled)
   const lspStatus = useAppStore((s) => s.lspStatus)
   const lspEnabled = useAppStore((s) => s.lspEnabled)
 
-  const statusConfig = {
-    idle: { dotClass: 'green', label: 'Ready' },
-    compiling: { dotClass: 'yellow', label: 'Compiling...' },
-    success: { dotClass: 'green', label: 'Success' },
-    error: { dotClass: 'red', label: 'Error' }
-  }
-
-  const { dotClass, label } = statusConfig[compileStatus]
+  const { dotClass, label } = STATUS_CONFIG[compileStatus]
 
   const errorCount = diagnostics.filter((d) => d.severity === 'error').length
   const warnCount = diagnostics.filter((d) => d.severity === 'warning').length
@@ -67,14 +66,14 @@ function StatusBar(): JSX.Element {
         )}
         <span
           className="status-spellcheck"
-          onClick={() => setSpellCheckEnabled(!spellCheckEnabled)}
+          onClick={() => useAppStore.getState().setSpellCheckEnabled(!spellCheckEnabled)}
           title="Toggle spell check"
           role="button"
           tabIndex={0}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault()
-              setSpellCheckEnabled(!spellCheckEnabled)
+              useAppStore.getState().setSpellCheckEnabled(!spellCheckEnabled)
             }
           }}
         >
