@@ -144,6 +144,9 @@ export interface UserSettings {
   autoHideSidebar?: boolean
   wordWrap?: boolean
   formatOnSave?: boolean
+  statusBarShowLsp?: boolean
+  statusBarShowSpellCheck?: boolean
+  statusBarShowCursorPosition?: boolean
   recentProjects?: RecentProject[]
 }
 

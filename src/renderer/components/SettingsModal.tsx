@@ -216,6 +216,44 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
                                         </div>
                                     </div>
                                 </div>
+
+                                <hr className="settings-divider" />
+
+                                <div>
+                                    <h3 className="settings-heading" style={{ marginBottom: 12 }}>Status Bar</h3>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                        <div className="settings-row">
+                                            <div>
+                                                <div className="settings-row-label">Show LSP Status</div>
+                                                <div className="settings-row-description">Display language server connection status</div>
+                                            </div>
+                                            <Toggle
+                                                checked={settings.statusBarShowLsp}
+                                                onChange={(checked) => updateSetting('statusBarShowLsp', checked)}
+                                            />
+                                        </div>
+                                        <div className="settings-row">
+                                            <div>
+                                                <div className="settings-row-label">Show Spell Check</div>
+                                                <div className="settings-row-description">Display spell check on/off toggle</div>
+                                            </div>
+                                            <Toggle
+                                                checked={settings.statusBarShowSpellCheck}
+                                                onChange={(checked) => updateSetting('statusBarShowSpellCheck', checked)}
+                                            />
+                                        </div>
+                                        <div className="settings-row">
+                                            <div>
+                                                <div className="settings-row-label">Show Cursor Position</div>
+                                                <div className="settings-row-description">Display line and column numbers</div>
+                                            </div>
+                                            <Toggle
+                                                checked={settings.statusBarShowCursorPosition}
+                                                onChange={(checked) => updateSetting('statusBarShowCursorPosition', checked)}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         )}
 

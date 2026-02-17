@@ -55,6 +55,8 @@
 |       +-- main.tsx               # React root mount (wraps App in ErrorBoundary)
 |       +-- App.tsx                # Top-level layout, keyboard shortcuts, compile logic
 |       +-- components/
+|       |   +-- HomeScreen.tsx     # Landing page: search bar, slash commands, grid tiles
+|       |   +-- DraftModal.tsx     # AI draft modal (supports initialPrompt prefill)
 |       |   +-- EditorPane.tsx     # Monaco Editor wrapper (LaTeX, vs-dark theme)
 |       |   +-- PreviewPane.tsx    # react-pdf viewer (Base64 -> Uint8Array -> PDF.js)
 |       |   +-- Toolbar.tsx        # File actions + compile button + keyboard hints

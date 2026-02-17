@@ -17,6 +17,9 @@ function StatusBar() {
   const spellCheckEnabled = useAppStore((s) => s.settings.spellCheckEnabled)
   const lspStatus = useAppStore((s) => s.lspStatus)
   const lspEnabled = useAppStore((s) => s.settings.lspEnabled)
+  const showLsp = useAppStore((s) => s.settings.statusBarShowLsp)
+  const showSpellCheck = useAppStore((s) => s.settings.statusBarShowSpellCheck)
+  const showCursorPosition = useAppStore((s) => s.settings.statusBarShowCursorPosition)
 
   const { dotClass, label } = STATUS_CONFIG[compileStatus]
 
@@ -49,7 +52,7 @@ function StatusBar() {
         )}
       </div>
       <div className="status-right">
-        {lspEnabled && (
+        {showLsp && lspEnabled && (
           <span
             className={`status-lsp${lspStatus === 'error' ? ' status-lsp-error' : ''}`}
             title={lspStatus === 'error' ? 'TexLab LSP error' : `TexLab LSP: ${lspStatus}`}
@@ -64,24 +67,28 @@ function StatusBar() {
                   : 'Off'}
           </span>
         )}
-        <span
-          className="status-spellcheck"
-          onClick={() => useAppStore.getState().updateSetting('spellCheckEnabled', !spellCheckEnabled)}
-          title="Toggle spell check"
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault()
-              useAppStore.getState().updateSetting('spellCheckEnabled', !spellCheckEnabled)
-            }
-          }}
-        >
-          Spell: {spellCheckEnabled ? 'On' : 'Off'}
-        </span>
-        <span>
-          Ln {cursorLine}, Col {cursorColumn}
-        </span>
+        {showSpellCheck && (
+          <span
+            className="status-spellcheck"
+            onClick={() => useAppStore.getState().updateSetting('spellCheckEnabled', !spellCheckEnabled)}
+            title="Toggle spell check"
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                useAppStore.getState().updateSetting('spellCheckEnabled', !spellCheckEnabled)
+              }
+            }}
+          >
+            Spell: {spellCheckEnabled ? 'On' : 'Off'}
+          </span>
+        )}
+        {showCursorPosition && (
+          <span>
+            Ln {cursorLine}, Col {cursorColumn}
+          </span>
+        )}
       </div>
     </div>
   )

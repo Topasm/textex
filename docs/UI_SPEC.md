@@ -32,12 +32,20 @@ The application uses a horizontal split-pane layout:
 ErrorBoundary
 +-- App
     +-- Toolbar
-    +-- SplitContainer
-    |   +-- EditorPane
-    |   +-- PreviewPane
+    +-- HomeScreen (when no project open)
+    |   +-- Brand
+    |   +-- SearchBar + Dropdown (slash commands, project/template search)
+    |   +-- ActionButtons (Open Folder, New from Template)
+    |   +-- RecentProjectsGrid (tiles)
+    +-- Workspace (when project open)
+    |   +-- SplitContainer
+    |   |   +-- EditorPane
+    |   |   +-- PreviewPane
     +-- LogPanel
     +-- StatusBar
     +-- SettingsModal (Overlay)
+    +-- DraftModal (Overlay, supports initialPrompt prefill)
+    +-- TemplateGallery (Overlay)
 ```
 
 ---
@@ -56,6 +64,9 @@ ErrorBoundary
 - Registers keyboard shortcuts via a `keydown` event listener.
 - Sets up the `latex:log` IPC listener on mount (using `useAppStore.getState()` to
   avoid stale closure issues).
+- Manages `draftPrefill` state alongside `isDraftModalOpen` so the `/draft` slash
+  command can pre-fill the DraftModal prompt. `handleAiDraft(prefill?)` sets both
+  and is passed to HomeScreen and Toolbar.
 
 ### `Toolbar.tsx`
 | Button | Action | Shortcut |
@@ -149,6 +160,43 @@ highlights with a yellow background when the file is dirty.
   (`--accent`, `--bg-input`, `--card-bg`, etc.) — fully themed across dark/light/high-contrast.
 - Toggle component uses `aria-checked` attribute with CSS-only animation (no JS class toggling).
 - Persistence: Updates `settings` slice in Zustand store, saved to `localStorage`.
+
+### `HomeScreen.tsx`
+Displayed when no project is open (browser new-tab style landing page).
+
+**Layout (top to bottom):**
+1. **Brand** — "TextEx" title + "LaTeX Editor" subtitle.
+2. **Search bar** — auto-focused on mount, with a Search icon and clear button.
+   - Typing a project name or template name filters recent projects and templates
+     in a dropdown below the search bar.
+   - Typing `/` shows slash commands in the dropdown.
+   - Arrow keys navigate the dropdown, Enter selects, Escape dismisses.
+3. **Action buttons** — "Open Folder" (primary) and "New from Template".
+4. **Recent projects grid** — responsive CSS grid of tiles (`minmax(200px, 1fr)`),
+   each tile shows a folder icon, project name, path, and relative date. A remove
+   button appears on hover (top-right corner).
+
+**Slash commands:**
+
+| Command | Action |
+|---------|--------|
+| `/draft [prompt]` | Opens DraftModal, optionally pre-filled with the text after `/draft` |
+| `/template` | Opens TemplateGallery modal |
+| `/open` | Opens native folder picker dialog |
+| `/help` | Opens SettingsModal |
+
+**Props:** `onOpenFolder`, `onNewFromTemplate`, `onAiDraft(prefill?)`, `onOpenSettings`.
+
+**Search result types:** Each dropdown item shows an icon, label, detail text, and a
+badge pill ("Recent", "Template", or "Command").
+
+### `DraftModal.tsx`
+- Modal overlay for AI-powered LaTeX document generation.
+- Three phases: `input` → `generating` → `preview`.
+- Accepts an optional `initialPrompt` prop to pre-fill the input textarea
+  (used by the `/draft` slash command from the home screen search bar).
+- Input phase: textarea with placeholder, Generate button (Ctrl+Enter).
+- Preview phase: editable generated LaTeX, Insert into Editor button.
 
 ---
 
@@ -246,3 +294,10 @@ interface AppState {
   `.settings-tab`, `.settings-content`, `.settings-section`, `.settings-row`,
   `.settings-input`, `.settings-select`, `.settings-toggle-track`, `.settings-theme-card`,
   `.settings-range`, `.settings-badge`, `.settings-status-badge`, etc.
+- Home screen classes: `.home-screen`, `.home-brand`, `.home-title`, `.home-subtitle`,
+  `.home-search-wrapper`, `.home-search-bar`, `.home-search-input`, `.home-search-clear`,
+  `.home-search-dropdown`, `.home-search-result` (`.selected`), `.home-search-result-icon`,
+  `.home-search-result-text`, `.home-search-result-badge`, `.home-actions`,
+  `.home-action-btn`, `.home-recent`, `.home-recent-grid`, `.home-recent-tile`,
+  `.home-recent-tile-icon`, `.home-recent-tile-name`, `.home-recent-tile-path`,
+  `.home-recent-tile-date`, `.home-recent-tile-remove`.
