@@ -47,11 +47,11 @@ export function useDocumentSymbols(content: string): void {
           })
           .catch(() => {
             // LSP request failed — try fallback
-            fetchFallbackOutline(currentFile)
+            fetchFallbackOutline(currentFile, content)
           })
       } else {
-        // Fallback: use regex-based parser via IPC
-        fetchFallbackOutline(currentFile)
+        // Fallback: use regex-based parser via IPC with live editor content
+        fetchFallbackOutline(currentFile, content)
       }
     }, 2000)
 
@@ -59,9 +59,9 @@ export function useDocumentSymbols(content: string): void {
   }, [content])
 }
 
-function fetchFallbackOutline(currentFile: string): void {
+function fetchFallbackOutline(currentFile: string, content: string): void {
   window.api
-    .getDocumentOutline(currentFile)
+    .getDocumentOutline(currentFile, content)
     .then((sectionNodes) => {
       if (useAppStore.getState().filePath === currentFile) {
         useAppStore.getState().setDocumentSymbols(sectionNodesToSymbols(sectionNodes))

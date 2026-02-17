@@ -114,13 +114,11 @@ function Toolbar({
             <button onClick={() => { onNewFromTemplate(); setIsFileMenuOpen(false) }}>
               New from Template
             </button>
-            <button onClick={() => { setIsFileMenuOpen(false) }}>
-              Export <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>(Coming soon)</span>
-            </button>
-            {/* Re-add export sub-items if needed, or keep simple for now */}
+            <div className="toolbar-separator" style={{ height: '1px', width: '100%', margin: '4px 0' }} />
+            <div style={{ padding: '4px 12px', fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Export</div>
             {exportFormats.map(fmt => (
               <button key={fmt.ext} onClick={() => { onExport(fmt.ext); setIsFileMenuOpen(false) }} style={{ paddingLeft: '24px' }}>
-                Export as {fmt.name}
+                {fmt.name}
               </button>
             ))}
           </div>

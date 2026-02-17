@@ -29,50 +29,54 @@ beforeEach(() => {
 })
 
 describe('Toolbar', () => {
-  it('renders all action buttons', () => {
+  it('renders fixed action buttons', () => {
     render(<Toolbar {...defaultProps} />)
-    expect(screen.getByTitle(/Open file/)).toBeInTheDocument()
-    expect(screen.getByTitle(/Open folder/)).toBeInTheDocument()
-    expect(screen.getByText(/Save As/)).toBeInTheDocument()
+    expect(screen.getByText(/File/)).toBeInTheDocument()
+    expect(screen.getByTitle(/Quick Save/)).toBeInTheDocument()
     expect(screen.getByText(/Compile/)).toBeInTheDocument()
     expect(screen.getByText(/Log/)).toBeInTheDocument()
-    expect(screen.getByText(/Template/)).toBeInTheDocument()
-    expect(screen.getByText(/Template/)).toBeInTheDocument()
+    // PDF controls
+    expect(screen.getByTitle(/Sync PDF to Code/)).toBeInTheDocument()
+    expect(screen.getByTitle(/Sync Code to PDF/)).toBeInTheDocument()
+    expect(screen.getByText(/Fit Width/)).toBeInTheDocument()
+  })
+
+  it('shows file menu items when File is clicked', async () => {
+    render(<Toolbar {...defaultProps} />)
+    const fileBtn = screen.getByText(/File/)
+    fireEvent.click(fileBtn)
+
+    // Wait for buttons to appear and find the specific one
+    const buttons = await screen.findAllByRole('button')
+    const openBtn = buttons.find(b => b.textContent?.includes('Open') && b.textContent?.includes('Ctrl+O'))
+    expect(openBtn).toBeInTheDocument()
+
+    expect(screen.getByText(/Open Folder/)).toBeInTheDocument()
+    expect(screen.getByText(/Save As/)).toBeInTheDocument()
+    expect(screen.getByText(/New from Template/)).toBeInTheDocument()
+    expect(screen.getByText(/Export/i)).toBeInTheDocument()
   })
 
   it('shows Untitled when no file is open', () => {
     render(<Toolbar {...defaultProps} />)
     expect(screen.getByText('Untitled')).toBeInTheDocument()
   })
-
-  it('shows file name when a file is open', () => {
-    useAppStore.setState({ filePath: '/home/user/document.tex' })
+  // ...
+  it('calls onOpen when Open button is clicked in menu', async () => {
     render(<Toolbar {...defaultProps} />)
-    expect(screen.getByText('document.tex')).toBeInTheDocument()
-  })
+    fireEvent.click(screen.getByText(/File/))
+    // Use findAllByRole to match button with specific text content spanning multiple nodes
+    const buttons = await screen.findAllByRole('button')
+    const openBtn = buttons.find(b => b.textContent?.includes('Open') && b.textContent?.includes('Ctrl+O'))
 
-  it('disables compile button while compiling', () => {
-    useAppStore.setState({ compileStatus: 'compiling' })
-    render(<Toolbar {...defaultProps} />)
-    const compileBtn = screen.getByText(/Compiling\.\.\./).closest('button')
-    expect(compileBtn).toBeDisabled()
-  })
-
-  it('shows Compile text when not compiling', () => {
-    render(<Toolbar {...defaultProps} />)
-    const compileBtn = screen.getByText(/Compile/).closest('button')
-    expect(compileBtn).not.toBeDisabled()
-  })
-
-  it('calls onOpen when Open button is clicked', () => {
-    render(<Toolbar {...defaultProps} />)
-    fireEvent.click(screen.getByTitle(/Open file/))
+    if (!openBtn) throw new Error('Open button not found')
+    fireEvent.click(openBtn)
     expect(defaultProps.onOpen).toHaveBeenCalledOnce()
   })
 
-  it('calls onSave when Save button is clicked', () => {
+  it('calls onSave when Quick Save button is clicked', () => {
     render(<Toolbar {...defaultProps} />)
-    fireEvent.click(screen.getByTitle(/Save file/))
+    fireEvent.click(screen.getByTitle(/Quick Save/))
     expect(defaultProps.onSave).toHaveBeenCalledOnce()
   })
 

@@ -203,7 +203,7 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.invoke('ai:process', action, text),
 
   // Document Structure (fallback outline)
-  getDocumentOutline: (filePath: string) => ipcRenderer.invoke('structure:outline', filePath),
+  getDocumentOutline: (filePath: string, content: string) => ipcRenderer.invoke('structure:outline', filePath, content),
 
   // Shell
   openExternal: (url: string) => ipcRenderer.invoke('shell:open-external', url),

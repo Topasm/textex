@@ -325,6 +325,21 @@ function extractMetadata(virtualLines: VirtualLine[], mainFile: string): Documen
   return metadata
 }
 
+/**
+ * Parse outline from in-memory content string (no disk I/O for the main file).
+ * Used by the editor UI for live outline updates.
+ */
+export function parseContentOutline(content: string, filePath: string): SectionNode[] {
+  const lines = content.split('\n')
+  const virtualLines: VirtualLine[] = lines.map((text, i) => ({
+    text,
+    file: filePath,
+    lineNumber: i + 1
+  }))
+  const headings = findHeadings(virtualLines)
+  return buildOutlineTree(headings, virtualLines, virtualLines.length)
+}
+
 // --- Public API ---
 
 export async function parseDocumentStructure(filePath: string): Promise<DocumentStructure> {

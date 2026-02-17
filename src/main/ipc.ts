@@ -19,7 +19,7 @@ import {
   isGitRepo
 } from './git'
 import { exportDocument, getPandocFormats } from './pandoc'
-import { parseDocumentStructure } from '../shared/structure'
+import { parseContentOutline } from '../shared/structure'
 import { scanLabels } from './labelscanner'
 import { loadPackageData } from './packageloader'
 import { texLabManager } from './texlab'
@@ -510,9 +510,8 @@ export function registerIpcHandlers(win: BrowserWindow): void {
   })
 
   // ---- Document Structure (fallback when LSP unavailable) ----
-  ipcMain.handle('structure:outline', async (_event, filePath: string) => {
+  ipcMain.handle('structure:outline', (_event, filePath: string, content: string) => {
     const validPath = validateFilePath(filePath)
-    const structure = await parseDocumentStructure(validPath)
-    return structure.outline
+    return parseContentOutline(content, validPath)
   })
 }

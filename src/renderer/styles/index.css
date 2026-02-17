@@ -3230,6 +3230,27 @@ body,
   flex-shrink: 0;
 }
 
+.todo-panel__item-delete {
+  opacity: 0;
+  color: var(--text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 4px;
+  margin-left: auto;
+  transition: opacity 0.1s, color 0.1s;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.todo-panel__item:hover .todo-panel__item-delete {
+  opacity: 1;
+}
+
+.todo-panel__item-delete:hover {
+  color: var(--error);
+}
+
 .todo-panel__item--done span {
   text-decoration: line-through;
   color: var(--text-secondary);

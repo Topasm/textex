@@ -149,7 +149,7 @@ export interface ElectronAPI {
   aiProcess(action: 'fix' | 'academic' | 'summarize' | 'longer' | 'shorter', text: string): Promise<string>
 
   // Document Structure (fallback outline)
-  getDocumentOutline(filePath: string): Promise<SectionNode[]>
+  getDocumentOutline(filePath: string, content: string): Promise<SectionNode[]>
 
   // Shell
   openExternal(url: string): Promise<{ success: boolean }>
