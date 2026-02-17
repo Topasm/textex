@@ -8,7 +8,8 @@ import type {
   LabelInfo,
   Diagnostic,
   PackageData,
-  DocumentSymbolNode
+  DocumentSymbolNode,
+  UserSettings
 } from '../../shared/types'
 import { create } from 'zustand'
 import { subscribeWithSelector, persist } from 'zustand/middleware'
@@ -18,73 +19,36 @@ export { useEditorStore } from './useEditorStore'
 export { useCompileStore } from './useCompileStore'
 export { useProjectStore } from './useProjectStore'
 export { usePdfStore } from './usePdfStore'
-export { useSettingsStore } from './useSettingsStore'
 export { useUiStore } from './useUiStore'
 
+export type { UserSettings }
 export type CompileStatus = 'idle' | 'compiling' | 'success' | 'error'
-export type Theme = 'system' | 'dark' | 'light' | 'high-contrast'
+export type Theme = UserSettings['theme']
 export type SidebarView = 'files' | 'git' | 'bib' | 'outline' | 'todo' | 'timeline'
 export type UpdateStatus = 'idle' | 'available' | 'downloading' | 'ready' | 'error'
 export type ExportStatus = 'idle' | 'exporting' | 'success' | 'error'
 export type LspStatus = 'stopped' | 'starting' | 'running' | 'error'
 
-export interface UserSettings {
-  // Appearance
-  theme: Theme
-  pdfInvertMode: boolean // For "Night Mode" reading
+// Keys that the main process cares about — sync these via IPC on change
+const MAIN_PROCESS_KEYS = new Set<keyof UserSettings>([
+  'aiProvider', 'aiModel', 'aiEnabled', 'aiThinkingEnabled', 'aiThinkingBudget',
+  'aiPromptGenerate', 'aiPromptFix', 'aiPromptAcademic', 'aiPromptSummarize',
+  'aiPromptLonger', 'aiPromptShorter', 'spellCheckLanguage', 'theme'
+])
 
-  // User Info
-  name: string
-  email: string
-  affiliation: string
-
-  // Editor
-  fontSize: number
-  wordWrap: boolean
-  vimMode: boolean
-
-  // Automation
-  formatOnSave: boolean
-  autoCompile: boolean
-
-  // Math Preview
-  mathPreviewEnabled: boolean
-
-  // Spell check
-  spellCheckEnabled: boolean
-
-  // Section highlight
-  sectionHighlightEnabled: boolean
-  sectionHighlightColors: string[]
-
-  // LSP
-  lspEnabled: boolean
-
-  // Zotero
-  zoteroEnabled: boolean
-  zoteroPort: number
-
-  // AI Draft
-  aiEnabled: boolean
-  aiProvider: 'openai' | 'anthropic' | 'gemini' | ''
-  aiModel: string
-  aiThinkingEnabled: boolean
-  aiThinkingBudget: number
-  aiPromptGenerate: string
-  aiPromptFix: string
-  aiPromptAcademic: string
-  aiPromptSummarize: string
-  aiPromptLonger: string
-  aiPromptShorter: string
-
-  // Sidebar
-  autoHideSidebar: boolean
-
-  // Status Bar
-  showStatusBar: boolean
-
-  // Bibliography grouping
-  bibGroupMode: 'flat' | 'author' | 'year' | 'type' | 'custom'
+let syncTimer: ReturnType<typeof setTimeout> | undefined
+function syncToMain(): void {
+  clearTimeout(syncTimer)
+  syncTimer = setTimeout(() => {
+    const settings = useAppStore.getState().settings
+    const partial: Partial<UserSettings> = {}
+    for (const key of MAIN_PROCESS_KEYS) {
+      if (settings[key] !== undefined) {
+        ;(partial as Record<string, unknown>)[key] = settings[key]
+      }
+    }
+    window.api.saveSettings(partial).catch(() => { /* ignore */ })
+  }, 500)
 }
 
 const defaultSettings: UserSettings = {
@@ -100,6 +64,7 @@ const defaultSettings: UserSettings = {
   autoCompile: true,
   mathPreviewEnabled: true,
   spellCheckEnabled: false,
+  spellCheckLanguage: 'en-US',
   sectionHighlightEnabled: false,
   sectionHighlightColors: [
     '#e06c75', // red
@@ -113,6 +78,8 @@ const defaultSettings: UserSettings = {
   lspEnabled: true,
   zoteroEnabled: false,
   zoteroPort: 23119,
+  gitEnabled: true,
+  autoUpdateEnabled: true,
   aiEnabled: false,
   aiProvider: '',
   aiModel: '',
@@ -126,7 +93,10 @@ const defaultSettings: UserSettings = {
   aiPromptShorter: '',
   autoHideSidebar: false,
   showStatusBar: true,
-  bibGroupMode: 'flat'
+  bibGroupMode: 'flat',
+  lineNumbers: true,
+  minimap: false,
+  tabSize: 4
 }
 
 interface OpenFileData {
@@ -607,6 +577,10 @@ export const useAppStore = create<AppState>()(
         // Handle side effects of specific settings
         if (key === 'theme') {
           document.documentElement.dataset.theme = value as string
+        }
+        // Sync main-process-relevant fields via IPC
+        if (MAIN_PROCESS_KEYS.has(key)) {
+          syncToMain()
         }
       },
       increaseFontSize: () => {

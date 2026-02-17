@@ -500,7 +500,9 @@ function EditorPane() {
               onMount={handleEditorDidMount}
               options={{
                 fontSize,
-                lineNumbers: 'on',
+                lineNumbers: settings.lineNumbers !== false ? 'on' : 'off',
+                minimap: { enabled: !!settings.minimap },
+                tabSize: settings.tabSize ?? 4,
                 scrollBeyondLastLine: false,
                 automaticLayout: true,
                 quickSuggestions: true,

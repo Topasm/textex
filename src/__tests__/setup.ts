@@ -34,6 +34,9 @@ Object.defineProperty(window, 'api', {
       spellCheckLanguage: 'en-US',
       gitEnabled: true,
       autoUpdateEnabled: true,
+      lineNumbers: true,
+      minimap: false,
+      tabSize: 4,
       recentProjects: []
     }),
     saveSettings: vi.fn(),

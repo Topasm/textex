@@ -130,7 +130,7 @@ export interface RecentProject {
 }
 
 export interface UserSettings {
-  theme: 'dark' | 'light' | 'high-contrast'
+  theme: 'system' | 'dark' | 'light' | 'high-contrast'
   fontSize: number
   autoCompile: boolean
   spellCheckEnabled: boolean
@@ -152,14 +152,22 @@ export interface UserSettings {
   aiPromptSummarize?: string
   aiPromptLonger?: string
   aiPromptShorter?: string
+  name?: string
+  email?: string
+  affiliation?: string
+  wordWrap?: boolean
+  vimMode?: boolean
+  formatOnSave?: boolean
   mathPreviewEnabled?: boolean
   pdfInvertMode?: boolean
   autoHideSidebar?: boolean
-  wordWrap?: boolean
-  formatOnSave?: boolean
   showStatusBar?: boolean
   sectionHighlightEnabled?: boolean
   sectionHighlightColors?: string[]
+  bibGroupMode?: 'flat' | 'author' | 'year' | 'type' | 'custom'
+  lineNumbers?: boolean
+  minimap?: boolean
+  tabSize?: number
   recentProjects?: RecentProject[]
 }
 

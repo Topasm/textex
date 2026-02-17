@@ -1,9 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useAppStore } from '../store/useAppStore'
-
-function errorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : String(err)
-}
+import { errorMessage } from '../utils/errorMessage'
 
 export function useAutoCompile(): void {
   const content = useAppStore((s) => s.content)

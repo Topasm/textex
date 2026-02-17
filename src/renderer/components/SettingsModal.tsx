@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../store/useAppStore'
-import type { UserSettings } from '../types/api';
+import type { UserSettings } from '../../shared/types';
 import { X, Moon, Sun, Monitor, Type, Zap, Link, Check, Palette, Settings as SettingsIcon, User, Bot, Eye, EyeOff, Key, Brain, MessageSquare, ChevronDown, ChevronRight, RotateCcw } from 'lucide-react';
 
 export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
@@ -103,6 +103,24 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
                                         </div>
                                     </div>
                                 </div>
+
+                                <hr className="settings-divider" />
+
+                                <div>
+                                    <h3 className="settings-heading" style={{ marginBottom: 12 }}>Application</h3>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                        <div className="settings-row">
+                                            <div>
+                                                <div className="settings-row-label">Auto Updates</div>
+                                                <div className="settings-row-description">Automatically check for updates on launch</div>
+                                            </div>
+                                            <Toggle
+                                                checked={settings.autoUpdateEnabled !== false}
+                                                onChange={(checked) => updateSetting('autoUpdateEnabled', checked)}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         )}
 
@@ -189,6 +207,23 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
                                             <span>32px</span>
                                         </div>
                                     </div>
+
+                                    <div style={{ marginTop: 16 }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                                            <label className="settings-label" style={{ marginBottom: 0 }}>Tab Size</label>
+                                            <span className="settings-badge">{settings.tabSize ?? 4} spaces</span>
+                                        </div>
+                                        <select
+                                            value={settings.tabSize ?? 4}
+                                            onChange={(e) => updateSetting('tabSize', parseInt(e.target.value))}
+                                            className="settings-select"
+                                            style={{ maxWidth: 120 }}
+                                        >
+                                            <option value={2}>2</option>
+                                            <option value={4}>4</option>
+                                            <option value={8}>8</option>
+                                        </select>
+                                    </div>
                                 </div>
 
                                 <hr className="settings-divider" />
@@ -214,6 +249,36 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
                                             <Toggle
                                                 checked={settings.formatOnSave}
                                                 onChange={(checked) => updateSetting('formatOnSave', checked)}
+                                            />
+                                        </div>
+                                        <div className="settings-row">
+                                            <div>
+                                                <div className="settings-row-label">Line Numbers</div>
+                                                <div className="settings-row-description">Show line numbers in the gutter</div>
+                                            </div>
+                                            <Toggle
+                                                checked={settings.lineNumbers !== false}
+                                                onChange={(checked) => updateSetting('lineNumbers', checked)}
+                                            />
+                                        </div>
+                                        <div className="settings-row">
+                                            <div>
+                                                <div className="settings-row-label">Minimap</div>
+                                                <div className="settings-row-description">Show code minimap on the right side</div>
+                                            </div>
+                                            <Toggle
+                                                checked={!!settings.minimap}
+                                                onChange={(checked) => updateSetting('minimap', checked)}
+                                            />
+                                        </div>
+                                        <div className="settings-row">
+                                            <div>
+                                                <div className="settings-row-label">Vim Mode</div>
+                                                <div className="settings-row-description">Vim-style keybindings (coming soon)</div>
+                                            </div>
+                                            <Toggle
+                                                checked={false}
+                                                onChange={() => {}}
                                             />
                                         </div>
                                         <div className="settings-row">
@@ -313,6 +378,28 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
                                     </div>
                                 </div>
 
+                                <hr className="settings-divider" />
+
+                                <div className="settings-section">
+                                    <div className="settings-section-header">
+                                        <div className="settings-section-icon">
+                                            <Link size={24} />
+                                        </div>
+                                        <div className="settings-section-body">
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                                                <h3 className="settings-section-title" style={{ marginBottom: 0 }}>Git Integration</h3>
+                                                <Toggle
+                                                    checked={settings.gitEnabled !== false}
+                                                    onChange={(checked) => updateSetting('gitEnabled', checked)}
+                                                />
+                                            </div>
+                                            <p className="settings-section-description">
+                                                Show git panel, branch info, and file status.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
                             </div>
                         )}
 
@@ -345,6 +432,22 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
                                                 onChange={(checked) => updateSetting('spellCheckEnabled', checked)}
                                             />
                                         </div>
+                                        {settings.spellCheckEnabled && (
+                                            <div style={{ paddingLeft: 0, marginTop: 4, marginBottom: 8 }}>
+                                                <label className="settings-label">Language</label>
+                                                <select
+                                                    value={settings.spellCheckLanguage ?? 'en-US'}
+                                                    onChange={(e) => {
+                                                        updateSetting('spellCheckLanguage', e.target.value);
+                                                        window.api.spellSetLanguage(e.target.value);
+                                                    }}
+                                                    className="settings-select"
+                                                    style={{ maxWidth: 200 }}
+                                                >
+                                                    <option value="en-US">English (US)</option>
+                                                </select>
+                                            </div>
+                                        )}
                                         <div className="settings-row">
                                             <div>
                                                 <div className="settings-row-label">Language Server</div>

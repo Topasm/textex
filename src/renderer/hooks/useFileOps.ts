@@ -2,10 +2,7 @@ import { useCallback } from 'react'
 import { useAppStore } from '../store/useAppStore'
 import { formatLatex } from '../utils/formatter'
 import { openProject } from '../utils/openProject'
-
-function errorMessage(err: unknown): string {
-  return err instanceof Error ? err.message : String(err)
-}
+import { errorMessage } from '../utils/errorMessage'
 
 interface FileOps {
   handleOpen: () => Promise<void>

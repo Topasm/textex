@@ -5,7 +5,7 @@ import { UserSettings } from '../shared/types'
 import { listPapers } from '../shared/structure'
 
 const defaults: UserSettings = {
-  theme: 'light',
+  theme: 'system',
   fontSize: 14,
   autoCompile: true,
   spellCheckEnabled: false,
@@ -15,6 +15,24 @@ const defaults: UserSettings = {
   lspEnabled: true,
   zoteroEnabled: false,
   zoteroPort: 23119,
+  name: '',
+  email: '',
+  affiliation: '',
+  wordWrap: true,
+  vimMode: false,
+  formatOnSave: true,
+  mathPreviewEnabled: true,
+  pdfInvertMode: false,
+  autoHideSidebar: false,
+  showStatusBar: true,
+  sectionHighlightEnabled: false,
+  sectionHighlightColors: [
+    '#e06c75', '#e5c07b', '#98c379', '#61afef', '#c678dd', '#56b6c2', '#d19a66'
+  ],
+  bibGroupMode: 'flat',
+  lineNumbers: true,
+  minimap: false,
+  tabSize: 4,
   aiEnabled: false,
   aiProvider: '',
   aiApiKey: '',
