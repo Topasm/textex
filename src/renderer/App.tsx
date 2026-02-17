@@ -591,7 +591,7 @@ function App() {
     swipeLocked.current = true
 
     const s = useAppStore.getState()
-    const tabs: SidebarView[] = ['files', 'git', 'bib', 'outline', 'todo', 'timeline']
+    const tabs: SidebarView[] = ['files', 'bib', 'outline', 'todo', 'timeline', 'git']
     const idx = tabs.indexOf(s.sidebarView)
     const next = tabs[(idx + direction + tabs.length) % tabs.length]
 
@@ -634,11 +634,11 @@ function App() {
   // ---- Sidebar tab definitions ----
   const sidebarTabs: { key: SidebarView; label: string }[] = [
     { key: 'files', label: 'Files' },
-    { key: 'git', label: 'Git' },
     { key: 'bib', label: 'Bib' },
     { key: 'outline', label: 'Outline' },
     { key: 'todo', label: 'Notes' },
-    { key: 'timeline', label: 'Timeline' }
+    { key: 'timeline', label: 'Timeline' },
+    { key: 'git', label: 'Git' }
   ]
 
   const showHomeScreen = sessionRestored && !projectRoot

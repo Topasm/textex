@@ -109,6 +109,11 @@ function OutlineNode({
 function OutlinePanel() {
   const documentSymbols = useAppStore((s) => s.documentSymbols)
   const filePath = useAppStore((s) => s.filePath)
+  const sectionHighlightEnabled = useAppStore((s) => s.settings.sectionHighlightEnabled)
+
+  const toggleHighlight = useCallback(() => {
+    useAppStore.getState().updateSetting('sectionHighlightEnabled', !sectionHighlightEnabled)
+  }, [sectionHighlightEnabled])
 
   if (!filePath) {
     return (
@@ -121,6 +126,15 @@ function OutlinePanel() {
   if (documentSymbols.length === 0) {
     return (
       <div className="outline-panel">
+        <div className="outline-panel-header">
+          <button
+            className={`outline-highlight-toggle${sectionHighlightEnabled ? ' active' : ''}`}
+            onClick={toggleHighlight}
+            title={sectionHighlightEnabled ? 'Hide section bands in editor' : 'Show section bands in editor'}
+          >
+            {'\u2261'} Bands
+          </button>
+        </div>
         <div className="git-empty">No document outline found.</div>
       </div>
     )
@@ -128,6 +142,15 @@ function OutlinePanel() {
 
   return (
     <div className="outline-panel">
+      <div className="outline-panel-header">
+        <button
+          className={`outline-highlight-toggle${sectionHighlightEnabled ? ' active' : ''}`}
+          onClick={toggleHighlight}
+          title={sectionHighlightEnabled ? 'Hide section bands in editor' : 'Show section bands in editor'}
+        >
+          {'\u2261'} Bands
+        </button>
+      </div>
       {documentSymbols.map((sym, i) => (
         <OutlineNode key={`${sym.name}-${i}`} node={sym} depth={0} />
       ))}

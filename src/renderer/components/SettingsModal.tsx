@@ -235,6 +235,16 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
                                                 onChange={(checked) => updateSetting('mathPreviewEnabled', checked)}
                                             />
                                         </div>
+                                        <div className="settings-row">
+                                            <div>
+                                                <div className="settings-row-label">Section Highlight</div>
+                                                <div className="settings-row-description">Show alternating background bands for each section in the editor</div>
+                                            </div>
+                                            <Toggle
+                                                checked={settings.sectionHighlightEnabled}
+                                                onChange={(checked) => updateSetting('sectionHighlightEnabled', checked)}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
 

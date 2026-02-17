@@ -150,6 +150,7 @@ export interface UserSettings {
   wordWrap?: boolean
   formatOnSave?: boolean
   showStatusBar?: boolean
+  sectionHighlightEnabled?: boolean
   recentProjects?: RecentProject[]
 }
 

@@ -1027,11 +1027,10 @@ body,
 }
 
 /* Auto-hide mode: overlay on the left edge */
+/* Auto-hide mode: overlay on the left edge */
 .sidebar-wrapper.sidebar-auto-hide {
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
+  position: relative;
+  /* Changing from absolute to relative to reserve space in flex flow */
   z-index: 20;
   width: 12px;
   /* hover trigger strip */
@@ -1047,12 +1046,13 @@ body,
   transition: transform 0.2s ease, opacity 0.2s ease;
   box-shadow: 4px 0 12px rgba(0, 0, 0, 0.15);
   pointer-events: none;
+  /* Ensure backgrounds are set so it covers content */
+  background-color: var(--sidebar-bg);
 }
 
-.sidebar-wrapper.sidebar-auto-hide:hover {
-  /* Expand wrapper to cover the sidebar so hover doesn't drop */
-  width: auto;
-}
+/* Note: Removed .sidebar-wrapper.sidebar-auto-hide:hover { width: auto } 
+   to prevent layout shift of the editor area when opening. 
+   Hovering the absolute sidebar child will maintain the :hover state on the wrapper. */
 
 .sidebar-wrapper.sidebar-auto-hide:hover .sidebar {
   transform: translateX(0);
@@ -1547,6 +1547,38 @@ body,
   overflow-y: auto;
 }
 
+.outline-panel-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 2px 8px 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2px;
+}
+
+.outline-highlight-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.12s, color 0.12s;
+}
+
+.outline-highlight-toggle:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.outline-highlight-toggle.active {
+  background-color: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
 
 .outline-item {
   display: flex;
@@ -3539,4 +3571,3 @@ body,
 [data-theme='high-contrast'] .section-heading-marker {
   width: 4px !important;
 }
-
