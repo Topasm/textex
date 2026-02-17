@@ -14,8 +14,7 @@ const defaultProps = {
   onNewFromTemplate: vi.fn(),
   onAiDraft: vi.fn(),
   onExport: vi.fn(),
-  onOpenSettings: vi.fn(),
-  onZoteroSearch: vi.fn()
+  onOpenSettings: vi.fn()
 }
 
 beforeEach(() => {
@@ -83,5 +82,21 @@ describe('Toolbar', () => {
     render(<Toolbar {...defaultProps} />)
     fireEvent.click(screen.getByTitle(/Compile LaTeX/))
     expect(defaultProps.onCompile).toHaveBeenCalledOnce()
+  })
+
+  it('shows Zotero search input when zoteroEnabled is true', () => {
+    useAppStore.setState({
+      settings: { ...useAppStore.getState().settings, zoteroEnabled: true }
+    })
+    render(<Toolbar {...defaultProps} />)
+    expect(screen.getByPlaceholderText('Search Zotero...')).toBeInTheDocument()
+  })
+
+  it('does not show Zotero search input when zoteroEnabled is false', () => {
+    useAppStore.setState({
+      settings: { ...useAppStore.getState().settings, zoteroEnabled: false }
+    })
+    render(<Toolbar {...defaultProps} />)
+    expect(screen.queryByPlaceholderText('Search Zotero...')).not.toBeInTheDocument()
   })
 })

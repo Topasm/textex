@@ -18,7 +18,6 @@ import HomeScreen from './components/HomeScreen'
 import { useAutoCompile } from './hooks/useAutoCompile'
 import { useFileOps } from './hooks/useFileOps'
 import { SettingsModal } from './components/SettingsModal'
-import { ZoteroCiteModal } from './components/ZoteroCiteModal'
 import { DraftModal } from './components/DraftModal'
 import { useAppStore } from './store/useAppStore'
 import type { SidebarView, LspStatus, } from './store/useAppStore'
@@ -51,50 +50,12 @@ function App() {
   const showStatusBar = useAppStore((s) => s.settings.showStatusBar)
   const prevFilePathRef = useRef<string | null>(null)
 
-  const [isZoteroModalOpen, setIsZoteroModalOpen] = useState(false)
   const [isDraftModalOpen, setIsDraftModalOpen] = useState(false)
   const [draftPrefill, setDraftPrefill] = useState<string | undefined>(undefined)
 
   const handleAiDraft = useCallback((prefill?: string) => {
     setDraftPrefill(prefill)
     setIsDraftModalOpen(true)
-  }, [])
-
-  const handleZoteroInsert = useCallback((citekeys: string[]) => {
-    if (!citekeys.length) return
-    const citeCmd = `\\cite{${citekeys.join(',')}}`
-    // Insert at cursor position.
-    // Since we don't have direct access to Monaco editor instance here easily without
-    // refactoring EditorPane, we'll append to content for now or rely on EditorPane
-    // exposing a way to insert.
-    // Better approach: Update content in store using a helper that inserts at cursor.
-    // For this MVP, let's append to logs (debug) and try to insert if we can.
-    // Actually, we can use useAppStore's content + cursorLine/Column to splice.
-    // BUT, that is complex to get right with lines vs index.
-    // Let's assume we just append for now or use a placeholder.
-    // Wait, we can use the `setPdfBase64` trick? No.
-
-    // Let's implement a rudimentary insertAtCursor in store or just helper here?
-    // EditorPane uses Monaco, which has its own state. The store has `content`.
-    // If we update store `content`, EditorPane should update.
-    // We need to calculate index from line/col.
-    const state = useAppStore.getState()
-    const lines = state.content.split('\n')
-    // cursorLine is 1-based, cursorColumn is 1-based
-    const lineIdx = state.cursorLine - 1
-    const colIdx = state.cursorColumn - 1
-
-    if (lineIdx >= 0 && lineIdx < lines.length) {
-      const line = lines[lineIdx]
-      const before = line.slice(0, colIdx)
-      const after = line.slice(colIdx)
-      lines[lineIdx] = before + citeCmd + after
-      state.setContent(lines.join('\n'))
-    } else {
-      // Fallback: append
-      state.setContent(state.content + '\n' + citeCmd)
-    }
-    setIsZoteroModalOpen(false)
   }, [])
 
   const handleDraftInsert = useCallback((latex: string) => {
@@ -506,7 +467,7 @@ function App() {
       } else if ((e.key === 'z' || e.key === 'Z') && mod && e.shiftKey) {
         if (zoteroEnabled) {
           e.preventDefault()
-          setIsZoteroModalOpen(true)
+          useAppStore.getState().requestCiteSearchFocus()
         }
       }
     }
@@ -643,14 +604,8 @@ function App() {
         onAiDraft={() => handleAiDraft()}
         onExport={handleExport}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        onZoteroSearch={() => setIsZoteroModalOpen(true)}
       />
       {isSettingsOpen && <SettingsModal onClose={() => setIsSettingsOpen(false)} />}
-      <ZoteroCiteModal
-        isOpen={isZoteroModalOpen}
-        onClose={() => setIsZoteroModalOpen(false)}
-        onInsert={handleZoteroInsert}
-      />
       <DraftModal
         isOpen={isDraftModalOpen}
         onClose={() => { setIsDraftModalOpen(false); setDraftPrefill(undefined) }}

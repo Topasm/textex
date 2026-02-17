@@ -386,7 +386,27 @@ const AiDraftSettings = () => {
     const settings = useAppStore((state) => state.settings);
     const updateSetting = useAppStore((state) => state.updateSetting);
 
-    const modelPlaceholder = settings.aiProvider === 'openai' ? 'gpt-4o' : settings.aiProvider === 'anthropic' ? 'claude-sonnet-4-5-20250929' : 'Select a provider first';
+    const modelOptions: Record<string, { value: string; label: string }[]> = {
+        openai: [
+            { value: 'gpt-4o', label: 'GPT-4o' },
+            { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+            { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
+            { value: 'o1', label: 'o1' },
+            { value: 'o1-mini', label: 'o1 Mini' },
+        ],
+        anthropic: [
+            { value: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5' },
+            { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5' },
+            { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
+        ],
+        gemini: [
+            { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+            { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+            { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
+        ],
+    };
+
+    const currentModels = settings.aiProvider ? modelOptions[settings.aiProvider] ?? [] : [];
 
     return (
         <div className="settings-section">
@@ -412,25 +432,33 @@ const AiDraftSettings = () => {
                                 <label className="settings-label">Provider</label>
                                 <select
                                     value={settings.aiProvider}
-                                    onChange={(e) => updateSetting('aiProvider', e.target.value as 'openai' | 'anthropic' | '')}
+                                    onChange={(e) => {
+                                        const provider = e.target.value as 'openai' | 'anthropic' | 'gemini' | '';
+                                        updateSetting('aiProvider', provider);
+                                        updateSetting('aiModel', '');
+                                    }}
                                     className="settings-select"
                                 >
                                     <option value="">Select provider...</option>
                                     <option value="openai">OpenAI</option>
                                     <option value="anthropic">Anthropic</option>
+                                    <option value="gemini">Gemini</option>
                                 </select>
                             </div>
 
                             <div>
                                 <label className="settings-label">Model</label>
-                                <input
-                                    type="text"
+                                <select
                                     value={settings.aiModel}
                                     onChange={(e) => updateSetting('aiModel', e.target.value)}
-                                    placeholder={modelPlaceholder}
                                     disabled={!settings.aiProvider}
-                                    className="settings-input"
-                                />
+                                    className="settings-select"
+                                >
+                                    <option value="">Default</option>
+                                    {currentModels.map((m) => (
+                                        <option key={m.value} value={m.value}>{m.label}</option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
                     )}

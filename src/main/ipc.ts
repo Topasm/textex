@@ -490,8 +490,8 @@ export function registerIpcHandlers(win: BrowserWindow): void {
     'ai:generate',
     async (_event, input: string, provider: string, model: string) => {
       if (!input || typeof input !== 'string') throw new Error('Input text is required')
-      if (provider !== 'openai' && provider !== 'anthropic') {
-        throw new Error('Provider must be "openai" or "anthropic"')
+      if (provider !== 'openai' && provider !== 'anthropic' && provider !== 'gemini') {
+        throw new Error('Provider must be "openai", "anthropic", or "gemini"')
       }
       const latex = await generateLatex({ input, provider, model: model || '' })
       return { latex }
@@ -507,7 +507,7 @@ export function registerIpcHandlers(win: BrowserWindow): void {
   )
 
   ipcMain.handle('ai:save-api-key', async (_event, provider: string, apiKey: string) => {
-    await saveSettings({ aiApiKey: apiKey, aiProvider: provider as 'openai' | 'anthropic' | '' })
+    await saveSettings({ aiApiKey: apiKey, aiProvider: provider as 'openai' | 'anthropic' | 'gemini' | '' })
     return { success: true }
   })
 

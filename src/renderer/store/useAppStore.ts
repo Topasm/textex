@@ -57,7 +57,7 @@ export interface UserSettings {
   zoteroPort: number
 
   // AI Draft
-  aiProvider: 'openai' | 'anthropic' | ''
+  aiProvider: 'openai' | 'anthropic' | 'gemini' | ''
   aiModel: string
 
   // Sidebar
@@ -287,6 +287,11 @@ interface AppState {
   // PDF Search
   setPdfSearchVisible: (visible: boolean) => void
   setPdfSearchQuery: (query: string) => void
+
+  // Cite search focus request
+  citeSearchFocusRequested: boolean
+  requestCiteSearchFocus: () => void
+  clearCiteSearchFocus: () => void
 
   // Sync request from toolbar to PreviewPane
   // Using a timestamp allows multiple clicks to trigger effects even if value "true" doesn't change
@@ -636,6 +641,11 @@ export const useAppStore = create<AppState>()(
       // PDF Search
       setPdfSearchVisible: (pdfSearchVisible) => set({ pdfSearchVisible }),
       setPdfSearchQuery: (pdfSearchQuery) => set({ pdfSearchQuery }),
+
+      // Cite search focus
+      citeSearchFocusRequested: false,
+      requestCiteSearchFocus: () => set({ citeSearchFocusRequested: true }),
+      clearCiteSearchFocus: () => set({ citeSearchFocusRequested: false }),
 
       // Sync request
       syncToCodeRequest: null,

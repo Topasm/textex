@@ -21,14 +21,14 @@ To configure this:
 
 ## Usage
 
-### Inserting Citations (Search)
-1.  Press `Ctrl+Shift+Z` (or `Cmd+Shift+Z` on macOS) to open the Zotero search modal.
-2.  Type to search your library (title, author, year, etc.).
-3.  Select a reference using `Up`/`Down` arrows.
-4.  Press `Enter` to insert the citation key (e.g., `\cite{knuth1984}`).
-    -   Press `Ctrl+Enter` (or `Cmd+Enter`) to insert immediately.
-5.  **Show in Zotero:** Hover over a result and click **Show in Zotero ↗** to open the paper in your Zotero library.
-6.  **Drag and Drop:** You can also drag a reference from the "Bib" panel in the sidebar directly into the editor to insert its citation.
+### Inserting Citations (Inline Search)
+1.  Press `Ctrl+Shift+Z` (or `Cmd+Shift+Z` on macOS) to focus the Zotero search bar in the toolbar, or click it directly.
+2.  Type 3+ characters to search your library (title, author, year, etc.).
+3.  A dropdown appears with matching results. Navigate with `Up`/`Down` arrow keys.
+4.  Press `Enter` to toggle selection on the highlighted result (multi-select with checkboxes).
+5.  Press `Ctrl+Enter` (or `Cmd+Enter`) to insert `\cite{key1,key2}` at the cursor.
+6.  Press `Escape` to close the dropdown.
+7.  **Drag and Drop:** You can also drag a reference from the "Bib" panel in the sidebar directly into the editor to insert its citation.
 
 ### Exporting to .bib
 TextEx automatically manages your `.bib` file, but you can also manually trigger a sync if needed. When you compile, TextEx ensures the bibliography is updated.

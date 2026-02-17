@@ -85,7 +85,11 @@ function PreviewPane() {
       e.preventDefault()
 
       const s = useAppStore.getState()
-      const step = 5
+      // Scale step by deltaY magnitude for proportional zoom;
+      // clamp so trackpad pinch (small deltas) feels gentle while
+      // discrete mouse wheel clicks still respond well.
+      const rawStep = Math.abs(e.deltaY) * 0.15
+      const step = Math.max(1, Math.min(rawStep, 5))
       // Use pending zoom as base if we're mid-scroll, otherwise current store value
       const baseZoom = pendingZoomRef.current ?? s.zoomLevel
       const newZoom =

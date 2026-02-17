@@ -6,7 +6,7 @@
 - [x] **BBT HTTP Client**: `src/main/zotero.ts` (Probe, Search, CAYW)
 - [x] **IPC Channels**: `zotero:probe`, `zotero:search`, `zotero:cite-cayw`
 - [x] **Settings**: Toggle enable/disable, configure port (default 23119)
-- [x] **Search Modal**: `Ctrl+Shift+Z` with debounced search
+- [x] **Inline Toolbar Search**: `Ctrl+Shift+Z` with debounced search (replaced Search Modal)
 - [x] ~~**Native Picker**: `Ctrl+Shift+C` for Zotero CAYW~~ *(removed — merged into Search Modal)*
 - [x] **Show in Zotero**: Button in search results to open paper in Zotero
 - [x] **Drag & Drop**: Drag citations from BibPanel to editor

@@ -73,7 +73,7 @@ export const DraftModal: React.FC<DraftModalProps> = ({ isOpen, onClose, onInser
   if (!isOpen) return null
 
   const providerLabel =
-    aiProvider === 'openai' ? 'OpenAI' : aiProvider === 'anthropic' ? 'Anthropic' : 'Not configured'
+    aiProvider === 'openai' ? 'OpenAI' : aiProvider === 'anthropic' ? 'Anthropic' : aiProvider === 'gemini' ? 'Gemini' : 'Not configured'
 
   return (
     <div className="modal-overlay" onClick={onClose} onKeyDown={handleKeyDown}>

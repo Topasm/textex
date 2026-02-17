@@ -141,7 +141,7 @@ export interface UserSettings {
   zoteroEnabled: boolean
   zoteroPort: number
   aiEnabled?: boolean
-  aiProvider: 'openai' | 'anthropic' | ''
+  aiProvider: 'openai' | 'anthropic' | 'gemini' | ''
   aiApiKey?: string
   aiModel: string
   mathPreviewEnabled?: boolean

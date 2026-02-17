@@ -2,7 +2,7 @@ import { loadSettings } from './settings'
 
 interface GenerateLatexOptions {
   input: string
-  provider: 'openai' | 'anthropic'
+  provider: 'openai' | 'anthropic' | 'gemini'
   model: string
 }
 
@@ -79,6 +79,35 @@ async function callAnthropic(input: string, model: string, apiKey: string, syste
   return stripCodeFences(text)
 }
 
+async function callGemini(input: string, model: string, apiKey: string, systemPrompt: string): Promise<string> {
+  const modelId = model || 'gemini-2.5-flash'
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${encodeURIComponent(apiKey)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ role: 'user', parts: [{ text: input }] }],
+        generationConfig: { temperature: 0.3 }
+      }),
+      signal: AbortSignal.timeout(120_000)
+    }
+  )
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => '')
+    throw new Error(`Gemini API error ${response.status}: ${body}`)
+  }
+
+  const data = (await response.json()) as {
+    candidates: { content: { parts: { text: string }[] } }[]
+  }
+  const text = data.candidates?.[0]?.content?.parts?.find((p) => p.text)?.text
+  if (!text) throw new Error('No text in Gemini response')
+  return stripCodeFences(text)
+}
+
 export async function generateLatex(options: GenerateLatexOptions): Promise<string> {
   const settings = await loadSettings()
   const apiKey = settings.aiApiKey
@@ -90,6 +119,8 @@ export async function generateLatex(options: GenerateLatexOptions): Promise<stri
     return callOpenAI(options.input, options.model, apiKey, GENERATE_SYSTEM_PROMPT)
   } else if (options.provider === 'anthropic') {
     return callAnthropic(options.input, options.model, apiKey, GENERATE_SYSTEM_PROMPT)
+  } else if (options.provider === 'gemini') {
+    return callGemini(options.input, options.model, apiKey, GENERATE_SYSTEM_PROMPT)
   }
   throw new Error(`Unknown AI provider: ${options.provider}`)
 }
@@ -120,6 +151,8 @@ export async function processText(action: 'fix' | 'academic' | 'summarize' | 'lo
     return callOpenAI(userPrompt, activeModel, apiKey, systemPrompt)
   } else if (activeProvider === 'anthropic') {
     return callAnthropic(userPrompt, activeModel, apiKey, systemPrompt)
+  } else if (activeProvider === 'gemini') {
+    return callGemini(userPrompt, activeModel, apiKey, systemPrompt)
   }
   throw new Error(`Unknown AI provider: ${activeProvider}`)
 }

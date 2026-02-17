@@ -912,7 +912,7 @@ body,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: 8px 16px;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -942,7 +942,7 @@ body,
 
 .sidebar-tab {
   flex: 1;
-  padding: 6px 8px;
+  padding: 6px 12px;
   font-size: 11px;
   text-align: center;
   background: none;
@@ -1020,13 +1020,27 @@ body,
 }
 
 @keyframes sidebar-enter-from-left {
-  from { transform: translateX(-16px); opacity: 0; }
-  to   { transform: translateX(0); opacity: 1; }
+  from {
+    transform: translateX(-16px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 @keyframes sidebar-enter-from-right {
-  from { transform: translateX(16px); opacity: 0; }
-  to   { transform: translateX(0); opacity: 1; }
+  from {
+    transform: translateX(16px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 
@@ -1056,7 +1070,8 @@ body,
   position: relative;
   /* Changing from absolute to relative to reserve space in flex flow */
   z-index: 20;
-  width: 12px;
+  width: 16px;
+  overflow: visible;
   /* hover trigger strip */
 }
 
@@ -1108,7 +1123,7 @@ body,
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 8px;
+  padding: 3px 12px;
   font-size: 13px;
   cursor: pointer;
   transition: background-color 0.1s;
@@ -1919,148 +1934,117 @@ body,
   border-radius: 2px;
 }
 
-/* Zotero Cite Modal */
-.zotero-modal {
-  width: 600px;
-  max-width: 90vw;
+/* Cite Search (Inline Toolbar) */
+.cite-search-wrapper {
+  position: relative;
   display: flex;
-  flex-direction: column;
-  max-height: 80vh;
+  align-items: center;
 }
 
-.zotero-search-input {
-  width: 100%;
-  padding: 10px;
-  font-size: 16px;
+.cite-search-input {
+  width: 200px;
+  padding: 4px 10px;
+  font-size: 13px;
   border: 1px solid var(--border);
-  background-color: var(--bg-input);
+  background-color: var(--bg-input, var(--bg-secondary));
   color: var(--text-primary);
   border-radius: 4px;
-  margin-bottom: 12px;
+  transition: border-color 0.15s, width 0.2s;
 }
 
-.zotero-search-input:focus {
-  outline: 2px solid var(--accent);
-  border-color: transparent;
+.cite-search-input:focus {
+  width: 280px;
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
-.zotero-results-list {
-  flex: 1;
+.cite-search-badge {
+  position: absolute;
+  right: 6px;
+  background: var(--accent);
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 9999px;
+  pointer-events: none;
+}
+
+.cite-search-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 400px;
+  max-height: 320px;
   overflow-y: auto;
+  background-color: var(--modal-bg, var(--bg-secondary));
   border: 1px solid var(--border);
-  border-radius: 4px;
-  background-color: var(--bg-primary);
-  min-height: 200px;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  z-index: 200;
+  padding: 4px;
 }
 
-.zotero-result-item {
+.cite-search-result {
   display: flex;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
   cursor: pointer;
-  align-items: center;
-  gap: 12px;
 }
 
-.zotero-result-item:last-child {
-  border-bottom: none;
-}
-
-.zotero-result-item:hover {
+.cite-search-result.highlighted {
   background-color: var(--bg-hover);
 }
 
-.zotero-result-item.highlighted {
-  background-color: var(--tab-hover-bg);
-}
-
-.zotero-result-item.selected {
+.cite-search-result.selected {
   background-color: var(--sidebar-selected);
 }
 
-.zotero-item-checkbox input {
+.cite-search-result input[type="checkbox"] {
+  margin-top: 3px;
   cursor: pointer;
 }
 
-.zotero-item-details {
+.cite-search-result-text {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
 }
 
-.zotero-item-title {
+.cite-search-result-title {
+  font-size: 13px;
   font-weight: 500;
   color: var(--text-primary);
-  margin-bottom: 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.zotero-item-meta {
-  font-size: 12px;
-  color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.zotero-item-type {
-  text-transform: capitalize;
-  font-style: italic;
-  color: var(--accent);
-}
-
-.zotero-item-citekey {
+.cite-search-result-meta {
   font-size: 11px;
-  font-family: monospace;
-  color: var(--text-kbd);
-  margin-top: 2px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.zotero-loading,
-.zotero-error {
-  padding: 20px;
+.cite-search-footer {
+  font-size: 11px;
   text-align: center;
   color: var(--text-secondary);
+  padding: 6px 8px 4px;
 }
 
-.zotero-error {
-  color: var(--error);
-}
-
-.zotero-hint {
-  padding: 20px;
+.cite-search-loading {
   text-align: center;
   color: var(--text-secondary);
-  font-style: italic;
-}
-
-.zotero-status {
-  font-size: 13px;
-  color: var(--text-secondary);
-}
-
-.zotero-show-link {
-  margin-left: 8px;
-  padding: 1px 6px;
-  font-size: 10px;
-  background-color: var(--bg-primary);
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  cursor: pointer;
-  opacity: 0.6;
-  transition: opacity 0.2s, background-color 0.2s, color 0.2s;
-}
-
-.zotero-result-item:hover .zotero-show-link {
-  opacity: 1;
-}
-
-.zotero-show-link:hover {
-  background-color: var(--bg-hover);
-  color: var(--accent);
-  border-color: var(--accent);
+  padding: 12px 8px;
+  font-size: 12px;
 }
 
 /* Bib Panel */
