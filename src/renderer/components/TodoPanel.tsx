@@ -134,6 +134,26 @@ export function TodoPanel() {
         }
     }, [newItem, filePath, rawContent])
 
+    const handleDelete = useCallback(async (lineIdx: number) => {
+        if (!filePath) return
+        const rawLines = rawContent.split('\n')
+        if (lineIdx < 0 || lineIdx >= rawLines.length) return
+
+        rawLines.splice(lineIdx, 1)
+        const updated = rawLines.join('\n')
+
+        setRawContent(updated)
+        setLines(parseMarkdown(updated))
+
+        try {
+            await window.api.saveFile(updated, filePath)
+        } catch {
+            // rollback
+            setRawContent(rawContent)
+            setLines(parseMarkdown(rawContent))
+        }
+    }, [filePath, rawContent])
+
     if (!projectRoot) {
         return (
             <div className="todo-panel todo-panel--empty">
@@ -185,21 +205,43 @@ export function TodoPanel() {
 
                 if (line.type === 'checkbox') {
                     return (
-                        <label key={idx} className={`todo-panel__item${line.checked ? ' todo-panel__item--done' : ''}`}>
+                        <div key={idx} className={`todo-panel__item${line.checked ? ' todo-panel__item--done' : ''}`}>
                             <input
                                 type="checkbox"
                                 checked={line.checked}
                                 onChange={() => toggleCheckbox(idx)}
                             />
-                            <span>{line.label}</span>
-                        </label>
+                            <span onClick={() => toggleCheckbox(idx)} style={{ flex: 1 }}>{line.label}</span>
+                            <button
+                                className="todo-panel__item-delete"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleDelete(idx)
+                                }}
+                                title="Delete item"
+                            >
+                                ×
+                            </button>
+                        </div>
                     )
                 }
 
                 return (
-                    <p key={idx} className="todo-panel__text">
-                        {line.label}
-                    </p>
+                    <div key={idx} className="todo-panel__item">
+                        <p className="todo-panel__text" style={{ flex: 1 }}>
+                            {line.label}
+                        </p>
+                        <button
+                            className="todo-panel__item-delete"
+                            onClick={(e) => {
+                                e.stopPropagation()
+                                handleDelete(idx)
+                            }}
+                            title="Delete line"
+                        >
+                            ×
+                        </button>
+                    </div>
                 )
             })}
 
