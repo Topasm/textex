@@ -372,7 +372,7 @@ function registerProviders(monaco: MonacoInstance): void {
   // Document symbol provider
   if (serverCapabilities.documentSymbolProvider) {
     const d = monaco.languages.registerDocumentSymbolProvider('latex', {
-      provideDocumentSymbols: async (model) => {
+      provideDocumentSymbols: async (_model) => {
         if (!initialized) return []
         try {
           const result = (await sendRequest('textDocument/documentSymbol', {
@@ -480,7 +480,7 @@ function registerProviders(monaco: MonacoInstance): void {
   // Formatting provider
   if (serverCapabilities.documentFormattingProvider) {
     const d = monaco.languages.registerDocumentFormattingEditProvider('latex', {
-      provideDocumentFormattingEdits: async (model) => {
+      provideDocumentFormattingEdits: async (_model) => {
         if (!initialized) return []
         try {
           const result = (await sendRequest('textDocument/formatting', {

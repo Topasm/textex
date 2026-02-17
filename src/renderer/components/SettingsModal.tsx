@@ -1,6 +1,7 @@
 
 import React from 'react';
-import { useAppStore } from '../store/useAppStore';
+import { useAppStore } from '../store/useAppStore'
+import type { UserSettings } from '../types/api';
 import { X } from 'lucide-react';
 
 export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
@@ -35,7 +36,7 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
                                 {['System', 'Light', 'Dark'].map((mode) => (
                                     <button
                                         key={mode}
-                                        onClick={() => updateSetting('theme', mode.toLowerCase() as any)}
+                                        onClick={() => updateSetting('theme', mode.toLowerCase() as UserSettings['theme'])}
                                         className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${settings.theme === mode.toLowerCase()
                                             ? 'bg-white dark:bg-gray-600 text-black dark:text-white shadow-sm'
                                             : 'text-gray-500 dark:text-gray-400 hover:text-gray-900'

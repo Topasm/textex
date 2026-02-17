@@ -17,7 +17,8 @@ import { useFileOps } from './hooks/useFileOps'
 import { SettingsModal } from './components/SettingsModal'
 import { ZoteroCiteModal } from './components/ZoteroCiteModal'
 import { useAppStore } from './store/useAppStore'
-import type { SidebarView, LspStatus } from './store/useAppStore'
+import type { SidebarView, LspStatus, } from './store/useAppStore'
+import type { DirectoryEntry, Diagnostic } from './types/api'
 import { startLspClient, stopLspClient, lspNotifyDidOpen, lspNotifyDidClose, lspNotifyDidChange, lspRequestDocumentSymbols } from './lsp/lspClient'
 import { loader } from '@monaco-editor/react'
 
@@ -490,7 +491,7 @@ function App() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [handleOpen, handleSave, handleSaveAs, handleCompile])
+  }, [handleOpen, handleSave, handleSaveAs, handleCompile, handleZoteroCAYW, zoteroEnabled])
 
   // ---- Split divider drag logic ----
   const mainContentRef = useRef<HTMLDivElement>(null)

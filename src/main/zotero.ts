@@ -1,4 +1,4 @@
-import { net } from 'electron'
+
 
 interface ZoteroSearchResult {
     citekey: string
@@ -6,6 +6,21 @@ interface ZoteroSearchResult {
     author: string
     year: string
     type: string
+}
+
+interface ZoteroCreator {
+    creatorType: string
+    firstName?: string
+    lastName?: string
+    name?: string
+}
+
+interface ZoteroItem {
+    citekey: string
+    title?: string
+    creators?: ZoteroCreator[]
+    date?: string
+    itemType?: string
 }
 
 const DEFAULT_PORT = 23119
@@ -20,7 +35,7 @@ export async function zoteroProbe(port = DEFAULT_PORT): Promise<boolean> {
             signal: AbortSignal.timeout(2000)
         })
         return response.ok
-    } catch (error) {
+    } catch {
         return false
     }
 }
@@ -68,10 +83,15 @@ export async function zoteroSearch(
             throw new Error(`Search failed: ${response.status} ${response.statusText}`)
         }
 
-        const data = await response.json()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const data = await response.json() as any
+
+
+
+        // ...
 
         // BBT item.search returns an array of objects with citekey + metadata
-        return (data.result || []).map((item: any) => ({
+        return (data.result || []).map((item: ZoteroItem) => ({
             citekey: item.citekey,
             title: item.title || '',
             author: formatAuthors(item.creators || []),
@@ -115,7 +135,7 @@ export async function zoteroExportBibtex(
     }
 }
 
-function formatAuthors(creators: any[]): string {
+function formatAuthors(creators: ZoteroCreator[]): string {
     return creators
         .filter(c => c.creatorType === 'author')
         .map(c => c.name || `${c.lastName}, ${c.firstName}`)

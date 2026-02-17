@@ -44,7 +44,7 @@ export const ZoteroCiteModal: React.FC<ZoteroCiteModalProps> = ({ isOpen, onClos
                     if (res.length === 0) {
                         setError('No results found')
                     }
-                } catch (err) {
+                } catch {
                     setError('Failed to connect to Zotero (Better BibTeX)')
                     setResults([])
                 } finally {
