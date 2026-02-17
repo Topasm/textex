@@ -680,10 +680,15 @@ function App() {
                     title={autoHideSidebar ? 'Pin sidebar' : 'Unpin sidebar (auto-hide)'}
                     onClick={() => {
                       const store = useAppStore.getState()
-                      store.updateSetting('autoHideSidebar', !autoHideSidebar)
-                      if (autoHideSidebar && !isSidebarOpen) {
-                        // Pinning: ensure sidebar stays visible
-                        store.toggleSidebar()
+                      if (autoHideSidebar) {
+                        // Pinning: switch to fixed mode, ensure sidebar is open
+                        store.updateSetting('autoHideSidebar', false)
+                        if (!store.isSidebarOpen) {
+                          store.toggleSidebar()
+                        }
+                      } else {
+                        // Unpinning: switch to auto-hide mode
+                        store.updateSetting('autoHideSidebar', true)
                       }
                     }}
                   >
