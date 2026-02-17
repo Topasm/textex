@@ -339,32 +339,6 @@ function App(): JSX.Element {
     }
   }, [filePath])
 
-  // ---- Fetch document symbols on content change (debounced) ----
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | undefined
-    const unsub = useAppStore.subscribe(
-      (state) => state.content,
-      () => {
-        clearTimeout(timer)
-        timer = setTimeout(() => {
-          const state = useAppStore.getState()
-          if (state.filePath && state.lspEnabled && state.lspStatus === 'running') {
-            const currentFile = state.filePath
-            lspRequestDocumentSymbols(currentFile).then((symbols) => {
-              if (useAppStore.getState().filePath === currentFile) {
-                useAppStore.getState().setDocumentSymbols(symbols)
-              }
-            })
-          }
-        }, 500)
-      }
-    )
-    return () => {
-      clearTimeout(timer)
-      unsub()
-    }
-  }, [])
-
   // ---- Keyboard shortcuts ----
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {

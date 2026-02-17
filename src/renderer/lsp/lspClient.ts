@@ -35,21 +35,43 @@ function sendNotification(method: string, params: unknown): void {
 }
 
 function filePathToUri(filePath: string): string {
-  if (filePath.startsWith('/')) {
-    return `file://${filePath}`
+  const normalized = filePath.replace(/\\/g, '/')
+
+  if (normalized.startsWith('//')) {
+    return `file:${encodeURI(normalized)}`
   }
-  // Windows path
-  return `file:///${filePath.replace(/\\/g, '/')}`
+
+  if (/^[a-zA-Z]:\//.test(normalized)) {
+    return `file:///${encodeURI(normalized)}`
+  }
+
+  if (normalized.startsWith('/')) {
+    return `file://${encodeURI(normalized)}`
+  }
+
+  return `file:///${encodeURI(normalized)}`
 }
 
 function uriToFilePath(uri: string): string {
-  if (uri.startsWith('file:///') && process.platform === 'win32') {
-    return uri.slice(8).replace(/\//g, '\\')
+  try {
+    const parsed = new URL(uri)
+    if (parsed.protocol !== 'file:') return uri
+
+    const decodedPath = decodeURIComponent(parsed.pathname)
+
+    if (parsed.host) {
+      const unc = `//${parsed.host}${decodedPath}`
+      return process.platform === 'win32' ? unc.replace(/\//g, '\\') : unc
+    }
+
+    if (/^\/[a-zA-Z]:\//.test(decodedPath)) {
+      return decodedPath.slice(1).replace(/\//g, '\\')
+    }
+
+    return decodedPath
+  } catch {
+    return uri
   }
-  if (uri.startsWith('file://')) {
-    return uri.slice(7)
-  }
-  return uri
 }
 
 function handleMessage(message: Record<string, unknown>): void {
