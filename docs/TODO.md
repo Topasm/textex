@@ -69,11 +69,12 @@ electron-builder config (NSIS/DMG/AppImage), Tectonic binaries for all platforms
 - **GPL compliance** — TEXLAB-NOTICE.txt, TEXLAB-GPL-3.0.txt, extraResources in builder
 - **Binaries** — TexLab v5.25.1 for Linux/macOS/Windows (x86_64)
 
-### Phase 13: IDE Features (4/4)
+### Phase 13: IDE Features (5/5)
 - **Magic comment parsing** — `%! TeX root = ./main.tex` support in `src/shared/magicComments.ts`; IPC handler resolves root file before compiling
 - **LSP code folding** — `foldingRange` capability + provider registration in `lspClient.ts`; folds sections, environments, comments
 - **Inverse search flash** — yellow fade-out line decoration in `usePendingJump.ts` on PDF→source jumps
 - **Enhanced Problems Panel** — diagnostics grouped by file with collapsible headers, severity filter buttons, problem count in tab label
+- **Semantic Highlighting** — `semanticTokens` LSP capability for rich syntax coloring (macros, environments, math)
 
 ### Phase 14: Preferences & Formatting (5/5)
 - **Settings Store** — `localStorage` persistence, typed settings object, immediate apply

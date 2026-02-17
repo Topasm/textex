@@ -37,8 +37,8 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
                                         key={mode}
                                         onClick={() => updateSetting('theme', mode.toLowerCase() as any)}
                                         className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${settings.theme === mode.toLowerCase()
-                                                ? 'bg-white dark:bg-gray-600 text-black dark:text-white shadow-sm'
-                                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-900'
+                                            ? 'bg-white dark:bg-gray-600 text-black dark:text-white shadow-sm'
+                                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-900'
                                             }`}
                                     >
                                         {mode}
@@ -112,6 +112,45 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
                         </div>
                     </section>
 
+
+                    {/* Section: Integrations */}
+                    <section className="py-4 border-t border-gray-100 dark:border-gray-800">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Integrations</h3>
+
+                        {/* Zotero Toggle */}
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Zotero Integration</div>
+                                <div className="text-xs text-gray-500">Enable citation search and insertion</div>
+                            </div>
+                            <input
+                                type="checkbox"
+                                checked={settings.zoteroEnabled}
+                                onChange={(e) => updateSetting('zoteroEnabled', e.target.checked)}
+                                className="toggle-switch"
+                            />
+                        </div>
+
+                        {/* Zotero Port (Conditional) */}
+                        {settings.zoteroEnabled && (
+                            <div className="ml-4 mb-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-md border border-gray-100 dark:border-gray-800">
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Better BibTeX Port</label>
+                                    <input
+                                        type="number"
+                                        value={settings.zoteroPort}
+                                        onChange={(e) => updateSetting('zoteroPort', parseInt(e.target.value))}
+                                        className="w-20 px-2 py-1 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded text-right"
+                                    />
+                                </div>
+                                <div className="text-xs text-gray-500 flex items-center gap-2">
+                                    <span>Status:</span>
+                                    <ZoteroStatusProbe port={settings.zoteroPort} />
+                                </div>
+                            </div>
+                        )}
+                    </section>
+
                     {/* Section: Automation */}
                     <section className="py-4 border-t border-gray-100 dark:border-gray-800">
                         <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Automation</h3>
@@ -167,4 +206,27 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
             </div>
         </div>
     );
+};
+
+const ZoteroStatusProbe = ({ port }: { port: number }) => {
+    const [status, setStatus] = React.useState<'checking' | 'connected' | 'error'>('checking');
+
+    React.useEffect(() => {
+        let mounted = true;
+        const check = async () => {
+            setStatus('checking');
+            try {
+                const connected = await window.api.zoteroProbe(port);
+                if (mounted) setStatus(connected ? 'connected' : 'error');
+            } catch {
+                if (mounted) setStatus('error');
+            }
+        };
+        check();
+        return () => { mounted = false; };
+    }, [port]);
+
+    if (status === 'checking') return <span className="text-gray-400">Checking...</span>;
+    if (status === 'connected') return <span className="text-green-500 font-medium">Connected</span>;
+    return <span className="text-red-500 font-medium">Not Connected</span>;
 };

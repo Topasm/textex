@@ -13,6 +13,8 @@ interface ToolbarProps {
   onNewFromTemplate: () => void
   onExport: (format: string) => void
   onOpenSettings: () => void
+  onZoteroSearch: () => void
+  onZoteroCite: () => void
 }
 
 const exportFormats = [
@@ -32,12 +34,15 @@ function Toolbar({
   onToggleTheme,
   onNewFromTemplate,
   onExport,
-  onOpenSettings
+  onOpenSettings,
+  onZoteroSearch,
+  onZoteroCite
 }: ToolbarProps) {
   const filePath = useAppStore((s) => s.filePath)
   const isDirty = useAppStore((s) => s.isDirty)
   const compileStatus = useAppStore((s) => s.compileStatus)
   const theme = useAppStore((s) => s.settings.theme)
+  const zoteroEnabled = useAppStore((s) => s.settings.zoteroEnabled)
 
   const [isExportOpen, setIsExportOpen] = useState(false)
   const exportRef = useRef<HTMLDivElement>(null)
@@ -137,6 +142,20 @@ function Toolbar({
       <button onClick={onOpenSettings} title="Settings" className="p-1">
         <Settings size={16} />
       </button>
+
+      {zoteroEnabled && (
+        <>
+          <span className="toolbar-separator" />
+          <div className="zotero-toolbar-group" style={{ display: 'flex', gap: '4px' }}>
+            <button onClick={onZoteroSearch} title="Search Zotero (Ctrl+Shift+Z)">
+              Zotero<kbd>Ctrl+Shift+Z</kbd>
+            </button>
+            <button onClick={onZoteroCite} title="Zotero Classic Picker (Ctrl+Shift+C)">
+              Cite<kbd>Ctrl+Shift+C</kbd>
+            </button>
+          </div>
+        </>
+      )}
 
       <span className="file-name">
         {isDirty && <span className="dirty-dot" />}

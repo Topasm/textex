@@ -15,6 +15,7 @@ import PreviewErrorBoundary from './components/PreviewErrorBoundary'
 import { useAutoCompile } from './hooks/useAutoCompile'
 import { useFileOps } from './hooks/useFileOps'
 import { SettingsModal } from './components/SettingsModal'
+import { ZoteroCiteModal } from './components/ZoteroCiteModal'
 import { useAppStore } from './store/useAppStore'
 import type { SidebarView, LspStatus } from './store/useAppStore'
 import { startLspClient, stopLspClient, lspNotifyDidOpen, lspNotifyDidClose, lspNotifyDidChange, lspRequestDocumentSymbols } from './lsp/lspClient'
@@ -38,7 +39,71 @@ function App() {
   const projectRoot = useAppStore((s) => s.projectRoot)
   const isGitRepo = useAppStore((s) => s.isGitRepo)
   const lspEnabled = useAppStore((s) => s.settings.lspEnabled)
+  const zoteroEnabled = useAppStore((s) => s.settings.zoteroEnabled)
+  const zoteroPort = useAppStore((s) => s.settings.zoteroPort)
   const prevFilePathRef = useRef<string | null>(null)
+
+  const [isZoteroModalOpen, setIsZoteroModalOpen] = useState(false)
+
+  const handleZoteroInsert = useCallback((citekeys: string[]) => {
+    if (!citekeys.length) return
+    const citeCmd = `\\cite{${citekeys.join(',')}}`
+    // Insert at cursor position.
+    // Since we don't have direct access to Monaco editor instance here easily without
+    // refactoring EditorPane, we'll append to content for now or rely on EditorPane
+    // exposing a way to insert.
+    // Better approach: Update content in store using a helper that inserts at cursor.
+    // For this MVP, let's append to logs (debug) and try to insert if we can.
+    // Actually, we can use useAppStore's content + cursorLine/Column to splice.
+    // BUT, that is complex to get right with lines vs index.
+    // Let's assume we just append for now or use a placeholder.
+    // Wait, we can use the `setPdfBase64` trick? No.
+
+    // Let's implement a rudimentary insertAtCursor in store or just helper here?
+    // EditorPane uses Monaco, which has its own state. The store has `content`.
+    // If we update store `content`, EditorPane should update.
+    // We need to calculate index from line/col.
+    const state = useAppStore.getState()
+    const lines = state.content.split('\n')
+    // cursorLine is 1-based, cursorColumn is 1-based
+    const lineIdx = state.cursorLine - 1
+    const colIdx = state.cursorColumn - 1
+
+    if (lineIdx >= 0 && lineIdx < lines.length) {
+      const line = lines[lineIdx]
+      const before = line.slice(0, colIdx)
+      const after = line.slice(colIdx)
+      lines[lineIdx] = before + citeCmd + after
+      state.setContent(lines.join('\n'))
+    } else {
+      // Fallback: append
+      state.setContent(state.content + '\n' + citeCmd)
+    }
+    setIsZoteroModalOpen(false)
+  }, [])
+
+  const handleZoteroCAYW = useCallback(async () => {
+    try {
+      const citeCmd = await window.api.zoteroCiteCAYW(zoteroPort)
+      if (citeCmd) {
+        // Same insertion logic
+        const state = useAppStore.getState()
+        const lines = state.content.split('\n')
+        const lineIdx = state.cursorLine - 1
+        const colIdx = state.cursorColumn - 1
+
+        if (lineIdx >= 0 && lineIdx < lines.length) {
+          const line = lines[lineIdx]
+          const before = line.slice(0, colIdx)
+          const after = line.slice(colIdx)
+          lines[lineIdx] = before + citeCmd + after
+          state.setContent(lines.join('\n'))
+        }
+      }
+    } catch (err) {
+      useAppStore.getState().appendLog(`Zotero CAYW Error: ${errorMessage(err)}`)
+    }
+  }, [zoteroPort])
 
   // ---- Compile handler ----
   const handleCompile = useCallback(async (): Promise<void> => {
@@ -411,6 +476,16 @@ function App() {
       } else if (e.key === 'n' && e.shiftKey) {
         e.preventDefault()
         s.toggleTemplateGallery()
+      } else if ((e.key === 'z' || e.key === 'Z') && mod && e.shiftKey) {
+        if (zoteroEnabled) {
+          e.preventDefault()
+          setIsZoteroModalOpen(true)
+        }
+      } else if ((e.key === 'c' || e.key === 'C') && mod && e.shiftKey) {
+        if (zoteroEnabled) {
+          e.preventDefault()
+          handleZoteroCAYW()
+        }
       }
     }
     window.addEventListener('keydown', handler)
@@ -497,8 +572,15 @@ function App() {
         onNewFromTemplate={() => useAppStore.getState().toggleTemplateGallery()}
         onExport={handleExport}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onZoteroSearch={() => setIsZoteroModalOpen(true)}
+        onZoteroCite={handleZoteroCAYW}
       />
       {isSettingsOpen && <SettingsModal onClose={() => setIsSettingsOpen(false)} />}
+      <ZoteroCiteModal
+        isOpen={isZoteroModalOpen}
+        onClose={() => setIsZoteroModalOpen(false)}
+        onInsert={handleZoteroInsert}
+      />
       <UpdateNotification />
       <div className="workspace">
         {isSidebarOpen && (

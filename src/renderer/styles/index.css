@@ -1544,3 +1544,117 @@ body,
   outline: 2px solid orange;
   border-radius: 2px;
 }
+
+/* Zotero Cite Modal */
+.zotero-modal {
+  width: 600px;
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column;
+  max-height: 80vh;
+}
+
+.zotero-search-input {
+  width: 100%;
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid var(--border);
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+.zotero-search-input:focus {
+  outline: 2px solid var(--accent);
+  border-color: transparent;
+}
+
+.zotero-results-list {
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background-color: var(--bg-primary);
+  min-height: 200px;
+}
+
+.zotero-result-item {
+  display: flex;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  align-items: center;
+  gap: 12px;
+}
+
+.zotero-result-item:last-child {
+  border-bottom: none;
+}
+
+.zotero-result-item:hover {
+  background-color: var(--bg-hover);
+}
+
+.zotero-result-item.highlighted {
+  background-color: var(--tab-hover-bg);
+}
+
+.zotero-result-item.selected {
+  background-color: var(--sidebar-selected);
+}
+
+.zotero-item-checkbox input {
+  cursor: pointer;
+}
+
+.zotero-item-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.zotero-item-title {
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.zotero-item-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.zotero-item-type {
+  text-transform: capitalize;
+  font-style: italic;
+  color: var(--accent);
+}
+
+.zotero-item-citekey {
+  font-size: 11px;
+  font-family: monospace;
+  color: var(--text-kbd);
+  margin-top: 2px;
+}
+
+.zotero-loading,
+.zotero-error {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.zotero-error {
+  color: var(--error);
+}
+
+.zotero-status {
+  font-size: 13px;
+  color: var(--text-secondary);
+}

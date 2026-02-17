@@ -173,6 +173,20 @@ interface ElectronAPI {
   removeLspMessageListener(): void
   onLspStatus(cb: (status: string, error?: string) => void): void
   removeLspStatusListener(): void
+
+  // Zotero
+  zoteroProbe(port?: number): Promise<boolean>
+  zoteroSearch(term: string, port?: number): Promise<ZoteroSearchResult[]>
+  zoteroCiteCAYW(port?: number): Promise<string>
+  zoteroExportBibtex(citekeys: string[], port?: number): Promise<string>
+}
+
+interface ZoteroSearchResult {
+  citekey: string
+  title: string
+  author: string
+  year: string
+  type: string
 }
 
 type DiagnosticSeverity = 'error' | 'warning' | 'info'

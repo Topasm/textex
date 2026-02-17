@@ -170,5 +170,12 @@ contextBridge.exposeInMainWorld('api', {
       ipcRenderer.removeListener('lsp:status-change', lspStatusHandler)
       lspStatusHandler = null
     }
-  }
+  },
+
+  // Zotero
+  zoteroProbe: (port?: number) => ipcRenderer.invoke('zotero:probe', port),
+  zoteroSearch: (term: string, port?: number) => ipcRenderer.invoke('zotero:search', term, port),
+  zoteroCiteCAYW: (port?: number) => ipcRenderer.invoke('zotero:cite-cayw', port),
+  zoteroExportBibtex: (citekeys: string[], port?: number) =>
+    ipcRenderer.invoke('zotero:export-bibtex', citekeys, port)
 })

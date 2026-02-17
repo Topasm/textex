@@ -40,3 +40,11 @@ TextEx integrates [Prettier](https://prettier.io/) for opinionated, consistent L
 ### Usage
 - **Manual**: Press `Shift+Alt+F` (or `Shift+Option+F` on macOS) to format the current document.
 - **On Save**: Enable "Format on Save" in settings to automatically format whenever you save the file (`Ctrl+S`).
+
+## Syntax Highlighting
+
+TextEx features **Semantic Highlighting** powered by the TexLab language server.
+
+- **Standard**: Basic keyword and comment coloring via Monaco's built-in tokenizer.
+- **Semantic**: Rich coloring for macros, environments, math modes, and citations based on the language server's understanding of the code structure.
+- **Theme**: Adapts to the selected application theme (Light/Dark/High-Contrast).

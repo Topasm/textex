@@ -21,6 +21,7 @@ import { exportDocument, getPandocFormats } from './pandoc'
 import { scanLabels } from './labelscanner'
 import { loadPackageData } from './packageloader'
 import { texLabManager } from './texlab'
+import { zoteroProbe, zoteroSearch, zoteroCiteCAYW, zoteroExportBibtex } from './zotero'
 
 function validateFilePath(filePath: unknown): string {
   if (typeof filePath !== 'string' || filePath.length === 0) {
@@ -151,20 +152,20 @@ export function registerIpcHandlers(win: BrowserWindow): void {
       const abort = new AbortController()
       watcherAbort = abort
       const watcher = fs.watch(validPath, { recursive: true, signal: abort.signal })
-      ;(async () => {
-        try {
-          for await (const event of watcher) {
-            if (event.filename) {
-              currentWindow?.webContents.send('fs:directory-changed', {
-                type: event.eventType,
-                filename: event.filename
-              })
+        ; (async () => {
+          try {
+            for await (const event of watcher) {
+              if (event.filename) {
+                currentWindow?.webContents.send('fs:directory-changed', {
+                  type: event.eventType,
+                  filename: event.filename
+                })
+              }
             }
+          } catch {
+            // watcher closed or aborted
           }
-        } catch {
-          // watcher closed or aborted
-        }
-      })()
+        })()
     } catch {
       // watch not supported or failed
     }
@@ -376,4 +377,12 @@ export function registerIpcHandlers(win: BrowserWindow): void {
   ipcMain.handle('lsp:status', () => {
     return { status: texLabManager.getStatus() }
   })
+
+  // ---- Zotero ----
+  ipcMain.handle('zotero:probe', (_e, port?: number) => zoteroProbe(port))
+  ipcMain.handle('zotero:search', (_e, term: string, port?: number) => zoteroSearch(term, port))
+  ipcMain.handle('zotero:cite-cayw', (_e, port?: number) => zoteroCiteCAYW(port))
+  ipcMain.handle('zotero:export-bibtex', (_e, citekeys: string[], port?: number) =>
+    zoteroExportBibtex(citekeys, port)
+  )
 }

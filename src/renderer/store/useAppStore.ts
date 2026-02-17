@@ -28,6 +28,10 @@ export interface UserSettings {
 
   // LSP
   lspEnabled: boolean
+
+  // Zotero
+  zoteroEnabled: boolean
+  zoteroPort: number
 }
 
 const defaultSettings: UserSettings = {
@@ -39,7 +43,9 @@ const defaultSettings: UserSettings = {
   formatOnSave: true,
   autoCompile: true,
   spellCheckEnabled: false,
-  lspEnabled: true
+  lspEnabled: true,
+  zoteroEnabled: false,
+  zoteroPort: 23119
 }
 
 interface OpenFileData {

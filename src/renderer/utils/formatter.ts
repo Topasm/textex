@@ -1,7 +1,7 @@
 
 import prettier from 'prettier/standalone';
 // @ts-ignore
-import latexPlugin from 'prettier-plugin-latex';
+import * as latexPlugin from 'prettier-plugin-latex';
 
 export interface FormatOptions {
     printWidth?: number;
