@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAppStore } from '../store/useAppStore'
 import type { UserSettings } from '../types/api';
-import { X, Moon, Sun, Monitor, Type, Zap, Link, Check, Palette, FileText, Settings as SettingsIcon } from 'lucide-react';
+import { X, Moon, Sun, Monitor, Type, Zap, Link, Check, Palette, Settings as SettingsIcon } from 'lucide-react';
 
 export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
     const settings = useAppStore((state) => state.settings);
