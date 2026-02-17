@@ -338,6 +338,16 @@ function EditorPane(): JSX.Element {
     })
     completionDisposablesRef.current.push(envDisposable)
 
+    // Register addWord command first so the code action provider can reference its ID
+    const addWordCmdId = editor.addCommand(0, async (...args: unknown[]) => {
+      const word = args[0] as string
+      if (word) {
+        await window.api.spellAddWord(word)
+        // Re-run spell check
+        runSpellCheck(editor, monaco)
+      }
+    })
+
     // Register spell check code action provider
     const codeActionDisposable = monaco.languages.registerCodeActionProvider('latex', {
       provideCodeActions: async (model, range, context) => {
@@ -377,15 +387,17 @@ function EditorPane(): JSX.Element {
                 }
               })
             }
-            actions.push({
-              title: `Add "${word}" to dictionary`,
-              kind: 'quickfix',
-              command: {
-                id: 'spellcheck.addWord',
-                title: `Add "${word}"`,
-                arguments: [word]
-              }
-            })
+            if (addWordCmdId) {
+              actions.push({
+                title: `Add "${word}" to dictionary`,
+                kind: 'quickfix',
+                command: {
+                  id: addWordCmdId,
+                  title: `Add "${word}"`,
+                  arguments: [word]
+                }
+              })
+            }
           } catch {
             // ignore
           }
@@ -394,16 +406,6 @@ function EditorPane(): JSX.Element {
       }
     })
     completionDisposablesRef.current.push(codeActionDisposable)
-
-    // Register addWord command
-    editor.addCommand(0, async (...args: unknown[]) => {
-      const word = args[0] as string
-      if (word) {
-        await window.api.spellAddWord(word)
-        // Re-run spell check
-        runSpellCheck(editor, monaco)
-      }
-    })
 
     // Register hover provider for math preview and citation info
     const hoverDisposable = registerHoverProvider(monaco, {

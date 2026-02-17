@@ -48,7 +48,7 @@ function readTextFileWithEncoding(buffer: Buffer): string {
   return utf8
 }
 
-let directoryWatcher: ReturnType<typeof fs.watch> | null = null
+let watcherAbort: AbortController | null = null
 
 let currentWindow: BrowserWindow | null = null
 let handlersRegistered = false
@@ -141,13 +141,15 @@ export function registerIpcHandlers(win: BrowserWindow): void {
 
   ipcMain.handle('fs:watch-directory', async (_event, dirPath: string) => {
     const validPath = validateFilePath(dirPath)
-    // Clean up previous watcher
-    if (directoryWatcher) {
-      directoryWatcher = null
+    // Close previous watcher
+    if (watcherAbort) {
+      watcherAbort.abort()
+      watcherAbort = null
     }
     try {
-      const watcher = fs.watch(validPath, { recursive: true })
-      directoryWatcher = watcher
+      const abort = new AbortController()
+      watcherAbort = abort
+      const watcher = fs.watch(validPath, { recursive: true, signal: abort.signal })
       ;(async () => {
         try {
           for await (const event of watcher) {
@@ -159,7 +161,7 @@ export function registerIpcHandlers(win: BrowserWindow): void {
             }
           }
         } catch {
-          // watcher closed
+          // watcher closed or aborted
         }
       })()
     } catch {
@@ -169,7 +171,10 @@ export function registerIpcHandlers(win: BrowserWindow): void {
   })
 
   ipcMain.handle('fs:unwatch-directory', () => {
-    directoryWatcher = null
+    if (watcherAbort) {
+      watcherAbort.abort()
+      watcherAbort = null
+    }
     return { success: true }
   })
 

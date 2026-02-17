@@ -405,9 +405,11 @@ function loadSyncTexForFile(texFile: string): PdfSyncObject | undefined {
 
 function findInputFilePath(filePath: string, pdfSyncObject: PdfSyncObject): string | undefined {
   const resolvedPath = path.resolve(filePath)
+  const fileDir = path.dirname(filePath)
   for (const inputFilePath in pdfSyncObject.blockNumberLine) {
     try {
-      if (path.resolve(inputFilePath) === resolvedPath) {
+      // Resolve relative paths from the SyncTeX file against the tex file's directory
+      if (path.resolve(fileDir, inputFilePath) === resolvedPath) {
         return inputFilePath
       }
     } catch {
@@ -551,11 +553,11 @@ export async function inverseSync(
     return null
   }
 
-  // Verify the file exists
-  const resolvedInput = fs.existsSync(record.input) ? record.input : null
-  if (!resolvedInput) {
+  // Resolve relative paths from the SyncTeX file against the tex file's directory
+  const candidate = path.resolve(path.dirname(texFile), record.input)
+  if (!fs.existsSync(candidate)) {
     return null
   }
 
-  return { file: resolvedInput, line: record.line, column: 0 }
+  return { file: candidate, line: record.line, column: 0 }
 }
