@@ -74,6 +74,15 @@ export interface SectionNode {
   children: SectionNode[]
 }
 
+export interface DocumentSymbolNode {
+  name: string
+  detail: string
+  kind: number // LSP SymbolKind
+  range: { startLine: number; startColumn: number; endLine: number; endColumn: number }
+  selectionRange: { startLine: number; startColumn: number; endLine: number; endColumn: number }
+  children: DocumentSymbolNode[]
+}
+
 export interface DocumentMetadata {
   documentClass: string
   documentClassOptions: string[]

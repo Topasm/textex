@@ -163,7 +163,7 @@ async function doInitialize(workspaceRoot: string): Promise<void> {
         },
         definition: { dynamicRegistration: false },
         references: { dynamicRegistration: false },
-        documentSymbol: { dynamicRegistration: false },
+        documentSymbol: { dynamicRegistration: false, hierarchicalDocumentSymbolSupport: true },
         formatting: { dynamicRegistration: false },
         rename: { dynamicRegistration: false },
         publishDiagnostics: { relatedInformation: false }
@@ -639,4 +639,49 @@ export function lspNotifyDidSave(filePath: string): void {
 
 export function lspNotifyDidClose(filePath: string): void {
   notifyDidClose(filePath)
+}
+
+// ---- Document Symbols ----
+
+interface LspDocumentSymbol {
+  name: string
+  detail?: string
+  kind: number
+  range: { start: { line: number; character: number }; end: { line: number; character: number } }
+  selectionRange: { start: { line: number; character: number }; end: { line: number; character: number } }
+  children?: LspDocumentSymbol[]
+}
+
+function mapSymbols(symbols: LspDocumentSymbol[]): import('../../shared/types').DocumentSymbolNode[] {
+  return symbols.map((sym) => ({
+    name: sym.name,
+    detail: sym.detail || '',
+    kind: sym.kind,
+    range: {
+      startLine: sym.range.start.line + 1,
+      startColumn: sym.range.start.character + 1,
+      endLine: sym.range.end.line + 1,
+      endColumn: sym.range.end.character + 1
+    },
+    selectionRange: {
+      startLine: sym.selectionRange.start.line + 1,
+      startColumn: sym.selectionRange.start.character + 1,
+      endLine: sym.selectionRange.end.line + 1,
+      endColumn: sym.selectionRange.end.character + 1
+    },
+    children: sym.children ? mapSymbols(sym.children) : []
+  }))
+}
+
+export async function lspRequestDocumentSymbols(filePath: string): Promise<import('../../shared/types').DocumentSymbolNode[]> {
+  if (!initialized) return []
+  try {
+    const result = await sendRequest('textDocument/documentSymbol', {
+      textDocument: { uri: filePathToUri(filePath) }
+    })
+    if (!result || !Array.isArray(result)) return []
+    return mapSymbols(result as LspDocumentSymbol[])
+  } catch {
+    return []
+  }
 }

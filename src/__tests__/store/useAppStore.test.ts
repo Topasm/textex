@@ -16,7 +16,8 @@ const initialState = {
   pendingJump: null,
   synctexHighlight: null,
   splitRatio: 0.5,
-  zoomLevel: 100
+  zoomLevel: 100,
+  documentSymbols: []
 }
 
 beforeEach(() => {
@@ -301,6 +302,47 @@ describe('useAppStore', () => {
       useAppStore.setState({ zoomLevel: 250 })
       useAppStore.getState().resetZoom()
       expect(useAppStore.getState().zoomLevel).toBe(100)
+    })
+  })
+
+  describe('setDocumentSymbols', () => {
+    it('stores and retrieves document symbols', () => {
+      const symbols: DocumentSymbolNode[] = [
+        {
+          name: 'Introduction',
+          detail: 'section',
+          kind: 3,
+          range: { startLine: 1, startColumn: 1, endLine: 10, endColumn: 1 },
+          selectionRange: { startLine: 1, startColumn: 1, endLine: 1, endColumn: 20 },
+          children: [
+            {
+              name: 'Background',
+              detail: 'subsection',
+              kind: 3,
+              range: { startLine: 3, startColumn: 1, endLine: 8, endColumn: 1 },
+              selectionRange: { startLine: 3, startColumn: 1, endLine: 3, endColumn: 22 },
+              children: []
+            }
+          ]
+        }
+      ]
+      useAppStore.getState().setDocumentSymbols(symbols)
+      expect(useAppStore.getState().documentSymbols).toEqual(symbols)
+    })
+
+    it('can clear document symbols with empty array', () => {
+      useAppStore.getState().setDocumentSymbols([
+        {
+          name: 'Test',
+          detail: '',
+          kind: 3,
+          range: { startLine: 1, startColumn: 1, endLine: 1, endColumn: 1 },
+          selectionRange: { startLine: 1, startColumn: 1, endLine: 1, endColumn: 1 },
+          children: []
+        }
+      ])
+      useAppStore.getState().setDocumentSymbols([])
+      expect(useAppStore.getState().documentSymbols).toEqual([])
     })
   })
 

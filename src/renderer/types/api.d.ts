@@ -199,6 +199,15 @@ declare global {
     column: number
   }
 
+  interface DocumentSymbolNode {
+    name: string
+    detail: string
+    kind: number
+    range: { startLine: number; startColumn: number; endLine: number; endColumn: number }
+    selectionRange: { startLine: number; startColumn: number; endLine: number; endColumn: number }
+    children: DocumentSymbolNode[]
+  }
+
   interface Window {
     api: ElectronAPI
   }

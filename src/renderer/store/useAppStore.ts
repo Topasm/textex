@@ -3,7 +3,7 @@ import { subscribeWithSelector } from 'zustand/middleware'
 
 export type CompileStatus = 'idle' | 'compiling' | 'success' | 'error'
 export type Theme = 'dark' | 'light' | 'high-contrast'
-export type SidebarView = 'files' | 'git' | 'bib'
+export type SidebarView = 'files' | 'git' | 'bib' | 'structure'
 export type UpdateStatus = 'idle' | 'available' | 'downloading' | 'ready' | 'error'
 export type ExportStatus = 'idle' | 'exporting' | 'success' | 'error'
 export type LspStatus = 'stopped' | 'starting' | 'running' | 'error'
@@ -85,6 +85,9 @@ interface AppState {
   lspStatus: LspStatus
   lspError: string | null
   lspEnabled: boolean
+
+  // Document symbols
+  documentSymbols: DocumentSymbolNode[]
 
   // ---- Actions ----
 
@@ -168,6 +171,9 @@ interface AppState {
   setLspStatus: (status: LspStatus) => void
   setLspError: (error: string | null) => void
   setLspEnabled: (enabled: boolean) => void
+
+  // Document symbols
+  setDocumentSymbols: (symbols: DocumentSymbolNode[]) => void
 }
 
 export const useAppStore = create<AppState>()(
@@ -241,6 +247,9 @@ export const useAppStore = create<AppState>()(
     lspStatus: 'stopped',
     lspError: null,
     lspEnabled: true,
+
+    // Document symbols
+    documentSymbols: [],
 
     // ---- Actions ----
 
@@ -483,6 +492,9 @@ export const useAppStore = create<AppState>()(
     setLspEnabled: (lspEnabled) => {
       set({ lspEnabled })
       window.api.saveSettings({ lspEnabled })
-    }
+    },
+
+    // Document symbols
+    setDocumentSymbols: (documentSymbols) => set({ documentSymbols })
   }))
 )

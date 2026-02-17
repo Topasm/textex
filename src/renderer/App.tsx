@@ -8,6 +8,7 @@ import FileTree from './components/FileTree'
 import TabBar from './components/TabBar'
 import TemplateGallery from './components/TemplateGallery'
 import BibPanel from './components/BibPanel'
+import StructurePanel from './components/StructurePanel'
 import GitPanel from './components/GitPanel'
 import UpdateNotification from './components/UpdateNotification'
 import PreviewErrorBoundary from './components/PreviewErrorBoundary'
@@ -15,7 +16,7 @@ import { useAutoCompile } from './hooks/useAutoCompile'
 import { useFileOps } from './hooks/useFileOps'
 import { useAppStore } from './store/useAppStore'
 import type { SidebarView, LspStatus } from './store/useAppStore'
-import { startLspClient, stopLspClient, lspNotifyDidOpen, lspNotifyDidChange } from './lsp/lspClient'
+import { startLspClient, stopLspClient, lspNotifyDidOpen, lspNotifyDidChange, lspRequestDocumentSymbols } from './lsp/lspClient'
 import { loader } from '@monaco-editor/react'
 
 function App(): JSX.Element {
@@ -378,8 +379,51 @@ function App(): JSX.Element {
   useEffect(() => {
     if (filePath) {
       lspNotifyDidOpen(filePath, useAppStore.getState().content)
+      // Fetch symbols after LSP processes didOpen
+      const state = useAppStore.getState()
+      if (state.lspEnabled && state.lspStatus === 'running') {
+        const switchedFile = filePath
+        const timer = setTimeout(() => {
+          if (useAppStore.getState().filePath === switchedFile) {
+            lspRequestDocumentSymbols(switchedFile).then((symbols) => {
+              if (useAppStore.getState().filePath === switchedFile) {
+                useAppStore.getState().setDocumentSymbols(symbols)
+              }
+            })
+          }
+        }, 200)
+        return () => clearTimeout(timer)
+      }
+    } else {
+      useAppStore.getState().setDocumentSymbols([])
     }
   }, [filePath])
+
+  // ---- Fetch document symbols on content change (debounced) ----
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const unsub = useAppStore.subscribe(
+      (state) => state.content,
+      () => {
+        clearTimeout(timer)
+        timer = setTimeout(() => {
+          const state = useAppStore.getState()
+          if (state.filePath && state.lspEnabled && state.lspStatus === 'running') {
+            const currentFile = state.filePath
+            lspRequestDocumentSymbols(currentFile).then((symbols) => {
+              if (useAppStore.getState().filePath === currentFile) {
+                useAppStore.getState().setDocumentSymbols(symbols)
+              }
+            })
+          }
+        }, 500)
+      }
+    )
+    return () => {
+      clearTimeout(timer)
+      unsub()
+    }
+  }, [])
 
   // ---- Keyboard shortcuts ----
   useEffect(() => {
@@ -545,7 +589,8 @@ function App(): JSX.Element {
   const sidebarTabs: { key: SidebarView; label: string }[] = [
     { key: 'files', label: 'Files' },
     { key: 'git', label: 'Git' },
-    { key: 'bib', label: 'Bib' }
+    { key: 'bib', label: 'Bib' },
+    { key: 'structure', label: 'Structure' }
   ]
 
   return (
@@ -581,6 +626,7 @@ function App(): JSX.Element {
                 {sidebarView === 'files' && <FileTree />}
                 {sidebarView === 'git' && <GitPanel />}
                 {sidebarView === 'bib' && <BibPanel />}
+                {sidebarView === 'structure' && <StructurePanel />}
               </div>
             </div>
             <div
