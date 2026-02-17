@@ -49,14 +49,28 @@ function getSymbolIcon(category: SymbolCategory): string {
   switch (category) {
     case 'section':
       return '\u00A7' // §
+    case 'subsection':
+      return '\u00B6' // ¶
+    case 'subsubsection':
+      return '\u22B3' // ⊳
+    case 'figure':
+      return '\u25A3' // ▣
+    case 'table':
+      return '\u25A6' // ▦
+    case 'list':
+      return '\u25A4' // ▤
+    case 'equation':
+      return '\u2211' // ∑
+    case 'algorithm':
+      return '\u25B7' // ▷
     case 'env':
       return '\u25A1' // □
     case 'math':
-      return '\u0192' // ƒ
+      return '\u2211' // ∑
     case 'label':
-      return '\u2022' // •
+      return '#'
     default:
-      return '\u00A7'
+      return '\u25C7' // ◇
   }
 }
 
@@ -81,7 +95,7 @@ function OutlineNode({
   }, [])
 
   const hasChildren = node.children.length > 0
-  const category = getSymbolCategory(node.kind)
+  const category = getSymbolCategory(node.kind, node.name, depth)
 
   return (
     <>

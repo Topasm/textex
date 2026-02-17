@@ -1685,6 +1685,44 @@ body,
   color: var(--text-secondary);
 }
 
+.outline-icon-subsection {
+  color: var(--accent);
+  opacity: 0.8;
+}
+
+.outline-icon-subsubsection {
+  color: var(--accent);
+  opacity: 0.6;
+}
+
+.outline-icon-figure {
+  color: var(--success);
+}
+
+.outline-icon-table {
+  color: var(--info);
+}
+
+.outline-icon-list {
+  color: var(--text-secondary);
+}
+
+.outline-icon-equation {
+  color: var(--warning);
+}
+
+.outline-icon-algorithm {
+  color: #b07adc;
+}
+
+[data-theme='light'] .outline-icon-algorithm {
+  color: #7a5a9e;
+}
+
+[data-theme='high-contrast'] .outline-icon-algorithm {
+  color: #d89fff;
+}
+
 /* Name */
 .outline-name {
   flex: 1;
