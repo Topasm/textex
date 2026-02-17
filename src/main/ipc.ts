@@ -4,7 +4,7 @@ import fs from 'fs/promises'
 import { compileLatex, cancelCompilation } from './compiler'
 import { forwardSync, inverseSync } from './synctex'
 import { loadSettings, saveSettings } from './settings'
-import { parseBibFile, findBibFilesInProject } from './bibparser'
+import { parseBibFile, findBibFilesInProject } from '../shared/bibparser'
 import { checkWords, getSuggestions, initSpellChecker, addWord, setLanguage } from './spellcheck'
 import {
   initGit,

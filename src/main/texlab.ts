@@ -25,19 +25,11 @@ function getDefaultTexLabPath(): string {
   return path.join(process.resourcesPath, 'bin', binary)
 }
 
-function findTexLabBinary(customPath: string): string {
-  // 1. Custom user path
-  if (customPath && fs.existsSync(customPath)) {
-    return customPath
-  }
-
-  // 2. Bundled binary
+function findTexLabBinary(): string {
   const bundled = getDefaultTexLabPath()
   if (fs.existsSync(bundled)) {
     return bundled
   }
-
-  // 3. Fallback to system PATH
   return 'texlab'
 }
 
@@ -46,16 +38,11 @@ class TexLabManager {
   private status: TexLabStatus = 'stopped'
   private callbacks: TexLabCallbacks | null = null
   private workspaceRoot: string | null = null
-  private customPath = ''
   private retryCount = 0
   private stdoutBuffer = ''
 
   getStatus(): TexLabStatus {
     return this.status
-  }
-
-  setCustomPath(customPath: string): void {
-    this.customPath = customPath
   }
 
   start(workspaceRoot: string, callbacks: TexLabCallbacks): void {
@@ -72,7 +59,7 @@ class TexLabManager {
   private spawn(): void {
     if (!this.callbacks || !this.workspaceRoot) return
 
-    const binaryPath = findTexLabBinary(this.customPath)
+    const binaryPath = findTexLabBinary()
     this.setStatus('starting')
     this.stdoutBuffer = ''
 
@@ -107,12 +94,8 @@ class TexLabManager {
       this.parseMessages()
     })
 
-    this.process.stderr!.on('data', (chunk: Buffer) => {
-      // TexLab logs to stderr — ignore but don't crash
-      const text = chunk.toString('utf-8').trim()
-      if (text) {
-        // Could be useful for debugging, but we don't surface it
-      }
+    this.process.stderr!.on('data', () => {
+      // TexLab logs to stderr — drain but don't crash
     })
 
     // If process started successfully, mark as running after a tick

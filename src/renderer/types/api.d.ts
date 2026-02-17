@@ -87,7 +87,6 @@ interface UserSettings {
   gitEnabled: boolean
   autoUpdateEnabled: boolean
   lspEnabled: boolean
-  texlabPath: string
 }
 
 interface ElectronAPI {

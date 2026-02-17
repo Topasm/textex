@@ -101,7 +101,6 @@ interface AppState {
   openFileInTab: (filePath: string, content: string) => void
   closeTab: (filePath: string) => void
   setActiveTab: (filePath: string) => void
-  updateFileContent: (filePath: string, content: string) => void
   setDirectoryTree: (tree: DirectoryEntry[] | null) => void
   toggleSidebar: () => void
   setSidebarView: (view: SidebarView) => void
@@ -132,7 +131,6 @@ interface AppState {
 
   // Settings
   setTheme: (theme: Theme) => void
-  setFontSize: (size: number) => void
   increaseFontSize: () => void
   decreaseFontSize: () => void
   loadUserSettings: (settings: UserSettings) => void
@@ -378,18 +376,6 @@ export const useAppStore = create<AppState>()(
         }
       }
     },
-    updateFileContent: (filePath, content) => {
-      const state = get()
-      const openFiles = { ...state.openFiles }
-      if (openFiles[filePath]) {
-        openFiles[filePath] = { ...openFiles[filePath], content, isDirty: true }
-      }
-      if (state.activeFilePath === filePath) {
-        set({ openFiles, content, isDirty: true })
-      } else {
-        set({ openFiles })
-      }
-    },
     setDirectoryTree: (directoryTree) => set({ directoryTree }),
     toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
     setSidebarView: (sidebarView) => set({ sidebarView }),
@@ -424,11 +410,6 @@ export const useAppStore = create<AppState>()(
       document.documentElement.dataset.theme = theme
       set({ theme })
       window.api.saveSettings({ theme })
-    },
-    setFontSize: (fontSize) => {
-      const clamped = Math.max(8, Math.min(32, fontSize))
-      set({ fontSize: clamped })
-      window.api.saveSettings({ fontSize: clamped })
     },
     increaseFontSize: () => {
       const state = get()

@@ -20,16 +20,6 @@ export interface SyncTeXInverseResult {
   column: number
 }
 
-export interface UserSettings {
-  theme: 'dark' | 'light' | 'high-contrast'
-  fontSize: number
-  autoCompile: boolean
-  spellCheckEnabled: boolean
-  spellCheckLanguage: string
-  gitEnabled: boolean
-  autoUpdateEnabled: boolean
-}
-
 export interface DirectoryEntry {
   name: string
   path: string
