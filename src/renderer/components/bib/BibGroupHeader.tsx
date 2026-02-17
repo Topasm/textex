@@ -46,9 +46,7 @@ export function BibGroupHeader({
       }}
       title={citekeys ? `Drag to insert \\cite{} for all ${count} entries` : undefined}
     >
-      <span className="bib-group-chevron">
-        {isCollapsed ? '\u25B8' : '\u25BE'}
-      </span>
+      <span className="bib-group-chevron">{isCollapsed ? '\u25B8' : '\u25BE'}</span>
       {isRenaming ? (
         <input
           className="bib-rename-input"
@@ -65,11 +63,15 @@ export function BibGroupHeader({
       ) : (
         <span
           className="bib-group-label"
-          onDoubleClick={isCustom ? (e) => {
-            e.stopPropagation()
-            setIsRenaming(true)
-            setRenameValue(label)
-          } : undefined}
+          onDoubleClick={
+            isCustom
+              ? (e) => {
+                  e.stopPropagation()
+                  setIsRenaming(true)
+                  setRenameValue(label)
+                }
+              : undefined
+          }
         >
           {label}
         </span>
@@ -78,7 +80,10 @@ export function BibGroupHeader({
       {isCustom && onDelete && (
         <button
           className="bib-group-delete-btn"
-          onClick={(e) => { e.stopPropagation(); onDelete() }}
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete()
+          }}
           title="Delete group"
         >
           ×

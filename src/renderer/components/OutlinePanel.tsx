@@ -23,7 +23,8 @@ function getSymbolCategory(kind: number, name: string, depth: number): SymbolCat
       if (depth >= 2) return 'subsubsection'
       if (depth === 1) return 'subsection'
       return 'section'
-    case 5: { // Class (environment)
+    case 5: {
+      // Class (environment)
       const n = name.toLowerCase()
       if (/^(figure\*?|wrapfigure|subfigure|graphic)$/.test(n)) return 'figure'
       if (/^(table\*?|tabular x?|tabularx|longtable)$/.test(n)) return 'table'
@@ -108,11 +109,7 @@ const OutlineNode = React.memo(function OutlineNode({
         {/* Indent guide lines */}
         {depth > 0 &&
           Array.from({ length: depth }).map((_, i) => (
-            <span
-              key={i}
-              className="outline-indent-guide"
-              style={{ left: `${10 + i * 18}px` }}
-            />
+            <span key={i} className="outline-indent-guide" style={{ left: `${10 + i * 18}px` }} />
           ))}
 
         {hasChildren ? (
@@ -125,9 +122,7 @@ const OutlineNode = React.memo(function OutlineNode({
         ) : (
           <span className="outline-toggle-spacer" />
         )}
-        <span className={`outline-icon outline-icon-${category}`}>
-          {getSymbolIcon(category)}
-        </span>
+        <span className={`outline-icon outline-icon-${category}`}>{getSymbolIcon(category)}</span>
         <span className="outline-name">{node.name}</span>
         {node.detail && <span className="outline-detail">{node.detail}</span>}
       </div>
@@ -166,7 +161,11 @@ function OutlinePanel() {
           <button
             className={`outline-highlight-toggle${sectionHighlightEnabled ? ' active' : ''}`}
             onClick={toggleHighlight}
-            title={sectionHighlightEnabled ? 'Hide section bands in editor' : 'Show section bands in editor'}
+            title={
+              sectionHighlightEnabled
+                ? 'Hide section bands in editor'
+                : 'Show section bands in editor'
+            }
           >
             {'\u2261'} Bands
           </button>
@@ -182,7 +181,11 @@ function OutlinePanel() {
         <button
           className={`outline-highlight-toggle${sectionHighlightEnabled ? ' active' : ''}`}
           onClick={toggleHighlight}
-          title={sectionHighlightEnabled ? 'Hide section bands in editor' : 'Show section bands in editor'}
+          title={
+            sectionHighlightEnabled
+              ? 'Hide section bands in editor'
+              : 'Show section bands in editor'
+          }
         >
           {'\u2261'} Bands
         </button>

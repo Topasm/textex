@@ -17,7 +17,7 @@ pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl
 interface PageViewportInfo {
   viewport: { convertToViewportPoint(x: number, y: number): [number, number]; viewBox: number[] }
   element: HTMLDivElement
-  pageWidth: number  // actual PDF page width in points
+  pageWidth: number // actual PDF page width in points
   pageHeight: number // actual PDF page height in points
 }
 
@@ -35,7 +35,11 @@ function PreviewPane() {
   // Extracted hooks
   const { containerWidth, ctrlHeld } = useContainerSize(containerRef)
   const { transientScale } = usePreviewZoom(containerRef)
-  const { highlightStyle, handleContainerClick } = useSynctex(containerRef, pageViewportsRef, containerWidth)
+  const { highlightStyle, handleContainerClick } = useSynctex(
+    containerRef,
+    pageViewportsRef,
+    containerWidth
+  )
   const {
     searchVisible,
     searchMatches,
@@ -43,7 +47,7 @@ function PreviewPane() {
     handleSearchNext,
     handleSearchPrev,
     handleSearchClose,
-    setSearchQuery,
+    setSearchQuery
   } = usePdfSearch(containerRef, numPages)
 
   // Track scroll position continuously
@@ -58,7 +62,7 @@ function PreviewPane() {
     const binaryString = atob(pdfBase64)
     const bytes = new Uint8Array(binaryString.length)
     for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i) & 0xFF
+      bytes[i] = binaryString.charCodeAt(i) & 0xff
     }
     return { data: bytes }
   }, [pdfBase64])
@@ -105,7 +109,7 @@ function PreviewPane() {
           viewport,
           element: pageEl,
           pageWidth: actualPageWidth,
-          pageHeight: actualPageHeight,
+          pageHeight: actualPageHeight
         })
       }
     },
@@ -155,10 +159,10 @@ function PreviewPane() {
             style={
               transientScale != null
                 ? {
-                  transform: `scale(${transientScale})`,
-                  transformOrigin: 'top center',
-                  willChange: 'transform'
-                }
+                    transform: `scale(${transientScale})`,
+                    transformOrigin: 'top center',
+                    willChange: 'transform'
+                  }
                 : undefined
             }
           >
@@ -186,7 +190,10 @@ function PreviewPane() {
             </Document>
           </div>
           {pdfError && (
-            <div className="preview-center preview-error" style={{ position: 'absolute', top: 40, left: 0, right: 0 }}>
+            <div
+              className="preview-center preview-error"
+              style={{ position: 'absolute', top: 40, left: 0, right: 0 }}
+            >
               <p>Failed to load PDF: {pdfError}</p>
               <p>Check the log panel for details.</p>
             </div>

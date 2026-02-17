@@ -1,4 +1,5 @@
 import { BrowserWindow } from 'electron'
+import { DisposableStore } from '../../shared/lifecycle'
 import { registerFileSystemHandlers } from './fileSystem'
 import { registerCompilerHandlers } from './compiler'
 import { registerSynctexHandlers } from './synctex'
@@ -13,6 +14,7 @@ import { registerMiscHandlers } from './misc'
 
 let currentWindow: BrowserWindow | null = null
 let handlersRegistered = false
+const ipcDisposables = new DisposableStore()
 
 function getWindow(): BrowserWindow | null {
   return currentWindow
@@ -37,4 +39,14 @@ export function registerIpcHandlers(win: BrowserWindow): void {
   registerAiHandlers()
   registerHistoryHandlers()
   registerMiscHandlers(getWindow)
+}
+
+/**
+ * Dispose all IPC handlers and listeners. Called on app quit or window close
+ * to ensure deterministic cleanup (no dangling listeners between reload cycles).
+ */
+export function disposeIpcHandlers(): void {
+  ipcDisposables.dispose()
+  currentWindow = null
+  handlersRegistered = false
 }

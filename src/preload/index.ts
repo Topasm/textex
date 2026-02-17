@@ -1,4 +1,78 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
+import type { IpcChannel, IpcRequest, IpcResponse } from '../shared/ipcChannels'
+
+// ---- IPC invoke with deduplication & timeout ----
+
+const DEFAULT_TIMEOUT_MS = 30_000
+// Channels that involve user interaction (dialogs) should never time out
+const NO_TIMEOUT_CHANNELS = new Set<string>([
+  'fs:open', 'fs:save-as', 'fs:open-directory',
+  'fs:create-template-project', 'export:convert'
+])
+
+/**
+ * In-flight request map for deduplication.
+ * Only read-only channels are deduplicated (not writes or mutations).
+ */
+const DEDUP_CHANNELS = new Set<string>([
+  'fs:read-file', 'fs:read-directory', 'settings:load',
+  'bib:parse', 'bib:find-in-project', 'spell:check', 'spell:suggest',
+  'git:is-repo', 'git:status', 'git:diff', 'git:log', 'git:file-log',
+  'latex:scan-labels', 'latex:load-package-data', 'export:formats',
+  'lsp:status', 'ai:has-api-key', 'structure:outline',
+  'history:list', 'zotero:probe', 'zotero:search'
+])
+
+const inflight = new Map<string, Promise<unknown>>()
+
+function makeKey(channel: string, args: unknown[]): string {
+  return channel + '\0' + JSON.stringify(args)
+}
+
+/**
+ * Type-safe IPC invoke with optional deduplication and timeout.
+ */
+function invoke<C extends IpcChannel>(
+  channel: C,
+  ...args: IpcRequest<C>
+): Promise<IpcResponse<C>> {
+  const shouldDedup = DEDUP_CHANNELS.has(channel)
+  const key = shouldDedup ? makeKey(channel, args) : ''
+
+  if (shouldDedup) {
+    const existing = inflight.get(key)
+    if (existing) return existing as Promise<IpcResponse<C>>
+  }
+
+  const ipcPromise = ipcRenderer.invoke(channel, ...args)
+
+  let resultPromise: Promise<IpcResponse<C>>
+
+  if (NO_TIMEOUT_CHANNELS.has(channel)) {
+    resultPromise = ipcPromise
+  } else {
+    resultPromise = Promise.race([
+      ipcPromise,
+      new Promise<never>((_, reject) => {
+        setTimeout(
+          () => reject(new Error(`IPC call "${channel}" timed out after ${DEFAULT_TIMEOUT_MS}ms`)),
+          DEFAULT_TIMEOUT_MS
+        )
+      })
+    ])
+  }
+
+  if (shouldDedup) {
+    inflight.set(key, resultPromise)
+    resultPromise = resultPromise.finally(() => {
+      inflight.delete(key)
+    }) as Promise<IpcResponse<C>>
+  }
+
+  return resultPromise
+}
+
+// ---- Listener helpers with disposable cleanup ----
 
 /**
  * Helper that manages a single IPC listener for a channel.
@@ -26,28 +100,30 @@ function createIpcListener<TArgs extends unknown[]>(channel: string) {
 
 const compileLogListener = createIpcListener<[string]>('latex:log')
 const diagnosticsListener = createIpcListener<[unknown[]]>('latex:diagnostics')
-const directoryChangedListener = createIpcListener<[{ type: string; filename: string }]>('fs:directory-changed')
+const directoryChangedListener =
+  createIpcListener<[{ type: string; filename: string }]>('fs:directory-changed')
 const lspMessageListener = createIpcListener<[object]>('lsp:message')
 const lspStatusListener = createIpcListener<[string, string?]>('lsp:status-change')
 
-let updateHandlers: Record<string, ((_event: IpcRendererEvent, ...args: unknown[]) => void)> = {}
+let updateHandlers: Record<string, (_event: IpcRendererEvent, ...args: unknown[]) => void> = {}
 
 contextBridge.exposeInMainWorld('api', {
   // File System
-  openFile: () => ipcRenderer.invoke('fs:open'),
-  saveFile: (content: string, filePath: string) => ipcRenderer.invoke('fs:save', content, filePath),
-  saveFileBatch: (files: Array<{ content: string; filePath: string }>) => ipcRenderer.invoke('fs:save-batch', files),
-  saveFileAs: (content: string) => ipcRenderer.invoke('fs:save-as', content),
+  openFile: () => invoke('fs:open'),
+  saveFile: (content: string, filePath: string) => invoke('fs:save', content, filePath),
+  saveFileBatch: (files: Array<{ content: string; filePath: string }>) =>
+    invoke('fs:save-batch', files),
+  saveFileAs: (content: string) => invoke('fs:save-as', content),
   createTemplateProject: (templateName: string, content: string) =>
-    ipcRenderer.invoke('fs:create-template-project', templateName, content),
-  readFile: (filePath: string) => ipcRenderer.invoke('fs:read-file', filePath),
-  openDirectory: () => ipcRenderer.invoke('fs:open-directory'),
-  readDirectory: (dirPath: string) => ipcRenderer.invoke('fs:read-directory', dirPath),
-  createFile: (filePath: string) => ipcRenderer.invoke('fs:create-file', filePath),
-  copyFile: (source: string, dest: string) => ipcRenderer.invoke('fs:copy-file', source, dest),
-  createDirectory: (dirPath: string) => ipcRenderer.invoke('fs:create-directory', dirPath),
-  watchDirectory: (dirPath: string) => ipcRenderer.invoke('fs:watch-directory', dirPath),
-  unwatchDirectory: () => ipcRenderer.invoke('fs:unwatch-directory'),
+    invoke('fs:create-template-project', templateName, content),
+  readFile: (filePath: string) => invoke('fs:read-file', filePath),
+  openDirectory: () => invoke('fs:open-directory'),
+  readDirectory: (dirPath: string) => invoke('fs:read-directory', dirPath),
+  createFile: (filePath: string) => invoke('fs:create-file', filePath),
+  copyFile: (source: string, dest: string) => invoke('fs:copy-file', source, dest),
+  createDirectory: (dirPath: string) => invoke('fs:create-directory', dirPath),
+  watchDirectory: (dirPath: string) => invoke('fs:watch-directory', dirPath),
+  unwatchDirectory: () => invoke('fs:unwatch-directory'),
   onDirectoryChanged: (cb: (change: { type: string; filename: string }) => void) => {
     directoryChangedListener.on(cb)
   },
@@ -56,8 +132,8 @@ contextBridge.exposeInMainWorld('api', {
   },
 
   // Compilation
-  compile: (filePath: string) => ipcRenderer.invoke('latex:compile', filePath),
-  cancelCompile: () => ipcRenderer.invoke('latex:cancel'),
+  compile: (filePath: string) => invoke('latex:compile', filePath),
+  cancelCompile: () => invoke('latex:cancel'),
   onCompileLog: (cb: (log: string) => void) => {
     compileLogListener.on(cb)
   },
@@ -73,56 +149,51 @@ contextBridge.exposeInMainWorld('api', {
 
   // SyncTeX
   synctexForward: (texFile: string, line: number) =>
-    ipcRenderer.invoke('synctex:forward', texFile, line),
+    invoke('synctex:forward', texFile, line),
   synctexInverse: (texFile: string, page: number, x: number, y: number) =>
-    ipcRenderer.invoke('synctex:inverse', texFile, page, x, y),
+    invoke('synctex:inverse', texFile, page, x, y),
 
   // Settings
-  loadSettings: () => ipcRenderer.invoke('settings:load'),
-  saveSettings: (partial: Record<string, unknown>) =>
-    ipcRenderer.invoke('settings:save', partial),
+  loadSettings: () => invoke('settings:load'),
+  saveSettings: (partial: Record<string, unknown>) => invoke('settings:save', partial),
   addRecentProject: (projectPath: string) =>
-    ipcRenderer.invoke('settings:add-recent-project', projectPath),
+    invoke('settings:add-recent-project', projectPath),
   removeRecentProject: (projectPath: string) =>
-    ipcRenderer.invoke('settings:remove-recent-project', projectPath),
+    invoke('settings:remove-recent-project', projectPath),
   updateRecentProject: (projectPath: string, updates: { tag?: string; pinned?: boolean }) =>
-    ipcRenderer.invoke('settings:update-recent-project', projectPath, updates),
+    invoke('settings:update-recent-project', projectPath, updates),
 
   // BibTeX
-  parseBibFile: (filePath: string) => ipcRenderer.invoke('bib:parse', filePath),
-  findBibInProject: (projectRoot: string) =>
-    ipcRenderer.invoke('bib:find-in-project', projectRoot),
+  parseBibFile: (filePath: string) => invoke('bib:parse', filePath),
+  findBibInProject: (projectRoot: string) => invoke('bib:find-in-project', projectRoot),
 
   // Spell Check
-  spellInit: (language: string) => ipcRenderer.invoke('spell:init', language),
-  spellCheck: (words: string[]) => ipcRenderer.invoke('spell:check', words),
-  spellSuggest: (word: string) => ipcRenderer.invoke('spell:suggest', word),
-  spellAddWord: (word: string) => ipcRenderer.invoke('spell:add-word', word),
-  spellSetLanguage: (language: string) => ipcRenderer.invoke('spell:set-language', language),
+  spellInit: (language: string) => invoke('spell:init', language),
+  spellCheck: (words: string[]) => invoke('spell:check', words),
+  spellSuggest: (word: string) => invoke('spell:suggest', word),
+  spellAddWord: (word: string) => invoke('spell:add-word', word),
+  spellSetLanguage: (language: string) => invoke('spell:set-language', language),
 
   // Git
-  gitIsRepo: (workDir: string) => ipcRenderer.invoke('git:is-repo', workDir),
-  gitInit: (workDir: string) => ipcRenderer.invoke('git:init', workDir),
-  gitStatus: (workDir: string) => ipcRenderer.invoke('git:status', workDir),
+  gitIsRepo: (workDir: string) => invoke('git:is-repo', workDir),
+  gitInit: (workDir: string) => invoke('git:init', workDir),
+  gitStatus: (workDir: string) => invoke('git:status', workDir),
   gitStage: (workDir: string, filePath: string) =>
-    ipcRenderer.invoke('git:stage', workDir, filePath),
+    invoke('git:stage', workDir, filePath),
   gitUnstage: (workDir: string, filePath: string) =>
-    ipcRenderer.invoke('git:unstage', workDir, filePath),
+    invoke('git:unstage', workDir, filePath),
   gitCommit: (workDir: string, message: string) =>
-    ipcRenderer.invoke('git:commit', workDir, message),
-  gitDiff: (workDir: string) => ipcRenderer.invoke('git:diff', workDir),
-  gitLog: (workDir: string) => ipcRenderer.invoke('git:log', workDir),
+    invoke('git:commit', workDir, message),
+  gitDiff: (workDir: string) => invoke('git:diff', workDir),
+  gitLog: (workDir: string) => invoke('git:log', workDir),
   gitFileLog: (workDir: string, filePath: string) =>
-    ipcRenderer.invoke('git:file-log', workDir, filePath),
+    invoke('git:file-log', workDir, filePath),
 
   // Auto Update
-  updateCheck: () => ipcRenderer.invoke('update:check'),
-  updateDownload: () => ipcRenderer.invoke('update:download'),
-  updateInstall: () => ipcRenderer.invoke('update:install'),
-  onUpdateEvent: (
-    event: string,
-    cb: (...args: unknown[]) => void
-  ) => {
+  updateCheck: () => invoke('update:check'),
+  updateDownload: () => invoke('update:download'),
+  updateInstall: () => invoke('update:install'),
+  onUpdateEvent: (event: string, cb: (...args: unknown[]) => void) => {
     const channel = `update:${event}`
     if (updateHandlers[channel]) {
       ipcRenderer.removeListener(channel, updateHandlers[channel])
@@ -138,23 +209,22 @@ contextBridge.exposeInMainWorld('api', {
   },
 
   // Labels
-  scanLabels: (projectRoot: string) =>
-    ipcRenderer.invoke('latex:scan-labels', projectRoot),
+  scanLabels: (projectRoot: string) => invoke('latex:scan-labels', projectRoot),
 
   // Package Data
   loadPackageData: (packageNames: string[]) =>
-    ipcRenderer.invoke('latex:load-package-data', packageNames),
+    invoke('latex:load-package-data', packageNames),
 
   // Export
   exportDocument: (inputPath: string, format: string) =>
-    ipcRenderer.invoke('export:convert', inputPath, format),
-  getExportFormats: () => ipcRenderer.invoke('export:formats'),
+    invoke('export:convert', inputPath, format),
+  getExportFormats: () => invoke('export:formats'),
 
   // LSP (TexLab)
-  lspStart: (workspaceRoot: string) => ipcRenderer.invoke('lsp:start', workspaceRoot),
-  lspStop: () => ipcRenderer.invoke('lsp:stop'),
-  lspSend: (message: object) => ipcRenderer.invoke('lsp:send', message),
-  lspStatus: () => ipcRenderer.invoke('lsp:status'),
+  lspStart: (workspaceRoot: string) => invoke('lsp:start', workspaceRoot),
+  lspStop: () => invoke('lsp:stop'),
+  lspSend: (message: object) => invoke('lsp:send', message),
+  lspStatus: () => invoke('lsp:status'),
   onLspMessage: (cb: (message: object) => void) => {
     lspMessageListener.on(cb)
   },
@@ -169,35 +239,38 @@ contextBridge.exposeInMainWorld('api', {
   },
 
   // Zotero
-  zoteroProbe: (port?: number) => ipcRenderer.invoke('zotero:probe', port),
-  zoteroSearch: (term: string, port?: number) => ipcRenderer.invoke('zotero:search', term, port),
-  zoteroCiteCAYW: (port?: number) => ipcRenderer.invoke('zotero:cite-cayw', port),
+  zoteroProbe: (port?: number) => invoke('zotero:probe', port),
+  zoteroSearch: (term: string, port?: number) => invoke('zotero:search', term, port),
+  zoteroCiteCAYW: (port?: number) => invoke('zotero:cite-cayw', port),
   zoteroExportBibtex: (citekeys: string[], port?: number) =>
-    ipcRenderer.invoke('zotero:export-bibtex', citekeys, port),
+    invoke('zotero:export-bibtex', citekeys, port),
 
   // Citation Groups
-  loadCitationGroups: (projectRoot: string) =>
-    ipcRenderer.invoke('citgroups:load', projectRoot),
-  saveCitationGroups: (projectRoot: string, groups: { id: string; name: string; citekeys: string[] }[]) =>
-    ipcRenderer.invoke('citgroups:save', projectRoot, groups),
+  loadCitationGroups: (projectRoot: string) => invoke('citgroups:load', projectRoot),
+  saveCitationGroups: (
+    projectRoot: string,
+    groups: { id: string; name: string; citekeys: string[] }[]
+  ) => invoke('citgroups:save', projectRoot, groups),
 
   // AI Draft
   aiGenerate: (input: string, provider: string, model: string) =>
-    ipcRenderer.invoke('ai:generate', input, provider, model),
+    invoke('ai:generate', input, provider, model),
   aiSaveApiKey: (provider: string, apiKey: string) =>
-    ipcRenderer.invoke('ai:save-api-key', provider, apiKey),
-  aiHasApiKey: (provider: string) => ipcRenderer.invoke('ai:has-api-key', provider),
+    invoke('ai:save-api-key', provider, apiKey),
+  aiHasApiKey: (provider: string) => invoke('ai:has-api-key', provider),
   aiProcess: (action: 'fix' | 'academic' | 'summarize' | 'longer' | 'shorter', text: string) =>
-    ipcRenderer.invoke('ai:process', action, text),
+    invoke('ai:process', action, text),
 
   // Document Structure (fallback outline)
-  getDocumentOutline: (filePath: string, content: string) => ipcRenderer.invoke('structure:outline', filePath, content),
+  getDocumentOutline: (filePath: string, content: string) =>
+    invoke('structure:outline', filePath, content),
 
   // Shell
-  openExternal: (url: string) => ipcRenderer.invoke('shell:open-external', url),
+  openExternal: (url: string) => invoke('shell:open-external', url),
 
   // History
-  saveHistorySnapshot: (filePath: string, content: string) => ipcRenderer.invoke('history:save', filePath, content),
-  getHistoryList: (filePath: string) => ipcRenderer.invoke('history:list', filePath),
-  loadHistorySnapshot: (snapshotPath: string) => ipcRenderer.invoke('history:load', snapshotPath)
+  saveHistorySnapshot: (filePath: string, content: string) =>
+    invoke('history:save', filePath, content),
+  getHistoryList: (filePath: string) => invoke('history:list', filePath),
+  loadHistorySnapshot: (snapshotPath: string) => invoke('history:load', snapshotPath)
 })

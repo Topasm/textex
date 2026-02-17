@@ -6,12 +6,22 @@ function getFileIcon(name: string, type: 'file' | 'directory', expanded?: boolea
   if (type === 'directory') return expanded ? '\u{1F4C2}' : '\u{1F4C1}'
   const ext = name.split('.').pop()?.toLowerCase()
   switch (ext) {
-    case 'tex': return '\u{1F4DD}'
-    case 'bib': return '\u{1F4DA}'
-    case 'sty': case 'cls': return '\u{2699}'
-    case 'pdf': return '\u{1F4C4}'
-    case 'png': case 'jpg': case 'jpeg': case 'svg': return '\u{1F5BC}'
-    default: return '\u{1F4C3}'
+    case 'tex':
+      return '\u{1F4DD}'
+    case 'bib':
+      return '\u{1F4DA}'
+    case 'sty':
+    case 'cls':
+      return '\u{2699}'
+    case 'pdf':
+      return '\u{1F4C4}'
+    case 'png':
+    case 'jpg':
+    case 'jpeg':
+    case 'svg':
+      return '\u{1F5BC}'
+    default:
+      return '\u{1F4C3}'
   }
 }
 
@@ -99,53 +109,65 @@ function FileTreeNode({ entry, depth, gitFiles }: FileTreeNodeProps) {
     }
   }, [entry, expanded, children, loadChildren])
 
-  const handleContextMenu = useCallback((e: React.MouseEvent) => {
-    if (entry.type !== 'directory') return
-    e.preventDefault()
-    e.stopPropagation()
-    // Expand if not already
-    if (!expanded) {
-      if (!children) loadChildren()
-      setExpanded(true)
-    }
-  }, [entry.type, expanded, children, loadChildren])
-
-  const handleCreateFile = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (!expanded) {
-      if (!children) loadChildren()
-      setExpanded(true)
-    }
-    setCreatingType('file')
-  }, [expanded, children, loadChildren])
-
-  const handleCreateFolder = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (!expanded) {
-      if (!children) loadChildren()
-      setExpanded(true)
-    }
-    setCreatingType('folder')
-  }, [expanded, children, loadChildren])
-
-  const handleSubmitCreate = useCallback(async (name: string) => {
-    const fullPath = entry.path + '/' + name
-    try {
-      if (creatingType === 'folder') {
-        await window.api.createDirectory(fullPath)
-      } else {
-        await window.api.createFile(fullPath)
-        // Open the newly created file
-        const result = await window.api.readFile(fullPath)
-        useAppStore.getState().openFileInTab(result.filePath, result.content)
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent) => {
+      if (entry.type !== 'directory') return
+      e.preventDefault()
+      e.stopPropagation()
+      // Expand if not already
+      if (!expanded) {
+        if (!children) loadChildren()
+        setExpanded(true)
       }
-      // Refresh children
-      await loadChildren()
-    } catch (err) {
-      logError('FileTree:create', err)
-    }
-    setCreatingType(null)
-  }, [entry.path, creatingType, loadChildren])
+    },
+    [entry.type, expanded, children, loadChildren]
+  )
+
+  const handleCreateFile = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      if (!expanded) {
+        if (!children) loadChildren()
+        setExpanded(true)
+      }
+      setCreatingType('file')
+    },
+    [expanded, children, loadChildren]
+  )
+
+  const handleCreateFolder = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation()
+      if (!expanded) {
+        if (!children) loadChildren()
+        setExpanded(true)
+      }
+      setCreatingType('folder')
+    },
+    [expanded, children, loadChildren]
+  )
+
+  const handleSubmitCreate = useCallback(
+    async (name: string) => {
+      const fullPath = entry.path + '/' + name
+      try {
+        if (creatingType === 'folder') {
+          await window.api.createDirectory(fullPath)
+        } else {
+          await window.api.createFile(fullPath)
+          // Open the newly created file
+          const result = await window.api.readFile(fullPath)
+          useAppStore.getState().openFileInTab(result.filePath, result.content)
+        }
+        // Refresh children
+        await loadChildren()
+      } catch (err) {
+        logError('FileTree:create', err)
+      }
+      setCreatingType(null)
+    },
+    [entry.path, creatingType, loadChildren]
+  )
 
   const isSelected = entry.path === activeFilePath
   const gitDeco = entry.type === 'file' ? getGitFileDecoration(entry.path, gitFiles) : null
@@ -158,9 +180,7 @@ function FileTreeNode({ entry, depth, gitFiles }: FileTreeNodeProps) {
         onClick={handleClick}
         onContextMenu={handleContextMenu}
       >
-        <span className="file-tree-icon">
-          {getFileIcon(entry.name, entry.type, expanded)}
-        </span>
+        <span className="file-tree-icon">{getFileIcon(entry.name, entry.type, expanded)}</span>
         <span className="file-tree-name">{entry.name}</span>
         {entry.type === 'directory' && (
           <span className="file-tree-actions">
@@ -182,9 +202,7 @@ function FileTreeNode({ entry, depth, gitFiles }: FileTreeNodeProps) {
             </button>
           </span>
         )}
-        {gitDeco && (
-          <span className={`file-tree-git ${gitDeco.className}`}>{gitDeco.label}</span>
-        )}
+        {gitDeco && <span className={`file-tree-git ${gitDeco.className}`}>{gitDeco.label}</span>}
       </div>
       {expanded && entry.type === 'directory' && (
         <>
@@ -196,9 +214,10 @@ function FileTreeNode({ entry, depth, gitFiles }: FileTreeNodeProps) {
               onCancel={() => setCreatingType(null)}
             />
           )}
-          {children && children.map((child) => (
-            <FileTreeNode key={child.path} entry={child} depth={depth + 1} gitFiles={gitFiles} />
-          ))}
+          {children &&
+            children.map((child) => (
+              <FileTreeNode key={child.path} entry={child} depth={depth + 1} gitFiles={gitFiles} />
+            ))}
         </>
       )}
     </>
@@ -211,23 +230,26 @@ function FileTree() {
   const projectRoot = useAppStore((s) => s.projectRoot)
   const [creatingType, setCreatingType] = useState<'file' | 'folder' | null>(null)
 
-  const handleRootCreate = useCallback(async (name: string) => {
-    if (!projectRoot) return
-    const fullPath = projectRoot + '/' + name
-    try {
-      if (creatingType === 'folder') {
-        await window.api.createDirectory(fullPath)
-      } else {
-        await window.api.createFile(fullPath)
-        const result = await window.api.readFile(fullPath)
-        useAppStore.getState().openFileInTab(result.filePath, result.content)
+  const handleRootCreate = useCallback(
+    async (name: string) => {
+      if (!projectRoot) return
+      const fullPath = projectRoot + '/' + name
+      try {
+        if (creatingType === 'folder') {
+          await window.api.createDirectory(fullPath)
+        } else {
+          await window.api.createFile(fullPath)
+          const result = await window.api.readFile(fullPath)
+          useAppStore.getState().openFileInTab(result.filePath, result.content)
+        }
+        // Tree refreshes via directory watcher
+      } catch (err) {
+        logError('FileTree:rootCreate', err)
       }
-      // Tree refreshes via directory watcher
-    } catch (err) {
-      logError('FileTree:rootCreate', err)
-    }
-    setCreatingType(null)
-  }, [projectRoot, creatingType])
+      setCreatingType(null)
+    },
+    [projectRoot, creatingType]
+  )
 
   if (!directoryTree || directoryTree.length === 0) {
     return (
@@ -266,12 +288,7 @@ function FileTree() {
         />
       )}
       {directoryTree.map((entry) => (
-        <FileTreeNode
-          key={entry.path}
-          entry={entry}
-          depth={0}
-          gitFiles={gitStatus?.files}
-        />
+        <FileTreeNode key={entry.path} entry={entry} depth={0} gitFiles={gitStatus?.files} />
       ))}
     </div>
   )

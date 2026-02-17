@@ -1,5 +1,11 @@
 import { ipcMain } from 'electron'
-import { loadSettings, saveSettings, addRecentProject, removeRecentProject, updateRecentProject } from '../settings'
+import {
+  loadSettings,
+  saveSettings,
+  addRecentProject,
+  removeRecentProject,
+  updateRecentProject
+} from '../settings'
 
 export function registerSettingsHandlers(): void {
   ipcMain.handle('settings:load', async () => {

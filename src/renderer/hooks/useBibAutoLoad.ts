@@ -12,13 +12,13 @@ export function useBibAutoLoad(projectRoot: string | null): void {
       .then((entries) => {
         useAppStore.getState().setBibEntries(entries)
       })
-      .catch(() => { })
+      .catch(() => {})
     // Also load citation groups
     window.api
       .loadCitationGroups(projectRoot)
       .then((groups) => {
         useAppStore.getState().setCitationGroups(groups)
       })
-      .catch(() => { })
+      .catch(() => {})
   }, [projectRoot])
 }

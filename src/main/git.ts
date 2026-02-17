@@ -81,10 +81,7 @@ export async function getGitStatus(workDir: string): Promise<GitStatusResult> {
   return { branch, files, staged, modified, not_added }
 }
 
-export async function stageFile(
-  workDir: string,
-  filePath: string
-): Promise<{ success: boolean }> {
+export async function stageFile(workDir: string, filePath: string): Promise<{ success: boolean }> {
   await git(workDir, ['add', filePath])
   return { success: true }
 }
@@ -102,10 +99,7 @@ export async function unstageFile(
   return { success: true }
 }
 
-export async function gitCommit(
-  workDir: string,
-  message: string
-): Promise<{ success: boolean }> {
+export async function gitCommit(workDir: string, message: string): Promise<{ success: boolean }> {
   await git(workDir, ['commit', '-m', message])
   return { success: true }
 }
@@ -116,11 +110,7 @@ export async function getDiff(workDir: string): Promise<string> {
 
 export async function getLog(workDir: string): Promise<GitLogEntry[]> {
   try {
-    const output = await git(workDir, [
-      'log',
-      '--pretty=format:%H|%aI|%an|%s',
-      '-20'
-    ])
+    const output = await git(workDir, ['log', '--pretty=format:%H|%aI|%an|%s', '-20'])
     return output
       .trim()
       .split('\n')

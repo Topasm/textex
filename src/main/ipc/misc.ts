@@ -15,9 +15,7 @@ function validateFilePath(filePath: unknown): string {
   return filePath
 }
 
-export function registerMiscHandlers(
-  getWindow: () => BrowserWindow | null
-): void {
+export function registerMiscHandlers(getWindow: () => BrowserWindow | null): void {
   // ---- Auto Update ----
   ipcMain.handle('update:check', async () => {
     try {

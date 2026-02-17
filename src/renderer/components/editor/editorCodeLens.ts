@@ -38,36 +38,39 @@ export function registerTableEditorCodeLens(
           }
         })
       }
-      return { lenses, dispose: () => { } }
+      return { lenses, dispose: () => {} }
     }
   })
   disposables.push(codeLensProvider)
 
-  const command = monaco.editor.registerCommand('textex.openTableEditor', (_: unknown, startIndex: number) => {
-    const model = editor.getModel()
-    if (!model) return
+  const command = monaco.editor.registerCommand(
+    'textex.openTableEditor',
+    (_: unknown, startIndex: number) => {
+      const model = editor.getModel()
+      if (!model) return
 
-    const text = model.getValue()
-    const tail = text.slice(startIndex)
-    const endMatch = tail.match(/\\end{tabular}/)
+      const text = model.getValue()
+      const tail = text.slice(startIndex)
+      const endMatch = tail.match(/\\end{tabular}/)
 
-    if (endMatch && endMatch.index !== undefined) {
-      const endIndex = startIndex + endMatch.index + endMatch[0].length
-      const range = {
-        startLineNumber: model.getPositionAt(startIndex).lineNumber,
-        startColumn: model.getPositionAt(startIndex).column,
-        endLineNumber: model.getPositionAt(endIndex).lineNumber,
-        endColumn: model.getPositionAt(endIndex).column
+      if (endMatch && endMatch.index !== undefined) {
+        const endIndex = startIndex + endMatch.index + endMatch[0].length
+        const range = {
+          startLineNumber: model.getPositionAt(startIndex).lineNumber,
+          startColumn: model.getPositionAt(startIndex).column,
+          endLineNumber: model.getPositionAt(endIndex).lineNumber,
+          endColumn: model.getPositionAt(endIndex).column
+        }
+        const tableLatex = text.slice(startIndex, endIndex)
+
+        setTableModal(() => ({
+          isOpen: true,
+          latex: tableLatex,
+          range
+        }))
       }
-      const tableLatex = text.slice(startIndex, endIndex)
-
-      setTableModal(() => ({
-        isOpen: true,
-        latex: tableLatex,
-        range
-      }))
     }
-  })
+  )
   disposables.push(command)
 
   return disposables

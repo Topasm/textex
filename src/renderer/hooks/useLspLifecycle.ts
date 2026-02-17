@@ -41,7 +41,7 @@ export function useLspLifecycle(
         monacoInstance,
         () => useAppStore.getState().filePath,
         () => useAppStore.getState().content
-      ).catch(() => { })
+      ).catch(() => {})
     })
 
     return () => {

@@ -6,7 +6,10 @@ const isDev = !app.isPackaged
 
 let worker: Worker | null = null
 let initialized = false
-let pendingCallbacks = new Map<number, { resolve: (value: unknown) => void; reject: (err: Error) => void }>()
+const pendingCallbacks = new Map<
+  number,
+  { resolve: (value: unknown) => void; reject: (err: Error) => void }
+>()
 let nextId = 0
 
 function getDictionaryPath(language: string): { aff: string; dic: string } {
@@ -62,7 +65,9 @@ function sendToWorker(msg: Record<string, unknown>): Promise<Record<string, unkn
   })
 }
 
-export async function initSpellChecker(language: string): Promise<{ success: boolean; error?: string }> {
+export async function initSpellChecker(
+  language: string
+): Promise<{ success: boolean; error?: string }> {
   try {
     const paths = getDictionaryPath(language)
     const response = await sendToWorker({

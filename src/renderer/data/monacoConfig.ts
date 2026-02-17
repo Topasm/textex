@@ -16,7 +16,7 @@ export function configureMonacoLanguages(monaco: MonacoInstance): void {
     brackets: [
       { open: '{', close: '}', token: 'delimiter.curly' },
       { open: '[', close: ']', token: 'delimiter.square' },
-      { open: '(', close: ')', token: 'delimiter.parenthesis' },
+      { open: '(', close: ')', token: 'delimiter.parenthesis' }
     ],
 
     tokenizer: {
@@ -25,16 +25,25 @@ export function configureMonacoLanguages(monaco: MonacoInstance): void {
         [/%.*$/, 'comment'],
 
         // Begin/end environments
-        [/(\\(?:begin|end))(\{)([^}]*)(\})/, ['keyword', 'delimiter.curly', 'variable', 'delimiter.curly']],
+        [
+          /(\\(?:begin|end))(\{)([^}]*)(\})/,
+          ['keyword', 'delimiter.curly', 'variable', 'delimiter.curly']
+        ],
 
         // Section commands
         [/\\(?:part|chapter|(?:sub){0,2}section|(?:sub)?paragraph)\b\*?/, 'keyword'],
 
         // Common keyword commands
-        [/\\(?:documentclass|usepackage|input|include|bibliography|bibliographystyle|newcommand|renewcommand|newenvironment|renewenvironment|def|let|newtheorem|theoremstyle|makeatletter|makeatother|maketitle|tableofcontents|listoffigures|listoftables)\b\*?/, 'keyword'],
+        [
+          /\\(?:documentclass|usepackage|input|include|bibliography|bibliographystyle|newcommand|renewcommand|newenvironment|renewenvironment|def|let|newtheorem|theoremstyle|makeatletter|makeatother|maketitle|tableofcontents|listoffigures|listoftables)\b\*?/,
+          'keyword'
+        ],
 
         // Formatting commands
-        [/\\(?:textbf|textit|texttt|textsc|textrm|textsf|textup|textmd|emph|underline|sout|textsubscript|textsuperscript|footnote|endnote|caption|label|ref|eqref|cite|citep|citet|citeauthor|citeyear|nocite|pageref|autoref|nameref|href|url)\b\*?/, 'keyword'],
+        [
+          /\\(?:textbf|textit|texttt|textsc|textrm|textsf|textup|textmd|emph|underline|sout|textsubscript|textsuperscript|footnote|endnote|caption|label|ref|eqref|cite|citep|citet|citeauthor|citeyear|nocite|pageref|autoref|nameref|href|url)\b\*?/,
+          'keyword'
+        ],
 
         // Math environment commands
         [/\\(?:left|right|big|Big|bigg|Bigg)\b/, 'keyword.math'],
@@ -58,23 +67,23 @@ export function configureMonacoLanguages(monaco: MonacoInstance): void {
         [/[&~#^_]/, 'keyword'],
 
         // Numbers
-        [/\d+(\.\d+)?/, 'number'],
+        [/\d+(\.\d+)?/, 'number']
       ],
 
       inlinemath: [
         [/[^\\$]+/, 'string.math'],
         [/\\[a-zA-Z@]+\*?/, 'string.math'],
         [/\\[^a-zA-Z]/, 'string.math'],
-        [/\$/, { token: 'string.math', next: '@pop' }],
+        [/\$/, { token: 'string.math', next: '@pop' }]
       ],
 
       displaymath: [
         [/[^\\$]+/, 'string.math'],
         [/\\[a-zA-Z@]+\*?/, 'string.math'],
         [/\\[^a-zA-Z]/, 'string.math'],
-        [/\$\$/, { token: 'string.math', next: '@pop' }],
-      ],
-    },
+        [/\$\$/, { token: 'string.math', next: '@pop' }]
+      ]
+    }
   })
 
   // Also register bibtex language
@@ -92,33 +101,33 @@ export function configureMonacoLanguages(monaco: MonacoInstance): void {
         [/"[^"]*"/, 'string'],
         [/\{[^}]*\}/, 'string'],
         [/,/, 'delimiter'],
-        [/\d+/, 'number'],
-      ],
-    },
+        [/\d+/, 'number']
+      ]
+    }
   })
 
   // Set LaTeX language configuration (comment toggling, brackets, etc.)
   monaco.languages.setLanguageConfiguration('latex', {
     comments: {
-      lineComment: '%',
+      lineComment: '%'
     },
     brackets: [
       ['{', '}'],
       ['[', ']'],
-      ['(', ')'],
+      ['(', ')']
     ],
     autoClosingPairs: [
       { open: '{', close: '}' },
       { open: '[', close: ']' },
       { open: '(', close: ')' },
-      { open: '$', close: '$' },
+      { open: '$', close: '$' }
     ],
     surroundingPairs: [
       { open: '{', close: '}' },
       { open: '[', close: ']' },
       { open: '(', close: ')' },
-      { open: '$', close: '$' },
-    ],
+      { open: '$', close: '$' }
+    ]
   })
 
   monaco.editor.defineTheme('ivory-light', {
@@ -136,7 +145,7 @@ export function configureMonacoLanguages(monaco: MonacoInstance): void {
       { token: 'number', foreground: '6a5a8a' },
       { token: 'delimiter', foreground: '6b6158' },
       { token: 'delimiter.curly', foreground: '6b6158' },
-      { token: 'delimiter.square', foreground: '6b6158' },
+      { token: 'delimiter.square', foreground: '6b6158' }
     ],
     colors: {
       'editor.background': '#faf6f0',
@@ -165,8 +174,11 @@ export function configureMonacoLanguages(monaco: MonacoInstance): void {
 /** Map the app theme setting to the corresponding Monaco theme name. */
 export function getMonacoTheme(theme: string): string {
   switch (theme) {
-    case 'light': return 'ivory-light'
-    case 'high-contrast': return 'hc-black'
-    default: return 'vs-dark'
+    case 'light':
+      return 'ivory-light'
+    case 'high-contrast':
+      return 'hc-black'
+    default:
+      return 'vs-dark'
   }
 }

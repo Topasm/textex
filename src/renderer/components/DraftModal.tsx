@@ -10,7 +10,12 @@ interface DraftModalProps {
 
 type Phase = 'input' | 'generating' | 'preview'
 
-export const DraftModal: React.FC<DraftModalProps> = ({ isOpen, onClose, onInsert, initialPrompt }) => {
+export const DraftModal: React.FC<DraftModalProps> = ({
+  isOpen,
+  onClose,
+  onInsert,
+  initialPrompt
+}) => {
   const [phase, setPhase] = useState<Phase>('input')
   const [input, setInput] = useState('')
   const [generatedLatex, setGeneratedLatex] = useState('')
@@ -73,8 +78,18 @@ export const DraftModal: React.FC<DraftModalProps> = ({ isOpen, onClose, onInser
   if (!isOpen) return null
 
   const providerName =
-    aiProvider === 'openai' ? 'OpenAI' : aiProvider === 'anthropic' ? 'Anthropic' : aiProvider === 'gemini' ? 'Gemini' : ''
-  const providerLabel = providerName ? (aiModel ? `${providerName} / ${aiModel}` : providerName) : 'Not configured'
+    aiProvider === 'openai'
+      ? 'OpenAI'
+      : aiProvider === 'anthropic'
+        ? 'Anthropic'
+        : aiProvider === 'gemini'
+          ? 'Gemini'
+          : ''
+  const providerLabel = providerName
+    ? aiModel
+      ? `${providerName} / ${aiModel}`
+      : providerName
+    : 'Not configured'
 
   return (
     <div className="modal-overlay" onClick={onClose} onKeyDown={handleKeyDown}>

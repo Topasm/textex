@@ -43,7 +43,11 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
       if (menuOpenPath && menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setMenuOpenPath(null)
       }
-      if (editingTagPath && tagEditorRef.current && !tagEditorRef.current.contains(e.target as Node)) {
+      if (
+        editingTagPath &&
+        tagEditorRef.current &&
+        !tagEditorRef.current.contains(e.target as Node)
+      ) {
         setEditingTagPath(null)
       }
     }
@@ -63,25 +67,37 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
     return [...pinned, ...unpinned]
   }, [recentProjects])
 
-  const handleOpenRecent = useCallback(async (project: RecentProject) => {
-    try {
-      await window.api.readDirectory(project.path)
-      await openProject(project.path)
-    } catch (err) {
-      logError('RecentProject:open', err)
-      window.api.removeRecentProject(project.path).then((settings) => {
-        setRecentProjects(settings.recentProjects ?? [])
-      }).catch((err) => logError('recentProject', err))
-    }
-  }, [setRecentProjects])
+  const handleOpenRecent = useCallback(
+    async (project: RecentProject) => {
+      try {
+        await window.api.readDirectory(project.path)
+        await openProject(project.path)
+      } catch (err) {
+        logError('RecentProject:open', err)
+        window.api
+          .removeRecentProject(project.path)
+          .then((settings) => {
+            setRecentProjects(settings.recentProjects ?? [])
+          })
+          .catch((err) => logError('recentProject', err))
+      }
+    },
+    [setRecentProjects]
+  )
 
-  const handleRemoveRecent = useCallback((e: React.MouseEvent, projectPath: string) => {
-    e.stopPropagation()
-    setMenuOpenPath(null)
-    window.api.removeRecentProject(projectPath).then((settings) => {
-      setRecentProjects(settings.recentProjects ?? [])
-    }).catch((err) => logError('recentProject', err))
-  }, [setRecentProjects])
+  const handleRemoveRecent = useCallback(
+    (e: React.MouseEvent, projectPath: string) => {
+      e.stopPropagation()
+      setMenuOpenPath(null)
+      window.api
+        .removeRecentProject(projectPath)
+        .then((settings) => {
+          setRecentProjects(settings.recentProjects ?? [])
+        })
+        .catch((err) => logError('recentProject', err))
+    },
+    [setRecentProjects]
+  )
 
   const handleToggleMenu = useCallback((e: React.MouseEvent, projectPath: string) => {
     e.stopPropagation()
@@ -89,13 +105,19 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
     setEditingTagPath(null)
   }, [])
 
-  const handleTogglePin = useCallback((e: React.MouseEvent, project: RecentProject) => {
-    e.stopPropagation()
-    setMenuOpenPath(null)
-    window.api.updateRecentProject(project.path, { pinned: !project.pinned }).then((settings) => {
-      setRecentProjects(settings.recentProjects ?? [])
-    }).catch((err) => logError('recentProject', err))
-  }, [setRecentProjects])
+  const handleTogglePin = useCallback(
+    (e: React.MouseEvent, project: RecentProject) => {
+      e.stopPropagation()
+      setMenuOpenPath(null)
+      window.api
+        .updateRecentProject(project.path, { pinned: !project.pinned })
+        .then((settings) => {
+          setRecentProjects(settings.recentProjects ?? [])
+        })
+        .catch((err) => logError('recentProject', err))
+    },
+    [setRecentProjects]
+  )
 
   const handleEditTag = useCallback((e: React.MouseEvent, project: RecentProject) => {
     e.stopPropagation()
@@ -104,13 +126,19 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
     setEditingTagPath(project.path)
   }, [])
 
-  const handleSaveTag = useCallback((projectPath: string) => {
-    const trimmed = tagInputValue.trim()
-    window.api.updateRecentProject(projectPath, { tag: trimmed || undefined }).then((settings) => {
-      setRecentProjects(settings.recentProjects ?? [])
-    }).catch((err) => logError('recentProject', err))
-    setEditingTagPath(null)
-  }, [tagInputValue, setRecentProjects])
+  const handleSaveTag = useCallback(
+    (projectPath: string) => {
+      const trimmed = tagInputValue.trim()
+      window.api
+        .updateRecentProject(projectPath, { tag: trimmed || undefined })
+        .then((settings) => {
+          setRecentProjects(settings.recentProjects ?? [])
+        })
+        .catch((err) => logError('recentProject', err))
+      setEditingTagPath(null)
+    },
+    [tagInputValue, setRecentProjects]
+  )
 
   if (sortedProjects.length === 0) return null
 
@@ -128,7 +156,9 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
             onClick={() => handleOpenRecent(project)}
           >
             {project.pinned && (
-              <span className="home-recent-item-pin-indicator"><Pin size={12} /></span>
+              <span className="home-recent-item-pin-indicator">
+                <Pin size={12} />
+              </span>
             )}
             <FolderOpen size={20} className="home-recent-item-icon" />
             <div className="home-recent-item-info">
@@ -136,11 +166,16 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
               <span className="home-recent-item-folder">{project.name}</span>
             </div>
             <div className="home-recent-item-meta">
-              <span className="home-recent-item-date">{formatRelativeDate(project.lastOpened)}</span>
+              <span className="home-recent-item-date">
+                {formatRelativeDate(project.lastOpened)}
+              </span>
               {project.tag && <span className="home-recent-item-tag">{project.tag}</span>}
             </div>
 
-            <div className="home-recent-item-menu-wrapper" ref={menuOpenPath === project.path ? menuRef : undefined}>
+            <div
+              className="home-recent-item-menu-wrapper"
+              ref={menuOpenPath === project.path ? menuRef : undefined}
+            >
               <button
                 className="home-recent-item-menu-btn"
                 onClick={(e) => handleToggleMenu(e, project.path)}
@@ -167,7 +202,11 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
               )}
 
               {editingTagPath === project.path && (
-                <div className="home-recent-item-tag-editor" ref={tagEditorRef} onClick={(e) => e.stopPropagation()}>
+                <div
+                  className="home-recent-item-tag-editor"
+                  ref={tagEditorRef}
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <input
                     ref={tagInputRef}
                     className="home-recent-item-tag-input"
@@ -176,11 +215,19 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
                     value={tagInputValue}
                     onChange={(e) => setTagInputValue(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter') { e.preventDefault(); handleSaveTag(project.path) }
-                      else if (e.key === 'Escape') { e.preventDefault(); setEditingTagPath(null) }
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        handleSaveTag(project.path)
+                      } else if (e.key === 'Escape') {
+                        e.preventDefault()
+                        setEditingTagPath(null)
+                      }
                     }}
                   />
-                  <button className="home-recent-item-tag-save" onClick={() => handleSaveTag(project.path)}>
+                  <button
+                    className="home-recent-item-tag-save"
+                    onClick={() => handleSaveTag(project.path)}
+                  >
                     Save
                   </button>
                 </div>

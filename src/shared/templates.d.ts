@@ -1,6 +1,6 @@
 export interface Template {
-    name: string;
-    description: string;
-    content: string;
+  name: string
+  description: string
+  content: string
 }
-export declare const templates: Template[];
+export declare const templates: Template[]

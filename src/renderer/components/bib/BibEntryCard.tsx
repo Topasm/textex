@@ -11,7 +11,13 @@ interface BibEntryCardProps {
   addTitle?: string
 }
 
-export const BibEntryCard = React.memo(function BibEntryCard({ entry, onInsert, onRemove, onAdd, addTitle }: BibEntryCardProps) {
+export const BibEntryCard = React.memo(function BibEntryCard({
+  entry,
+  onInsert,
+  onRemove,
+  onAdd,
+  addTitle
+}: BibEntryCardProps) {
   const cleanTitle = (entry.title || '(no title)').replace(/[{}]/g, '')
   let authors = entry.author || 'Unknown Author'
   const authorList = authors.split(/\s+and\s+/)
@@ -49,7 +55,10 @@ export const BibEntryCard = React.memo(function BibEntryCard({ entry, onInsert, 
         {onRemove && (
           <button
             className="bib-entry-action-btn"
-            onClick={(e) => { e.stopPropagation(); onRemove() }}
+            onClick={(e) => {
+              e.stopPropagation()
+              onRemove()
+            }}
             title="Remove from group"
           >
             ×
@@ -58,7 +67,10 @@ export const BibEntryCard = React.memo(function BibEntryCard({ entry, onInsert, 
         {onAdd && (
           <button
             className="bib-entry-action-btn bib-entry-add-btn"
-            onClick={(e) => { e.stopPropagation(); onAdd() }}
+            onClick={(e) => {
+              e.stopPropagation()
+              onAdd()
+            }}
             title={addTitle}
           >
             +

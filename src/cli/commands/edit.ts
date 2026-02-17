@@ -30,7 +30,7 @@ function readStdin(): Promise<string> {
 export function registerEditCommand(program: commander.Command): void {
   program
     .command('edit <file-or-dir> <section-path>')
-    .description('Replace a section\'s content with stdin input')
+    .description("Replace a section's content with stdin input")
     .action(async (fileOrDir: string, sectionPath: string) => {
       try {
         const mainFile = await resolveMainFile(fileOrDir)

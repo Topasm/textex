@@ -46,7 +46,9 @@ describe('Toolbar', () => {
 
     // Wait for buttons to appear and find the specific one
     const buttons = await screen.findAllByRole('button')
-    const openBtn = buttons.find(b => b.textContent?.includes('Open') && b.textContent?.includes('Ctrl+O'))
+    const openBtn = buttons.find(
+      (b) => b.textContent?.includes('Open') && b.textContent?.includes('Ctrl+O')
+    )
     expect(openBtn).toBeInTheDocument()
 
     expect(screen.getByText(/Open Folder/)).toBeInTheDocument()
@@ -65,7 +67,9 @@ describe('Toolbar', () => {
     fireEvent.click(screen.getByText(/File/))
     // Use findAllByRole to match button with specific text content spanning multiple nodes
     const buttons = await screen.findAllByRole('button')
-    const openBtn = buttons.find(b => b.textContent?.includes('Open') && b.textContent?.includes('Ctrl+O'))
+    const openBtn = buttons.find(
+      (b) => b.textContent?.includes('Open') && b.textContent?.includes('Ctrl+O')
+    )
 
     if (!openBtn) throw new Error('Open button not found')
     fireEvent.click(openBtn)

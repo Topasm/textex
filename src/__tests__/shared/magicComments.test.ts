@@ -9,7 +9,9 @@ describe('findRootFile', () => {
 
   it('parses standard magic comment', () => {
     const content = '%! TeX root = ./main.tex\n\\section{Chapter 1}'
-    expect(findRootFile(content, '/project/chapters/chapter1.tex')).toBe('/project/chapters/main.tex')
+    expect(findRootFile(content, '/project/chapters/chapter1.tex')).toBe(
+      '/project/chapters/main.tex'
+    )
   })
 
   it('resolves parent directory reference', () => {
@@ -19,17 +21,23 @@ describe('findRootFile', () => {
 
   it('handles case-insensitive matching', () => {
     const content = '%! tex ROOT = ./main.tex\n\\section{Chapter 1}'
-    expect(findRootFile(content, '/project/chapters/chapter1.tex')).toBe('/project/chapters/main.tex')
+    expect(findRootFile(content, '/project/chapters/chapter1.tex')).toBe(
+      '/project/chapters/main.tex'
+    )
   })
 
   it('handles quoted paths', () => {
     const content = '%! TeX root = "./main.tex"\n\\section{Chapter 1}'
-    expect(findRootFile(content, '/project/chapters/chapter1.tex')).toBe('/project/chapters/main.tex')
+    expect(findRootFile(content, '/project/chapters/chapter1.tex')).toBe(
+      '/project/chapters/main.tex'
+    )
   })
 
   it('handles single-quoted paths', () => {
     const content = "%! TeX root = './main.tex'\n\\section{Chapter 1}"
-    expect(findRootFile(content, '/project/chapters/chapter1.tex')).toBe('/project/chapters/main.tex')
+    expect(findRootFile(content, '/project/chapters/chapter1.tex')).toBe(
+      '/project/chapters/main.tex'
+    )
   })
 
   it('only checks first 5 lines', () => {
@@ -46,7 +54,9 @@ describe('findRootFile', () => {
 
   it('handles extra whitespace in magic comment', () => {
     const content = '%!   TeX   root   =   ./main.tex\n\\section{Chapter 1}'
-    expect(findRootFile(content, '/project/chapters/chapter1.tex')).toBe('/project/chapters/main.tex')
+    expect(findRootFile(content, '/project/chapters/chapter1.tex')).toBe(
+      '/project/chapters/main.tex'
+    )
   })
 
   it('returns current file for empty content', () => {

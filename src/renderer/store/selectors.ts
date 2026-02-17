@@ -3,7 +3,11 @@
  *
  * Components can import these for optimal re-render performance,
  * as each selector only subscribes to its relevant domain store.
+ *
+ * For selectors that return derived objects, we use shallow equality
+ * via useShallow to avoid unnecessary re-renders.
  */
+import { useShallow } from 'zustand/react/shallow'
 import { useEditorStore } from './useEditorStore'
 import { useCompileStore } from './useCompileStore'
 import { useProjectStore } from './useProjectStore'
@@ -19,8 +23,20 @@ export const useIsDirty = () => useEditorStore((s) => s.isDirty)
 export const useOpenFiles = () => useEditorStore((s) => s.openFiles)
 export const useActiveFilePath = () => useEditorStore((s) => s.activeFilePath)
 export const useCursorPosition = () =>
-  useEditorStore((s) => ({ line: s.cursorLine, column: s.cursorColumn }))
+  useEditorStore(useShallow((s) => ({ line: s.cursorLine, column: s.cursorColumn })))
 export const usePendingJump = () => useEditorStore((s) => s.pendingJump)
+
+/** Number of open tabs -- primitive value, no object allocation. */
+export const useOpenFileCount = () =>
+  useEditorStore((s) => Object.keys(s.openFiles).length)
+
+/** List of open file paths (stable reference when paths haven't changed). */
+export const useOpenFilePaths = () =>
+  useEditorStore(useShallow((s) => Object.keys(s.openFiles)))
+
+/** Whether any open file has unsaved changes. */
+export const useHasUnsavedFiles = () =>
+  useEditorStore((s) => Object.values(s.openFiles).some((f) => f.isDirty))
 
 // ---- Compile ----
 export const useCompileStatus = () => useCompileStore((s) => s.compileStatus)
@@ -29,6 +45,14 @@ export const useLogs = () => useCompileStore((s) => s.logs)
 export const useIsLogPanelOpen = () => useCompileStore((s) => s.isLogPanelOpen)
 export const useDiagnostics = () => useCompileStore((s) => s.diagnostics)
 export const useLogViewMode = () => useCompileStore((s) => s.logViewMode)
+
+/** Number of errors in current diagnostics. */
+export const useErrorCount = () =>
+  useCompileStore((s) => s.diagnostics.filter((d) => d.severity === 'error').length)
+
+/** Number of warnings in current diagnostics. */
+export const useWarningCount = () =>
+  useCompileStore((s) => s.diagnostics.filter((d) => d.severity === 'warning').length)
 
 // ---- PDF / Zoom ----
 export const useSplitRatio = () => usePdfStore((s) => s.splitRatio)

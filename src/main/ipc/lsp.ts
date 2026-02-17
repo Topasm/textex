@@ -12,9 +12,7 @@ function validateFilePath(filePath: unknown): string {
   return filePath
 }
 
-export function registerLspHandlers(
-  getWindow: () => BrowserWindow | null
-): void {
+export function registerLspHandlers(getWindow: () => BrowserWindow | null): void {
   function sendToWindow(channel: string, ...args: unknown[]): void {
     const win = getWindow()
     if (win && !win.isDestroyed()) {

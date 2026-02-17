@@ -1,12 +1,6 @@
 import fs from 'fs/promises'
 import path from 'path'
-import {
-  SectionLevel,
-  SectionNode,
-  DocumentMetadata,
-  DocumentStructure,
-  PaperInfo
-} from './types'
+import { SectionLevel, SectionNode, DocumentMetadata, DocumentStructure, PaperInfo } from './types'
 
 // --- Helpers ---
 
@@ -59,10 +53,7 @@ function extractBracedArgument(lines: string[], startIdx: number, startCol: numb
  * Expand \input{} and \include{} directives recursively.
  * Returns a flat array of virtual lines mapping back to source files.
  */
-async function expandFile(
-  filePath: string,
-  seen: Set<string>
-): Promise<VirtualLine[]> {
+async function expandFile(filePath: string, seen: Set<string>): Promise<VirtualLine[]> {
   const resolved = path.resolve(filePath)
   if (seen.has(resolved)) return [] // circular include guard
   seen.add(resolved)

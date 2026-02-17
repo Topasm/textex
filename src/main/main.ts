@@ -2,6 +2,7 @@ import { app, BrowserWindow, shell } from 'electron'
 import path from 'path'
 import { registerIpcHandlers } from './ipc'
 import { loadSettings } from './settings'
+import { loadPersistentCache, savePersistentCache } from './services/compileCache'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -92,6 +93,9 @@ function createWindow(backgroundColor: string): void {
 }
 
 app.whenReady().then(async () => {
+  // Load persistent compile cache from disk
+  await loadPersistentCache().catch(() => {})
+
   const settings = await loadSettings()
   const backgroundColor = getBackgroundColor(settings.theme)
 
@@ -108,4 +112,9 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+app.on('will-quit', () => {
+  // Save compile cache to disk for next session
+  savePersistentCache().catch(() => {})
 })

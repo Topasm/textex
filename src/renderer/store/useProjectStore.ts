@@ -73,7 +73,10 @@ export const useProjectStore = create<ProjectState>()(
       setDirectoryTree: (directoryTree) => set({ directoryTree }),
       toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
       setSidebarView: (sidebarView) => set({ sidebarView }),
-      setSidebarWidth: (sidebarWidth) => set({ sidebarWidth: Math.max(SIDEBAR_WIDTH_MIN, Math.min(SIDEBAR_WIDTH_MAX, sidebarWidth)) }),
+      setSidebarWidth: (sidebarWidth) =>
+        set({
+          sidebarWidth: Math.max(SIDEBAR_WIDTH_MIN, Math.min(SIDEBAR_WIDTH_MAX, sidebarWidth))
+        }),
       setBibEntries: (bibEntries) => set({ bibEntries }),
       setCitationGroups: (citationGroups) => set({ citationGroups }),
       setLabels: (labels) => set({ labels }),

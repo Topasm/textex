@@ -22,8 +22,14 @@ function StatusBar() {
 
   const { dotClass, label } = STATUS_CONFIG[compileStatus]
 
-  const errorCount = useMemo(() => diagnostics.filter((d) => d.severity === 'error').length, [diagnostics])
-  const warnCount = useMemo(() => diagnostics.filter((d) => d.severity === 'warning').length, [diagnostics])
+  const errorCount = useMemo(
+    () => diagnostics.filter((d) => d.severity === 'error').length,
+    [diagnostics]
+  )
+  const warnCount = useMemo(
+    () => diagnostics.filter((d) => d.severity === 'warning').length,
+    [diagnostics]
+  )
 
   return (
     <div className="status-bar">
@@ -67,35 +73,43 @@ function StatusBar() {
           </span>
         )}
         <span
-            className="status-spellcheck"
-            onClick={() => useAppStore.getState().updateSetting('sectionHighlightEnabled', !sectionHighlightEnabled)}
-            title="Toggle section highlight bands"
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                useAppStore.getState().updateSetting('sectionHighlightEnabled', !sectionHighlightEnabled)
-              }
-            }}
-          >
-            Sections: {sectionHighlightEnabled ? 'On' : 'Off'}
-          </span>
+          className="status-spellcheck"
+          onClick={() =>
+            useAppStore
+              .getState()
+              .updateSetting('sectionHighlightEnabled', !sectionHighlightEnabled)
+          }
+          title="Toggle section highlight bands"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              useAppStore
+                .getState()
+                .updateSetting('sectionHighlightEnabled', !sectionHighlightEnabled)
+            }
+          }}
+        >
+          Sections: {sectionHighlightEnabled ? 'On' : 'Off'}
+        </span>
         <span
-            className="status-spellcheck"
-            onClick={() => useAppStore.getState().updateSetting('spellCheckEnabled', !spellCheckEnabled)}
-            title="Toggle spell check"
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                useAppStore.getState().updateSetting('spellCheckEnabled', !spellCheckEnabled)
-              }
-            }}
-          >
-            Spell: {spellCheckEnabled ? 'On' : 'Off'}
-          </span>
+          className="status-spellcheck"
+          onClick={() =>
+            useAppStore.getState().updateSetting('spellCheckEnabled', !spellCheckEnabled)
+          }
+          title="Toggle spell check"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              useAppStore.getState().updateSetting('spellCheckEnabled', !spellCheckEnabled)
+            }
+          }}
+        >
+          Spell: {spellCheckEnabled ? 'On' : 'Off'}
+        </span>
         <span>
           Ln {cursorLine}, Col {cursorColumn}
         </span>

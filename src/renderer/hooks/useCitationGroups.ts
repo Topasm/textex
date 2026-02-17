@@ -50,7 +50,9 @@ export function useCitationGroupOps() {
     (groups: CitationGroup[]) => {
       setCitationGroups(groups)
       if (projectRoot) {
-        window.api.saveCitationGroups(projectRoot, groups).catch((err) => logError('saveCitationGroups', err))
+        window.api
+          .saveCitationGroups(projectRoot, groups)
+          .catch((err) => logError('saveCitationGroups', err))
       }
     },
     [setCitationGroups, projectRoot]
@@ -76,9 +78,7 @@ export function useCitationGroupOps() {
 
   const renameGroup = useCallback(
     (groupId: string, newName: string) => {
-      saveGroups(
-        citationGroups.map((g) => (g.id === groupId ? { ...g, name: newName } : g))
-      )
+      saveGroups(citationGroups.map((g) => (g.id === groupId ? { ...g, name: newName } : g)))
     },
     [citationGroups, saveGroups]
   )

@@ -27,7 +27,13 @@ const defaults: UserSettings = {
   showStatusBar: true,
   sectionHighlightEnabled: false,
   sectionHighlightColors: [
-    '#e06c75', '#e5c07b', '#98c379', '#61afef', '#c678dd', '#56b6c2', '#d19a66'
+    '#e06c75',
+    '#e5c07b',
+    '#98c379',
+    '#61afef',
+    '#c678dd',
+    '#56b6c2',
+    '#d19a66'
   ],
   bibGroupMode: 'flat',
   lineNumbers: true,
@@ -72,7 +78,11 @@ export async function saveSettings(partial: Partial<UserSettings>): Promise<User
     await fs.rename(tmpPath, settingsPath)
   } catch (err) {
     // Clean up orphaned .tmp file on failure
-    try { await fs.unlink(tmpPath) } catch { /* ignore cleanup failure */ }
+    try {
+      await fs.unlink(tmpPath)
+    } catch {
+      /* ignore cleanup failure */
+    }
     throw err
   }
   return merged
@@ -121,8 +131,6 @@ export async function updateRecentProject(
 ): Promise<UserSettings> {
   const current = await loadSettings()
   const existing = current.recentProjects ?? []
-  const updated = existing.map((p) =>
-    p.path === projectPath ? { ...p, ...updates } : p
-  )
+  const updated = existing.map((p) => (p.path === projectPath ? { ...p, ...updates } : p))
   return saveSettings({ recentProjects: updated })
 }

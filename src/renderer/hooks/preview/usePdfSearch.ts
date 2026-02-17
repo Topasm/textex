@@ -113,6 +113,6 @@ export function usePdfSearch(
     handleSearchNext,
     handleSearchPrev,
     handleSearchClose,
-    setSearchQuery,
+    setSearchQuery
   }
 }

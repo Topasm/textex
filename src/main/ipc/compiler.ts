@@ -14,9 +14,7 @@ function validateFilePath(filePath: unknown): string {
   return filePath
 }
 
-export function registerCompilerHandlers(
-  getWindow: () => BrowserWindow | null
-): void {
+export function registerCompilerHandlers(getWindow: () => BrowserWindow | null): void {
   ipcMain.handle('latex:compile', async (_event, filePath: string) => {
     const validPath = validateFilePath(filePath)
 

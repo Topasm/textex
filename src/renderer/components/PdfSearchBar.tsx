@@ -55,10 +55,20 @@ const PdfSearchBar = React.memo(function PdfSearchBar({
       <span className="pdf-search-count">
         {matchCount > 0 ? `${currentMatch + 1}/${matchCount}` : 'No matches'}
       </span>
-      <button onClick={onPrev} disabled={matchCount === 0} title="Previous (Shift+Enter)" aria-label="Previous match">
+      <button
+        onClick={onPrev}
+        disabled={matchCount === 0}
+        title="Previous (Shift+Enter)"
+        aria-label="Previous match"
+      >
         &#x25B2;
       </button>
-      <button onClick={onNext} disabled={matchCount === 0} title="Next (Enter)" aria-label="Next match">
+      <button
+        onClick={onNext}
+        disabled={matchCount === 0}
+        title="Next (Enter)"
+        aria-label="Next match"
+      >
         &#x25BC;
       </button>
       <button onClick={onClose} title="Close (Escape)" aria-label="Close search">

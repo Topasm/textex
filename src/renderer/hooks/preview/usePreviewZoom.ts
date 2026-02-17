@@ -10,7 +10,9 @@ export interface PreviewZoomState {
  * Manages Ctrl+scroll zoom with instant CSS transform feedback
  * and debounced react-pdf re-render.
  */
-export function usePreviewZoom(containerRef: React.RefObject<HTMLDivElement | null>): PreviewZoomState {
+export function usePreviewZoom(
+  containerRef: React.RefObject<HTMLDivElement | null>
+): PreviewZoomState {
   const [transientScale, setTransientScale] = useState<number | null>(null)
   const transientTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingZoomRef = useRef<number | null>(null)
@@ -27,9 +29,7 @@ export function usePreviewZoom(containerRef: React.RefObject<HTMLDivElement | nu
       const step = Math.max(1, Math.min(rawStep, 5))
       const baseZoom = pendingZoomRef.current ?? s.zoomLevel
       const newZoom =
-        e.deltaY < 0
-          ? Math.min(ZOOM_MAX, baseZoom + step)
-          : Math.max(ZOOM_MIN, baseZoom - step)
+        e.deltaY < 0 ? Math.min(ZOOM_MAX, baseZoom + step) : Math.max(ZOOM_MIN, baseZoom - step)
       pendingZoomRef.current = newZoom
 
       // Instant visual feedback via CSS transform

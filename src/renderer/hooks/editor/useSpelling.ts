@@ -41,6 +41,12 @@ function extractWordsFromLine(line: string, lineNumber: number): WordInfo[] {
   return words
 }
 
+/** Debounce interval for spell checking after content changes. */
+const SPELL_DEBOUNCE_MS = 500
+
+/** Lazy initialization: skip spell check until first content edit after mount. */
+let spellCheckInitialized = false
+
 export function useSpelling({ content, enabled, editorRef, monacoRef }: UseSpellingParams): {
   runSpellCheck: () => Promise<void>
 } {
@@ -48,6 +54,8 @@ export function useSpelling({ content, enabled, editorRef, monacoRef }: UseSpell
   // Cache of previous spell check results per line for incremental checking
   const prevLinesRef = useRef<string[]>([])
   const prevMarkersRef = useRef<Map<number, monacoEditor.IMarkerData[]>>(new Map())
+  // Track if this is the initial mount to defer first spell check
+  const mountedRef = useRef(false)
 
   const runSpellCheck = useCallback(async (): Promise<void> => {
     const editor = editorRef.current
@@ -152,13 +160,53 @@ export function useSpelling({ content, enabled, editorRef, monacoRef }: UseSpell
       return
     }
 
+    // Defer initial spell check until after first render using requestIdleCallback
+    if (!mountedRef.current) {
+      mountedRef.current = true
+      if (!spellCheckInitialized) {
+        spellCheckInitialized = true
+        const idleId =
+          typeof requestIdleCallback !== 'undefined'
+            ? requestIdleCallback(() => {
+                void runSpellCheck()
+              })
+            : (setTimeout(() => {
+                void runSpellCheck()
+              }, 1000) as unknown as number)
+        return () => {
+          if (typeof cancelIdleCallback !== 'undefined') {
+            cancelIdleCallback(idleId)
+          } else {
+            clearTimeout(idleId)
+          }
+        }
+      }
+    }
+
     clearTimeout(spellTimerRef.current)
     spellTimerRef.current = setTimeout(() => {
       void runSpellCheck()
-    }, 500)
+    }, SPELL_DEBOUNCE_MS)
 
     return () => clearTimeout(spellTimerRef.current)
   }, [content, enabled, runSpellCheck])
+
+  // Cleanup markers on unmount
+  useEffect(() => {
+    return () => {
+      clearTimeout(spellTimerRef.current)
+      const monaco = monacoRef.current
+      const editor = editorRef.current
+      if (monaco && editor) {
+        const model = editor.getModel()
+        if (model) {
+          monaco.editor.setModelMarkers(model, 'spellcheck', [])
+        }
+      }
+      prevLinesRef.current = []
+      prevMarkersRef.current.clear()
+    }
+  }, [editorRef, monacoRef])
 
   return { runSpellCheck }
 }

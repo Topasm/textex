@@ -16,7 +16,8 @@ const MAX_RETRIES = 3
 const RETRY_DELAYS = [1000, 2000, 4000]
 
 function getDefaultTexLabPath(): string {
-  const platform = process.platform === 'win32' ? 'win' : process.platform === 'darwin' ? 'mac' : 'linux'
+  const platform =
+    process.platform === 'win32' ? 'win' : process.platform === 'darwin' ? 'mac' : 'linux'
   const binary = process.platform === 'win32' ? 'texlab.exe' : 'texlab'
 
   if (isDev) {
@@ -163,7 +164,9 @@ class TexLabManager {
       if (available < contentLength) break // wait for more data
 
       // Extract exactly contentLength bytes from the buffer
-      const body = this.stdoutBuffer.subarray(bodyStart, bodyStart + contentLength).toString('utf-8')
+      const body = this.stdoutBuffer
+        .subarray(bodyStart, bodyStart + contentLength)
+        .toString('utf-8')
       this.stdoutBuffer = this.stdoutBuffer.subarray(bodyStart + contentLength)
 
       try {

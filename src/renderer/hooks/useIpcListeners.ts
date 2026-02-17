@@ -51,16 +51,19 @@ export function useIpcListeners(projectRoot: string | null): void {
   }, [])
 
   // Directory watcher refresh
-  useDisposable((store) => {
-    if (!projectRoot) return
-    window.api.onDirectoryChanged(async () => {
-      try {
-        const tree = await window.api.readDirectory(projectRoot)
-        useAppStore.getState().setDirectoryTree(tree)
-      } catch {
-        // ignore
-      }
-    })
-    store.add(toDisposable(() => window.api.removeDirectoryChangedListener()))
-  }, [projectRoot])
+  useDisposable(
+    (store) => {
+      if (!projectRoot) return
+      window.api.onDirectoryChanged(async () => {
+        try {
+          const tree = await window.api.readDirectory(projectRoot)
+          useAppStore.getState().setDirectoryTree(tree)
+        } catch {
+          // ignore
+        }
+      })
+      store.add(toDisposable(() => window.api.removeDirectoryChangedListener()))
+    },
+    [projectRoot]
+  )
 }

@@ -16,10 +16,10 @@ function validateFilePath(filePath: unknown): string {
 
 function readTextFileWithEncoding(buffer: Buffer): string {
   // Check for BOM markers
-  if (buffer[0] === 0xEF && buffer[1] === 0xBB && buffer[2] === 0xBF) {
+  if (buffer[0] === 0xef && buffer[1] === 0xbb && buffer[2] === 0xbf) {
     return buffer.subarray(3).toString('utf-8')
   }
-  if (buffer[0] === 0xFF && buffer[1] === 0xFE) {
+  if (buffer[0] === 0xff && buffer[1] === 0xfe) {
     return buffer.subarray(2).toString('utf16le')
   }
 
@@ -32,11 +32,8 @@ function readTextFileWithEncoding(buffer: Buffer): string {
 }
 
 const watcherDisposable = new MutableDisposable()
-let watchedRootDir: string | null = null
 
-export function registerFileSystemHandlers(
-  getWindow: () => BrowserWindow | null
-): void {
+export function registerFileSystemHandlers(getWindow: () => BrowserWindow | null): void {
   function sendToWindow(channel: string, ...args: unknown[]): void {
     const win = getWindow()
     if (win && !win.isDestroyed()) {
@@ -65,7 +62,7 @@ export function registerFileSystemHandlers(
     if (sizeInfo.refuse) {
       throw new Error(
         `File is too large to open (${Math.round(sizeInfo.size / 1024 / 1024)}MB). ` +
-        `Files larger than 50MB cannot be opened to prevent editor freezing.`
+          `Files larger than 50MB cannot be opened to prevent editor freezing.`
       )
     }
 
@@ -90,18 +87,21 @@ export function registerFileSystemHandlers(
   })
 
   // Batch save: write multiple files concurrently
-  ipcMain.handle('fs:save-batch', async (_event, files: Array<{ content: string; filePath: string }>) => {
-    if (!Array.isArray(files)) throw new Error('files must be an array')
-    await Promise.all(
-      files.map(async ({ content, filePath }) => {
-        const validPath = validateFilePath(filePath)
-        await fs.writeFile(validPath, content, 'utf-8')
-        fileCache.invalidate(validPath)
-        directoryCache.invalidateForChange(validPath)
-      })
-    )
-    return { success: true }
-  })
+  ipcMain.handle(
+    'fs:save-batch',
+    async (_event, files: Array<{ content: string; filePath: string }>) => {
+      if (!Array.isArray(files)) throw new Error('files must be an array')
+      await Promise.all(
+        files.map(async ({ content, filePath }) => {
+          const validPath = validateFilePath(filePath)
+          await fs.writeFile(validPath, content, 'utf-8')
+          fileCache.invalidate(validPath)
+          directoryCache.invalidateForChange(validPath)
+        })
+      )
+      return { success: true }
+    }
+  )
 
   ipcMain.handle('fs:save-as', async (_event, content: string) => {
     const win = getWindow()
@@ -122,27 +122,30 @@ export function registerFileSystemHandlers(
     return { filePath: result.filePath }
   })
 
-  ipcMain.handle('fs:create-template-project', async (_event, templateName: string, content: string) => {
-    const win = getWindow()
-    const defaultName = templateName.toLowerCase().replace(/[\s/\\]+/g, '-')
-    const result = await dialog.showSaveDialog(win!, {
-      title: 'Create Project Folder',
-      defaultPath: defaultName,
-      buttonLabel: 'Create Project'
-    })
+  ipcMain.handle(
+    'fs:create-template-project',
+    async (_event, templateName: string, content: string) => {
+      const win = getWindow()
+      const defaultName = templateName.toLowerCase().replace(/[\s/\\]+/g, '-')
+      const result = await dialog.showSaveDialog(win!, {
+        title: 'Create Project Folder',
+        defaultPath: defaultName,
+        buttonLabel: 'Create Project'
+      })
 
-    if (result.canceled || !result.filePath) {
-      return null
+      if (result.canceled || !result.filePath) {
+        return null
+      }
+
+      const projectDir = result.filePath
+      const mainTexPath = path.join(projectDir, 'main.tex')
+
+      await fs.mkdir(projectDir, { recursive: true })
+      await fs.writeFile(mainTexPath, content, 'utf-8')
+
+      return { projectPath: projectDir, filePath: mainTexPath }
     }
-
-    const projectDir = result.filePath
-    const mainTexPath = path.join(projectDir, 'main.tex')
-
-    await fs.mkdir(projectDir, { recursive: true })
-    await fs.writeFile(mainTexPath, content, 'utf-8')
-
-    return { projectPath: projectDir, filePath: mainTexPath }
-  })
+  )
 
   ipcMain.handle('fs:read-file', async (_event, filePath: string) => {
     const validPath = validateFilePath(filePath)
@@ -152,7 +155,7 @@ export function registerFileSystemHandlers(
     if (sizeInfo.refuse) {
       throw new Error(
         `File is too large to open (${Math.round(sizeInfo.size / 1024 / 1024)}MB). ` +
-        `Files larger than 50MB cannot be opened to prevent editor freezing.`
+          `Files larger than 50MB cannot be opened to prevent editor freezing.`
       )
     }
 
@@ -215,33 +218,32 @@ export function registerFileSystemHandlers(
   ipcMain.handle('fs:watch-directory', async (_event, dirPath: string) => {
     const validPath = validateFilePath(dirPath)
     // Dispose previous watcher (MutableDisposable auto-disposes the old value)
-    watchedRootDir = validPath
     try {
       const abort = new AbortController()
       watcherDisposable.value = toDisposable(() => abort.abort())
       const watcher = fs.watch(validPath, { recursive: true, signal: abort.signal })
-        ; (async () => {
-          try {
-            for await (const event of watcher) {
-              if (event.filename) {
-                // Invalidate directory and file caches on change
-                const changedPath = path.join(validPath, event.filename)
-                directoryCache.invalidateForChange(changedPath)
-                fileCache.invalidate(changedPath)
+      ;(async () => {
+        try {
+          for await (const event of watcher) {
+            if (event.filename) {
+              // Invalidate directory and file caches on change
+              const changedPath = path.join(validPath, event.filename)
+              directoryCache.invalidateForChange(changedPath)
+              fileCache.invalidate(changedPath)
 
-                sendToWindow('fs:directory-changed', {
-                  type: event.eventType,
-                  filename: event.filename
-                })
-              }
-            }
-          } catch (err) {
-            // Forward watcher errors (unless it was just an abort)
-            if (err instanceof Error && err.name !== 'AbortError') {
-              sendToWindow('fs:watch-error', err.message)
+              sendToWindow('fs:directory-changed', {
+                type: event.eventType,
+                filename: event.filename
+              })
             }
           }
-        })()
+        } catch (err) {
+          // Forward watcher errors (unless it was just an abort)
+          if (err instanceof Error && err.name !== 'AbortError') {
+            sendToWindow('fs:watch-error', err.message)
+          }
+        }
+      })()
     } catch {
       // watch not supported or failed
     }
@@ -273,7 +275,6 @@ export function registerFileSystemHandlers(
 
   ipcMain.handle('fs:unwatch-directory', () => {
     watcherDisposable.dispose()
-    watchedRootDir = null
     return { success: true }
   })
 }

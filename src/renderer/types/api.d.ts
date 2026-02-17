@@ -83,7 +83,10 @@ export interface ElectronAPI {
   saveSettings(partial: Partial<UserSettings>): Promise<UserSettings>
   addRecentProject(projectPath: string): Promise<UserSettings>
   removeRecentProject(projectPath: string): Promise<UserSettings>
-  updateRecentProject(projectPath: string, updates: { tag?: string; pinned?: boolean }): Promise<UserSettings>
+  updateRecentProject(
+    projectPath: string,
+    updates: { tag?: string; pinned?: boolean }
+  ): Promise<UserSettings>
 
   // BibTeX
   parseBibFile(filePath: string): Promise<BibEntry[]>
@@ -151,7 +154,10 @@ export interface ElectronAPI {
   aiGenerate(input: string, provider: string, model: string): Promise<{ latex: string }>
   aiSaveApiKey(provider: string, apiKey: string): Promise<{ success: boolean }>
   aiHasApiKey(provider: string): Promise<boolean>
-  aiProcess(action: 'fix' | 'academic' | 'summarize' | 'longer' | 'shorter', text: string): Promise<string>
+  aiProcess(
+    action: 'fix' | 'academic' | 'summarize' | 'longer' | 'shorter',
+    text: string
+  ): Promise<string>
 
   // Document Structure (fallback outline)
   getDocumentOutline(filePath: string, content: string): Promise<SectionNode[]>

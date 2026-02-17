@@ -15,8 +15,7 @@ export function useAutoCompile(): void {
 
     clearTimeout(timerRef.current)
     timerRef.current = setTimeout(async () => {
-      const { appendLog, setCompileStatus, setLogPanelOpen, clearLogs } =
-        useAppStore.getState()
+      const { appendLog, setCompileStatus, setLogPanelOpen, clearLogs } = useAppStore.getState()
 
       // Save ALL dirty files before compiling (multi-file awareness)
       // Use batch save IPC to write all dirty files concurrently in a single call

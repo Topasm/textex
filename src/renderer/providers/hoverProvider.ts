@@ -8,10 +8,7 @@ interface HoverDeps {
   getBibEntries: () => BibEntry[]
 }
 
-function extractMathAtPosition(
-  lineContent: string,
-  column: number
-): string | null {
+function extractMathAtPosition(lineContent: string, column: number): string | null {
   const col = column - 1 // 0-based
 
   // Check inline math $...$
@@ -50,10 +47,7 @@ function extractMathAtPosition(
   return null
 }
 
-function extractCiteKeyAtPosition(
-  lineContent: string,
-  column: number
-): string | null {
+function extractCiteKeyAtPosition(lineContent: string, column: number): string | null {
   const col = column - 1
   const citeRegex = /\\cite[tp]?\*?\{([^}]+)\}/g
   let match: RegExpExecArray | null
@@ -84,10 +78,7 @@ export function registerHoverProvider(
   deps: HoverDeps
 ): { dispose(): void } {
   const disposable = monaco.languages.registerHoverProvider('latex', {
-    provideHover(
-      model: monacoEditor.ITextModel,
-      position: { lineNumber: number; column: number }
-    ) {
+    provideHover(model: monacoEditor.ITextModel, position: { lineNumber: number; column: number }) {
       const lineContent = model.getLineContent(position.lineNumber)
 
       // Math hover
@@ -106,9 +97,7 @@ export function registerHoverProvider(
               endLineNumber: position.lineNumber,
               endColumn: lineContent.length + 1
             },
-            contents: [
-              { supportHtml: true, value: `<div style="padding:4px">${html}</div>` }
-            ]
+            contents: [{ supportHtml: true, value: `<div style="padding:4px">${html}</div>` }]
           }
         } catch {
           // KaTeX render failed, skip

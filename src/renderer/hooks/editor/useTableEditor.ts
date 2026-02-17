@@ -6,7 +6,9 @@ type MonacoInstance = typeof import('monaco-editor')
 
 export interface TableEditorState {
   tableModal: { isOpen: boolean; latex: string; range: IRange | null }
-  setTableModal: React.Dispatch<React.SetStateAction<{ isOpen: boolean; latex: string; range: IRange | null }>>
+  setTableModal: React.Dispatch<
+    React.SetStateAction<{ isOpen: boolean; latex: string; range: IRange | null }>
+  >
   registerTableEditor: (editor: monacoEditor.IStandaloneCodeEditor, monaco: MonacoInstance) => void
   disposeTableEditor: () => void
 }
@@ -24,10 +26,11 @@ export function useTableEditor(): TableEditorState {
 
   const disposablesRef = useRef<IDisposable[]>([])
 
-  const registerTableEditor = (editor: monacoEditor.IStandaloneCodeEditor, monaco: MonacoInstance) => {
-    disposablesRef.current.push(
-      ...registerTableEditorCodeLens(editor, monaco, setTableModal)
-    )
+  const registerTableEditor = (
+    editor: monacoEditor.IStandaloneCodeEditor,
+    monaco: MonacoInstance
+  ) => {
+    disposablesRef.current.push(...registerTableEditorCodeLens(editor, monaco, setTableModal))
   }
 
   const disposeTableEditor = () => {
@@ -44,6 +47,6 @@ export function useTableEditor(): TableEditorState {
     tableModal,
     setTableModal,
     registerTableEditor,
-    disposeTableEditor,
+    disposeTableEditor
   }
 }

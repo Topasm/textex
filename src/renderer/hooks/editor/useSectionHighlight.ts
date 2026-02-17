@@ -9,9 +9,7 @@ interface UseSectionHighlightArgs {
   monacoRef: MutableRefObject<MonacoInstance | null>
 }
 
-const DEFAULT_COLORS = [
-  '#e06c75', '#e5c07b', '#98c379', '#61afef', '#c678dd', '#56b6c2', '#d19a66'
-]
+const DEFAULT_COLORS = ['#e06c75', '#e5c07b', '#98c379', '#61afef', '#c678dd', '#56b6c2', '#d19a66']
 
 /**
  * Inject a <style> element with dynamic CSS classes generated from the
@@ -63,7 +61,9 @@ export function useSectionHighlight({ editorRef, monacoRef }: UseSectionHighligh
     }
   }, [enabled, colors])
 
-  // Apply decorations
+  // Apply decorations using requestIdleCallback to batch non-urgent updates
+  const pendingDecorationRef = useRef<number | ReturnType<typeof setTimeout> | null>(null)
+
   useEffect(() => {
     const editor = editorRef.current
     const monaco = monacoRef.current
@@ -78,50 +78,82 @@ export function useSectionHighlight({ editorRef, monacoRef }: UseSectionHighligh
       return
     }
 
-    const sections = documentSymbols.filter((s) => s.kind === 2 || s.kind === 3)
-
-    if (sections.length === 0) {
-      collectionRef.current.set([])
-      return
+    // Cancel any pending idle callback
+    if (pendingDecorationRef.current !== null) {
+      if (typeof cancelIdleCallback !== 'undefined') {
+        cancelIdleCallback(pendingDecorationRef.current as number)
+      } else {
+        clearTimeout(pendingDecorationRef.current as ReturnType<typeof setTimeout>)
+      }
     }
 
-    const paletteSize = colors.length
-    const decorations: monacoEditor.IModelDeltaDecoration[] = []
+    const applyDecorations = (): void => {
+      pendingDecorationRef.current = null
+      if (!collectionRef.current) return
 
-    sections.forEach((section, index) => {
-      const c = index % paletteSize
-      const startLine = section.range.startLine
-      const endLine = section.range.endLine
+      const sections = documentSymbols.filter((s) => s.kind === 2 || s.kind === 3)
 
-      // Heading: top border divider
-      decorations.push({
-        range: new monaco.Range(startLine, 1, startLine, 1),
-        options: {
-          isWholeLine: true,
-          className: `sh-heading sh-heading-c${c}`
-        }
+      if (sections.length === 0) {
+        collectionRef.current.set([])
+        return
+      }
+
+      const paletteSize = colors.length
+      const decorations: monacoEditor.IModelDeltaDecoration[] = []
+
+      sections.forEach((section, index) => {
+        const c = index % paletteSize
+        const startLine = section.range.startLine
+        const endLine = section.range.endLine
+
+        // Heading: top border divider
+        decorations.push({
+          range: new monaco.Range(startLine, 1, startLine, 1),
+          options: {
+            isWholeLine: true,
+            className: `sh-heading sh-heading-c${c}`
+          }
+        })
+
+        // Left accent bar spanning full section
+        decorations.push({
+          range: new monaco.Range(startLine, 1, endLine, 1),
+          options: {
+            isWholeLine: true,
+            linesDecorationsClassName: `sh-bar sh-bar-c${c}`
+          }
+        })
+
+        // Background band spanning full section
+        decorations.push({
+          range: new monaco.Range(startLine, 1, endLine, 1),
+          options: {
+            isWholeLine: true,
+            className: `sh-band-c${c}`
+          }
+        })
       })
 
-      // Left accent bar spanning full section
-      decorations.push({
-        range: new monaco.Range(startLine, 1, endLine, 1),
-        options: {
-          isWholeLine: true,
-          linesDecorationsClassName: `sh-bar sh-bar-c${c}`
-        }
-      })
+      collectionRef.current.set(decorations)
+    }
 
-      // Background band spanning full section
-      decorations.push({
-        range: new monaco.Range(startLine, 1, endLine, 1),
-        options: {
-          isWholeLine: true,
-          className: `sh-band-c${c}`
-        }
-      })
-    })
+    // Defer decoration updates to idle time since they are non-critical visual updates
+    if (typeof requestIdleCallback !== 'undefined') {
+      pendingDecorationRef.current = requestIdleCallback(applyDecorations)
+    } else {
+      pendingDecorationRef.current = setTimeout(applyDecorations, 100)
+    }
 
-    collectionRef.current.set(decorations)
+    return () => {
+      if (pendingDecorationRef.current !== null) {
+        if (typeof cancelIdleCallback !== 'undefined') {
+          cancelIdleCallback(pendingDecorationRef.current as number)
+        } else {
+          clearTimeout(pendingDecorationRef.current as ReturnType<typeof setTimeout>)
+        }
+        pendingDecorationRef.current = null
+      }
+    }
   }, [enabled, documentSymbols, colors, editorRef, monacoRef])
 
   // Cleanup on unmount

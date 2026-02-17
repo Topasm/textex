@@ -201,7 +201,9 @@ server.tool(
     file_path: z.string().describe('Absolute path to the main .tex file'),
     section_path: z
       .string()
-      .describe('Slash-separated section title path (e.g. "Introduction" or "Methods/Data Collection")')
+      .describe(
+        'Slash-separated section title path (e.g. "Introduction" or "Methods/Data Collection")'
+      )
   },
   async ({ file_path: filePath, section_path: sectionPath }) => {
     try {
@@ -232,7 +234,9 @@ server.tool(
     file_path: z.string().describe('Absolute path to the main .tex file'),
     section_path: z
       .string()
-      .describe('Slash-separated section title path (e.g. "Introduction" or "Methods/Data Collection")'),
+      .describe(
+        'Slash-separated section title path (e.g. "Introduction" or "Methods/Data Collection")'
+      ),
     content: z.string().describe('New LaTeX content to replace the section body with')
   },
   async ({ file_path: filePath, section_path: sectionPath, content }) => {
@@ -249,7 +253,9 @@ server.tool(
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       return {
-        content: [{ type: 'text' as const, text: JSON.stringify({ success: false, error: message }) }],
+        content: [
+          { type: 'text' as const, text: JSON.stringify({ success: false, error: message }) }
+        ],
         isError: true
       }
     }

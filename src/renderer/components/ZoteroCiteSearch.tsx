@@ -74,9 +74,12 @@ export function ZoteroCiteSearch() {
   }, [])
 
   const insertCitation = useCallback(() => {
-    const keys = selectedKeys.size > 0
-      ? Array.from(selectedKeys)
-      : results.length > 0 ? [results[highlightedIndex].citekey] : []
+    const keys =
+      selectedKeys.size > 0
+        ? Array.from(selectedKeys)
+        : results.length > 0
+          ? [results[highlightedIndex].citekey]
+          : []
     if (!keys.length) return
 
     const citeCmd = `\\cite{${keys.join(',')}}`
@@ -99,26 +102,30 @@ export function ZoteroCiteSearch() {
     setIsDropdownOpen(false)
   }, [selectedKeys, results, highlightedIndex])
 
-  const handleCiteKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      setIsDropdownOpen(false)
-      ;(e.target as HTMLInputElement).blur()
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      if (results.length) setHighlightedIndex((prev) => (prev + 1) % results.length)
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      if (results.length) setHighlightedIndex((prev) => (prev - 1 + results.length) % results.length)
-    } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-      e.preventDefault()
-      insertCitation()
-    } else if (e.key === 'Enter') {
-      e.preventDefault()
-      if (results.length > 0) {
-        toggleSelection(results[highlightedIndex].citekey)
+  const handleCiteKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsDropdownOpen(false)
+        ;(e.target as HTMLInputElement).blur()
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        if (results.length) setHighlightedIndex((prev) => (prev + 1) % results.length)
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        if (results.length)
+          setHighlightedIndex((prev) => (prev - 1 + results.length) % results.length)
+      } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault()
+        insertCitation()
+      } else if (e.key === 'Enter') {
+        e.preventDefault()
+        if (results.length > 0) {
+          toggleSelection(results[highlightedIndex].citekey)
+        }
       }
-    }
-  }, [results, highlightedIndex, insertCitation, toggleSelection])
+    },
+    [results, highlightedIndex, insertCitation, toggleSelection]
+  )
 
   return (
     <div className="cite-search-wrapper" ref={citeSearchRef}>
@@ -129,11 +136,11 @@ export function ZoteroCiteSearch() {
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         onKeyDown={handleCiteKeyDown}
-        onFocus={() => { if (results.length) setIsDropdownOpen(true) }}
+        onFocus={() => {
+          if (results.length) setIsDropdownOpen(true)
+        }}
       />
-      {selectedKeys.size > 0 && (
-        <span className="cite-search-badge">{selectedKeys.size}</span>
-      )}
+      {selectedKeys.size > 0 && <span className="cite-search-badge">{selectedKeys.size}</span>}
       {isDropdownOpen && (results.length > 0 || loading) && (
         <div className="cite-search-dropdown">
           {loading && <div className="cite-search-loading">Searching...</div>}

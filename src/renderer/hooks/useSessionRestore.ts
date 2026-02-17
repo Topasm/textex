@@ -53,7 +53,9 @@ export function useSessionRestore(): boolean {
       // Watch directory
       try {
         await window.api.watchDirectory(savedRoot)
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
 
       // Git status
       try {
@@ -73,18 +75,24 @@ export function useSessionRestore(): boolean {
       try {
         const entries = await window.api.findBibInProject(savedRoot)
         useAppStore.getState().setBibEntries(entries)
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
 
       // Labels
       try {
         const labels = await window.api.scanLabels(savedRoot)
         useAppStore.getState().setLabels(labels)
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
 
       // Add to recent projects
       try {
         await window.api.addRecentProject(savedRoot)
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
 
       setSessionRestored(true)
     }
@@ -96,9 +104,12 @@ export function useSessionRestore(): boolean {
   useEffect(() => {
     const settings = useAppStore.getState().settings
     if (settings.spellCheckEnabled) {
-      window.api.loadSettings().then((s) => {
-        window.api.spellInit(s.spellCheckLanguage || 'en-US')
-      }).catch(() => { })
+      window.api
+        .loadSettings()
+        .then((s) => {
+          window.api.spellInit(s.spellCheckLanguage || 'en-US')
+        })
+        .catch(() => {})
     }
     if (useAppStore.getState().settings.autoUpdateEnabled !== false) {
       window.api.updateCheck()

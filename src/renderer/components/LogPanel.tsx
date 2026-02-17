@@ -16,9 +16,18 @@ function LogPanel() {
   )
 
   // Counts (must be before early return to satisfy Rules of Hooks)
-  const errorCount = useMemo(() => diagnostics.filter((d) => d.severity === 'error').length, [diagnostics])
-  const warningCount = useMemo(() => diagnostics.filter((d) => d.severity === 'warning').length, [diagnostics])
-  const infoCount = useMemo(() => diagnostics.filter((d) => d.severity === 'info').length, [diagnostics])
+  const errorCount = useMemo(
+    () => diagnostics.filter((d) => d.severity === 'error').length,
+    [diagnostics]
+  )
+  const warningCount = useMemo(
+    () => diagnostics.filter((d) => d.severity === 'warning').length,
+    [diagnostics]
+  )
+  const infoCount = useMemo(
+    () => diagnostics.filter((d) => d.severity === 'info').length,
+    [diagnostics]
+  )
 
   useEffect(() => {
     if (logViewMode === 'raw' && scrollRef.current) {
@@ -70,10 +79,7 @@ function LogPanel() {
 
   // Problems tab label
   const totalCount = diagnostics.length
-  const problemsLabel =
-    totalCount === 0
-      ? 'Problems'
-      : `Problems (${totalCount})`
+  const problemsLabel = totalCount === 0 ? 'Problems' : `Problems (${totalCount})`
 
   return (
     <div className="log-panel">
@@ -210,10 +216,14 @@ function StructuredProblems({
                 <span className="log-file-name">{fileName}</span>
                 <span className="log-file-counts">
                   {fileErrors > 0 && (
-                    <span className="log-file-count-error">{'\u2716'} {fileErrors}</span>
+                    <span className="log-file-count-error">
+                      {'\u2716'} {fileErrors}
+                    </span>
                   )}
                   {fileWarnings > 0 && (
-                    <span className="log-file-count-warning">{'\u26A0'} {fileWarnings}</span>
+                    <span className="log-file-count-warning">
+                      {'\u26A0'} {fileWarnings}
+                    </span>
                   )}
                 </span>
               </div>

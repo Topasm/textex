@@ -53,6 +53,6 @@ export function useHistoryPanel(): HistoryPanelState {
     historyMode,
     setHistoryMode,
     handleSelectHistoryItem,
-    closeHistory,
+    closeHistory
   }
 }

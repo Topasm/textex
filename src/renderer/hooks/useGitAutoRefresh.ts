@@ -6,7 +6,11 @@ import { logError } from '../utils/errorMessage'
 /**
  * Polls git status periodically while a git repo is open and git is enabled.
  */
-export function useGitAutoRefresh(projectRoot: string | null, isGitRepo: boolean, gitEnabled?: boolean): void {
+export function useGitAutoRefresh(
+  projectRoot: string | null,
+  isGitRepo: boolean,
+  gitEnabled?: boolean
+): void {
   useEffect(() => {
     if (!projectRoot || !isGitRepo || gitEnabled === false) return
     const interval = setInterval(async () => {

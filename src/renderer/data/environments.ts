@@ -92,5 +92,5 @@ export const environments: EnvironmentInfo[] = [
   // Misc
   { name: 'appendix' },
   { name: 'longtable', argSnippet: '{${1:cols}}' },
-  { name: 'multicols', argSnippet: '{${1:2}}' },
+  { name: 'multicols', argSnippet: '{${1:2}}' }
 ]

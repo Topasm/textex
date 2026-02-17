@@ -40,12 +40,9 @@ export function registerBibliographyHandlers(): void {
     return loadCitationGroups(validPath)
   })
 
-  ipcMain.handle(
-    'citgroups:save',
-    async (_event, projectRoot: string, groups: CitationGroup[]) => {
-      const validPath = validateFilePath(projectRoot)
-      await saveCitationGroups(validPath, groups)
-      return { success: true }
-    }
-  )
+  ipcMain.handle('citgroups:save', async (_event, projectRoot: string, groups: CitationGroup[]) => {
+    const validPath = validateFilePath(projectRoot)
+    await saveCitationGroups(validPath, groups)
+    return { success: true }
+  })
 }

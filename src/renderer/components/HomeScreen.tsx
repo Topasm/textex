@@ -12,13 +12,21 @@ interface HomeScreenProps {
   onOpenSettings: () => void
 }
 
-function HomeScreen({ onOpenFolder, onNewFromTemplate, onAiDraft, onOpenSettings }: HomeScreenProps) {
+function HomeScreen({
+  onOpenFolder,
+  onNewFromTemplate,
+  onAiDraft,
+  onOpenSettings
+}: HomeScreenProps) {
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([])
 
   useEffect(() => {
-    window.api.loadSettings().then((settings) => {
-      setRecentProjects(settings.recentProjects ?? [])
-    }).catch((err) => logError('loadSettings', err))
+    window.api
+      .loadSettings()
+      .then((settings) => {
+        setRecentProjects(settings.recentProjects ?? [])
+      })
+      .catch((err) => logError('loadSettings', err))
   }, [])
 
   return (
@@ -48,10 +56,7 @@ function HomeScreen({ onOpenFolder, onNewFromTemplate, onAiDraft, onOpenSettings
         </button>
       </div>
 
-      <RecentProjectList
-        recentProjects={recentProjects}
-        setRecentProjects={setRecentProjects}
-      />
+      <RecentProjectList recentProjects={recentProjects} setRecentProjects={setRecentProjects} />
     </div>
   )
 }

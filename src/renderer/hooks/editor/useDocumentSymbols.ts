@@ -27,19 +27,33 @@ function sectionNodesToSymbols(nodes: SectionNode[]): DocumentSymbolNode[] {
   }))
 }
 
+/** Debounce interval for outline refresh on content edits. */
+const OUTLINE_DEBOUNCE_MS = 2000
+
 // Generation counter to prevent stale LSP responses from overwriting newer data
 let outlineGeneration = 0
 
+// Track in-flight LSP request file to deduplicate concurrent fetches
+let pendingFetchFile: string | null = null
+
 function fetchOutline(currentFile: string, content: string): void {
   const state = useAppStore.getState()
-  const lspAvailable =
-    state.settings.lspEnabled && state.lspStatus === 'running'
+  const lspAvailable = state.settings.lspEnabled && state.lspStatus === 'running'
+
+  // Deduplicate: skip if a request for the same file is already in flight
+  if (pendingFetchFile === currentFile) return
+  pendingFetchFile = currentFile
 
   const generation = ++outlineGeneration
+
+  const onComplete = (): void => {
+    if (pendingFetchFile === currentFile) pendingFetchFile = null
+  }
 
   if (lspAvailable) {
     lspRequestDocumentSymbols(currentFile)
       .then((symbols) => {
+        onComplete()
         // Stale check: only apply if this is still the latest request
         if (outlineGeneration !== generation) return
         if (useAppStore.getState().filePath === currentFile) {
@@ -47,11 +61,12 @@ function fetchOutline(currentFile: string, content: string): void {
         }
       })
       .catch(() => {
+        onComplete()
         if (outlineGeneration !== generation) return
         fetchFallbackOutline(currentFile, content, generation)
       })
   } else {
-    fetchFallbackOutline(currentFile, content, generation)
+    fetchFallbackOutline(currentFile, content, generation).finally(onComplete)
   }
 }
 
@@ -76,14 +91,26 @@ export function useDocumentSymbols(content: string): void {
       const state = useAppStore.getState()
       if (!state.filePath) return
       fetchOutline(state.filePath, content)
-    }, 2000)
+    }, OUTLINE_DEBOUNCE_MS)
 
     return () => clearTimeout(timer)
   }, [content, lspStatus])
+
+  // Cancel pending generation on unmount to prevent stale updates
+  useEffect(() => {
+    return () => {
+      outlineGeneration++
+      pendingFetchFile = null
+    }
+  }, [])
 }
 
-function fetchFallbackOutline(currentFile: string, content: string, generation: number): void {
-  window.api
+function fetchFallbackOutline(
+  currentFile: string,
+  content: string,
+  generation: number
+): Promise<void> {
+  return window.api
     .getDocumentOutline(currentFile, content)
     .then((sectionNodes) => {
       if (outlineGeneration !== generation) return
@@ -91,5 +118,5 @@ function fetchFallbackOutline(currentFile: string, content: string, generation: 
         useAppStore.getState().setDocumentSymbols(sectionNodesToSymbols(sectionNodes))
       }
     })
-    .catch(() => { })
+    .catch(() => {})
 }

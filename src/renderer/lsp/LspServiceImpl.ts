@@ -1,11 +1,11 @@
-import type {
-  editor as monacoEditor,
-  MarkerSeverity
-} from 'monaco-editor'
+import type { editor as monacoEditor, MarkerSeverity } from 'monaco-editor'
 import type { MonacoInstance } from './types'
 import type { DocumentSymbolNode } from '../../shared/types'
 import { DisposableStore, toDisposable } from '../utils/disposable'
-import { createCompletionProvider, createBibtexCompletionProvider } from './providers/completionProvider'
+import {
+  createCompletionProvider,
+  createBibtexCompletionProvider
+} from './providers/completionProvider'
 import { createHoverProvider } from './providers/hoverProvider'
 import { createDefinitionProvider } from './providers/definitionProvider'
 import { createDocumentSymbolProvider } from './providers/symbolProvider'
@@ -31,7 +31,10 @@ interface LspDocumentSymbol {
   detail?: string
   kind: number
   range: { start: { line: number; character: number }; end: { line: number; character: number } }
-  selectionRange: { start: { line: number; character: number }; end: { line: number; character: number } }
+  selectionRange: {
+    start: { line: number; character: number }
+    end: { line: number; character: number }
+  }
   children?: LspDocumentSymbol[]
 }
 
@@ -103,7 +106,11 @@ export class LspClient {
     return this._initialized
   }
 
-  sendRequest(method: string, params: unknown, timeoutMs = DEFAULT_REQUEST_TIMEOUT): Promise<unknown> {
+  sendRequest(
+    method: string,
+    params: unknown,
+    timeoutMs = DEFAULT_REQUEST_TIMEOUT
+  ): Promise<unknown> {
     const id = this.nextRequestId++
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
@@ -112,8 +119,14 @@ export class LspClient {
       }, timeoutMs)
 
       this.pendingRequests.set(id, {
-        resolve: (result) => { clearTimeout(timeout); resolve(result) },
-        reject: (error) => { clearTimeout(timeout); reject(error) }
+        resolve: (result) => {
+          clearTimeout(timeout)
+          resolve(result)
+        },
+        reject: (error) => {
+          clearTimeout(timeout)
+          reject(error)
+        }
       })
       window.api.lspSend({ jsonrpc: '2.0', id, method, params })
     })
@@ -163,7 +176,10 @@ export class LspClient {
     const monaco = this.options.monaco
     const uri = params.uri as string
     const diagnostics = (params.diagnostics || []) as Array<{
-      range: { start: { line: number; character: number }; end: { line: number; character: number } }
+      range: {
+        start: { line: number; character: number }
+        end: { line: number; character: number }
+      }
       severity?: number
       message: string
       source?: string
@@ -180,10 +196,17 @@ export class LspClient {
     const markers: monacoEditor.IMarkerData[] = diagnostics.map((d) => {
       let severity: MarkerSeverity
       switch (d.severity) {
-        case 1: severity = monaco.MarkerSeverity.Error; break
-        case 2: severity = monaco.MarkerSeverity.Warning; break
-        case 3: severity = monaco.MarkerSeverity.Info; break
-        default: severity = monaco.MarkerSeverity.Hint
+        case 1:
+          severity = monaco.MarkerSeverity.Error
+          break
+        case 2:
+          severity = monaco.MarkerSeverity.Warning
+          break
+        case 3:
+          severity = monaco.MarkerSeverity.Info
+          break
+        default:
+          severity = monaco.MarkerSeverity.Hint
       }
       return {
         severity,
@@ -201,42 +224,79 @@ export class LspClient {
 
   private async doInitialize(workspaceRoot: string): Promise<void> {
     const rootUri = filePathToUri(workspaceRoot)
-    const result = (await this.sendRequest('initialize', {
-      processId: null,
-      rootUri,
-      capabilities: {
-        textDocument: {
-          synchronization: {
-            dynamicRegistration: false,
-            willSave: false,
-            willSaveWaitUntil: false,
-            didSave: true
-          },
-          completion: {
-            completionItem: {
-              snippetSupport: true,
-              documentationFormat: ['plaintext', 'markdown']
+    const result = (await this.sendRequest(
+      'initialize',
+      {
+        processId: null,
+        rootUri,
+        capabilities: {
+          textDocument: {
+            synchronization: {
+              dynamicRegistration: false,
+              willSave: false,
+              willSaveWaitUntil: false,
+              didSave: true
+            },
+            completion: {
+              completionItem: {
+                snippetSupport: true,
+                documentationFormat: ['plaintext', 'markdown']
+              }
+            },
+            hover: { contentFormat: ['plaintext', 'markdown'] },
+            definition: { dynamicRegistration: false },
+            references: { dynamicRegistration: false },
+            documentSymbol: { dynamicRegistration: false, hierarchicalDocumentSymbolSupport: true },
+            formatting: { dynamicRegistration: false },
+            rename: { dynamicRegistration: false },
+            publishDiagnostics: { relatedInformation: false },
+            foldingRange: { dynamicRegistration: false, lineFoldingOnly: true },
+            semanticTokens: {
+              dynamicRegistration: false,
+              requests: { range: false, full: { delta: false } },
+              tokenTypes: [
+                'type',
+                'class',
+                'enum',
+                'interface',
+                'struct',
+                'typeParameter',
+                'parameter',
+                'variable',
+                'property',
+                'enumMember',
+                'event',
+                'function',
+                'method',
+                'macro',
+                'keyword',
+                'modifier',
+                'comment',
+                'string',
+                'number',
+                'regexp',
+                'operator'
+              ],
+              tokenModifiers: [
+                'declaration',
+                'definition',
+                'readonly',
+                'static',
+                'deprecated',
+                'abstract',
+                'async',
+                'modification',
+                'documentation',
+                'defaultLibrary'
+              ],
+              formats: ['relative']
             }
           },
-          hover: { contentFormat: ['plaintext', 'markdown'] },
-          definition: { dynamicRegistration: false },
-          references: { dynamicRegistration: false },
-          documentSymbol: { dynamicRegistration: false, hierarchicalDocumentSymbolSupport: true },
-          formatting: { dynamicRegistration: false },
-          rename: { dynamicRegistration: false },
-          publishDiagnostics: { relatedInformation: false },
-          foldingRange: { dynamicRegistration: false, lineFoldingOnly: true },
-          semanticTokens: {
-            dynamicRegistration: false,
-            requests: { range: false, full: { delta: false } },
-            tokenTypes: ['type', 'class', 'enum', 'interface', 'struct', 'typeParameter', 'parameter', 'variable', 'property', 'enumMember', 'event', 'function', 'method', 'macro', 'keyword', 'modifier', 'comment', 'string', 'number', 'regexp', 'operator'],
-            tokenModifiers: ['declaration', 'definition', 'readonly', 'static', 'deprecated', 'abstract', 'async', 'modification', 'documentation', 'defaultLibrary'],
-            formats: ['relative']
-          }
-        },
-        workspace: { workspaceFolders: false }
-      }
-    }, 15000)) as Record<string, unknown>
+          workspace: { workspaceFolders: false }
+        }
+      },
+      15000
+    )) as Record<string, unknown>
 
     this.serverCapabilities = (result?.capabilities || {}) as Record<string, unknown>
     this.sendNotification('initialized', {})
@@ -247,51 +307,86 @@ export class LspClient {
     const caps = this.serverCapabilities
 
     if (caps.completionProvider) {
-      this.disposables.add(toDisposable(
-        monaco.languages.registerCompletionItemProvider('latex', createCompletionProvider(monaco)).dispose
-      ))
+      this.disposables.add(
+        toDisposable(
+          monaco.languages.registerCompletionItemProvider('latex', createCompletionProvider(monaco))
+            .dispose
+        )
+      )
     }
     if (caps.hoverProvider) {
-      this.disposables.add(toDisposable(
-        monaco.languages.registerHoverProvider('latex', createHoverProvider(monaco)).dispose
-      ))
+      this.disposables.add(
+        toDisposable(
+          monaco.languages.registerHoverProvider('latex', createHoverProvider(monaco)).dispose
+        )
+      )
     }
     if (caps.definitionProvider) {
-      this.disposables.add(toDisposable(
-        monaco.languages.registerDefinitionProvider('latex', createDefinitionProvider(monaco)).dispose
-      ))
+      this.disposables.add(
+        toDisposable(
+          monaco.languages.registerDefinitionProvider('latex', createDefinitionProvider(monaco))
+            .dispose
+        )
+      )
     }
     if (caps.documentSymbolProvider) {
-      this.disposables.add(toDisposable(
-        monaco.languages.registerDocumentSymbolProvider('latex', createDocumentSymbolProvider(monaco)).dispose
-      ))
+      this.disposables.add(
+        toDisposable(
+          monaco.languages.registerDocumentSymbolProvider(
+            'latex',
+            createDocumentSymbolProvider(monaco)
+          ).dispose
+        )
+      )
     }
     if (caps.renameProvider) {
-      this.disposables.add(toDisposable(
-        monaco.languages.registerRenameProvider('latex', createRenameProvider(monaco)).dispose
-      ))
+      this.disposables.add(
+        toDisposable(
+          monaco.languages.registerRenameProvider('latex', createRenameProvider(monaco)).dispose
+        )
+      )
     }
     if (caps.documentFormattingProvider) {
-      this.disposables.add(toDisposable(
-        monaco.languages.registerDocumentFormattingEditProvider('latex', createFormattingProvider(monaco)).dispose
-      ))
+      this.disposables.add(
+        toDisposable(
+          monaco.languages.registerDocumentFormattingEditProvider(
+            'latex',
+            createFormattingProvider(monaco)
+          ).dispose
+        )
+      )
     }
     if (caps.foldingRangeProvider) {
-      this.disposables.add(toDisposable(
-        monaco.languages.registerFoldingRangeProvider('latex', createFoldingProvider(monaco)).dispose
-      ))
+      this.disposables.add(
+        toDisposable(
+          monaco.languages.registerFoldingRangeProvider('latex', createFoldingProvider(monaco))
+            .dispose
+        )
+      )
     }
     if (caps.semanticTokensProvider) {
-      const provider = caps.semanticTokensProvider as { legend: { tokenTypes: string[]; tokenModifiers: string[] } }
+      const provider = caps.semanticTokensProvider as {
+        legend: { tokenTypes: string[]; tokenModifiers: string[] }
+      }
       const legend = provider.legend || { tokenTypes: [], tokenModifiers: [] }
-      this.disposables.add(toDisposable(
-        monaco.languages.registerDocumentSemanticTokensProvider('latex', createSemanticTokensProvider(monaco, legend)).dispose
-      ))
+      this.disposables.add(
+        toDisposable(
+          monaco.languages.registerDocumentSemanticTokensProvider(
+            'latex',
+            createSemanticTokensProvider(monaco, legend)
+          ).dispose
+        )
+      )
     }
     if (caps.completionProvider) {
-      this.disposables.add(toDisposable(
-        monaco.languages.registerCompletionItemProvider('bibtex', createBibtexCompletionProvider(monaco)).dispose
-      ))
+      this.disposables.add(
+        toDisposable(
+          monaco.languages.registerCompletionItemProvider(
+            'bibtex',
+            createBibtexCompletionProvider(monaco)
+          ).dispose
+        )
+      )
     }
   }
 

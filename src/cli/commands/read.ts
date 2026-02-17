@@ -20,22 +20,20 @@ export function registerReadCommand(program: commander.Command): void {
     .command('read <file-or-dir> <section-path>')
     .description('Output the LaTeX content of a section')
     .option('-m, --metadata', 'Prepend file and line info as comments')
-    .action(
-      async (fileOrDir: string, sectionPath: string, opts: { metadata?: boolean }) => {
-        try {
-          const mainFile = await resolveMainFile(fileOrDir)
-          const result = await getSectionContent(mainFile, sectionPath)
+    .action(async (fileOrDir: string, sectionPath: string, opts: { metadata?: boolean }) => {
+      try {
+        const mainFile = await resolveMainFile(fileOrDir)
+        const result = await getSectionContent(mainFile, sectionPath)
 
-          if (opts.metadata) {
-            console.log(`% file: ${result.file}`)
-            console.log(`% lines: ${result.startLine}-${result.endLine}`)
-          }
-          console.log(result.content)
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err)
-          console.error(`Error: ${msg}`)
-          process.exit(1)
+        if (opts.metadata) {
+          console.log(`% file: ${result.file}`)
+          console.log(`% lines: ${result.startLine}-${result.endLine}`)
         }
+        console.log(result.content)
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        console.error(`Error: ${msg}`)
+        process.exit(1)
       }
-    )
+    })
 }

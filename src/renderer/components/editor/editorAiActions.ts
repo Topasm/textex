@@ -9,11 +9,41 @@ interface AiActionDef {
 }
 
 const AI_ACTIONS: AiActionDef[] = [
-  { id: 'ai-fix-grammar', label: 'AI: Fix Grammar & Spelling', order: 1, mode: 'replace', action: 'fix' },
-  { id: 'ai-academic-rewrite', label: 'AI: Rewrite Academically', order: 2, mode: 'replace', action: 'academic' },
-  { id: 'ai-summarize', label: 'AI: Summarize Selection', order: 3, mode: 'alert', action: 'summarize' },
-  { id: 'ai-paraphrase-longer', label: 'AI: Paraphrase Longer (+)', order: 4, mode: 'replace', action: 'longer' },
-  { id: 'ai-paraphrase-shorter', label: 'AI: Paraphrase Shorter (-)', order: 5, mode: 'replace', action: 'shorter' },
+  {
+    id: 'ai-fix-grammar',
+    label: 'AI: Fix Grammar & Spelling',
+    order: 1,
+    mode: 'replace',
+    action: 'fix'
+  },
+  {
+    id: 'ai-academic-rewrite',
+    label: 'AI: Rewrite Academically',
+    order: 2,
+    mode: 'replace',
+    action: 'academic'
+  },
+  {
+    id: 'ai-summarize',
+    label: 'AI: Summarize Selection',
+    order: 3,
+    mode: 'alert',
+    action: 'summarize'
+  },
+  {
+    id: 'ai-paraphrase-longer',
+    label: 'AI: Paraphrase Longer (+)',
+    order: 4,
+    mode: 'replace',
+    action: 'longer'
+  },
+  {
+    id: 'ai-paraphrase-shorter',
+    label: 'AI: Paraphrase Shorter (-)',
+    order: 5,
+    mode: 'replace',
+    action: 'shorter'
+  }
 ]
 
 export function registerAiActions(editor: monacoEditor.IStandaloneCodeEditor): void {
@@ -33,11 +63,13 @@ export function registerAiActions(editor: monacoEditor.IStandaloneCodeEditor): v
         try {
           const result = await window.api.aiProcess(def.action, text)
           if (def.mode === 'replace') {
-            ed.executeEdits(def.id, [{
-              range: selection,
-              text: result,
-              forceMoveMarkers: true
-            }])
+            ed.executeEdits(def.id, [
+              {
+                range: selection,
+                text: result,
+                forceMoveMarkers: true
+              }
+            ])
           } else {
             alert(`Summary:\n\n${result}`)
           }

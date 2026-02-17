@@ -26,8 +26,12 @@ export function useKeyboardShortcuts(opts: KeyboardShortcutsOpts): void {
     commandRegistry.register('file.save', { key: 's', mod: true }, handleSave)
     commandRegistry.register('compile', { key: 'Enter', mod: true }, handleCompile)
     commandRegistry.register('log.toggle', { key: 'l', mod: true }, () => s().toggleLogPanel())
-    commandRegistry.register('font.increase', { key: ['=', '+'], mod: true, shift: true }, () => s().increaseFontSize())
-    commandRegistry.register('font.decrease', { key: '-', mod: true, shift: true }, () => s().decreaseFontSize())
+    commandRegistry.register('font.increase', { key: ['=', '+'], mod: true, shift: true }, () =>
+      s().increaseFontSize()
+    )
+    commandRegistry.register('font.decrease', { key: '-', mod: true, shift: true }, () =>
+      s().decreaseFontSize()
+    )
     commandRegistry.register('zoom.in', { key: ['=', '+'], mod: true }, () => s().zoomIn())
     commandRegistry.register('zoom.out', { key: '-', mod: true }, () => s().zoomOut())
     commandRegistry.register('zoom.reset', { key: '0', mod: true }, () => s().resetZoom())
@@ -52,7 +56,9 @@ export function useKeyboardShortcuts(opts: KeyboardShortcutsOpts): void {
         state.setActiveTab(paths[(idx + 1) % paths.length])
       }
     })
-    commandRegistry.register('template.new', { key: 'n', mod: true, shift: true }, () => s().toggleTemplateGallery())
+    commandRegistry.register('template.new', { key: 'n', mod: true, shift: true }, () =>
+      s().toggleTemplateGallery()
+    )
     commandRegistry.register('ai.draft', { key: ['d', 'D'], mod: true, shift: true }, handleAiDraft)
     commandRegistry.register('zotero.search', { key: ['z', 'Z'], mod: true, shift: true }, () => {
       if (zoteroEnabled) useAppStore.getState().requestCiteSearchFocus()

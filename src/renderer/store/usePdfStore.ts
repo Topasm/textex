@@ -35,7 +35,8 @@ export const usePdfStore = create<PdfState>()(
     pdfSearchQuery: '',
     syncToCodeRequest: null,
 
-    setSplitRatio: (splitRatio) => set({ splitRatio: Math.max(SPLIT_RATIO_MIN, Math.min(SPLIT_RATIO_MAX, splitRatio)) }),
+    setSplitRatio: (splitRatio) =>
+      set({ splitRatio: Math.max(SPLIT_RATIO_MIN, Math.min(SPLIT_RATIO_MAX, splitRatio)) }),
     setZoomLevel: (level) => set({ zoomLevel: Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, level)) }),
     zoomIn: () => set((state) => ({ zoomLevel: Math.min(ZOOM_MAX, state.zoomLevel + ZOOM_STEP) })),
     zoomOut: () => set((state) => ({ zoomLevel: Math.max(ZOOM_MIN, state.zoomLevel - ZOOM_STEP) })),

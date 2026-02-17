@@ -129,12 +129,16 @@ export function TimelinePanel() {
           onClick={() => handleEntryClick(entry)}
           role={entry.type === 'local' ? 'button' : undefined}
           tabIndex={entry.type === 'local' ? 0 : undefined}
-          onKeyDown={entry.type === 'local' ? (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault()
-              handleEntryClick(entry)
-            }
-          } : undefined}
+          onKeyDown={
+            entry.type === 'local'
+              ? (e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    handleEntryClick(entry)
+                  }
+                }
+              : undefined
+          }
         >
           <div className="timeline-icon">
             {entry.type === 'git' ? (

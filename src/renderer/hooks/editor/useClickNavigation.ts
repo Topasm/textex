@@ -33,7 +33,9 @@ function findCommandArgAtPosition(
   return null
 }
 
-export function useClickNavigation(): (editor: monacoEditor.IStandaloneCodeEditor) => { dispose(): void } {
+export function useClickNavigation(): (editor: monacoEditor.IStandaloneCodeEditor) => {
+  dispose(): void
+} {
   return useCallback((editor: monacoEditor.IStandaloneCodeEditor) => {
     return editor.onMouseDown((e) => {
       if (!(e.event.ctrlKey || e.event.metaKey)) return
@@ -58,10 +60,15 @@ export function useClickNavigation(): (editor: monacoEditor.IStandaloneCodeEdito
       if (refKey) {
         const label = state.labels.find((l) => l.label === refKey)
         if (label) {
-          window.api.readFile(label.file).then((result) => {
-            useAppStore.getState().openFileInTab(result.filePath, result.content)
-            setTimeout(() => useAppStore.getState().requestJumpToLine(label.line, 1), 50)
-          }).catch((err) => { console.warn('Failed to navigate to label:', err) })
+          window.api
+            .readFile(label.file)
+            .then((result) => {
+              useAppStore.getState().openFileInTab(result.filePath, result.content)
+              setTimeout(() => useAppStore.getState().requestJumpToLine(label.line, 1), 50)
+            })
+            .catch((err) => {
+              console.warn('Failed to navigate to label:', err)
+            })
           return
         }
       }
@@ -70,27 +77,39 @@ export function useClickNavigation(): (editor: monacoEditor.IStandaloneCodeEdito
       if (citeKey) {
         const entry = state.bibEntries.find((b) => b.key === citeKey)
         if (entry?.file) {
-          window.api.readFile(entry.file).then((result) => {
-            useAppStore.getState().openFileInTab(result.filePath, result.content)
-            if (entry.line) {
-              const line = entry.line
-              setTimeout(() => useAppStore.getState().requestJumpToLine(line, 1), 50)
-            }
-          }).catch((err) => { console.warn('Failed to navigate to citation:', err) })
+          window.api
+            .readFile(entry.file)
+            .then((result) => {
+              useAppStore.getState().openFileInTab(result.filePath, result.content)
+              if (entry.line) {
+                const line = entry.line
+                setTimeout(() => useAppStore.getState().requestJumpToLine(line, 1), 50)
+              }
+            })
+            .catch((err) => {
+              console.warn('Failed to navigate to citation:', err)
+            })
           return
         }
       }
 
-      const inputFile = findCommandArgAtPosition(lineContent, col, /\\(?:input|include)\{([^}]+)\}/g)
+      const inputFile = findCommandArgAtPosition(
+        lineContent,
+        col,
+        /\\(?:input|include)\{([^}]+)\}/g
+      )
       if (inputFile && state.projectRoot) {
         let resolvedPath = inputFile
         if (!resolvedPath.endsWith('.tex')) resolvedPath += '.tex'
         const fullPath = resolvedPath.startsWith('/')
           ? resolvedPath
           : `${state.projectRoot}/${resolvedPath}`
-        window.api.readFile(fullPath).then((result) => {
-          useAppStore.getState().openFileInTab(result.filePath, result.content)
-        }).catch(() => { })
+        window.api
+          .readFile(fullPath)
+          .then((result) => {
+            useAppStore.getState().openFileInTab(result.filePath, result.content)
+          })
+          .catch(() => {})
         return
       }
 

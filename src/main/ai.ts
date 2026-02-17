@@ -28,10 +28,13 @@ const DEFAULT_ACTION_SYSTEM = 'You are a helpful academic assistant expert in La
 
 const DEFAULT_PROMPTS: Record<string, string> = {
   fix: 'Fix grammar and spelling in the following LaTeX text. Do not remove LaTeX commands. Return ONLY the fixed text.',
-  academic: 'Rewrite the following text to be more formal and academic suitable for a research paper. Preserve LaTeX commands. Return ONLY the rewritten text.',
+  academic:
+    'Rewrite the following text to be more formal and academic suitable for a research paper. Preserve LaTeX commands. Return ONLY the rewritten text.',
   summarize: 'Summarize the following text briefly. Return ONLY the summary.',
-  longer: 'Paraphrase the following text to be longer and more detailed, expanding on the key points. Preserve all LaTeX commands. Return ONLY the paraphrased text.',
-  shorter: 'Paraphrase the following text to be shorter and more concise, keeping only the essential points. Preserve all LaTeX commands. Return ONLY the paraphrased text.'
+  longer:
+    'Paraphrase the following text to be longer and more detailed, expanding on the key points. Preserve all LaTeX commands. Return ONLY the paraphrased text.',
+  shorter:
+    'Paraphrase the following text to be shorter and more concise, keeping only the essential points. Preserve all LaTeX commands. Return ONLY the paraphrased text.'
 }
 
 // ---- Helpers ----
@@ -91,8 +94,11 @@ async function callAIAPI(
 // ---- Provider calls ----
 
 function callOpenAI(
-  input: string, model: string, apiKey: string,
-  systemPrompt: string, thinking: ThinkingConfig
+  input: string,
+  model: string,
+  apiKey: string,
+  systemPrompt: string,
+  thinking: ThinkingConfig
 ): Promise<string> {
   const modelId = model || DEFAULT_MODELS.openai
   const isReasoning = /^(o1|o3|o4)/.test(modelId)
@@ -123,8 +129,11 @@ function callOpenAI(
 }
 
 function callAnthropic(
-  input: string, model: string, apiKey: string,
-  systemPrompt: string, thinking: ThinkingConfig
+  input: string,
+  model: string,
+  apiKey: string,
+  systemPrompt: string,
+  thinking: ThinkingConfig
 ): Promise<string> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const body: Record<string, any> = {
@@ -157,8 +166,11 @@ function callAnthropic(
 }
 
 function callGemini(
-  input: string, model: string, apiKey: string,
-  systemPrompt: string, thinking: ThinkingConfig
+  input: string,
+  model: string,
+  apiKey: string,
+  systemPrompt: string,
+  thinking: ThinkingConfig
 ): Promise<string> {
   const modelId = model || DEFAULT_MODELS.gemini
 
@@ -190,14 +202,22 @@ function callGemini(
 // ---- Dispatch helpers ----
 
 function callProvider(
-  provider: string, input: string, model: string,
-  apiKey: string, systemPrompt: string, thinking: ThinkingConfig
+  provider: string,
+  input: string,
+  model: string,
+  apiKey: string,
+  systemPrompt: string,
+  thinking: ThinkingConfig
 ): Promise<string> {
   switch (provider) {
-    case 'openai': return callOpenAI(input, model, apiKey, systemPrompt, thinking)
-    case 'anthropic': return callAnthropic(input, model, apiKey, systemPrompt, thinking)
-    case 'gemini': return callGemini(input, model, apiKey, systemPrompt, thinking)
-    default: throw new Error(`Unknown AI provider: ${provider}`)
+    case 'openai':
+      return callOpenAI(input, model, apiKey, systemPrompt, thinking)
+    case 'anthropic':
+      return callAnthropic(input, model, apiKey, systemPrompt, thinking)
+    case 'gemini':
+      return callGemini(input, model, apiKey, systemPrompt, thinking)
+    default:
+      throw new Error(`Unknown AI provider: ${provider}`)
   }
 }
 
@@ -211,12 +231,21 @@ export async function generateLatex(options: GenerateLatexOptions): Promise<stri
   const systemPrompt = settings.aiPromptGenerate?.trim() || DEFAULT_GENERATE_PROMPT
   const thinking = getThinkingConfig(settings)
 
-  return callProvider(options.provider, options.input, options.model, apiKey, systemPrompt, thinking)
+  return callProvider(
+    options.provider,
+    options.input,
+    options.model,
+    apiKey,
+    systemPrompt,
+    thinking
+  )
 }
 
 export async function processText(
   action: 'fix' | 'academic' | 'summarize' | 'longer' | 'shorter',
-  text: string, provider?: string, model?: string
+  text: string,
+  provider?: string,
+  model?: string
 ): Promise<string> {
   const settings = await loadSettings()
   const activeProvider = provider || settings.aiProvider
@@ -231,5 +260,12 @@ export async function processText(
   const userPrompt = `${actionPrompt}:\n\n${text}`
   const thinking = getThinkingConfig(settings)
 
-  return callProvider(activeProvider, userPrompt, activeModel, apiKey, DEFAULT_ACTION_SYSTEM, thinking)
+  return callProvider(
+    activeProvider,
+    userPrompt,
+    activeModel,
+    apiKey,
+    DEFAULT_ACTION_SYSTEM,
+    thinking
+  )
 }

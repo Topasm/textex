@@ -103,8 +103,16 @@ export function useSynctex(
     const info = pageViewportsRef.current.get(bestPage)
     if (!info) return
     const pageRect = info.element.getBoundingClientRect()
-    const centerX = (Math.max(pageRect.left, containerRect.left) + Math.min(pageRect.right, containerRect.right)) / 2 - pageRect.left
-    const centerY = (Math.max(pageRect.top, containerRect.top) + Math.min(pageRect.bottom, containerRect.bottom)) / 2 - pageRect.top
+    const centerX =
+      (Math.max(pageRect.left, containerRect.left) +
+        Math.min(pageRect.right, containerRect.right)) /
+        2 -
+      pageRect.left
+    const centerY =
+      (Math.max(pageRect.top, containerRect.top) +
+        Math.min(pageRect.bottom, containerRect.bottom)) /
+        2 -
+      pageRect.top
 
     const pw = containerWidth
       ? (containerWidth - 32) * (useAppStore.getState().zoomLevel / 100)

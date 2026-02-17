@@ -7,7 +7,12 @@ interface BibPanelHeaderProps {
   onGroupModeChange: (mode: BibGroupMode) => void
 }
 
-export function BibPanelHeader({ filter, onFilterChange, groupMode, onGroupModeChange }: BibPanelHeaderProps) {
+export function BibPanelHeader({
+  filter,
+  onFilterChange,
+  groupMode,
+  onGroupModeChange
+}: BibPanelHeaderProps) {
   return (
     <div className="bib-panel-header">
       <input

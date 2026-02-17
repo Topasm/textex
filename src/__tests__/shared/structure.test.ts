@@ -537,8 +537,14 @@ Old sub content.
 
 describe('listPapers', () => {
   it('finds main files with \\documentclass', async () => {
-    await writeTexFile('paper1.tex', '\\documentclass{article}\n\\title{Paper One}\n\\begin{document}\n\\end{document}\n')
-    await writeTexFile('paper2.tex', '\\documentclass{report}\n\\title{Paper Two}\n\\begin{document}\n\\end{document}\n')
+    await writeTexFile(
+      'paper1.tex',
+      '\\documentclass{article}\n\\title{Paper One}\n\\begin{document}\n\\end{document}\n'
+    )
+    await writeTexFile(
+      'paper2.tex',
+      '\\documentclass{report}\n\\title{Paper Two}\n\\begin{document}\n\\end{document}\n'
+    )
     // This is a fragment — no documentclass
     await writeTexFile('fragment.tex', '\\section{Fragment}\nSome text.\n')
 
@@ -549,20 +555,29 @@ describe('listPapers', () => {
   })
 
   it('extracts title from documents', async () => {
-    await writeTexFile('main.tex', '\\documentclass{article}\n\\title{My Title}\n\\begin{document}\n\\end{document}\n')
+    await writeTexFile(
+      'main.tex',
+      '\\documentclass{article}\n\\title{My Title}\n\\begin{document}\n\\end{document}\n'
+    )
     const papers = await listPapers(tmpDir)
     expect(papers[0].title).toBe('My Title')
     expect(papers[0].documentClass).toBe('article')
   })
 
   it('uses filename when title is missing', async () => {
-    await writeTexFile('notitle.tex', '\\documentclass{article}\n\\begin{document}\n\\end{document}\n')
+    await writeTexFile(
+      'notitle.tex',
+      '\\documentclass{article}\n\\begin{document}\n\\end{document}\n'
+    )
     const papers = await listPapers(tmpDir)
     expect(papers[0].title).toBe('notitle')
   })
 
   it('scans subdirectories', async () => {
-    await writeTexFile('sub/deep.tex', '\\documentclass{article}\n\\title{Deep Paper}\n\\begin{document}\n\\end{document}\n')
+    await writeTexFile(
+      'sub/deep.tex',
+      '\\documentclass{article}\n\\title{Deep Paper}\n\\begin{document}\n\\end{document}\n'
+    )
     const papers = await listPapers(tmpDir)
     expect(papers.length).toBe(1)
     expect(papers[0].title).toBe('Deep Paper')

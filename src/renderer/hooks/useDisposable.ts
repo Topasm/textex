@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { DisposableStore, type IDisposable } from '../utils/disposable'
+import { DisposableStore } from '../utils/disposable'
 
 /**
  * React hook that creates a DisposableStore, disposes on unmount,

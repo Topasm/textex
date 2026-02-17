@@ -27,7 +27,7 @@ export const EXPORT_FORMATS = [
   { name: 'HTML', ext: 'html' },
   { name: 'Word (DOCX)', ext: 'docx' },
   { name: 'OpenDocument (ODT)', ext: 'odt' },
-  { name: 'EPUB', ext: 'epub' },
+  { name: 'EPUB', ext: 'epub' }
 ] as const
 
 // ── AI Provider metadata ────────────────────────────────────
@@ -37,25 +37,30 @@ export const AI_MODEL_OPTIONS: Record<string, { value: string; label: string }[]
     { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
     { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
     { value: 'o1', label: 'o1' },
-    { value: 'o1-mini', label: 'o1 Mini' },
+    { value: 'o1-mini', label: 'o1 Mini' }
   ],
   anthropic: [
     { value: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5' },
     { value: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5' },
-    { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
+    { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' }
   ],
   gemini: [
     { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
     { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
-    { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' },
-  ],
+    { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' }
+  ]
 }
 
-export const AI_PROVIDER_INFO: Record<string, { label: string; keyHint: string; keyUrl: string }> = {
-  openai: { label: 'OpenAI', keyHint: 'sk-...', keyUrl: 'https://platform.openai.com/api-keys' },
-  anthropic: { label: 'Anthropic', keyHint: 'sk-ant-...', keyUrl: 'https://console.anthropic.com/settings/keys' },
-  gemini: { label: 'Gemini', keyHint: 'AIza...', keyUrl: 'https://aistudio.google.com/apikey' },
-}
+export const AI_PROVIDER_INFO: Record<string, { label: string; keyHint: string; keyUrl: string }> =
+  {
+    openai: { label: 'OpenAI', keyHint: 'sk-...', keyUrl: 'https://platform.openai.com/api-keys' },
+    anthropic: {
+      label: 'Anthropic',
+      keyHint: 'sk-ant-...',
+      keyUrl: 'https://console.anthropic.com/settings/keys'
+    },
+    gemini: { label: 'Gemini', keyHint: 'AIza...', keyUrl: 'https://aistudio.google.com/apikey' }
+  }
 
 // ── Hidden editor actions ────────────────────────────────────
 /** Monaco editor actions hidden from the command palette (not relevant for LaTeX editing). */
@@ -104,5 +109,5 @@ export const HIDDEN_EDITOR_ACTIONS = new Set([
   'editor.action.formatDocument',
   'editor.action.formatSelection',
   // Hover
-  'editor.action.showHover',
+  'editor.action.showHover'
 ])

@@ -62,12 +62,15 @@ function BibPanel() {
     [filtered, assignedKeys]
   )
 
-  const lastGroupId = citationGroups.length > 0 ? citationGroups[citationGroups.length - 1].id : null
+  const lastGroupId =
+    citationGroups.length > 0 ? citationGroups[citationGroups.length - 1].id : null
 
   if (bibEntries.length === 0) {
     return (
       <div className="bib-panel">
-        <div className="git-empty">No bibliography entries found. Open a project with .bib files.</div>
+        <div className="git-empty">
+          No bibliography entries found. Open a project with .bib files.
+        </div>
       </div>
     )
   }
@@ -85,7 +88,9 @@ function BibPanel() {
           onGroupModeChange={(mode) => updateSetting('bibGroupMode', mode)}
         />
         <div className="bib-custom-toolbar">
-          <button className="bib-new-group-btn" onClick={createGroup}>+ New Group</button>
+          <button className="bib-new-group-btn" onClick={createGroup}>
+            + New Group
+          </button>
         </div>
         <div className="bib-list">
           {citationGroups.map((group) => {
@@ -105,14 +110,15 @@ function BibPanel() {
                   onRename={(name) => renameGroup(group.id, name)}
                   onDelete={() => deleteGroup(group.id)}
                 />
-                {!collapsed[group.id] && groupEntries.map((entry) => (
-                  <BibEntryCard
-                    key={entry.key}
-                    entry={entry}
-                    onInsert={handleInsert}
-                    onRemove={() => removeFromGroup(group.id, entry.key)}
-                  />
-                ))}
+                {!collapsed[group.id] &&
+                  groupEntries.map((entry) => (
+                    <BibEntryCard
+                      key={entry.key}
+                      entry={entry}
+                      onInsert={handleInsert}
+                      onRemove={() => removeFromGroup(group.id, entry.key)}
+                    />
+                  ))}
               </div>
             )
           })}
@@ -125,15 +131,16 @@ function BibPanel() {
                 isCollapsed={!!collapsed['__ungrouped__']}
                 onToggle={() => toggle('__ungrouped__')}
               />
-              {!collapsed['__ungrouped__'] && ungroupedEntries.map((entry) => (
-                <BibEntryCard
-                  key={entry.key}
-                  entry={entry}
-                  onInsert={handleInsert}
-                  onAdd={lastGroupId ? () => addToGroup(lastGroupId, entry.key) : undefined}
-                  addTitle={`Add to "${citationGroups[citationGroups.length - 1]?.name}"`}
-                />
-              ))}
+              {!collapsed['__ungrouped__'] &&
+                ungroupedEntries.map((entry) => (
+                  <BibEntryCard
+                    key={entry.key}
+                    entry={entry}
+                    onInsert={handleInsert}
+                    onAdd={lastGroupId ? () => addToGroup(lastGroupId, entry.key) : undefined}
+                    addTitle={`Add to "${citationGroups[citationGroups.length - 1]?.name}"`}
+                  />
+                ))}
             </div>
           )}
         </div>
@@ -162,9 +169,10 @@ function BibPanel() {
                 citekeys={group.entries.map((e) => e.key)}
               />
             )}
-            {!collapsed[group.label] && group.entries.map((entry) => (
-              <BibEntryCard key={entry.key} entry={entry} onInsert={handleInsert} />
-            ))}
+            {!collapsed[group.label] &&
+              group.entries.map((entry) => (
+                <BibEntryCard key={entry.key} entry={entry} onInsert={handleInsert} />
+              ))}
           </div>
         ))}
       </div>

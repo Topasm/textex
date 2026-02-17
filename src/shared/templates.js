@@ -1,8 +1,8 @@
 export const templates = [
-    {
-        name: 'Article',
-        description: 'Standard academic article with sections, bibliography, and common packages.',
-        content: `\\documentclass[12pt,a4paper]{article}
+  {
+    name: 'Article',
+    description: 'Standard academic article with sections, bibliography, and common packages.',
+    content: `\\documentclass[12pt,a4paper]{article}
 
 \\usepackage[utf8]{inputenc}
 \\usepackage[T1]{fontenc}
@@ -37,11 +37,11 @@ Start writing your introduction here.
 
 \\end{document}
 `
-    },
-    {
-        name: 'Report',
-        description: 'Technical or academic report with chapters, table of contents, and appendices.',
-        content: `\\documentclass[12pt,a4paper]{report}
+  },
+  {
+    name: 'Report',
+    description: 'Technical or academic report with chapters, table of contents, and appendices.',
+    content: `\\documentclass[12pt,a4paper]{report}
 
 \\usepackage[utf8]{inputenc}
 \\usepackage[T1]{fontenc}
@@ -80,11 +80,11 @@ Begin your report here.
 
 \\end{document}
 `
-    },
-    {
-        name: 'Beamer Presentation',
-        description: 'Slide presentation using the Beamer class with a clean theme.',
-        content: `\\documentclass{beamer}
+  },
+  {
+    name: 'Beamer Presentation',
+    description: 'Slide presentation using the Beamer class with a clean theme.',
+    content: `\\documentclass{beamer}
 
 \\usetheme{Madrid}
 \\usecolortheme{default}
@@ -134,11 +134,11 @@ Your content here.
 
 \\end{document}
 `
-    },
-    {
-        name: 'Letter',
-        description: 'Formal letter using the LaTeX letter class.',
-        content: `\\documentclass{letter}
+  },
+  {
+    name: 'Letter',
+    description: 'Formal letter using the LaTeX letter class.',
+    content: `\\documentclass{letter}
 
 \\usepackage[utf8]{inputenc}
 \\usepackage[margin=1in]{geometry}
@@ -160,11 +160,11 @@ Write your letter content here.
 
 \\end{document}
 `
-    },
-    {
-        name: 'CV / Resume',
-        description: 'Curriculum vitae with sections for education, experience, and skills.',
-        content: `\\documentclass[11pt,a4paper]{article}
+  },
+  {
+    name: 'CV / Resume',
+    description: 'Curriculum vitae with sections for education, experience, and skills.',
+    content: `\\documentclass[11pt,a4paper]{article}
 
 \\usepackage[utf8]{inputenc}
 \\usepackage[T1]{fontenc}
@@ -206,5 +206,5 @@ Your Name et al. \`\`Paper Title,'' \\textit{Journal Name}, 2024.
 
 \\end{document}
 `
-    }
-];
+  }
+]

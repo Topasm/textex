@@ -28,9 +28,10 @@ export function getGitFileDecoration(
   matchMode: 'endsWith' | 'exact' = 'endsWith'
 ): GitDecoration | null {
   if (!gitFiles) return null
-  const file = matchMode === 'exact'
-    ? gitFiles.find((f) => f.path === filePath)
-    : gitFiles.find((f) => filePath.endsWith(f.path))
+  const file =
+    matchMode === 'exact'
+      ? gitFiles.find((f) => f.path === filePath)
+      : gitFiles.find((f) => filePath.endsWith(f.path))
   if (!file) return null
   if (file.index === '?' && file.working_dir === '?') return { label: 'U', className: 'untracked' }
   if (file.index === 'A' || file.working_dir === 'A') return { label: 'A', className: 'added' }

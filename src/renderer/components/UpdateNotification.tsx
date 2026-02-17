@@ -45,22 +45,12 @@ function UpdateNotification() {
       )}
 
       {status === 'available' && (
-        <button onClick={() => window.api.updateDownload()}>
-          Download
-        </button>
+        <button onClick={() => window.api.updateDownload()}>Download</button>
       )}
 
-      {status === 'ready' && (
-        <button onClick={() => window.api.updateInstall()}>
-          Restart
-        </button>
-      )}
+      {status === 'ready' && <button onClick={() => window.api.updateInstall()}>Restart</button>}
 
-      <button
-        className="update-dismiss"
-        onClick={handleDismiss}
-        title="Dismiss"
-      >
+      <button className="update-dismiss" onClick={handleDismiss} title="Dismiss">
         {'\u00D7'}
       </button>
     </div>

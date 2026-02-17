@@ -364,12 +364,12 @@ function useAppStoreFn<T>(selector: (state: ComposedState) => T): T {
 
 // Build the subscribe method that dispatches to domain stores
 type Listener = (state: ComposedState, prevState: ComposedState) => void
-function subscribeComposed(listener: Listener): () => void;
+function subscribeComposed(listener: Listener): () => void
 function subscribeComposed<T>(
   selector: (state: ComposedState) => T,
   listener: (slice: T, prevSlice: T) => void,
   options?: { fireImmediately?: boolean; equalityFn?: (a: T, b: T) => boolean }
-): () => void;
+): () => void
 function subscribeComposed<T>(
   selectorOrListener: ((state: ComposedState) => T) | Listener,
   listener?: (slice: T, prevSlice: T) => void,
@@ -380,12 +380,36 @@ function subscribeComposed<T>(
     const cb = selectorOrListener as Listener
     let prev = getComposedState()
     const unsubs = [
-      useEditorStore.subscribe(() => { const next = getComposedState(); cb(next, prev); prev = next }),
-      useCompileStore.subscribe(() => { const next = getComposedState(); cb(next, prev); prev = next }),
-      useProjectStore.subscribe(() => { const next = getComposedState(); cb(next, prev); prev = next }),
-      usePdfStore.subscribe(() => { const next = getComposedState(); cb(next, prev); prev = next }),
-      useUiStore.subscribe(() => { const next = getComposedState(); cb(next, prev); prev = next }),
-      useSettingsStore.subscribe(() => { const next = getComposedState(); cb(next, prev); prev = next })
+      useEditorStore.subscribe(() => {
+        const next = getComposedState()
+        cb(next, prev)
+        prev = next
+      }),
+      useCompileStore.subscribe(() => {
+        const next = getComposedState()
+        cb(next, prev)
+        prev = next
+      }),
+      useProjectStore.subscribe(() => {
+        const next = getComposedState()
+        cb(next, prev)
+        prev = next
+      }),
+      usePdfStore.subscribe(() => {
+        const next = getComposedState()
+        cb(next, prev)
+        prev = next
+      }),
+      useUiStore.subscribe(() => {
+        const next = getComposedState()
+        cb(next, prev)
+        prev = next
+      }),
+      useSettingsStore.subscribe(() => {
+        const next = getComposedState()
+        cb(next, prev)
+        prev = next
+      })
     ]
     return () => unsubs.forEach((u) => u())
   }
@@ -423,27 +447,59 @@ function subscribeComposed<T>(
 function setStateComposed(partial: Partial<ComposedState>): void {
   // Route each key to the appropriate domain store
   const editorKeys = new Set([
-    'filePath', 'content', 'isDirty', 'openFiles', 'activeFilePath',
-    'cursorLine', 'cursorColumn', 'pendingJump',
-    '_sessionOpenPaths', '_sessionActiveFile'
+    'filePath',
+    'content',
+    'isDirty',
+    'openFiles',
+    'activeFilePath',
+    'cursorLine',
+    'cursorColumn',
+    'pendingJump',
+    '_sessionOpenPaths',
+    '_sessionActiveFile'
   ])
   const compileKeys = new Set([
-    'compileStatus', 'pdfBase64', 'logs', 'isLogPanelOpen', 'diagnostics', 'logViewMode'
+    'compileStatus',
+    'pdfBase64',
+    'logs',
+    'isLogPanelOpen',
+    'diagnostics',
+    'logViewMode'
   ])
   const projectKeys = new Set([
-    'projectRoot', 'directoryTree', 'isSidebarOpen', 'sidebarView', 'sidebarWidth',
-    'bibEntries', 'citationGroups', 'labels', 'packageData', 'detectedPackages',
-    'isGitRepo', 'gitBranch', 'gitStatus'
+    'projectRoot',
+    'directoryTree',
+    'isSidebarOpen',
+    'sidebarView',
+    'sidebarWidth',
+    'bibEntries',
+    'citationGroups',
+    'labels',
+    'packageData',
+    'detectedPackages',
+    'isGitRepo',
+    'gitBranch',
+    'gitStatus'
   ])
   const pdfKeys = new Set([
-    'splitRatio', 'zoomLevel', 'synctexHighlight',
-    'pdfSearchVisible', 'pdfSearchQuery', 'syncToCodeRequest'
+    'splitRatio',
+    'zoomLevel',
+    'synctexHighlight',
+    'pdfSearchVisible',
+    'pdfSearchQuery',
+    'syncToCodeRequest'
   ])
   const uiKeys = new Set([
-    'isDraftModalOpen', 'isTemplateGalleryOpen',
-    'updateStatus', 'updateVersion', 'updateProgress',
-    'exportStatus', 'lspStatus', 'lspError',
-    'documentSymbols', 'citeSearchFocusRequested'
+    'isDraftModalOpen',
+    'isTemplateGalleryOpen',
+    'updateStatus',
+    'updateVersion',
+    'updateProgress',
+    'exportStatus',
+    'lspStatus',
+    'lspError',
+    'documentSymbols',
+    'citeSearchFocusRequested'
   ])
   const settingsKeys = new Set(['settings'])
 

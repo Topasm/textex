@@ -22,27 +22,33 @@ function GitPanel() {
     }
   }, [projectRoot])
 
-  const handleStage = useCallback(async (filePath: string) => {
-    if (!projectRoot) return
-    try {
-      await window.api.gitStage(projectRoot, filePath)
-      const status = await window.api.gitStatus(projectRoot)
-      useAppStore.getState().setGitStatus(status)
-    } catch (err) {
-      logError('GitPanel:stage', err)
-    }
-  }, [projectRoot])
+  const handleStage = useCallback(
+    async (filePath: string) => {
+      if (!projectRoot) return
+      try {
+        await window.api.gitStage(projectRoot, filePath)
+        const status = await window.api.gitStatus(projectRoot)
+        useAppStore.getState().setGitStatus(status)
+      } catch (err) {
+        logError('GitPanel:stage', err)
+      }
+    },
+    [projectRoot]
+  )
 
-  const handleUnstage = useCallback(async (filePath: string) => {
-    if (!projectRoot) return
-    try {
-      await window.api.gitUnstage(projectRoot, filePath)
-      const status = await window.api.gitStatus(projectRoot)
-      useAppStore.getState().setGitStatus(status)
-    } catch (err) {
-      logError('GitPanel:unstage', err)
-    }
-  }, [projectRoot])
+  const handleUnstage = useCallback(
+    async (filePath: string) => {
+      if (!projectRoot) return
+      try {
+        await window.api.gitUnstage(projectRoot, filePath)
+        const status = await window.api.gitStatus(projectRoot)
+        useAppStore.getState().setGitStatus(status)
+      } catch (err) {
+        logError('GitPanel:unstage', err)
+      }
+    },
+    [projectRoot]
+  )
 
   const handleCommit = useCallback(async () => {
     if (!projectRoot || !commitMsg.trim()) return
@@ -70,7 +76,11 @@ function GitPanel() {
         <div className="git-empty">
           Not a Git repository.
           <br />
-          <button className="git-commit-btn" style={{ width: 'auto', marginTop: '8px', padding: '4px 12px' }} onClick={handleInit}>
+          <button
+            className="git-commit-btn"
+            style={{ width: 'auto', marginTop: '8px', padding: '4px 12px' }}
+            onClick={handleInit}
+          >
             Initialize Repository
           </button>
         </div>
@@ -79,12 +89,7 @@ function GitPanel() {
   }
 
   const staged = gitStatus?.staged || []
-  const unstaged = [
-    ...(gitStatus?.modified || []),
-    ...(gitStatus?.not_added || [])
-  ]
-
-
+  const unstaged = [...(gitStatus?.modified || []), ...(gitStatus?.not_added || [])]
 
   return (
     <div className="git-panel">
@@ -95,12 +100,20 @@ function GitPanel() {
             <span>{staged.length}</span>
           </div>
           {staged.map((fp) => {
-            const st = getGitFileDecoration(fp, gitStatus?.files, 'exact') || { className: '', label: 'M' }
+            const st = getGitFileDecoration(fp, gitStatus?.files, 'exact') || {
+              className: '',
+              label: 'M'
+            }
             return (
               <div key={fp} className="git-file">
                 <span className={`git-file-status ${st.className}`}>{st.label}</span>
                 <span className="git-file-name">{fp}</span>
-                <button className="git-file-action" onClick={() => handleUnstage(fp)} title="Unstage" aria-label="Unstage file">
+                <button
+                  className="git-file-action"
+                  onClick={() => handleUnstage(fp)}
+                  title="Unstage"
+                  aria-label="Unstage file"
+                >
                   {'\u2212'}
                 </button>
               </div>
@@ -116,12 +129,20 @@ function GitPanel() {
             <span>{unstaged.length}</span>
           </div>
           {unstaged.map((fp) => {
-            const st = getGitFileDecoration(fp, gitStatus?.files, 'exact') || { className: '', label: 'M' }
+            const st = getGitFileDecoration(fp, gitStatus?.files, 'exact') || {
+              className: '',
+              label: 'M'
+            }
             return (
               <div key={fp} className="git-file">
                 <span className={`git-file-status ${st.className}`}>{st.label}</span>
                 <span className="git-file-name">{fp}</span>
-                <button className="git-file-action" onClick={() => handleStage(fp)} title="Stage" aria-label="Stage file">
+                <button
+                  className="git-file-action"
+                  onClick={() => handleStage(fp)}
+                  title="Stage"
+                  aria-label="Stage file"
+                >
                   +
                 </button>
               </div>
@@ -130,9 +151,7 @@ function GitPanel() {
         </div>
       )}
 
-      {staged.length === 0 && unstaged.length === 0 && (
-        <div className="git-empty">No changes</div>
-      )}
+      {staged.length === 0 && unstaged.length === 0 && <div className="git-empty">No changes</div>}
 
       <div className="git-commit-section">
         <textarea

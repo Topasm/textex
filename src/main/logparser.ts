@@ -96,13 +96,9 @@ function mapSeverity(type: string): DiagnosticSeverity {
 
 function parseLine(line: string, state: ParserState, buildLog: LogEntry[]): string | undefined {
   // Compose the current file — guard empty fileStack
-  const currentFile = state.fileStack.length > 0
-    ? state.fileStack[state.fileStack.length - 1]
-    : state.rootFile
-  const filename = path.resolve(
-    path.dirname(state.rootFile),
-    currentFile
-  )
+  const currentFile =
+    state.fileStack.length > 0 ? state.fileStack[state.fileStack.length - 1] : state.rootFile
+  const filename = path.resolve(path.dirname(state.rootFile), currentFile)
 
   // Skip the first line after a box warning, this is just garbage
   if (state.insideBoxWarn) {

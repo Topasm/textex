@@ -28,7 +28,8 @@ export function useFileOps(): FileOps {
 
   const handleSave = useCallback(async () => {
     const state = useAppStore.getState()
-    const { filePath, setFilePath, setDirty, appendLog, setLogPanelOpen, settings, setContent } = state
+    const { filePath, setFilePath, setDirty, appendLog, setLogPanelOpen, settings, setContent } =
+      state
 
     let contentToSave = state.content
 
@@ -63,8 +64,8 @@ export function useFileOps(): FileOps {
     // Trigger format on save-as as well? Spec doesn't say, but consistent.
     // However, usually "Format on Save" applies to explicit save actions.
     // For now, let's keep Save As simple or we can add it if needed.
-    // Let's stick to the existing behavior for Save As for now, 
-    // or maybe apply formatting there too if desired. 
+    // Let's stick to the existing behavior for Save As for now,
+    // or maybe apply formatting there too if desired.
     // Users often expect "Format on Save" to apply to any save.
     // But let's just use raw content for Save As to follow least surprise if they just want to dump current state.
     // Actually, consistency suggests formatting. But valid arguments either way.

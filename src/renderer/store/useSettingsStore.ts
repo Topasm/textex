@@ -7,9 +7,19 @@ export type Theme = UserSettings['theme']
 
 // Keys that the main process cares about -- sync these via IPC on change
 const MAIN_PROCESS_KEYS = new Set<keyof UserSettings>([
-  'aiProvider', 'aiModel', 'aiEnabled', 'aiThinkingEnabled', 'aiThinkingBudget',
-  'aiPromptGenerate', 'aiPromptFix', 'aiPromptAcademic', 'aiPromptSummarize',
-  'aiPromptLonger', 'aiPromptShorter', 'spellCheckLanguage', 'theme'
+  'aiProvider',
+  'aiModel',
+  'aiEnabled',
+  'aiThinkingEnabled',
+  'aiThinkingBudget',
+  'aiPromptGenerate',
+  'aiPromptFix',
+  'aiPromptAcademic',
+  'aiPromptSummarize',
+  'aiPromptLonger',
+  'aiPromptShorter',
+  'spellCheckLanguage',
+  'theme'
 ])
 
 let syncTimer: ReturnType<typeof setTimeout> | undefined
@@ -23,7 +33,9 @@ function syncToMain(): void {
         ;(partial as Record<string, unknown>)[key] = settings[key]
       }
     }
-    window.api.saveSettings(partial).catch(() => { /* ignore */ })
+    window.api.saveSettings(partial).catch(() => {
+      /* ignore */
+    })
   }, 500)
 }
 
@@ -49,7 +61,7 @@ const defaultSettings: UserSettings = {
     '#61afef', // blue
     '#c678dd', // violet
     '#56b6c2', // cyan
-    '#d19a66'  // warm orange
+    '#d19a66' // warm orange
   ],
   lspEnabled: true,
   zoteroEnabled: false,
@@ -122,7 +134,13 @@ export const useSettingsStore = create<SettingsState>()(
         // Backfill sectionHighlightColors for pre-existing settings
         if (state && !state.settings.sectionHighlightColors) {
           state.settings.sectionHighlightColors = [
-            '#e06c75', '#e5c07b', '#98c379', '#61afef', '#c678dd', '#56b6c2', '#d19a66'
+            '#e06c75',
+            '#e5c07b',
+            '#98c379',
+            '#61afef',
+            '#c678dd',
+            '#56b6c2',
+            '#d19a66'
           ]
         }
       }

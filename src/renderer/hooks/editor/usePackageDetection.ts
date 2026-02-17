@@ -20,9 +20,12 @@ export function usePackageDetection(content: string): void {
         useAppStore.getState().setDetectedPackages(detected)
 
         if (detected.length > 0) {
-          window.api.loadPackageData(detected).then((data) => {
-            useAppStore.getState().setPackageData(data)
-          }).catch((err) => logError('loadPackageData', err))
+          window.api
+            .loadPackageData(detected)
+            .then((data) => {
+              useAppStore.getState().setPackageData(data)
+            })
+            .catch((err) => logError('loadPackageData', err))
         } else {
           useAppStore.getState().setPackageData({})
         }

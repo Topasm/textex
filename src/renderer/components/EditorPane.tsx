@@ -25,7 +25,6 @@ import { configureMonacoLanguages, getMonacoTheme } from '../data/monacoConfig'
 
 type MonacoInstance = typeof import('monaco-editor')
 
-
 function EditorPane() {
   const content = useAppStore((s) => s.content)
   const setContent = useAppStore((s) => s.setContent)
@@ -62,17 +61,18 @@ function EditorPane() {
 
   // History panel hook
   const {
-    showHistory, setShowHistory,
-    historyItems, snapshotContent,
-    historyMode, setHistoryMode,
-    handleSelectHistoryItem, closeHistory,
+    showHistory,
+    setShowHistory,
+    historyItems,
+    snapshotContent,
+    historyMode,
+    setHistoryMode,
+    handleSelectHistoryItem,
+    closeHistory
   } = useHistoryPanel()
 
   // Table editor hook
-  const {
-    tableModal, setTableModal,
-    registerTableEditor, disposeTableEditor,
-  } = useTableEditor()
+  const { tableModal, setTableModal, registerTableEditor, disposeTableEditor } = useTableEditor()
 
   // Editor commands hook
   const registerEditorCommands = useEditorCommands({ setShowHistory, showHistory, setHistoryMode })
@@ -131,11 +131,14 @@ function EditorPane() {
     }
   }, [disposeTableEditor])
 
-  const handleChange = useCallback((value: string | undefined): void => {
-    if (value !== undefined) {
-      setContent(value)
-    }
-  }, [setContent])
+  const handleChange = useCallback(
+    (value: string | undefined): void => {
+      if (value !== undefined) {
+        setContent(value)
+      }
+    },
+    [setContent]
+  )
 
   return (
     <>
@@ -162,11 +165,13 @@ function EditorPane() {
           const target = editor.getTargetAtClientPoint(e.clientX, e.clientY)
           if (target?.position) {
             const pos = target.position
-            editor.executeEdits('bib-drop', [{
-              range: new monaco.Range(pos.lineNumber, pos.column, pos.lineNumber, pos.column),
-              text,
-              forceMoveMarkers: true,
-            }])
+            editor.executeEdits('bib-drop', [
+              {
+                range: new monaco.Range(pos.lineNumber, pos.column, pos.lineNumber, pos.column),
+                text,
+                forceMoveMarkers: true
+              }
+            ])
             editor.setPosition(pos)
             editor.focus()
           }
@@ -207,7 +212,7 @@ function EditorPane() {
                 suggestOnTriggerCharacters: true,
                 padding: { top: 8 },
                 wordWrap: settings.wordWrap ? 'on' : 'off',
-                dropIntoEditor: { enabled: false },
+                dropIntoEditor: { enabled: false }
               }}
             />
           )}
@@ -232,15 +237,17 @@ function EditorPane() {
       {tableModal.isOpen && (
         <TableEditorModal
           initialLatex={tableModal.latex}
-          onClose={() => setTableModal(prev => ({ ...prev, isOpen: false }))}
+          onClose={() => setTableModal((prev) => ({ ...prev, isOpen: false }))}
           onApply={(newLatex) => {
             if (editorRef.current && tableModal.range) {
-              editorRef.current.executeEdits('table-editor', [{
-                range: tableModal.range,
-                text: newLatex,
-                forceMoveMarkers: true
-              }])
-              setTableModal(prev => ({ ...prev, isOpen: false }))
+              editorRef.current.executeEdits('table-editor', [
+                {
+                  range: tableModal.range,
+                  text: newLatex,
+                  forceMoveMarkers: true
+                }
+              ])
+              setTableModal((prev) => ({ ...prev, isOpen: false }))
             }
           }}
         />

@@ -16,7 +16,11 @@ interface EditorCommandsOptions {
  * Returns a callback that registers editor keybindings and filters the command palette.
  * Call it inside `onMount` after the editor instance is available.
  */
-export function useEditorCommands({ setShowHistory, showHistory, setHistoryMode }: EditorCommandsOptions) {
+export function useEditorCommands({
+  setShowHistory,
+  showHistory,
+  setHistoryMode
+}: EditorCommandsOptions) {
   return useCallback(
     (editor: monacoEditor.IStandaloneCodeEditor, monaco: MonacoInstance) => {
       // Ctrl+F: Sync Search — triggers both editor find widget AND PDF search bar
@@ -44,11 +48,13 @@ export function useEditorCommands({ setShowHistory, showHistory, setHistoryMode 
         const text = model.getValue()
         const formatted = await formatLatex(text)
 
-        editor.executeEdits('prettier', [{
-          range: model.getFullModelRange(),
-          text: formatted,
-          forceMoveMarkers: true
-        }])
+        editor.executeEdits('prettier', [
+          {
+            range: model.getFullModelRange(),
+            text: formatted,
+            forceMoveMarkers: true
+          }
+        ])
       })
 
       // Ctrl+Shift+I: Insert user info
@@ -63,17 +69,24 @@ export function useEditorCommands({ setShowHistory, showHistory, setHistoryMode 
 `
         const position = editor.getPosition()
         if (position) {
-          editor.executeEdits('insert-user-info', [{
-            range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
-            text: userInfo,
-            forceMoveMarkers: true
-          }])
+          editor.executeEdits('insert-user-info', [
+            {
+              range: new monaco.Range(
+                position.lineNumber,
+                position.column,
+                position.lineNumber,
+                position.column
+              ),
+              text: userInfo,
+              forceMoveMarkers: true
+            }
+          ])
         }
       })
 
       // Ctrl+Shift+H: Toggle history panel
       editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyH, () => {
-        setShowHistory(prev => !prev)
+        setShowHistory((prev) => !prev)
         if (showHistory) setHistoryMode(false)
       })
 
@@ -84,7 +97,7 @@ export function useEditorCommands({ setShowHistory, showHistory, setHistoryMode 
       if (typeof editorAny.getSupportedActions === 'function') {
         const origGetSupportedActions = editorAny.getSupportedActions.bind(editorAny)
         editorAny.getSupportedActions = () => {
-          return origGetSupportedActions().filter(a => !HIDDEN_EDITOR_ACTIONS.has(a.id))
+          return origGetSupportedActions().filter((a) => !HIDDEN_EDITOR_ACTIONS.has(a.id))
         }
       }
     },
