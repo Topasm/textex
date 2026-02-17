@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { Settings, Home, ChevronDown, Check } from 'lucide-react'
+import { Settings, Home, ChevronDown } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 
 interface ToolbarProps {
@@ -47,7 +47,7 @@ function Toolbar({
 
   // PDF State
   const zoomLevel = useAppStore((s) => s.zoomLevel)
-  const synctexHighlight = useAppStore((s) => s.synctexHighlight)
+
 
   const [isFileMenuOpen, setIsFileMenuOpen] = useState(false)
   const fileMenuRef = useRef<HTMLDivElement>(null)

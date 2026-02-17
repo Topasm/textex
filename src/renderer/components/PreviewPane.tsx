@@ -284,17 +284,7 @@ function PreviewPane() {
     })
   }, [containerWidth])
 
-  const handleSyncToPdf = useCallback(() => {
-    const state = useAppStore.getState()
-    const filePath = state.filePath
-    if (!filePath) return
 
-    window.api.synctexForward(filePath, state.cursorLine).then((result) => {
-      if (result) {
-        useAppStore.getState().setSynctexHighlight(result)
-      }
-    })
-  }, [])
 
   // Ctrl+Click inverse SyncTeX handler
   const handleContainerClick = useCallback(
@@ -372,7 +362,7 @@ function PreviewPane() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [searchVisible])
+  }, [searchVisible, setSearchVisible, setSearchQuery])
 
   // Perform search in text layer spans
   useEffect(() => {
@@ -435,7 +425,7 @@ function PreviewPane() {
   const handleSearchClose = useCallback(() => {
     setSearchVisible(false)
     setSearchQuery('')
-  }, [])
+  }, [setSearchVisible, setSearchQuery])
 
   // Listen for sync requests from toolbar
   const syncToCodeRequest = useAppStore((s) => s.syncToCodeRequest)
@@ -443,7 +433,7 @@ function PreviewPane() {
     if (syncToCodeRequest) {
       handleSyncToCode()
     }
-  }, [syncToCodeRequest])
+  }, [syncToCodeRequest, handleSyncToCode])
 
 
 

@@ -48,7 +48,10 @@ export function useSmartImageDrop() {
             const destPath = `${imagesDir}${sep}${file.name}`
             // The file object from DragEvent has a 'path' property in Electron!
             // But standard File object doesn't. Electron adds it.
-            const sourcePath = (file as any).path
+            interface ElectronFile extends File {
+                path: string
+            }
+            const sourcePath = (file as ElectronFile).path
 
             if (sourcePath) {
                 await window.api.copyFile(sourcePath, destPath)

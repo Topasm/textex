@@ -13,7 +13,7 @@ type MathFieldAttributes = React.DetailedHTMLProps<
 >
 
 declare module 'react' {
-    // eslint-disable-next-line @typescript-eslint/no-namespace
+
     namespace JSX {
         interface IntrinsicElements {
             'math-field': MathFieldAttributes
@@ -22,7 +22,7 @@ declare module 'react' {
 }
 
 declare global {
-    // eslint-disable-next-line @typescript-eslint/no-namespace
+
     namespace JSX {
         interface IntrinsicElements {
             'math-field': MathFieldAttributes
