@@ -221,8 +221,8 @@ export function useCompletion(
                 }
               })
             }
-          } catch {
-            // ignore
+          } catch (err) {
+            console.warn('Failed to fetch spell suggestions:', err)
           }
         }
         return { actions, dispose: () => { } }

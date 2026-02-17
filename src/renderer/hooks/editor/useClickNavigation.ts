@@ -61,7 +61,7 @@ export function useClickNavigation(): (editor: monacoEditor.IStandaloneCodeEdito
           window.api.readFile(label.file).then((result) => {
             useAppStore.getState().openFileInTab(result.filePath, result.content)
             setTimeout(() => useAppStore.getState().requestJumpToLine(label.line, 1), 50)
-          }).catch(() => { })
+          }).catch((err) => { console.warn('Failed to navigate to label:', err) })
           return
         }
       }
@@ -76,7 +76,7 @@ export function useClickNavigation(): (editor: monacoEditor.IStandaloneCodeEdito
               const line = entry.line
               setTimeout(() => useAppStore.getState().requestJumpToLine(line, 1), 50)
             }
-          }).catch(() => { })
+          }).catch((err) => { console.warn('Failed to navigate to citation:', err) })
           return
         }
       }

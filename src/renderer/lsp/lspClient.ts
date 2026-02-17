@@ -32,10 +32,26 @@ let options: LspClientOptions | null = null
 let disposables: { dispose(): void }[] = []
 const LSP_MARKER_OWNER = 'texlab'
 
-export function sendRequest(method: string, params: unknown): Promise<unknown> {
+const DEFAULT_REQUEST_TIMEOUT = 5000
+
+export function sendRequest(method: string, params: unknown, timeoutMs = DEFAULT_REQUEST_TIMEOUT): Promise<unknown> {
   const id = nextRequestId++
   return new Promise((resolve, reject) => {
-    pendingRequests.set(id, { resolve, reject })
+    const timeout = setTimeout(() => {
+      pendingRequests.delete(id)
+      reject(new Error(`LSP request "${method}" timed out after ${timeoutMs}ms`))
+    }, timeoutMs)
+
+    pendingRequests.set(id, {
+      resolve: (result) => {
+        clearTimeout(timeout)
+        resolve(result)
+      },
+      reject: (error) => {
+        clearTimeout(timeout)
+        reject(error)
+      }
+    })
     window.api.lspSend({ jsonrpc: '2.0', id, method, params })
   })
 }
@@ -92,7 +108,8 @@ function handleMessage(message: Record<string, unknown>): void {
     if (pending) {
       pendingRequests.delete(id)
       if ('error' in message) {
-        pending.reject(new Error(JSON.stringify(message.error)))
+        const err = message.error as { message?: string } | undefined
+        pending.reject(new Error(err?.message || JSON.stringify(message.error)))
       } else {
         pending.resolve(message.result)
       }
@@ -218,21 +235,21 @@ async function doInitialize(workspaceRoot: string): Promise<void> {
         workspaceFolders: false
       }
     }
-  })) as Record<string, unknown>
+  }, 15000)) as Record<string, unknown> // longer timeout for initialize
 
   serverCapabilities = (result?.capabilities || {}) as Record<string, unknown>
   sendNotification('initialized', {})
   initialized = true
 }
 
-function notifyDidOpen(filePath: string, content: string, languageId?: string): void {
+function notifyDidOpen(filePath: string, content: string, version: number, languageId?: string): void {
   if (!initialized) return
   const lang = languageId || (filePath.endsWith('.bib') ? 'bibtex' : 'latex')
   sendNotification('textDocument/didOpen', {
     textDocument: {
       uri: filePathToUri(filePath),
       languageId: lang,
-      version: 1,
+      version,
       text: content
     }
   })
@@ -395,7 +412,7 @@ export function isLspRunning(): boolean {
 export function lspNotifyDidOpen(filePath: string, content: string): void {
   const version = (documentVersions.get(filePath) || 0) + 1
   documentVersions.set(filePath, version)
-  notifyDidOpen(filePath, content)
+  notifyDidOpen(filePath, content, version)
 }
 
 export function lspNotifyDidChange(filePath: string, content: string): void {

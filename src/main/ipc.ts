@@ -61,6 +61,12 @@ let watcherAbort: AbortController | null = null
 let currentWindow: BrowserWindow | null = null
 let handlersRegistered = false
 
+function sendToWindow(channel: string, ...args: unknown[]): void {
+  if (currentWindow && !currentWindow.isDestroyed()) {
+    currentWindow.webContents.send(channel, ...args)
+  }
+}
+
 export function registerIpcHandlers(win: BrowserWindow): void {
   currentWindow = win
 
@@ -183,16 +189,17 @@ export function registerIpcHandlers(win: BrowserWindow): void {
           try {
             for await (const event of watcher) {
               if (event.filename) {
-                if (currentWindow && !currentWindow.isDestroyed()) {
-                  currentWindow.webContents.send('fs:directory-changed', {
-                    type: event.eventType,
-                    filename: event.filename
-                  })
-                }
+                sendToWindow('fs:directory-changed', {
+                  type: event.eventType,
+                  filename: event.filename
+                })
               }
             }
-          } catch {
-            // watcher closed or aborted
+          } catch (err) {
+            // Forward watcher errors (unless it was just an abort)
+            if (err instanceof Error && err.name !== 'AbortError') {
+              sendToWindow('fs:watch-error', err.message)
+            }
           }
         })()
     } catch {
@@ -436,14 +443,10 @@ export function registerIpcHandlers(win: BrowserWindow): void {
     const validPath = validateFilePath(workspaceRoot)
     texLabManager.start(validPath, {
       onMessage: (message) => {
-        if (currentWindow && !currentWindow.isDestroyed()) {
-          currentWindow.webContents.send('lsp:message', message)
-        }
+        sendToWindow('lsp:message', message)
       },
       onStatusChange: (status, error) => {
-        if (currentWindow && !currentWindow.isDestroyed()) {
-          currentWindow.webContents.send('lsp:status-change', status, error)
-        }
+        sendToWindow('lsp:status-change', status, error)
       }
     })
     return { success: true }

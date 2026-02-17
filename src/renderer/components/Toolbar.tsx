@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { Settings, Home, ChevronDown } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
+import { useClickOutside } from '../hooks/useClickOutside'
 import type { ZoteroSearchResult } from '../types/api'
 
 interface ToolbarProps {
@@ -64,30 +65,13 @@ function Toolbar({
   const fileName = filePath ? filePath.split(/[\\/]/).pop() : 'Untitled'
 
   // Close menus when clicking outside
-  useEffect(() => {
-    if (!isFileMenuOpen) return
-    const handleClickOutside = (e: MouseEvent): void => {
-      if (fileMenuRef.current && !fileMenuRef.current.contains(e.target as Node)) {
-        setIsFileMenuOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [isFileMenuOpen])
+  const closeFileMenu = useCallback(() => setIsFileMenuOpen(false), [])
+  const closeCiteDropdown = useCallback(() => setIsDropdownOpen(false), [])
+  useClickOutside(fileMenuRef, closeFileMenu, isFileMenuOpen)
+  useClickOutside(citeSearchRef, closeCiteDropdown, isDropdownOpen)
 
-  // Close cite dropdown when clicking outside
-  useEffect(() => {
-    if (!isDropdownOpen) return
-    const handleClickOutside = (e: MouseEvent): void => {
-      if (citeSearchRef.current && !citeSearchRef.current.contains(e.target as Node)) {
-        setIsDropdownOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [isDropdownOpen])
-
-  // Debounced Zotero search
+  // Debounced Zotero search with stale result protection
+  const searchGenRef = useRef(0)
   useEffect(() => {
     if (searchTerm.length <= 2) {
       setResults([])
@@ -95,16 +79,22 @@ function Toolbar({
       return
     }
     setLoading(true)
+    const generation = ++searchGenRef.current
     const timer = setTimeout(async () => {
       try {
         const res = await window.api.zoteroSearch(searchTerm, zoteroPort)
+        // Only update if this is still the latest search
+        if (searchGenRef.current !== generation) return
         setResults(res)
         setHighlightedIndex(0)
         setIsDropdownOpen(true)
       } catch {
+        if (searchGenRef.current !== generation) return
         setResults([])
       } finally {
-        setLoading(false)
+        if (searchGenRef.current === generation) {
+          setLoading(false)
+        }
       }
     }, 300)
     return () => clearTimeout(timer)

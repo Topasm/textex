@@ -546,7 +546,18 @@ function App() {
   // ---- Sidebar trackpad swipe to switch tabs ----
   const swipeLocked = useRef(false)
   const swipeEndTimer = useRef<ReturnType<typeof setTimeout>>()
+  const slideAnimTimer = useRef<ReturnType<typeof setTimeout>>()
+  const slideAnimClearTimer = useRef<ReturnType<typeof setTimeout>>()
   const [slideAnim, setSlideAnim] = useState<'exit-left' | 'exit-right' | 'enter-left' | 'enter-right' | null>(null)
+
+  // Clean up animation timers on unmount
+  useEffect(() => {
+    return () => {
+      clearTimeout(swipeEndTimer.current)
+      clearTimeout(slideAnimTimer.current)
+      clearTimeout(slideAnimClearTimer.current)
+    }
+  }, [])
 
   const handleSidebarWheel = useCallback((e: React.WheelEvent) => {
     // While locked, keep resetting the end-of-gesture timer to absorb momentum
@@ -562,6 +573,10 @@ function App() {
     swipeLocked.current = true
     swipeEndTimer.current = setTimeout(() => { swipeLocked.current = false }, 300)
 
+    // Clear any in-flight animation timers before starting new ones
+    clearTimeout(slideAnimTimer.current)
+    clearTimeout(slideAnimClearTimer.current)
+
     const s = useAppStore.getState()
     const tabs: SidebarView[] = ['files', 'bib', 'outline', 'todo', 'timeline', 'git']
     const idx = tabs.indexOf(s.sidebarView)
@@ -570,11 +585,11 @@ function App() {
     // Phase 1: slide out
     setSlideAnim(direction > 0 ? 'exit-left' : 'exit-right')
     // Phase 2: switch tab + slide in from opposite side
-    setTimeout(() => {
+    slideAnimTimer.current = setTimeout(() => {
       s.setSidebarView(next)
       setSlideAnim(direction > 0 ? 'enter-right' : 'enter-left')
       // Phase 3: clear animation class
-      setTimeout(() => setSlideAnim(null), 120)
+      slideAnimClearTimer.current = setTimeout(() => setSlideAnim(null), 120)
     }, 100)
   }, [])
 

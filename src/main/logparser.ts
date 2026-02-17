@@ -63,7 +63,11 @@ export function parseLatexLog(log: string, rootFile: string): Diagnostic[] {
   const state = initParserState(rootFile)
 
   for (const line of lines) {
-    parseLine(line, state, buildLog)
+    // parseLine may return a remainder string to continue processing iteratively
+    let remaining: string | undefined = line
+    while (remaining !== undefined) {
+      remaining = parseLine(remaining, state, buildLog)
+    }
   }
 
   // Push the final result
@@ -90,11 +94,14 @@ function mapSeverity(type: string): DiagnosticSeverity {
   }
 }
 
-function parseLine(line: string, state: ParserState, buildLog: LogEntry[]): void {
-  // Compose the current file
+function parseLine(line: string, state: ParserState, buildLog: LogEntry[]): string | undefined {
+  // Compose the current file — guard empty fileStack
+  const currentFile = state.fileStack.length > 0
+    ? state.fileStack[state.fileStack.length - 1]
+    : state.rootFile
   const filename = path.resolve(
     path.dirname(state.rootFile),
-    state.fileStack[state.fileStack.length - 1]
+    currentFile
   )
 
   // Skip the first line after a box warning, this is just garbage
@@ -139,10 +146,12 @@ function parseLine(line: string, state: ParserState, buildLog: LogEntry[]): void
   }
 
   if (parseUndefinedReference(line, filename, state, buildLog)) {
-    return
+    return undefined
   }
-  if (parseBadBox(line, filename, state, buildLog)) {
-    return
+  const badBoxResult = parseBadBox(line, filename, state, buildLog)
+  if (badBoxResult !== false) {
+    // If parseBadBox returned a string, it's a remainder to continue parsing
+    return typeof badBoxResult === 'string' ? badBoxResult : undefined
   }
 
   let result = line.match(latexNoPageOutput)
@@ -203,8 +212,7 @@ function parseLine(line: string, state: ParserState, buildLog: LogEntry[]): void
       text: `No bib entry found for '${result[1]}'`
     }
     state.searchEmptyLine = false
-    parseLine(line.substring(result[0].length), state, buildLog)
-    return
+    return line.substring(result[0].length)
   }
 
   result = line.match(latexError)
@@ -263,7 +271,7 @@ function parseBadBox(
   filename: string,
   state: ParserState,
   buildLog: LogEntry[]
-): boolean {
+): string | boolean {
   // Hardcoded to 'both' — show all badboxes
   const regexs = [
     latexOverfullBox,
@@ -289,7 +297,7 @@ function parseBadBox(
         line: 1,
         text: result[2] ? `${result[1]} in page ${result[2]}` : result[1]
       }
-      parseLine(line.substring(result[0].length), state, buildLog)
+      return line.substring(result[0].length)
     } else {
       state.currentResult = {
         type: 'typesetting',
@@ -306,12 +314,15 @@ function parseBadBox(
 }
 
 function parseLaTeXFileStack(line: string, fileStack: string[], nested: number): number {
-  const result = line.match(/(\(|\))/)
-  if (result && result.index !== undefined && result.index > -1) {
-    line = line.substring(result.index + 1)
+  let remaining = line
+  while (true) {
+    const result = remaining.match(/(\(|\))/)
+    if (!result || result.index === undefined || result.index <= -1) break
+
+    remaining = remaining.substring(result.index + 1)
     if (result[1] === '(') {
-      const pathResult = line.match(/^"?((?:(?:[a-zA-Z]:|\.|\/)?(?:\/|\\\\?))[^"()[\]]*)/)
-      const mikTeXPathResult = line.match(/^"?([^"()[\]]*\.[a-z]{3,})/)
+      const pathResult = remaining.match(/^"?((?:(?:[a-zA-Z]:|\.|\/)?(?:\/|\\\\?))[^"()[\]]*)/)
+      const mikTeXPathResult = remaining.match(/^"?([^"()[\]]*\.[a-z]{3,})/)
       if (pathResult) {
         fileStack.push(pathResult[1].trim())
       } else if (mikTeXPathResult) {
@@ -326,7 +337,6 @@ function parseLaTeXFileStack(line: string, fileStack: string[], nested: number):
         fileStack.pop()
       }
     }
-    nested = parseLaTeXFileStack(line, fileStack, nested)
   }
   return nested
 }

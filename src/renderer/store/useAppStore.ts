@@ -13,6 +13,14 @@ import type {
 import { create } from 'zustand'
 import { subscribeWithSelector, persist } from 'zustand/middleware'
 
+// Re-export domain stores for gradual migration
+export { useEditorStore } from './useEditorStore'
+export { useCompileStore } from './useCompileStore'
+export { useProjectStore } from './useProjectStore'
+export { usePdfStore } from './usePdfStore'
+export { useSettingsStore } from './useSettingsStore'
+export { useUiStore } from './useUiStore'
+
 export type CompileStatus = 'idle' | 'compiling' | 'success' | 'error'
 export type Theme = 'system' | 'dark' | 'light' | 'high-contrast'
 export type SidebarView = 'files' | 'git' | 'bib' | 'outline' | 'todo' | 'timeline'

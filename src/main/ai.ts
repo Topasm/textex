@@ -12,6 +12,14 @@ interface ThinkingConfig {
   budget: number // 0 = provider default, >0 = token budget
 }
 
+// ---- Default models ----
+
+const DEFAULT_MODELS: Record<string, string> = {
+  openai: 'gpt-4o',
+  anthropic: 'claude-sonnet-4-5-20250929',
+  gemini: 'gemini-2.5-flash'
+}
+
 // ---- Default prompts (used when user hasn't customized) ----
 
 const DEFAULT_GENERATE_PROMPT = `You are a LaTeX document generator. Given markdown, plain text notes, or an outline, produce a complete, compilable LaTeX document. Output ONLY the LaTeX source code — no explanations, no commentary. The document must include \\documentclass, \\begin{document}, and \\end{document}. Use appropriate packages for the content (e.g., amsmath for equations, graphicx for figures, hyperref for links). Structure the document with proper sections, subsections, and formatting.`
@@ -53,13 +61,40 @@ function getActionPrompt(action: string, settings: UserSettings): string {
   return customMap[action]?.trim() || DEFAULT_PROMPTS[action] || ''
 }
 
+// ---- Common API call ----
+
+async function callAIAPI(
+  url: string,
+  body: object,
+  headers: Record<string, string>,
+  providerName: string,
+  responseExtractor: (data: unknown) => string | undefined
+): Promise<string> {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...headers },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(180_000)
+  })
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '')
+    throw new Error(`${providerName} API error ${response.status}: ${text}`)
+  }
+
+  const data = await response.json()
+  const text = responseExtractor(data)
+  if (!text) throw new Error(`No text in ${providerName} response`)
+  return stripCodeFences(text)
+}
+
 // ---- Provider calls ----
 
-async function callOpenAI(
+function callOpenAI(
   input: string, model: string, apiKey: string,
   systemPrompt: string, thinking: ThinkingConfig
 ): Promise<string> {
-  const modelId = model || 'gpt-4o'
+  const modelId = model || DEFAULT_MODELS.openai
   const isReasoning = /^(o1|o3|o4)/.test(modelId)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -77,36 +112,23 @@ async function callOpenAI(
     body.temperature = 0.3
   }
 
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`
-    },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(180_000)
-  })
-
-  if (!response.ok) {
-    const text = await response.text().catch(() => '')
-    throw new Error(`OpenAI API error ${response.status}: ${text}`)
-  }
-
-  const data = (await response.json()) as {
-    choices: { message: { content: string } }[]
-  }
-  const content = data.choices?.[0]?.message?.content
-  if (!content) throw new Error('No content in OpenAI response')
-  return stripCodeFences(content)
+  return callAIAPI(
+    'https://api.openai.com/v1/chat/completions',
+    body,
+    { Authorization: `Bearer ${apiKey}` },
+    'OpenAI',
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (data: any) => data?.choices?.[0]?.message?.content
+  )
 }
 
-async function callAnthropic(
+function callAnthropic(
   input: string, model: string, apiKey: string,
   systemPrompt: string, thinking: ThinkingConfig
 ): Promise<string> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const body: Record<string, any> = {
-    model: model || 'claude-sonnet-4-5-20250929',
+    model: model || DEFAULT_MODELS.anthropic,
     system: systemPrompt,
     messages: [{ role: 'user', content: input }]
   }
@@ -124,35 +146,21 @@ async function callAnthropic(
     body.temperature = 0.3
   }
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2025-04-15'
-    },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(180_000)
-  })
-
-  if (!response.ok) {
-    const text = await response.text().catch(() => '')
-    throw new Error(`Anthropic API error ${response.status}: ${text}`)
-  }
-
-  const data = (await response.json()) as {
-    content: { type: string; text: string }[]
-  }
-  const text = data.content?.find((b) => b.type === 'text')?.text
-  if (!text) throw new Error('No text in Anthropic response')
-  return stripCodeFences(text)
+  return callAIAPI(
+    'https://api.anthropic.com/v1/messages',
+    body,
+    { 'x-api-key': apiKey, 'anthropic-version': '2025-04-15' },
+    'Anthropic',
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (data: any) => data?.content?.find((b: any) => b.type === 'text')?.text
+  )
 }
 
-async function callGemini(
+function callGemini(
   input: string, model: string, apiKey: string,
   systemPrompt: string, thinking: ThinkingConfig
 ): Promise<string> {
-  const modelId = model || 'gemini-2.5-flash'
+  const modelId = model || DEFAULT_MODELS.gemini
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const generationConfig: Record<string, any> = {
@@ -165,31 +173,18 @@ async function callGemini(
     }
   }
 
-  const response = await fetch(
+  return callAIAPI(
     `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${encodeURIComponent(apiKey)}`,
     {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ role: 'user', parts: [{ text: input }] }],
-        generationConfig
-      }),
-      signal: AbortSignal.timeout(180_000)
-    }
+      systemInstruction: { parts: [{ text: systemPrompt }] },
+      contents: [{ role: 'user', parts: [{ text: input }] }],
+      generationConfig
+    },
+    {},
+    'Gemini',
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (data: any) => data?.candidates?.[0]?.content?.parts?.find((p: any) => p.text)?.text
   )
-
-  if (!response.ok) {
-    const text = await response.text().catch(() => '')
-    throw new Error(`Gemini API error ${response.status}: ${text}`)
-  }
-
-  const data = (await response.json()) as {
-    candidates: { content: { parts: { text: string }[] } }[]
-  }
-  const text = data.candidates?.[0]?.content?.parts?.find((p) => p.text)?.text
-  if (!text) throw new Error('No text in Gemini response')
-  return stripCodeFences(text)
 }
 
 // ---- Dispatch helpers ----

@@ -20,6 +20,9 @@ interface GitLogEntry {
 }
 
 async function git(workDir: string, args: string[]): Promise<string> {
+  if (!path.isAbsolute(workDir)) {
+    throw new Error('workDir must be an absolute path')
+  }
   const { stdout } = await exec('git', args, { cwd: workDir, maxBuffer: 10 * 1024 * 1024 })
   return stdout
 }
@@ -42,8 +45,12 @@ export async function getGitStatus(workDir: string): Promise<GitStatusResult> {
   let branch = ''
   try {
     branch = (await git(workDir, ['branch', '--show-current'])).trim()
+    if (!branch) {
+      // Empty string means detached HEAD state
+      branch = 'detached'
+    }
   } catch {
-    branch = 'HEAD'
+    branch = 'detached'
   }
 
   const porcelain = await git(workDir, ['status', '--porcelain=v1'])

@@ -27,23 +27,31 @@ function sectionNodesToSymbols(nodes: SectionNode[]): DocumentSymbolNode[] {
   }))
 }
 
+// Generation counter to prevent stale LSP responses from overwriting newer data
+let outlineGeneration = 0
+
 function fetchOutline(currentFile: string, content: string): void {
   const state = useAppStore.getState()
   const lspAvailable =
     state.settings.lspEnabled && state.lspStatus === 'running'
 
+  const generation = ++outlineGeneration
+
   if (lspAvailable) {
     lspRequestDocumentSymbols(currentFile)
       .then((symbols) => {
+        // Stale check: only apply if this is still the latest request
+        if (outlineGeneration !== generation) return
         if (useAppStore.getState().filePath === currentFile) {
           useAppStore.getState().setDocumentSymbols(symbols)
         }
       })
       .catch(() => {
-        fetchFallbackOutline(currentFile, content)
+        if (outlineGeneration !== generation) return
+        fetchFallbackOutline(currentFile, content, generation)
       })
   } else {
-    fetchFallbackOutline(currentFile, content)
+    fetchFallbackOutline(currentFile, content, generation)
   }
 }
 
@@ -74,10 +82,11 @@ export function useDocumentSymbols(content: string): void {
   }, [content, lspStatus])
 }
 
-function fetchFallbackOutline(currentFile: string, content: string): void {
+function fetchFallbackOutline(currentFile: string, content: string, generation: number): void {
   window.api
     .getDocumentOutline(currentFile, content)
     .then((sectionNodes) => {
+      if (outlineGeneration !== generation) return
       if (useAppStore.getState().filePath === currentFile) {
         useAppStore.getState().setDocumentSymbols(sectionNodesToSymbols(sectionNodes))
       }

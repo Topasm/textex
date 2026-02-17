@@ -19,6 +19,8 @@ import { HistoryPanel } from './HistoryPanel'
 import { HistoryItem } from '../../shared/types'
 import { DiffEditor } from '@monaco-editor/react'
 import type { editor as monacoEditor, IDisposable, IRange } from 'monaco-editor'
+import { registerAiActions } from './editor/editorAiActions'
+import { registerTableEditorCodeLens } from './editor/editorCodeLens'
 
 type MonacoInstance = typeof import('monaco-editor')
 
@@ -56,7 +58,6 @@ function EditorPane() {
   const registerCompletionProviders = useCompletion(runSpellCheck)
   useDocumentSymbols(content)
   useEditorDiagnostics({ editorRef, monacoRef })
-  usePendingJump({ editorRef, monacoRef })
   usePendingJump({ editorRef, monacoRef })
   usePackageDetection(content)
   const mathData = useMathPreview({ editorRef, enabled: mathPreviewEnabled })
@@ -298,62 +299,10 @@ function EditorPane() {
       }])
     })
 
-    // Register CodeLens Provider for Table Editor
-    const codeLensProvider = monaco.languages.registerCodeLensProvider('latex', {
-      provideCodeLenses: (model: monacoEditor.ITextModel) => {
-        const text = model.getValue()
-        const lenses = []
-        const regex = /\\begin{tabular}/g
-        let match
-
-        while ((match = regex.exec(text)) !== null) {
-          const position = model.getPositionAt(match.index)
-          lenses.push({
-            range: {
-              startLineNumber: position.lineNumber,
-              startColumn: 1,
-              endLineNumber: position.lineNumber,
-              endColumn: 1
-            },
-            command: {
-              id: 'textex.openTableEditor',
-              title: '📊 Edit Table Visually',
-              arguments: [match.index]
-            }
-          })
-        }
-        return { lenses, dispose: () => { } }
-      }
-    })
-    tableEditorDisposablesRef.current.push(codeLensProvider)
-
-    // Register Command for Opening Table Editor
-    const command = monaco.editor.registerCommand('textex.openTableEditor', (_: unknown, startIndex: number) => {
-      const model = editor.getModel()
-      if (!model) return
-
-      const text = model.getValue()
-      const tail = text.slice(startIndex)
-      const endMatch = tail.match(/\\end{tabular}/)
-
-      if (endMatch && endMatch.index !== undefined) {
-        const endIndex = startIndex + endMatch.index + endMatch[0].length
-        const range = {
-          startLineNumber: model.getPositionAt(startIndex).lineNumber,
-          startColumn: model.getPositionAt(startIndex).column,
-          endLineNumber: model.getPositionAt(endIndex).lineNumber,
-          endColumn: model.getPositionAt(endIndex).column
-        }
-        const tableLatex = text.slice(startIndex, endIndex)
-
-        setTableModal({
-          isOpen: true,
-          latex: tableLatex,
-          range
-        })
-      }
-    })
-    tableEditorDisposablesRef.current.push(command)
+    // Register CodeLens + command for table editor
+    tableEditorDisposablesRef.current.push(
+      ...registerTableEditorCodeLens(editor, monaco, setTableModal)
+    )
 
     // Register Insert User Info Command
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyI, () => {
@@ -375,132 +324,8 @@ function EditorPane() {
       }
     })
 
-    // Register AI Actions
-    editor.addAction({
-      id: 'ai-fix-grammar',
-      label: 'AI: Fix Grammar & Spelling',
-      contextMenuGroupId: 'ai',
-      contextMenuOrder: 1,
-      precondition: 'textex.aiEnabled',
-      run: async (editor) => {
-        const selection = editor.getSelection()
-        const model = editor.getModel()
-        if (!selection || !model || selection.isEmpty()) return
-
-        const text = model.getValueInRange(selection)
-        try {
-          const fixed = await window.api.aiProcess('fix', text)
-          editor.executeEdits('ai-fix', [{
-            range: selection,
-            text: fixed,
-            forceMoveMarkers: true
-          }])
-        } catch (e) {
-          console.error(e)
-          alert('AI processing failed. Enable AI Draft in Settings > Integrations.')
-        }
-      }
-    })
-
-    editor.addAction({
-      id: 'ai-academic-rewrite',
-      label: 'AI: Rewrite Academically',
-      contextMenuGroupId: 'ai',
-      contextMenuOrder: 2,
-      precondition: 'textex.aiEnabled',
-      run: async (editor) => {
-        const selection = editor.getSelection()
-        const model = editor.getModel()
-        if (!selection || !model || selection.isEmpty()) return
-
-        const text = model.getValueInRange(selection)
-        try {
-          const rewritten = await window.api.aiProcess('academic', text)
-          editor.executeEdits('ai-rewrite', [{
-            range: selection,
-            text: rewritten,
-            forceMoveMarkers: true
-          }])
-        } catch (e) {
-          console.error(e)
-          alert('AI processing failed. Enable AI Draft in Settings > Integrations.')
-        }
-      }
-    })
-
-    editor.addAction({
-      id: 'ai-summarize',
-      label: 'AI: Summarize Selection',
-      contextMenuGroupId: 'ai',
-      contextMenuOrder: 3,
-      precondition: 'textex.aiEnabled',
-      run: async (editor) => {
-        const selection = editor.getSelection()
-        const model = editor.getModel()
-        if (!selection || !model || selection.isEmpty()) return
-
-        const text = model.getValueInRange(selection)
-        try {
-          const summary = await window.api.aiProcess('summarize', text)
-          alert(`Summary:\n\n${summary}`)
-        } catch (e) {
-          console.error(e)
-          alert('AI processing failed. Enable AI Draft in Settings > Integrations.')
-        }
-      }
-    })
-
-    editor.addAction({
-      id: 'ai-paraphrase-longer',
-      label: 'AI: Paraphrase Longer (+)',
-      contextMenuGroupId: 'ai',
-      contextMenuOrder: 4,
-      precondition: 'textex.aiEnabled',
-      run: async (editor) => {
-        const selection = editor.getSelection()
-        const model = editor.getModel()
-        if (!selection || !model || selection.isEmpty()) return
-
-        const text = model.getValueInRange(selection)
-        try {
-          const longer = await window.api.aiProcess('longer', text)
-          editor.executeEdits('ai-longer', [{
-            range: selection,
-            text: longer,
-            forceMoveMarkers: true
-          }])
-        } catch (e) {
-          console.error(e)
-          alert('AI processing failed. Enable AI Draft in Settings > Integrations.')
-        }
-      }
-    })
-
-    editor.addAction({
-      id: 'ai-paraphrase-shorter',
-      label: 'AI: Paraphrase Shorter (-)',
-      contextMenuGroupId: 'ai',
-      contextMenuOrder: 5,
-      precondition: 'textex.aiEnabled',
-      run: async (editor) => {
-        const selection = editor.getSelection()
-        const model = editor.getModel()
-        if (!selection || !model || selection.isEmpty()) return
-
-        const text = model.getValueInRange(selection)
-        try {
-          const shorter = await window.api.aiProcess('shorter', text)
-          editor.executeEdits('ai-shorter', [{
-            range: selection,
-            text: shorter,
-            forceMoveMarkers: true
-          }])
-        } catch (e) {
-          console.error(e)
-          alert('AI processing failed. Enable AI Draft in Settings > Integrations.')
-        }
-      }
-    })
+    // Register AI Actions (extracted to editorAiActions.ts)
+    registerAiActions(editor)
 
     // Register Toggle History Command
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyH, () => {

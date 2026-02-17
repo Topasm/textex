@@ -95,6 +95,8 @@ export async function loadPackageData(
     loaded.add(name)
 
     try {
+      // Validate package name to prevent path traversal
+      if (!/^[a-z0-9_-]+$/i.test(name)) continue
       const jsonPath = path.join(dir, `${name}.json`)
       const content = await fs.readFile(jsonPath, 'utf-8')
       const data = JSON.parse(content)

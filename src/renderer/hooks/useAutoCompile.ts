@@ -17,7 +17,7 @@ export function useAutoCompile(): void {
 
     clearTimeout(timerRef.current)
     timerRef.current = setTimeout(async () => {
-      const { appendLog, setCompileStatus, setLogPanelOpen, setDirty, clearLogs, setPdfBase64 } =
+      const { appendLog, setCompileStatus, setLogPanelOpen, clearLogs } =
         useAppStore.getState()
 
       // Save ALL dirty files before compiling (multi-file awareness)
@@ -41,10 +41,16 @@ export function useAutoCompile(): void {
         }
       }
 
+      // Fetch fresh state inside debounce callback to avoid stale closures
+      const freshState = useAppStore.getState()
+      const currentContent = freshState.content
+      const currentFilePath = freshState.filePath
+      if (!currentFilePath) return
+
       // Save the active file content (which may have changed since openFiles snapshot)
       try {
-        await window.api.saveFile(content, filePath)
-        setDirty(false)
+        await window.api.saveFile(currentContent, currentFilePath)
+        useAppStore.getState().setDirty(false)
       } catch (err: unknown) {
         appendLog(`Save failed, skipping compile: ${errorMessage(err)}`)
         setCompileStatus('error')
@@ -55,15 +61,15 @@ export function useAutoCompile(): void {
       setCompileStatus('compiling')
       clearLogs()
       try {
-        const result = await window.api.compile(filePath)
-        setPdfBase64(result.pdfBase64)
-        setCompileStatus('success')
+        const result = await window.api.compile(currentFilePath)
+        useAppStore.getState().setPdfBase64(result.pdfBase64)
+        useAppStore.getState().setCompileStatus('success')
       } catch (err: unknown) {
         const message = errorMessage(err)
         if (message.includes('Compilation was cancelled')) return
-        appendLog(message)
-        setCompileStatus('error')
-        setLogPanelOpen(true)
+        useAppStore.getState().appendLog(message)
+        useAppStore.getState().setCompileStatus('error')
+        useAppStore.getState().setLogPanelOpen(true)
       }
     }, 1000)
 

@@ -49,8 +49,14 @@ export async function saveSettings(partial: Partial<UserSettings>): Promise<User
   const merged = { ...current, ...partial }
   const settingsPath = getSettingsPath()
   const tmpPath = settingsPath + '.tmp'
-  await fs.writeFile(tmpPath, JSON.stringify(merged, null, 2), 'utf-8')
-  await fs.rename(tmpPath, settingsPath)
+  try {
+    await fs.writeFile(tmpPath, JSON.stringify(merged, null, 2), 'utf-8')
+    await fs.rename(tmpPath, settingsPath)
+  } catch (err) {
+    // Clean up orphaned .tmp file on failure
+    try { await fs.unlink(tmpPath) } catch { /* ignore cleanup failure */ }
+    throw err
+  }
   return merged
 }
 

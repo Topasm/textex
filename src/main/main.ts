@@ -5,6 +5,12 @@ import { loadSettings } from './settings'
 
 let mainWindow: BrowserWindow | null = null
 
+function sendToRenderer(channel: string, ...args: unknown[]): void {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send(channel, ...args)
+  }
+}
+
 function getBackgroundColor(theme: string): string {
   switch (theme) {
     case 'light':
@@ -58,39 +64,27 @@ function createWindow(backgroundColor: string): void {
     const { autoUpdater } = require('electron-updater')
 
     autoUpdater.on('checking-for-update', () => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('update:checking')
-      }
+      sendToRenderer('update:checking')
     })
 
     autoUpdater.on('update-available', (info: { version: string }) => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('update:available', info)
-      }
+      sendToRenderer('update:available', info)
     })
 
     autoUpdater.on('update-not-available', () => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('update:not-available')
-      }
+      sendToRenderer('update:not-available')
     })
 
     autoUpdater.on('download-progress', (progress: { percent: number }) => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('update:download-progress', progress)
-      }
+      sendToRenderer('update:download-progress', progress)
     })
 
     autoUpdater.on('update-downloaded', (info: { version: string }) => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('update:downloaded', info)
-      }
+      sendToRenderer('update:downloaded', info)
     })
 
     autoUpdater.on('error', (err: Error) => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('update:error', err.message)
-      }
+      sendToRenderer('update:error', err.message)
     })
   } catch {
     // electron-updater is not installed — auto-update disabled

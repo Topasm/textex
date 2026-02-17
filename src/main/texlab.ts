@@ -39,7 +39,8 @@ class TexLabManager {
   private callbacks: TexLabCallbacks | null = null
   private workspaceRoot: string | null = null
   private retryCount = 0
-  private stdoutBuffer = ''
+  private stdoutBuffer = Buffer.alloc(0)
+  private retryTimeout: ReturnType<typeof setTimeout> | null = null
 
   getStatus(): TexLabStatus {
     return this.status
@@ -61,7 +62,7 @@ class TexLabManager {
 
     const binaryPath = findTexLabBinary()
     this.setStatus('starting')
-    this.stdoutBuffer = ''
+    this.stdoutBuffer = Buffer.alloc(0)
 
     try {
       this.process = spawn(binaryPath, [], {
@@ -90,7 +91,7 @@ class TexLabManager {
     })
 
     this.process.stdout!.on('data', (chunk: Buffer) => {
-      this.stdoutBuffer += chunk.toString('utf-8')
+      this.stdoutBuffer = Buffer.concat([this.stdoutBuffer, chunk])
       this.parseMessages()
     })
 
@@ -122,7 +123,13 @@ class TexLabManager {
     this.callbacks = null
     this.workspaceRoot = null
     this.retryCount = 0
-    this.stdoutBuffer = ''
+    this.stdoutBuffer = Buffer.alloc(0)
+
+    // Clear any pending retry timeout
+    if (this.retryTimeout !== null) {
+      clearTimeout(this.retryTimeout)
+      this.retryTimeout = null
+    }
 
     if (this.process) {
       try {
@@ -136,31 +143,32 @@ class TexLabManager {
 
   private parseMessages(): void {
     while (true) {
-      const headerEnd = this.stdoutBuffer.indexOf('\r\n\r\n')
+      // Find header/body separator in the buffer
+      const separator = Buffer.from('\r\n\r\n')
+      const headerEnd = this.stdoutBuffer.indexOf(separator)
       if (headerEnd === -1) break
 
-      const headerPart = this.stdoutBuffer.substring(0, headerEnd)
+      const headerPart = this.stdoutBuffer.subarray(0, headerEnd).toString('utf-8')
       const match = headerPart.match(/Content-Length:\s*(\d+)/i)
       if (!match) {
         // Malformed header — skip past it
-        this.stdoutBuffer = this.stdoutBuffer.substring(headerEnd + 4)
+        this.stdoutBuffer = this.stdoutBuffer.subarray(headerEnd + 4)
         continue
       }
 
       const contentLength = parseInt(match[1], 10)
       const bodyStart = headerEnd + 4
-      const available = Buffer.byteLength(this.stdoutBuffer.substring(bodyStart), 'utf-8')
+      const available = this.stdoutBuffer.length - bodyStart
 
       if (available < contentLength) break // wait for more data
 
-      // Extract exactly contentLength bytes
-      const bodyBytes = Buffer.from(this.stdoutBuffer.substring(bodyStart), 'utf-8')
-      const body = bodyBytes.subarray(0, contentLength).toString('utf-8')
-      const consumed = bodyStart + Buffer.from(body, 'utf-8').toString().length
-      this.stdoutBuffer = this.stdoutBuffer.substring(consumed)
+      // Extract exactly contentLength bytes from the buffer
+      const body = this.stdoutBuffer.subarray(bodyStart, bodyStart + contentLength).toString('utf-8')
+      this.stdoutBuffer = this.stdoutBuffer.subarray(bodyStart + contentLength)
 
       try {
         const parsed = JSON.parse(body)
+        // Guard: only call callback if not stopped
         this.callbacks?.onMessage(parsed)
       } catch {
         // malformed JSON — skip
@@ -170,6 +178,7 @@ class TexLabManager {
 
   private setStatus(status: TexLabStatus, error?: string): void {
     this.status = status
+    // Guard: only call callback if it still exists (not cleared by stop())
     this.callbacks?.onStatusChange(status, error)
   }
 
@@ -182,7 +191,8 @@ class TexLabManager {
 
     const delay = RETRY_DELAYS[this.retryCount] || 4000
     this.retryCount++
-    setTimeout(() => {
+    this.retryTimeout = setTimeout(() => {
+      this.retryTimeout = null
       if (this.status !== 'stopped' && this.callbacks && this.workspaceRoot) {
         this.spawn()
       }

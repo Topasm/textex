@@ -4,6 +4,8 @@ import zlib from 'zlib';
 import { promisify } from 'util';
 import type { HistoryItem } from '../shared/types';
 
+const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+
 const gzip = promisify(zlib.gzip);
 const gunzip = promisify(zlib.gunzip);
 
@@ -30,7 +32,7 @@ export async function saveSnapshot(filePath: string, content: string): Promise<v
             }
         }
     } catch (error) {
-        console.error('Failed to save snapshot:', error);
+        if (isDev) console.error('Failed to save snapshot:', error);
     }
 }
 
@@ -66,7 +68,7 @@ export async function getHistoryList(filePath: string): Promise<HistoryItem[]> {
 
         return items.sort((a, b) => b.timestamp - a.timestamp); // Newest first
     } catch (error) {
-        console.error('Failed to get history list:', error);
+        if (isDev) console.error('Failed to get history list:', error);
         return [];
     }
 }
@@ -77,7 +79,7 @@ export async function loadSnapshot(snapshotPath: string): Promise<string> {
         const decoded = await gunzip(buffer);
         return decoded.toString();
     } catch (error) {
-        console.error('Failed to load snapshot:', error);
+        if (isDev) console.error('Failed to load snapshot:', error);
         throw error;
     }
 }

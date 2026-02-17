@@ -19,7 +19,7 @@ function getDictionaryPath(language: string): { aff: string; dic: string } {
   }
 }
 
-export async function initSpellChecker(language: string): Promise<{ success: boolean }> {
+export async function initSpellChecker(language: string): Promise<{ success: boolean; error?: string }> {
   try {
     const paths = getDictionaryPath(language)
     const [affData, dicData] = await Promise.all([
@@ -29,9 +29,11 @@ export async function initSpellChecker(language: string): Promise<{ success: boo
     spell = nspell(affData, dicData)
     initialized = true
     return { success: true }
-  } catch {
+  } catch (err) {
     initialized = false
-    return { success: false }
+    spell = null
+    const message = err instanceof Error ? err.message : String(err)
+    return { success: false, error: `Failed to init spell checker for "${language}": ${message}` }
   }
 }
 
