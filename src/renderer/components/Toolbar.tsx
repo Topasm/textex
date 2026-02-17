@@ -9,7 +9,7 @@ interface ToolbarProps {
   onCompile: () => void
   onToggleLog: () => void
   onOpenFolder: () => void
-  onToggleTheme: () => void
+
   onNewFromTemplate: () => void
   onExport: (format: string) => void
   onOpenSettings: () => void
@@ -31,7 +31,6 @@ function Toolbar({
   onCompile,
   onToggleLog,
   onOpenFolder,
-  onToggleTheme,
   onNewFromTemplate,
   onExport,
   onOpenSettings,
@@ -41,16 +40,12 @@ function Toolbar({
   const filePath = useAppStore((s) => s.filePath)
   const isDirty = useAppStore((s) => s.isDirty)
   const compileStatus = useAppStore((s) => s.compileStatus)
-  const theme = useAppStore((s) => s.settings.theme)
   const zoteroEnabled = useAppStore((s) => s.settings.zoteroEnabled)
 
   const [isExportOpen, setIsExportOpen] = useState(false)
   const exportRef = useRef<HTMLDivElement>(null)
 
   const fileName = filePath ? filePath.split(/[\\/]/).pop() : 'Untitled'
-
-  const themeLabel =
-    theme === 'dark' ? 'Dark' : theme === 'light' ? 'Light' : 'High Contrast'
 
   const handleExportSelect = useCallback(
     (ext: string) => {
@@ -130,12 +125,6 @@ function Toolbar({
           </div>
         )}
       </div>
-
-      <span className="toolbar-separator" />
-
-      <button onClick={onToggleTheme} title="Toggle theme">
-        Theme: {themeLabel}
-      </button>
 
       <span className="toolbar-separator" />
 

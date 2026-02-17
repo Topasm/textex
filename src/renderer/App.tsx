@@ -203,12 +203,7 @@ function App() {
     }
   }, [])
 
-  const handleToggleTheme = useCallback((): void => {
-    const s = useAppStore.getState()
-    const currentTheme = s.settings.theme
-    const next = currentTheme === 'dark' ? 'light' : currentTheme === 'light' ? 'high-contrast' : 'dark'
-    s.updateSetting('theme', next)
-  }, [])
+
 
   const handleExport = useCallback(async (format: string): Promise<void> => {
     const s = useAppStore.getState()
@@ -569,7 +564,7 @@ function App() {
         onCompile={handleCompile}
         onToggleLog={() => useAppStore.getState().toggleLogPanel()}
         onOpenFolder={handleOpenFolder}
-        onToggleTheme={handleToggleTheme}
+
         onNewFromTemplate={() => useAppStore.getState().toggleTemplateGallery()}
         onExport={handleExport}
         onOpenSettings={() => setIsSettingsOpen(true)}
