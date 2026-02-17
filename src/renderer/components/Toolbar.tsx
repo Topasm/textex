@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { Settings, Home } from 'lucide-react'
+import { Settings, Home, ChevronDown, Check } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 
 interface ToolbarProps {
@@ -45,32 +45,43 @@ function Toolbar({
   const compileStatus = useAppStore((s) => s.compileStatus)
   const zoteroEnabled = useAppStore((s) => s.settings.zoteroEnabled)
 
-  const [isExportOpen, setIsExportOpen] = useState(false)
-  const exportRef = useRef<HTMLDivElement>(null)
+  // PDF State
+  const zoomLevel = useAppStore((s) => s.zoomLevel)
+  const synctexHighlight = useAppStore((s) => s.synctexHighlight)
+
+  const [isFileMenuOpen, setIsFileMenuOpen] = useState(false)
+  const fileMenuRef = useRef<HTMLDivElement>(null)
 
   const fileName = filePath ? filePath.split(/[\\/]/).pop() : 'Untitled'
 
-  const handleExportSelect = useCallback(
-    (ext: string) => {
-      onExport(ext)
-      setIsExportOpen(false)
-    },
-    [onExport]
-  )
-
-  // Close export dropdown when clicking outside
+  // Close menus when clicking outside
   useEffect(() => {
-    if (!isExportOpen) return
+    if (!isFileMenuOpen) return
     const handleClickOutside = (e: MouseEvent): void => {
-      if (exportRef.current && !exportRef.current.contains(e.target as Node)) {
-        setIsExportOpen(false)
+      if (fileMenuRef.current && !fileMenuRef.current.contains(e.target as Node)) {
+        setIsFileMenuOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [isExportOpen])
+  }, [isFileMenuOpen])
 
   const projectRoot = useAppStore((s) => s.projectRoot)
+
+  // Sync Handlers
+  const handleSyncToCode = useCallback(() => {
+    useAppStore.getState().triggerSyncToCode()
+  }, [])
+
+  const handleSyncToPdf = useCallback(() => {
+    const state = useAppStore.getState()
+    if (!state.filePath) return
+    window.api.synctexForward(state.filePath, state.cursorLine).then((result) => {
+      if (result) {
+        useAppStore.getState().setSynctexHighlight(result)
+      }
+    })
+  }, [])
 
   return (
     <div className="toolbar">
@@ -79,21 +90,49 @@ function Toolbar({
           <Home size={16} />
         </button>
       )}
-      <button onClick={onOpen} title="Open file (Ctrl+O)">
-        Open<kbd>Ctrl+O</kbd>
-      </button>
-      <button onClick={onOpenFolder} title="Open folder">
-        Open Folder
-      </button>
+
+      {/* File Menu */}
+      <div className="menu-dropdown" ref={fileMenuRef}>
+        <button onClick={() => setIsFileMenuOpen(!isFileMenuOpen)} title="File operations">
+          File <ChevronDown size={12} />
+        </button>
+        {isFileMenuOpen && (
+          <div className="menu-dropdown-content">
+            <button onClick={() => { onOpen(); setIsFileMenuOpen(false) }}>
+              Open <kbd>Ctrl+O</kbd>
+            </button>
+            <button onClick={() => { onOpenFolder(); setIsFileMenuOpen(false) }}>
+              Open Folder
+            </button>
+            <button onClick={() => { onSave(); setIsFileMenuOpen(false) }}>
+              Save <kbd>Ctrl+S</kbd>
+            </button>
+            <button onClick={() => { onSaveAs(); setIsFileMenuOpen(false) }}>
+              Save As <kbd>Ctrl+Shift+S</kbd>
+            </button>
+            <div className="toolbar-separator" style={{ height: '1px', width: '100%', margin: '4px 0' }} />
+            <button onClick={() => { onNewFromTemplate(); setIsFileMenuOpen(false) }}>
+              New from Template
+            </button>
+            <button onClick={() => { setIsFileMenuOpen(false) }}>
+              Export <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>(Coming soon)</span>
+            </button>
+            {/* Re-add export sub-items if needed, or keep simple for now */}
+            {exportFormats.map(fmt => (
+              <button key={fmt.ext} onClick={() => { onExport(fmt.ext); setIsFileMenuOpen(false) }} style={{ paddingLeft: '24px' }}>
+                Export as {fmt.name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       <button
         className={isDirty ? 'save-btn-dirty' : undefined}
         onClick={onSave}
-        title="Save file (Ctrl+S)"
+        title="Quick Save (Ctrl+S)"
       >
-        Save<kbd>Ctrl+S</kbd>
-      </button>
-      <button onClick={onSaveAs} title="Save As (Ctrl+Shift+S)">
-        Save As<kbd>Ctrl+Shift+S</kbd>
+        Save
       </button>
 
       <span className="toolbar-separator" />
@@ -107,64 +146,61 @@ function Toolbar({
         {compileStatus === 'compiling' ? 'Compiling...' : 'Compile'}
         <kbd>Ctrl+Enter</kbd>
       </button>
+
       <button onClick={onToggleLog} title="Toggle log panel (Ctrl+L)">
-        Log<kbd>Ctrl+L</kbd>
+        Log
       </button>
 
-      <span className="toolbar-separator" />
-
-      <button onClick={onNewFromTemplate} title="New from template (Ctrl+Shift+N)">
-        Template
-      </button>
-      {useAppStore((s) => s.settings.aiEnabled) && (
+      {useAppStore((s) => !!s.settings.aiProvider) && (
         <button onClick={onAiDraft} title="AI Draft (Ctrl+Shift+D)">
-          AI Draft<kbd>Ctrl+Shift+D</kbd>
+          AI Draft
         </button>
       )}
 
-      <div className="export-dropdown" ref={exportRef}>
-        <button
-          onClick={() => setIsExportOpen(!isExportOpen)}
-          title="Export document"
-          disabled={!filePath}
-        >
-          Export {'\u25BE'}
-        </button>
-        {isExportOpen && (
-          <div className="export-dropdown-menu">
-            {exportFormats.map((fmt) => (
-              <button key={fmt.ext} onClick={() => handleExportSelect(fmt.ext)}>
-                {fmt.name}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <span className="toolbar-separator" />
-
-      <button onClick={onOpenSettings} title="Settings" className="p-1">
+      <button onClick={onOpenSettings} title="Settings">
         <Settings size={16} />
       </button>
 
       {zoteroEnabled && (
         <>
           <span className="toolbar-separator" />
-          <div className="zotero-toolbar-group" style={{ display: 'flex', gap: '4px' }}>
-            <button onClick={onZoteroSearch} title="Search Zotero (Ctrl+Shift+Z)">
-              Zotero<kbd>Ctrl+Shift+Z</kbd>
-            </button>
-            <button onClick={onZoteroCite} title="Zotero Classic Picker (Ctrl+Shift+C)">
-              Cite<kbd>Ctrl+Shift+C</kbd>
-            </button>
-          </div>
+          <button onClick={onZoteroSearch} title="Search Zotero (Ctrl+Shift+Z)">
+            Zotero
+          </button>
+          <button onClick={onZoteroCite} title="Zotero Classic Picker (Ctrl+Shift+C)">
+            Cite
+          </button>
         </>
       )}
 
-      <span className="file-name">
-        {isDirty && <span className="dirty-dot" />}
-        {fileName}
-      </span>
+      {/* Right side: PDF Controls & File Info */}
+      <div className="toolbar-group-right">
+        {/* PDF Controls */}
+        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+          <button onClick={handleSyncToCode} title="Sync PDF to Code (Ctrl+Click in PDF)" style={{ padding: '4px 8px' }}>
+            {'\u2190'}
+          </button>
+          <button onClick={handleSyncToPdf} title="Sync Code to PDF" style={{ padding: '4px 8px' }}>
+            {'\u2192'}
+          </button>
+          <div className="toolbar-separator" />
+          <button onClick={() => useAppStore.getState().zoomOut()} disabled={zoomLevel <= 25} title="Zoom Out" style={{ padding: '4px 8px' }}>
+            -
+          </button>
+          <span style={{ fontSize: '12px', minWidth: '36px', textAlign: 'center' }}>{zoomLevel}%</span>
+          <button onClick={() => useAppStore.getState().zoomIn()} disabled={zoomLevel >= 400} title="Zoom In" style={{ padding: '4px 8px' }}>
+            +
+          </button>
+          <button onClick={() => useAppStore.getState().resetZoom()} title="Fit Width" style={{ padding: '4px 8px' }}>
+            Fit Width
+          </button>
+        </div>
+
+        <span className="file-name">
+          {isDirty && <span className="dirty-dot" />}
+          {fileName}
+        </span>
+      </div>
     </div>
   )
 }

@@ -263,6 +263,11 @@ interface AppState {
 
   // Document symbols
   setDocumentSymbols: (symbols: DocumentSymbolNode[]) => void
+
+  // Sync request from toolbar to PreviewPane
+  // Using a timestamp allows multiple clicks to trigger effects even if value "true" doesn't change
+  syncToCodeRequest: number | null
+  triggerSyncToCode: () => void
 }
 
 export const useAppStore = create<AppState>()(
@@ -596,7 +601,11 @@ export const useAppStore = create<AppState>()(
       setLspError: (lspError) => set({ lspError }),
 
       // Document symbols
-      setDocumentSymbols: (documentSymbols) => set({ documentSymbols })
+      setDocumentSymbols: (documentSymbols) => set({ documentSymbols }),
+
+      // Sync request
+      syncToCodeRequest: null,
+      triggerSyncToCode: () => set({ syncToCodeRequest: Date.now() })
     })),
     {
       name: 'textex-settings-storage', // key in localStorage

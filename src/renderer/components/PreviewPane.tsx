@@ -11,8 +11,10 @@ import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl
 
 interface PageViewportInfo {
-  viewport: { convertToViewportPoint(x: number, y: number): [number, number] }
+  viewport: { convertToViewportPoint(x: number, y: number): [number, number]; viewBox: number[] }
   element: HTMLDivElement
+  pageWidth: number  // actual PDF page width in points
+  pageHeight: number // actual PDF page height in points
 }
 
 function PreviewPane() {
@@ -153,12 +155,19 @@ function PreviewPane() {
           `[data-page-number="${pageNumber}"]`
         ) as HTMLDivElement | null
         if (!pageEl) return
-        // Calculate the actual scale from the rendered page (including zoom)
-        const pw = containerWidth ? (containerWidth - 32) * (zoomLevel / 100) : 612
-        const defaultWidth = 612 // default PDF point width for letter
-        const scale = pw / defaultWidth
+        // Get actual page dimensions from PDF.js (handles A4, Letter, etc.)
+        const baseViewport = page.getViewport({ scale: 1 })
+        const actualPageWidth = baseViewport.width
+        const actualPageHeight = baseViewport.height
+        const pw = containerWidth ? (containerWidth - 32) * (zoomLevel / 100) : actualPageWidth
+        const scale = pw / actualPageWidth
         const viewport = page.getViewport({ scale })
-        pageViewportsRef.current.set(pageNumber, { viewport, element: pageEl })
+        pageViewportsRef.current.set(pageNumber, {
+          viewport,
+          element: pageEl,
+          pageWidth: actualPageWidth,
+          pageHeight: actualPageHeight,
+        })
       }
     },
     [containerWidth, zoomLevel]
@@ -188,8 +197,13 @@ function PreviewPane() {
       return
     }
 
-    const { viewport, element } = info
-    const [vx, vy] = viewport.convertToViewportPoint(x, y)
+    const { viewport, element, pageHeight } = info
+    // SyncTeX y is measured from the TOP of the page (top-down), but PDF.js
+    // convertToViewportPoint expects PDF coordinates (bottom-up, origin at bottom-left).
+    // Invert y using the page height, matching Overleaf's highlights.ts approach:
+    //   viewBoxHeight - synctexY
+    const pdfY = pageHeight - y
+    const [vx, vy] = viewport.convertToViewportPoint(x, pdfY)
 
     // Scroll the page into view
     element.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -252,10 +266,11 @@ function PreviewPane() {
     const centerX = (Math.max(pageRect.left, containerRect.left) + Math.min(pageRect.right, containerRect.right)) / 2 - pageRect.left
     const centerY = (Math.max(pageRect.top, containerRect.top) + Math.min(pageRect.bottom, containerRect.bottom)) / 2 - pageRect.top
 
+    // Use actual page width for correct coordinate conversion (not hardcoded 612)
     const pw = containerWidth
       ? (containerWidth - 32) * (useAppStore.getState().zoomLevel / 100)
-      : 612
-    const scale = pw / 612
+      : info.pageWidth
+    const scale = pw / info.pageWidth
     const pdfX = centerX / scale
     const pdfY = centerY / scale
 
@@ -317,13 +332,12 @@ function PreviewPane() {
       const clickX = e.clientX - pageRect.left
       const clickY = e.clientY - pageRect.top
 
-      // Convert screen coordinates to PDF coordinates
-      // We need to reverse the viewport transformation (including zoom)
+      // Convert screen coordinates to PDF coordinates (synctex top-down system)
+      // Use actual page width for correct scaling (not hardcoded 612)
       const pw = containerWidth
         ? (containerWidth - 32) * (useAppStore.getState().zoomLevel / 100)
-        : 612
-      const defaultWidth = 612
-      const scale = pw / defaultWidth
+        : info.pageWidth
+      const scale = pw / info.pageWidth
       const pdfX = clickX / scale
       const pdfY = clickY / scale
 
@@ -420,6 +434,16 @@ function PreviewPane() {
     setSearchQuery('')
   }, [])
 
+  // Listen for sync requests from toolbar
+  const syncToCodeRequest = useAppStore((s) => s.syncToCodeRequest)
+  useEffect(() => {
+    if (syncToCodeRequest) {
+      handleSyncToCode()
+    }
+  }, [syncToCodeRequest])
+
+
+
   const pageWidth = containerWidth ? (containerWidth - 32) * (zoomLevel / 100) : undefined
 
   // Always render the container so the ResizeObserver can attach and measure width.
@@ -445,25 +469,6 @@ function PreviewPane() {
         </div>
       ) : (
         <>
-          <div className="zoom-toolbar">
-            <button onClick={handleSyncToCode} title="Sync PDF to Code" className="synctex-btn">
-              {'\u2190'}
-            </button>
-            <button onClick={handleSyncToPdf} title="Sync Code to PDF" className="synctex-btn">
-              {'\u2192'}
-            </button>
-            <span className="zoom-toolbar-separator" />
-            <button onClick={() => useAppStore.getState().zoomOut()} disabled={zoomLevel <= 25} title="Zoom Out">
-              -
-            </button>
-            <span>{zoomLevel}%</span>
-            <button onClick={() => useAppStore.getState().zoomIn()} disabled={zoomLevel >= 400} title="Zoom In">
-              +
-            </button>
-            <button onClick={() => useAppStore.getState().resetZoom()} title="Fit Width">
-              Fit Width
-            </button>
-          </div>
           <PdfSearchBar
             visible={searchVisible}
             onClose={handleSearchClose}
@@ -482,10 +487,10 @@ function PreviewPane() {
             style={
               transientScale != null
                 ? {
-                    transform: `scale(${transientScale})`,
-                    transformOrigin: 'top center',
-                    willChange: 'transform'
-                  }
+                  transform: `scale(${transientScale})`,
+                  transformOrigin: 'top center',
+                  willChange: 'transform'
+                }
                 : undefined
             }
           >
