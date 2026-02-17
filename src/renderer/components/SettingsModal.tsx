@@ -220,6 +220,16 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
                                                 onChange={(checked) => updateSetting('formatOnSave', checked)}
                                             />
                                         </div>
+                                        <div className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                                            <div>
+                                                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">Auto-hide Sidebar</div>
+                                                <div className="text-xs text-gray-500 mt-0.5">Sidebar slides away and reappears on hover</div>
+                                            </div>
+                                            <Toggle
+                                                checked={settings.autoHideSidebar}
+                                                onChange={(checked) => updateSetting('autoHideSidebar', checked)}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             </div>

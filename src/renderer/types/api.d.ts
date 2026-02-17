@@ -10,8 +10,7 @@ import {
   LabelInfo,
   PackageData,
   CitationGroup,
-  ZoteroSearchResult,
-  DocumentSymbolNode
+  ZoteroSearchResult
 } from '../../shared/types'
 
 export interface OpenFileResult {
@@ -72,6 +71,8 @@ export interface ElectronAPI {
   // Settings
   loadSettings(): Promise<UserSettings>
   saveSettings(partial: Partial<UserSettings>): Promise<UserSettings>
+  addRecentProject(projectPath: string): Promise<UserSettings>
+  removeRecentProject(projectPath: string): Promise<UserSettings>
 
   // BibTeX
   parseBibFile(filePath: string): Promise<BibEntry[]>

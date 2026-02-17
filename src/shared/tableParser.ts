@@ -21,17 +21,28 @@ export function parseLatexTable(latex: string): TableData {
       continue;
     }
     if (trimmed.startsWith('\\hline')) {
-      // Ignore hlines for now
+      // Preserve hlines or similar structure if we want to, 
+      // but for a basic data grid, we often just ignore them 
+      // or handle them as specific row attributes.
+      // For now, we ignore them to populate the grid.
       continue;
     }
 
     // simplistic split, doesn't handle escaped \&
+    // We remove the trailing \\ if present
     const rowContent = trimmed.replace(/\\\\$/, '');
-    const cells = rowContent.split('&').map(cell => cell.trim());
+
+    // Split by & but be careful of escaped \& (basic check)
+    // A more robust regex split: 
+    const cells = rowContent.split(/(?<!\\)&/g).map(cell => cell.trim().replace(/\\&/g, '&'));
+
     if (cells.length > 0 && (cells.length > 1 || cells[0] !== '')) {
       rows.push(cells);
     }
   }
+
+  // Ensure all rows have the same number of columns? 
+  // Not strictly necessary for the grid, but good for stability.
 
   return { rows, alignment };
 }
@@ -42,7 +53,10 @@ export function generateLatexTable(data: TableData): string {
   latex += `  \\hline\n`;
 
   for (const row of rows) {
-    latex += `  ${row.join(' & ')} \\\\\n`;
+    // Escape & back to \& if needed? 
+    // Usually user types raw text in grid.
+    const escapedRow = row.map(cell => cell.replace(/&/g, '\\&'));
+    latex += `  ${escapedRow.join(' & ')} \\\\\n`;
     latex += `  \\hline\n`;
   }
 

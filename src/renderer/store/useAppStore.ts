@@ -51,6 +51,9 @@ export interface UserSettings {
   aiProvider: 'openai' | 'anthropic' | ''
   aiModel: string
 
+  // Sidebar
+  autoHideSidebar: boolean
+
   // Bibliography grouping
   bibGroupMode: 'flat' | 'author' | 'year' | 'type' | 'custom'
 }
@@ -72,6 +75,7 @@ const defaultSettings: UserSettings = {
   zoteroPort: 23119,
   aiProvider: '',
   aiModel: '',
+  autoHideSidebar: false,
   bibGroupMode: 'flat'
 }
 
@@ -163,6 +167,9 @@ interface AppState {
   _sessionActiveFile: string | null
 
   // ---- Actions ----
+
+  // Project
+  closeProject: () => void
 
   // File
   setContent: (content: string) => void
@@ -332,6 +339,39 @@ export const useAppStore = create<AppState>()(
       _sessionActiveFile: null,
 
       // ---- Actions ----
+
+      closeProject: () => set({
+        projectRoot: null,
+        filePath: null,
+        content: '',
+        isDirty: false,
+        openFiles: {},
+        activeFilePath: null,
+        directoryTree: null,
+        isSidebarOpen: false,
+        compileStatus: 'idle',
+        pdfBase64: null,
+        logs: '',
+        isLogPanelOpen: false,
+        diagnostics: [],
+        cursorLine: 1,
+        cursorColumn: 1,
+        pendingJump: null,
+        synctexHighlight: null,
+        isGitRepo: false,
+        gitBranch: '',
+        gitStatus: null,
+        bibEntries: [],
+        citationGroups: [],
+        labels: [],
+        packageData: {},
+        detectedPackages: [],
+        lspStatus: 'stopped',
+        lspError: null,
+        documentSymbols: [],
+        _sessionOpenPaths: [],
+        _sessionActiveFile: null
+      }),
 
       setContent: (content) => {
         const state = get()

@@ -120,6 +120,12 @@ export interface PackageData {
   deps: string[]
 }
 
+export interface RecentProject {
+  path: string
+  name: string
+  lastOpened: string
+}
+
 export interface UserSettings {
   theme: 'dark' | 'light' | 'high-contrast'
   fontSize: number
@@ -135,8 +141,10 @@ export interface UserSettings {
   aiApiKey?: string
   aiModel: string
   pdfInvertMode?: boolean
+  autoHideSidebar?: boolean
   wordWrap?: boolean
   formatOnSave?: boolean
+  recentProjects?: RecentProject[]
 }
 
 export interface CitationGroup {

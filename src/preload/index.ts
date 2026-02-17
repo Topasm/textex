@@ -78,6 +78,10 @@ contextBridge.exposeInMainWorld('api', {
   loadSettings: () => ipcRenderer.invoke('settings:load'),
   saveSettings: (partial: Record<string, unknown>) =>
     ipcRenderer.invoke('settings:save', partial),
+  addRecentProject: (projectPath: string) =>
+    ipcRenderer.invoke('settings:add-recent-project', projectPath),
+  removeRecentProject: (projectPath: string) =>
+    ipcRenderer.invoke('settings:remove-recent-project', projectPath),
 
   // BibTeX
   parseBibFile: (filePath: string) => ipcRenderer.invoke('bib:parse', filePath),

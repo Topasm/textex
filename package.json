@@ -37,6 +37,7 @@
     "@monaco-editor/react": "^4.7.0",
     "chokidar": "^5.0.0",
     "commander": "^14.0.3",
+    "date-fns": "^4.1.0",
     "electron-updater": "^6.3.9",
     "katex": "^0.16.28",
     "lucide-react": "^0.564.0",

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { Settings } from 'lucide-react'
+import { Settings, Home } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 
 interface ToolbarProps {
@@ -9,7 +9,7 @@ interface ToolbarProps {
   onCompile: () => void
   onToggleLog: () => void
   onOpenFolder: () => void
-
+  onReturnHome: () => void
   onNewFromTemplate: () => void
   onAiDraft: () => void
   onExport: (format: string) => void
@@ -32,6 +32,7 @@ function Toolbar({
   onCompile,
   onToggleLog,
   onOpenFolder,
+  onReturnHome,
   onNewFromTemplate,
   onAiDraft,
   onExport,
@@ -69,8 +70,15 @@ function Toolbar({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [isExportOpen])
 
+  const projectRoot = useAppStore((s) => s.projectRoot)
+
   return (
     <div className="toolbar">
+      {projectRoot && (
+        <button onClick={onReturnHome} title="Return to home screen">
+          <Home size={16} />
+        </button>
+      )}
       <button onClick={onOpen} title="Open file (Ctrl+O)">
         Open<kbd>Ctrl+O</kbd>
       </button>

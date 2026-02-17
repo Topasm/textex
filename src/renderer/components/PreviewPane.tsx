@@ -20,6 +20,7 @@ function PreviewPane() {
   const compileStatus = useAppStore((s) => s.compileStatus)
   const synctexHighlight = useAppStore((s) => s.synctexHighlight)
   const zoomLevel = useAppStore((s) => s.zoomLevel)
+  const pdfInvertMode = useAppStore((s) => s.settings.pdfInvertMode)
   const containerRef = useRef<HTMLDivElement>(null)
   const scrollPositionRef = useRef(0)
   const [numPages, setNumPages] = useState(0)
@@ -341,7 +342,7 @@ function PreviewPane() {
   return (
     <div
       ref={containerRef}
-      className={`preview-container${ctrlHeld ? ' preview-synctex-cursor' : ''}`}
+      className={`preview-container${ctrlHeld ? ' preview-synctex-cursor' : ''}${pdfInvertMode ? ' preview-invert' : ''}`}
       onScroll={handleScroll}
       onClick={handleContainerClick}
       style={{ position: 'relative' }}

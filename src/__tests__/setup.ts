@@ -33,9 +33,12 @@ Object.defineProperty(window, 'api', {
       spellCheckEnabled: false,
       spellCheckLanguage: 'en-US',
       gitEnabled: true,
-      autoUpdateEnabled: true
+      autoUpdateEnabled: true,
+      recentProjects: []
     }),
     saveSettings: vi.fn(),
+    addRecentProject: vi.fn().mockResolvedValue({}),
+    removeRecentProject: vi.fn().mockResolvedValue({}),
 
     // BibTeX
     parseBibFile: vi.fn(),

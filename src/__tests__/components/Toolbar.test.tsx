@@ -10,7 +10,7 @@ const defaultProps = {
   onCompile: vi.fn(),
   onToggleLog: vi.fn(),
   onOpenFolder: vi.fn(),
-  onToggleTheme: vi.fn(),
+  onReturnHome: vi.fn(),
   onNewFromTemplate: vi.fn(),
   onAiDraft: vi.fn(),
   onExport: vi.fn(),

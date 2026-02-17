@@ -16,7 +16,8 @@ const defaults: UserSettings = {
   zoteroPort: 23119,
   aiProvider: '',
   aiApiKey: '',
-  aiModel: ''
+  aiModel: '',
+  recentProjects: []
 }
 
 function getSettingsPath(): string {
@@ -41,4 +42,24 @@ export async function saveSettings(partial: Partial<UserSettings>): Promise<User
   await fs.writeFile(tmpPath, JSON.stringify(merged, null, 2), 'utf-8')
   await fs.rename(tmpPath, settingsPath)
   return merged
+}
+
+export async function addRecentProject(projectPath: string): Promise<UserSettings> {
+  const current = await loadSettings()
+  const existing = current.recentProjects ?? []
+  const filtered = existing.filter((p) => p.path !== projectPath)
+  const entry = {
+    path: projectPath,
+    name: path.basename(projectPath),
+    lastOpened: new Date().toISOString()
+  }
+  const updated = [entry, ...filtered].slice(0, 10)
+  return saveSettings({ recentProjects: updated })
+}
+
+export async function removeRecentProject(projectPath: string): Promise<UserSettings> {
+  const current = await loadSettings()
+  const existing = current.recentProjects ?? []
+  const updated = existing.filter((p) => p.path !== projectPath)
+  return saveSettings({ recentProjects: updated })
 }

@@ -12,6 +12,7 @@ import StructurePanel from './components/StructurePanel'
 import GitPanel from './components/GitPanel'
 import UpdateNotification from './components/UpdateNotification'
 import PreviewErrorBoundary from './components/PreviewErrorBoundary'
+import HomeScreen from './components/HomeScreen'
 import { useAutoCompile } from './hooks/useAutoCompile'
 import { useFileOps } from './hooks/useFileOps'
 import { SettingsModal } from './components/SettingsModal'
@@ -19,7 +20,8 @@ import { ZoteroCiteModal } from './components/ZoteroCiteModal'
 import { DraftModal } from './components/DraftModal'
 import { useAppStore } from './store/useAppStore'
 import type { SidebarView, LspStatus, } from './store/useAppStore'
-import type { DirectoryEntry, Diagnostic } from './types/api'
+import type { Diagnostic } from '../shared/types'
+import { openProject } from './utils/openProject'
 import { startLspClient, stopLspClient, lspNotifyDidOpen, lspNotifyDidClose, lspNotifyDidChange, lspRequestDocumentSymbols } from './lsp/lspClient'
 import { loader } from '@monaco-editor/react'
 
@@ -29,6 +31,7 @@ function errorMessage(err: unknown): string {
 
 function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [sessionRestored, setSessionRestored] = useState(false)
   useAutoCompile()
   const { handleOpen, handleSave, handleSaveAs } = useFileOps()
 
@@ -43,6 +46,7 @@ function App() {
   const lspEnabled = useAppStore((s) => s.settings.lspEnabled)
   const zoteroEnabled = useAppStore((s) => s.settings.zoteroEnabled)
   const zoteroPort = useAppStore((s) => s.settings.zoteroPort)
+  const autoHideSidebar = useAppStore((s) => s.settings.autoHideSidebar)
   const prevFilePathRef = useRef<string | null>(null)
 
   const [isZoteroModalOpen, setIsZoteroModalOpen] = useState(false)
@@ -145,68 +149,14 @@ function App() {
   const handleOpenFolder = useCallback(async (): Promise<void> => {
     const dirPath = await window.api.openDirectory()
     if (!dirPath) return
+    await openProject(dirPath)
+  }, [])
 
-    useAppStore.getState().setProjectRoot(dirPath)
-
-    let tree: DirectoryEntry[] = []
-    try {
-      tree = await window.api.readDirectory(dirPath)
-      useAppStore.getState().setDirectoryTree(tree)
-    } catch {
-      // ignore
-    }
-
-    if (!useAppStore.getState().isSidebarOpen) {
-      useAppStore.getState().toggleSidebar()
-    }
-    useAppStore.getState().setSidebarView('files')
-
-    // Auto-open first .tex file
-    const texFile = tree.find((e) => e.type === 'file' && e.name.endsWith('.tex'))
-    if (texFile) {
-      try {
-        const result = await window.api.readFile(texFile.path)
-        const s = useAppStore.getState()
-        s.openFileInTab(result.filePath, result.content)
-        s.setFilePath(result.filePath)
-        s.setDirty(false)
-      } catch {
-        // ignore
-      }
-    }
-
-    try {
-      await window.api.watchDirectory(dirPath)
-    } catch {
-      // ignore
-    }
-
-    try {
-      const isRepo = await window.api.gitIsRepo(dirPath)
-      const s = useAppStore.getState()
-      s.setIsGitRepo(isRepo)
-      if (isRepo) {
-        const status = await window.api.gitStatus(dirPath)
-        s.setGitStatus(status)
-        s.setGitBranch(status.branch)
-      }
-    } catch {
-      useAppStore.getState().setIsGitRepo(false)
-    }
-
-    try {
-      const entries = await window.api.findBibInProject(dirPath)
-      useAppStore.getState().setBibEntries(entries)
-    } catch {
-      // ignore
-    }
-
-    try {
-      const labels = await window.api.scanLabels(dirPath)
-      useAppStore.getState().setLabels(labels)
-    } catch {
-      // ignore
-    }
+  // ---- Close project (return to home screen) ----
+  const handleCloseProject = useCallback(async (): Promise<void> => {
+    try { await window.api.unwatchDirectory() } catch { /* ignore */ }
+    stopLspClient()
+    useAppStore.getState().closeProject()
   }, [])
 
 
@@ -230,7 +180,10 @@ function App() {
     const restoreSession = async (): Promise<void> => {
       const state = useAppStore.getState()
       const { projectRoot: savedRoot, _sessionOpenPaths, _sessionActiveFile } = state
-      if (!savedRoot || _sessionOpenPaths.length === 0) return
+      if (!savedRoot || _sessionOpenPaths.length === 0) {
+        setSessionRestored(true)
+        return
+      }
 
       // Read directory tree
       try {
@@ -239,6 +192,7 @@ function App() {
       } catch {
         // Directory no longer exists — bail out
         useAppStore.getState().setProjectRoot(null)
+        setSessionRestored(true)
         return
       }
 
@@ -287,6 +241,13 @@ function App() {
         const labels = await window.api.scanLabels(savedRoot)
         useAppStore.getState().setLabels(labels)
       } catch { /* ignore */ }
+
+      // Add to recent projects
+      try {
+        await window.api.addRecentProject(savedRoot)
+      } catch { /* ignore */ }
+
+      setSessionRestored(true)
     }
 
     restoreSession()
@@ -638,6 +599,8 @@ function App() {
     { key: 'structure', label: 'Structure' }
   ]
 
+  const showHomeScreen = sessionRestored && !projectRoot
+
   return (
     <div className="app-container">
       <Toolbar
@@ -647,7 +610,7 @@ function App() {
         onCompile={handleCompile}
         onToggleLog={() => useAppStore.getState().toggleLogPanel()}
         onOpenFolder={handleOpenFolder}
-
+        onReturnHome={handleCloseProject}
         onNewFromTemplate={() => useAppStore.getState().toggleTemplateGallery()}
         onAiDraft={() => setIsDraftModalOpen(true)}
         onExport={handleExport}
@@ -667,53 +630,62 @@ function App() {
         onInsert={handleDraftInsert}
       />
       <UpdateNotification />
-      <div className="workspace">
-        {isSidebarOpen && (
-          <>
-            <div className="sidebar" style={{ width: `${sidebarWidth}px` }}>
-              <div className="sidebar-tabs">
-                {sidebarTabs.map((tab) => (
-                  <button
-                    key={tab.key}
-                    className={`sidebar-tab${sidebarView === tab.key ? ' active' : ''}`}
-                    onClick={() => useAppStore.getState().setSidebarView(tab.key)}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
+      {showHomeScreen ? (
+        <HomeScreen
+          onOpenFolder={handleOpenFolder}
+          onNewFromTemplate={() => useAppStore.getState().toggleTemplateGallery()}
+        />
+      ) : (
+        <div className="workspace">
+          {isSidebarOpen && (
+            <div className={`sidebar-wrapper${autoHideSidebar ? ' sidebar-auto-hide' : ''}`}>
+              <div className="sidebar" style={{ width: `${sidebarWidth}px` }}>
+                <div className="sidebar-tabs">
+                  {sidebarTabs.map((tab) => (
+                    <button
+                      key={tab.key}
+                      className={`sidebar-tab${sidebarView === tab.key ? ' active' : ''}`}
+                      onClick={() => useAppStore.getState().setSidebarView(tab.key)}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="sidebar-content">
+                  {sidebarView === 'files' && <FileTree />}
+                  {sidebarView === 'git' && <GitPanel />}
+                  {sidebarView === 'bib' && <BibPanel />}
+                  {sidebarView === 'structure' && <StructurePanel />}
+                </div>
               </div>
-              <div className="sidebar-content">
-                {sidebarView === 'files' && <FileTree />}
-                {sidebarView === 'git' && <GitPanel />}
-                {sidebarView === 'bib' && <BibPanel />}
-                {sidebarView === 'structure' && <StructurePanel />}
+              {!autoHideSidebar && (
+                <div
+                  className="sidebar-resize-handle"
+                  onMouseDown={handleSidebarDividerMouseDown}
+                />
+              )}
+            </div>
+          )}
+          <div className="editor-area">
+            <div className="editor-main-content" ref={mainContentRef}>
+              <div className="editor-pane" style={{ width: `${splitRatio * 100}%` }}>
+                <TabBar />
+                <EditorPane />
               </div>
-            </div>
-            <div
-              className="sidebar-resize-handle"
-              onMouseDown={handleSidebarDividerMouseDown}
-            />
-          </>
-        )}
-        <div className="editor-area">
-          <div className="editor-main-content" ref={mainContentRef}>
-            <div className="editor-pane" style={{ width: `${splitRatio * 100}%` }}>
-              <TabBar />
-              <EditorPane />
-            </div>
-            <div
-              className="split-divider"
-              onMouseDown={handleDividerMouseDown}
-              onDoubleClick={handleDividerDoubleClick}
-            />
-            <div className="preview-pane" style={{ width: `${(1 - splitRatio) * 100}%` }}>
-              <PreviewErrorBoundary>
-                <PreviewPane />
-              </PreviewErrorBoundary>
+              <div
+                className="split-divider"
+                onMouseDown={handleDividerMouseDown}
+                onDoubleClick={handleDividerDoubleClick}
+              />
+              <div className="preview-pane" style={{ width: `${(1 - splitRatio) * 100}%` }}>
+                <PreviewErrorBoundary>
+                  <PreviewPane />
+                </PreviewErrorBoundary>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
       <LogPanel />
       <StatusBar />
       <TemplateGallery />
