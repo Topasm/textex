@@ -18,6 +18,11 @@ A self-contained desktop LaTeX editor built on Electron. TextEx provides a split
 - **AI Writing Assistant:** Draft content using your own OpenAI/Anthropic keys.
 - **User Profiles:** Automatically fill templates with your name, email, and affiliation.
 - **Visual Table Editor:** Edit LaTeX tables with a spreadsheet-like interface.
+- **MathLive Equation Editor:** Insert complex math formulas with a visual editor.
+- **Smart Image Drop:** Drag & drop images to automatically generate figure code.
+- **PDF Search:** Find text in the PDF preview with synchronized highlighting.
+- **Productivity Tools:** Built-in Todo list and Memo scratchpad.
+- **Spell Checker:** Real-time spell checking for your documents.
 - **Local History:** Simplified "Time Machine" for file versioning with diff view.
 
 ## Download
