@@ -578,23 +578,34 @@ function App() {
   const isSidebarDragging = useRef(false)
 
   // ---- Sidebar trackpad swipe to switch tabs ----
-  const sidebarSwipeAccum = useRef(0)
-  const SWIPE_THRESHOLD = 50
+  const swipeLocked = useRef(false)
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null)
 
   const handleSidebarWheel = useCallback((e: React.WheelEvent) => {
+    if (swipeLocked.current) return
     // Only respond to horizontal scroll (trackpad two-finger slide)
     if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return
+    if (Math.abs(e.deltaX) < 15) return
 
-    sidebarSwipeAccum.current += e.deltaX
-    if (Math.abs(sidebarSwipeAccum.current) >= SWIPE_THRESHOLD) {
-      const direction = sidebarSwipeAccum.current > 0 ? 1 : -1
-      sidebarSwipeAccum.current = 0
-      const s = useAppStore.getState()
-      const tabs: SidebarView[] = ['files', 'git', 'bib', 'outline', 'todo', 'timeline']
-      const idx = tabs.indexOf(s.sidebarView)
-      const next = tabs[(idx + direction + tabs.length) % tabs.length]
+    const direction = e.deltaX > 0 ? 1 : -1
+    swipeLocked.current = true
+
+    const s = useAppStore.getState()
+    const tabs: SidebarView[] = ['files', 'git', 'bib', 'outline', 'todo', 'timeline']
+    const idx = tabs.indexOf(s.sidebarView)
+    const next = tabs[(idx + direction + tabs.length) % tabs.length]
+
+    setSlideDirection(direction > 0 ? 'left' : 'right')
+    // Small delay so the exit animation plays, then switch tab
+    setTimeout(() => {
       s.setSidebarView(next)
-    }
+      setSlideDirection(null)
+    }, 150)
+
+    // Cooldown before next swipe is accepted
+    setTimeout(() => {
+      swipeLocked.current = false
+    }, 400)
   }, [])
 
   const handleSidebarDividerMouseDown = useCallback((e: React.MouseEvent) => {
@@ -705,7 +716,7 @@ function App() {
                     </svg>
                   </button>
                 </div>
-                <div className="sidebar-content">
+                <div className={`sidebar-content${slideDirection ? ` sidebar-slide-${slideDirection}` : ''}`}>
                   {sidebarView === 'files' && <FileTree />}
                   {sidebarView === 'git' && <GitPanel />}
                   {sidebarView === 'bib' && <BibPanel />}

@@ -995,6 +995,17 @@ body,
 .sidebar-content {
   flex: 1;
   overflow: auto;
+  transition: transform 0.15s ease-out, opacity 0.15s ease-out;
+}
+
+.sidebar-slide-left {
+  transform: translateX(-30px);
+  opacity: 0;
+}
+
+.sidebar-slide-right {
+  transform: translateX(30px);
+  opacity: 0;
 }
 
 .sidebar-resize-handle {
