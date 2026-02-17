@@ -4,7 +4,6 @@ function UpdateNotification(): JSX.Element | null {
   const status = useAppStore((s) => s.updateStatus)
   const version = useAppStore((s) => s.updateVersion)
   const progress = useAppStore((s) => s.updateProgress)
-  const setUpdateStatus = useAppStore((s) => s.setUpdateStatus)
 
   if (status === 'idle') return null
 
@@ -37,7 +36,7 @@ function UpdateNotification(): JSX.Element | null {
 
       <button
         className="update-dismiss"
-        onClick={() => setUpdateStatus('idle')}
+        onClick={() => useAppStore.getState().setUpdateStatus('idle')}
         title="Dismiss"
       >
         {'\u00D7'}

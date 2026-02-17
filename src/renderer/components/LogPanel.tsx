@@ -6,10 +6,6 @@ function LogPanel(): JSX.Element | null {
   const logs = useAppStore((s) => s.logs)
   const diagnostics = useAppStore((s) => s.diagnostics)
   const logViewMode = useAppStore((s) => s.logViewMode)
-  const setLogViewMode = useAppStore((s) => s.setLogViewMode)
-  const clearLogs = useAppStore((s) => s.clearLogs)
-  const toggleLogPanel = useAppStore((s) => s.toggleLogPanel)
-  const requestJumpToLine = useAppStore((s) => s.requestJumpToLine)
   const scrollRef = useRef<HTMLPreElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
@@ -22,7 +18,7 @@ function LogPanel(): JSX.Element | null {
   if (!isLogPanelOpen) return null
 
   const handleEntryClick = (line: number, column?: number): void => {
-    requestJumpToLine(line, column ?? 1)
+    useAppStore.getState().requestJumpToLine(line, column ?? 1)
   }
 
   const severityIcon = (severity: DiagnosticSeverity): string => {
@@ -43,18 +39,18 @@ function LogPanel(): JSX.Element | null {
         <div className="log-actions">
           <button
             className={logViewMode === 'structured' ? 'log-tab-active' : ''}
-            onClick={() => setLogViewMode('structured')}
+            onClick={() => useAppStore.getState().setLogViewMode('structured')}
           >
             Problems
           </button>
           <button
             className={logViewMode === 'raw' ? 'log-tab-active' : ''}
-            onClick={() => setLogViewMode('raw')}
+            onClick={() => useAppStore.getState().setLogViewMode('raw')}
           >
             Output
           </button>
-          <button onClick={clearLogs}>Clear</button>
-          <button onClick={toggleLogPanel}>Close</button>
+          <button onClick={() => useAppStore.getState().clearLogs()}>Clear</button>
+          <button onClick={() => useAppStore.getState().toggleLogPanel()}>Close</button>
         </div>
       </div>
       {logViewMode === 'raw' ? (

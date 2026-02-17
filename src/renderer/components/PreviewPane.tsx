@@ -20,9 +20,6 @@ function PreviewPane(): JSX.Element {
   const compileStatus = useAppStore((s) => s.compileStatus)
   const synctexHighlight = useAppStore((s) => s.synctexHighlight)
   const zoomLevel = useAppStore((s) => s.zoomLevel)
-  const zoomIn = useAppStore((s) => s.zoomIn)
-  const zoomOut = useAppStore((s) => s.zoomOut)
-  const resetZoom = useAppStore((s) => s.resetZoom)
   const containerRef = useRef<HTMLDivElement>(null)
   const scrollPositionRef = useRef(0)
   const [numPages, setNumPages] = useState(0)
@@ -350,14 +347,14 @@ function PreviewPane(): JSX.Element {
       style={{ position: 'relative' }}
     >
       <div className="zoom-toolbar">
-        <button onClick={zoomOut} disabled={zoomLevel <= 25} title="Zoom Out">
+        <button onClick={() => useAppStore.getState().zoomOut()} disabled={zoomLevel <= 25} title="Zoom Out">
           -
         </button>
         <span>{zoomLevel}%</span>
-        <button onClick={zoomIn} disabled={zoomLevel >= 400} title="Zoom In">
+        <button onClick={() => useAppStore.getState().zoomIn()} disabled={zoomLevel >= 400} title="Zoom In">
           +
         </button>
-        <button onClick={resetZoom} title="Fit Width">
+        <button onClick={() => useAppStore.getState().resetZoom()} title="Fit Width">
           Fit Width
         </button>
       </div>

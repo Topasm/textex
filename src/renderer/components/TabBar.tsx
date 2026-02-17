@@ -4,29 +4,20 @@ import { useAppStore } from '../store/useAppStore'
 function TabBar(): JSX.Element {
   const openFiles = useAppStore((s) => s.openFiles)
   const activeFilePath = useAppStore((s) => s.activeFilePath)
-  const setActiveTab = useAppStore((s) => s.setActiveTab)
-  const closeTab = useAppStore((s) => s.closeTab)
 
   const filePaths = Object.keys(openFiles)
 
-  const handleClose = useCallback(
-    (e: React.MouseEvent, filePath: string) => {
-      e.stopPropagation()
-      closeTab(filePath)
-    },
-    [closeTab]
-  )
+  const handleClose = useCallback((e: React.MouseEvent, filePath: string) => {
+    e.stopPropagation()
+    useAppStore.getState().closeTab(filePath)
+  }, [])
 
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent, filePath: string) => {
-      // Middle-click to close
-      if (e.button === 1) {
-        e.preventDefault()
-        closeTab(filePath)
-      }
-    },
-    [closeTab]
-  )
+  const handleMouseDown = useCallback((e: React.MouseEvent, filePath: string) => {
+    if (e.button === 1) {
+      e.preventDefault()
+      useAppStore.getState().closeTab(filePath)
+    }
+  }, [])
 
   if (filePaths.length === 0) return <></>
 
@@ -40,7 +31,7 @@ function TabBar(): JSX.Element {
           <div
             key={fp}
             className={`tab${isActive ? ' active' : ''}`}
-            onClick={() => setActiveTab(fp)}
+            onClick={() => useAppStore.getState().setActiveTab(fp)}
             onMouseDown={(e) => handleMouseDown(e, fp)}
             title={fp}
           >

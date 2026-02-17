@@ -27,11 +27,10 @@ function StructureNode({
   depth: number
 }): JSX.Element {
   const [expanded, setExpanded] = useState(true)
-  const requestJumpToLine = useAppStore((s) => s.requestJumpToLine)
 
   const handleClick = useCallback(() => {
-    requestJumpToLine(node.selectionRange.startLine, node.selectionRange.startColumn)
-  }, [requestJumpToLine, node.selectionRange.startLine, node.selectionRange.startColumn])
+    useAppStore.getState().requestJumpToLine(node.selectionRange.startLine, node.selectionRange.startColumn)
+  }, [node.selectionRange.startLine, node.selectionRange.startColumn])
 
   const handleToggle = useCallback(
     (e: React.MouseEvent) => {

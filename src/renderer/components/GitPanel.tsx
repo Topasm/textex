@@ -82,23 +82,13 @@ function GitPanel(): JSX.Element {
     ...(gitStatus?.not_added || [])
   ]
 
-  function getStatusClass(filePath: string): string {
+  function getFileStatus(filePath: string): { cls: string; label: string } {
     const file = gitStatus?.files.find((f) => f.path === filePath)
-    if (!file) return ''
-    if (file.index === '?' && file.working_dir === '?') return 'untracked'
-    if (file.index === 'A' || file.working_dir === 'A') return 'added'
-    if (file.index === 'D' || file.working_dir === 'D') return 'deleted'
-    return 'modified'
-  }
-
-  function getStatusLabel(filePath: string): string {
-    const cls = getStatusClass(filePath)
-    switch (cls) {
-      case 'untracked': return 'U'
-      case 'added': return 'A'
-      case 'deleted': return 'D'
-      default: return 'M'
-    }
+    if (!file) return { cls: '', label: 'M' }
+    if (file.index === '?' && file.working_dir === '?') return { cls: 'untracked', label: 'U' }
+    if (file.index === 'A' || file.working_dir === 'A') return { cls: 'added', label: 'A' }
+    if (file.index === 'D' || file.working_dir === 'D') return { cls: 'deleted', label: 'D' }
+    return { cls: 'modified', label: 'M' }
   }
 
   return (
@@ -109,17 +99,18 @@ function GitPanel(): JSX.Element {
             <span>Staged Changes</span>
             <span>{staged.length}</span>
           </div>
-          {staged.map((fp) => (
-            <div key={fp} className="git-file">
-              <span className={`git-file-status ${getStatusClass(fp)}`}>
-                {getStatusLabel(fp)}
-              </span>
-              <span className="git-file-name">{fp}</span>
-              <button className="git-file-action" onClick={() => handleUnstage(fp)} title="Unstage">
-                {'\u2212'}
-              </button>
-            </div>
-          ))}
+          {staged.map((fp) => {
+            const st = getFileStatus(fp)
+            return (
+              <div key={fp} className="git-file">
+                <span className={`git-file-status ${st.cls}`}>{st.label}</span>
+                <span className="git-file-name">{fp}</span>
+                <button className="git-file-action" onClick={() => handleUnstage(fp)} title="Unstage">
+                  {'\u2212'}
+                </button>
+              </div>
+            )
+          })}
         </div>
       )}
 
@@ -129,17 +120,18 @@ function GitPanel(): JSX.Element {
             <span>Changes</span>
             <span>{unstaged.length}</span>
           </div>
-          {unstaged.map((fp) => (
-            <div key={fp} className="git-file">
-              <span className={`git-file-status ${getStatusClass(fp)}`}>
-                {getStatusLabel(fp)}
-              </span>
-              <span className="git-file-name">{fp}</span>
-              <button className="git-file-action" onClick={() => handleStage(fp)} title="Stage">
-                +
-              </button>
-            </div>
-          ))}
+          {unstaged.map((fp) => {
+            const st = getFileStatus(fp)
+            return (
+              <div key={fp} className="git-file">
+                <span className={`git-file-status ${st.cls}`}>{st.label}</span>
+                <span className="git-file-name">{fp}</span>
+                <button className="git-file-action" onClick={() => handleStage(fp)} title="Stage">
+                  +
+                </button>
+              </div>
+            )
+          })}
         </div>
       )}
 
