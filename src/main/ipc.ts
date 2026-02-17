@@ -232,6 +232,11 @@ export function registerIpcHandlers(win: BrowserWindow): void {
   ipcMain.handle('latex:compile', async (_event, filePath: string) => {
     const validPath = validateFilePath(filePath)
 
+    // Only compile .tex files
+    if (!validPath.toLowerCase().endsWith('.tex')) {
+      throw new Error('Only .tex files can be compiled')
+    }
+
     // Resolve magic comment (%! TeX root = ...) to compile the root file
     let compilePath = validPath
     try {

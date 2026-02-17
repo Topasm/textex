@@ -129,6 +129,8 @@ function App() {
   const handleCompile = useCallback(async (): Promise<void> => {
     const state = useAppStore.getState()
     if (!state.filePath) return
+    // Only compile .tex files
+    if (!state.filePath.toLowerCase().endsWith('.tex')) return
     try {
       await window.api.saveFile(state.content, state.filePath)
     } catch {

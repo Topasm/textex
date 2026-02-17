@@ -12,6 +12,8 @@ export function useAutoCompile(): void {
 
   useEffect(() => {
     if (!filePath) return
+    // Only auto-compile .tex files
+    if (!filePath.toLowerCase().endsWith('.tex')) return
 
     clearTimeout(timerRef.current)
     timerRef.current = setTimeout(async () => {
