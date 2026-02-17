@@ -140,6 +140,7 @@ export interface UserSettings {
   lspEnabled: boolean
   zoteroEnabled: boolean
   zoteroPort: number
+  aiEnabled?: boolean
   aiProvider: 'openai' | 'anthropic' | ''
   aiApiKey?: string
   aiModel: string

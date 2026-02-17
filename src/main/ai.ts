@@ -94,7 +94,7 @@ export async function generateLatex(options: GenerateLatexOptions): Promise<stri
   throw new Error(`Unknown AI provider: ${options.provider}`)
 }
 
-export async function processText(action: 'fix' | 'academic' | 'summarize', text: string, provider?: string, model?: string): Promise<string> {
+export async function processText(action: 'fix' | 'academic' | 'summarize' | 'longer' | 'shorter', text: string, provider?: string, model?: string): Promise<string> {
   const settings = await loadSettings()
   // Use passed provider/model or fallback to settings
   const activeProvider = provider || settings.aiProvider
@@ -108,7 +108,9 @@ export async function processText(action: 'fix' | 'academic' | 'summarize', text
   const prompts = {
     fix: "Fix grammar and spelling in the following LaTeX text. Do not remove LaTeX commands. Return ONLY the fixed text.",
     academic: "Rewrite the following text to be more formal and academic suitable for a research paper. Preserve LaTeX commands. Return ONLY the rewritten text.",
-    summarize: "Summarize the following text briefly. Return ONLY the summary."
+    summarize: "Summarize the following text briefly. Return ONLY the summary.",
+    longer: "Paraphrase the following text to be longer and more detailed, expanding on the key points. Preserve all LaTeX commands. Return ONLY the paraphrased text.",
+    shorter: "Paraphrase the following text to be shorter and more concise, keeping only the essential points. Preserve all LaTeX commands. Return ONLY the paraphrased text."
   };
 
   const systemPrompt = "You are a helpful academic assistant expert in LaTeX."

@@ -351,31 +351,6 @@ const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (checked: b
 const AiDraftSettings = () => {
     const settings = useAppStore((state) => state.settings);
     const updateSetting = useAppStore((state) => state.updateSetting);
-    const [apiKey, setApiKey] = useState('');
-    const [hasKey, setHasKey] = useState(false);
-    const [saving, setSaving] = useState(false);
-
-    useEffect(() => {
-        if (settings.aiProvider) {
-            window.api.aiHasApiKey(settings.aiProvider).then(setHasKey).catch(() => setHasKey(false));
-        } else {
-            setHasKey(false);
-        }
-    }, [settings.aiProvider]);
-
-    const handleSaveKey = async () => {
-        if (!apiKey.trim() || !settings.aiProvider) return;
-        setSaving(true);
-        try {
-            await window.api.aiSaveApiKey(settings.aiProvider, apiKey.trim());
-            setHasKey(true);
-            setApiKey('');
-        } catch {
-            // ignore
-        } finally {
-            setSaving(false);
-        }
-    };
 
     const modelPlaceholder = settings.aiProvider === 'openai' ? 'gpt-4o' : settings.aiProvider === 'anthropic' ? 'claude-sonnet-4-5-20250929' : 'Select a provider first';
 
@@ -386,60 +361,45 @@ const AiDraftSettings = () => {
                     <Zap size={24} />
                 </div>
                 <div className="settings-section-body">
-                    <h3 className="settings-section-title">AI Draft</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <h3 className="settings-section-title" style={{ marginBottom: 0 }}>AI Draft</h3>
+                        <Toggle
+                            checked={!!settings.aiEnabled}
+                            onChange={(checked) => updateSetting('aiEnabled', checked)}
+                        />
+                    </div>
                     <p className="settings-section-description">
-                        Generate LaTeX documents from markdown or notes using OpenAI or Anthropic.
+                        Enable AI features: generate LaTeX from notes, fix grammar, rewrite academically, paraphrase longer/shorter.
                     </p>
 
-                    <div className="settings-field-group">
-                        <div>
-                            <label className="settings-label">Provider</label>
-                            <select
-                                value={settings.aiProvider}
-                                onChange={(e) => updateSetting('aiProvider', e.target.value as 'openai' | 'anthropic' | '')}
-                                className="settings-select"
-                            >
-                                <option value="">Select provider...</option>
-                                <option value="openai">OpenAI</option>
-                                <option value="anthropic">Anthropic</option>
-                            </select>
-                        </div>
+                    {settings.aiEnabled && (
+                        <div className="settings-field-group">
+                            <div>
+                                <label className="settings-label">Provider</label>
+                                <select
+                                    value={settings.aiProvider}
+                                    onChange={(e) => updateSetting('aiProvider', e.target.value as 'openai' | 'anthropic' | '')}
+                                    className="settings-select"
+                                >
+                                    <option value="">Select provider...</option>
+                                    <option value="openai">OpenAI</option>
+                                    <option value="anthropic">Anthropic</option>
+                                </select>
+                            </div>
 
-                        <div>
-                            <label className="settings-label">Model</label>
-                            <input
-                                type="text"
-                                value={settings.aiModel}
-                                onChange={(e) => updateSetting('aiModel', e.target.value)}
-                                placeholder={modelPlaceholder}
-                                disabled={!settings.aiProvider}
-                                className="settings-input"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="settings-label">
-                                API Key {hasKey && <span className="settings-configured-tag">(configured)</span>}
-                            </label>
-                            <div className="settings-key-row">
+                            <div>
+                                <label className="settings-label">Model</label>
                                 <input
-                                    type="password"
-                                    value={apiKey}
-                                    onChange={(e) => setApiKey(e.target.value)}
-                                    placeholder={hasKey ? 'Key saved — enter new key to replace' : 'Enter API key'}
+                                    type="text"
+                                    value={settings.aiModel}
+                                    onChange={(e) => updateSetting('aiModel', e.target.value)}
+                                    placeholder={modelPlaceholder}
                                     disabled={!settings.aiProvider}
                                     className="settings-input"
                                 />
-                                <button
-                                    onClick={handleSaveKey}
-                                    disabled={!apiKey.trim() || !settings.aiProvider || saving}
-                                    className="primary-button"
-                                >
-                                    {saving ? 'Saving...' : 'Save'}
-                                </button>
                             </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
         </div>

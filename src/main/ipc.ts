@@ -470,7 +470,7 @@ export function registerIpcHandlers(win: BrowserWindow): void {
 
   ipcMain.handle(
     'ai:process',
-    async (_event, action: 'fix' | 'academic' | 'summarize', text: string) => {
+    async (_event, action: 'fix' | 'academic' | 'summarize' | 'longer' | 'shorter', text: string) => {
       // Use configured settings for provider/model
       return processText(action, text)
     }

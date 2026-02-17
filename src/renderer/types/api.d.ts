@@ -145,7 +145,7 @@ export interface ElectronAPI {
   aiGenerate(input: string, provider: string, model: string): Promise<{ latex: string }>
   aiSaveApiKey(provider: string, apiKey: string): Promise<{ success: boolean }>
   aiHasApiKey(provider: string): Promise<boolean>
-  aiProcess(action: 'fix' | 'academic' | 'summarize', text: string): Promise<string>
+  aiProcess(action: 'fix' | 'academic' | 'summarize' | 'longer' | 'shorter', text: string): Promise<string>
 
   // Shell
   openExternal(url: string): Promise<{ success: boolean }>

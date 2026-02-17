@@ -15,6 +15,7 @@ const defaults: UserSettings = {
   lspEnabled: true,
   zoteroEnabled: false,
   zoteroPort: 23119,
+  aiEnabled: false,
   aiProvider: '',
   aiApiKey: '',
   aiModel: '',

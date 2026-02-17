@@ -34,11 +34,13 @@ function EditorPane() {
   const theme = settings.theme
   const fontSize = settings.fontSize
   const spellCheckEnabled = settings.spellCheckEnabled
+  const aiEnabled = !!settings.aiEnabled
   const editorRef = useRef<monacoEditor.IStandaloneCodeEditor | null>(null)
   const monacoRef = useRef<MonacoInstance | null>(null)
   const cursorDisposableRef = useRef<{ dispose(): void } | null>(null)
   const mouseDisposableRef = useRef<{ dispose(): void } | null>(null)
   const completionDisposablesRef = useRef<{ dispose(): void }[]>([])
+  const aiEnabledKeyRef = useRef<{ set(value: boolean): void } | null>(null)
   const registerClickNavigation = useClickNavigation()
   const { runSpellCheck } = useSpelling({
     content,
@@ -110,6 +112,8 @@ function EditorPane() {
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor
+    // Create context key for AI enabled state
+    aiEnabledKeyRef.current = editor.createContextKey('textex.aiEnabled', aiEnabled)
     monacoRef.current = monaco
     cursorDisposableRef.current = editor.onDidChangeCursorPosition((e) => {
       setCursorPosition(e.position.lineNumber, e.position.column)
@@ -215,6 +219,7 @@ function EditorPane() {
       label: 'AI: Fix Grammar & Spelling',
       contextMenuGroupId: 'ai',
       contextMenuOrder: 1,
+      precondition: 'textex.aiEnabled',
       run: async (editor) => {
         const selection = editor.getSelection()
         const model = editor.getModel()
@@ -230,7 +235,7 @@ function EditorPane() {
           }])
         } catch (e) {
           console.error(e)
-          alert('AI processing failed. Check API key in settings.')
+          alert('AI processing failed. Enable AI Draft in Settings > Integrations.')
         }
       }
     })
@@ -240,6 +245,7 @@ function EditorPane() {
       label: 'AI: Rewrite Academically',
       contextMenuGroupId: 'ai',
       contextMenuOrder: 2,
+      precondition: 'textex.aiEnabled',
       run: async (editor) => {
         const selection = editor.getSelection()
         const model = editor.getModel()
@@ -255,7 +261,7 @@ function EditorPane() {
           }])
         } catch (e) {
           console.error(e)
-          alert('AI processing failed. Check API key in settings.')
+          alert('AI processing failed. Enable AI Draft in Settings > Integrations.')
         }
       }
     })
@@ -265,6 +271,7 @@ function EditorPane() {
       label: 'AI: Summarize Selection',
       contextMenuGroupId: 'ai',
       contextMenuOrder: 3,
+      precondition: 'textex.aiEnabled',
       run: async (editor) => {
         const selection = editor.getSelection()
         const model = editor.getModel()
@@ -276,7 +283,59 @@ function EditorPane() {
           alert(`Summary:\n\n${summary}`)
         } catch (e) {
           console.error(e)
-          alert('AI processing failed. Check API key in settings.')
+          alert('AI processing failed. Enable AI Draft in Settings > Integrations.')
+        }
+      }
+    })
+
+    editor.addAction({
+      id: 'ai-paraphrase-longer',
+      label: 'AI: Paraphrase Longer (+)',
+      contextMenuGroupId: 'ai',
+      contextMenuOrder: 4,
+      precondition: 'textex.aiEnabled',
+      run: async (editor) => {
+        const selection = editor.getSelection()
+        const model = editor.getModel()
+        if (!selection || !model || selection.isEmpty()) return
+
+        const text = model.getValueInRange(selection)
+        try {
+          const longer = await window.api.aiProcess('longer', text)
+          editor.executeEdits('ai-longer', [{
+            range: selection,
+            text: longer,
+            forceMoveMarkers: true
+          }])
+        } catch (e) {
+          console.error(e)
+          alert('AI processing failed. Enable AI Draft in Settings > Integrations.')
+        }
+      }
+    })
+
+    editor.addAction({
+      id: 'ai-paraphrase-shorter',
+      label: 'AI: Paraphrase Shorter (-)',
+      contextMenuGroupId: 'ai',
+      contextMenuOrder: 5,
+      precondition: 'textex.aiEnabled',
+      run: async (editor) => {
+        const selection = editor.getSelection()
+        const model = editor.getModel()
+        if (!selection || !model || selection.isEmpty()) return
+
+        const text = model.getValueInRange(selection)
+        try {
+          const shorter = await window.api.aiProcess('shorter', text)
+          editor.executeEdits('ai-shorter', [{
+            range: selection,
+            text: shorter,
+            forceMoveMarkers: true
+          }])
+        } catch (e) {
+          console.error(e)
+          alert('AI processing failed. Enable AI Draft in Settings > Integrations.')
         }
       }
     })
@@ -347,6 +406,13 @@ function EditorPane() {
       }
     }
   }
+
+  // Keep the aiEnabled context key in sync with settings
+  useEffect(() => {
+    if (aiEnabledKeyRef.current) {
+      aiEnabledKeyRef.current.set(aiEnabled)
+    }
+  }, [aiEnabled])
 
   useEffect(() => {
     const completionDisposables = completionDisposablesRef

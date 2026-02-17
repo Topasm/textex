@@ -116,9 +116,11 @@ function Toolbar({
       <button onClick={onNewFromTemplate} title="New from template (Ctrl+Shift+N)">
         Template
       </button>
-      <button onClick={onAiDraft} title="AI Draft (Ctrl+Shift+D)">
-        AI Draft<kbd>Ctrl+Shift+D</kbd>
-      </button>
+      {useAppStore((s) => s.settings.aiEnabled) && (
+        <button onClick={onAiDraft} title="AI Draft (Ctrl+Shift+D)">
+          AI Draft<kbd>Ctrl+Shift+D</kbd>
+        </button>
+      )}
 
       <div className="export-dropdown" ref={exportRef}>
         <button
