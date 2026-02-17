@@ -44,6 +44,8 @@ export interface BibEntry {
   author: string
   year: string
   journal?: string
+  file?: string
+  line?: number
 }
 
 export interface GitFileStatus {
@@ -57,4 +59,40 @@ export interface GitLogEntry {
   date: string
   message: string
   author: string
+}
+
+export type SectionLevel = 0 | 1 | 2 | 3
+// 0=chapter, 1=section, 2=subsection, 3=subsubsection
+
+export interface SectionNode {
+  title: string
+  level: SectionLevel
+  starred: boolean
+  file: string
+  startLine: number
+  endLine: number
+  children: SectionNode[]
+}
+
+export interface DocumentMetadata {
+  documentClass: string
+  documentClassOptions: string[]
+  title: string | null
+  author: string | null
+  date: string | null
+  abstract: string | null
+  packages: string[]
+  mainFile: string
+}
+
+export interface DocumentStructure {
+  metadata: DocumentMetadata
+  outline: SectionNode[]
+  files: string[]
+}
+
+export interface PaperInfo {
+  mainFile: string
+  title: string
+  documentClass: string
 }
