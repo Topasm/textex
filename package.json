@@ -1,6 +1,6 @@
 {
   "name": "textex",
-  "version": "1.0.0",
+  "version": "1.0.0-alpha.1",
   "description": "A self-contained desktop LaTeX editor built on Electron",
   "main": "./out/main/main.js",
   "bin": {
