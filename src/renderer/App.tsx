@@ -11,6 +11,7 @@ import BibPanel from './components/BibPanel'
 import OutlinePanel from './components/OutlinePanel'
 import GitPanel from './components/GitPanel'
 import { TodoPanel } from './components/TodoPanel'
+import { TimelinePanel } from './components/TimelinePanel'
 import UpdateNotification from './components/UpdateNotification'
 import PreviewErrorBoundary from './components/PreviewErrorBoundary'
 import HomeScreen from './components/HomeScreen'
@@ -589,7 +590,7 @@ function App() {
       const direction = sidebarSwipeAccum.current > 0 ? 1 : -1
       sidebarSwipeAccum.current = 0
       const s = useAppStore.getState()
-      const tabs: SidebarView[] = ['files', 'git', 'bib', 'outline', 'todo']
+      const tabs: SidebarView[] = ['files', 'git', 'bib', 'outline', 'todo', 'timeline']
       const idx = tabs.indexOf(s.sidebarView)
       const next = tabs[(idx + direction + tabs.length) % tabs.length]
       s.setSidebarView(next)
@@ -625,7 +626,8 @@ function App() {
     { key: 'git', label: 'Git' },
     { key: 'bib', label: 'Bib' },
     { key: 'outline', label: 'Outline' },
-    { key: 'todo', label: 'Notes' }
+    { key: 'todo', label: 'Notes' },
+    { key: 'timeline', label: 'Timeline' }
   ]
 
   const showHomeScreen = sessionRestored && !projectRoot
@@ -709,6 +711,7 @@ function App() {
                   {sidebarView === 'bib' && <BibPanel />}
                   {sidebarView === 'outline' && <OutlinePanel />}
                   {sidebarView === 'todo' && <TodoPanel />}
+                  {sidebarView === 'timeline' && <TimelinePanel />}
                 </div>
               </div>
               {!autoHideSidebar && (

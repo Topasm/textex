@@ -1,4 +1,5 @@
 import { execFile } from 'child_process'
+import path from 'path'
 import { promisify } from 'util'
 
 const exec = promisify(execFile)
@@ -112,6 +113,30 @@ export async function getLog(workDir: string): Promise<GitLogEntry[]> {
       'log',
       '--pretty=format:%H|%aI|%an|%s',
       '-20'
+    ])
+    return output
+      .trim()
+      .split('\n')
+      .filter((l) => l)
+      .map((line) => {
+        const [hash, date, author, ...messageParts] = line.split('|')
+        return { hash, date, author, message: messageParts.join('|') }
+      })
+  } catch {
+    return []
+  }
+}
+
+export async function getFileLog(workDir: string, filePath: string): Promise<GitLogEntry[]> {
+  try {
+    const relative = path.relative(workDir, filePath)
+    const output = await git(workDir, [
+      'log',
+      '--follow',
+      '--pretty=format:%H|%aI|%an|%s',
+      '-50',
+      '--',
+      relative
     ])
     return output
       .trim()

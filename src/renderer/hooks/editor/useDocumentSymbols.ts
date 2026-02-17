@@ -28,8 +28,16 @@ function sectionNodesToSymbols(nodes: SectionNode[]): DocumentSymbolNode[] {
 }
 
 export function useDocumentSymbols(content: string): void {
+  const filePath = useAppStore((s) => s.filePath)
+  const lspStatus = useAppStore((s) => s.lspStatus)
+
   useEffect(() => {
     const timer = setTimeout(() => {
+      // Use the values from closure or store? 
+      // The original code used useAppStore.getState(), which gets fresh values. 
+      // But we want to re-run the effect when these change.
+      // So accessing them via hooks (above) triggers re-render, thus re-scheduling the effect.
+
       const state = useAppStore.getState()
       if (!state.filePath) return
 
@@ -56,7 +64,7 @@ export function useDocumentSymbols(content: string): void {
     }, 2000)
 
     return () => clearTimeout(timer)
-  }, [content])
+  }, [content, filePath, lspStatus])
 }
 
 function fetchFallbackOutline(currentFile: string, content: string): void {

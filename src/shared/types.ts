@@ -166,3 +166,9 @@ export interface ZoteroSearchResult {
   year: string
   type: string
 }
+
+export interface HistoryItem {
+  timestamp: number
+  size: number
+  path: string
+}

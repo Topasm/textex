@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('api', {
   openDirectory: () => ipcRenderer.invoke('fs:open-directory'),
   readDirectory: (dirPath: string) => ipcRenderer.invoke('fs:read-directory', dirPath),
   createFile: (filePath: string) => ipcRenderer.invoke('fs:create-file', filePath),
+  copyFile: (source: string, dest: string) => ipcRenderer.invoke('fs:copy-file', source, dest),
   createDirectory: (dirPath: string) => ipcRenderer.invoke('fs:create-directory', dirPath),
   watchDirectory: (dirPath: string) => ipcRenderer.invoke('fs:watch-directory', dirPath),
   unwatchDirectory: () => ipcRenderer.invoke('fs:unwatch-directory'),
@@ -113,6 +114,8 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.invoke('git:commit', workDir, message),
   gitDiff: (workDir: string) => ipcRenderer.invoke('git:diff', workDir),
   gitLog: (workDir: string) => ipcRenderer.invoke('git:log', workDir),
+  gitFileLog: (workDir: string, filePath: string) =>
+    ipcRenderer.invoke('git:file-log', workDir, filePath),
 
   // Auto Update
   updateCheck: () => ipcRenderer.invoke('update:check'),

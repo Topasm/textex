@@ -15,6 +15,7 @@ function StatusBar() {
   const isGitRepo = useAppStore((s) => s.isGitRepo)
   const gitBranch = useAppStore((s) => s.gitBranch)
   const spellCheckEnabled = useAppStore((s) => s.settings.spellCheckEnabled)
+  const sectionHighlightEnabled = useAppStore((s) => s.settings.sectionHighlightEnabled)
   const lspStatus = useAppStore((s) => s.lspStatus)
   const lspEnabled = useAppStore((s) => s.settings.lspEnabled)
 
@@ -64,6 +65,21 @@ function StatusBar() {
                   : 'Off'}
           </span>
         )}
+        <span
+            className="status-spellcheck"
+            onClick={() => useAppStore.getState().updateSetting('sectionHighlightEnabled', !sectionHighlightEnabled)}
+            title="Toggle section highlight bands"
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                useAppStore.getState().updateSetting('sectionHighlightEnabled', !sectionHighlightEnabled)
+              }
+            }}
+          >
+            Sections: {sectionHighlightEnabled ? 'On' : 'Off'}
+          </span>
         <span
             className="status-spellcheck"
             onClick={() => useAppStore.getState().updateSetting('spellCheckEnabled', !spellCheckEnabled)}

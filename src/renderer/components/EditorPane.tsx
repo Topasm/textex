@@ -11,6 +11,8 @@ import { useEditorDiagnostics } from '../hooks/editor/useEditorDiagnostics'
 import { usePendingJump } from '../hooks/editor/usePendingJump'
 import { usePackageDetection } from '../hooks/editor/usePackageDetection'
 import { useMathPreview } from '../hooks/editor/useMathPreview'
+import { useSmartImageDrop } from '../hooks/editor/useSmartImageDrop'
+import { useSectionHighlight } from '../hooks/editor/useSectionHighlight'
 import { TableEditorModal } from './TableEditorModal'
 import { MathPreviewWidget } from './MathPreviewWidget'
 import { HistoryPanel } from './HistoryPanel'
@@ -37,7 +39,7 @@ function EditorPane() {
   const fontSize = settings.fontSize
   const spellCheckEnabled = settings.spellCheckEnabled
   const mathPreviewEnabled = settings.mathPreviewEnabled !== false
-  const aiEnabled = !!settings.aiEnabled
+  const aiEnabled = !!settings.aiProvider
   const editorRef = useRef<monacoEditor.IStandaloneCodeEditor | null>(null)
   const monacoRef = useRef<MonacoInstance | null>(null)
   const cursorDisposableRef = useRef<{ dispose(): void } | null>(null)
@@ -58,6 +60,8 @@ function EditorPane() {
   usePendingJump({ editorRef, monacoRef })
   usePackageDetection(content)
   const mathData = useMathPreview({ editorRef, enabled: mathPreviewEnabled })
+  useSectionHighlight({ editorRef, monacoRef })
+  const { handleDrop: handleSmartImageDrop } = useSmartImageDrop()
   const [showMathPreview, setShowMathPreview] = useState(true)
   const prevMathRangeRef = useRef<string | null>(null)
 
@@ -258,6 +262,27 @@ function EditorPane() {
 
     mouseDisposableRef.current = registerClickNavigation(editor)
     completionDisposablesRef.current.push(...registerCompletionProviders(editor, monaco))
+
+    // Register Sync Search Command (Ctrl+F)
+    // This triggers BOTH the editor's find widget AND the PDF search bar
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF, () => {
+      const selection = editor.getSelection()
+      const model = editor.getModel()
+      const store = useAppStore.getState()
+
+      store.setPdfSearchVisible(true)
+
+      if (selection && model && !selection.isEmpty()) {
+        const text = model.getValueInRange(selection)
+        // Only update query if text is selected, otherwise keep previous query or empty
+        if (text.trim().length > 0) {
+          store.setPdfSearchQuery(text)
+        }
+      }
+
+      // Trigger the default find widget so user can search code too
+      editor.trigger('source', 'actions.find', {})
+    })
 
     // Register Format Command
     editor.addCommand(monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyF, async () => {
@@ -597,8 +622,15 @@ function EditorPane() {
           e.preventDefault()
           e.dataTransfer.dropEffect = 'copy'
         }}
-        onDrop={(e) => {
+        onDrop={async (e) => {
           e.preventDefault()
+
+          // Try smart image drop first
+          if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            await handleSmartImageDrop(e, editorRef.current, monacoRef.current)
+            return
+          }
+
           const text = e.dataTransfer.getData('text/plain')
           const editor = editorRef.current
           const monaco = monacoRef.current

@@ -2,15 +2,10 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import zlib from 'zlib';
 import { promisify } from 'util';
+import type { HistoryItem } from '../shared/types';
 
 const gzip = promisify(zlib.gzip);
 const gunzip = promisify(zlib.gunzip);
-
-export interface HistoryItem {
-    timestamp: number;
-    size: number;
-    path: string;
-}
 
 export async function saveSnapshot(filePath: string, content: string): Promise<void> {
     try {

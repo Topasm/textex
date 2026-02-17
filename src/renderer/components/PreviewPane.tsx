@@ -38,8 +38,11 @@ function PreviewPane() {
   const pendingZoomRef = useRef<number | null>(null)
 
   // PDF search state
-  const [searchVisible, setSearchVisible] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
+  const searchVisible = useAppStore((s) => s.pdfSearchVisible)
+  const searchQuery = useAppStore((s) => s.pdfSearchQuery)
+  const setSearchVisible = useAppStore((s) => s.setPdfSearchVisible)
+  const setSearchQuery = useAppStore((s) => s.setPdfSearchQuery)
+
   const [searchMatches, setSearchMatches] = useState<HTMLElement[]>([])
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0)
 

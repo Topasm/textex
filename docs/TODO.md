@@ -1,6 +1,6 @@
 # TextEx — Implementation Status
 
-**90 / 97 tasks complete** across 18 phases.
+**91 / 98 tasks complete** across 18 phases.
 
 ---
 
@@ -104,6 +104,7 @@ electron-builder config (NSIS/DMG/AppImage), Tectonic binaries for all platforms
 - **Visual Table Editor** — WYSIWYG table editing with `react-data-grid` via CodeLens
 - **Local History** — Automated file snapshots with diff view and restoration
 - **AI Writing Assistant** — Context menu integration for grammar fixing, rewriting, and summarization
+- **Smart Image Drop** — Drag & drop images into editor with auto-copy and code generation
 
 ---
 

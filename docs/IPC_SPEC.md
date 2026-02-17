@@ -206,6 +206,23 @@ channel.
 
 ---
 
+---
+
+### `fs:copy-file`
+
+| Field | Value |
+|---|---|
+| Direction | Renderer -> Main |
+| Method | `ipcRenderer.invoke` / `ipcMain.handle` |
+| Request payload | `(source: string, dest: string)` |
+| Response | `{ success: boolean }` |
+
+**Main handler logic:**
+1. Validate `source` and `dest` paths (must be non-empty absolute paths).
+2. Copy file using `fs.copyFile`.
+
+---
+
 ### `lsp:message`
 
 | Field | Value |
@@ -258,6 +275,7 @@ interface ElectronAPI {
   openFile(): Promise<OpenFileResult | null>
   saveFile(content: string, filePath: string): Promise<SaveResult>
   saveFileAs(content: string): Promise<SaveAsResult | null>
+  copyFile(source: string, dest: string): Promise<{ success: boolean }>
   compile(filePath: string): Promise<CompileResult>
   onCompileLog(cb: (log: string) => void): void
   removeCompileLogListener(): void

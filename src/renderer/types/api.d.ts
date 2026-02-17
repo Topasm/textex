@@ -53,6 +53,7 @@ export interface ElectronAPI {
   openDirectory(): Promise<string | null>
   createFile(filePath: string): Promise<{ success: boolean }>
   createDirectory(dirPath: string): Promise<{ success: boolean }>
+  copyFile(source: string, dest: string): Promise<{ success: boolean }>
   readDirectory(dirPath: string): Promise<DirectoryEntry[]>
   watchDirectory(dirPath: string): Promise<{ success: boolean }>
   unwatchDirectory(): Promise<{ success: boolean }>
@@ -109,6 +110,7 @@ export interface ElectronAPI {
   gitCommit(workDir: string, message: string): Promise<{ success: boolean }>
   gitDiff(workDir: string): Promise<string>
   gitLog(workDir: string): Promise<GitLogEntry[]>
+  gitFileLog(workDir: string, filePath: string): Promise<GitLogEntry[]>
 
   // Auto Update
   updateCheck(): Promise<{ success: boolean; error?: string }>

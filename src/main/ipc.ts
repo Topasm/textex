@@ -16,6 +16,7 @@ import {
   gitCommit,
   getDiff,
   getLog,
+  getFileLog,
   isGitRepo
 } from './git'
 import { exportDocument, getPandocFormats } from './pandoc'
@@ -212,6 +213,13 @@ export function registerIpcHandlers(win: BrowserWindow): void {
     return { success: true }
   })
 
+  ipcMain.handle('fs:copy-file', async (_event, source: string, dest: string) => {
+    const validSource = validateFilePath(source)
+    const validDest = validateFilePath(dest)
+    await fs.copyFile(validSource, validDest)
+    return { success: true }
+  })
+
   ipcMain.handle('fs:unwatch-directory', () => {
     if (watcherAbort) {
       watcherAbort.abort()
@@ -350,6 +358,10 @@ export function registerIpcHandlers(win: BrowserWindow): void {
 
   ipcMain.handle('git:log', async (_event, workDir: string) => {
     return getLog(workDir)
+  })
+
+  ipcMain.handle('git:file-log', async (_event, workDir: string, filePath: string) => {
+    return getFileLog(workDir, filePath)
   })
 
   // ---- Auto Update ----

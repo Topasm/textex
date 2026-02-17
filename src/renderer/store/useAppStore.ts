@@ -15,7 +15,7 @@ import { subscribeWithSelector, persist } from 'zustand/middleware'
 
 export type CompileStatus = 'idle' | 'compiling' | 'success' | 'error'
 export type Theme = 'system' | 'dark' | 'light' | 'high-contrast'
-export type SidebarView = 'files' | 'git' | 'bib' | 'outline' | 'todo'
+export type SidebarView = 'files' | 'git' | 'bib' | 'outline' | 'todo' | 'timeline'
 export type UpdateStatus = 'idle' | 'available' | 'downloading' | 'ready' | 'error'
 export type ExportStatus = 'idle' | 'exporting' | 'success' | 'error'
 export type LspStatus = 'stopped' | 'starting' | 'running' | 'error'
@@ -44,6 +44,9 @@ export interface UserSettings {
 
   // Spell check
   spellCheckEnabled: boolean
+
+  // Section highlight
+  sectionHighlightEnabled: boolean
 
   // LSP
   lspEnabled: boolean
@@ -79,6 +82,7 @@ const defaultSettings: UserSettings = {
   autoCompile: true,
   mathPreviewEnabled: true,
   spellCheckEnabled: false,
+  sectionHighlightEnabled: false,
   lspEnabled: true,
   zoteroEnabled: false,
   zoteroPort: 23119,
@@ -171,6 +175,10 @@ interface AppState {
 
   // Document symbols
   documentSymbols: DocumentSymbolNode[]
+
+  // PDF Search
+  pdfSearchVisible: boolean
+  pdfSearchQuery: string
 
   // Session restore (persisted metadata — not live state)
   _sessionOpenPaths: string[]
@@ -266,6 +274,10 @@ interface AppState {
   // Document symbols
   setDocumentSymbols: (symbols: DocumentSymbolNode[]) => void
 
+  // PDF Search
+  setPdfSearchVisible: (visible: boolean) => void
+  setPdfSearchQuery: (query: string) => void
+
   // Sync request from toolbar to PreviewPane
   // Using a timestamp allows multiple clicks to trigger effects even if value "true" doesn't change
   syncToCodeRequest: number | null
@@ -349,6 +361,10 @@ export const useAppStore = create<AppState>()(
       // Document symbols
       documentSymbols: [],
 
+      // PDF Search
+      pdfSearchVisible: false,
+      pdfSearchQuery: '',
+
       // Session restore metadata
       _sessionOpenPaths: [],
       _sessionActiveFile: null,
@@ -384,6 +400,8 @@ export const useAppStore = create<AppState>()(
         lspStatus: 'stopped',
         lspError: null,
         documentSymbols: [],
+        pdfSearchVisible: false,
+        pdfSearchQuery: '',
         _sessionOpenPaths: [],
         _sessionActiveFile: null
       }),
@@ -604,6 +622,10 @@ export const useAppStore = create<AppState>()(
 
       // Document symbols
       setDocumentSymbols: (documentSymbols) => set({ documentSymbols }),
+
+      // PDF Search
+      setPdfSearchVisible: (pdfSearchVisible) => set({ pdfSearchVisible }),
+      setPdfSearchQuery: (pdfSearchQuery) => set({ pdfSearchQuery }),
 
       // Sync request
       syncToCodeRequest: null,

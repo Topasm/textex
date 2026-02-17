@@ -89,6 +89,7 @@ These are explicitly **out of scope** for the first release:
 - [x] Code folding for LaTeX sections, environments, and comments.
 - [x] Inverse search flash animation (yellow highlight on jump-to-line).
 - [x] Enhanced Problems Panel (file grouping, severity filters, counts).
+- [x] Smart Image Drop (drag & drop images into editor).
 
 ---
 
