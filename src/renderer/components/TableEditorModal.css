@@ -1,0 +1,83 @@
+.table-editor-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.table-editor-modal {
+    background-color: var(--bg-primary, #ffffff);
+    color: var(--text-primary, #000000);
+    width: 80%;
+    height: 80%;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.table-editor-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color, #e0e0e0);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.table-editor-header h3 {
+    margin: 0;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--text-secondary, #666);
+}
+
+.table-editor-grid-container {
+    flex: 1;
+    overflow: hidden;
+    padding: 16px;
+}
+
+.table-editor-footer {
+    padding: 16px;
+    border-top: 1px solid var(--border-color, #e0e0e0);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.cancel-btn,
+.apply-btn {
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: none;
+    font-weight: 500;
+}
+
+.cancel-btn {
+    background-color: var(--bg-secondary, #f5f5f5);
+    color: var(--text-primary, #333);
+}
+
+.apply-btn {
+    background-color: var(--accent-color, #007bff);
+    color: white;
+}
+
+/* React Data Grid Overrides if needed */
+.rdg {
+    block-size: 100%;
+    /* Fill container */
+    border: 1px solid var(--border-color, #ddd);
+}

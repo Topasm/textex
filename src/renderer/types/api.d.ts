@@ -10,7 +10,8 @@ import {
   LabelInfo,
   PackageData,
   CitationGroup,
-  ZoteroSearchResult
+  ZoteroSearchResult,
+  HistoryItem
 } from '../../shared/types'
 
 export interface OpenFileResult {
@@ -139,9 +140,15 @@ export interface ElectronAPI {
   aiGenerate(input: string, provider: string, model: string): Promise<{ latex: string }>
   aiSaveApiKey(provider: string, apiKey: string): Promise<{ success: boolean }>
   aiHasApiKey(provider: string): Promise<boolean>
+  aiProcess(action: 'fix' | 'academic' | 'summarize', text: string): Promise<string>
 
   // Shell
   openExternal(url: string): Promise<{ success: boolean }>
+
+  // History
+  saveHistorySnapshot(filePath: string, content: string): Promise<void>
+  getHistoryList(filePath: string): Promise<HistoryItem[]>
+  loadHistorySnapshot(snapshotPath: string): Promise<string>
 }
 
 declare global {

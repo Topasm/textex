@@ -195,7 +195,14 @@ contextBridge.exposeInMainWorld('api', {
   aiSaveApiKey: (provider: string, apiKey: string) =>
     ipcRenderer.invoke('ai:save-api-key', provider, apiKey),
   aiHasApiKey: (provider: string) => ipcRenderer.invoke('ai:has-api-key', provider),
+  aiProcess: (action: 'fix' | 'academic' | 'summarize', text: string) =>
+    ipcRenderer.invoke('ai:process', action, text),
 
   // Shell
-  openExternal: (url: string) => ipcRenderer.invoke('shell:open-external', url)
+  openExternal: (url: string) => ipcRenderer.invoke('shell:open-external', url),
+
+  // History
+  saveHistorySnapshot: (filePath: string, content: string) => ipcRenderer.invoke('history:save', filePath, content),
+  getHistoryList: (filePath: string) => ipcRenderer.invoke('history:list', filePath),
+  loadHistorySnapshot: (snapshotPath: string) => ipcRenderer.invoke('history:load', snapshotPath)
 })

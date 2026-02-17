@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { DataGrid, Column } from 'react-data-grid';
+import React, { useState, useMemo } from 'react';
+import { DataGrid, Column, RenderEditCellProps } from 'react-data-grid';
 import 'react-data-grid/lib/styles.css';
 import { parseLatexTable, generateLatexTable, TableData } from '../../shared/tableParser';
+import './TableEditorModal.css'; // We'll need to create this for basic styling if needed
 
 interface Props {
     initialLatex: string;
@@ -9,94 +10,89 @@ interface Props {
     onClose: () => void;
 }
 
-interface GridRow {
+interface Row {
     [key: string]: string;
 }
 
-export const TableEditorModal = ({ initialLatex, onApply, onClose }: Props) => {
-    const [data, setData] = useState<TableData>({ rows: [], alignment: '' });
-    const [columns, setColumns] = useState<Column<GridRow>[]>([]);
-    const [rows, setRows] = useState<GridRow[]>([]);
+export const TableEditorModal: React.FC<Props> = ({ initialLatex, onApply, onClose }) => {
+    // Parse initial LaTeX
+    const initialData = useMemo(() => parseLatexTable(initialLatex), [initialLatex]);
 
-    useEffect(() => {
-        const parsed = parseLatexTable(initialLatex);
-        setData(parsed);
-
-        if (parsed.rows.length > 0) {
-            const cols = parsed.rows[0].map((_, i) => ({
-                key: `${i}`,
-                name: `Col ${i + 1}`,
-                editable: true,
-                resizable: true,
-            }));
-            setColumns(cols);
-
-            const gridRows = parsed.rows.map((row) => {
-                const rowObj: GridRow = {};
-                row.forEach((cell, idx) => {
-                    rowObj[`${idx}`] = cell;
-                });
-                return rowObj;
+    // Convert TableData to DataGrid format
+    const [rows, setRows] = useState<Row[]>(() => {
+        return initialData.rows.map((row) => {
+            const rowObj: Row = {};
+            row.forEach((cell, idx) => {
+                rowObj[`col${idx}`] = cell;
             });
-            setRows(gridRows);
-        }
-    }, [initialLatex]);
+            return rowObj;
+        });
+    });
 
-    const handleRowsChange = (newRows: GridRow[]) => {
+    const [columns, setColumns] = useState<Column<Row>[]>(() => {
+        if (initialData.rows.length === 0) return [];
+        // Determine max columns
+        const maxCols = Math.max(...initialData.rows.map(r => r.length));
+        return Array.from({ length: maxCols }).map((_, i) => ({
+            key: `col${i}`,
+            name: `Col ${i + 1}`,
+            editable: true,
+            resizable: true,
+            editor: textEditor
+        }));
+    });
+
+    const handleRowsChange = (newRows: Row[]) => {
         setRows(newRows);
     };
 
     const handleApply = () => {
         // Convert back to TableData
-        const newRows = rows.map((row) => {
-            // Ensure we extract values in order of columns
-            return columns.map(col => row[col.key] || '');
-        });
-
-        // We keep the original alignment for now. 
-        // Future improvement: Allow editing alignment.
-        const newLatex = generateLatexTable({ ...data, rows: newRows });
+        const newTableData: TableData = {
+            alignment: initialData.alignment, // Preserve alignment for now
+            rows: rows.map(row => {
+                return columns.map(col => row[col.key] || '');
+            })
+        };
+        const newLatex = generateLatexTable(newTableData);
         onApply(newLatex);
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-[#2e2e2e] p-6 rounded-lg shadow-xl w-[80vw] h-[80vh] flex flex-col">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold dark:text-white">Edit Table Visually</h2>
-                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
-                        ✕
-                    </button>
+        <div className="table-editor-overlay">
+            <div className="table-editor-modal">
+                <div className="table-editor-header">
+                    <h3>Visual Table Editor</h3>
+                    <button onClick={onClose} className="close-btn">×</button>
                 </div>
 
-                <div className="flex-1 overflow-auto bg-white dark:bg-[#1e1e1e]">
-                    {columns.length > 0 ? (
-                        <DataGrid
-                            columns={columns}
-                            rows={rows}
-                            onRowsChange={handleRowsChange}
-                            className="rdg-light dark:rdg-dark h-full"
-                        />
-                    ) : (
-                        <div className="text-center p-10 text-gray-500">No data found or invalid table format.</div>
-                    )}
+                <div className="table-editor-grid-container">
+                    <DataGrid
+                        columns={columns}
+                        rows={rows}
+                        onRowsChange={handleRowsChange}
+                        className="rdg-light" // Force light theme or add dark mode support later
+                    />
                 </div>
 
-                <div className="mt-4 flex justify-end gap-2">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        onClick={handleApply}
-                        className="px-4 py-2 rounded bg-blue-500 hover:bg-blue-600 text-white"
-                    >
-                        Apply Changes
-                    </button>
+                <div className="table-editor-footer">
+                    <button onClick={onClose} className="cancel-btn">Cancel</button>
+                    <button onClick={handleApply} className="apply-btn">Apply Changes</button>
                 </div>
             </div>
         </div>
     );
 };
+
+// Simple text editor for cells
+function textEditor({ row, column, onRowChange, onClose }: RenderEditCellProps<Row>) {
+    return (
+        <input
+            className="rdg-text-editor"
+            ref={(input) => input?.focus()}
+            value={row[column.key]}
+            onChange={(e) => onRowChange({ ...row, [column.key]: e.target.value })}
+            onBlur={() => onClose(true)}
+        />
+    );
+}

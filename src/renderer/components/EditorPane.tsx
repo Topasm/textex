@@ -11,6 +11,9 @@ import { useEditorDiagnostics } from '../hooks/editor/useEditorDiagnostics'
 import { usePendingJump } from '../hooks/editor/usePendingJump'
 import { usePackageDetection } from '../hooks/editor/usePackageDetection'
 import { TableEditorModal } from './TableEditorModal'
+import { HistoryPanel } from './HistoryPanel'
+import { HistoryItem } from '../../shared/types'
+import { DiffEditor } from '@monaco-editor/react'
 import type { editor as monacoEditor, IDisposable, IRange } from 'monaco-editor'
 
 type MonacoInstance = typeof import('monaco-editor')
@@ -59,6 +62,12 @@ function EditorPane() {
     latex: '',
     range: null
   })
+
+  // History State
+  const [showHistory, setShowHistory] = useState(false)
+  const [historyItems, setHistoryItems] = useState<HistoryItem[]>([])
+  const [snapshotContent, setSnapshotContent] = useState('')
+  const [historyMode, setHistoryMode] = useState(false) // true if viewing a snapshot diff
 
   // Disposables for CodeLens and Commands
   const tableEditorDisposablesRef = useRef<IDisposable[]>([])
@@ -153,21 +162,11 @@ function EditorPane() {
     tableEditorDisposablesRef.current.push(codeLensProvider)
 
     // Register Command for Opening Table Editor
-    // We use a unique command ID to avoid conflicts if multiple editors were present,
-    // though here we assume 'textex.openTableEditor' is fine for the singleton editor pane.
-    // If it already exists, it might warn, but we dispose it on unmount.
-
-    // Check if command exists to avoid error on remount if not disposed properly (though we do dispose)
-    // Monaco doesn't expose hasCommand easily, so we just try to register.
-    // However, registerCommand is global. If we have multiple instances, this is tricky.
-    // For now, simple registration.
     const command = monaco.editor.registerCommand('textex.openTableEditor', (_: unknown, startIndex: number) => {
       const model = editor.getModel()
       if (!model) return
 
       const text = model.getValue()
-      // Find the end of the tabular environment
-      // Simple heuristic: matching end{tabular} after startIndex
       const tail = text.slice(startIndex)
       const endMatch = tail.match(/\\end{tabular}/)
 
@@ -209,7 +208,85 @@ function EditorPane() {
         }])
       }
     })
-    // We don't need to dispose addCommand results usually, but good to keep track if we detached
+
+    // Register AI Actions
+    editor.addAction({
+      id: 'ai-fix-grammar',
+      label: 'AI: Fix Grammar & Spelling',
+      contextMenuGroupId: 'ai',
+      contextMenuOrder: 1,
+      run: async (editor) => {
+        const selection = editor.getSelection()
+        const model = editor.getModel()
+        if (!selection || !model || selection.isEmpty()) return
+
+        const text = model.getValueInRange(selection)
+        try {
+          const fixed = await window.api.aiProcess('fix', text)
+          editor.executeEdits('ai-fix', [{
+            range: selection,
+            text: fixed,
+            forceMoveMarkers: true
+          }])
+        } catch (e) {
+          console.error(e)
+          alert('AI processing failed. Check API key in settings.')
+        }
+      }
+    })
+
+    editor.addAction({
+      id: 'ai-academic-rewrite',
+      label: 'AI: Rewrite Academically',
+      contextMenuGroupId: 'ai',
+      contextMenuOrder: 2,
+      run: async (editor) => {
+        const selection = editor.getSelection()
+        const model = editor.getModel()
+        if (!selection || !model || selection.isEmpty()) return
+
+        const text = model.getValueInRange(selection)
+        try {
+          const rewritten = await window.api.aiProcess('academic', text)
+          editor.executeEdits('ai-rewrite', [{
+            range: selection,
+            text: rewritten,
+            forceMoveMarkers: true
+          }])
+        } catch (e) {
+          console.error(e)
+          alert('AI processing failed. Check API key in settings.')
+        }
+      }
+    })
+
+    editor.addAction({
+      id: 'ai-summarize',
+      label: 'AI: Summarize Selection',
+      contextMenuGroupId: 'ai',
+      contextMenuOrder: 3,
+      run: async (editor) => {
+        const selection = editor.getSelection()
+        const model = editor.getModel()
+        if (!selection || !model || selection.isEmpty()) return
+
+        const text = model.getValueInRange(selection)
+        try {
+          const summary = await window.api.aiProcess('summarize', text)
+          alert(`Summary:\n\n${summary}`)
+        } catch (e) {
+          console.error(e)
+          alert('AI processing failed. Check API key in settings.')
+        }
+      }
+    })
+
+    // Register Toggle History Command
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyH, () => {
+      setShowHistory(prev => !prev);
+      // Reset history mode when closing
+      if (showHistory) setHistoryMode(false);
+    });
   }
 
   useEffect(() => {
@@ -224,6 +301,26 @@ function EditorPane() {
     }
   }, [])
 
+  useEffect(() => {
+    if (showHistory) {
+      const activeFilePath = useAppStore.getState().activeFilePath;
+      if (activeFilePath) {
+        window.api.getHistoryList(activeFilePath).then(setHistoryItems);
+      }
+    }
+  }, [showHistory]);
+
+  const handleSelectHistoryItem = async (item: HistoryItem) => {
+    try {
+      const content = await window.api.loadHistorySnapshot(item.path);
+      setSnapshotContent(content);
+      setHistoryMode(true);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to load snapshot');
+    }
+  };
+
   const handleChange = (value: string | undefined): void => {
     if (value !== undefined) {
       setContent(value)
@@ -233,7 +330,7 @@ function EditorPane() {
   return (
     <>
       <div
-        style={{ height: '100%' }}
+        style={{ height: '100%', display: 'flex' }}
         onDragOver={(e) => {
           e.preventDefault()
           e.dataTransfer.dropEffect = 'copy'
@@ -258,27 +355,57 @@ function EditorPane() {
           }
         }}
       >
-        <Editor
-          height="100%"
-          defaultLanguage="latex"
-          theme={getMonacoTheme(theme === 'system' ? 'light' : theme)} // Fallback for system theme logic
-          value={content}
-          onChange={handleChange}
-          beforeMount={handleEditorWillMount}
-          onMount={handleEditorDidMount}
-          options={{
-            fontSize,
-            lineNumbers: 'on',
-            scrollBeyondLastLine: false,
-            automaticLayout: true,
-            quickSuggestions: true,
-            suggestOnTriggerCharacters: true,
-            padding: { top: 8 },
-            wordWrap: settings.wordWrap ? 'on' : 'off',
-            dropIntoEditor: { enabled: false },
-          }}
-        />
+        <div style={{ flex: 1, position: 'relative' }}>
+          {historyMode ? (
+            <DiffEditor
+              height="100%"
+              language="latex"
+              theme={getMonacoTheme(theme === 'system' ? 'light' : theme)}
+              original={snapshotContent}
+              modified={content}
+              options={{
+                fontSize,
+                readOnly: true,
+                originalEditable: false,
+                wordWrap: settings.wordWrap ? 'on' : 'off'
+              }}
+            />
+          ) : (
+            <Editor
+              height="100%"
+              defaultLanguage="latex"
+              theme={getMonacoTheme(theme === 'system' ? 'light' : theme)}
+              value={content}
+              onChange={handleChange}
+              beforeMount={handleEditorWillMount}
+              onMount={handleEditorDidMount}
+              options={{
+                fontSize,
+                lineNumbers: 'on',
+                scrollBeyondLastLine: false,
+                automaticLayout: true,
+                quickSuggestions: true,
+                suggestOnTriggerCharacters: true,
+                padding: { top: 8 },
+                wordWrap: settings.wordWrap ? 'on' : 'off',
+                dropIntoEditor: { enabled: false },
+              }}
+            />
+          )}
+        </div>
+
+        {showHistory && (
+          <HistoryPanel
+            historyItems={historyItems}
+            onSelect={handleSelectHistoryItem}
+            onClose={() => {
+              setShowHistory(false);
+              setHistoryMode(false);
+            }}
+          />
+        )}
       </div>
+
       {tableModal.isOpen && (
         <TableEditorModal
           initialLatex={tableModal.latex}

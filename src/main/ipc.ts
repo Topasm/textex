@@ -7,6 +7,7 @@ import { loadSettings, saveSettings, addRecentProject, removeRecentProject } fro
 import { parseBibFile, findBibFilesInProject } from '../shared/bibparser'
 import { findRootFile } from '../shared/magicComments'
 import { checkWords, getSuggestions, initSpellChecker, addWord, setLanguage } from './spellcheck'
+import { CitationGroup } from '../shared/types'
 import {
   initGit,
   getGitStatus,
@@ -22,8 +23,9 @@ import { scanLabels } from './labelscanner'
 import { loadPackageData } from './packageloader'
 import { texLabManager } from './texlab'
 import { zoteroProbe, zoteroSearch, zoteroCiteCAYW, zoteroExportBibtex } from './zotero'
-import { loadCitationGroups, saveCitationGroups, CitationGroup } from './citgroups'
-import { generateLatex } from './ai'
+import { loadCitationGroups, saveCitationGroups } from './citgroups'
+import { generateLatex, processText } from './ai'
+import { saveSnapshot, getHistoryList, loadSnapshot } from './history'
 
 function validateFilePath(filePath: unknown): string {
   if (typeof filePath !== 'string' || filePath.length === 0) {
@@ -429,6 +431,14 @@ export function registerIpcHandlers(win: BrowserWindow): void {
     }
   )
 
+  ipcMain.handle(
+    'ai:process',
+    async (_event, action: 'fix' | 'academic' | 'summarize', text: string) => {
+      // Use configured settings for provider/model
+      return processText(action, text)
+    }
+  )
+
   ipcMain.handle('ai:save-api-key', async (_event, provider: string, apiKey: string) => {
     await saveSettings({ aiApiKey: apiKey, aiProvider: provider as 'openai' | 'anthropic' | '' })
     return { success: true }
@@ -443,5 +453,21 @@ export function registerIpcHandlers(win: BrowserWindow): void {
   ipcMain.handle('shell:open-external', async (_event, url: string) => {
     await shell.openExternal(url)
     return { success: true }
+  })
+
+  // ---- History ----
+  ipcMain.handle('history:save', async (_event, filePath: string, content: string) => {
+    const validPath = validateFilePath(filePath)
+    return saveSnapshot(validPath, content)
+  })
+
+  ipcMain.handle('history:list', async (_event, filePath: string) => {
+    const validPath = validateFilePath(filePath)
+    return getHistoryList(validPath)
+  })
+
+  ipcMain.handle('history:load', async (_event, snapshotPath: string) => {
+    // snapshotPath is absolute within .textex/history
+    return loadSnapshot(snapshotPath)
   })
 }
