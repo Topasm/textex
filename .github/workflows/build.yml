@@ -71,7 +71,7 @@ jobs:
 
       - name: Build and package
         shell: bash
-        run: npx electron-vite build && npx electron-builder ${{ matrix.build_args }}
+        run: npx electron-vite build && npx electron-builder ${{ matrix.build_args }} --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Skip auto-discovery of Developer ID certificates on macOS CI.
