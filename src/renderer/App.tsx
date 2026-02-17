@@ -10,6 +10,8 @@ import TemplateGallery from './components/TemplateGallery'
 import BibPanel from './components/BibPanel'
 import StructurePanel from './components/StructurePanel'
 import GitPanel from './components/GitPanel'
+import { TodoPanel } from './components/TodoPanel'
+import { MemoPanel } from './components/MemoPanel'
 import UpdateNotification from './components/UpdateNotification'
 import PreviewErrorBoundary from './components/PreviewErrorBoundary'
 import HomeScreen from './components/HomeScreen'
@@ -603,7 +605,9 @@ function App() {
     { key: 'files', label: 'Files' },
     { key: 'git', label: 'Git' },
     { key: 'bib', label: 'Bib' },
-    { key: 'structure', label: 'Structure' }
+    { key: 'structure', label: 'Structure' },
+    { key: 'todo', label: 'TODO' },
+    { key: 'memo', label: 'Memo' }
   ]
 
   const showHomeScreen = sessionRestored && !projectRoot
@@ -686,6 +690,8 @@ function App() {
                   {sidebarView === 'git' && <GitPanel />}
                   {sidebarView === 'bib' && <BibPanel />}
                   {sidebarView === 'structure' && <StructurePanel />}
+                  {sidebarView === 'todo' && <TodoPanel />}
+                  {sidebarView === 'memo' && <MemoPanel />}
                 </div>
               </div>
               {!autoHideSidebar && (

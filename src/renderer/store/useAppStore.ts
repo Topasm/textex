@@ -13,7 +13,7 @@ import { subscribeWithSelector, persist } from 'zustand/middleware'
 
 export type CompileStatus = 'idle' | 'compiling' | 'success' | 'error'
 export type Theme = 'system' | 'dark' | 'light' | 'high-contrast'
-export type SidebarView = 'files' | 'git' | 'bib' | 'structure'
+export type SidebarView = 'files' | 'git' | 'bib' | 'structure' | 'todo' | 'memo'
 export type UpdateStatus = 'idle' | 'available' | 'downloading' | 'ready' | 'error'
 export type ExportStatus = 'idle' | 'exporting' | 'success' | 'error'
 export type LspStatus = 'stopped' | 'starting' | 'running' | 'error'

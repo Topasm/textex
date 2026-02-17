@@ -1007,7 +1007,8 @@ body,
   left: 0;
   bottom: 0;
   z-index: 20;
-  width: 12px; /* hover trigger strip */
+  width: 12px;
+  /* hover trigger strip */
 }
 
 .sidebar-wrapper.sidebar-auto-hide .sidebar {
@@ -1906,7 +1907,7 @@ body,
 }
 
 /* Indent entries under a group header */
-.bib-group .bib-group-header + .bib-entry,
+.bib-group .bib-group-header+.bib-entry,
 .bib-group .bib-entry {
   padding-left: 24px;
 }
@@ -2657,8 +2658,15 @@ body,
 }
 
 @keyframes settingsFadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .settings-animate-in {
@@ -3105,4 +3113,151 @@ body,
 
 .home-recent-item-tag-save:hover {
   background-color: var(--accent-hover);
+}
+
+/* ===== TODO Panel ===== */
+.todo-panel {
+  padding: 12px;
+  overflow-y: auto;
+  height: 100%;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.todo-panel--empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+  font-size: 13px;
+  gap: 12px;
+}
+
+.panel-create-icon-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: var(--bg-hover);
+  color: var(--text-secondary);
+  border: 2px dashed var(--border);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.panel-create-icon-btn:hover {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: white;
+  transform: scale(1.05);
+}
+
+.todo-panel__header {
+  margin: 12px 0 6px;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.todo-panel__header:first-child {
+  margin-top: 0;
+}
+
+.todo-panel h1.todo-panel__header {
+  font-size: 18px;
+}
+
+.todo-panel h2.todo-panel__header {
+  font-size: 15px;
+}
+
+.todo-panel h3.todo-panel__header {
+  font-size: 14px;
+}
+
+.todo-panel h4.todo-panel__header,
+.todo-panel h5.todo-panel__header,
+.todo-panel h6.todo-panel__header {
+  font-size: 13px;
+}
+
+.todo-panel__blockquote {
+  margin: 4px 0;
+  padding: 4px 8px 4px 12px;
+  border-left: 3px solid var(--accent);
+  background-color: var(--bg-hover);
+  color: var(--text-secondary);
+  font-size: 12px;
+  border-radius: 0 4px 4px 0;
+}
+
+.todo-panel__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 3px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.1s;
+}
+
+.todo-panel__item:hover {
+  background-color: var(--bg-hover);
+}
+
+.todo-panel__item input[type='checkbox'] {
+  margin-top: 3px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.todo-panel__item--done span {
+  text-decoration: line-through;
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+.todo-panel__text {
+  margin: 2px 0;
+  color: var(--text-primary);
+}
+
+.todo-panel__blank {
+  height: 8px;
+}
+
+/* ===== Memo Panel ===== */
+.memo-panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.memo-panel--empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+  font-size: 13px;
+  gap: 12px;
+}
+
+.memo-panel__textarea {
+  flex: 1;
+  width: 100%;
+  padding: 12px;
+  font-size: 13px;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  line-height: 1.6;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border: none;
+  outline: none;
+  resize: none;
 }
