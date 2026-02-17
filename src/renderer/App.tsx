@@ -230,6 +230,7 @@ function App() {
               </div>
               <div
                 className="sidebar-resize-handle"
+                style={autoHideSidebar ? { left: `${sidebarWidth}px`, right: 'auto' } : undefined}
                 onMouseDown={handleSidebarDividerMouseDown}
                 onDoubleClick={handleSidebarDividerDoubleClick}
               />

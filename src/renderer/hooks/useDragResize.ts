@@ -72,6 +72,10 @@ export function useDragResize(): DragResizeHandlers {
     document.body.style.cursor = 'col-resize'
     document.body.style.userSelect = 'none'
 
+    // Force sidebar visible during drag so auto-hide doesn't collapse it on hover-loss
+    const wrapper = sidebarRef.current?.parentElement
+    wrapper?.classList.add('sidebar-dragging')
+
     const sidebarLeft = sidebarRef.current?.getBoundingClientRect().left ?? 0
 
     const onMouseMove = (moveEvent: MouseEvent): void => {
@@ -83,6 +87,7 @@ export function useDragResize(): DragResizeHandlers {
       isSidebarDragging.current = false
       document.body.style.cursor = ''
       document.body.style.userSelect = ''
+      wrapper?.classList.remove('sidebar-dragging')
       window.removeEventListener('mousemove', onMouseMove)
       window.removeEventListener('mouseup', onMouseUp)
     }

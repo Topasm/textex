@@ -1093,7 +1093,7 @@ body,
   position: absolute;
   top: 0;
   bottom: 0;
-  right: -4px;
+  /* left is set via inline style to match sidebar width */
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease;
@@ -1103,13 +1103,19 @@ body,
    to prevent layout shift of the editor area when opening.
    Hovering the absolute sidebar child will maintain the :hover state on the wrapper. */
 
-.sidebar-wrapper.sidebar-auto-hide:hover .sidebar {
+.sidebar-wrapper.sidebar-auto-hide:hover .sidebar,
+.sidebar-wrapper.sidebar-auto-hide.sidebar-dragging .sidebar {
   transform: translateX(0);
   opacity: 1;
   pointer-events: auto;
 }
 
-.sidebar-wrapper.sidebar-auto-hide:hover .sidebar-resize-handle {
+.sidebar-wrapper.sidebar-auto-hide.sidebar-dragging .sidebar {
+  transition: none;
+}
+
+.sidebar-wrapper.sidebar-auto-hide:hover .sidebar-resize-handle,
+.sidebar-wrapper.sidebar-auto-hide.sidebar-dragging .sidebar-resize-handle {
   opacity: 1;
   pointer-events: auto;
 }
