@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAppStore } from '../store/useAppStore'
-import path from 'path'
 
 interface TodoLine {
     raw: string
@@ -46,7 +45,7 @@ export function TodoPanel() {
     const [exists, setExists] = useState(true)
     const [loading, setLoading] = useState(true)
 
-    const filePath = projectRoot ? path.join(projectRoot, 'TODO.md') : null
+    const filePath = projectRoot ? `${projectRoot}/TODO.md` : null
 
     const loadFile = useCallback(async () => {
         if (!filePath) return

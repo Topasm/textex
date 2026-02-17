@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAppStore } from '../store/useAppStore'
-import path from 'path'
 
 export function MemoPanel() {
     const projectRoot = useAppStore((s) => s.projectRoot)
@@ -9,7 +8,7 @@ export function MemoPanel() {
     const [loading, setLoading] = useState(true)
     const saveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
-    const filePath = projectRoot ? path.join(projectRoot, 'memo.md') : null
+    const filePath = projectRoot ? `${projectRoot}/memo.md` : null
 
     const loadFile = useCallback(async () => {
         if (!filePath) return
