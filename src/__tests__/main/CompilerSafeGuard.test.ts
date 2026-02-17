@@ -43,7 +43,7 @@ describe('compileLatex Loop Safeguard', () => {
         } as unknown as BrowserWindow
 
         // simulate sharedCompileLatex calling onLog
-        const compileSpy = vi.spyOn(sharedCompiler, 'compileLatex').mockImplementation(async (path, opts) => {
+        vi.spyOn(sharedCompiler, 'compileLatex').mockImplementation(async (path, opts) => {
             if (opts && opts.onLog) {
                 opts.onLog('test log')
             }
@@ -71,7 +71,7 @@ describe('compileLatex Loop Safeguard', () => {
         } as unknown as BrowserWindow
 
         // simulate sharedCompileLatex calling onLog
-        const compileSpy = vi.spyOn(sharedCompiler, 'compileLatex').mockImplementation(async (path, opts) => {
+        vi.spyOn(sharedCompiler, 'compileLatex').mockImplementation(async (path, opts) => {
             if (opts && opts.onLog) {
                 opts.onLog('test log')
             }

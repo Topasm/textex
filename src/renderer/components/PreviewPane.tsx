@@ -30,6 +30,11 @@ function PreviewPane() {
   const [highlightStyle, setHighlightStyle] = useState<React.CSSProperties | null>(null)
   const [pdfError, setPdfError] = useState<string | null>(null)
 
+  // Transient zoom state: CSS transform during wheel zoom for instant feedback
+  const [transientScale, setTransientScale] = useState<number | null>(null)
+  const transientTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingZoomRef = useRef<number | null>(null)
+
   // PDF search state
   const [searchVisible, setSearchVisible] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -65,19 +70,36 @@ function PreviewPane() {
     return () => observer.disconnect()
   }, [])
 
-  // Ctrl+scroll wheel zoom
+  // Ctrl+scroll wheel zoom — use CSS transform for instant feedback,
+  // then debounce the actual react-pdf re-render for performance
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
     const handler = (e: WheelEvent): void => {
       if (!(e.ctrlKey || e.metaKey)) return
       e.preventDefault()
+
       const s = useAppStore.getState()
-      if (e.deltaY < 0) {
-        s.zoomIn()
-      } else if (e.deltaY > 0) {
-        s.zoomOut()
-      }
+      const step = 10
+      // Use pending zoom as base if we're mid-scroll, otherwise current store value
+      const baseZoom = pendingZoomRef.current ?? s.zoomLevel
+      const newZoom =
+        e.deltaY < 0
+          ? Math.min(400, baseZoom + step)
+          : Math.max(25, baseZoom - step)
+      pendingZoomRef.current = newZoom
+
+      // Instant visual feedback via CSS transform
+      setTransientScale(newZoom / s.zoomLevel)
+
+      // Debounce the actual re-render
+      if (transientTimerRef.current) clearTimeout(transientTimerRef.current)
+      transientTimerRef.current = setTimeout(() => {
+        const finalZoom = pendingZoomRef.current ?? newZoom
+        pendingZoomRef.current = null
+        useAppStore.getState().setZoomLevel(finalZoom)
+        setTransientScale(null)
+      }, 150)
     }
     el.addEventListener('wheel', handler, { passive: false })
     return () => el.removeEventListener('wheel', handler)
@@ -192,6 +214,69 @@ function PreviewPane() {
     }, 1500)
     return () => clearTimeout(timer)
   }, [synctexHighlight])
+
+  // Sync buttons: PDF → Code (←) and Code → PDF (→)
+  const handleSyncToCode = useCallback(() => {
+    const filePath = useAppStore.getState().filePath
+    if (!filePath) return
+
+    const container = containerRef.current
+    if (!container) return
+
+    // Find the page most visible in the viewport
+    let bestPage: number | null = null
+    let bestVisibleArea = 0
+
+    const containerRect = container.getBoundingClientRect()
+    for (const [pageNum, info] of pageViewportsRef.current) {
+      const rect = info.element.getBoundingClientRect()
+      const overlapTop = Math.max(rect.top, containerRect.top)
+      const overlapBottom = Math.min(rect.bottom, containerRect.bottom)
+      const visibleHeight = Math.max(0, overlapBottom - overlapTop)
+      const overlapLeft = Math.max(rect.left, containerRect.left)
+      const overlapRight = Math.min(rect.right, containerRect.right)
+      const visibleWidth = Math.max(0, overlapRight - overlapLeft)
+      const area = visibleWidth * visibleHeight
+      if (area > bestVisibleArea) {
+        bestVisibleArea = area
+        bestPage = pageNum
+      }
+    }
+
+    if (bestPage === null) return
+
+    // Use center of the visible portion of the page
+    const info = pageViewportsRef.current.get(bestPage)
+    if (!info) return
+    const pageRect = info.element.getBoundingClientRect()
+    const centerX = (Math.max(pageRect.left, containerRect.left) + Math.min(pageRect.right, containerRect.right)) / 2 - pageRect.left
+    const centerY = (Math.max(pageRect.top, containerRect.top) + Math.min(pageRect.bottom, containerRect.bottom)) / 2 - pageRect.top
+
+    const pw = containerWidth
+      ? (containerWidth - 32) * (useAppStore.getState().zoomLevel / 100)
+      : 612
+    const scale = pw / 612
+    const pdfX = centerX / scale
+    const pdfY = centerY / scale
+
+    window.api.synctexInverse(filePath, bestPage, pdfX, pdfY).then((result) => {
+      if (result) {
+        useAppStore.getState().requestJumpToLine(result.line, result.column || 1)
+      }
+    })
+  }, [containerWidth])
+
+  const handleSyncToPdf = useCallback(() => {
+    const state = useAppStore.getState()
+    const filePath = state.filePath
+    if (!filePath) return
+
+    window.api.synctexForward(filePath, state.cursorLine).then((result) => {
+      if (result) {
+        useAppStore.getState().setSynctexHighlight(result)
+      }
+    })
+  }, [])
 
   // Ctrl+Click inverse SyncTeX handler
   const handleContainerClick = useCallback(
@@ -361,6 +446,13 @@ function PreviewPane() {
       ) : (
         <>
           <div className="zoom-toolbar">
+            <button onClick={handleSyncToCode} title="Sync PDF to Code" className="synctex-btn">
+              {'\u2190'}
+            </button>
+            <button onClick={handleSyncToPdf} title="Sync Code to PDF" className="synctex-btn">
+              {'\u2192'}
+            </button>
+            <span className="zoom-toolbar-separator" />
             <button onClick={() => useAppStore.getState().zoomOut()} disabled={zoomLevel <= 25} title="Zoom Out">
               -
             </button>
@@ -386,28 +478,40 @@ function PreviewPane() {
               <div className="preview-spinner" />
             </div>
           )}
-          <Document
-            file={pdfData}
-            onLoadSuccess={onDocumentLoadSuccess}
-            onLoadError={onDocumentLoadError}
-            loading={
-              <div className="preview-center">
-                <div>
-                  <div className="preview-spinner" />
-                  <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Loading PDF...</p>
-                </div>
-              </div>
+          <div
+            style={
+              transientScale != null
+                ? {
+                    transform: `scale(${transientScale})`,
+                    transformOrigin: 'top center',
+                    willChange: 'transform'
+                  }
+                : undefined
             }
           >
-            {Array.from({ length: numPages }, (_, i) => (
-              <Page
-                key={`page_${i + 1}`}
-                pageNumber={i + 1}
-                width={pageWidth}
-                onRenderSuccess={handlePageRenderSuccess(i + 1)}
-              />
-            ))}
-          </Document>
+            <Document
+              file={pdfData}
+              onLoadSuccess={onDocumentLoadSuccess}
+              onLoadError={onDocumentLoadError}
+              loading={
+                <div className="preview-center">
+                  <div>
+                    <div className="preview-spinner" />
+                    <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Loading PDF...</p>
+                  </div>
+                </div>
+              }
+            >
+              {Array.from({ length: numPages }, (_, i) => (
+                <Page
+                  key={`page_${i + 1}`}
+                  pageNumber={i + 1}
+                  width={pageWidth}
+                  onRenderSuccess={handlePageRenderSuccess(i + 1)}
+                />
+              ))}
+            </Document>
+          </div>
           {pdfError && (
             <div className="preview-center preview-error" style={{ position: 'absolute', top: 40, left: 0, right: 0 }}>
               <p>Failed to load PDF: {pdfError}</p>

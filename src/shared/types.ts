@@ -124,6 +124,8 @@ export interface RecentProject {
   path: string
   name: string
   lastOpened: string
+  tag?: string
+  pinned?: boolean
 }
 
 export interface UserSettings {
@@ -144,9 +146,7 @@ export interface UserSettings {
   autoHideSidebar?: boolean
   wordWrap?: boolean
   formatOnSave?: boolean
-  statusBarShowLsp?: boolean
-  statusBarShowSpellCheck?: boolean
-  statusBarShowCursorPosition?: boolean
+  showStatusBar?: boolean
   recentProjects?: RecentProject[]
 }
 

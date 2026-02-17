@@ -44,6 +44,10 @@ export interface ElectronAPI {
   openFile(): Promise<OpenFileResult | null>
   saveFile(content: string, filePath: string): Promise<SaveResult>
   saveFileAs(content: string): Promise<SaveAsResult | null>
+  createTemplateProject(
+    templateName: string,
+    content: string
+  ): Promise<{ projectPath: string; filePath: string } | null>
   readFile(filePath: string): Promise<OpenFileResult>
   openDirectory(): Promise<string | null>
   readDirectory(dirPath: string): Promise<DirectoryEntry[]>

@@ -1,14 +1,14 @@
 import { useCallback } from 'react'
 import { useAppStore } from '../store/useAppStore'
 import { templates } from '../data/templates'
+import { openProject } from '../utils/openProject'
 
 function TemplateGallery() {
   const isOpen = useAppStore((s) => s.isTemplateGalleryOpen)
   const setOpen = useAppStore((s) => s.setTemplateGalleryOpen)
 
   const handleSelect = useCallback(
-    async (content: string) => {
-      // Save as new file from template
+    async (templateName: string, content: string) => {
       try {
         const settings = useAppStore.getState().settings
         const finalContent = content
@@ -16,10 +16,9 @@ function TemplateGallery() {
           .replace(/{{EMAIL}}/g, settings.email || 'your.email@example.com')
           .replace(/{{AFFILIATION}}/g, settings.affiliation || 'Institution')
 
-        const result = await window.api.saveFileAs(finalContent)
+        const result = await window.api.createTemplateProject(templateName, finalContent)
         if (result) {
-          useAppStore.getState().openFileInTab(result.filePath, finalContent)
-          useAppStore.getState().setDirty(false)
+          await openProject(result.projectPath)
         }
       } catch {
         // user cancelled
@@ -51,7 +50,7 @@ function TemplateGallery() {
             <div
               key={t.name}
               className="template-card"
-              onClick={() => handleSelect(t.content)}
+              onClick={() => handleSelect(t.name, t.content)}
             >
               <h3>{t.name}</h3>
               <p>{t.description}</p>

@@ -16,6 +16,8 @@ contextBridge.exposeInMainWorld('api', {
   openFile: () => ipcRenderer.invoke('fs:open'),
   saveFile: (content: string, filePath: string) => ipcRenderer.invoke('fs:save', content, filePath),
   saveFileAs: (content: string) => ipcRenderer.invoke('fs:save-as', content),
+  createTemplateProject: (templateName: string, content: string) =>
+    ipcRenderer.invoke('fs:create-template-project', templateName, content),
   readFile: (filePath: string) => ipcRenderer.invoke('fs:read-file', filePath),
   openDirectory: () => ipcRenderer.invoke('fs:open-directory'),
   readDirectory: (dirPath: string) => ipcRenderer.invoke('fs:read-directory', dirPath),

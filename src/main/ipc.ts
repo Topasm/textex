@@ -110,6 +110,27 @@ export function registerIpcHandlers(win: BrowserWindow): void {
     return { filePath: result.filePath }
   })
 
+  ipcMain.handle('fs:create-template-project', async (_event, templateName: string, content: string) => {
+    const defaultName = templateName.toLowerCase().replace(/[\s/\\]+/g, '-')
+    const result = await dialog.showSaveDialog(currentWindow!, {
+      title: 'Create Project Folder',
+      defaultPath: defaultName,
+      buttonLabel: 'Create Project'
+    })
+
+    if (result.canceled || !result.filePath) {
+      return null
+    }
+
+    const projectDir = result.filePath
+    const mainTexPath = path.join(projectDir, 'main.tex')
+
+    await fs.mkdir(projectDir, { recursive: true })
+    await fs.writeFile(mainTexPath, content, 'utf-8')
+
+    return { projectPath: projectDir, filePath: mainTexPath }
+  })
+
   ipcMain.handle('fs:read-file', async (_event, filePath: string) => {
     const validPath = validateFilePath(filePath)
     const buffer = await fs.readFile(validPath)

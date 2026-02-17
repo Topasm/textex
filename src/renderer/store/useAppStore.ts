@@ -55,9 +55,7 @@ export interface UserSettings {
   autoHideSidebar: boolean
 
   // Status Bar
-  statusBarShowLsp: boolean
-  statusBarShowSpellCheck: boolean
-  statusBarShowCursorPosition: boolean
+  showStatusBar: boolean
 
   // Bibliography grouping
   bibGroupMode: 'flat' | 'author' | 'year' | 'type' | 'custom'
@@ -81,9 +79,7 @@ const defaultSettings: UserSettings = {
   aiProvider: '',
   aiModel: '',
   autoHideSidebar: false,
-  statusBarShowLsp: true,
-  statusBarShowSpellCheck: true,
-  statusBarShowCursorPosition: true,
+  showStatusBar: true,
   bibGroupMode: 'flat'
 }
 

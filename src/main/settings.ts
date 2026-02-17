@@ -47,11 +47,14 @@ export async function saveSettings(partial: Partial<UserSettings>): Promise<User
 export async function addRecentProject(projectPath: string): Promise<UserSettings> {
   const current = await loadSettings()
   const existing = current.recentProjects ?? []
+  const prev = existing.find((p) => p.path === projectPath)
   const filtered = existing.filter((p) => p.path !== projectPath)
   const entry = {
     path: projectPath,
     name: path.basename(projectPath),
-    lastOpened: new Date().toISOString()
+    lastOpened: new Date().toISOString(),
+    ...(prev?.tag ? { tag: prev.tag } : {}),
+    ...(prev?.pinned ? { pinned: prev.pinned } : {})
   }
   const updated = [entry, ...filtered].slice(0, 10)
   return saveSettings({ recentProjects: updated })

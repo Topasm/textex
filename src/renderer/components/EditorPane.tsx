@@ -287,6 +287,65 @@ function EditorPane() {
       // Reset history mode when closing
       if (showHistory) setHistoryMode(false);
     });
+
+    // Filter command palette: remove IDE actions not relevant for LaTeX editing
+    const hiddenActions = new Set([
+      // Go-to / peek / references (not useful without full LSP)
+      'editor.action.goToDeclaration',
+      'editor.action.goToImplementation',
+      'editor.action.goToReferences',
+      'editor.action.goToTypeDefinition',
+      'editor.action.peekDefinition',
+      'editor.action.peekImplementation',
+      'editor.action.peekReferences',
+      'editor.action.peekTypeDefinition',
+      'editor.action.revealDefinition',
+      'editor.action.revealDeclaration',
+      'editor.action.referenceSearch.trigger',
+      'editor.action.showDefinitionPreviewHover',
+      // Refactoring / code actions
+      'editor.action.rename',
+      'editor.action.refactor',
+      'editor.action.sourceAction',
+      'editor.action.organizeImports',
+      'editor.action.autoFix',
+      'editor.action.fixAll',
+      'editor.action.codeAction',
+      'editor.action.quickFix',
+      // Suggestions / hints not relevant
+      'editor.action.triggerParameterHints',
+      'editor.action.inlineSuggest.trigger',
+      'editor.action.inlineSuggest.commit',
+      'editor.action.inlineSuggest.hide',
+      'editor.action.inlineSuggest.showNext',
+      'editor.action.inlineSuggest.showPrevious',
+      // Debug / internal
+      'editor.action.inspectTokens',
+      'editor.action.forceRetokenize',
+      'editor.action.toggleTabFocusMode',
+      'editor.action.toggleRenderWhitespace',
+      'editor.action.accessibilityHelp',
+      'editor.action.showAccessibilityHelp',
+      // Quick outline (no symbol provider for LaTeX by default)
+      'editor.action.quickOutline',
+      // Linked editing (for HTML-like tag renaming)
+      'editor.action.linkedEditing',
+      // Format (we have our own Shift+Alt+F formatter)
+      'editor.action.formatDocument',
+      'editor.action.formatSelection',
+      // Hover
+      'editor.action.showHover',
+    ])
+
+    const editorAny = editor as unknown as {
+      getSupportedActions(): { id: string }[]
+    }
+    if (typeof editorAny.getSupportedActions === 'function') {
+      const origGetSupportedActions = editorAny.getSupportedActions.bind(editorAny)
+      editorAny.getSupportedActions = () => {
+        return origGetSupportedActions().filter(a => !hiddenActions.has(a.id))
+      }
+    }
   }
 
   useEffect(() => {

@@ -47,6 +47,7 @@ function App() {
   const zoteroEnabled = useAppStore((s) => s.settings.zoteroEnabled)
   const zoteroPort = useAppStore((s) => s.settings.zoteroPort)
   const autoHideSidebar = useAppStore((s) => s.settings.autoHideSidebar)
+  const showStatusBar = useAppStore((s) => s.settings.showStatusBar)
   const prevFilePathRef = useRef<string | null>(null)
 
   const [isZoteroModalOpen, setIsZoteroModalOpen] = useState(false)
@@ -659,6 +660,26 @@ function App() {
                       {tab.label}
                     </button>
                   ))}
+                  <button
+                    className="sidebar-pin-btn"
+                    title={autoHideSidebar ? 'Pin sidebar' : 'Unpin sidebar (auto-hide)'}
+                    onClick={() => {
+                      const store = useAppStore.getState()
+                      store.updateSetting('autoHideSidebar', !autoHideSidebar)
+                      if (autoHideSidebar && !isSidebarOpen) {
+                        // Pinning: ensure sidebar stays visible
+                        store.toggleSidebar()
+                      }
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                      {autoHideSidebar ? (
+                        <path d="M9.828.722a.5.5 0 0 1 .354.146l4.95 4.95a.5.5 0 0 1 0 .707c-.48.48-1.072.588-1.503.588-.177 0-.335-.018-.46-.039l-3.134 3.134a6 6 0 0 1 .16 1.013c.046.702-.032 1.687-.72 2.375a.5.5 0 0 1-.707 0l-2.829-2.828-3.182 3.182a.5.5 0 0 1-.707-.708l3.182-3.181L2.4 7.328a.5.5 0 0 1 0-.707c.688-.688 1.673-.767 2.375-.72a6 6 0 0 1 1.013.16l3.134-3.133a3 3 0 0 1-.04-.461c0-.43.109-1.022.589-1.503a.5.5 0 0 1 .353-.146z" transform="rotate(45, 8, 8)" />
+                      ) : (
+                        <path d="M9.828.722a.5.5 0 0 1 .354.146l4.95 4.95a.5.5 0 0 1 0 .707c-.48.48-1.072.588-1.503.588-.177 0-.335-.018-.46-.039l-3.134 3.134a6 6 0 0 1 .16 1.013c.046.702-.032 1.687-.72 2.375a.5.5 0 0 1-.707 0l-2.829-2.828-3.182 3.182a.5.5 0 0 1-.707-.708l3.182-3.181L2.4 7.328a.5.5 0 0 1 0-.707c.688-.688 1.673-.767 2.375-.72a6 6 0 0 1 1.013.16l3.134-3.133a3 3 0 0 1-.04-.461c0-.43.109-1.022.589-1.503a.5.5 0 0 1 .353-.146z" />
+                      )}
+                    </svg>
+                  </button>
                 </div>
                 <div className="sidebar-content">
                   {sidebarView === 'files' && <FileTree />}
@@ -696,7 +717,7 @@ function App() {
         </div>
       )}
       <LogPanel />
-      <StatusBar />
+      {showStatusBar && <StatusBar />}
       <TemplateGallery />
     </div>
   )
