@@ -75,6 +75,13 @@ electron-builder config (NSIS/DMG/AppImage), Tectonic binaries for all platforms
 - **Inverse search flash** — yellow fade-out line decoration in `usePendingJump.ts` on PDF→source jumps
 - **Enhanced Problems Panel** — diagnostics grouped by file with collapsible headers, severity filter buttons, problem count in tab label
 
+### Phase 14: Preferences & Formatting (5/5)
+- **Settings Store** — `localStorage` persistence, typed settings object, immediate apply
+- **Settings Modal** — UI for theme, font size, editor options, system toggles
+- **Prettier Integration** — `prettier/standalone` + `prettier-plugin-latex` for code formatting
+- **Format on Save** — auto-format on save based on settings
+- **Editor Integration** — dynamic font size/word wrap/theme updates
+
 ---
 
 ## Remaining (7 tasks)

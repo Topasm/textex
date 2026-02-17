@@ -6,7 +6,7 @@ The application uses a horizontal split-pane layout:
 
 ```
 +----------------------------------------------------------+
-|  Toolbar: [Open Ctrl+O] [Save Ctrl+S] [Compile] [Log]   |
+|  Toolbar: [Open Ctrl+O] [Save Ctrl+S] [Compile] [Log] [Settings] |
 |           file.tex (dot = dirty)                         |
 +----------------------------+-----------------------------+
 |                            |                             |
@@ -37,6 +37,7 @@ ErrorBoundary
     |   +-- PreviewPane
     +-- LogPanel
     +-- StatusBar
+    +-- SettingsModal (Overlay)
 ```
 
 ---
@@ -64,6 +65,7 @@ ErrorBoundary
 | Save As | Calls `window.api.saveFileAs(content)` | `Ctrl/Cmd+Shift+S` |
 | Compile | Triggers manual compilation | `Ctrl/Cmd+Enter` |
 | Toggle Log | Shows/hides the LogPanel | `Ctrl/Cmd+L` |
+| Settings | Opens Settings Modal | -- |
 
 Each button displays its keyboard shortcut as a `<kbd>` element.
 
@@ -132,6 +134,13 @@ highlights with a yellow background when the file is dirty.
   - Spell check toggle: `Spell: On/Off` (clickable)
   - Cursor position (`Ln X, Col Y`) from Monaco's `onDidChangeCursorPosition`.
 
+### `SettingsModal.tsx`
+- Modal overlay for application settings.
+- **Appearance**: Theme selection (System/Light/Dark), Font Size slider.
+- **Editor**: Format on Save, Word Wrap, Mimimap toggles.
+- **System**: Auto-Compile, Spell Check, LSP, Git toggles.
+- Persistence: Updates `settings` slice in Zustand store, saved to `localStorage`.
+
 ---
 
 ## Zustand Store Shape
@@ -155,6 +164,9 @@ interface AppState {
   cursorLine: number
   cursorColumn: number
 
+  // Settings
+  settings: UserSettings
+
   // Actions
   setContent: (content: string) => void
   setFilePath: (path: string | null) => void
@@ -166,6 +178,7 @@ interface AppState {
   toggleLogPanel: () => void
   setLogPanelOpen: (open: boolean) => void
   setCursorPosition: (line: number, column: number) => void
+  updateSetting: <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => void
 }
 ```
 

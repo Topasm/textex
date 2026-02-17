@@ -21,6 +21,7 @@ A self-contained desktop LaTeX editor built on Electron. Split-pane interface wi
 - **Spell checker** — inline spell checking with quick-fix suggestions
 - **SyncTeX** — click in the editor to jump to the PDF position, or Ctrl+Click in the PDF to jump to source
 - **LSP integration** — bundled [TexLab](https://github.com/latex-lsp/texlab) language server for real-time diagnostics, completions, hover docs, go-to-definition, document outline, rename, and formatting
+- **Code Formatting** — Prettier-based LaTeX formatting (Shift+Alt+F) with "Format on Save" option
 - **Export formats** — export to HTML, DOCX, ODT, and EPUB via Pandoc
 - **CLI tools** — headless compile, init, export, and template listing via `textex` command
 - **MCP server** — `compile_latex` and `get_compile_log` tools for AI integration
@@ -71,6 +72,7 @@ chmod +x TextEx-1.0.0.AppImage
 | `Ctrl/Cmd + Tab` | Next tab |
 | `Ctrl/Cmd + Shift + Tab` | Previous tab |
 | `Ctrl/Cmd + Shift + N` | New from template |
+| `Shift + Alt + F` | Format document |
 
 ## Development
 

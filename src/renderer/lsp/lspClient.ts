@@ -197,6 +197,15 @@ async function doInitialize(workspaceRoot: string): Promise<void> {
         foldingRange: {
           dynamicRegistration: false,
           lineFoldingOnly: true
+        },
+        semanticTokens: {
+          dynamicRegistration: false,
+          requests: {
+            range: false,
+            full: { delta: false }
+          },
+          tokenTypes: ['type', 'class', 'enum', 'interface', 'struct', 'typeParameter', 'parameter', 'variable', 'property', 'enumMember', 'event', 'function', 'method', 'macro', 'keyword', 'modifier', 'comment', 'string', 'number', 'regexp', 'operator'],
+          tokenModifiers: ['declaration', 'definition', 'readonly', 'static', 'deprecated', 'abstract', 'async', 'modification', 'documentation', 'defaultLibrary']
         }
       },
       workspace: {
@@ -521,6 +530,33 @@ function registerProviders(monaco: MonacoInstance): void {
           return []
         }
       }
+    })
+    disposables.push(d)
+  }
+
+  // Semantic tokens provider
+  if (serverCapabilities.semanticTokensProvider) {
+    const provider = serverCapabilities.semanticTokensProvider as { legend: { tokenTypes: string[]; tokenModifiers: string[] } }
+    const legend = provider.legend || { tokenTypes: [], tokenModifiers: [] }
+
+    const d = monaco.languages.registerDocumentSemanticTokensProvider('latex', {
+      getLegend: () => legend,
+      provideDocumentSemanticTokens: async (model) => {
+        if (!initialized) return null
+        try {
+          const result = (await sendRequest('textDocument/semanticTokens/full', {
+            textDocument: { uri: model.uri.toString() }
+          })) as { data: number[] } | null
+
+          if (!result || !result.data) return null
+          return {
+            data: new Uint32Array(result.data)
+          }
+        } catch {
+          return null
+        }
+      },
+      releaseDocumentSemanticTokens: () => { }
     })
     disposables.push(d)
   }
