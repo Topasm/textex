@@ -136,7 +136,8 @@ function EditorPane() {
 
           // Braces and brackets
           [/[{}]/, 'delimiter.curly'],
-          [/[\[\]]/, 'delimiter.square'],
+          [/\[/, 'delimiter.square'],
+          [/\]/, 'delimiter.square'],
 
           // Special characters
           [/[&~#^_]/, 'keyword'],

@@ -42,6 +42,7 @@ export function TodoPanel() {
     const projectRoot = useAppStore((s) => s.projectRoot)
     const [lines, setLines] = useState<TodoLine[]>([])
     const [rawContent, setRawContent] = useState('')
+    const [newItem, setNewItem] = useState('')
     const [exists, setExists] = useState(true)
     const [loading, setLoading] = useState(true)
 
@@ -114,6 +115,25 @@ export function TodoPanel() {
         }
     }, [filePath])
 
+    const handleAddItem = useCallback(async () => {
+        if (!newItem.trim() || !filePath) return
+
+        const lineToAdd = `- [ ] ${newItem.trim()}`
+        // Ensure there's a newline before if the file isn't empty and doesn't end with one
+        const prefix = rawContent && !rawContent.endsWith('\n') ? '\n' : ''
+        const updated = rawContent + prefix + lineToAdd + '\n'
+
+        setRawContent(updated)
+        setLines(parseMarkdown(updated))
+        setNewItem('')
+
+        try {
+            await window.api.saveFile(updated, filePath)
+        } catch {
+            // rollback or silent fail
+        }
+    }, [newItem, filePath, rawContent])
+
     if (!projectRoot) {
         return (
             <div className="todo-panel todo-panel--empty">
@@ -176,13 +196,28 @@ export function TodoPanel() {
                     )
                 }
 
-                // Plain text
                 return (
                     <p key={idx} className="todo-panel__text">
                         {line.label}
                     </p>
                 )
             })}
+
+            <div className="todo-panel__input-row">
+                <input
+                    type="text"
+                    className="todo-panel__input"
+                    value={newItem}
+                    onChange={(e) => setNewItem(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleAddItem()
+                    }}
+                    placeholder="Add a new task..."
+                />
+                <button className="todo-panel__add-btn" onClick={handleAddItem}>
+                    Add
+                </button>
+            </div>
         </div>
     )
 }
