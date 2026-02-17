@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow } from 'electron'
+import { ipcMain, dialog, BrowserWindow, shell } from 'electron'
 import path from 'path'
 import fs from 'fs/promises'
 import { compileLatex, cancelCompilation } from './compiler'
@@ -385,4 +385,9 @@ export function registerIpcHandlers(win: BrowserWindow): void {
   ipcMain.handle('zotero:export-bibtex', (_e, citekeys: string[], port?: number) =>
     zoteroExportBibtex(citekeys, port)
   )
+  // ---- Shell ----
+  ipcMain.handle('shell:open-external', async (_event, url: string) => {
+    await shell.openExternal(url)
+    return { success: true }
+  })
 }

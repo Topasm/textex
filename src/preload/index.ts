@@ -177,5 +177,8 @@ contextBridge.exposeInMainWorld('api', {
   zoteroSearch: (term: string, port?: number) => ipcRenderer.invoke('zotero:search', term, port),
   zoteroCiteCAYW: (port?: number) => ipcRenderer.invoke('zotero:cite-cayw', port),
   zoteroExportBibtex: (citekeys: string[], port?: number) =>
-    ipcRenderer.invoke('zotero:export-bibtex', citekeys, port)
+    ipcRenderer.invoke('zotero:export-bibtex', citekeys, port),
+
+  // Shell
+  openExternal: (url: string) => ipcRenderer.invoke('shell:open-external', url)
 })

@@ -27,6 +27,7 @@ To configure this:
 3.  Select a reference using `Up`/`Down` arrows.
 4.  Press `Enter` to insert the citation key (e.g., `\cite{knuth1984}`).
     -   Press `Ctrl+Enter` (or `Cmd+Enter`) to insert immediately.
+5.  **Show in Zotero:** Hover over a result and click **Show in Zotero ↗** to open the paper in your Zotero library.
 
 ### Inserting Citations (Zotero Picker)
 1.  Press `Ctrl+Shift+C` to open the native "Cite as You Write" (CAYW) picker window from Zotero.

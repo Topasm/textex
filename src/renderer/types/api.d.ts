@@ -181,6 +181,9 @@ export interface ElectronAPI {
   zoteroSearch(term: string, port?: number): Promise<ZoteroSearchResult[]>
   zoteroCiteCAYW(port?: number): Promise<string>
   zoteroExportBibtex(citekeys: string[], port?: number): Promise<string>
+
+  // Shell
+  openExternal(url: string): Promise<{ success: boolean }>
 }
 
 export interface ZoteroSearchResult {

@@ -144,7 +144,19 @@ export const ZoteroCiteModal: React.FC<ZoteroCiteModalProps> = ({ isOpen, onClos
                                     <div className="zotero-item-meta">
                                         {item.author} • {item.year} • <span className="zotero-item-type">{item.type}</span>
                                     </div>
-                                    <div className="zotero-item-citekey">@{item.citekey}</div>
+                                    <div className="zotero-item-citekey">
+                                        @{item.citekey}
+                                        <button
+                                            className="zotero-show-link"
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                window.api.openExternal(`zotero://select/items/@${item.citekey}`)
+                                            }}
+                                            title="Show in Zotero"
+                                        >
+                                            Show in Zotero ↗
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         ))}
