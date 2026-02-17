@@ -19,6 +19,8 @@ A self-contained desktop LaTeX editor built on Electron. Split-pane interface wi
 - **BibTeX bibliography panel** — dedicated panel for managing bibliography entries with citation auto-completion
 - **Git integration** — view status, stage files, and commit directly from a sidebar panel
 - **Spell checker** — inline spell checking with quick-fix suggestions
+- **SyncTeX** — click in the editor to jump to the PDF position, or Ctrl+Click in the PDF to jump to source
+- **LSP integration** — bundled [TexLab](https://github.com/latex-lsp/texlab) language server for real-time diagnostics, completions, hover docs, go-to-definition, document outline, rename, and formatting
 - **Export formats** — export to HTML, DOCX, ODT, and EPUB via Pandoc
 - **CLI tools** — headless compile, init, export, and template listing via `textex` command
 - **MCP server** — `compile_latex` and `get_compile_log` tools for AI integration
@@ -181,6 +183,8 @@ See [`docs/`](docs/) for detailed documentation:
 - **react-pdf / PDF.js** — PDF rendering
 - **Zustand** — state management
 - **Tectonic 0.15.0** — LaTeX engine (bundled, [continuous build](https://github.com/tectonic-typesetting/tectonic/releases/tag/continuous))
+- **TexLab 5.25.1** — LaTeX language server (bundled)
+- **vscode-jsonrpc** — JSON-RPC transport for LSP
 - **electron-vite** — build tooling
 - **electron-builder** — packaging
 - **electron-updater** — auto-updates
@@ -211,6 +215,8 @@ TextEx is built on these open-source projects:
 | [Commander.js](https://github.com/tj/commander.js) | CLI argument parsing | MIT |
 | [chokidar](https://github.com/paulmillr/chokidar) | File watching for CLI `--watch` mode | MIT |
 | [MCP SDK](https://github.com/modelcontextprotocol/sdk) | Model Context Protocol server framework | MIT |
+| [TexLab](https://github.com/latex-lsp/texlab) | LaTeX language server (diagnostics, completions, hover, rename) | GPL-3.0 |
+| [vscode-jsonrpc](https://github.com/microsoft/vscode-languageserver-node) | JSON-RPC transport for LSP communication | MIT |
 | [KaTeX](https://katex.org/) | Math typesetting for previews | MIT |
 
 ## License
