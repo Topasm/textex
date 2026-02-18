@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useDeferredValue, useEffect, useCallback } from 'react'
 import { useAppStore } from '../../store/useAppStore'
 
 export interface PdfSearchState {
@@ -23,6 +23,8 @@ export function usePdfSearch(
 
   const [searchMatches, setSearchMatches] = useState<HTMLElement[]>([])
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0)
+  // Defer search query so DOM scanning doesn't block input responsiveness
+  const deferredSearchQuery = useDeferredValue(searchQuery)
 
   // Keyboard handler for Ctrl+F search toggle
   useEffect(() => {
@@ -54,13 +56,13 @@ export function usePdfSearch(
       el.classList.remove('pdf-search-highlight', 'pdf-search-current')
     })
 
-    if (!searchQuery || !searchVisible) {
+    if (!deferredSearchQuery || !searchVisible) {
       setSearchMatches([])
       setCurrentMatchIndex(0)
       return
     }
 
-    const query = searchQuery.toLowerCase()
+    const query = deferredSearchQuery.toLowerCase()
     const matches: HTMLElement[] = []
 
     const spans = container.querySelectorAll('.react-pdf__Page__textContent span')
@@ -80,7 +82,7 @@ export function usePdfSearch(
       matches[0].classList.add('pdf-search-current')
       matches[0].scrollIntoView({ behavior: 'smooth', block: 'center' })
     }
-  }, [searchQuery, searchVisible, numPages, containerRef])
+  }, [deferredSearchQuery, searchVisible, numPages, containerRef])
 
   const handleSearchNext = useCallback(() => {
     if (searchMatches.length === 0) return

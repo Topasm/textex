@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from 'react'
+import React, { useEffect, useRef, useState, useMemo } from 'react'
 import { useAppStore } from '../store/useAppStore'
 
 type SeverityFilter = 'error' | 'warning' | 'info'
@@ -137,7 +137,7 @@ interface StructuredProblemsProps {
   listRef: React.RefObject<HTMLDivElement | null>
 }
 
-function StructuredProblems({
+const StructuredProblems = React.memo(function StructuredProblems({
   diagnostics,
   activeFilters,
   collapsedFiles,
@@ -245,6 +245,6 @@ function StructuredProblems({
       )}
     </div>
   )
-}
+})
 
 export default LogPanel

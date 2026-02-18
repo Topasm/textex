@@ -191,16 +191,22 @@ function App() {
         onExport={handleExport}
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
-      {isSettingsOpen && <SettingsModal onClose={() => setIsSettingsOpen(false)} />}
-      <DraftModal
-        isOpen={isDraftModalOpen}
-        onClose={() => {
-          setIsDraftModalOpen(false)
-          setDraftPrefill(undefined)
-        }}
-        onInsert={handleDraftInsert}
-        initialPrompt={draftPrefill}
-      />
+      {isSettingsOpen && (
+        <Suspense fallback={null}>
+          <SettingsModal onClose={() => setIsSettingsOpen(false)} />
+        </Suspense>
+      )}
+      <Suspense fallback={null}>
+        <DraftModal
+          isOpen={isDraftModalOpen}
+          onClose={() => {
+            setIsDraftModalOpen(false)
+            setDraftPrefill(undefined)
+          }}
+          onInsert={handleDraftInsert}
+          initialPrompt={draftPrefill}
+        />
+      </Suspense>
       <UpdateNotification />
       {showHomeScreen ? (
         <HomeScreen
@@ -295,7 +301,9 @@ function App() {
       )}
       <LogPanel />
       {showStatusBar && <StatusBar />}
-      <TemplateGallery />
+      <Suspense fallback={null}>
+        <TemplateGallery />
+      </Suspense>
     </div>
   )
 }

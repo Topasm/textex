@@ -1,4 +1,4 @@
-import { useMemo, useRef, useCallback, useState } from 'react'
+import { useMemo, useRef, useCallback, useState, useEffect } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import { useAppStore } from '../store/useAppStore'
 import PdfSearchBar from './PdfSearchBar'
@@ -21,6 +21,13 @@ interface PageViewportInfo {
   pageHeight: number // actual PDF page height in points
 }
 
+/** Number of pages to render beyond the visible viewport in each direction. */
+const PAGE_OVERSCAN = 2
+/** Estimated page height in pixels when actual height is unknown. */
+const ESTIMATED_PAGE_HEIGHT = 1100
+/** Debounce scroll events to reduce visible-page recalculation frequency. */
+const SCROLL_DEBOUNCE_MS = 100
+
 function PreviewPane() {
   const pdfBase64 = useAppStore((s) => s.pdfBase64)
   const compileStatus = useAppStore((s) => s.compileStatus)
@@ -31,6 +38,12 @@ function PreviewPane() {
   const [numPages, setNumPages] = useState(0)
   const [pdfError, setPdfError] = useState<string | null>(null)
   const pageViewportsRef = useRef<Map<number, PageViewportInfo>>(new Map())
+
+  // Virtual scrolling: track which pages are visible
+  const [visibleRange, setVisibleRange] = useState<{ start: number; end: number }>({ start: 1, end: 5 })
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Cache of rendered page heights for accurate positioning
+  const pageHeightsRef = useRef<Map<number, number>>(new Map())
 
   // Extracted hooks
   const { containerWidth, ctrlHeld } = useContainerSize(containerRef)
@@ -50,10 +63,79 @@ function PreviewPane() {
     setSearchQuery
   } = usePdfSearch(containerRef, numPages)
 
-  // Track scroll position continuously
+  /** Calculate estimated height for a page. */
+  const getPageHeight = useCallback(
+    (pageNum: number): number => {
+      const cached = pageHeightsRef.current.get(pageNum)
+      if (cached) return cached
+      // Estimate based on A4 aspect ratio and current page width
+      const pw = containerWidth ? (containerWidth - 32) * (zoomLevel / 100) : 595
+      return pw * (842 / 595) // A4 aspect ratio
+    },
+    [containerWidth, zoomLevel]
+  )
+
+  /** Compute which pages are currently in the viewport. */
+  const computeVisiblePages = useCallback(() => {
+    const container = containerRef.current
+    if (!container || numPages === 0) return
+
+    const scrollTop = container.scrollTop
+    const viewportHeight = container.clientHeight
+
+    let cumHeight = 0
+    let startPage = 1
+    let endPage = numPages
+
+    // Find first visible page
+    for (let i = 1; i <= numPages; i++) {
+      const ph = getPageHeight(i) + 16 // 16px gap between pages
+      if (cumHeight + ph > scrollTop) {
+        startPage = i
+        break
+      }
+      cumHeight += ph
+    }
+
+    // Find last visible page
+    cumHeight = 0
+    for (let i = 1; i <= numPages; i++) {
+      cumHeight += getPageHeight(i) + 16
+      if (cumHeight >= scrollTop + viewportHeight) {
+        endPage = i
+        break
+      }
+    }
+
+    // Add overscan
+    const start = Math.max(1, startPage - PAGE_OVERSCAN)
+    const end = Math.min(numPages, endPage + PAGE_OVERSCAN)
+
+    setVisibleRange((prev) => {
+      if (prev.start === start && prev.end === end) return prev
+      return { start, end }
+    })
+  }, [numPages, getPageHeight])
+
+  // Track scroll position and update visible pages with debouncing
   const handleScroll = useCallback(() => {
     if (containerRef.current) {
       scrollPositionRef.current = containerRef.current.scrollTop
+    }
+
+    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current)
+    scrollTimerRef.current = setTimeout(computeVisiblePages, SCROLL_DEBOUNCE_MS)
+  }, [computeVisiblePages])
+
+  // Recalculate visible pages when zoom or page count changes
+  useEffect(() => {
+    computeVisiblePages()
+  }, [computeVisiblePages, zoomLevel])
+
+  // Cleanup scroll timer
+  useEffect(() => {
+    return () => {
+      if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current)
     }
   }, [])
 
@@ -71,6 +153,8 @@ function PreviewPane() {
     setNumPages(numPages)
     setPdfError(null)
     pageViewportsRef.current.clear()
+    pageHeightsRef.current.clear()
+    setVisibleRange({ start: 1, end: Math.min(numPages, 5) })
     // Restore scroll position after new PDF renders
     requestAnimationFrame(() => {
       if (containerRef.current) {
@@ -111,12 +195,26 @@ function PreviewPane() {
           pageWidth: actualPageWidth,
           pageHeight: actualPageHeight
         })
+        // Cache the rendered height for virtual scrolling calculations
+        pageHeightsRef.current.set(pageNumber, actualPageHeight * scale)
       }
     },
     [containerWidth, zoomLevel]
   )
 
   const pageWidth = containerWidth ? (containerWidth - 32) * (zoomLevel / 100) : undefined
+
+  // Calculate total content height and page offsets for virtual scrolling placeholder
+  const { totalHeight, pageOffsets } = useMemo(() => {
+    const offsets = new Map<number, number>()
+    let total = 0
+    for (let i = 1; i <= numPages; i++) {
+      offsets.set(i, total)
+      const ph = pageHeightsRef.current.get(i) ?? (pageWidth ? pageWidth * (842 / 595) : ESTIMATED_PAGE_HEIGHT)
+      total += ph + 16 // 16px gap between pages
+    }
+    return { totalHeight: total, pageOffsets: offsets }
+  }, [numPages, pageWidth])
 
   // Always render the container so the ResizeObserver can attach and measure width.
   // Conditional content is rendered inside it.
@@ -179,14 +277,64 @@ function PreviewPane() {
                 </div>
               }
             >
-              {Array.from({ length: numPages }, (_, i) => (
-                <Page
-                  key={`page_${i + 1}`}
-                  pageNumber={i + 1}
-                  width={pageWidth}
-                  onRenderSuccess={handlePageRenderSuccess(i + 1)}
-                />
-              ))}
+              {/* Virtual scrolling: use a container with total height and only render visible pages */}
+              {numPages <= 10 ? (
+                // For small documents, render all pages (no virtualization overhead)
+                Array.from({ length: numPages }, (_, i) => (
+                  <Page
+                    key={`page_${i + 1}`}
+                    pageNumber={i + 1}
+                    width={pageWidth}
+                    onRenderSuccess={handlePageRenderSuccess(i + 1)}
+                  />
+                ))
+              ) : (
+                <div style={{ height: totalHeight, position: 'relative' }}>
+                  {Array.from({ length: numPages }, (_, i) => {
+                    const pageNum = i + 1
+                    const isVisible = pageNum >= visibleRange.start && pageNum <= visibleRange.end
+                    const offset = pageOffsets.get(pageNum) ?? 0
+                    const estimatedHeight =
+                      pageHeightsRef.current.get(pageNum) ??
+                      (pageWidth ? pageWidth * (842 / 595) : ESTIMATED_PAGE_HEIGHT)
+
+                    if (!isVisible) {
+                      // Placeholder for non-visible pages to maintain scroll position
+                      return (
+                        <div
+                          key={`page_placeholder_${pageNum}`}
+                          style={{
+                            position: 'absolute',
+                            top: offset,
+                            left: 0,
+                            right: 0,
+                            height: estimatedHeight
+                          }}
+                          data-page-number={pageNum}
+                        />
+                      )
+                    }
+
+                    return (
+                      <div
+                        key={`page_${pageNum}`}
+                        style={{
+                          position: 'absolute',
+                          top: offset,
+                          left: 0,
+                          right: 0
+                        }}
+                      >
+                        <Page
+                          pageNumber={pageNum}
+                          width={pageWidth}
+                          onRenderSuccess={handlePageRenderSuccess(pageNum)}
+                        />
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </Document>
           </div>
           {pdfError && (

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { subscribeWithSelector } from 'zustand/middleware'
+import { subscribeWithSelector, persist } from 'zustand/middleware'
 
 interface OpenFileData {
   content: string
@@ -44,139 +44,158 @@ interface EditorState {
 export type { OpenFileData }
 
 export const useEditorStore = create<EditorState>()(
-  subscribeWithSelector((set, get) => ({
-    filePath: null,
-    content: '',
-    isDirty: false,
-    openFiles: {},
-    activeFilePath: null,
-    cursorLine: 1,
-    cursorColumn: 1,
-    pendingJump: null,
-    _sessionOpenPaths: [],
-    _sessionActiveFile: null,
+  persist(
+    subscribeWithSelector((set, get) => ({
+      filePath: null,
+      content: '',
+      isDirty: false,
+      openFiles: {},
+      activeFilePath: null,
+      cursorLine: 1,
+      cursorColumn: 1,
+      pendingJump: null,
+      _sessionOpenPaths: [],
+      _sessionActiveFile: null,
 
-    setContent: (content) => {
-      const state = get()
-      const activeFile = state.activeFilePath
-      if (activeFile) {
-        const openFiles = { ...state.openFiles }
-        if (openFiles[activeFile]) {
-          openFiles[activeFile] = { ...openFiles[activeFile], content, isDirty: true }
-        }
-        set({ content, isDirty: true, openFiles })
-      } else {
-        set({ content, isDirty: true })
-      }
-    },
-    setFilePath: (filePath) => set({ filePath }),
-    setDirty: (isDirty) => {
-      const state = get()
-      const activeFile = state.activeFilePath
-      if (activeFile && state.openFiles[activeFile]) {
-        const openFiles = { ...state.openFiles }
-        openFiles[activeFile] = { ...openFiles[activeFile], isDirty }
-        set({ isDirty, openFiles })
-      } else {
-        set({ isDirty })
-      }
-    },
-
-    openFileInTab: (filePath, content) => {
-      const state = get()
-      const openFiles = { ...state.openFiles }
-      if (state.activeFilePath && openFiles[state.activeFilePath]) {
-        openFiles[state.activeFilePath] = {
-          ...openFiles[state.activeFilePath],
-          content: state.content,
-          cursorLine: state.cursorLine,
-          cursorColumn: state.cursorColumn
-        }
-      }
-      if (openFiles[filePath]) {
-        openFiles[filePath] = { ...openFiles[filePath], content, isDirty: false }
-      } else {
-        openFiles[filePath] = { content, isDirty: false, cursorLine: 1, cursorColumn: 1 }
-      }
-      set({
-        openFiles,
-        activeFilePath: filePath,
-        filePath,
-        content: openFiles[filePath].content,
-        isDirty: openFiles[filePath].isDirty,
-        cursorLine: openFiles[filePath].cursorLine,
-        cursorColumn: openFiles[filePath].cursorColumn
-      })
-    },
-    closeTab: (filePath) => {
-      const state = get()
-      const openFiles = { ...state.openFiles }
-      delete openFiles[filePath]
-      const remaining = Object.keys(openFiles)
-
-      if (state.activeFilePath === filePath) {
-        if (remaining.length > 0) {
-          const next = remaining[remaining.length - 1]
-          set({
-            openFiles,
-            activeFilePath: next,
-            filePath: next,
-            content: openFiles[next].content,
-            isDirty: openFiles[next].isDirty,
-            cursorLine: openFiles[next].cursorLine,
-            cursorColumn: openFiles[next].cursorColumn
-          })
+      setContent: (content) => {
+        const state = get()
+        const activeFile = state.activeFilePath
+        if (activeFile) {
+          const openFiles = { ...state.openFiles }
+          if (openFiles[activeFile]) {
+            openFiles[activeFile] = { ...openFiles[activeFile], content, isDirty: true }
+          }
+          set({ content, isDirty: true, openFiles })
         } else {
-          set({
-            openFiles,
-            activeFilePath: null,
-            filePath: null,
-            content: '',
-            isDirty: false
-          })
+          set({ content, isDirty: true })
         }
-      } else {
-        set({ openFiles })
-      }
-    },
-    setActiveTab: (filePath) => {
-      const state = get()
-      if (state.activeFilePath && state.openFiles[state.activeFilePath]) {
+      },
+      setFilePath: (filePath) => set({ filePath }),
+      setDirty: (isDirty) => {
+        const state = get()
+        const activeFile = state.activeFilePath
+        if (activeFile && state.openFiles[activeFile]) {
+          const openFiles = { ...state.openFiles }
+          openFiles[activeFile] = { ...openFiles[activeFile], isDirty }
+          set({ isDirty, openFiles })
+        } else {
+          set({ isDirty })
+        }
+      },
+
+      openFileInTab: (filePath, content) => {
+        const state = get()
         const openFiles = { ...state.openFiles }
-        openFiles[state.activeFilePath] = {
-          ...openFiles[state.activeFilePath],
-          content: state.content,
-          cursorLine: state.cursorLine,
-          cursorColumn: state.cursorColumn
+        if (state.activeFilePath && openFiles[state.activeFilePath]) {
+          openFiles[state.activeFilePath] = {
+            ...openFiles[state.activeFilePath],
+            content: state.content,
+            cursorLine: state.cursorLine,
+            cursorColumn: state.cursorColumn
+          }
         }
-        const fileData = openFiles[filePath]
-        if (fileData) {
-          set({
-            openFiles,
-            activeFilePath: filePath,
-            filePath,
-            content: fileData.content,
-            isDirty: fileData.isDirty,
-            cursorLine: fileData.cursorLine,
-            cursorColumn: fileData.cursorColumn
-          })
+        if (openFiles[filePath]) {
+          openFiles[filePath] = { ...openFiles[filePath], content, isDirty: false }
+        } else {
+          openFiles[filePath] = { content, isDirty: false, cursorLine: 1, cursorColumn: 1 }
         }
-      } else {
-        const fileData = state.openFiles[filePath]
-        if (fileData) {
-          set({
-            activeFilePath: filePath,
-            filePath,
-            content: fileData.content,
-            isDirty: fileData.isDirty,
-            cursorLine: fileData.cursorLine,
-            cursorColumn: fileData.cursorColumn
-          })
+        set({
+          openFiles,
+          activeFilePath: filePath,
+          filePath,
+          content: openFiles[filePath].content,
+          isDirty: openFiles[filePath].isDirty,
+          cursorLine: openFiles[filePath].cursorLine,
+          cursorColumn: openFiles[filePath].cursorColumn
+        })
+      },
+      closeTab: (filePath) => {
+        const state = get()
+        const openFiles = { ...state.openFiles }
+        delete openFiles[filePath]
+        const remaining = Object.keys(openFiles)
+
+        if (state.activeFilePath === filePath) {
+          if (remaining.length > 0) {
+            const next = remaining[remaining.length - 1]
+            set({
+              openFiles,
+              activeFilePath: next,
+              filePath: next,
+              content: openFiles[next].content,
+              isDirty: openFiles[next].isDirty,
+              cursorLine: openFiles[next].cursorLine,
+              cursorColumn: openFiles[next].cursorColumn
+            })
+          } else {
+            set({
+              openFiles,
+              activeFilePath: null,
+              filePath: null,
+              content: '',
+              isDirty: false
+            })
+          }
+        } else {
+          set({ openFiles })
         }
-      }
-    },
-    setCursorPosition: (cursorLine, cursorColumn) => set({ cursorLine, cursorColumn }),
-    requestJumpToLine: (line, column) => set({ pendingJump: { line, column } }),
-    clearPendingJump: () => set({ pendingJump: null })
-  }))
+      },
+      setActiveTab: (filePath) => {
+        const state = get()
+        if (state.activeFilePath && state.openFiles[state.activeFilePath]) {
+          const openFiles = { ...state.openFiles }
+          openFiles[state.activeFilePath] = {
+            ...openFiles[state.activeFilePath],
+            content: state.content,
+            cursorLine: state.cursorLine,
+            cursorColumn: state.cursorColumn
+          }
+          const fileData = openFiles[filePath]
+          if (fileData) {
+            set({
+              openFiles,
+              activeFilePath: filePath,
+              filePath,
+              content: fileData.content,
+              isDirty: fileData.isDirty,
+              cursorLine: fileData.cursorLine,
+              cursorColumn: fileData.cursorColumn
+            })
+          }
+        } else {
+          const fileData = state.openFiles[filePath]
+          if (fileData) {
+            set({
+              activeFilePath: filePath,
+              filePath,
+              content: fileData.content,
+              isDirty: fileData.isDirty,
+              cursorLine: fileData.cursorLine,
+              cursorColumn: fileData.cursorColumn
+            })
+          }
+        }
+      },
+      setCursorPosition: (cursorLine, cursorColumn) => set({ cursorLine, cursorColumn }),
+      requestJumpToLine: (line, column) => set({ pendingJump: { line, column } }),
+      clearPendingJump: () => set({ pendingJump: null })
+    })),
+    {
+      name: 'textex-editor-session',
+      partialize: (state) => ({
+        // Persist session restore metadata: which files were open and where the cursor was.
+        // We persist the paths + cursor positions (not file content, which must be re-read
+        // from disk on restore to avoid stale data).
+        _sessionOpenPaths: Object.keys(state.openFiles),
+        _sessionActiveFile: state.activeFilePath,
+        // Persist cursor positions per file for session restore
+        _sessionCursors: Object.fromEntries(
+          Object.entries(state.openFiles).map(([path, data]) => [
+            path,
+            { cursorLine: data.cursorLine, cursorColumn: data.cursorColumn }
+          ])
+        )
+      })
+    }
+  )
 )

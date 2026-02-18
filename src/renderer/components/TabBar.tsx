@@ -1,7 +1,7 @@
-import { useCallback } from 'react'
+import React, { useCallback } from 'react'
 import { useAppStore } from '../store/useAppStore'
 
-function TabBar() {
+const TabBar = React.memo(function TabBar() {
   const openFiles = useAppStore((s) => s.openFiles)
   const activeFilePath = useAppStore((s) => s.activeFilePath)
 
@@ -45,6 +45,6 @@ function TabBar() {
       })}
     </div>
   )
-}
+})
 
 export default TabBar

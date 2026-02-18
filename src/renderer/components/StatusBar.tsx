@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import React, { useMemo } from 'react'
 import { useAppStore } from '../store/useAppStore'
 
 const STATUS_CONFIG = {
@@ -8,7 +8,7 @@ const STATUS_CONFIG = {
   error: { dotClass: 'red', label: 'Error' }
 } as const
 
-function StatusBar() {
+const StatusBar = React.memo(function StatusBar() {
   const compileStatus = useAppStore((s) => s.compileStatus)
   const cursorLine = useAppStore((s) => s.cursorLine)
   const cursorColumn = useAppStore((s) => s.cursorColumn)
@@ -116,6 +116,6 @@ function StatusBar() {
       </div>
     </div>
   )
-}
+})
 
 export default StatusBar

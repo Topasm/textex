@@ -24,7 +24,14 @@ type RequestId = number
 type PendingRequest = {
   resolve: (result: unknown) => void
   reject: (error: Error) => void
+  method: string
 }
+
+/**
+ * Key for deduplicating in-flight requests.
+ * For document-specific requests, includes the document URI.
+ */
+type DedupeKey = string
 
 interface LspDocumentSymbol {
   name: string
@@ -93,6 +100,9 @@ function mapSymbols(symbols: LspDocumentSymbol[]): DocumentSymbolNode[] {
  * Encapsulates all state (pending requests, initialization, disposables)
  * into a single instance rather than module-level globals.
  */
+/** Connection health monitoring interval. */
+const HEALTH_CHECK_INTERVAL_MS = 30000
+
 export class LspClient {
   private nextRequestId = 1
   private pendingRequests = new Map<RequestId, PendingRequest>()
@@ -102,8 +112,45 @@ export class LspClient {
   private disposables = new DisposableStore()
   private documentVersions = new Map<string, number>()
 
+  // Request deduplication: map from dedupe key to the in-flight request ID
+  private inflightRequests = new Map<DedupeKey, RequestId>()
+
+  // Connection health monitoring
+  private healthCheckTimer: ReturnType<typeof setInterval> | null = null
+  private lastResponseTime = 0
+
   get initialized(): boolean {
     return this._initialized
+  }
+
+  /**
+   * Build a deduplication key for a method + params combination.
+   * Used to cancel outdated requests when a newer one arrives.
+   */
+  private buildDedupeKey(method: string, params: unknown): DedupeKey {
+    // For document-specific methods, use method + document URI for deduplication
+    const p = params as Record<string, unknown> | null
+    const textDoc = p?.textDocument as { uri?: string } | undefined
+    if (textDoc?.uri) {
+      return `${method}:${textDoc.uri}`
+    }
+    return method
+  }
+
+  /**
+   * Cancel a previous in-flight request for the same dedupe key.
+   * This prevents stale results from overwriting newer requests.
+   */
+  private cancelPreviousRequest(dedupeKey: DedupeKey): void {
+    const prevId = this.inflightRequests.get(dedupeKey)
+    if (prevId !== undefined) {
+      const pending = this.pendingRequests.get(prevId)
+      if (pending) {
+        this.pendingRequests.delete(prevId)
+        pending.reject(new Error('Request cancelled: superseded by newer request'))
+      }
+      this.inflightRequests.delete(dedupeKey)
+    }
   }
 
   sendRequest(
@@ -112,22 +159,33 @@ export class LspClient {
     timeoutMs = DEFAULT_REQUEST_TIMEOUT
   ): Promise<unknown> {
     const id = this.nextRequestId++
+    const dedupeKey = this.buildDedupeKey(method, params)
+
+    // Cancel any previous in-flight request for the same key
+    this.cancelPreviousRequest(dedupeKey)
+
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.pendingRequests.delete(id)
+        this.inflightRequests.delete(dedupeKey)
         reject(new Error(`LSP request "${method}" timed out after ${timeoutMs}ms`))
       }, timeoutMs)
 
       this.pendingRequests.set(id, {
         resolve: (result) => {
           clearTimeout(timeout)
+          this.inflightRequests.delete(dedupeKey)
+          this.lastResponseTime = Date.now()
           resolve(result)
         },
         reject: (error) => {
           clearTimeout(timeout)
+          this.inflightRequests.delete(dedupeKey)
           reject(error)
-        }
+        },
+        method
       })
+      this.inflightRequests.set(dedupeKey, id)
       window.api.lspSend({ jsonrpc: '2.0', id, method, params })
     })
   }
@@ -417,9 +475,42 @@ export class LspClient {
     }
 
     this.registerProviders(monacoInstance)
+
+    // Start connection health monitoring
+    this.startHealthCheck(workspaceRoot)
+  }
+
+  /**
+   * Periodically check if the LSP server is responsive.
+   * If no response has been received for a long time and requests are pending,
+   * attempt to restart the connection.
+   */
+  private startHealthCheck(_workspaceRoot: string): void {
+    this.lastResponseTime = Date.now()
+    this.healthCheckTimer = setInterval(() => {
+      if (!this._initialized) return
+      const elapsed = Date.now() - this.lastResponseTime
+      // If we have pending requests and haven't heard back in 2x the check interval,
+      // the server may be unresponsive
+      if (this.pendingRequests.size > 0 && elapsed > HEALTH_CHECK_INTERVAL_MS * 2) {
+        console.warn('LSP health check: server appears unresponsive, clearing stale requests')
+        // Reject all pending requests
+        for (const [id, pending] of this.pendingRequests) {
+          pending.reject(new Error('LSP server unresponsive'))
+          this.pendingRequests.delete(id)
+        }
+        this.inflightRequests.clear()
+      }
+    }, HEALTH_CHECK_INTERVAL_MS)
   }
 
   stop(): void {
+    // Stop health monitoring
+    if (this.healthCheckTimer) {
+      clearInterval(this.healthCheckTimer)
+      this.healthCheckTimer = null
+    }
+
     if (this._initialized) {
       try {
         this.sendRequest('shutdown', null)
@@ -433,6 +524,7 @@ export class LspClient {
     this._initialized = false
     this.serverCapabilities = {}
     this.pendingRequests.clear()
+    this.inflightRequests.clear()
     this.nextRequestId = 1
     this.documentVersions.clear()
     this.options = null

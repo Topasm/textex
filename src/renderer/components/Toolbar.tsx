@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import React, { useState, useCallback, useRef } from 'react'
 import { Settings, Home, ChevronDown } from 'lucide-react'
 import { useAppStore } from '../store/useAppStore'
 import { useClickOutside } from '../hooks/useClickOutside'
@@ -21,7 +21,7 @@ interface ToolbarProps {
 
 import { EXPORT_FORMATS, ZOOM_MIN, ZOOM_MAX } from '../constants'
 
-function Toolbar({
+const Toolbar = React.memo(function Toolbar({
   onOpen,
   onSave,
   onSaveAs,
@@ -240,6 +240,6 @@ function Toolbar({
       </div>
     </div>
   )
-}
+})
 
 export default Toolbar

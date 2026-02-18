@@ -193,18 +193,19 @@ export function useSpelling({ content, enabled, editorRef, monacoRef }: UseSpell
 
   // Cleanup markers on unmount
   useEffect(() => {
+    const monacoInstance = monacoRef.current
+    const editorInstance = editorRef.current
+    const markersMap = prevMarkersRef.current
     return () => {
       clearTimeout(spellTimerRef.current)
-      const monaco = monacoRef.current
-      const editor = editorRef.current
-      if (monaco && editor) {
-        const model = editor.getModel()
+      if (monacoInstance && editorInstance) {
+        const model = editorInstance.getModel()
         if (model) {
-          monaco.editor.setModelMarkers(model, 'spellcheck', [])
+          monacoInstance.editor.setModelMarkers(model, 'spellcheck', [])
         }
       }
       prevLinesRef.current = []
-      prevMarkersRef.current.clear()
+      markersMap.clear()
     }
   }, [editorRef, monacoRef])
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { FolderOpen, FileText, Search, X, Terminal, BookOpen, Settings } from 'lucide-react'
 import type { RecentProject } from '../../../shared/types'
 import { templates } from '../../data/templates'
@@ -67,6 +67,8 @@ export function SearchBar({
   onOpenSettings
 }: SearchBarProps) {
   const [query, setQuery] = useState('')
+  // Use deferred value so filtering doesn't block typing responsiveness
+  const deferredQuery = useDeferredValue(query)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -76,7 +78,7 @@ export function SearchBar({
   }, [])
 
   const filteredResults = useMemo<SearchResult[]>(() => {
-    const q = query.trim()
+    const q = deferredQuery.trim()
     if (!q) return []
 
     if (q.startsWith('/')) {
@@ -126,7 +128,7 @@ export function SearchBar({
     }
 
     return results
-  }, [query, recentProjects])
+  }, [deferredQuery, recentProjects])
 
   useEffect(() => {
     setIsDropdownOpen(filteredResults.length > 0)

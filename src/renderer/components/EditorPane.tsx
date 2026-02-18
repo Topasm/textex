@@ -1,5 +1,5 @@
 import Editor, { BeforeMount, OnMount } from '@monaco-editor/react'
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, lazy, Suspense } from 'react'
 import { useAppStore } from '../store/useAppStore'
 import { stopLspClient } from '../lsp/lspClient'
 import { useClickNavigation } from '../hooks/editor/useClickNavigation'
@@ -15,13 +15,19 @@ import { useSectionHighlight } from '../hooks/editor/useSectionHighlight'
 import { useEditorCommands } from '../hooks/editor/useEditorCommands'
 import { useHistoryPanel } from '../hooks/editor/useHistoryPanel'
 import { useTableEditor } from '../hooks/editor/useTableEditor'
-import { TableEditorModal } from './TableEditorModal'
 import { MathPreviewWidget } from './MathPreviewWidget'
-import { HistoryPanel } from './HistoryPanel'
 import { DiffEditor } from '@monaco-editor/react'
 import type { editor as monacoEditor } from 'monaco-editor'
 import { registerAiActions } from './editor/editorAiActions'
 import { configureMonacoLanguages, getMonacoTheme } from '../data/monacoConfig'
+
+// Lazy-load heavy modals that are rarely shown
+const TableEditorModal = lazy(() =>
+  import('./TableEditorModal').then((m) => ({ default: m.TableEditorModal }))
+)
+const HistoryPanel = lazy(() =>
+  import('./HistoryPanel').then((m) => ({ default: m.HistoryPanel }))
+)
 
 type MonacoInstance = typeof import('monaco-editor')
 
@@ -226,31 +232,35 @@ function EditorPane() {
         </div>
 
         {showHistory && (
-          <HistoryPanel
-            historyItems={historyItems}
-            onSelect={handleSelectHistoryItem}
-            onClose={closeHistory}
-          />
+          <Suspense fallback={null}>
+            <HistoryPanel
+              historyItems={historyItems}
+              onSelect={handleSelectHistoryItem}
+              onClose={closeHistory}
+            />
+          </Suspense>
         )}
       </div>
 
       {tableModal.isOpen && (
-        <TableEditorModal
-          initialLatex={tableModal.latex}
-          onClose={() => setTableModal((prev) => ({ ...prev, isOpen: false }))}
-          onApply={(newLatex) => {
-            if (editorRef.current && tableModal.range) {
-              editorRef.current.executeEdits('table-editor', [
-                {
-                  range: tableModal.range,
-                  text: newLatex,
-                  forceMoveMarkers: true
-                }
-              ])
-              setTableModal((prev) => ({ ...prev, isOpen: false }))
-            }
-          }}
-        />
+        <Suspense fallback={null}>
+          <TableEditorModal
+            initialLatex={tableModal.latex}
+            onClose={() => setTableModal((prev) => ({ ...prev, isOpen: false }))}
+            onApply={(newLatex) => {
+              if (editorRef.current && tableModal.range) {
+                editorRef.current.executeEdits('table-editor', [
+                  {
+                    range: tableModal.range,
+                    text: newLatex,
+                    forceMoveMarkers: true
+                  }
+                ])
+                setTableModal((prev) => ({ ...prev, isOpen: false }))
+              }
+            }}
+          />
+        </Suspense>
       )}
     </>
   )

@@ -99,14 +99,18 @@ export function useMathPreview({ editorRef, enabled }: UseMathPreviewOptions) {
       return
     }
 
+    // Debounce content change detection to avoid excessive recomputation
+    let contentTimer: ReturnType<typeof setTimeout> | null = null
+
     const cursorDisposable = editor.onDidChangeCursorPosition(() => {
       detectMath()
     })
     disposablesRef.current.push(cursorDisposable)
 
-    // Also detect on content change
+    // Debounce content changes slightly since they fire frequently during typing
     const contentDisposable = editor.onDidChangeModelContent(() => {
-      detectMath()
+      if (contentTimer) clearTimeout(contentTimer)
+      contentTimer = setTimeout(detectMath, 150)
     })
     disposablesRef.current.push(contentDisposable)
 
@@ -114,6 +118,7 @@ export function useMathPreview({ editorRef, enabled }: UseMathPreviewOptions) {
     detectMath()
 
     return () => {
+      if (contentTimer) clearTimeout(contentTimer)
       for (const d of disposablesRef.current) d.dispose()
       disposablesRef.current = []
     }
