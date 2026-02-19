@@ -132,6 +132,33 @@ function EditorPane() {
     }
   }, [aiEnabled])
 
+  // Vim Mode
+  useEffect(() => {
+    const editor = editorRef.current
+    if (!editor || !settings.vimMode) {
+      if ((window as any).vimMode) {
+        ;(window as any).vimMode.dispose()
+        ;(window as any).vimMode = null
+      }
+      return
+    }
+
+    // Load monaco-vim dynamically to avoid issues if not needed
+    import('monaco-vim').then(({ initVimMode }) => {
+      const statusNode = document.getElementById('vim-status-bar')
+      if (editor && settings.vimMode && !(window as any).vimMode) {
+        ;(window as any).vimMode = initVimMode(editor, statusNode)
+      }
+    })
+
+    return () => {
+      if ((window as any).vimMode) {
+        ;(window as any).vimMode.dispose()
+        ;(window as any).vimMode = null
+      }
+    }
+  }, [settings.vimMode])
+
   useEffect(() => {
     const completionDisposables = completionDisposablesRef
     return () => {
@@ -140,6 +167,10 @@ function EditorPane() {
       for (const d of completionDisposables.current) d.dispose()
       disposeTableEditor()
       stopLspClient()
+      if ((window as any).vimMode) {
+        ;(window as any).vimMode.dispose()
+        ;(window as any).vimMode = null
+      }
     }
   }, [disposeTableEditor])
 
@@ -298,6 +329,7 @@ function EditorPane() {
           />
         </Suspense>
       )}
+      <div id="vim-status-bar" style={{ fontSize: '12px', padding: '0 5px' }} />
     </>
   )
 }

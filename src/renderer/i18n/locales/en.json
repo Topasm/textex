@@ -121,7 +121,7 @@
       "minimap": "Minimap",
       "minimapDesc": "Show code minimap on the right side",
       "vimMode": "Vim Mode",
-      "vimModeDesc": "Vim-style keybindings (coming soon)",
+      "vimModeDesc": "Vim-style keybindings",
       "autoHideSidebar": "Auto-hide Sidebar",
       "autoHideSidebarDesc": "Sidebar slides away and reappears on hover",
       "mathPreview": "Math Preview",

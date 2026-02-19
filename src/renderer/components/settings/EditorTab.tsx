@@ -144,7 +144,7 @@ export const EditorTab = () => {
               </div>
             </div>
             <Toggle
-              checked={settings.wordWrap}
+              checked={!!settings.wordWrap}
               onChange={(checked) => updateSetting('wordWrap', checked)}
             />
           </div>
@@ -156,7 +156,7 @@ export const EditorTab = () => {
               </div>
             </div>
             <Toggle
-              checked={settings.formatOnSave}
+              checked={!!settings.formatOnSave}
               onChange={(checked) => updateSetting('formatOnSave', checked)}
             />
           </div>
@@ -185,7 +185,10 @@ export const EditorTab = () => {
               <div className="settings-row-label">{t('settings.editor.vimMode')}</div>
               <div className="settings-row-description">{t('settings.editor.vimModeDesc')}</div>
             </div>
-            <Toggle checked={false} onChange={() => {}} />
+            <Toggle
+              checked={!!settings.vimMode}
+              onChange={(checked) => updateSetting('vimMode', checked)}
+            />
           </div>
           <div className="settings-row">
             <div>
@@ -195,7 +198,7 @@ export const EditorTab = () => {
               </div>
             </div>
             <Toggle
-              checked={settings.autoHideSidebar}
+              checked={!!settings.autoHideSidebar}
               onChange={(checked) => updateSetting('autoHideSidebar', checked)}
             />
           </div>
@@ -219,7 +222,7 @@ export const EditorTab = () => {
               </div>
             </div>
             <Toggle
-              checked={settings.sectionHighlightEnabled}
+              checked={!!settings.sectionHighlightEnabled}
               onChange={(checked) => updateSetting('sectionHighlightEnabled', checked)}
             />
           </div>
@@ -238,7 +241,7 @@ export const EditorTab = () => {
               <div className="settings-row-description">{t('settings.editor.showStatusBarDesc')}</div>
             </div>
             <Toggle
-              checked={settings.showStatusBar}
+              checked={!!settings.showStatusBar}
               onChange={(checked) => updateSetting('showStatusBar', checked)}
             />
           </div>
