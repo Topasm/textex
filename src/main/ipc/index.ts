@@ -12,6 +12,7 @@ import { registerAiHandlers } from './ai'
 import { registerHistoryHandlers } from './history'
 import { registerMiscHandlers } from './misc'
 import { registerTemplateHandlers } from './templates'
+import { registerProjectDataHandlers } from './projectData'
 
 let currentWindow: BrowserWindow | null = null
 let handlersRegistered = false
@@ -41,6 +42,7 @@ export function registerIpcHandlers(win: BrowserWindow): void {
   registerHistoryHandlers()
   registerMiscHandlers(getWindow)
   registerTemplateHandlers(getWindow)
+  registerProjectDataHandlers()
 }
 
 /**

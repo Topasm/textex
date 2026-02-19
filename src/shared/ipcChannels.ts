@@ -20,7 +20,12 @@ import type {
   CitationGroup,
   ZoteroSearchResult,
   SectionNode,
-  HistoryItem
+  HistoryItem,
+  ProjectDatabase,
+  CompileDatabase,
+  CompileRecord,
+  ProjectSnippet,
+  ProjectBookmark
 } from './types'
 import type { Template } from './templates'
 
@@ -176,6 +181,30 @@ export interface IpcChannelMap {
   'templates:add': [[name: string, description: string, content: string], Template]
   'templates:remove': [[id: string], SuccessResult]
   'templates:import-zip': [[], Template | null]
+
+  // Project Data (.textex/ folder)
+  'project:init': [[projectRoot: string], ProjectDatabase]
+  'project:exists': [[projectRoot: string], boolean]
+  'project:load': [[projectRoot: string], ProjectDatabase]
+  'project:save': [[projectRoot: string, partial: Record<string, unknown>], ProjectDatabase]
+  'project:touch': [[projectRoot: string], SuccessResult]
+  'project:compile-load': [[projectRoot: string], CompileDatabase]
+  'project:compile-save': [[projectRoot: string, record: CompileRecord], CompileDatabase]
+  'project:compile-clear': [[projectRoot: string], CompileDatabase]
+  'project:compile-log-save': [[projectRoot: string, filePath: string, log: string], string]
+  'project:compile-log-load': [[projectRoot: string, filePath: string], string | null]
+  'project:snippets-load': [[projectRoot: string], ProjectSnippet[]]
+  'project:snippets-add': [
+    [projectRoot: string, snippet: Omit<ProjectSnippet, 'id'>],
+    ProjectSnippet
+  ]
+  'project:snippets-remove': [[projectRoot: string, id: string], SuccessResult]
+  'project:bookmarks-load': [[projectRoot: string], ProjectBookmark[]]
+  'project:bookmarks-add': [
+    [projectRoot: string, bookmark: Omit<ProjectBookmark, 'id' | 'created'>],
+    ProjectBookmark
+  ]
+  'project:bookmarks-remove': [[projectRoot: string, id: string], SuccessResult]
 }
 
 /** All valid invoke channel names. */

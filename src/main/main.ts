@@ -23,6 +23,17 @@ function getBackgroundColor(theme: string): string {
   }
 }
 
+function getTitleBarOverlay(theme: string): { color: string; symbolColor: string; height: number } {
+  switch (theme) {
+    case 'light':
+      return { color: '#eae3d8', symbolColor: '#3b3530', height: 36 }
+    case 'high-contrast':
+      return { color: '#1a1a1a', symbolColor: '#ffffff', height: 36 }
+    default:
+      return { color: '#333333', symbolColor: '#cccccc', height: 36 }
+  }
+}
+
 function initAutoUpdater(): void {
   // Set up auto-update events, forwarding them to the renderer
   try {
@@ -57,13 +68,19 @@ function initAutoUpdater(): void {
   }
 }
 
-function createWindow(backgroundColor: string): void {
+function createWindow(theme: string): void {
+  const backgroundColor = getBackgroundColor(theme)
+
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     minWidth: 800,
     minHeight: 600,
     title: 'TextEx',
+    titleBarStyle: 'hidden',
+    ...(process.platform === 'win32' && {
+      titleBarOverlay: getTitleBarOverlay(theme)
+    }),
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       nodeIntegration: false,
@@ -106,13 +123,13 @@ app.whenReady().then(async () => {
   await loadPersistentCache().catch(() => {})
 
   const settings = await loadSettings()
-  const backgroundColor = getBackgroundColor(settings.theme)
+  const theme = settings.theme
 
-  createWindow(backgroundColor)
+  createWindow(theme)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow(backgroundColor)
+      createWindow(theme)
     }
   })
 })

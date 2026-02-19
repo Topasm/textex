@@ -191,3 +191,57 @@ export interface HistoryItem {
   size: number
   path: string
 }
+
+// ---- .textex/ Project Data ----
+
+/** Per-project metadata stored in .textex/project.json */
+export interface ProjectDatabase {
+  version: number
+  name: string
+  mainFile: string
+  created: string
+  lastOpened: string
+  documentClass: string
+  description: string
+  tags: string[]
+  authors: string[]
+}
+
+/** Per-file compile record */
+export interface CompileRecord {
+  filePath: string
+  lastCompiled: string
+  duration: number
+  exitCode: number
+  pdfPath: string
+  errorCount: number
+  warningCount: number
+  hash: string
+}
+
+/** Per-project compile state stored in .textex/compile.json */
+export interface CompileDatabase {
+  version: number
+  totalCompiles: number
+  lastCompiled: string | null
+  records: Record<string, CompileRecord>
+}
+
+/** Project-specific snippet stored in .textex/snippets.json */
+export interface ProjectSnippet {
+  id: string
+  prefix: string
+  label: string
+  body: string
+  description: string
+}
+
+/** Editor bookmark stored in .textex/bookmarks.json */
+export interface ProjectBookmark {
+  id: string
+  file: string
+  line: number
+  column: number
+  label: string
+  created: string
+}

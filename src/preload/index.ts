@@ -22,7 +22,10 @@ const DEDUP_CHANNELS = new Set<string>([
   'latex:scan-labels', 'latex:load-package-data', 'export:formats',
   'lsp:status', 'ai:has-api-key', 'structure:outline',
   'history:list', 'zotero:probe', 'zotero:search',
-  'templates:list'
+  'templates:list',
+  'project:exists', 'project:load', 'project:compile-load',
+  'project:snippets-load', 'project:bookmarks-load',
+  'project:compile-log-load'
 ])
 
 const inflight = new Map<string, Promise<unknown>>()
