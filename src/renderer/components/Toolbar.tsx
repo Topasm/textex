@@ -1,5 +1,15 @@
 import React, { useState, useCallback, useRef } from 'react'
-import { Settings, Home, ChevronDown } from 'lucide-react'
+import {
+  Settings,
+  Home,
+  ChevronDown,
+  Save,
+  Play,
+  Loader,
+  ScrollText,
+  Sparkles,
+  FileText
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useEditorStore } from '../store/useEditorStore'
 import { useCompileStore } from '../store/useCompileStore'
@@ -8,6 +18,7 @@ import { usePdfStore } from '../store/usePdfStore'
 import { useSettingsStore } from '../store/useSettingsStore'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { ZoteroCiteSearch } from './ZoteroCiteSearch'
+import PdfZoomDropdown from './PdfZoomDropdown'
 import { isFeatureEnabled } from '../utils/featureFlags'
 
 interface ToolbarProps {
@@ -47,9 +58,13 @@ const Toolbar = React.memo(function Toolbar({
   const aiEnabled = isFeatureEnabled(settings, 'ai')
   const zoteroEnabled = isFeatureEnabled(settings, 'zotero')
   const zoomLevel = usePdfStore((s) => s.zoomLevel)
+  const currentPage = usePdfStore((s) => s.currentPage)
+  const numPages = usePdfStore((s) => s.numPages)
   const projectRoot = useProjectStore((s) => s.projectRoot)
 
   const [isFileMenuOpen, setIsFileMenuOpen] = useState(false)
+  const [pageInputValue, setPageInputValue] = useState('')
+  const [isPageInputFocused, setIsPageInputFocused] = useState(false)
   const fileMenuRef = useRef<HTMLDivElement>(null)
 
   const fileName = filePath ? filePath.split(/[\\/]/).pop() : t('toolbar.untitled')
@@ -65,12 +80,57 @@ const Toolbar = React.memo(function Toolbar({
   const handleSyncToPdf = useCallback(() => {
     const editorState = useEditorStore.getState()
     if (!editorState.filePath) return
+    console.log(`[SyncTeX UI] forward sync: cursorLine=${editorState.cursorLine}, file=${editorState.filePath}`)
     window.api.synctexForward(editorState.filePath, editorState.cursorLine).then((result) => {
+      console.log('[SyncTeX UI] forward sync result:', result)
       if (result) {
         usePdfStore.getState().setSynctexHighlight(result)
       }
     })
   }, [])
+
+  // Page navigation handlers
+  const handlePrevPage = useCallback(() => {
+    const { scrollToPage, currentPage } = usePdfStore.getState()
+    if (scrollToPage && currentPage > 1) {
+      scrollToPage(currentPage - 1)
+    }
+  }, [])
+
+  const handleNextPage = useCallback(() => {
+    const { scrollToPage, currentPage, numPages } = usePdfStore.getState()
+    if (scrollToPage && currentPage < numPages) {
+      scrollToPage(currentPage + 1)
+    }
+  }, [])
+
+  const handlePageInputFocus = useCallback(() => {
+    setPageInputValue(String(currentPage))
+    setIsPageInputFocused(true)
+  }, [currentPage])
+
+  const handlePageInputBlur = useCallback(() => {
+    setIsPageInputFocused(false)
+    const page = parseInt(pageInputValue, 10)
+    if (!isNaN(page) && page >= 1 && page <= numPages) {
+      const { scrollToPage } = usePdfStore.getState()
+      if (scrollToPage) scrollToPage(page)
+    }
+    setPageInputValue('')
+  }, [pageInputValue, numPages])
+
+  const handlePageInputKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        e.currentTarget.blur()
+      } else if (e.key === 'Escape') {
+        setPageInputValue('')
+        setIsPageInputFocused(false)
+        e.currentTarget.blur()
+      }
+    },
+    []
+  )
 
   return (
     <div className="toolbar">
@@ -87,7 +147,7 @@ const Toolbar = React.memo(function Toolbar({
       {/* File Menu */}
       <div className="menu-dropdown" ref={fileMenuRef}>
         <button onClick={() => setIsFileMenuOpen(!isFileMenuOpen)} title={t('toolbar.fileOperations')}>
-          {t('toolbar.file')} <ChevronDown size={12} />
+          <FileText size={16} /> <ChevronDown size={12} />
         </button>
         {isFileMenuOpen && (
           <div className="menu-dropdown-content">
@@ -155,7 +215,7 @@ const Toolbar = React.memo(function Toolbar({
         onClick={onSave}
         title={t('toolbar.quickSave')}
       >
-        {t('toolbar.save')}
+        <Save size={16} />
       </button>
 
       <span className="toolbar-separator" />
@@ -166,17 +226,16 @@ const Toolbar = React.memo(function Toolbar({
         disabled={compileStatus === 'compiling'}
         title={t('toolbar.compileLaTeX')}
       >
-        {compileStatus === 'compiling' ? t('toolbar.compiling') : t('toolbar.compile')}
-        <kbd>Ctrl+Enter</kbd>
+        {compileStatus === 'compiling' ? <Loader size={16} className="spin" /> : <Play size={16} />}
       </button>
 
       <button onClick={onToggleLog} title={t('toolbar.toggleLog')}>
-        {t('toolbar.log')}
+        <ScrollText size={16} />
       </button>
 
       {aiEnabled && (
         <button onClick={onAiDraft} title={t('toolbar.aiDraftShortcut')}>
-          {t('toolbar.aiDraft')}
+          <Sparkles size={16} />
         </button>
       )}
 
@@ -211,6 +270,50 @@ const Toolbar = React.memo(function Toolbar({
             {'\u2192'}
           </button>
           <div className="toolbar-separator" />
+
+          {/* Page Navigation */}
+          {numPages > 0 && (
+            <>
+              <button
+                className="toolbar-compact-btn"
+                onClick={handlePrevPage}
+                disabled={currentPage <= 1}
+                title={t('toolbar.prevPage')}
+                aria-label={t('toolbar.prevPage')}
+              >
+                {'\u25B2'}
+              </button>
+              <span className="toolbar-page-nav">
+                <input
+                  className="toolbar-page-input"
+                  type="text"
+                  inputMode="numeric"
+                  value={isPageInputFocused ? pageInputValue : String(currentPage)}
+                  onChange={(e) => setPageInputValue(e.target.value.replace(/\D/g, ''))}
+                  onFocus={handlePageInputFocus}
+                  onBlur={handlePageInputBlur}
+                  onKeyDown={handlePageInputKeyDown}
+                  title={t('toolbar.goToPage')}
+                  aria-label={t('toolbar.goToPage')}
+                />
+                <span className="toolbar-page-label">
+                  {t('toolbar.pageOf')} {numPages}
+                </span>
+              </span>
+              <button
+                className="toolbar-compact-btn"
+                onClick={handleNextPage}
+                disabled={currentPage >= numPages}
+                title={t('toolbar.nextPage')}
+                aria-label={t('toolbar.nextPage')}
+              >
+                {'\u25BC'}
+              </button>
+              <div className="toolbar-separator" />
+            </>
+          )}
+
+          {/* Zoom Controls */}
           <button
             className="toolbar-compact-btn"
             onClick={() => usePdfStore.getState().zoomOut()}
@@ -220,7 +323,7 @@ const Toolbar = React.memo(function Toolbar({
           >
             -
           </button>
-          <span className="toolbar-zoom-label">{zoomLevel}%</span>
+          <PdfZoomDropdown />
           <button
             className="toolbar-compact-btn"
             onClick={() => usePdfStore.getState().zoomIn()}
@@ -229,13 +332,6 @@ const Toolbar = React.memo(function Toolbar({
             aria-label={t('toolbar.zoomIn')}
           >
             +
-          </button>
-          <button
-            className="toolbar-compact-btn"
-            onClick={() => usePdfStore.getState().resetZoom()}
-            title={t('toolbar.fitWidth')}
-          >
-            {t('toolbar.fitWidth')}
           </button>
         </div>
 

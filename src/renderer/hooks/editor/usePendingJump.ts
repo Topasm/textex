@@ -29,10 +29,14 @@ export function usePendingJump({ editorRef, monacoRef }: UsePendingJumpParams): 
         const collection = editor.createDecorationsCollection([
           {
             range: new monaco.Range(pendingJump.line, 1, pendingJump.line, 1),
-            options: { isWholeLine: true, className: 'editor-flash-line' }
+            options: {
+              isWholeLine: true,
+              className: 'editor-flash-line',
+              marginClassName: 'editor-flash-gutter'
+            }
           }
         ])
-        setTimeout(() => collection.clear(), 1000)
+        setTimeout(() => collection.clear(), 1200)
 
         useEditorStore.getState().clearPendingJump()
       }

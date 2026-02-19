@@ -23,6 +23,12 @@
     "zoomOut": "축소",
     "zoomIn": "확대",
     "fitWidth": "너비 맞춤",
+    "fitHeight": "높이 맞춤",
+    "prevPage": "이전 페이지",
+    "nextPage": "다음 페이지",
+    "pageOf": "/",
+    "goToPage": "페이지로 이동",
+    "zoomPreset": "확대/축소 수준",
     "untitled": "제목 없음"
   },
   "statusBar": {
@@ -103,6 +109,7 @@
       "light": "라이트",
       "dark": "다크",
       "system": "시스템",
+      "glass": "글래스",
       "pdfNightMode": "PDF 야간 모드",
       "pdfNightModeDesc": "어두운 환경에서 편안하게 읽을 수 있도록 텍스트와 배경색을 반전합니다."
     },

@@ -175,6 +175,7 @@ export function configureMonacoLanguages(monaco: MonacoInstance): void {
 export function getMonacoTheme(theme: string): string {
   switch (theme) {
     case 'light':
+    case 'glass':
       return 'ivory-light'
     case 'high-contrast':
       return 'hc-black'

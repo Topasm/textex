@@ -78,12 +78,16 @@ function getSymbolIcon(category: SymbolCategory): string {
   }
 }
 
+const DEFAULT_COLORS = ['#e06c75', '#e5c07b', '#98c379', '#61afef', '#c678dd', '#56b6c2', '#d19a66']
+
 const OutlineNode = React.memo(function OutlineNode({
   node,
-  depth
+  depth,
+  bandColor
 }: {
   node: DocumentSymbolNode
   depth: number
+  bandColor?: string
 }) {
   const [expanded, setExpanded] = useState(true)
 
@@ -105,7 +109,10 @@ const OutlineNode = React.memo(function OutlineNode({
     <>
       <div
         className={`outline-item outline-depth-${Math.min(depth, 4)}`}
-        style={{ paddingLeft: `${10 + depth * 18}px` }}
+        style={{
+          paddingLeft: `${10 + depth * 18}px`,
+          borderLeftColor: bandColor || undefined
+        }}
         onClick={handleClick}
         title={node.detail || undefined}
       >
@@ -125,14 +132,14 @@ const OutlineNode = React.memo(function OutlineNode({
         ) : (
           <span className="outline-toggle-spacer" />
         )}
-        <span className={`outline-icon outline-icon-${category}`}>{getSymbolIcon(category)}</span>
+        <span className={`outline-icon outline-icon-${category}`} style={bandColor ? { color: bandColor } : undefined}>{getSymbolIcon(category)}</span>
         <span className="outline-name">{node.name}</span>
         {node.detail && <span className="outline-detail">{node.detail}</span>}
       </div>
       {hasChildren && expanded && (
         <div className="outline-children">
           {node.children.map((child, i) => (
-            <OutlineNode key={`${child.name}-${i}`} node={child} depth={depth + 1} />
+            <OutlineNode key={`${child.name}-${i}`} node={child} depth={depth + 1} bandColor={bandColor} />
           ))}
         </div>
       )}
@@ -145,6 +152,7 @@ function OutlinePanel() {
   const documentSymbols = useUiStore((s) => s.documentSymbols)
   const filePath = useEditorStore((s) => s.filePath)
   const sectionHighlightEnabled = useSettingsStore((s) => s.settings.sectionHighlightEnabled)
+  const colors = useSettingsStore((s) => s.settings.sectionHighlightColors) ?? DEFAULT_COLORS
 
   const toggleHighlight = useCallback(() => {
     useSettingsStore.getState().updateSetting('sectionHighlightEnabled', !sectionHighlightEnabled)
@@ -194,9 +202,19 @@ function OutlinePanel() {
           {'\u2261'} {t('outlinePanel.bands')}
         </button>
       </div>
-      {documentSymbols.map((sym, i) => (
-        <OutlineNode key={`${sym.name}-${i}`} node={sym} depth={0} />
-      ))}
+      {documentSymbols.map((sym, i) => {
+        const isSection = sym.kind === 2 || sym.kind === 3
+        let sectionColor: string | undefined
+        if (sectionHighlightEnabled && isSection) {
+          const sectionIndex = documentSymbols
+            .slice(0, i)
+            .filter((s) => s.kind === 2 || s.kind === 3).length
+          sectionColor = colors[sectionIndex % colors.length]
+        }
+        return (
+          <OutlineNode key={`${sym.name}-${i}`} node={sym} depth={0} bandColor={sectionColor} />
+        )
+      })}
     </div>
   )
 }

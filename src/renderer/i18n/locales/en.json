@@ -23,6 +23,12 @@
     "zoomOut": "Zoom Out",
     "zoomIn": "Zoom In",
     "fitWidth": "Fit Width",
+    "fitHeight": "Fit Height",
+    "prevPage": "Previous Page",
+    "nextPage": "Next Page",
+    "pageOf": "of",
+    "goToPage": "Go to page",
+    "zoomPreset": "Zoom level",
     "untitled": "Untitled"
   },
   "statusBar": {
@@ -103,6 +109,7 @@
       "light": "Light",
       "dark": "Dark",
       "system": "System",
+      "glass": "Glass",
       "pdfNightMode": "PDF Night Mode",
       "pdfNightModeDesc": "Invert text and background colors for comfortable reading in dark environments."
     },

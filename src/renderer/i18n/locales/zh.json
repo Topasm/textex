@@ -23,6 +23,12 @@
     "zoomOut": "缩小",
     "zoomIn": "放大",
     "fitWidth": "适应宽度",
+    "fitHeight": "适应高度",
+    "prevPage": "上一页",
+    "nextPage": "下一页",
+    "pageOf": "/",
+    "goToPage": "跳转到页",
+    "zoomPreset": "缩放级别",
     "untitled": "未命名"
   },
   "statusBar": {
@@ -103,6 +109,7 @@
       "light": "浅色",
       "dark": "深色",
       "system": "跟随系统",
+      "glass": "玻璃",
       "pdfNightMode": "PDF 夜间模式",
       "pdfNightModeDesc": "反转文本和背景颜色，以便在暗光环境下舒适阅读。"
     },

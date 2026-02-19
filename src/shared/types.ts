@@ -130,7 +130,7 @@ export interface RecentProject {
 }
 
 export interface UserSettings {
-  theme: 'system' | 'dark' | 'light' | 'high-contrast'
+  theme: 'system' | 'dark' | 'light' | 'high-contrast' | 'glass'
   fontSize: number
   autoCompile: boolean
   spellCheckEnabled: boolean

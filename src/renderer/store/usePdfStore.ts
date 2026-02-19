@@ -14,6 +14,17 @@ interface PdfState {
   // Sync request from toolbar to PreviewPane
   syncToCodeRequest: number | null
 
+  // Page navigation
+  currentPage: number
+  numPages: number
+  scrollToPage: ((page: number) => void) | null
+
+  // Fit mode request
+  fitRequest: 'width' | 'height' | null
+
+  // Per-project scroll persistence
+  savedScrollPositions: Record<string, number>
+
   // Actions
   setSplitRatio: (ratio: number) => void
   setZoomLevel: (level: number) => void
@@ -24,17 +35,29 @@ interface PdfState {
   setPdfSearchVisible: (visible: boolean) => void
   setPdfSearchQuery: (query: string) => void
   triggerSyncToCode: () => void
+  setCurrentPage: (page: number) => void
+  setNumPages: (n: number) => void
+  setScrollToPage: (fn: ((page: number) => void) | null) => void
+  requestFit: (mode: 'width' | 'height') => void
+  clearFitRequest: () => void
+  saveScrollPosition: (projectRoot: string, scrollTop: number) => void
+  getScrollPosition: (projectRoot: string) => number
 }
 
 export const usePdfStore = create<PdfState>()(
   persist(
-    subscribeWithSelector((set) => ({
+    subscribeWithSelector((set, get) => ({
       zoomLevel: 100,
       splitRatio: 0.5,
       synctexHighlight: null,
       pdfSearchVisible: false,
       pdfSearchQuery: '',
       syncToCodeRequest: null,
+      currentPage: 1,
+      numPages: 0,
+      scrollToPage: null,
+      fitRequest: null,
+      savedScrollPositions: {},
 
       setSplitRatio: (splitRatio) =>
         set({ splitRatio: Math.max(SPLIT_RATIO_MIN, Math.min(SPLIT_RATIO_MAX, splitRatio)) }),
@@ -46,13 +69,24 @@ export const usePdfStore = create<PdfState>()(
         set({ synctexHighlight: highlight ? { ...highlight, timestamp: Date.now() } : null }),
       setPdfSearchVisible: (pdfSearchVisible) => set({ pdfSearchVisible }),
       setPdfSearchQuery: (pdfSearchQuery) => set({ pdfSearchQuery }),
-      triggerSyncToCode: () => set({ syncToCodeRequest: Date.now() })
+      triggerSyncToCode: () => set({ syncToCodeRequest: Date.now() }),
+      setCurrentPage: (page) => set({ currentPage: page }),
+      setNumPages: (n) => set({ numPages: n }),
+      setScrollToPage: (fn) => set({ scrollToPage: fn }),
+      requestFit: (mode) => set({ fitRequest: mode }),
+      clearFitRequest: () => set({ fitRequest: null }),
+      saveScrollPosition: (projectRoot, scrollTop) =>
+        set((state) => ({
+          savedScrollPositions: { ...state.savedScrollPositions, [projectRoot]: scrollTop }
+        })),
+      getScrollPosition: (projectRoot) => get().savedScrollPositions[projectRoot] ?? 0
     })),
     {
       name: 'textex-pdf-layout',
       partialize: (state) => ({
         zoomLevel: state.zoomLevel,
-        splitRatio: state.splitRatio
+        splitRatio: state.splitRatio,
+        savedScrollPositions: state.savedScrollPositions
       })
     }
   )

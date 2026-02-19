@@ -4,6 +4,9 @@ import type { SidebarView } from '../store/useProjectStore'
 import { usePdfStore } from '../store/usePdfStore'
 import { SWIPE_LOCK_MS } from '../constants'
 
+/** Shorter lock for discrete mouse horizontal scroll (e.g. MX Master thumb wheel). */
+const MOUSE_SWIPE_LOCK_MS = 400
+
 export type SlideAnim = 'exit-left' | 'exit-right' | 'enter-left' | 'enter-right' | null
 
 interface DragResizeHandlers {
@@ -102,9 +105,8 @@ export function useDragResize(): DragResizeHandlers {
     useProjectStore.getState().setSidebarWidth(240)
   }, [])
 
-  // ---- Sidebar trackpad swipe to switch tabs ----
-  const swipeLocked = useRef(false)
-  const swipeEndTimer = useRef<ReturnType<typeof setTimeout>>()
+  // ---- Sidebar swipe / horizontal scroll to switch tabs ----
+  const lastSwipeTime = useRef(0)
   const slideAnimTimer = useRef<ReturnType<typeof setTimeout>>()
   const slideAnimClearTimer = useRef<ReturnType<typeof setTimeout>>()
   const [slideAnim, setSlideAnim] = useState<SlideAnim>(null)
@@ -112,23 +114,25 @@ export function useDragResize(): DragResizeHandlers {
   // Clean up animation timers on unmount
   useEffect(() => {
     return () => {
-      clearTimeout(swipeEndTimer.current)
       clearTimeout(slideAnimTimer.current)
       clearTimeout(slideAnimClearTimer.current)
     }
   }, [])
 
   const handleSidebarWheel = useCallback((e: React.WheelEvent) => {
-    // While locked, ignore all wheel events (including trackpad momentum)
-    if (swipeLocked.current) return
     if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return
-    if (Math.abs(e.deltaX) < 30) return
+
+    // Discrete mouse wheel (e.g. MX Master thumb wheel): deltaY===0, lower threshold
+    const isMouseWheel = e.deltaY === 0
+    if (Math.abs(e.deltaX) < (isMouseWheel ? 5 : 30)) return
+
+    // Timestamp-based lock: prevent rapid consecutive switches
+    const now = Date.now()
+    const lockMs = isMouseWheel ? MOUSE_SWIPE_LOCK_MS : SWIPE_LOCK_MS
+    if (now - lastSwipeTime.current < lockMs) return
+    lastSwipeTime.current = now
 
     const direction = e.deltaX > 0 ? 1 : -1
-    swipeLocked.current = true
-    swipeEndTimer.current = setTimeout(() => {
-      swipeLocked.current = false
-    }, SWIPE_LOCK_MS)
 
     // Clear any in-flight animation timers before starting new ones
     clearTimeout(slideAnimTimer.current)

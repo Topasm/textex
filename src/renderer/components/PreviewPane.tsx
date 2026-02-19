@@ -3,6 +3,7 @@ import { Document, Page, pdfjs } from 'react-pdf'
 import { useCompileStore } from '../store/useCompileStore'
 import { usePdfStore } from '../store/usePdfStore'
 import { useSettingsStore } from '../store/useSettingsStore'
+import { useProjectStore } from '../store/useProjectStore'
 import PdfSearchBar from './PdfSearchBar'
 import { usePreviewZoom } from '../hooks/preview/usePreviewZoom'
 import { useSynctex } from '../hooks/preview/useSynctex'
@@ -31,13 +32,17 @@ const PAGE_OVERSCAN = 2
 const ESTIMATED_PAGE_HEIGHT = 1100
 /** Debounce scroll events to reduce visible-page recalculation frequency. */
 const SCROLL_DEBOUNCE_MS = 100
+/** Debounce delay for persisting scroll position. */
+const SCROLL_PERSIST_DEBOUNCE_MS = 500
 
 function PreviewPane() {
   const pdfPath = useCompileStore((s) => s.pdfPath)
   const pdfRevision = useCompileStore((s) => s.pdfRevision)
   const compileStatus = useCompileStore((s) => s.compileStatus)
   const zoomLevel = usePdfStore((s) => s.zoomLevel)
+  const fitRequest = usePdfStore((s) => s.fitRequest)
   const pdfInvertMode = useSettingsStore((s) => s.settings.pdfInvertMode)
+  const projectRoot = useProjectStore((s) => s.projectRoot)
   const containerRef = useRef<HTMLDivElement>(null)
   const scrollPositionRef = useRef(0)
   const [numPages, setNumPages] = useState(0)
@@ -47,13 +52,14 @@ function PreviewPane() {
   // Virtual scrolling: track which pages are visible
   const [visibleRange, setVisibleRange] = useState<{ start: number; end: number }>({ start: 1, end: 5 })
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const scrollPersistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Cache of rendered page heights for accurate positioning
   const pageHeightsRef = useRef<Map<number, number>>(new Map())
 
   // Extracted hooks
   const { containerWidth, ctrlHeld } = useContainerSize(containerRef)
   const { transientScale } = usePreviewZoom(containerRef)
-  const { highlightStyle, handleContainerClick } = useSynctex(
+  const { highlights, handleContainerClick } = useSynctex(
     containerRef,
     pageViewportsRef,
     containerWidth
@@ -113,6 +119,9 @@ function PreviewPane() {
       }
     }
 
+    // Update current page in store
+    usePdfStore.getState().setCurrentPage(startPage)
+
     // Add overscan
     const start = Math.max(1, startPage - PAGE_OVERSCAN)
     const end = Math.min(numPages, endPage + PAGE_OVERSCAN)
@@ -123,6 +132,64 @@ function PreviewPane() {
     })
   }, [numPages, getPageHeight])
 
+  // scrollToPage: scroll the container so the given page is at the top
+  const scrollToPage = useCallback(
+    (page: number) => {
+      const container = containerRef.current
+      if (!container || numPages === 0) return
+      const clamped = Math.max(1, Math.min(numPages, page))
+      let offset = 0
+      for (let i = 1; i < clamped; i++) {
+        offset += getPageHeight(i) + 16
+      }
+      container.scrollTop = offset
+    },
+    [numPages, getPageHeight]
+  )
+
+  // Expose scrollToPage to the store so Toolbar can call it
+  useEffect(() => {
+    usePdfStore.getState().setScrollToPage(scrollToPage)
+    return () => {
+      usePdfStore.getState().setScrollToPage(null)
+    }
+  }, [scrollToPage])
+
+  // Sync numPages to store
+  useEffect(() => {
+    usePdfStore.getState().setNumPages(numPages)
+  }, [numPages])
+
+  // Handle fitRequest from store
+  useEffect(() => {
+    if (!fitRequest) return
+    const container = containerRef.current
+    if (!container) {
+      usePdfStore.getState().clearFitRequest()
+      return
+    }
+
+    if (fitRequest === 'width') {
+      // 100% zoom = page fills container width (minus padding)
+      usePdfStore.getState().setZoomLevel(100)
+    } else if (fitRequest === 'height') {
+      // Compute zoom so one full page fits vertically
+      const containerHeight = container.clientHeight
+      const cw = containerWidth || container.clientWidth
+      // Use first page dimensions if available, else A4
+      const firstPage = pageViewportsRef.current.get(1)
+      const pageW = firstPage?.pageWidth ?? 595
+      const pageH = firstPage?.pageHeight ?? 842
+      // At zoom Z%, page rendered width = (cw - 32) * Z/100
+      // Rendered height = pageH * ((cw - 32) * Z/100) / pageW
+      // We want rendered height = containerHeight
+      // => Z = (containerHeight * pageW) / (pageH * (cw - 32)) * 100
+      const zoom = Math.round((containerHeight * pageW) / (pageH * (cw - 32)) * 100)
+      usePdfStore.getState().setZoomLevel(zoom)
+    }
+    usePdfStore.getState().clearFitRequest()
+  }, [fitRequest, containerWidth])
+
   // Track scroll position and update visible pages with debouncing
   const handleScroll = useCallback(() => {
     if (containerRef.current) {
@@ -131,17 +198,70 @@ function PreviewPane() {
 
     if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current)
     scrollTimerRef.current = setTimeout(computeVisiblePages, SCROLL_DEBOUNCE_MS)
-  }, [computeVisiblePages])
+
+    // Debounced persist of scroll position per project
+    if (scrollPersistTimerRef.current) clearTimeout(scrollPersistTimerRef.current)
+    scrollPersistTimerRef.current = setTimeout(() => {
+      if (projectRoot && containerRef.current) {
+        usePdfStore.getState().saveScrollPosition(projectRoot, containerRef.current.scrollTop)
+      }
+    }, SCROLL_PERSIST_DEBOUNCE_MS)
+  }, [computeVisiblePages, projectRoot])
+
+  // Explicit horizontal scroll support for mice with horizontal wheels
+  // (e.g. Logitech MX Master thumb wheel). Electron/Windows may not
+  // translate horizontal WheelEvent deltaX into native container scroll.
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+
+    const handler = (e: WheelEvent): void => {
+      if (e.ctrlKey || e.metaKey) return
+
+      // Shift + vertical wheel → horizontal scroll
+      if (e.shiftKey && e.deltaY !== 0) {
+        el.scrollLeft += e.deltaY
+        e.preventDefault()
+        return
+      }
+
+      // Horizontal wheel (e.g. MX Master thumb wheel)
+      if (e.deltaX !== 0) {
+        el.scrollLeft += e.deltaX
+        if (e.deltaY === 0) e.preventDefault()
+      }
+    }
+
+    el.addEventListener('wheel', handler, { passive: false })
+    return () => el.removeEventListener('wheel', handler)
+  }, [])
+
+  // Keyboard shortcuts for fit-to-width (Ctrl+0) and fit-to-height (Ctrl+9)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent): void => {
+      if (!(e.ctrlKey || e.metaKey)) return
+      if (e.key === '0') {
+        e.preventDefault()
+        usePdfStore.getState().requestFit('width')
+      } else if (e.key === '9') {
+        e.preventDefault()
+        usePdfStore.getState().requestFit('height')
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
 
   // Recalculate visible pages when zoom or page count changes
   useEffect(() => {
     computeVisiblePages()
   }, [computeVisiblePages, zoomLevel])
 
-  // Cleanup scroll timer
+  // Cleanup timers
   useEffect(() => {
     return () => {
       if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current)
+      if (scrollPersistTimerRef.current) clearTimeout(scrollPersistTimerRef.current)
     }
   }, [])
 
@@ -177,10 +297,19 @@ function PreviewPane() {
     // Restore scroll position after new PDF renders
     requestAnimationFrame(() => {
       if (containerRef.current) {
-        containerRef.current.scrollTop = scrollPositionRef.current
+        // Prefer within-session ref for recompile position, then per-project persisted
+        const sessionScroll = scrollPositionRef.current
+        if (sessionScroll > 0) {
+          containerRef.current.scrollTop = sessionScroll
+        } else if (projectRoot) {
+          const saved = usePdfStore.getState().getScrollPosition(projectRoot)
+          if (saved > 0) {
+            containerRef.current.scrollTop = saved
+          }
+        }
       }
     })
-  }, [])
+  }, [projectRoot])
 
   const onDocumentLoadError = useCallback((error: Error) => {
     const msg = error.message || 'Unknown PDF loading error'
@@ -365,7 +494,8 @@ function PreviewPane() {
               <p>Check the log panel for details.</p>
             </div>
           )}
-          {highlightStyle && <div className="synctex-indicator" style={highlightStyle} />}
+          {highlights.lineStyle && <div className="synctex-line-highlight" style={highlights.lineStyle} />}
+          {highlights.dotStyle && <div className="synctex-indicator" style={highlights.dotStyle} />}
           {tooltipData && (
             <CitationTooltip
               entries={tooltipData.entries}

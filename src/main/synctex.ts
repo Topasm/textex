@@ -1,7 +1,11 @@
-import * as fs from 'fs'
+import * as fs from 'fs/promises'
+import * as fsSync from 'fs'
 import * as path from 'path'
 import * as zlib from 'zlib'
+import { promisify } from 'util'
 import type { SyncTeXForwardResult, SyncTeXInverseResult } from '../shared/types'
+
+const gunzip = promisify(zlib.gunzip)
 
 // ============================================================
 // SyncTeX parser (from LaTeX-Workshop synctexjs.ts, MIT license)
@@ -77,7 +81,7 @@ function parseSyncTex(pdfsyncBody: string): PdfSyncObject | undefined {
   pdfsyncObject.version = lineArray[0].replace('SyncTeX Version:', '')
 
   const inputPattern = /Input:([0-9]+):(.+)/
-  const offsetPattern = /(X|Y) Offset:([0-9]+)/
+  const offsetPattern = /(X|Y) Offset:(-?[0-9]+)/
   const openPagePattern = /\{([0-9]+)$/
   const closePagePattern = /\}([0-9]+)$/
   const verticalBlockPattern =
@@ -367,7 +371,16 @@ export function clearSyncTexCache(): void {
   cachedTexFile = undefined
 }
 
-function loadSyncTexForFile(texFile: string): PdfSyncObject | undefined {
+async function fileExists(filePath: string): Promise<boolean> {
+  try {
+    await fs.access(filePath)
+    return true
+  } catch {
+    return false
+  }
+}
+
+async function loadSyncTexForFile(texFile: string): Promise<PdfSyncObject | undefined> {
   // Return cached if same file
   if (cachedTexFile === texFile && cachedSyncObject) {
     return cachedSyncObject
@@ -379,20 +392,20 @@ function loadSyncTexForFile(texFile: string): PdfSyncObject | undefined {
 
   let syncObject: PdfSyncObject | undefined
 
-  if (fs.existsSync(synctexPath)) {
+  if (await fileExists(synctexPath)) {
     try {
-      const content = fs.readFileSync(synctexPath, 'utf-8')
+      const content = await fs.readFile(synctexPath, 'utf-8')
       syncObject = parseSyncTex(content)
-    } catch {
-      // Failed to parse .synctex
+    } catch (err) {
+      console.error('SyncTeX: failed to parse .synctex file:', err)
     }
-  } else if (fs.existsSync(synctexGzPath)) {
+  } else if (await fileExists(synctexGzPath)) {
     try {
-      const data = fs.readFileSync(synctexGzPath)
-      const decompressed = zlib.gunzipSync(data)
+      const data = await fs.readFile(synctexGzPath)
+      const decompressed = await gunzip(data)
       syncObject = parseSyncTex(decompressed.toString('utf-8'))
-    } catch {
-      // Failed to parse .synctex.gz
+    } catch (err) {
+      console.error('SyncTeX: failed to parse .synctex.gz file:', err)
     }
   }
 
@@ -404,12 +417,13 @@ function loadSyncTexForFile(texFile: string): PdfSyncObject | undefined {
 }
 
 function findInputFilePath(filePath: string, pdfSyncObject: PdfSyncObject): string | undefined {
-  const resolvedPath = path.resolve(filePath)
+  const resolvedPath = path.resolve(filePath).toLowerCase()
   const fileDir = path.dirname(filePath)
   for (const inputFilePath in pdfSyncObject.blockNumberLine) {
     try {
       // Resolve relative paths from the SyncTeX file against the tex file's directory
-      if (path.resolve(fileDir, inputFilePath) === resolvedPath) {
+      // Use case-insensitive comparison on Windows
+      if (path.resolve(fileDir, inputFilePath).toLowerCase() === resolvedPath) {
         return inputFilePath
       }
     } catch {
@@ -425,15 +439,26 @@ export async function forwardSync(
   texFile: string,
   line: number
 ): Promise<SyncTeXForwardResult | null> {
-  const pdfSyncObject = loadSyncTexForFile(texFile)
+  console.log(`[SyncTeX] forwardSync called: file=${texFile}, line=${line}`)
+
+  const pdfSyncObject = await loadSyncTexForFile(texFile)
   if (!pdfSyncObject) {
+    console.warn('[SyncTeX] forwardSync: no sync object for', texFile)
     return null
   }
 
   const inputFilePath = findInputFilePath(texFile, pdfSyncObject)
   if (inputFilePath === undefined) {
+    console.warn(
+      '[SyncTeX] forwardSync: no input file match for',
+      texFile,
+      'available keys:',
+      Object.keys(pdfSyncObject.blockNumberLine)
+    )
     return null
   }
+
+  console.log(`[SyncTeX] matched input file: "${inputFilePath}"`)
 
   const linePageBlocks = pdfSyncObject.blockNumberLine[inputFilePath]
   const lineNums = Object.keys(linePageBlocks)
@@ -441,8 +466,15 @@ export async function forwardSync(
     .sort((a, b) => a - b)
 
   if (lineNums.length === 0) {
+    console.warn('[SyncTeX] forwardSync: no line entries')
     return null
   }
+
+  console.log(
+    `[SyncTeX] lineNums range: ${lineNums[0]}..${lineNums[lineNums.length - 1]} (${lineNums.length} entries), requested line=${line}`
+  )
+
+  let result: SyncTeXForwardResult | null = null
 
   const i = lineNums.findIndex((x) => x >= line)
   if (i === -1) {
@@ -451,47 +483,48 @@ export async function forwardSync(
     const blocks = getBlocks(linePageBlocks, l)
     if (blocks.length === 0) return null
     const c = toRect(blocks)
-    return {
+    result = {
       page: blocks[0].page,
       x: c.left + pdfSyncObject.offset.x,
       y: c.bottom + pdfSyncObject.offset.y
     }
-  }
-
-  if (i === 0 || lineNums[i] === line) {
+  } else if (i === 0 || lineNums[i] === line) {
     const l = lineNums[i]
     const blocks = getBlocks(linePageBlocks, l)
     if (blocks.length === 0) return null
     const c = toRect(blocks)
-    return {
+    result = {
       page: blocks[0].page,
       x: c.left + pdfSyncObject.offset.x,
       y: c.bottom + pdfSyncObject.offset.y
     }
-  }
-
-  const line0 = lineNums[i - 1]
-  const blocks0 = getBlocks(linePageBlocks, line0)
-  const c0 = toRect(blocks0)
-  const line1 = lineNums[i]
-  const blocks1 = getBlocks(linePageBlocks, line1)
-  if (blocks1.length === 0) return null
-  const c1 = toRect(blocks1)
-
-  let bottom: number
-  if (c0.bottom < c1.bottom) {
-    bottom =
-      (c0.bottom * (line1 - line)) / (line1 - line0) +
-      (c1.bottom * (line - line0)) / (line1 - line0)
   } else {
-    bottom = c1.bottom
+    const line0 = lineNums[i - 1]
+    const blocks0 = getBlocks(linePageBlocks, line0)
+    const c0 = toRect(blocks0)
+    const line1 = lineNums[i]
+    const blocks1 = getBlocks(linePageBlocks, line1)
+    if (blocks1.length === 0) return null
+    const c1 = toRect(blocks1)
+
+    let bottom: number
+    if (c0.bottom < c1.bottom) {
+      bottom =
+        (c0.bottom * (line1 - line)) / (line1 - line0) +
+        (c1.bottom * (line - line0)) / (line1 - line0)
+    } else {
+      bottom = c1.bottom
+    }
+
+    result = {
+      page: blocks1[0].page,
+      x: c1.left + pdfSyncObject.offset.x,
+      y: bottom + pdfSyncObject.offset.y
+    }
   }
 
-  return {
-    page: blocks1[0].page,
-    x: c1.left + pdfSyncObject.offset.x,
-    y: bottom + pdfSyncObject.offset.y
-  }
+  console.log(`[SyncTeX] forwardSync result: page=${result?.page}, x=${result?.x?.toFixed(2)}, y=${result?.y?.toFixed(2)}`)
+  return result
 }
 
 export async function inverseSync(
@@ -500,7 +533,7 @@ export async function inverseSync(
   x: number,
   y: number
 ): Promise<SyncTeXInverseResult | null> {
-  const pdfSyncObject = loadSyncTexForFile(texFile)
+  const pdfSyncObject = await loadSyncTexForFile(texFile)
   if (!pdfSyncObject) {
     return null
   }
@@ -555,7 +588,7 @@ export async function inverseSync(
 
   // Resolve relative paths from the SyncTeX file against the tex file's directory
   const candidate = path.resolve(path.dirname(texFile), record.input)
-  if (!fs.existsSync(candidate)) {
+  if (!fsSync.existsSync(candidate)) {
     return null
   }
 

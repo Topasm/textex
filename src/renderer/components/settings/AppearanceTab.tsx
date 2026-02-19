@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import type { UserSettings } from '../../../shared/types'
-import { Moon, Sun, Monitor, Check } from 'lucide-react'
+import { Moon, Sun, Monitor, Sparkles, Check } from 'lucide-react'
 import { Toggle } from './Toggle'
 
 export const AppearanceTab = () => {
@@ -19,6 +19,7 @@ export const AppearanceTab = () => {
           {[
             { id: 'light', label: t('settings.appearance.light'), icon: Sun },
             { id: 'dark', label: t('settings.appearance.dark'), icon: Moon },
+            { id: 'glass', label: t('settings.appearance.glass'), icon: Sparkles },
             { id: 'system', label: t('settings.appearance.system'), icon: Monitor }
           ].map((mode) => (
             <button
@@ -28,7 +29,7 @@ export const AppearanceTab = () => {
                 updateSetting('theme', newTheme)
                 if (newTheme === 'dark') {
                   updateSetting('pdfInvertMode', true)
-                } else if (newTheme === 'light') {
+                } else if (newTheme === 'light' || newTheme === 'glass') {
                   updateSetting('pdfInvertMode', false)
                 } else if (newTheme === 'system') {
                   const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches

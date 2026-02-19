@@ -10,8 +10,13 @@ interface PageViewportInfo {
   pageHeight: number
 }
 
+export interface SynctexHighlights {
+  lineStyle: React.CSSProperties | null
+  dotStyle: React.CSSProperties | null
+}
+
 export interface SynctexState {
-  highlightStyle: React.CSSProperties | null
+  highlights: SynctexHighlights
   handleSyncToCode: () => void
   handleContainerClick: (e: React.MouseEvent<HTMLDivElement>) => void
 }
@@ -22,54 +27,112 @@ export function useSynctex(
   containerWidth: number | null
 ): SynctexState {
   const synctexHighlight = usePdfStore((s) => s.synctexHighlight)
-  const [highlightStyle, setHighlightStyle] = useState<React.CSSProperties | null>(null)
+  const [highlights, setHighlights] = useState<SynctexHighlights>({
+    lineStyle: null,
+    dotStyle: null
+  })
 
-  // React to synctexHighlight changes — show indicator + scroll
+  // React to synctexHighlight changes — show line bar + dot indicator + scroll
   useEffect(() => {
     if (!synctexHighlight) {
-      setHighlightStyle(null)
+      setHighlights({ lineStyle: null, dotStyle: null })
       return
     }
 
     const { page, x, y } = synctexHighlight
-    const info = pageViewportsRef.current?.get(page)
-    if (!info) {
-      const container = containerRef.current
-      if (container) {
-        const pageEl = container.querySelector(
-          `[data-page-number="${page}"]`
-        ) as HTMLDivElement | null
-        if (pageEl) {
-          pageEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    console.log(`[SyncTeX UI] highlight effect: page=${page}, x=${x.toFixed(2)}, y=${y.toFixed(2)}`)
+
+    let cancelled = false
+    let retryTimer: ReturnType<typeof setTimeout> | null = null
+    let fadeTimer: ReturnType<typeof setTimeout> | null = null
+
+    const positionHighlights = (
+      viewport: PageViewportInfo['viewport'],
+      element: HTMLDivElement,
+      pageHeight: number
+    ): void => {
+      const pdfY = pageHeight - y
+      const [vx, vy] = viewport.convertToViewportPoint(x, pdfY)
+      console.log(
+        `[SyncTeX UI] pageHeight=${pageHeight.toFixed(2)}, pdfY=${pdfY.toFixed(2)} -> viewport vx=${vx.toFixed(1)}, vy=${vy.toFixed(1)}`
+      )
+
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+
+      const containerRect = containerRef.current?.getBoundingClientRect()
+      const pageRect = element.getBoundingClientRect()
+      if (!containerRect) return
+
+      const scrollLeft = containerRef.current?.scrollLeft ?? 0
+      const scrollTop = containerRef.current?.scrollTop ?? 0
+      const pageLeft = pageRect.left - containerRect.left + scrollLeft
+      const pageTop = pageRect.top - containerRect.top + scrollTop
+
+      console.log(
+        `[SyncTeX UI] positioning: pageTop=${pageTop.toFixed(1)}, pageLeft=${pageLeft.toFixed(1)}, highlight top=${(pageTop + vy).toFixed(1)}`
+      )
+
+      setHighlights({
+        lineStyle: {
+          position: 'absolute',
+          left: pageLeft,
+          top: pageTop + vy,
+          width: pageRect.width,
+          height: 0 // set via CSS
+        },
+        dotStyle: {
+          position: 'absolute',
+          left: pageLeft + vx,
+          top: pageTop + vy,
+          width: 30,
+          height: 30
         }
-      }
-      setHighlightStyle(null)
-      return
+      })
+
+      fadeTimer = setTimeout(() => {
+        setHighlights({ lineStyle: null, dotStyle: null })
+        usePdfStore.getState().setSynctexHighlight(null)
+      }, SYNCTEX_HIGHLIGHT_MS)
     }
 
-    const { viewport, element, pageHeight } = info
-    const pdfY = pageHeight - y
-    const [vx, vy] = viewport.convertToViewportPoint(x, pdfY)
+    const tryShowHighlight = (attempt: number): void => {
+      if (cancelled) return
 
-    element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      const info = pageViewportsRef.current?.get(page)
+      if (info) {
+        positionHighlights(info.viewport, info.element, info.pageHeight)
+        return
+      }
 
-    const containerRect = containerRef.current?.getBoundingClientRect()
-    const pageRect = element.getBoundingClientRect()
-    if (!containerRect) return
+      // Page viewport not ready — scroll to page and retry
+      if (attempt === 0) {
+        console.log(`[SyncTeX UI] page ${page} viewport NOT available, scrolling and retrying`)
+        const container = containerRef.current
+        if (container) {
+          const pageEl = container.querySelector(
+            `[data-page-number="${page}"]`
+          ) as HTMLDivElement | null
+          if (pageEl) {
+            pageEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          }
+        }
+      }
 
-    setHighlightStyle({
-      position: 'absolute',
-      left: pageRect.left - containerRect.left + (containerRef.current?.scrollLeft ?? 0) + vx,
-      top: pageRect.top - containerRect.top + (containerRef.current?.scrollTop ?? 0) + vy,
-      width: 30,
-      height: 30
-    })
+      // Retry up to 15 times (1.5 seconds total) — enough for page to render
+      if (attempt < 15) {
+        retryTimer = setTimeout(() => tryShowHighlight(attempt + 1), 100)
+      } else {
+        console.warn(`[SyncTeX UI] gave up waiting for page ${page} viewport`)
+      }
+    }
 
-    const timer = setTimeout(() => {
-      setHighlightStyle(null)
-      usePdfStore.getState().setSynctexHighlight(null)
-    }, SYNCTEX_HIGHLIGHT_MS)
-    return () => clearTimeout(timer)
+    tryShowHighlight(0)
+
+    return () => {
+      cancelled = true
+      if (retryTimer) clearTimeout(retryTimer)
+      if (fadeTimer) clearTimeout(fadeTimer)
+    }
   }, [synctexHighlight, containerRef, pageViewportsRef])
 
   // Sync PDF → Code: find most visible page and inverse synctex from its center
@@ -187,8 +250,10 @@ export function useSynctex(
   useEffect(() => {
     if (syncToCodeRequest) {
       handleSyncToCode()
+      // Clear the request so it doesn't re-trigger when dependencies change
+      usePdfStore.setState({ syncToCodeRequest: null })
     }
   }, [syncToCodeRequest, handleSyncToCode])
 
-  return { highlightStyle, handleSyncToCode, handleContainerClick }
+  return { highlights, handleSyncToCode, handleContainerClick }
 }

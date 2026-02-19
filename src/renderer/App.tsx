@@ -1,5 +1,13 @@
 import { useCallback, useState, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
+import {
+  FolderTree,
+  BookOpen,
+  ListTree,
+  StickyNote,
+  Clock,
+  GitBranch
+} from 'lucide-react'
 import Toolbar from './components/Toolbar'
 import EditorPane from './components/EditorPane'
 import PreviewPane from './components/PreviewPane'
@@ -212,13 +220,14 @@ function App() {
   } = useDragResize()
 
   // ---- Sidebar tab definitions ----
-  const allSidebarTabs: { key: SidebarView; label: string }[] = [
-    { key: 'files', label: t('sidebar.files') },
-    { key: 'bib', label: t('sidebar.bib') },
-    { key: 'outline', label: t('sidebar.outline') },
-    { key: 'todo', label: t('sidebar.notes') },
-    { key: 'timeline', label: t('sidebar.timeline') },
-    { key: 'git', label: t('sidebar.git') }
+  const iconSize = 14
+  const allSidebarTabs: { key: SidebarView; label: string; icon: React.ReactNode }[] = [
+    { key: 'files', label: t('sidebar.files'), icon: <FolderTree size={iconSize} /> },
+    { key: 'bib', label: t('sidebar.bib'), icon: <BookOpen size={iconSize} /> },
+    { key: 'outline', label: t('sidebar.outline'), icon: <ListTree size={iconSize} /> },
+    { key: 'todo', label: t('sidebar.notes'), icon: <StickyNote size={iconSize} /> },
+    { key: 'timeline', label: t('sidebar.timeline'), icon: <Clock size={iconSize} /> },
+    { key: 'git', label: t('sidebar.git'), icon: <GitBranch size={iconSize} /> }
   ]
   const sidebarTabs = gitEnabled ? allSidebarTabs : allSidebarTabs.filter((t) => t.key !== 'git')
 
@@ -279,8 +288,10 @@ function App() {
                       key={tab.key}
                       className={`sidebar-tab${sidebarView === tab.key ? ' active' : ''}`}
                       onClick={() => useProjectStore.getState().setSidebarView(tab.key)}
+                      title={tab.label}
                     >
-                      {tab.label}
+                      {tab.icon}
+                      <span className="sidebar-tab-label">{tab.label}</span>
                     </button>
                   ))}
                   <button

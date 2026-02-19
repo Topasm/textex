@@ -18,6 +18,8 @@ function getBackgroundColor(theme: string): string {
       return '#faf6f0'
     case 'high-contrast':
       return '#000000'
+    case 'glass':
+      return '#f0f0f0'
     default:
       return '#1e1e1e'
   }
@@ -29,6 +31,8 @@ function getTitleBarOverlay(theme: string): { color: string; symbolColor: string
       return { color: '#eae3d8', symbolColor: '#3b3530', height: 36 }
     case 'high-contrast':
       return { color: '#1a1a1a', symbolColor: '#ffffff', height: 36 }
+    case 'glass':
+      return { color: '#e8e8e8', symbolColor: '#1a1a1a', height: 36 }
     default:
       return { color: '#333333', symbolColor: '#cccccc', height: 36 }
   }

@@ -10,6 +10,7 @@ export const GIT_REFRESH_INTERVAL_MS = 5000
 export const ZOOM_MIN = 25
 export const ZOOM_MAX = 400
 export const ZOOM_STEP = 25
+export const ZOOM_PRESETS = [50, 75, 100, 125, 150, 200, 300, 400] as const
 
 // ── Font ────────────────────────────────────────────────────
 export const FONT_SIZE_MIN = 8

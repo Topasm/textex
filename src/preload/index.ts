@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
 import type { IpcChannel, IpcRequest, IpcResponse } from '../shared/ipcChannels'
+import type { CompileRecord, ProjectSnippet, ProjectBookmark } from '../shared/types'
 
 // ---- IPC invoke with deduplication & timeout ----
 
@@ -285,5 +286,31 @@ contextBridge.exposeInMainWorld('api', {
   addTemplate: (name: string, description: string, content: string) =>
     invoke('templates:add', name, description, content),
   removeTemplate: (id: string) => invoke('templates:remove', id),
-  importTemplateZip: () => invoke('templates:import-zip')
+  importTemplateZip: () => invoke('templates:import-zip'),
+
+  // Project Data (.textex/ folder)
+  projectInit: (projectRoot: string) => invoke('project:init', projectRoot),
+  projectExists: (projectRoot: string) => invoke('project:exists', projectRoot),
+  projectLoad: (projectRoot: string) => invoke('project:load', projectRoot),
+  projectSave: (projectRoot: string, partial: Record<string, unknown>) =>
+    invoke('project:save', projectRoot, partial),
+  projectTouch: (projectRoot: string) => invoke('project:touch', projectRoot),
+  projectCompileLoad: (projectRoot: string) => invoke('project:compile-load', projectRoot),
+  projectCompileSave: (projectRoot: string, record: CompileRecord) =>
+    invoke('project:compile-save', projectRoot, record),
+  projectCompileClear: (projectRoot: string) => invoke('project:compile-clear', projectRoot),
+  projectCompileLogSave: (projectRoot: string, filePath: string, log: string) =>
+    invoke('project:compile-log-save', projectRoot, filePath, log),
+  projectCompileLogLoad: (projectRoot: string, filePath: string) =>
+    invoke('project:compile-log-load', projectRoot, filePath),
+  projectSnippetsLoad: (projectRoot: string) => invoke('project:snippets-load', projectRoot),
+  projectSnippetsAdd: (projectRoot: string, snippet: Omit<ProjectSnippet, 'id'>) =>
+    invoke('project:snippets-add', projectRoot, snippet),
+  projectSnippetsRemove: (projectRoot: string, id: string) =>
+    invoke('project:snippets-remove', projectRoot, id),
+  projectBookmarksLoad: (projectRoot: string) => invoke('project:bookmarks-load', projectRoot),
+  projectBookmarksAdd: (projectRoot: string, bookmark: Omit<ProjectBookmark, 'id' | 'created'>) =>
+    invoke('project:bookmarks-add', projectRoot, bookmark),
+  projectBookmarksRemove: (projectRoot: string, id: string) =>
+    invoke('project:bookmarks-remove', projectRoot, id)
 })

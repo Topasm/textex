@@ -23,6 +23,12 @@
     "zoomOut": "Verkleinern",
     "zoomIn": "Vergrößern",
     "fitWidth": "An Breite anpassen",
+    "fitHeight": "An Höhe anpassen",
+    "prevPage": "Vorherige Seite",
+    "nextPage": "Nächste Seite",
+    "pageOf": "von",
+    "goToPage": "Gehe zu Seite",
+    "zoomPreset": "Zoomstufe",
     "untitled": "Unbenannt"
   },
   "statusBar": {
@@ -103,6 +109,7 @@
       "light": "Hell",
       "dark": "Dunkel",
       "system": "System",
+      "glass": "Glas",
       "pdfNightMode": "PDF-Nachtmodus",
       "pdfNightModeDesc": "Text- und Hintergrundfarben invertieren für angenehmes Lesen in dunkler Umgebung."
     },

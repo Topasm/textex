@@ -33,6 +33,8 @@
   --shadow-color: rgba(0, 0, 0, 0.3);
   --synctex-border: #007acc;
   --synctex-bg: rgba(0, 122, 204, 0.3);
+  --synctex-line-bg: rgba(0, 122, 204, 0.15);
+  --synctex-flash-bg: rgba(0, 122, 204, 0.25);
   --tab-active-bg: #1e1e1e;
   --tab-inactive-bg: #2d2d2d;
   --tab-hover-bg: #353535;
@@ -88,6 +90,8 @@
   --shadow-color: rgba(60, 50, 40, 0.1);
   --synctex-border: #7a6240;
   --synctex-bg: rgba(122, 98, 64, 0.15);
+  --synctex-line-bg: rgba(122, 98, 64, 0.1);
+  --synctex-flash-bg: rgba(122, 98, 64, 0.2);
   --tab-active-bg: #faf6f0;
   --tab-inactive-bg: #efe8de;
   --tab-hover-bg: #e5ddd2;
@@ -143,6 +147,8 @@
   --shadow-color: rgba(0, 0, 0, 0.5);
   --synctex-border: #1aebff;
   --synctex-bg: rgba(26, 235, 255, 0.3);
+  --synctex-line-bg: rgba(26, 235, 255, 0.12);
+  --synctex-flash-bg: rgba(26, 235, 255, 0.25);
   --tab-active-bg: #000000;
   --tab-inactive-bg: #0a0a0a;
   --tab-hover-bg: #1a1a1a;
@@ -163,6 +169,75 @@
   --update-banner-border: #1aebff;
   --progress-bar-bg: #1a1a1a;
   --progress-bar-fill: #1aebff;
+}
+
+[data-theme='glass'] {
+  --bg-primary: #f0f0f0;
+  --bg-secondary: rgba(255, 255, 255, 0.55);
+  --bg-toolbar: rgba(255, 255, 255, 0.45);
+  --bg-hover: rgba(0, 0, 0, 0.06);
+  --bg-input: rgba(255, 255, 255, 0.65);
+  --text-primary: #1a1a1a;
+  --text-secondary: #555555;
+  --text-kbd: #999999;
+  --text-kbd-hover: #777777;
+  --accent: #007aff;
+  --accent-hover: #0060cc;
+  --border: rgba(0, 0, 0, 0.1);
+  --error: #ff3b30;
+  --warning: #ff9500;
+  --success: #34c759;
+  --info: #007aff;
+  --status-bar-bg: rgba(255, 255, 255, 0.45);
+  --status-bar-text: #1a1a1a;
+  --scrollbar-track: rgba(0, 0, 0, 0.03);
+  --scrollbar-thumb: rgba(0, 0, 0, 0.15);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.25);
+  --preview-bg: rgba(255, 255, 255, 0.4);
+  --save-dirty-bg: rgba(255, 204, 0, 0.15);
+  --save-dirty-text: #665e20;
+  --save-dirty-hover: rgba(255, 204, 0, 0.25);
+  --overlay-bg: rgba(255, 255, 255, 0.5);
+  --zoom-bg: rgba(255, 255, 255, 0.7);
+  --log-entry-hover: rgba(0, 0, 0, 0.04);
+  --location-color: #007aff;
+  --shadow-color: rgba(0, 0, 0, 0.08);
+  --synctex-border: #007aff;
+  --synctex-bg: rgba(0, 122, 255, 0.12);
+  --synctex-line-bg: rgba(0, 122, 255, 0.06);
+  --synctex-flash-bg: rgba(0, 122, 255, 0.15);
+  --tab-active-bg: rgba(255, 255, 255, 0.65);
+  --tab-inactive-bg: rgba(255, 255, 255, 0.3);
+  --tab-hover-bg: rgba(255, 255, 255, 0.5);
+  --sidebar-bg: rgba(255, 255, 255, 0.45);
+  --sidebar-hover: rgba(0, 0, 0, 0.05);
+  --sidebar-selected: rgba(0, 122, 255, 0.1);
+  --file-tree-indent: rgba(0, 0, 0, 0.08);
+  --git-added: #34c759;
+  --git-modified: #ff9500;
+  --git-deleted: #ff3b30;
+  --git-untracked: #8e8e93;
+  --modal-backdrop: rgba(0, 0, 0, 0.25);
+  --modal-bg: rgba(255, 255, 255, 0.7);
+  --card-bg: rgba(255, 255, 255, 0.5);
+  --card-hover: rgba(255, 255, 255, 0.7);
+  --card-border: rgba(0, 0, 0, 0.08);
+  --update-banner-bg: rgba(255, 255, 255, 0.6);
+  --update-banner-border: #007aff;
+  --progress-bar-bg: rgba(0, 0, 0, 0.06);
+  --progress-bar-fill: #007aff;
+}
+
+/* Glass theme: macOS Tahoe-style frosted blur on key panels */
+[data-theme='glass'] .toolbar,
+[data-theme='glass'] .sidebar,
+[data-theme='glass'] .zoom-toolbar,
+[data-theme='glass'] .status-bar,
+[data-theme='glass'] .modal-bg,
+[data-theme='glass'] .menu-dropdown-content,
+[data-theme='glass'] .tab-bar {
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
 * {
@@ -222,17 +297,26 @@ body,
 }
 
 @keyframes fadeOutBackground {
-  from {
-    background-color: rgba(255, 255, 0, 0.3);
+  0% {
+    background-color: var(--synctex-flash-bg, rgba(0, 122, 204, 0.25));
   }
 
-  to {
+  70% {
+    background-color: var(--synctex-flash-bg, rgba(0, 122, 204, 0.25));
+  }
+
+  100% {
     background-color: transparent;
   }
 }
 
 .editor-flash-line {
-  animation: fadeOutBackground 1s ease-out forwards;
+  animation: fadeOutBackground 1.2s ease-out forwards;
+  border-left: 3px solid var(--synctex-border, #007acc);
+}
+
+.editor-flash-gutter {
+  animation: fadeOutBackground 1.2s ease-out forwards;
 }
 
 .split-divider {
@@ -258,7 +342,7 @@ body,
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
+  padding: 5px 10px;
   background-color: var(--bg-toolbar);
   border-bottom: 1px solid var(--bg-secondary);
   user-select: none;
@@ -506,6 +590,10 @@ body,
   to {
     transform: rotate(360deg);
   }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
 }
 
 .preview-compiling-overlay {
@@ -904,25 +992,58 @@ body,
   color: var(--warning);
 }
 
-/* SyncTeX Indicator */
+/* SyncTeX Line Highlight — full-width bar across the page */
+.synctex-line-highlight {
+  position: absolute;
+  height: 24px;
+  transform: translateY(-12px);
+  background: var(--synctex-line-bg);
+  border-top: 2px solid var(--synctex-border);
+  border-bottom: 2px solid var(--synctex-border);
+  pointer-events: none;
+  animation: synctex-line-fade 1.5s ease-out forwards;
+  z-index: 5;
+}
+
+@keyframes synctex-line-fade {
+  0% {
+    opacity: 1;
+  }
+
+  70% {
+    opacity: 0.7;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+/* SyncTeX Dot Indicator — precise position marker */
 .synctex-indicator {
   position: absolute;
   border-radius: 50%;
-  border: 3px solid var(--synctex-border);
+  border: 2px solid var(--synctex-border);
   background: var(--synctex-bg);
   pointer-events: none;
-  animation: synctex-fade 1.5s ease-out forwards;
+  animation: synctex-dot-fade 1.5s ease-out forwards;
+  z-index: 6;
 }
 
-@keyframes synctex-fade {
+@keyframes synctex-dot-fade {
   0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+
+  15% {
     opacity: 1;
     transform: translate(-50%, -50%) scale(1);
   }
 
   100% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(2);
+    transform: translate(-50%, -50%) scale(1.5);
   }
 }
 
@@ -974,13 +1095,14 @@ body,
 
 .sidebar-tabs {
   display: flex;
+  justify-content: flex-start;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
 .sidebar-tab {
-  flex: 1;
-  padding: 6px 12px;
+  flex: none;
+  padding: 7px 8px;
   font-size: 11px;
   text-align: center;
   background: none;
@@ -988,6 +1110,16 @@ body,
   border-bottom: 2px solid transparent;
   color: var(--text-secondary);
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.sidebar-tab-label {
+  display: none;
 }
 
 .sidebar-tab:hover {
@@ -1005,6 +1137,7 @@ body,
   justify-content: center;
   width: 28px;
   flex-shrink: 0;
+  margin-left: auto;
   background: none;
   border: none;
   color: var(--text-secondary);
@@ -1824,7 +1957,7 @@ body,
   transition: background-color 0.12s;
   position: relative;
   min-height: 26px;
-  border-left: 2px solid transparent;
+  border-left: 3px solid transparent;
 }
 
 .outline-item:hover {
@@ -2966,7 +3099,7 @@ body,
 /* Theme cards */
 .settings-theme-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
 }
 
@@ -4063,6 +4196,54 @@ body,
   font-size: 12px;
   min-width: 36px;
   text-align: center;
+  cursor: pointer;
+}
+
+/* ── Page Navigation ──────────────────────────────────────── */
+
+.toolbar-page-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.toolbar-page-input {
+  width: 32px;
+  padding: 2px 4px;
+  font-size: 12px;
+  text-align: center;
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  outline: none;
+}
+
+.toolbar-page-input:focus {
+  border-color: var(--accent);
+}
+
+.toolbar-page-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* ── Zoom Dropdown ────────────────────────────────────────── */
+
+.zoom-dropdown {
+  position: relative;
+}
+
+.zoom-dropdown-content {
+  right: 0;
+  left: auto;
+  min-width: 120px;
+}
+
+.zoom-preset-active {
+  background-color: var(--bg-hover) !important;
+  font-weight: 600;
 }
 
 /* ── Settings shared inline style replacements ────────────── */

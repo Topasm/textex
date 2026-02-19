@@ -12,7 +12,12 @@ import {
   CitationGroup,
   ZoteroSearchResult,
   HistoryItem,
-  SectionNode
+  SectionNode,
+  ProjectDatabase,
+  CompileDatabase,
+  CompileRecord,
+  ProjectSnippet,
+  ProjectBookmark
 } from '../../shared/types'
 import { Template } from '../../shared/templates'
 
@@ -178,6 +183,33 @@ export interface ElectronAPI {
   addTemplate(name: string, description: string, content: string): Promise<Template>
   removeTemplate(id: string): Promise<{ success: boolean }>
   importTemplateZip(): Promise<Template | null>
+
+  // Project Data (.textex/ folder)
+  projectInit(projectRoot: string): Promise<ProjectDatabase>
+  projectExists(projectRoot: string): Promise<boolean>
+  projectLoad(projectRoot: string): Promise<ProjectDatabase>
+  projectSave(
+    projectRoot: string,
+    partial: Partial<ProjectDatabase>
+  ): Promise<ProjectDatabase>
+  projectTouch(projectRoot: string): Promise<{ success: boolean }>
+  projectCompileLoad(projectRoot: string): Promise<CompileDatabase>
+  projectCompileSave(projectRoot: string, record: CompileRecord): Promise<CompileDatabase>
+  projectCompileClear(projectRoot: string): Promise<CompileDatabase>
+  projectCompileLogSave(projectRoot: string, filePath: string, log: string): Promise<string>
+  projectCompileLogLoad(projectRoot: string, filePath: string): Promise<string | null>
+  projectSnippetsLoad(projectRoot: string): Promise<ProjectSnippet[]>
+  projectSnippetsAdd(
+    projectRoot: string,
+    snippet: Omit<ProjectSnippet, 'id'>
+  ): Promise<ProjectSnippet>
+  projectSnippetsRemove(projectRoot: string, id: string): Promise<{ success: boolean }>
+  projectBookmarksLoad(projectRoot: string): Promise<ProjectBookmark[]>
+  projectBookmarksAdd(
+    projectRoot: string,
+    bookmark: Omit<ProjectBookmark, 'id' | 'created'>
+  ): Promise<ProjectBookmark>
+  projectBookmarksRemove(projectRoot: string, id: string): Promise<{ success: boolean }>
 }
 
 declare global {

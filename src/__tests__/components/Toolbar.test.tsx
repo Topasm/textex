@@ -36,7 +36,7 @@ describe('Toolbar', () => {
     // PDF controls
     expect(screen.getByTitle(/Sync PDF to Code/)).toBeInTheDocument()
     expect(screen.getByTitle(/Sync Code to PDF/)).toBeInTheDocument()
-    expect(screen.getByText(/Fit Width/)).toBeInTheDocument()
+    expect(screen.getByTitle(/Zoom level/)).toBeInTheDocument()
   })
 
   it('shows file menu items when File is clicked', async () => {

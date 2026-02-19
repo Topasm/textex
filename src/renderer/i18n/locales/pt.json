@@ -23,6 +23,12 @@
     "zoomOut": "Diminuir zoom",
     "zoomIn": "Aumentar zoom",
     "fitWidth": "Ajustar à largura",
+    "fitHeight": "Ajustar à altura",
+    "prevPage": "Página anterior",
+    "nextPage": "Próxima página",
+    "pageOf": "de",
+    "goToPage": "Ir para a página",
+    "zoomPreset": "Nível de zoom",
     "untitled": "Sem título"
   },
   "statusBar": {
@@ -103,6 +109,7 @@
       "light": "Claro",
       "dark": "Escuro",
       "system": "Sistema",
+      "glass": "Vidro",
       "pdfNightMode": "Modo noturno do PDF",
       "pdfNightModeDesc": "Inverter cores de texto e fundo para leitura confortável em ambientes escuros."
     },
