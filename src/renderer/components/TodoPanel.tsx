@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../store/useAppStore'
 import { logError } from '../utils/errorMessage'
 
@@ -40,6 +41,7 @@ function parseMarkdown(content: string): TodoLine[] {
 }
 
 export function TodoPanel() {
+  const { t } = useTranslation()
   const projectRoot = useAppStore((s) => s.projectRoot)
   const [lines, setLines] = useState<TodoLine[]>([])
   const [rawContent, setRawContent] = useState('')
@@ -183,7 +185,7 @@ export function TodoPanel() {
   if (!projectRoot) {
     return (
       <div className="todo-panel todo-panel--empty">
-        <p>Open a project to use TODO</p>
+        <p>{t('todoPanel.openProject')}</p>
       </div>
     )
   }
@@ -191,7 +193,7 @@ export function TodoPanel() {
   if (loading) {
     return (
       <div className="todo-panel todo-panel--empty">
-        <p>Loading…</p>
+        <p>{t('todoPanel.loading')}</p>
       </div>
     )
   }
@@ -199,7 +201,7 @@ export function TodoPanel() {
   if (!exists) {
     return (
       <div className="todo-panel todo-panel--empty">
-        <button className="panel-create-icon-btn" onClick={handleCreate} title="Create TODO.md">
+        <button className="panel-create-icon-btn" onClick={handleCreate} title={t('todoPanel.createTodo')}>
           <svg
             width="28"
             height="28"
@@ -214,7 +216,7 @@ export function TodoPanel() {
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
         </button>
-        <p>Create TODO.md</p>
+        <p>{t('todoPanel.createTodo')}</p>
       </div>
     )
   }
@@ -287,8 +289,8 @@ export function TodoPanel() {
                   e.stopPropagation()
                   handleDelete(idx)
                 }}
-                title="Delete item"
-                aria-label="Delete item"
+                title={t('todoPanel.deleteItem')}
+                aria-label={t('todoPanel.deleteItem')}
               >
                 ×
               </button>
@@ -307,8 +309,8 @@ export function TodoPanel() {
                 e.stopPropagation()
                 handleDelete(idx)
               }}
-              title="Delete line"
-              aria-label="Delete line"
+              title={t('todoPanel.deleteLine')}
+              aria-label={t('todoPanel.deleteLine')}
             >
               ×
             </button>
@@ -330,10 +332,10 @@ export function TodoPanel() {
               handleAddMemo()
             }
           }}
-          placeholder="Enter: note · Shift+Enter: task"
+          placeholder={t('todoPanel.inputPlaceholder')}
         />
         <button className="todo-panel__add-btn" onClick={handleAddItem}>
-          Add
+          {t('todoPanel.add')}
         </button>
       </div>
     </div>

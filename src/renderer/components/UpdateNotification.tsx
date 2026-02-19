@@ -1,8 +1,10 @@
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../store/useAppStore'
 
 const DISMISSED_UPDATE_KEY = 'textex-dismissed-update-version'
 
 function UpdateNotification() {
+  const { t } = useTranslation()
   const status = useAppStore((s) => s.updateStatus)
   const version = useAppStore((s) => s.updateVersion)
   const progress = useAppStore((s) => s.updateProgress)
@@ -32,10 +34,10 @@ function UpdateNotification() {
   return (
     <div className="update-banner">
       <span className="update-banner-message">
-        {status === 'available' && `Update ${version || ''} is available.`}
-        {status === 'downloading' && `Downloading update...`}
-        {status === 'ready' && `Update ready. Restart to apply.`}
-        {status === 'error' && `Update check failed.`}
+        {status === 'available' && t('updateNotification.available', { version: version || '' })}
+        {status === 'downloading' && t('updateNotification.downloading')}
+        {status === 'ready' && t('updateNotification.ready')}
+        {status === 'error' && t('updateNotification.error')}
       </span>
 
       {status === 'downloading' && (
@@ -45,12 +47,12 @@ function UpdateNotification() {
       )}
 
       {status === 'available' && (
-        <button onClick={() => window.api.updateDownload()}>Download</button>
+        <button onClick={() => window.api.updateDownload()}>{t('updateNotification.download')}</button>
       )}
 
-      {status === 'ready' && <button onClick={() => window.api.updateInstall()}>Restart</button>}
+      {status === 'ready' && <button onClick={() => window.api.updateInstall()}>{t('updateNotification.restart')}</button>}
 
-      <button className="update-dismiss" onClick={handleDismiss} title="Dismiss">
+      <button className="update-dismiss" onClick={handleDismiss} title={t('updateNotification.dismiss')}>
         {'\u00D7'}
       </button>
     </div>

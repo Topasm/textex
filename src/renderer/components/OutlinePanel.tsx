@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../store/useAppStore'
 import type { DocumentSymbolNode } from '../../shared/types'
 
@@ -138,6 +139,7 @@ const OutlineNode = React.memo(function OutlineNode({
 })
 
 function OutlinePanel() {
+  const { t } = useTranslation()
   const documentSymbols = useAppStore((s) => s.documentSymbols)
   const filePath = useAppStore((s) => s.filePath)
   const sectionHighlightEnabled = useAppStore((s) => s.settings.sectionHighlightEnabled)
@@ -149,7 +151,7 @@ function OutlinePanel() {
   if (!filePath) {
     return (
       <div className="outline-panel">
-        <div className="git-empty">No file open.</div>
+        <div className="git-empty">{t('outlinePanel.noFile')}</div>
       </div>
     )
   }
@@ -163,14 +165,14 @@ function OutlinePanel() {
             onClick={toggleHighlight}
             title={
               sectionHighlightEnabled
-                ? 'Hide section bands in editor'
-                : 'Show section bands in editor'
+                ? t('outlinePanel.hideBands')
+                : t('outlinePanel.showBands')
             }
           >
-            {'\u2261'} Bands
+            {'\u2261'} {t('outlinePanel.bands')}
           </button>
         </div>
-        <div className="git-empty">No document outline found.</div>
+        <div className="git-empty">{t('outlinePanel.noOutline')}</div>
       </div>
     )
   }
@@ -183,11 +185,11 @@ function OutlinePanel() {
           onClick={toggleHighlight}
           title={
             sectionHighlightEnabled
-              ? 'Hide section bands in editor'
-              : 'Show section bands in editor'
+              ? t('outlinePanel.hideBands')
+              : t('outlinePanel.showBands')
           }
         >
-          {'\u2261'} Bands
+          {'\u2261'} {t('outlinePanel.bands')}
         </button>
       </div>
       {documentSymbols.map((sym, i) => (

@@ -1,21 +1,23 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../../store/useAppStore'
 import { Toggle } from './Toggle'
 
 export const AutomationTab = () => {
+  const { t } = useTranslation()
   const settings = useAppStore((state) => state.settings)
   const updateSetting = useAppStore((state) => state.updateSetting)
 
   return (
     <div className="settings-tab-content settings-animate-in">
       <div>
-        <h3 className="settings-heading settings-heading-mb">Compiler &amp; Tools</h3>
+        <h3 className="settings-heading settings-heading-mb">{t('settings.automation.compilerTools')}</h3>
         <div className="settings-column-group">
           <div className="settings-row">
             <div>
-              <div className="settings-row-label">Auto Compile</div>
+              <div className="settings-row-label">{t('settings.automation.autoCompile')}</div>
               <div className="settings-row-description">
-                Automatically compile when saving via shortcuts
+                {t('settings.automation.autoCompileDesc')}
               </div>
             </div>
             <Toggle
@@ -25,9 +27,9 @@ export const AutomationTab = () => {
           </div>
           <div className="settings-row">
             <div>
-              <div className="settings-row-label">Spell Check</div>
+              <div className="settings-row-label">{t('settings.automation.spellCheck')}</div>
               <div className="settings-row-description">
-                Highlight misspelled words while typing
+                {t('settings.automation.spellCheckDesc')}
               </div>
             </div>
             <Toggle
@@ -37,7 +39,7 @@ export const AutomationTab = () => {
           </div>
           {settings.spellCheckEnabled && (
             <div className="settings-spellcheck-sub">
-              <label className="settings-label">Language</label>
+              <label className="settings-label">{t('settings.automation.spellLanguage')}</label>
               <select
                 value={settings.spellCheckLanguage ?? 'en-US'}
                 onChange={(e) => {
@@ -52,9 +54,9 @@ export const AutomationTab = () => {
           )}
           <div className="settings-row">
             <div>
-              <div className="settings-row-label">Language Server</div>
+              <div className="settings-row-label">{t('settings.automation.languageServer')}</div>
               <div className="settings-row-description">
-                Enable advanced features like autocompletion and diagnostics
+                {t('settings.automation.languageServerDesc')}
               </div>
             </div>
             <Toggle

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X, Palette, Type, Zap, Link, Settings as SettingsIcon, User, Bot } from 'lucide-react'
 import { GeneralTab } from './settings/GeneralTab'
 import { AppearanceTab } from './settings/AppearanceTab'
@@ -9,14 +10,14 @@ import { AutomationTab } from './settings/AutomationTab'
 
 type TabId = 'general' | 'appearance' | 'editor' | 'ai' | 'integrations' | 'automation'
 
-const tabs = [
-  { id: 'general', label: 'General', icon: User },
-  { id: 'appearance', label: 'Appearance', icon: Palette },
-  { id: 'editor', label: 'Editor', icon: Type },
-  { id: 'ai', label: 'AI', icon: Bot },
-  { id: 'integrations', label: 'Integrations', icon: Link },
-  { id: 'automation', label: 'Automation', icon: Zap }
-] as const
+const TAB_ICONS = {
+  general: User,
+  appearance: Palette,
+  editor: Type,
+  ai: Bot,
+  integrations: Link,
+  automation: Zap
+} as const
 
 const TAB_CONTENT: Record<TabId, React.FC> = {
   general: GeneralTab,
@@ -27,7 +28,10 @@ const TAB_CONTENT: Record<TabId, React.FC> = {
   automation: AutomationTab
 }
 
+const TAB_IDS: TabId[] = ['general', 'appearance', 'editor', 'ai', 'integrations', 'automation']
+
 export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
+  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<TabId>('general')
   const ActiveContent = TAB_CONTENT[activeTab]
 
@@ -38,7 +42,7 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <SettingsIcon size={18} />
-            <h2>Settings</h2>
+            <h2>{t('settings.title')}</h2>
           </div>
           <button onClick={onClose} className="close-button">
             <X size={18} />
@@ -48,16 +52,16 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
         <div className="settings-layout">
           {/* Sidebar */}
           <div className="settings-sidebar">
-            {tabs.map((tab) => {
-              const Icon = tab.icon
+            {TAB_IDS.map((id) => {
+              const Icon = TAB_ICONS[id]
               return (
                 <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`settings-tab${activeTab === tab.id ? ' active' : ''}`}
+                  key={id}
+                  onClick={() => setActiveTab(id)}
+                  className={`settings-tab${activeTab === id ? ' active' : ''}`}
                 >
                   <Icon size={18} />
-                  {tab.label}
+                  {t(`settings.tabs.${id}`)}
                 </button>
               )
             })}

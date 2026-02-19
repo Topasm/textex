@@ -51,7 +51,8 @@ const defaults: UserSettings = {
   aiPromptSummarize: '',
   aiPromptLonger: '',
   aiPromptShorter: '',
-  recentProjects: []
+  recentProjects: [],
+  language: 'en'
 }
 
 function getSettingsPath(): string {

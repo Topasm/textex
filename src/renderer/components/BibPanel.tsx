@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../store/useAppStore'
 import type { BibEntry } from '../../shared/types'
 import { BibPanelHeader } from './bib/BibPanelHeader'
@@ -8,6 +9,7 @@ import { useCitationGroupOps, groupEntries } from '../hooks/useCitationGroups'
 import type { BibGroupMode } from '../hooks/useCitationGroups'
 
 function BibPanel() {
+  const { t } = useTranslation()
   const bibEntries = useAppStore((s) => s.bibEntries)
   const bibGroupMode = useAppStore((s) => s.settings.bibGroupMode) as BibGroupMode
   const updateSetting = useAppStore((s) => s.updateSetting)
@@ -69,7 +71,7 @@ function BibPanel() {
     return (
       <div className="bib-panel">
         <div className="git-empty">
-          No bibliography entries found. Open a project with .bib files.
+          {t('bibPanel.empty')}
         </div>
       </div>
     )
@@ -89,7 +91,7 @@ function BibPanel() {
         />
         <div className="bib-custom-toolbar">
           <button className="bib-new-group-btn" onClick={createGroup}>
-            + New Group
+            {t('bibPanel.newGroup')}
           </button>
         </div>
         <div className="bib-list">
@@ -126,7 +128,7 @@ function BibPanel() {
           {ungroupedEntries.length > 0 && (
             <div className="bib-group">
               <BibGroupHeader
-                label="Ungrouped"
+                label={t('bibPanel.ungrouped')}
                 count={ungroupedEntries.length}
                 isCollapsed={!!collapsed['__ungrouped__']}
                 onToggle={() => toggle('__ungrouped__')}

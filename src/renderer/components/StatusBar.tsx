@@ -1,14 +1,9 @@
 import React, { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../store/useAppStore'
 
-const STATUS_CONFIG = {
-  idle: { dotClass: 'green', label: 'Ready' },
-  compiling: { dotClass: 'yellow', label: 'Compiling...' },
-  success: { dotClass: 'green', label: 'Success' },
-  error: { dotClass: 'red', label: 'Error' }
-} as const
-
 const StatusBar = React.memo(function StatusBar() {
+  const { t } = useTranslation()
   const compileStatus = useAppStore((s) => s.compileStatus)
   const cursorLine = useAppStore((s) => s.cursorLine)
   const cursorColumn = useAppStore((s) => s.cursorColumn)
@@ -21,6 +16,14 @@ const StatusBar = React.memo(function StatusBar() {
   const lspEnabled = useAppStore((s) => s.settings.lspEnabled)
 
   const toggleLogPanel = useAppStore((s) => s.toggleLogPanel)
+
+  const STATUS_CONFIG = {
+    idle: { dotClass: 'green', label: t('statusBar.ready') },
+    compiling: { dotClass: 'yellow', label: t('statusBar.compiling') },
+    success: { dotClass: 'green', label: t('statusBar.success') },
+    error: { dotClass: 'red', label: t('statusBar.error') }
+  } as const
+
   const { dotClass, label } = STATUS_CONFIG[compileStatus]
 
   const errorCount = useMemo(
@@ -40,7 +43,7 @@ const StatusBar = React.memo(function StatusBar() {
           onClick={toggleLogPanel}
           role="button"
           tabIndex={0}
-          title="Toggle log panel"
+          title={t('statusBar.toggleLog')}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault()
@@ -66,7 +69,7 @@ const StatusBar = React.memo(function StatusBar() {
           )}
         </span>
         {isGitRepo && gitBranch && (
-          <span className="status-git-branch" title={`Git branch: ${gitBranch}`}>
+          <span className="status-git-branch" title={t('statusBar.gitBranch', { branch: gitBranch })}>
             {'\u2387'} {gitBranch}
           </span>
         )}
@@ -75,16 +78,16 @@ const StatusBar = React.memo(function StatusBar() {
         {lspEnabled && (
           <span
             className={`status-lsp${lspStatus === 'error' ? ' status-lsp-error' : ''}`}
-            title={lspStatus === 'error' ? 'TexLab LSP error' : `TexLab LSP: ${lspStatus}`}
+            title={lspStatus === 'error' ? t('statusBar.lspErrorTitle') : t('statusBar.lspTitle', { status: lspStatus })}
           >
-            LSP:{' '}
+            {t('statusBar.lsp')}:{' '}
             {lspStatus === 'running'
-              ? 'Connected'
+              ? t('statusBar.lspConnected')
               : lspStatus === 'starting'
-                ? 'Starting...'
+                ? t('statusBar.lspStarting')
                 : lspStatus === 'error'
-                  ? 'Error'
-                  : 'Off'}
+                  ? t('statusBar.lspError')
+                  : t('statusBar.lspOff')}
           </span>
         )}
         <span
@@ -94,7 +97,7 @@ const StatusBar = React.memo(function StatusBar() {
               .getState()
               .updateSetting('sectionHighlightEnabled', !sectionHighlightEnabled)
           }
-          title="Toggle section highlight bands"
+          title={t('statusBar.toggleSectionHighlight')}
           role="button"
           tabIndex={0}
           onKeyDown={(e) => {
@@ -106,14 +109,14 @@ const StatusBar = React.memo(function StatusBar() {
             }
           }}
         >
-          Sections: {sectionHighlightEnabled ? 'On' : 'Off'}
+          {t('statusBar.sections')}: {sectionHighlightEnabled ? t('statusBar.on') : t('statusBar.off')}
         </span>
         <span
           className="status-spellcheck"
           onClick={() =>
             useAppStore.getState().updateSetting('spellCheckEnabled', !spellCheckEnabled)
           }
-          title="Toggle spell check"
+          title={t('statusBar.toggleSpellCheck')}
           role="button"
           tabIndex={0}
           onKeyDown={(e) => {
@@ -123,10 +126,10 @@ const StatusBar = React.memo(function StatusBar() {
             }
           }}
         >
-          Spell: {spellCheckEnabled ? 'On' : 'Off'}
+          {t('statusBar.spell')}: {spellCheckEnabled ? t('statusBar.on') : t('statusBar.off')}
         </span>
         <span>
-          Ln {cursorLine}, Col {cursorColumn}
+          {t('statusBar.ln')} {cursorLine}, {t('statusBar.col')} {cursorColumn}
         </span>
       </div>
     </div>

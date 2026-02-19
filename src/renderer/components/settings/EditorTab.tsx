@@ -1,4 +1,5 @@
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../../store/useAppStore'
 import { Toggle } from './Toggle'
 
@@ -13,6 +14,7 @@ const DEFAULT_RAINBOW: string[] = [
 ]
 
 const SectionColorPalette = () => {
+  const { t } = useTranslation()
   const colors = useAppStore((s) => s.settings.sectionHighlightColors) ?? DEFAULT_RAINBOW
   const updateSetting = useAppStore((s) => s.updateSetting)
 
@@ -39,13 +41,13 @@ const SectionColorPalette = () => {
   return (
     <div className="sh-palette-editor">
       <div className="sh-palette-label">
-        <span>Section Colors</span>
+        <span>{t('settings.editor.sectionColors')}</span>
         <button
           className="sh-palette-reset"
           onClick={resetToDefault}
-          title="Reset to default rainbow"
+          title={t('settings.editor.resetColorsTitle')}
         >
-          Reset
+          {t('settings.editor.resetColors')}
         </button>
       </div>
       <div className="sh-palette-swatches">
@@ -67,14 +69,14 @@ const SectionColorPalette = () => {
               <button
                 className="sh-swatch-remove"
                 onClick={() => removeColor(i)}
-                title="Remove color"
+                title={t('settings.editor.removeColor')}
               >
                 {'\u00d7'}
               </button>
             )}
           </div>
         ))}
-        <button className="sh-swatch-add" onClick={addColor} title="Add color">
+        <button className="sh-swatch-add" onClick={addColor} title={t('settings.editor.addColor')}>
           +
         </button>
       </div>
@@ -83,17 +85,18 @@ const SectionColorPalette = () => {
 }
 
 export const EditorTab = () => {
+  const { t } = useTranslation()
   const settings = useAppStore((state) => state.settings)
   const updateSetting = useAppStore((state) => state.updateSetting)
 
   return (
     <div className="settings-tab-content settings-animate-in">
       <div>
-        <h3 className="settings-heading">Typography</h3>
+        <h3 className="settings-heading">{t('settings.editor.typography')}</h3>
 
         <div className="settings-field-mt">
           <div className="settings-flex-row-between">
-            <label className="settings-label settings-no-mb">Font Size</label>
+            <label className="settings-label settings-no-mb">{t('settings.editor.fontSize')}</label>
             <span className="settings-badge">{settings.fontSize}px</span>
           </div>
           <input
@@ -113,8 +116,8 @@ export const EditorTab = () => {
 
         <div className="settings-field-mt">
           <div className="settings-flex-row-between">
-            <label className="settings-label settings-no-mb">Tab Size</label>
-            <span className="settings-badge">{settings.tabSize ?? 4} spaces</span>
+            <label className="settings-label settings-no-mb">{t('settings.editor.tabSize')}</label>
+            <span className="settings-badge">{settings.tabSize ?? 4} {t('settings.editor.spaces')}</span>
           </div>
           <select
             value={settings.tabSize ?? 4}
@@ -131,13 +134,13 @@ export const EditorTab = () => {
       <hr className="settings-divider" />
 
       <div>
-        <h3 className="settings-heading settings-heading-mb">Behavior</h3>
+        <h3 className="settings-heading settings-heading-mb">{t('settings.editor.behavior')}</h3>
         <div className="settings-column-group">
           <div className="settings-row">
             <div>
-              <div className="settings-row-label">Word Wrap</div>
+              <div className="settings-row-label">{t('settings.editor.wordWrap')}</div>
               <div className="settings-row-description">
-                Wrap long lines to fit the visible area
+                {t('settings.editor.wordWrapDesc')}
               </div>
             </div>
             <Toggle
@@ -147,9 +150,9 @@ export const EditorTab = () => {
           </div>
           <div className="settings-row">
             <div>
-              <div className="settings-row-label">Format on Save</div>
+              <div className="settings-row-label">{t('settings.editor.formatOnSave')}</div>
               <div className="settings-row-description">
-                Automatically format functionality code when saving
+                {t('settings.editor.formatOnSaveDesc')}
               </div>
             </div>
             <Toggle
@@ -159,8 +162,8 @@ export const EditorTab = () => {
           </div>
           <div className="settings-row">
             <div>
-              <div className="settings-row-label">Line Numbers</div>
-              <div className="settings-row-description">Show line numbers in the gutter</div>
+              <div className="settings-row-label">{t('settings.editor.lineNumbers')}</div>
+              <div className="settings-row-description">{t('settings.editor.lineNumbersDesc')}</div>
             </div>
             <Toggle
               checked={settings.lineNumbers !== false}
@@ -169,8 +172,8 @@ export const EditorTab = () => {
           </div>
           <div className="settings-row">
             <div>
-              <div className="settings-row-label">Minimap</div>
-              <div className="settings-row-description">Show code minimap on the right side</div>
+              <div className="settings-row-label">{t('settings.editor.minimap')}</div>
+              <div className="settings-row-description">{t('settings.editor.minimapDesc')}</div>
             </div>
             <Toggle
               checked={!!settings.minimap}
@@ -179,16 +182,16 @@ export const EditorTab = () => {
           </div>
           <div className="settings-row">
             <div>
-              <div className="settings-row-label">Vim Mode</div>
-              <div className="settings-row-description">Vim-style keybindings (coming soon)</div>
+              <div className="settings-row-label">{t('settings.editor.vimMode')}</div>
+              <div className="settings-row-description">{t('settings.editor.vimModeDesc')}</div>
             </div>
             <Toggle checked={false} onChange={() => {}} />
           </div>
           <div className="settings-row">
             <div>
-              <div className="settings-row-label">Auto-hide Sidebar</div>
+              <div className="settings-row-label">{t('settings.editor.autoHideSidebar')}</div>
               <div className="settings-row-description">
-                Sidebar slides away and reappears on hover
+                {t('settings.editor.autoHideSidebarDesc')}
               </div>
             </div>
             <Toggle
@@ -198,9 +201,9 @@ export const EditorTab = () => {
           </div>
           <div className="settings-row">
             <div>
-              <div className="settings-row-label">Math Preview</div>
+              <div className="settings-row-label">{t('settings.editor.mathPreview')}</div>
               <div className="settings-row-description">
-                Show interactive MathLive editor when cursor is inside a math expression
+                {t('settings.editor.mathPreviewDesc')}
               </div>
             </div>
             <Toggle
@@ -210,9 +213,9 @@ export const EditorTab = () => {
           </div>
           <div className="settings-row">
             <div>
-              <div className="settings-row-label">Section Highlight</div>
+              <div className="settings-row-label">{t('settings.editor.sectionHighlight')}</div>
               <div className="settings-row-description">
-                Show colored bands for each \section in the editor
+                {t('settings.editor.sectionHighlightDesc')}
               </div>
             </div>
             <Toggle
@@ -227,12 +230,12 @@ export const EditorTab = () => {
       <hr className="settings-divider" />
 
       <div>
-        <h3 className="settings-heading settings-heading-mb">Status Bar</h3>
+        <h3 className="settings-heading settings-heading-mb">{t('settings.editor.statusBarSection')}</h3>
         <div className="settings-column-group">
           <div className="settings-row">
             <div>
-              <div className="settings-row-label">Show Status Bar</div>
-              <div className="settings-row-description">Show or hide the bottom status bar</div>
+              <div className="settings-row-label">{t('settings.editor.showStatusBar')}</div>
+              <div className="settings-row-description">{t('settings.editor.showStatusBarDesc')}</div>
             </div>
             <Toggle
               checked={settings.showStatusBar}

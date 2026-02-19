@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { FolderOpen, FileText } from 'lucide-react'
 import type { RecentProject } from '../../shared/types'
 import { logError } from '../utils/errorMessage'
@@ -18,6 +19,7 @@ function HomeScreen({
   onAiDraft,
   onOpenSettings
 }: HomeScreenProps) {
+  const { t } = useTranslation()
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([])
 
   useEffect(() => {
@@ -33,7 +35,7 @@ function HomeScreen({
     <div className="home-screen">
       <div className="home-brand">
         <h1 className="home-title">TextEx</h1>
-        <p className="home-subtitle">LaTeX Editor</p>
+        <p className="home-subtitle">{t('homeScreen.subtitle')}</p>
       </div>
 
       <SearchBar
@@ -48,11 +50,11 @@ function HomeScreen({
       <div className="home-actions">
         <button className="home-action-btn home-action-primary" onClick={onOpenFolder}>
           <FolderOpen size={18} />
-          Open Folder
+          {t('homeScreen.openFolder')}
         </button>
         <button className="home-action-btn" onClick={onNewFromTemplate}>
           <FileText size={18} />
-          New from Template
+          {t('homeScreen.newFromTemplate')}
         </button>
       </div>
 

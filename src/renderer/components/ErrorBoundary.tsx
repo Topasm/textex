@@ -1,6 +1,7 @@
 import React from 'react'
+import { withTranslation, WithTranslation } from 'react-i18next'
 
-interface Props {
+interface Props extends WithTranslation {
   children: React.ReactNode
 }
 
@@ -9,7 +10,7 @@ interface State {
   error: Error | null
 }
 
-class ErrorBoundary extends React.Component<Props, State> {
+class ErrorBoundaryInner extends React.Component<Props, State> {
   constructor(props: Props) {
     super(props)
     this.state = { hasError: false, error: null }
@@ -25,16 +26,17 @@ class ErrorBoundary extends React.Component<Props, State> {
 
   render(): React.ReactNode {
     if (this.state.hasError) {
+      const { t } = this.props
       return (
         <div className="error-boundary">
           <div className="error-boundary-content">
-            <h1>Something went wrong</h1>
-            <p>The application encountered an unexpected error.</p>
+            <h1>{t('errorBoundary.title')}</h1>
+            <p>{t('errorBoundary.message')}</p>
             {this.state.error && (
               <pre className="error-boundary-details">{this.state.error.message}</pre>
             )}
             <button className="error-boundary-reload" onClick={this.handleReload}>
-              Reload
+              {t('errorBoundary.reload')}
             </button>
           </div>
         </div>
@@ -45,4 +47,5 @@ class ErrorBoundary extends React.Component<Props, State> {
   }
 }
 
+const ErrorBoundary = withTranslation()(ErrorBoundaryInner)
 export default ErrorBoundary

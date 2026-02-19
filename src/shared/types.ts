@@ -169,6 +169,7 @@ export interface UserSettings {
   minimap?: boolean
   tabSize?: number
   recentProjects?: RecentProject[]
+  language?: string
 }
 
 export interface CitationGroup {

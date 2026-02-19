@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { formatDistanceToNow } from 'date-fns'
 import { useAppStore } from '../store/useAppStore'
 import { logError } from '../utils/errorMessage'
@@ -30,7 +31,7 @@ function mergeTimeline(commits: GitLogEntry[], snapshots: HistoryItem[]): Timeli
     entries.push({
       type: 'local',
       date: new Date(s.timestamp),
-      message: 'Local save',
+      message: '__LOCAL_SAVE__',
       snapshotPath: s.path
     })
   }
@@ -40,6 +41,7 @@ function mergeTimeline(commits: GitLogEntry[], snapshots: HistoryItem[]): Timeli
 }
 
 export function TimelinePanel() {
+  const { t } = useTranslation()
   const activeFilePath = useAppStore((s) => s.activeFilePath)
   const projectRoot = useAppStore((s) => s.projectRoot)
   const isGitRepo = useAppStore((s) => s.isGitRepo)
@@ -99,7 +101,7 @@ export function TimelinePanel() {
   if (!activeFilePath) {
     return (
       <div className="timeline-panel">
-        <div className="timeline-empty">No file open</div>
+        <div className="timeline-empty">{t('timelinePanel.noFile')}</div>
       </div>
     )
   }
@@ -107,7 +109,7 @@ export function TimelinePanel() {
   if (loading && entries.length === 0) {
     return (
       <div className="timeline-panel">
-        <div className="timeline-empty">Loading timeline…</div>
+        <div className="timeline-empty">{t('timelinePanel.loading')}</div>
       </div>
     )
   }
@@ -115,7 +117,7 @@ export function TimelinePanel() {
   if (entries.length === 0) {
     return (
       <div className="timeline-panel">
-        <div className="timeline-empty">No history available for this file</div>
+        <div className="timeline-empty">{t('timelinePanel.noHistory')}</div>
       </div>
     )
   }
@@ -152,7 +154,7 @@ export function TimelinePanel() {
             )}
           </div>
           <div className="timeline-info">
-            <span className="timeline-message">{entry.message}</span>
+            <span className="timeline-message">{entry.message === '__LOCAL_SAVE__' ? t('timelinePanel.localSave') : entry.message}</span>
             <span className="timeline-meta">
               {formatDistanceToNow(entry.date, { addSuffix: true })}
               {entry.author && ` · ${entry.author}`}

@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../store/useAppStore'
 
 type SeverityFilter = 'error' | 'warning' | 'info'
 
 function LogPanel() {
+  const { t } = useTranslation()
   const isLogPanelOpen = useAppStore((s) => s.isLogPanelOpen)
   const logs = useAppStore((s) => s.logs)
   const diagnostics = useAppStore((s) => s.diagnostics)
@@ -79,12 +81,12 @@ function LogPanel() {
 
   // Problems tab label
   const totalCount = diagnostics.length
-  const problemsLabel = totalCount === 0 ? 'Problems' : `Problems (${totalCount})`
+  const problemsLabel = totalCount === 0 ? t('logPanel.problems') : t('logPanel.problemsCount', { count: totalCount })
 
   return (
     <div className="log-panel">
       <div className="log-panel-header">
-        <span>Compilation Log</span>
+        <span>{t('logPanel.compilationLog')}</span>
         <div className="log-actions">
           <button
             className={logViewMode === 'structured' ? 'log-tab-active' : ''}
@@ -96,14 +98,14 @@ function LogPanel() {
             className={logViewMode === 'raw' ? 'log-tab-active' : ''}
             onClick={() => useAppStore.getState().setLogViewMode('raw')}
           >
-            Output
+            {t('logPanel.output')}
           </button>
-          <button onClick={() => useAppStore.getState().clearLogs()}>Clear</button>
-          <button onClick={() => useAppStore.getState().toggleLogPanel()}>Close</button>
+          <button onClick={() => useAppStore.getState().clearLogs()}>{t('logPanel.clear')}</button>
+          <button onClick={() => useAppStore.getState().toggleLogPanel()}>{t('logPanel.close')}</button>
         </div>
       </div>
       {logViewMode === 'raw' ? (
-        <pre ref={scrollRef}>{logs || 'No output yet.'}</pre>
+        <pre ref={scrollRef}>{logs || t('logPanel.noOutput')}</pre>
       ) : (
         <StructuredProblems
           diagnostics={diagnostics}
@@ -150,6 +152,8 @@ const StructuredProblems = React.memo(function StructuredProblems({
   severityIcon,
   listRef
 }: StructuredProblemsProps) {
+  const { t } = useTranslation()
+
   // Filter diagnostics by active severity filters
   const filtered = useMemo(
     () => diagnostics.filter((d) => activeFilters.has(d.severity as SeverityFilter)),
@@ -170,7 +174,7 @@ const StructuredProblems = React.memo(function StructuredProblems({
   if (diagnostics.length === 0) {
     return (
       <div ref={listRef} className="log-structured">
-        <div className="log-empty">No problems detected.</div>
+        <div className="log-empty">{t('logPanel.noProblems')}</div>
       </div>
     )
   }
@@ -181,27 +185,27 @@ const StructuredProblems = React.memo(function StructuredProblems({
         <button
           className={`log-filter-btn log-filter-error ${activeFilters.has('error') ? 'active' : ''}`}
           onClick={() => onToggleFilter('error')}
-          title="Toggle errors"
+          title={t('logPanel.toggleErrors')}
         >
           {'\u2716'} {errorCount}
         </button>
         <button
           className={`log-filter-btn log-filter-warning ${activeFilters.has('warning') ? 'active' : ''}`}
           onClick={() => onToggleFilter('warning')}
-          title="Toggle warnings"
+          title={t('logPanel.toggleWarnings')}
         >
           {'\u26A0'} {warningCount}
         </button>
         <button
           className={`log-filter-btn log-filter-info ${activeFilters.has('info') ? 'active' : ''}`}
           onClick={() => onToggleFilter('info')}
-          title="Toggle info"
+          title={t('logPanel.toggleInfo')}
         >
           {'\u2139'} {infoCount}
         </button>
       </div>
       {filtered.length === 0 ? (
-        <div className="log-empty">No matching problems.</div>
+        <div className="log-empty">{t('logPanel.noMatching')}</div>
       ) : (
         Array.from(grouped.entries()).map(([file, items]) => {
           const isCollapsed = collapsedFiles.has(file)
@@ -235,7 +239,7 @@ const StructuredProblems = React.memo(function StructuredProblems({
                     onClick={() => onEntryClick(d.line, d.column)}
                   >
                     <span className="log-entry-icon">{severityIcon(d.severity)}</span>
-                    <span className="log-entry-location">Ln {d.line}</span>
+                    <span className="log-entry-location">{t('logPanel.ln')} {d.line}</span>
                     <span className="log-entry-message">{d.message}</span>
                   </div>
                 ))}

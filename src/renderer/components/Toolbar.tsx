@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react'
 import { Settings, Home, ChevronDown } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../store/useAppStore'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { ZoteroCiteSearch } from './ZoteroCiteSearch'
@@ -34,6 +35,7 @@ const Toolbar = React.memo(function Toolbar({
   onExport,
   onOpenSettings
 }: ToolbarProps) {
+  const { t } = useTranslation()
   const filePath = useAppStore((s) => s.filePath)
   const isDirty = useAppStore((s) => s.isDirty)
   const compileStatus = useAppStore((s) => s.compileStatus)
@@ -46,7 +48,7 @@ const Toolbar = React.memo(function Toolbar({
   const [isFileMenuOpen, setIsFileMenuOpen] = useState(false)
   const fileMenuRef = useRef<HTMLDivElement>(null)
 
-  const fileName = filePath ? filePath.split(/[\\/]/).pop() : 'Untitled'
+  const fileName = filePath ? filePath.split(/[\\/]/).pop() : t('toolbar.untitled')
 
   const closeFileMenu = useCallback(() => setIsFileMenuOpen(false), [])
   useClickOutside(fileMenuRef, closeFileMenu, isFileMenuOpen)
@@ -71,8 +73,8 @@ const Toolbar = React.memo(function Toolbar({
       {projectRoot && (
         <button
           onClick={onReturnHome}
-          title="Return to home screen"
-          aria-label="Return to home screen"
+          title={t('toolbar.returnHome')}
+          aria-label={t('toolbar.returnHome')}
         >
           <Home size={16} />
         </button>
@@ -80,8 +82,8 @@ const Toolbar = React.memo(function Toolbar({
 
       {/* File Menu */}
       <div className="menu-dropdown" ref={fileMenuRef}>
-        <button onClick={() => setIsFileMenuOpen(!isFileMenuOpen)} title="File operations">
-          File <ChevronDown size={12} />
+        <button onClick={() => setIsFileMenuOpen(!isFileMenuOpen)} title={t('toolbar.fileOperations')}>
+          {t('toolbar.file')} <ChevronDown size={12} />
         </button>
         {isFileMenuOpen && (
           <div className="menu-dropdown-content">
@@ -91,7 +93,7 @@ const Toolbar = React.memo(function Toolbar({
                 setIsFileMenuOpen(false)
               }}
             >
-              Open <kbd>Ctrl+O</kbd>
+              {t('toolbar.open')} <kbd>Ctrl+O</kbd>
             </button>
             <button
               onClick={() => {
@@ -99,7 +101,7 @@ const Toolbar = React.memo(function Toolbar({
                 setIsFileMenuOpen(false)
               }}
             >
-              Open Folder
+              {t('toolbar.openFolder')}
             </button>
             <button
               onClick={() => {
@@ -107,7 +109,7 @@ const Toolbar = React.memo(function Toolbar({
                 setIsFileMenuOpen(false)
               }}
             >
-              Save <kbd>Ctrl+S</kbd>
+              {t('toolbar.save')} <kbd>Ctrl+S</kbd>
             </button>
             <button
               onClick={() => {
@@ -115,7 +117,7 @@ const Toolbar = React.memo(function Toolbar({
                 setIsFileMenuOpen(false)
               }}
             >
-              Save As <kbd>Ctrl+Shift+S</kbd>
+              {t('toolbar.saveAs')} <kbd>Ctrl+Shift+S</kbd>
             </button>
             <div className="toolbar-separator toolbar-separator-line" />
             <button
@@ -124,10 +126,10 @@ const Toolbar = React.memo(function Toolbar({
                 setIsFileMenuOpen(false)
               }}
             >
-              New from Template
+              {t('toolbar.newFromTemplate')}
             </button>
             <div className="toolbar-separator toolbar-separator-line" />
-            <div className="toolbar-export-header">Export</div>
+            <div className="toolbar-export-header">{t('toolbar.export')}</div>
             {EXPORT_FORMATS.map((fmt) => (
               <button
                 key={fmt.ext}
@@ -147,9 +149,9 @@ const Toolbar = React.memo(function Toolbar({
       <button
         className={isDirty ? 'save-btn-dirty' : undefined}
         onClick={onSave}
-        title="Quick Save (Ctrl+S)"
+        title={t('toolbar.quickSave')}
       >
-        Save
+        {t('toolbar.save')}
       </button>
 
       <span className="toolbar-separator" />
@@ -158,23 +160,23 @@ const Toolbar = React.memo(function Toolbar({
         className="compile-btn"
         onClick={onCompile}
         disabled={compileStatus === 'compiling'}
-        title="Compile LaTeX (Ctrl+Enter)"
+        title={t('toolbar.compileLaTeX')}
       >
-        {compileStatus === 'compiling' ? 'Compiling...' : 'Compile'}
+        {compileStatus === 'compiling' ? t('toolbar.compiling') : t('toolbar.compile')}
         <kbd>Ctrl+Enter</kbd>
       </button>
 
-      <button onClick={onToggleLog} title="Toggle log panel (Ctrl+L)">
-        Log
+      <button onClick={onToggleLog} title={t('toolbar.toggleLog')}>
+        {t('toolbar.log')}
       </button>
 
       {aiEnabled && (
-        <button onClick={onAiDraft} title="AI Draft (Ctrl+Shift+D)">
-          AI Draft
+        <button onClick={onAiDraft} title={t('toolbar.aiDraftShortcut')}>
+          {t('toolbar.aiDraft')}
         </button>
       )}
 
-      <button onClick={onOpenSettings} title="Settings" aria-label="Settings">
+      <button onClick={onOpenSettings} title={t('toolbar.settings')} aria-label={t('toolbar.settings')}>
         <Settings size={16} />
       </button>
 
@@ -191,16 +193,16 @@ const Toolbar = React.memo(function Toolbar({
           <button
             className="toolbar-compact-btn"
             onClick={handleSyncToCode}
-            title="Sync PDF to Code (Ctrl+Click in PDF)"
-            aria-label="Sync PDF to Code"
+            title={t('toolbar.syncPdfToCode')}
+            aria-label={t('toolbar.syncPdfToCode')}
           >
             {'\u2190'}
           </button>
           <button
             className="toolbar-compact-btn"
             onClick={handleSyncToPdf}
-            title="Sync Code to PDF"
-            aria-label="Sync Code to PDF"
+            title={t('toolbar.syncCodeToPdf')}
+            aria-label={t('toolbar.syncCodeToPdf')}
           >
             {'\u2192'}
           </button>
@@ -209,8 +211,8 @@ const Toolbar = React.memo(function Toolbar({
             className="toolbar-compact-btn"
             onClick={() => useAppStore.getState().zoomOut()}
             disabled={zoomLevel <= ZOOM_MIN}
-            title="Zoom Out"
-            aria-label="Zoom out"
+            title={t('toolbar.zoomOut')}
+            aria-label={t('toolbar.zoomOut')}
           >
             -
           </button>
@@ -219,17 +221,17 @@ const Toolbar = React.memo(function Toolbar({
             className="toolbar-compact-btn"
             onClick={() => useAppStore.getState().zoomIn()}
             disabled={zoomLevel >= ZOOM_MAX}
-            title="Zoom In"
-            aria-label="Zoom in"
+            title={t('toolbar.zoomIn')}
+            aria-label={t('toolbar.zoomIn')}
           >
             +
           </button>
           <button
             className="toolbar-compact-btn"
             onClick={() => useAppStore.getState().resetZoom()}
-            title="Fit Width"
+            title={t('toolbar.fitWidth')}
           >
-            Fit Width
+            {t('toolbar.fitWidth')}
           </button>
         </div>
 

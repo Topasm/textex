@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../store/useAppStore'
 import { openProject } from '../utils/openProject'
 import type { Template } from '../data/templates'
 
 function TemplateGallery() {
+  const { t } = useTranslation()
   const isOpen = useAppStore((s) => s.isTemplateGalleryOpen)
   const setOpen = useAppStore((s) => s.setTemplateGalleryOpen)
 
@@ -111,8 +113,8 @@ function TemplateGallery() {
         <button className="modal-close" onClick={() => setOpen(false)}>
           {'\u00D7'}
         </button>
-        <h2>New from Template</h2>
-        <p>Choose a template to start a new document.</p>
+        <h2>{t('templateGallery.title')}</h2>
+        <p>{t('templateGallery.description')}</p>
 
         {error && (
           <div className="template-error">
@@ -126,10 +128,10 @@ function TemplateGallery() {
             className="template-action-btn"
             onClick={() => setShowAddForm(!showAddForm)}
           >
-            {showAddForm ? 'Cancel' : '+ Add Custom'}
+            {showAddForm ? t('templateGallery.cancel') : t('templateGallery.addCustom')}
           </button>
           <button className="template-action-btn" onClick={handleImportZip}>
-            Import ZIP
+            {t('templateGallery.importZip')}
           </button>
         </div>
 
@@ -137,18 +139,18 @@ function TemplateGallery() {
           <div className="template-add-form">
             <input
               type="text"
-              placeholder="Template name"
+              placeholder={t('templateGallery.templateName')}
               value={addName}
               onChange={(e) => setAddName(e.target.value)}
             />
             <input
               type="text"
-              placeholder="Description (optional)"
+              placeholder={t('templateGallery.templateDescription')}
               value={addDescription}
               onChange={(e) => setAddDescription(e.target.value)}
             />
             <textarea
-              placeholder="LaTeX content"
+              placeholder={t('templateGallery.latexContent')}
               value={addContent}
               onChange={(e) => setAddContent(e.target.value)}
               rows={6}
@@ -158,41 +160,41 @@ function TemplateGallery() {
               onClick={handleAdd}
               disabled={!addName.trim() || !addContent.trim()}
             >
-              Save Template
+              {t('templateGallery.saveTemplate')}
             </button>
           </div>
         )}
 
-        <h3 className="template-section-label">Built-in</h3>
+        <h3 className="template-section-label">{t('templateGallery.builtIn')}</h3>
         <div className="template-grid">
-          {builtIn.map((t) => (
+          {builtIn.map((tmpl) => (
             <div
-              key={t.id}
+              key={tmpl.id}
               className="template-card"
-              onClick={() => handleSelect(t.name, t.content)}
+              onClick={() => handleSelect(tmpl.name, tmpl.content)}
             >
-              <h3>{t.name}</h3>
-              <p>{t.description}</p>
+              <h3>{tmpl.name}</h3>
+              <p>{tmpl.description}</p>
             </div>
           ))}
         </div>
 
         {custom.length > 0 && (
           <>
-            <h3 className="template-section-label">Custom</h3>
+            <h3 className="template-section-label">{t('templateGallery.custom')}</h3>
             <div className="template-grid">
-              {custom.map((t) => (
+              {custom.map((tmpl) => (
                 <div
-                  key={t.id}
+                  key={tmpl.id}
                   className="template-card"
-                  onClick={() => handleSelect(t.name, t.content)}
+                  onClick={() => handleSelect(tmpl.name, tmpl.content)}
                 >
-                  <h3>{t.name}</h3>
-                  <p>{t.description}</p>
+                  <h3>{tmpl.name}</h3>
+                  <p>{tmpl.description}</p>
                   <button
                     className="template-card-delete"
-                    onClick={(e) => handleRemove(t.id, e)}
-                    title="Remove template"
+                    onClick={(e) => handleRemove(tmpl.id, e)}
+                    title={t('templateGallery.removeTemplate')}
                   >
                     {'\u2715'}
                   </button>

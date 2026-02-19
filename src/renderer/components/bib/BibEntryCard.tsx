@@ -1,4 +1,5 @@
 import React, { useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { BibEntry } from '../../../shared/types'
 
 interface BibEntryCardProps {
@@ -18,8 +19,9 @@ export const BibEntryCard = React.memo(function BibEntryCard({
   onAdd,
   addTitle
 }: BibEntryCardProps) {
-  const cleanTitle = (entry.title || '(no title)').replace(/[{}]/g, '')
-  let authors = entry.author || 'Unknown Author'
+  const { t } = useTranslation()
+  const cleanTitle = (entry.title || t('bibPanel.noTitle')).replace(/[{}]/g, '')
+  let authors = entry.author || t('bibPanel.unknownAuthor')
   const authorList = authors.split(/\s+and\s+/)
   if (authorList.length > 1) {
     authors = authorList[0].trim() + ' et al.'
@@ -59,7 +61,7 @@ export const BibEntryCard = React.memo(function BibEntryCard({
               e.stopPropagation()
               onRemove()
             }}
-            title="Remove from group"
+            title={t('bibPanel.removeFromGroup')}
           >
             ×
           </button>

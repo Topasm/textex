@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next'
+
 type BibGroupMode = 'flat' | 'author' | 'year' | 'type' | 'custom'
 
 interface BibPanelHeaderProps {
@@ -13,24 +15,26 @@ export function BibPanelHeader({
   groupMode,
   onGroupModeChange
 }: BibPanelHeaderProps) {
+  const { t } = useTranslation()
+
   return (
     <div className="bib-panel-header">
       <input
         type="text"
-        placeholder="Filter citations..."
+        placeholder={t('bibPanel.filterPlaceholder')}
         value={filter}
         onChange={(e) => onFilterChange(e.target.value)}
       />
       <select
         value={groupMode}
         onChange={(e) => onGroupModeChange(e.target.value as BibGroupMode)}
-        title="Group citations by"
+        title={t('bibPanel.groupBy')}
       >
-        <option value="flat">Flat</option>
-        <option value="author">By Author</option>
-        <option value="year">By Year</option>
-        <option value="type">By Type</option>
-        <option value="custom">Custom</option>
+        <option value="flat">{t('bibPanel.flat')}</option>
+        <option value="author">{t('bibPanel.byAuthor')}</option>
+        <option value="year">{t('bibPanel.byYear')}</option>
+        <option value="type">{t('bibPanel.byType')}</option>
+        <option value="custom">{t('bibPanel.custom')}</option>
       </select>
     </div>
   )

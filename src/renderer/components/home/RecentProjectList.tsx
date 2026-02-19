@@ -1,25 +1,27 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { FolderOpen, Clock, MoreVertical, Pin, Tag, Trash2 } from 'lucide-react'
 import type { RecentProject } from '../../../shared/types'
 import { openProject } from '../../utils/openProject'
 import { logError } from '../../utils/errorMessage'
+import type { TFunction } from 'i18next'
 
-function formatRelativeDate(iso: string): string {
+function formatRelativeDate(iso: string, t: TFunction): string {
   const date = new Date(iso)
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
 
-  if (diffDays === 0) return 'Today'
-  if (diffDays === 1) return 'Yesterday'
-  if (diffDays < 7) return `${diffDays} days ago`
+  if (diffDays === 0) return t('recentProjects.today')
+  if (diffDays === 1) return t('recentProjects.yesterday')
+  if (diffDays < 7) return t('recentProjects.daysAgo', { count: diffDays })
   if (diffDays < 30) {
     const weeks = Math.floor(diffDays / 7)
-    return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`
+    return weeks === 1 ? t('recentProjects.weekAgo') : t('recentProjects.weeksAgo', { count: weeks })
   }
   if (diffDays < 365) {
     const months = Math.floor(diffDays / 30)
-    return months === 1 ? '1 month ago' : `${months} months ago`
+    return months === 1 ? t('recentProjects.monthAgo') : t('recentProjects.monthsAgo', { count: months })
   }
   return date.toLocaleDateString()
 }
@@ -30,6 +32,7 @@ interface RecentProjectListProps {
 }
 
 export function RecentProjectList({ recentProjects, setRecentProjects }: RecentProjectListProps) {
+  const { t } = useTranslation()
   const [menuOpenPath, setMenuOpenPath] = useState<string | null>(null)
   const [editingTagPath, setEditingTagPath] = useState<string | null>(null)
   const [tagInputValue, setTagInputValue] = useState('')
@@ -146,7 +149,7 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
     <div className="home-recent">
       <h2 className="home-recent-title">
         <Clock size={16} />
-        Recent Projects
+        {t('recentProjects.title')}
       </h2>
       <div className="home-recent-list">
         {sortedProjects.map((project) => (
@@ -167,7 +170,7 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
             </div>
             <div className="home-recent-item-meta">
               <span className="home-recent-item-date">
-                {formatRelativeDate(project.lastOpened)}
+                {formatRelativeDate(project.lastOpened, t)}
               </span>
               {project.tag && <span className="home-recent-item-tag">{project.tag}</span>}
             </div>
@@ -179,7 +182,7 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
               <button
                 className="home-recent-item-menu-btn"
                 onClick={(e) => handleToggleMenu(e, project.path)}
-                title="More actions"
+                title={t('recentProjects.moreActions')}
               >
                 <MoreVertical size={14} />
               </button>
@@ -188,15 +191,15 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
                 <div className="home-recent-item-dropdown">
                   <button onClick={(e) => handleTogglePin(e, project)}>
                     <Pin size={14} />
-                    {project.pinned ? 'Unpin' : 'Pin'}
+                    {project.pinned ? t('recentProjects.unpin') : t('recentProjects.pin')}
                   </button>
                   <button onClick={(e) => handleEditTag(e, project)}>
                     <Tag size={14} />
-                    Edit Tag
+                    {t('recentProjects.editTag')}
                   </button>
                   <button className="danger" onClick={(e) => handleRemoveRecent(e, project.path)}>
                     <Trash2 size={14} />
-                    Remove
+                    {t('recentProjects.remove')}
                   </button>
                 </div>
               )}
@@ -211,7 +214,7 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
                     ref={tagInputRef}
                     className="home-recent-item-tag-input"
                     type="text"
-                    placeholder="e.g. NeurIPS 2025"
+                    placeholder={t('recentProjects.tagPlaceholder')}
                     value={tagInputValue}
                     onChange={(e) => setTagInputValue(e.target.value)}
                     onKeyDown={(e) => {
@@ -228,7 +231,7 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
                     className="home-recent-item-tag-save"
                     onClick={() => handleSaveTag(project.path)}
                   >
-                    Save
+                    {t('recentProjects.save')}
                   </button>
                 </div>
               )}

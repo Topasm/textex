@@ -1,23 +1,25 @@
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../../store/useAppStore'
 import type { UserSettings } from '../../../shared/types'
 import { Moon, Sun, Monitor, Check } from 'lucide-react'
 import { Toggle } from './Toggle'
 
 export const AppearanceTab = () => {
+  const { t } = useTranslation()
   const settings = useAppStore((state) => state.settings)
   const updateSetting = useAppStore((state) => state.updateSetting)
 
   return (
     <div className="settings-tab-content settings-animate-in">
       <div>
-        <h3 className="settings-heading">Theme</h3>
-        <p className="settings-subheading">Choose how TexTex looks to you.</p>
+        <h3 className="settings-heading">{t('settings.appearance.theme')}</h3>
+        <p className="settings-subheading">{t('settings.appearance.themeDesc')}</p>
 
         <div className="settings-theme-grid">
           {[
-            { id: 'light', label: 'Light', icon: Sun },
-            { id: 'dark', label: 'Dark', icon: Moon },
-            { id: 'system', label: 'System', icon: Monitor }
+            { id: 'light', label: t('settings.appearance.light'), icon: Sun },
+            { id: 'dark', label: t('settings.appearance.dark'), icon: Moon },
+            { id: 'system', label: t('settings.appearance.system'), icon: Monitor }
           ].map((mode) => (
             <button
               key={mode.id}
@@ -53,9 +55,9 @@ export const AppearanceTab = () => {
 
       <div className="settings-row">
         <div>
-          <div className="settings-row-label">PDF Night Mode</div>
+          <div className="settings-row-label">{t('settings.appearance.pdfNightMode')}</div>
           <div className="settings-row-description">
-            Invert text and background colors for comfortable reading in dark environments.
+            {t('settings.appearance.pdfNightModeDesc')}
           </div>
         </div>
         <Toggle

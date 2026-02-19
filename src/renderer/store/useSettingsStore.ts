@@ -19,7 +19,8 @@ const MAIN_PROCESS_KEYS = new Set<keyof UserSettings>([
   'aiPromptLonger',
   'aiPromptShorter',
   'spellCheckLanguage',
-  'theme'
+  'theme',
+  'language'
 ])
 
 let syncTimer: ReturnType<typeof setTimeout> | undefined
@@ -84,7 +85,8 @@ const defaultSettings: UserSettings = {
   bibGroupMode: 'flat',
   lineNumbers: true,
   minimap: false,
-  tabSize: 4
+  tabSize: 4,
+  language: 'en'
 }
 
 interface SettingsState {

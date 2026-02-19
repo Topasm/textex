@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom'
+import '../renderer/i18n'
 
 // Mock window.api for all tests
 Object.defineProperty(window, 'api', {

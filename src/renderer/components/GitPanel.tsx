@@ -1,9 +1,11 @@
 import { useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../store/useAppStore'
 import { getGitFileDecoration } from '../utils/gitStatus'
 import { logError } from '../utils/errorMessage'
 
 function GitPanel() {
+  const { t } = useTranslation()
   const projectRoot = useAppStore((s) => s.projectRoot)
   const isRepo = useAppStore((s) => s.isGitRepo)
   const gitStatus = useAppStore((s) => s.gitStatus)
@@ -65,7 +67,7 @@ function GitPanel() {
   if (!projectRoot) {
     return (
       <div className="git-panel">
-        <div className="git-empty">Open a folder to use Git features.</div>
+        <div className="git-empty">{t('gitPanel.openFolder')}</div>
       </div>
     )
   }
@@ -74,14 +76,14 @@ function GitPanel() {
     return (
       <div className="git-panel">
         <div className="git-empty">
-          Not a Git repository.
+          {t('gitPanel.notRepo')}
           <br />
           <button
             className="git-commit-btn"
             style={{ width: 'auto', marginTop: '8px', padding: '4px 12px' }}
             onClick={handleInit}
           >
-            Initialize Repository
+            {t('gitPanel.initRepo')}
           </button>
         </div>
       </div>
@@ -96,7 +98,7 @@ function GitPanel() {
       {staged.length > 0 && (
         <div className="git-section">
           <div className="git-section-header">
-            <span>Staged Changes</span>
+            <span>{t('gitPanel.stagedChanges')}</span>
             <span>{staged.length}</span>
           </div>
           {staged.map((fp) => {
@@ -111,8 +113,8 @@ function GitPanel() {
                 <button
                   className="git-file-action"
                   onClick={() => handleUnstage(fp)}
-                  title="Unstage"
-                  aria-label="Unstage file"
+                  title={t('gitPanel.unstage')}
+                  aria-label={t('gitPanel.unstage')}
                 >
                   {'\u2212'}
                 </button>
@@ -125,7 +127,7 @@ function GitPanel() {
       {unstaged.length > 0 && (
         <div className="git-section">
           <div className="git-section-header">
-            <span>Changes</span>
+            <span>{t('gitPanel.changes')}</span>
             <span>{unstaged.length}</span>
           </div>
           {unstaged.map((fp) => {
@@ -140,8 +142,8 @@ function GitPanel() {
                 <button
                   className="git-file-action"
                   onClick={() => handleStage(fp)}
-                  title="Stage"
-                  aria-label="Stage file"
+                  title={t('gitPanel.stage')}
+                  aria-label={t('gitPanel.stage')}
                 >
                   +
                 </button>
@@ -151,12 +153,12 @@ function GitPanel() {
         </div>
       )}
 
-      {staged.length === 0 && unstaged.length === 0 && <div className="git-empty">No changes</div>}
+      {staged.length === 0 && unstaged.length === 0 && <div className="git-empty">{t('gitPanel.noChanges')}</div>}
 
       <div className="git-commit-section">
         <textarea
           className="git-commit-input"
-          placeholder="Commit message"
+          placeholder={t('gitPanel.commitMessage')}
           rows={3}
           value={commitMsg}
           onChange={(e) => setCommitMsg(e.target.value)}
@@ -172,7 +174,7 @@ function GitPanel() {
           onClick={handleCommit}
           disabled={!commitMsg.trim() || staged.length === 0}
         >
-          Commit ({staged.length} staged)
+          {t('gitPanel.commit', { count: staged.length })}
         </button>
       </div>
     </div>

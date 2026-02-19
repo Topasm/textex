@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../../store/useAppStore'
 import type { UserSettings } from '../../../shared/types'
 import {
@@ -19,39 +20,39 @@ import { AI_MODEL_OPTIONS, AI_PROVIDER_INFO } from '../../constants'
 
 const DEFAULT_PROMPTS: Record<
   string,
-  { label: string; key: keyof UserSettings; placeholder: string }
+  { labelKey: string; key: keyof UserSettings; placeholder: string }
 > = {
   generate: {
-    label: 'Draft Generation',
+    labelKey: 'settings.ai.promptGenerate',
     key: 'aiPromptGenerate' as keyof UserSettings,
     placeholder:
       'You are a LaTeX document generator. Given markdown, plain text notes, or an outline, produce a complete, compilable LaTeX document. Output ONLY the LaTeX source code...'
   },
   fix: {
-    label: 'Fix Grammar',
+    labelKey: 'settings.ai.promptFix',
     key: 'aiPromptFix' as keyof UserSettings,
     placeholder:
       'Fix grammar and spelling in the following LaTeX text. Do not remove LaTeX commands. Return ONLY the fixed text.'
   },
   academic: {
-    label: 'Academic Rewrite',
+    labelKey: 'settings.ai.promptAcademic',
     key: 'aiPromptAcademic' as keyof UserSettings,
     placeholder:
       'Rewrite the following text to be more formal and academic suitable for a research paper. Preserve LaTeX commands. Return ONLY the rewritten text.'
   },
   summarize: {
-    label: 'Summarize',
+    labelKey: 'settings.ai.promptSummarize',
     key: 'aiPromptSummarize' as keyof UserSettings,
     placeholder: 'Summarize the following text briefly. Return ONLY the summary.'
   },
   longer: {
-    label: 'Make Longer',
+    labelKey: 'settings.ai.promptLonger',
     key: 'aiPromptLonger' as keyof UserSettings,
     placeholder:
       'Paraphrase the following text to be longer and more detailed, expanding on the key points. Preserve all LaTeX commands. Return ONLY the paraphrased text.'
   },
   shorter: {
-    label: 'Make Shorter',
+    labelKey: 'settings.ai.promptShorter',
     key: 'aiPromptShorter' as keyof UserSettings,
     placeholder:
       'Paraphrase the following text to be shorter and more concise, keeping only the essential points. Preserve all LaTeX commands. Return ONLY the paraphrased text.'
@@ -59,6 +60,7 @@ const DEFAULT_PROMPTS: Record<
 }
 
 const AiPromptsEditor = () => {
+  const { t } = useTranslation()
   const settings = useAppStore((state) => state.settings)
   const updateSetting = useAppStore((state) => state.updateSetting)
   const [expandedPrompt, setExpandedPrompt] = useState<string | null>(null)
@@ -78,11 +80,10 @@ const AiPromptsEditor = () => {
     <div>
       <div className="settings-flex-row-start">
         <MessageSquare size={16} className="settings-icon-secondary" />
-        <h3 className="settings-heading settings-no-mb">Custom Prompts</h3>
+        <h3 className="settings-heading settings-no-mb">{t('settings.ai.customPrompts')}</h3>
       </div>
       <p className="settings-subheading">
-        Customize the system prompts used for each AI action. Leave empty to use the built-in
-        defaults.
+        {t('settings.ai.customPromptsDesc')}
       </p>
       <div className="ai-prompts-list">
         {promptEntries.map(([id, prompt]) => {
@@ -96,8 +97,8 @@ const AiPromptsEditor = () => {
               >
                 <div className="settings-section-header-row">
                   {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                  <span>{prompt.label}</span>
-                  {isCustom && <span className="settings-configured-tag">Custom</span>}
+                  <span>{t(prompt.labelKey)}</span>
+                  {isCustom && <span className="settings-configured-tag">{t('settings.ai.custom')}</span>}
                 </div>
               </button>
               {isExpanded && (
@@ -113,10 +114,10 @@ const AiPromptsEditor = () => {
                     <button
                       className="ai-prompt-reset"
                       onClick={() => handleReset(prompt.key)}
-                      title="Reset to default"
+                      title={t('settings.ai.resetToDefault')}
                     >
                       <RotateCcw size={13} />
-                      Reset
+                      {t('settings.editor.resetColors')}
                     </button>
                   )}
                 </div>
@@ -130,6 +131,7 @@ const AiPromptsEditor = () => {
 }
 
 export const AiTab = () => {
+  const { t } = useTranslation()
   const settings = useAppStore((state) => state.settings)
   const updateSetting = useAppStore((state) => state.updateSetting)
 
@@ -174,15 +176,14 @@ export const AiTab = () => {
           </div>
           <div className="settings-section-body">
             <div className="settings-flex-row">
-              <h3 className="settings-section-title settings-no-mb">AI Assistant</h3>
+              <h3 className="settings-section-title settings-no-mb">{t('settings.ai.title')}</h3>
               <Toggle
                 checked={!!settings.aiEnabled}
                 onChange={(checked) => updateSetting('aiEnabled', checked)}
               />
             </div>
             <p className="settings-section-description">
-              Generate LaTeX from notes, fix grammar, rewrite academically, and paraphrase text.
-              Bring your own API key from any supported provider.
+              {t('settings.ai.description')}
             </p>
           </div>
         </div>
@@ -193,9 +194,9 @@ export const AiTab = () => {
           {/* Provider selection */}
           <hr className="settings-divider" />
           <div>
-            <h3 className="settings-heading">Provider</h3>
+            <h3 className="settings-heading">{t('settings.ai.provider')}</h3>
             <p className="settings-subheading">
-              Choose which AI service to use for text generation.
+              {t('settings.ai.providerDesc')}
             </p>
             <div className="settings-theme-grid settings-field-mt-sm">
               {(['openai', 'anthropic', 'gemini'] as const).map((p) => (
@@ -225,9 +226,9 @@ export const AiTab = () => {
 
               {/* Model */}
               <div>
-                <h3 className="settings-heading">Model</h3>
+                <h3 className="settings-heading">{t('settings.ai.model')}</h3>
                 <p className="settings-subheading">
-                  Select which model to use. Leave on Default for the recommended option.
+                  {t('settings.ai.modelDesc')}
                 </p>
                 <div className="settings-field-group settings-field-mt-sm">
                   <select
@@ -235,7 +236,7 @@ export const AiTab = () => {
                     onChange={(e) => updateSetting('aiModel', e.target.value)}
                     className="settings-select"
                   >
-                    <option value="">Default</option>
+                    <option value="">{t('settings.ai.default')}</option>
                     {currentModels.map((m) => (
                       <option key={m.value} value={m.value}>
                         {m.label}
@@ -251,16 +252,16 @@ export const AiTab = () => {
               <div>
                 <div className="settings-flex-row-start">
                   <Key size={16} className="settings-icon-secondary" />
-                  <h3 className="settings-heading settings-no-mb">API Key</h3>
+                  <h3 className="settings-heading settings-no-mb">{t('settings.ai.apiKey')}</h3>
                   {hasKey && !keySaved && (
-                    <span className="settings-configured-tag">Configured</span>
+                    <span className="settings-configured-tag">{t('settings.ai.configured')}</span>
                   )}
                   {keySaved && (
-                    <span className="settings-configured-tag settings-tag-saved">Saved</span>
+                    <span className="settings-configured-tag settings-tag-saved">{t('settings.ai.saved')}</span>
                   )}
                 </div>
                 <p className="settings-subheading">
-                  Enter your {providerInfo.label} API key. Keys are stored locally and never shared.{' '}
+                  {t('settings.ai.apiKeyDesc', { provider: providerInfo.label })}{' '}
                   <a
                     href="#"
                     onClick={(e) => {
@@ -269,7 +270,7 @@ export const AiTab = () => {
                     }}
                     className="settings-accent-link"
                   >
-                    Get a key
+                    {t('settings.ai.getKey')}
                   </a>
                 </p>
                 <div className="settings-key-row settings-field-mt-sm">
@@ -278,7 +279,7 @@ export const AiTab = () => {
                       type={showKey ? 'text' : 'password'}
                       value={apiKey}
                       onChange={(e) => setApiKey(e.target.value)}
-                      placeholder={hasKey ? 'Enter new key to replace...' : providerInfo.keyHint}
+                      placeholder={hasKey ? t('settings.ai.enterNewKey') : providerInfo.keyHint}
                       className="settings-input settings-input-pr"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') handleSaveKey()
@@ -287,7 +288,7 @@ export const AiTab = () => {
                     <button
                       className="settings-key-toggle-btn"
                       onClick={() => setShowKey(!showKey)}
-                      title={showKey ? 'Hide key' : 'Show key'}
+                      title={showKey ? t('settings.ai.hideKey') : t('settings.ai.showKey')}
                     >
                       {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
@@ -297,7 +298,7 @@ export const AiTab = () => {
                     onClick={handleSaveKey}
                     disabled={!apiKey.trim()}
                   >
-                    Save Key
+                    {t('settings.ai.saveKey')}
                   </button>
                 </div>
               </div>
@@ -309,18 +310,17 @@ export const AiTab = () => {
           <div>
             <div className="settings-flex-row-start">
               <Brain size={16} className="settings-icon-secondary" />
-              <h3 className="settings-heading settings-no-mb">Thinking / Reasoning</h3>
+              <h3 className="settings-heading settings-no-mb">{t('settings.ai.thinking')}</h3>
             </div>
             <p className="settings-subheading">
-              Enable extended thinking for deeper reasoning. Supported on Gemini 2.5, Claude
-              Sonnet/Opus, and OpenAI o-series models.
+              {t('settings.ai.thinkingDesc')}
             </p>
             <div className="settings-column-group">
               <div className="settings-row">
                 <div>
-                  <div className="settings-row-label">Enable Thinking</div>
+                  <div className="settings-row-label">{t('settings.ai.enableThinking')}</div>
                   <div className="settings-row-description">
-                    Let the model reason step-by-step before answering
+                    {t('settings.ai.enableThinkingDesc')}
                   </div>
                 </div>
                 <Toggle
@@ -330,18 +330,18 @@ export const AiTab = () => {
               </div>
               {settings.aiThinkingEnabled && (
                 <div className="settings-thinking-sub">
-                  <label className="settings-label">Thinking Budget (tokens)</label>
+                  <label className="settings-label">{t('settings.ai.thinkingBudget')}</label>
                   <div className="settings-thinking-budget-row">
                     <select
                       value={settings.aiThinkingBudget || 0}
                       onChange={(e) => updateSetting('aiThinkingBudget', parseInt(e.target.value))}
                       className="settings-select settings-select-wide"
                     >
-                      <option value={0}>Default (provider decides)</option>
-                      <option value={4096}>Light (4K tokens)</option>
-                      <option value={8192}>Medium (8K tokens)</option>
-                      <option value={16384}>Deep (16K tokens)</option>
-                      <option value={32768}>Maximum (32K tokens)</option>
+                      <option value={0}>{t('settings.ai.budgetDefault')}</option>
+                      <option value={4096}>{t('settings.ai.budgetLight')}</option>
+                      <option value={8192}>{t('settings.ai.budgetMedium')}</option>
+                      <option value={16384}>{t('settings.ai.budgetDeep')}</option>
+                      <option value={32768}>{t('settings.ai.budgetMaximum')}</option>
                     </select>
                   </div>
                 </div>

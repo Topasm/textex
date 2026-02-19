@@ -1,4 +1,5 @@
 import { useCallback, useState, lazy, Suspense } from 'react'
+import { useTranslation } from 'react-i18next'
 import Toolbar from './components/Toolbar'
 import EditorPane from './components/EditorPane'
 import PreviewPane from './components/PreviewPane'
@@ -40,6 +41,7 @@ const DraftModal = lazy(() =>
 const TemplateGallery = lazy(() => import('./components/TemplateGallery'))
 
 function App() {
+  const { t } = useTranslation()
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   useAutoCompile()
   const { handleOpen, handleSave, handleSaveAs } = useFileOps()
@@ -164,12 +166,12 @@ function App() {
 
   // ---- Sidebar tab definitions ----
   const allSidebarTabs: { key: SidebarView; label: string }[] = [
-    { key: 'files', label: 'Files' },
-    { key: 'bib', label: 'Bib' },
-    { key: 'outline', label: 'Outline' },
-    { key: 'todo', label: 'Notes' },
-    { key: 'timeline', label: 'Timeline' },
-    { key: 'git', label: 'Git' }
+    { key: 'files', label: t('sidebar.files') },
+    { key: 'bib', label: t('sidebar.bib') },
+    { key: 'outline', label: t('sidebar.outline') },
+    { key: 'todo', label: t('sidebar.notes') },
+    { key: 'timeline', label: t('sidebar.timeline') },
+    { key: 'git', label: t('sidebar.git') }
   ]
   const sidebarTabs = gitEnabled ? allSidebarTabs : allSidebarTabs.filter((t) => t.key !== 'git')
 
@@ -236,7 +238,7 @@ function App() {
                   ))}
                   <button
                     className="sidebar-pin-btn"
-                    title={autoHideSidebar ? 'Pin sidebar' : 'Unpin sidebar (auto-hide)'}
+                    title={autoHideSidebar ? t('sidebar.pinSidebar') : t('sidebar.unpinSidebar')}
                     onClick={() => {
                       const store = useAppStore.getState()
                       if (autoHideSidebar) {

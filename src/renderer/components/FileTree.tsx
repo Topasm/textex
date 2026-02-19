@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../store/useAppStore'
 import { logError } from '../utils/errorMessage'
 
@@ -79,6 +80,7 @@ function InlineInput({ depth, icon, onSubmit, onCancel }: InlineInputProps) {
 }
 
 function FileTreeNode({ entry, depth, gitFiles }: FileTreeNodeProps) {
+  const { t } = useTranslation()
   const [expanded, setExpanded] = useState(depth < 1)
   const [children, setChildren] = useState<DirectoryEntry[] | null>(null)
   const [creatingType, setCreatingType] = useState<'file' | 'folder' | null>(null)
@@ -187,16 +189,16 @@ function FileTreeNode({ entry, depth, gitFiles }: FileTreeNodeProps) {
             <button
               className="file-tree-action-btn"
               onClick={handleCreateFile}
-              title="New File"
-              aria-label="New file"
+              title={t('fileTree.newFile')}
+              aria-label={t('fileTree.newFile')}
             >
               +
             </button>
             <button
               className="file-tree-action-btn"
               onClick={handleCreateFolder}
-              title="New Folder"
-              aria-label="New folder"
+              title={t('fileTree.newFolder')}
+              aria-label={t('fileTree.newFolder')}
             >
               +&#x2395;
             </button>
@@ -225,6 +227,7 @@ function FileTreeNode({ entry, depth, gitFiles }: FileTreeNodeProps) {
 }
 
 function FileTree() {
+  const { t } = useTranslation()
   const directoryTree = useAppStore((s) => s.directoryTree)
   const gitStatus = useAppStore((s) => s.gitStatus)
   const projectRoot = useAppStore((s) => s.projectRoot)
@@ -254,7 +257,7 @@ function FileTree() {
   if (!directoryTree || directoryTree.length === 0) {
     return (
       <div className="file-tree">
-        <div className="git-empty">No folder open</div>
+        <div className="git-empty">{t('fileTree.noFolder')}</div>
       </div>
     )
   }
@@ -265,16 +268,16 @@ function FileTree() {
         <button
           className="file-tree-header-btn"
           onClick={() => setCreatingType('file')}
-          title="New File"
-          aria-label="New file"
+          title={t('fileTree.newFile')}
+          aria-label={t('fileTree.newFile')}
         >
           +
         </button>
         <button
           className="file-tree-header-btn"
           onClick={() => setCreatingType('folder')}
-          title="New Folder"
-          aria-label="New folder"
+          title={t('fileTree.newFolder')}
+          aria-label={t('fileTree.newFolder')}
         >
           +&#x2395;
         </button>

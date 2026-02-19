@@ -1,4 +1,5 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { FolderOpen, FileText, Search, X, Terminal, BookOpen, Settings } from 'lucide-react'
 import type { RecentProject } from '../../../shared/types'
 import { templates } from '../../data/templates'
@@ -8,7 +9,7 @@ import { logError } from '../../utils/errorMessage'
 interface SlashCommand {
   command: string
   label: string
-  description: string
+  descriptionKey: string
   icon: React.ReactNode
 }
 
@@ -16,25 +17,25 @@ const SLASH_COMMANDS: SlashCommand[] = [
   {
     command: '/draft',
     label: '/draft',
-    description: 'AI-generate a LaTeX document',
+    descriptionKey: 'searchBar.draftDesc',
     icon: <FileText size={16} />
   },
   {
     command: '/template',
     label: '/template',
-    description: 'Create from a template',
+    descriptionKey: 'searchBar.templateDesc',
     icon: <BookOpen size={16} />
   },
   {
     command: '/open',
     label: '/open',
-    description: 'Open a project folder',
+    descriptionKey: 'searchBar.openDesc',
     icon: <FolderOpen size={16} />
   },
   {
     command: '/help',
     label: '/help',
-    description: 'Open settings & help',
+    descriptionKey: 'searchBar.helpDesc',
     icon: <Settings size={16} />
   }
 ]
@@ -45,7 +46,7 @@ interface SearchResult {
   kind: SearchResultKind
   label: string
   detail: string
-  badge: string
+  badgeKey: string
   data: RecentProject | { name: string; description: string } | SlashCommand
 }
 
@@ -66,6 +67,7 @@ export function SearchBar({
   onAiDraft,
   onOpenSettings
 }: SearchBarProps) {
+  const { t } = useTranslation()
   const [query, setQuery] = useState('')
   // Use deferred value so filtering doesn't block typing responsiveness
   const deferredQuery = useDeferredValue(query)
@@ -89,8 +91,8 @@ export function SearchBar({
       return SLASH_COMMANDS.filter((cmd) => cmd.command.startsWith(cmdPart)).map((cmd) => ({
         kind: 'command' as const,
         label: cmd.label,
-        detail: cmd.description,
-        badge: 'Command',
+        detail: t(cmd.descriptionKey),
+        badgeKey: 'searchBar.command',
         data: cmd
       }))
     }
@@ -109,26 +111,26 @@ export function SearchBar({
           kind: 'project',
           label: project.title || project.name,
           detail: project.tag ? `${project.path} — ${project.tag}` : project.path,
-          badge: 'Recent',
+          badgeKey: 'searchBar.recent',
           data: project
         })
       }
     }
 
-    for (const t of templates) {
-      if (t.name.toLowerCase().includes(lower) || t.description.toLowerCase().includes(lower)) {
+    for (const tmpl of templates) {
+      if (tmpl.name.toLowerCase().includes(lower) || tmpl.description.toLowerCase().includes(lower)) {
         results.push({
           kind: 'template',
-          label: t.name,
-          detail: t.description,
-          badge: 'Template',
-          data: t
+          label: tmpl.name,
+          detail: tmpl.description,
+          badgeKey: 'searchBar.template',
+          data: tmpl
         })
       }
     }
 
     return results
-  }, [deferredQuery, recentProjects])
+  }, [deferredQuery, recentProjects, t])
 
   useEffect(() => {
     setIsDropdownOpen(filteredResults.length > 0)
@@ -221,7 +223,7 @@ export function SearchBar({
           ref={inputRef}
           className="home-search-input"
           type="text"
-          placeholder="Search projects, templates, or type / for commands..."
+          placeholder={t('searchBar.placeholder')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleSearchKeyDown}
@@ -256,7 +258,7 @@ export function SearchBar({
                 <span className="home-search-result-label">{result.label}</span>
                 <span className="home-search-result-detail">{result.detail}</span>
               </div>
-              <span className="home-search-result-badge">{result.badge}</span>
+              <span className="home-search-result-badge">{t(result.badgeKey)}</span>
             </div>
           ))}
         </div>

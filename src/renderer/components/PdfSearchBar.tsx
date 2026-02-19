@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface PdfSearchBarProps {
   visible: boolean
@@ -19,6 +20,7 @@ const PdfSearchBar = React.memo(function PdfSearchBar({
   matchCount,
   currentMatch
 }: PdfSearchBarProps) {
+  const { t } = useTranslation()
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -48,30 +50,30 @@ const PdfSearchBar = React.memo(function PdfSearchBar({
       <input
         ref={inputRef}
         type="text"
-        placeholder="Search in PDF..."
+        placeholder={t('pdfSearch.placeholder')}
         onChange={(e) => onSearch(e.target.value)}
         onKeyDown={handleKeyDown}
       />
       <span className="pdf-search-count">
-        {matchCount > 0 ? `${currentMatch + 1}/${matchCount}` : 'No matches'}
+        {matchCount > 0 ? `${currentMatch + 1}/${matchCount}` : t('pdfSearch.noMatches')}
       </span>
       <button
         onClick={onPrev}
         disabled={matchCount === 0}
-        title="Previous (Shift+Enter)"
-        aria-label="Previous match"
+        title={t('pdfSearch.previous')}
+        aria-label={t('pdfSearch.previous')}
       >
         &#x25B2;
       </button>
       <button
         onClick={onNext}
         disabled={matchCount === 0}
-        title="Next (Enter)"
-        aria-label="Next match"
+        title={t('pdfSearch.next')}
+        aria-label={t('pdfSearch.next')}
       >
         &#x25BC;
       </button>
-      <button onClick={onClose} title="Close (Escape)" aria-label="Close search">
+      <button onClick={onClose} title={t('pdfSearch.close')} aria-label={t('pdfSearch.close')}>
         &#x2715;
       </button>
     </div>

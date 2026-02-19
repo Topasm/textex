@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../store/useAppStore'
 
 interface DraftModalProps {
@@ -16,6 +17,7 @@ export const DraftModal: React.FC<DraftModalProps> = ({
   onInsert,
   initialPrompt
 }) => {
+  const { t } = useTranslation()
   const [phase, setPhase] = useState<Phase>('input')
   const [input, setInput] = useState('')
   const [generatedLatex, setGeneratedLatex] = useState('')
@@ -38,7 +40,7 @@ export const DraftModal: React.FC<DraftModalProps> = ({
   const handleGenerate = useCallback(async () => {
     if (!input.trim()) return
     if (!aiProvider) {
-      setError('No AI provider configured. Go to Settings > AI to set up.')
+      setError(t('draftModal.noProvider'))
       return
     }
 
@@ -53,7 +55,7 @@ export const DraftModal: React.FC<DraftModalProps> = ({
       setError(err instanceof Error ? err.message : String(err))
       setPhase('input')
     }
-  }, [input, aiProvider, aiModel])
+  }, [input, aiProvider, aiModel, t])
 
   const handleInsert = useCallback(() => {
     if (generatedLatex.trim()) {
@@ -89,13 +91,13 @@ export const DraftModal: React.FC<DraftModalProps> = ({
     ? aiModel
       ? `${providerName} / ${aiModel}`
       : providerName
-    : 'Not configured'
+    : t('draftModal.notConfigured')
 
   return (
     <div className="modal-overlay" onClick={onClose} onKeyDown={handleKeyDown}>
       <div className="modal-content draft-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>AI Draft</h2>
+          <h2>{t('draftModal.title')}</h2>
           <button className="close-button" onClick={onClose}>
             &times;
           </button>
@@ -105,8 +107,7 @@ export const DraftModal: React.FC<DraftModalProps> = ({
           {phase === 'input' && (
             <>
               <p className="draft-hint">
-                Paste your markdown, notes, or outline below. The AI will generate a complete LaTeX
-                document.
+                {t('draftModal.hint')}
               </p>
               <textarea
                 ref={inputRef}
@@ -123,14 +124,14 @@ export const DraftModal: React.FC<DraftModalProps> = ({
           {phase === 'generating' && (
             <div className="draft-loading">
               <div className="preview-spinner" />
-              <p>Generating LaTeX document...</p>
+              <p>{t('draftModal.generating')}</p>
             </div>
           )}
 
           {phase === 'preview' && (
             <>
               <p className="draft-hint">
-                Review and edit the generated LaTeX below, then insert into your editor.
+                {t('draftModal.reviewHint')}
               </p>
               <textarea
                 className="draft-preview"
@@ -151,7 +152,7 @@ export const DraftModal: React.FC<DraftModalProps> = ({
                 onClick={handleGenerate}
                 disabled={!input.trim() || !aiProvider}
               >
-                Generate (Ctrl+Enter)
+                {t('draftModal.generate')}
               </button>
             )}
             {phase === 'preview' && (
@@ -162,10 +163,10 @@ export const DraftModal: React.FC<DraftModalProps> = ({
                     setError(null)
                   }}
                 >
-                  Back to Edit
+                  {t('draftModal.backToEdit')}
                 </button>
                 <button className="primary-button" onClick={handleInsert}>
-                  Insert into Editor
+                  {t('draftModal.insertIntoEditor')}
                 </button>
               </>
             )}
