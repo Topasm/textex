@@ -34,6 +34,10 @@ const ESTIMATED_PAGE_HEIGHT = 1100
 const SCROLL_DEBOUNCE_MS = 100
 /** Debounce delay for persisting scroll position. */
 const SCROLL_PERSIST_DEBOUNCE_MS = 500
+/** Accumulated horizontal delta threshold to trigger page navigation in single-page mode. */
+const SWIPE_THRESHOLD = 150
+/** Cooldown between swipe-triggered page navigations. */
+const SWIPE_COOLDOWN_MS = 300
 
 function PreviewPane() {
   const pdfPath = useCompileStore((s) => s.pdfPath)
@@ -42,6 +46,8 @@ function PreviewPane() {
   const zoomLevel = usePdfStore((s) => s.zoomLevel)
   const fitRequest = usePdfStore((s) => s.fitRequest)
   const pdfInvertMode = useSettingsStore((s) => s.settings.pdfInvertMode)
+  const pdfViewMode = useSettingsStore((s) => s.settings.pdfViewMode ?? 'continuous')
+  const currentPage = usePdfStore((s) => s.currentPage)
   const projectRoot = useProjectStore((s) => s.projectRoot)
   const containerRef = useRef<HTMLDivElement>(null)
   const scrollPositionRef = useRef(0)
@@ -138,13 +144,19 @@ function PreviewPane() {
       const container = containerRef.current
       if (!container || numPages === 0) return
       const clamped = Math.max(1, Math.min(numPages, page))
+
+      if (pdfViewMode === 'single') {
+        usePdfStore.getState().setCurrentPage(clamped)
+        return
+      }
+
       let offset = 0
       for (let i = 1; i < clamped; i++) {
         offset += getPageHeight(i) + 16
       }
       container.scrollTop = offset
     },
-    [numPages, getPageHeight]
+    [numPages, getPageHeight, pdfViewMode]
   )
 
   // Expose scrollToPage to the store so Toolbar can call it
@@ -192,6 +204,8 @@ function PreviewPane() {
 
   // Track scroll position and update visible pages with debouncing
   const handleScroll = useCallback(() => {
+    if (pdfViewMode === 'single') return
+
     if (containerRef.current) {
       scrollPositionRef.current = containerRef.current.scrollTop
     }
@@ -206,11 +220,14 @@ function PreviewPane() {
         usePdfStore.getState().saveScrollPosition(projectRoot, containerRef.current.scrollTop)
       }
     }, SCROLL_PERSIST_DEBOUNCE_MS)
-  }, [computeVisiblePages, projectRoot])
+  }, [computeVisiblePages, projectRoot, pdfViewMode])
 
-  // Explicit horizontal scroll support for mice with horizontal wheels
-  // (e.g. Logitech MX Master thumb wheel). Electron/Windows may not
-  // translate horizontal WheelEvent deltaX into native container scroll.
+  // Horizontal scroll / swipe navigation
+  // In continuous mode: horizontal scroll support for mice with horizontal wheels.
+  // In single-page mode: accumulate deltaX/deltaY for page navigation.
+  const swipeAccumRef = useRef(0)
+  const swipeCooldownRef = useRef(false)
+
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
@@ -218,7 +235,30 @@ function PreviewPane() {
     const handler = (e: WheelEvent): void => {
       if (e.ctrlKey || e.metaKey) return
 
-      // Shift + vertical wheel → horizontal scroll
+      if (pdfViewMode === 'single') {
+        // In single-page mode, accumulate delta for swipe navigation
+        const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY
+        if (delta === 0) return
+        e.preventDefault()
+
+        if (swipeCooldownRef.current) return
+
+        swipeAccumRef.current += delta
+        if (Math.abs(swipeAccumRef.current) >= SWIPE_THRESHOLD) {
+          const { currentPage: cp, numPages: np } = usePdfStore.getState()
+          if (swipeAccumRef.current > 0 && cp < np) {
+            usePdfStore.getState().setCurrentPage(cp + 1)
+          } else if (swipeAccumRef.current < 0 && cp > 1) {
+            usePdfStore.getState().setCurrentPage(cp - 1)
+          }
+          swipeAccumRef.current = 0
+          swipeCooldownRef.current = true
+          setTimeout(() => { swipeCooldownRef.current = false }, SWIPE_COOLDOWN_MS)
+        }
+        return
+      }
+
+      // Continuous mode: Shift + vertical wheel → horizontal scroll
       if (e.shiftKey && e.deltaY !== 0) {
         el.scrollLeft += e.deltaY
         e.preventDefault()
@@ -234,23 +274,67 @@ function PreviewPane() {
 
     el.addEventListener('wheel', handler, { passive: false })
     return () => el.removeEventListener('wheel', handler)
-  }, [])
+  }, [pdfViewMode])
 
-  // Keyboard shortcuts for fit-to-width (Ctrl+0) and fit-to-height (Ctrl+9)
+  // Keyboard shortcuts for fit-to-width (Ctrl+0), fit-to-height (Ctrl+9),
+  // and arrow key navigation in single-page mode
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
-      if (!(e.ctrlKey || e.metaKey)) return
-      if (e.key === '0') {
-        e.preventDefault()
-        usePdfStore.getState().requestFit('width')
-      } else if (e.key === '9') {
-        e.preventDefault()
-        usePdfStore.getState().requestFit('height')
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === '0') {
+          e.preventDefault()
+          usePdfStore.getState().requestFit('width')
+        } else if (e.key === '9') {
+          e.preventDefault()
+          usePdfStore.getState().requestFit('height')
+        }
+        return
+      }
+
+      // Arrow key navigation in single-page mode
+      if (pdfViewMode === 'single') {
+        const tag = (e.target as HTMLElement)?.tagName
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return
+
+        const { currentPage: cp, numPages: np } = usePdfStore.getState()
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+          if (cp < np) {
+            e.preventDefault()
+            usePdfStore.getState().setCurrentPage(cp + 1)
+          }
+        } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+          if (cp > 1) {
+            e.preventDefault()
+            usePdfStore.getState().setCurrentPage(cp - 1)
+          }
+        }
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [])
+  }, [pdfViewMode])
+
+  // Handle view mode transitions
+  useEffect(() => {
+    if (numPages === 0) return
+    if (pdfViewMode === 'single') {
+      // Clamp currentPage to valid range
+      const cp = usePdfStore.getState().currentPage
+      const clamped = Math.max(1, Math.min(numPages, cp))
+      if (clamped !== cp) usePdfStore.getState().setCurrentPage(clamped)
+    } else {
+      // Switching to continuous — scroll to the current page position
+      const cp = usePdfStore.getState().currentPage
+      const container = containerRef.current
+      if (container && cp > 1) {
+        let offset = 0
+        for (let i = 1; i < cp; i++) {
+          offset += getPageHeight(i) + 16
+        }
+        container.scrollTop = offset
+      }
+    }
+  }, [pdfViewMode, numPages, getPageHeight])
 
   // Recalculate visible pages when zoom or page count changes
   useEffect(() => {
@@ -369,7 +453,7 @@ function PreviewPane() {
   return (
     <div
       ref={containerRef}
-      className={`preview-container${ctrlHeld ? ' preview-synctex-cursor' : ''}${pdfInvertMode ? ' preview-invert' : ''}`}
+      className={`preview-container${ctrlHeld ? ' preview-synctex-cursor' : ''}${pdfInvertMode ? ' preview-invert' : ''}${pdfViewMode === 'single' ? ' preview-single-mode' : ''}`}
       onScroll={handleScroll}
       onClick={handleContainerClick}
       style={{ position: 'relative' }}
@@ -426,7 +510,16 @@ function PreviewPane() {
               }
             >
               {/* Virtual scrolling: use a container with total height and only render visible pages */}
-              {numPages <= 10 ? (
+              {pdfViewMode === 'single' ? (
+                <div className="preview-single-page-container">
+                  <Page
+                    key={`single_page_${currentPage}`}
+                    pageNumber={currentPage}
+                    width={pageWidth}
+                    onRenderSuccess={handlePageRenderSuccess(currentPage)}
+                  />
+                </div>
+              ) : numPages <= 10 ? (
                 // For small documents, render all pages (no virtualization overhead)
                 Array.from({ length: numPages }, (_, i) => (
                   <Page

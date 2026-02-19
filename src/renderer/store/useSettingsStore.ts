@@ -86,7 +86,9 @@ const defaultSettings: UserSettings = {
   lineNumbers: true,
   minimap: false,
   tabSize: 4,
-  language: 'en'
+  language: 'en',
+  pdfViewMode: 'continuous',
+  showPdfToolbarControls: true
 }
 
 interface SettingsState {

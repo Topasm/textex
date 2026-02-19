@@ -111,7 +111,13 @@
       "system": "System",
       "glass": "Glass",
       "pdfNightMode": "PDF Night Mode",
-      "pdfNightModeDesc": "Invert text and background colors for comfortable reading in dark environments."
+      "pdfNightModeDesc": "Invert text and background colors for comfortable reading in dark environments.",
+      "pdfViewMode": "PDF View Mode",
+      "pdfViewModeDesc": "Switch between continuous scroll and single-page view.",
+      "pdfViewModeContinuous": "Continuous",
+      "pdfViewModeSingle": "Single Page",
+      "showPdfToolbarControls": "PDF Toolbar Controls",
+      "showPdfToolbarControlsDesc": "Show page navigation and zoom controls in the toolbar."
     },
     "editor": {
       "typography": "Typography",

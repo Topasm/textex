@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useEditorStore } from '../../store/useEditorStore'
 import { usePdfStore } from '../../store/usePdfStore'
+import { useSettingsStore } from '../../store/useSettingsStore'
 import { SYNCTEX_HIGHLIGHT_MS } from '../../constants'
 
 interface PageViewportInfo {
@@ -46,6 +47,8 @@ export function useSynctex(
     let retryTimer: ReturnType<typeof setTimeout> | null = null
     let fadeTimer: ReturnType<typeof setTimeout> | null = null
 
+    const isSinglePage = useSettingsStore.getState().settings.pdfViewMode === 'single'
+
     const positionHighlights = (
       viewport: PageViewportInfo['viewport'],
       element: HTMLDivElement,
@@ -57,7 +60,9 @@ export function useSynctex(
         `[SyncTeX UI] pageHeight=${pageHeight.toFixed(2)}, pdfY=${pdfY.toFixed(2)} -> viewport vx=${vx.toFixed(1)}, vy=${vy.toFixed(1)}`
       )
 
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      if (!isSinglePage) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
 
       const containerRect = containerRef.current?.getBoundingClientRect()
       const pageRect = element.getBoundingClientRect()
@@ -104,16 +109,20 @@ export function useSynctex(
         return
       }
 
-      // Page viewport not ready — scroll to page and retry
+      // Page viewport not ready — navigate/scroll to page and retry
       if (attempt === 0) {
         console.log(`[SyncTeX UI] page ${page} viewport NOT available, scrolling and retrying`)
-        const container = containerRef.current
-        if (container) {
-          const pageEl = container.querySelector(
-            `[data-page-number="${page}"]`
-          ) as HTMLDivElement | null
-          if (pageEl) {
-            pageEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        if (isSinglePage) {
+          usePdfStore.getState().setCurrentPage(page)
+        } else {
+          const container = containerRef.current
+          if (container) {
+            const pageEl = container.querySelector(
+              `[data-page-number="${page}"]`
+            ) as HTMLDivElement | null
+            if (pageEl) {
+              pageEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }
           }
         }
       }

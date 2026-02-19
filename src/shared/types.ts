@@ -170,6 +170,8 @@ export interface UserSettings {
   tabSize?: number
   recentProjects?: RecentProject[]
   language?: string
+  pdfViewMode?: 'continuous' | 'single'
+  showPdfToolbarControls?: boolean
 }
 
 export interface CitationGroup {

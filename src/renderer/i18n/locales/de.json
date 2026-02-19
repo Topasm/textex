@@ -111,7 +111,13 @@
       "system": "System",
       "glass": "Glas",
       "pdfNightMode": "PDF-Nachtmodus",
-      "pdfNightModeDesc": "Text- und Hintergrundfarben invertieren für angenehmes Lesen in dunkler Umgebung."
+      "pdfNightModeDesc": "Text- und Hintergrundfarben invertieren für angenehmes Lesen in dunkler Umgebung.",
+      "pdfViewMode": "PDF-Ansichtsmodus",
+      "pdfViewModeDesc": "Zwischen fortlaufendem Scrollen und Einzelseitenansicht wechseln.",
+      "pdfViewModeContinuous": "Fortlaufend",
+      "pdfViewModeSingle": "Einzelseite",
+      "showPdfToolbarControls": "PDF-Symbolleistensteuerung",
+      "showPdfToolbarControlsDesc": "Seitennavigation und Zoomsteuerung in der Symbolleiste anzeigen."
     },
     "editor": {
       "typography": "Typografie",

@@ -103,4 +103,14 @@ describe('Toolbar', () => {
     render(<Toolbar {...defaultProps} />)
     expect(screen.queryByPlaceholderText('Search Zotero...')).not.toBeInTheDocument()
   })
+
+  it('hides PDF toolbar controls when showPdfToolbarControls is false', () => {
+    useAppStore.setState({
+      settings: { ...useAppStore.getState().settings, showPdfToolbarControls: false }
+    })
+    render(<Toolbar {...defaultProps} />)
+    expect(screen.queryByTitle(/Sync PDF to Code/)).not.toBeInTheDocument()
+    expect(screen.queryByTitle(/Sync Code to PDF/)).not.toBeInTheDocument()
+    expect(screen.queryByTitle(/Zoom level/)).not.toBeInTheDocument()
+  })
 })

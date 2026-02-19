@@ -111,7 +111,13 @@
       "system": "시스템",
       "glass": "글래스",
       "pdfNightMode": "PDF 야간 모드",
-      "pdfNightModeDesc": "어두운 환경에서 편안하게 읽을 수 있도록 텍스트와 배경색을 반전합니다."
+      "pdfNightModeDesc": "어두운 환경에서 편안하게 읽을 수 있도록 텍스트와 배경색을 반전합니다.",
+      "pdfViewMode": "PDF 보기 모드",
+      "pdfViewModeDesc": "연속 스크롤과 단일 페이지 보기 간 전환합니다.",
+      "pdfViewModeContinuous": "연속",
+      "pdfViewModeSingle": "단일 페이지",
+      "showPdfToolbarControls": "PDF 도구 모음 컨트롤",
+      "showPdfToolbarControlsDesc": "도구 모음에 페이지 탐색 및 확대/축소 컨트롤을 표시합니다."
     },
     "editor": {
       "typography": "서체",

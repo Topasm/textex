@@ -111,7 +111,13 @@
       "system": "跟随系统",
       "glass": "玻璃",
       "pdfNightMode": "PDF 夜间模式",
-      "pdfNightModeDesc": "反转文本和背景颜色，以便在暗光环境下舒适阅读。"
+      "pdfNightModeDesc": "反转文本和背景颜色，以便在暗光环境下舒适阅读。",
+      "pdfViewMode": "PDF 视图模式",
+      "pdfViewModeDesc": "在连续滚动和单页视图之间切换。",
+      "pdfViewModeContinuous": "连续",
+      "pdfViewModeSingle": "单页",
+      "showPdfToolbarControls": "PDF 工具栏控件",
+      "showPdfToolbarControlsDesc": "在工具栏中显示页面导航和缩放控件。"
     },
     "editor": {
       "typography": "排版",

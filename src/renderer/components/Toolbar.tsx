@@ -252,7 +252,7 @@ const Toolbar = React.memo(function Toolbar({
 
       {/* Right side: PDF Controls & File Info */}
       <div className="toolbar-group-right">
-        <div className="toolbar-pdf-controls">
+        {settings.showPdfToolbarControls !== false && <div className="toolbar-pdf-controls">
           <button
             className="toolbar-compact-btn"
             onClick={handleSyncToCode}
@@ -333,7 +333,7 @@ const Toolbar = React.memo(function Toolbar({
           >
             +
           </button>
-        </div>
+        </div>}
 
         <span className="file-name">
           {isDirty && <span className="dirty-dot" />}

@@ -66,6 +66,44 @@ export const AppearanceTab = () => {
           onChange={(checked) => updateSetting('pdfInvertMode', checked)}
         />
       </div>
+
+      <hr className="settings-divider" />
+
+      <div className="settings-row">
+        <div>
+          <div className="settings-row-label">{t('settings.appearance.pdfViewMode')}</div>
+          <div className="settings-row-description">
+            {t('settings.appearance.pdfViewModeDesc')}
+          </div>
+        </div>
+        <div className="settings-segmented-control">
+          <button
+            className={(settings.pdfViewMode ?? 'continuous') === 'continuous' ? 'active' : ''}
+            onClick={() => updateSetting('pdfViewMode', 'continuous')}
+          >
+            {t('settings.appearance.pdfViewModeContinuous')}
+          </button>
+          <button
+            className={(settings.pdfViewMode ?? 'continuous') === 'single' ? 'active' : ''}
+            onClick={() => updateSetting('pdfViewMode', 'single')}
+          >
+            {t('settings.appearance.pdfViewModeSingle')}
+          </button>
+        </div>
+      </div>
+
+      <div className="settings-row">
+        <div>
+          <div className="settings-row-label">{t('settings.appearance.showPdfToolbarControls')}</div>
+          <div className="settings-row-description">
+            {t('settings.appearance.showPdfToolbarControlsDesc')}
+          </div>
+        </div>
+        <Toggle
+          checked={settings.showPdfToolbarControls !== false}
+          onChange={(checked) => updateSetting('showPdfToolbarControls', checked)}
+        />
+      </div>
     </div>
   )
 }

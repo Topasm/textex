@@ -111,7 +111,13 @@
       "system": "Sistema",
       "glass": "Cristal",
       "pdfNightMode": "Modo nocturno de PDF",
-      "pdfNightModeDesc": "Invertir colores de texto y fondo para una lectura cómoda en ambientes oscuros."
+      "pdfNightModeDesc": "Invertir colores de texto y fondo para una lectura cómoda en ambientes oscuros.",
+      "pdfViewMode": "Modo de vista del PDF",
+      "pdfViewModeDesc": "Alternar entre desplazamiento continuo y vista de una sola página.",
+      "pdfViewModeContinuous": "Continuo",
+      "pdfViewModeSingle": "Página única",
+      "showPdfToolbarControls": "Controles de la barra de herramientas del PDF",
+      "showPdfToolbarControlsDesc": "Mostrar controles de navegación de página y zoom en la barra de herramientas."
     },
     "editor": {
       "typography": "Tipografía",
