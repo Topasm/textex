@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAppStore } from '../store/useAppStore'
+import { useProjectStore } from '../store/useProjectStore'
 import { logError } from '../utils/errorMessage'
 
 interface TodoLine {
@@ -42,7 +42,7 @@ function parseMarkdown(content: string): TodoLine[] {
 
 export function TodoPanel() {
   const { t } = useTranslation()
-  const projectRoot = useAppStore((s) => s.projectRoot)
+  const projectRoot = useProjectStore((s) => s.projectRoot)
   const [lines, setLines] = useState<TodoLine[]>([])
   const [rawContent, setRawContent] = useState('')
   const [newItem, setNewItem] = useState('')

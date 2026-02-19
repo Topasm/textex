@@ -1,6 +1,8 @@
 import { useMemo, useRef, useCallback, useState, useEffect } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
-import { useAppStore } from '../store/useAppStore'
+import { useCompileStore } from '../store/useCompileStore'
+import { usePdfStore } from '../store/usePdfStore'
+import { useSettingsStore } from '../store/useSettingsStore'
 import PdfSearchBar from './PdfSearchBar'
 import { usePreviewZoom } from '../hooks/preview/usePreviewZoom'
 import { useSynctex } from '../hooks/preview/useSynctex'
@@ -31,11 +33,11 @@ const ESTIMATED_PAGE_HEIGHT = 1100
 const SCROLL_DEBOUNCE_MS = 100
 
 function PreviewPane() {
-  const pdfPath = useAppStore((s) => s.pdfPath)
-  const pdfRevision = useAppStore((s) => s.pdfRevision)
-  const compileStatus = useAppStore((s) => s.compileStatus)
-  const zoomLevel = useAppStore((s) => s.zoomLevel)
-  const pdfInvertMode = useAppStore((s) => s.settings.pdfInvertMode)
+  const pdfPath = useCompileStore((s) => s.pdfPath)
+  const pdfRevision = useCompileStore((s) => s.pdfRevision)
+  const compileStatus = useCompileStore((s) => s.compileStatus)
+  const zoomLevel = usePdfStore((s) => s.zoomLevel)
+  const pdfInvertMode = useSettingsStore((s) => s.settings.pdfInvertMode)
   const containerRef = useRef<HTMLDivElement>(null)
   const scrollPositionRef = useRef(0)
   const [numPages, setNumPages] = useState(0)
@@ -168,8 +170,8 @@ function PreviewPane() {
     const msg = error.message || 'Unknown PDF loading error'
     console.error('PDF load error:', msg, error)
     setPdfError(msg)
-    useAppStore.getState().appendLog(`PDF viewer error: ${msg}\n`)
-    useAppStore.getState().setLogPanelOpen(true)
+    useCompileStore.getState().appendLog(`PDF viewer error: ${msg}\n`)
+    useCompileStore.getState().setLogPanelOpen(true)
   }, [])
 
   // Capture viewport info when each page renders

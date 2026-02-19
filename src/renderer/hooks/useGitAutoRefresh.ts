@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useAppStore } from '../store/useAppStore'
+import { useProjectStore } from '../store/useProjectStore'
 import { GIT_REFRESH_INTERVAL_MS } from '../constants'
 import { logError } from '../utils/errorMessage'
 
@@ -16,7 +16,7 @@ export function useGitAutoRefresh(
     const interval = setInterval(async () => {
       try {
         const status = await window.api.gitStatus(projectRoot)
-        const s = useAppStore.getState()
+        const s = useProjectStore.getState()
         s.setGitStatus(status)
         s.setGitBranch(status.branch)
       } catch (err) {

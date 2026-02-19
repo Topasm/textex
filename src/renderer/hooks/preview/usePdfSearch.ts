@@ -1,5 +1,5 @@
 import { useState, useDeferredValue, useEffect, useCallback } from 'react'
-import { useAppStore } from '../../store/useAppStore'
+import { usePdfStore } from '../../store/usePdfStore'
 
 export interface PdfSearchState {
   searchVisible: boolean
@@ -16,10 +16,10 @@ export function usePdfSearch(
   containerRef: React.RefObject<HTMLDivElement | null>,
   numPages: number
 ): PdfSearchState {
-  const searchVisible = useAppStore((s) => s.pdfSearchVisible)
-  const searchQuery = useAppStore((s) => s.pdfSearchQuery)
-  const setSearchVisible = useAppStore((s) => s.setPdfSearchVisible)
-  const setSearchQuery = useAppStore((s) => s.setPdfSearchQuery)
+  const searchVisible = usePdfStore((s) => s.pdfSearchVisible)
+  const searchQuery = usePdfStore((s) => s.pdfSearchQuery)
+  const setSearchVisible = usePdfStore((s) => s.setPdfSearchVisible)
+  const setSearchQuery = usePdfStore((s) => s.setPdfSearchQuery)
 
   const [searchMatches, setSearchMatches] = useState<HTMLElement[]>([])
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0)

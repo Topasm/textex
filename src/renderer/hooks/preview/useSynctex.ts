@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useAppStore } from '../../store/useAppStore'
+import { useEditorStore } from '../../store/useEditorStore'
+import { usePdfStore } from '../../store/usePdfStore'
 import { SYNCTEX_HIGHLIGHT_MS } from '../../constants'
 
 interface PageViewportInfo {
@@ -20,7 +21,7 @@ export function useSynctex(
   pageViewportsRef: React.RefObject<Map<number, PageViewportInfo>>,
   containerWidth: number | null
 ): SynctexState {
-  const synctexHighlight = useAppStore((s) => s.synctexHighlight)
+  const synctexHighlight = usePdfStore((s) => s.synctexHighlight)
   const [highlightStyle, setHighlightStyle] = useState<React.CSSProperties | null>(null)
 
   // React to synctexHighlight changes — show indicator + scroll
@@ -66,14 +67,14 @@ export function useSynctex(
 
     const timer = setTimeout(() => {
       setHighlightStyle(null)
-      useAppStore.getState().setSynctexHighlight(null)
+      usePdfStore.getState().setSynctexHighlight(null)
     }, SYNCTEX_HIGHLIGHT_MS)
     return () => clearTimeout(timer)
   }, [synctexHighlight, containerRef, pageViewportsRef])
 
   // Sync PDF → Code: find most visible page and inverse synctex from its center
   const handleSyncToCode = useCallback(() => {
-    const filePath = useAppStore.getState().filePath
+    const filePath = useEditorStore.getState().filePath
     if (!filePath) return
 
     const container = containerRef.current
@@ -115,7 +116,7 @@ export function useSynctex(
       pageRect.top
 
     const pw = containerWidth
-      ? (containerWidth - 32) * (useAppStore.getState().zoomLevel / 100)
+      ? (containerWidth - 32) * (usePdfStore.getState().zoomLevel / 100)
       : info.pageWidth
     const scale = pw / info.pageWidth
     const pdfX = centerX / scale
@@ -123,7 +124,7 @@ export function useSynctex(
 
     window.api.synctexInverse(filePath, bestPage, pdfX, pdfY).then((result) => {
       if (result) {
-        useAppStore.getState().requestJumpToLine(result.line, result.column || 1)
+        useEditorStore.getState().requestJumpToLine(result.line, result.column || 1)
       }
     })
   }, [containerRef, pageViewportsRef, containerWidth])
@@ -133,7 +134,7 @@ export function useSynctex(
     (e: React.MouseEvent<HTMLDivElement>) => {
       if (!(e.ctrlKey || e.metaKey)) return
 
-      const filePath = useAppStore.getState().filePath
+      const filePath = useEditorStore.getState().filePath
       if (!filePath) return
 
       const container = containerRef.current
@@ -166,7 +167,7 @@ export function useSynctex(
       const clickY = e.clientY - pageRect.top
 
       const pw = containerWidth
-        ? (containerWidth - 32) * (useAppStore.getState().zoomLevel / 100)
+        ? (containerWidth - 32) * (usePdfStore.getState().zoomLevel / 100)
         : info.pageWidth
       const scale = pw / info.pageWidth
       const pdfX = clickX / scale
@@ -174,7 +175,7 @@ export function useSynctex(
 
       window.api.synctexInverse(filePath, targetPageNumber, pdfX, pdfY).then((result) => {
         if (result) {
-          useAppStore.getState().requestJumpToLine(result.line, result.column || 1)
+          useEditorStore.getState().requestJumpToLine(result.line, result.column || 1)
         }
       })
     },
@@ -182,7 +183,7 @@ export function useSynctex(
   )
 
   // Listen for sync requests from toolbar
-  const syncToCodeRequest = useAppStore((s) => s.syncToCodeRequest)
+  const syncToCodeRequest = usePdfStore((s) => s.syncToCodeRequest)
   useEffect(() => {
     if (syncToCodeRequest) {
       handleSyncToCode()

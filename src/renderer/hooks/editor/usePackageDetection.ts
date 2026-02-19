@@ -1,11 +1,12 @@
 import { useEffect } from 'react'
-import { useAppStore } from '../../store/useAppStore'
+import { useEditorStore } from '../../store/useEditorStore'
+import { useProjectStore } from '../../store/useProjectStore'
 import { logError } from '../../utils/errorMessage'
 
 export function usePackageDetection(content: string): void {
   useEffect(() => {
     const timer = setTimeout(() => {
-      const currentContent = useAppStore.getState().content
+      const currentContent = useEditorStore.getState().content
       const pkgRegex = /\\usepackage(?:\[[^\]]*\])?\{([^}]+)\}/g
       const packages = new Set<string>()
       let pkgMatch: RegExpExecArray | null
@@ -15,19 +16,19 @@ export function usePackageDetection(content: string): void {
       }
 
       const detected = Array.from(packages).sort()
-      const current = useAppStore.getState().detectedPackages
+      const current = useProjectStore.getState().detectedPackages
       if (JSON.stringify(detected) !== JSON.stringify(current)) {
-        useAppStore.getState().setDetectedPackages(detected)
+        useProjectStore.getState().setDetectedPackages(detected)
 
         if (detected.length > 0) {
           window.api
             .loadPackageData(detected)
             .then((data) => {
-              useAppStore.getState().setPackageData(data)
+              useProjectStore.getState().setPackageData(data)
             })
             .catch((err) => logError('loadPackageData', err))
         } else {
-          useAppStore.getState().setPackageData({})
+          useProjectStore.getState().setPackageData({})
         }
       }
     }, 1500)

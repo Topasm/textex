@@ -1,24 +1,24 @@
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAppStore } from '../store/useAppStore'
+import { useProjectStore } from '../store/useProjectStore'
 import { getGitFileDecoration } from '../utils/gitStatus'
 import { logError } from '../utils/errorMessage'
 
 function GitPanel() {
   const { t } = useTranslation()
-  const projectRoot = useAppStore((s) => s.projectRoot)
-  const isRepo = useAppStore((s) => s.isGitRepo)
-  const gitStatus = useAppStore((s) => s.gitStatus)
+  const projectRoot = useProjectStore((s) => s.projectRoot)
+  const isRepo = useProjectStore((s) => s.isGitRepo)
+  const gitStatus = useProjectStore((s) => s.gitStatus)
   const [commitMsg, setCommitMsg] = useState('')
 
   const handleInit = useCallback(async () => {
     if (!projectRoot) return
     try {
       await window.api.gitInit(projectRoot)
-      useAppStore.getState().setIsGitRepo(true)
+      useProjectStore.getState().setIsGitRepo(true)
       const status = await window.api.gitStatus(projectRoot)
-      useAppStore.getState().setGitStatus(status)
-      useAppStore.getState().setGitBranch(status.branch)
+      useProjectStore.getState().setGitStatus(status)
+      useProjectStore.getState().setGitBranch(status.branch)
     } catch (err) {
       logError('GitPanel:init', err)
     }
@@ -30,7 +30,7 @@ function GitPanel() {
       try {
         await window.api.gitStage(projectRoot, filePath)
         const status = await window.api.gitStatus(projectRoot)
-        useAppStore.getState().setGitStatus(status)
+        useProjectStore.getState().setGitStatus(status)
       } catch (err) {
         logError('GitPanel:stage', err)
       }
@@ -44,7 +44,7 @@ function GitPanel() {
       try {
         await window.api.gitUnstage(projectRoot, filePath)
         const status = await window.api.gitStatus(projectRoot)
-        useAppStore.getState().setGitStatus(status)
+        useProjectStore.getState().setGitStatus(status)
       } catch (err) {
         logError('GitPanel:unstage', err)
       }
@@ -58,7 +58,7 @@ function GitPanel() {
       await window.api.gitCommit(projectRoot, commitMsg.trim())
       setCommitMsg('')
       const status = await window.api.gitStatus(projectRoot)
-      useAppStore.getState().setGitStatus(status)
+      useProjectStore.getState().setGitStatus(status)
     } catch (err) {
       logError('GitPanel:commit', err)
     }

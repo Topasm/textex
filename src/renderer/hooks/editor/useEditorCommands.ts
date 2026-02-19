@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
-import { useAppStore } from '../../store/useAppStore'
+import { usePdfStore } from '../../store/usePdfStore'
+import { useSettingsStore } from '../../store/useSettingsStore'
 import { formatLatex } from '../../utils/formatter'
 import { HIDDEN_EDITOR_ACTIONS } from '../../constants'
 import type { editor as monacoEditor } from 'monaco-editor'
@@ -27,14 +28,14 @@ export function useEditorCommands({
       editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF, () => {
         const selection = editor.getSelection()
         const model = editor.getModel()
-        const store = useAppStore.getState()
+        const pdfState = usePdfStore.getState()
 
-        store.setPdfSearchVisible(true)
+        pdfState.setPdfSearchVisible(true)
 
         if (selection && model && !selection.isEmpty()) {
           const text = model.getValueInRange(selection)
           if (text.trim().length > 0) {
-            store.setPdfSearchQuery(text)
+            pdfState.setPdfSearchQuery(text)
           }
         }
 
@@ -59,7 +60,7 @@ export function useEditorCommands({
 
       // Ctrl+Shift+I: Insert user info
       editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyI, () => {
-        const settings = useAppStore.getState().settings
+        const settings = useSettingsStore.getState().settings
         const userInfo = `
 % User Information
 % Name: ${settings.name}

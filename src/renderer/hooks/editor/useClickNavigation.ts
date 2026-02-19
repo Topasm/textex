@@ -1,6 +1,8 @@
 import { useCallback } from 'react'
 import type { editor as monacoEditor } from 'monaco-editor'
-import { useAppStore } from '../../store/useAppStore'
+import { useEditorStore } from '../../store/useEditorStore'
+import { useProjectStore } from '../../store/useProjectStore'
+import { usePdfStore } from '../../store/usePdfStore'
 
 function findCommandArgAtPosition(
   lineContent: string,
@@ -43,8 +45,9 @@ export function useClickNavigation(): (editor: monacoEditor.IStandaloneCodeEdito
       e.event.preventDefault()
       e.event.stopPropagation()
 
-      const state = useAppStore.getState()
-      const currentFilePath = state.filePath
+      const editorState = useEditorStore.getState()
+      const projectState = useProjectStore.getState()
+      const currentFilePath = editorState.filePath
       if (!currentFilePath) return
 
       const model = editor.getModel()
@@ -58,13 +61,13 @@ export function useClickNavigation(): (editor: monacoEditor.IStandaloneCodeEdito
         /\\(?:ref|eqref|autoref|pageref|cref|Cref|nameref)\{([^}]+)\}/g
       )
       if (refKey) {
-        const label = state.labels.find((l) => l.label === refKey)
+        const label = projectState.labels.find((l) => l.label === refKey)
         if (label) {
           window.api
             .readFile(label.file)
             .then((result) => {
-              useAppStore.getState().openFileInTab(result.filePath, result.content)
-              setTimeout(() => useAppStore.getState().requestJumpToLine(label.line, 1), 50)
+              useEditorStore.getState().openFileInTab(result.filePath, result.content)
+              setTimeout(() => useEditorStore.getState().requestJumpToLine(label.line, 1), 50)
             })
             .catch((err) => {
               console.warn('Failed to navigate to label:', err)
@@ -75,15 +78,15 @@ export function useClickNavigation(): (editor: monacoEditor.IStandaloneCodeEdito
 
       const citeKey = findCommandArgAtPosition(lineContent, col, /\\cite[tp]?\*?\{([^}]+)\}/g)
       if (citeKey) {
-        const entry = state.bibEntries.find((b) => b.key === citeKey)
+        const entry = projectState.bibEntries.find((b) => b.key === citeKey)
         if (entry?.file) {
           window.api
             .readFile(entry.file)
             .then((result) => {
-              useAppStore.getState().openFileInTab(result.filePath, result.content)
+              useEditorStore.getState().openFileInTab(result.filePath, result.content)
               if (entry.line) {
                 const line = entry.line
-                setTimeout(() => useAppStore.getState().requestJumpToLine(line, 1), 50)
+                setTimeout(() => useEditorStore.getState().requestJumpToLine(line, 1), 50)
               }
             })
             .catch((err) => {
@@ -98,16 +101,16 @@ export function useClickNavigation(): (editor: monacoEditor.IStandaloneCodeEdito
         col,
         /\\(?:input|include)\{([^}]+)\}/g
       )
-      if (inputFile && state.projectRoot) {
+      if (inputFile && projectState.projectRoot) {
         let resolvedPath = inputFile
         if (!resolvedPath.endsWith('.tex')) resolvedPath += '.tex'
         const fullPath = resolvedPath.startsWith('/')
           ? resolvedPath
-          : `${state.projectRoot}/${resolvedPath}`
+          : `${projectState.projectRoot}/${resolvedPath}`
         window.api
           .readFile(fullPath)
           .then((result) => {
-            useAppStore.getState().openFileInTab(result.filePath, result.content)
+            useEditorStore.getState().openFileInTab(result.filePath, result.content)
           })
           .catch(() => {})
         return
@@ -116,7 +119,7 @@ export function useClickNavigation(): (editor: monacoEditor.IStandaloneCodeEdito
       const line = e.target.position.lineNumber
       window.api.synctexForward(currentFilePath, line).then((result) => {
         if (result) {
-          useAppStore.getState().setSynctexHighlight(result)
+          usePdfStore.getState().setSynctexHighlight(result)
         }
       })
     })

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAppStore } from '../store/useAppStore'
+import { useSettingsStore } from '../store/useSettingsStore'
 
 interface DraftModalProps {
   isOpen: boolean
@@ -24,8 +24,8 @@ export const DraftModal: React.FC<DraftModalProps> = ({
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  const aiProvider = useAppStore((s) => s.settings.aiProvider)
-  const aiModel = useAppStore((s) => s.settings.aiModel)
+  const aiProvider = useSettingsStore((s) => s.settings.aiProvider)
+  const aiModel = useSettingsStore((s) => s.settings.aiModel)
 
   useEffect(() => {
     if (isOpen) {

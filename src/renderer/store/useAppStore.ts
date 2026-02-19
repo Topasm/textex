@@ -1,8 +1,9 @@
 /**
- * Facade store: composes all domain stores into a single unified interface.
+ * Legacy facade store: provides backward-compatible getState/setState/subscribe
+ * that compose all domain stores into a single unified interface.
  *
- * Components can continue importing useAppStore as before. Under the hood,
- * all state and actions are delegated to the domain-specific stores:
+ * IMPORTANT: No renderer components or hooks should import this file.
+ * All production code should import directly from domain stores:
  *   - useEditorStore   (file state, cursor, tabs, navigation)
  *   - useCompileStore  (compile status, PDF, logs, diagnostics)
  *   - useProjectStore  (project root, directory tree, sidebar, bib, git)
@@ -10,7 +11,7 @@
  *   - useUiStore       (modals, update, export, LSP, symbols, cite search)
  *   - useSettingsStore  (all user settings)
  *
- * New code should import from domain stores directly when possible.
+ * This file is retained only for test compatibility (setState/getState).
  */
 import { useEditorStore } from './useEditorStore'
 import { useCompileStore } from './useCompileStore'
@@ -231,152 +232,6 @@ function getComposedState() {
   }
 }
 
-/**
- * Facade hook: subscribe to composed state from all domain stores.
- *
- * Supports both selector-based usage:
- *   const filePath = useAppStore((s) => s.filePath)
- *
- * And static access:
- *   useAppStore.getState().setContent('...')
- *   useAppStore.subscribe(...)
- */
-function useAppStoreFn<T>(selector: (state: ComposedState) => T): T {
-  // Subscribe to all domain stores and compose
-  const editorSlice = useEditorStore((s) => s)
-  const compileSlice = useCompileStore((s) => s)
-  const projectSlice = useProjectStore((s) => s)
-  const pdfSlice = usePdfStore((s) => s)
-  const uiSlice = useUiStore((s) => s)
-  const settingsSlice = useSettingsStore((s) => s)
-
-  const composed: ComposedState = {
-    // Editor
-    filePath: editorSlice.filePath,
-    content: editorSlice.content,
-    isDirty: editorSlice.isDirty,
-    openFiles: editorSlice.openFiles,
-    activeFilePath: editorSlice.activeFilePath,
-    cursorLine: editorSlice.cursorLine,
-    cursorColumn: editorSlice.cursorColumn,
-    pendingJump: editorSlice.pendingJump,
-    pendingInsertText: editorSlice.pendingInsertText,
-    _sessionOpenPaths: editorSlice._sessionOpenPaths,
-    _sessionActiveFile: editorSlice._sessionActiveFile,
-    setContent: editorSlice.setContent,
-    setFilePath: editorSlice.setFilePath,
-    setDirty: editorSlice.setDirty,
-    openFileInTab: editorSlice.openFileInTab,
-    closeTab: editorSlice.closeTab,
-    setActiveTab: editorSlice.setActiveTab,
-    setCursorPosition: editorSlice.setCursorPosition,
-    requestJumpToLine: editorSlice.requestJumpToLine,
-    clearPendingJump: editorSlice.clearPendingJump,
-    requestInsertAtCursor: editorSlice.requestInsertAtCursor,
-    clearPendingInsert: editorSlice.clearPendingInsert,
-
-    // Compile
-    compileStatus: compileSlice.compileStatus,
-    pdfPath: compileSlice.pdfPath,
-    pdfRevision: compileSlice.pdfRevision,
-    logs: compileSlice.logs,
-    isLogPanelOpen: compileSlice.isLogPanelOpen,
-    diagnostics: compileSlice.diagnostics,
-    logViewMode: compileSlice.logViewMode,
-    setCompileStatus: compileSlice.setCompileStatus,
-    setPdfPath: compileSlice.setPdfPath,
-    appendLog: compileSlice.appendLog,
-    clearLogs: compileSlice.clearLogs,
-    toggleLogPanel: compileSlice.toggleLogPanel,
-    setLogPanelOpen: compileSlice.setLogPanelOpen,
-    setDiagnostics: compileSlice.setDiagnostics,
-    setLogViewMode: compileSlice.setLogViewMode,
-
-    // Project
-    projectRoot: projectSlice.projectRoot,
-    directoryTree: projectSlice.directoryTree,
-    isSidebarOpen: projectSlice.isSidebarOpen,
-    sidebarView: projectSlice.sidebarView,
-    sidebarWidth: projectSlice.sidebarWidth,
-    bibEntries: projectSlice.bibEntries,
-    citationGroups: projectSlice.citationGroups,
-    auxCitationMap: projectSlice.auxCitationMap,
-    labels: projectSlice.labels,
-    packageData: projectSlice.packageData,
-    detectedPackages: projectSlice.detectedPackages,
-    isGitRepo: projectSlice.isGitRepo,
-    gitBranch: projectSlice.gitBranch,
-    gitStatus: projectSlice.gitStatus,
-    setProjectRoot: projectSlice.setProjectRoot,
-    setDirectoryTree: projectSlice.setDirectoryTree,
-    toggleSidebar: projectSlice.toggleSidebar,
-    setSidebarView: projectSlice.setSidebarView,
-    setSidebarWidth: projectSlice.setSidebarWidth,
-    setBibEntries: projectSlice.setBibEntries,
-    setCitationGroups: projectSlice.setCitationGroups,
-    setAuxCitationMap: projectSlice.setAuxCitationMap,
-    setLabels: projectSlice.setLabels,
-    setPackageData: projectSlice.setPackageData,
-    setDetectedPackages: projectSlice.setDetectedPackages,
-    setIsGitRepo: projectSlice.setIsGitRepo,
-    setGitBranch: projectSlice.setGitBranch,
-    setGitStatus: projectSlice.setGitStatus,
-
-    // PDF
-    splitRatio: pdfSlice.splitRatio,
-    zoomLevel: pdfSlice.zoomLevel,
-    synctexHighlight: pdfSlice.synctexHighlight,
-    pdfSearchVisible: pdfSlice.pdfSearchVisible,
-    pdfSearchQuery: pdfSlice.pdfSearchQuery,
-    syncToCodeRequest: pdfSlice.syncToCodeRequest,
-    setSplitRatio: pdfSlice.setSplitRatio,
-    setZoomLevel: pdfSlice.setZoomLevel,
-    zoomIn: pdfSlice.zoomIn,
-    zoomOut: pdfSlice.zoomOut,
-    resetZoom: pdfSlice.resetZoom,
-    setSynctexHighlight: pdfSlice.setSynctexHighlight,
-    setPdfSearchVisible: pdfSlice.setPdfSearchVisible,
-    setPdfSearchQuery: pdfSlice.setPdfSearchQuery,
-    triggerSyncToCode: pdfSlice.triggerSyncToCode,
-
-    // UI
-    isDraftModalOpen: uiSlice.isDraftModalOpen,
-    isTemplateGalleryOpen: uiSlice.isTemplateGalleryOpen,
-    updateStatus: uiSlice.updateStatus,
-    updateVersion: uiSlice.updateVersion,
-    updateProgress: uiSlice.updateProgress,
-    exportStatus: uiSlice.exportStatus,
-    lspStatus: uiSlice.lspStatus,
-    lspError: uiSlice.lspError,
-    documentSymbols: uiSlice.documentSymbols,
-    citeSearchFocusRequested: uiSlice.citeSearchFocusRequested,
-    setDraftModalOpen: uiSlice.setDraftModalOpen,
-    toggleDraftModal: uiSlice.toggleDraftModal,
-    toggleTemplateGallery: uiSlice.toggleTemplateGallery,
-    setTemplateGalleryOpen: uiSlice.setTemplateGalleryOpen,
-    setUpdateStatus: uiSlice.setUpdateStatus,
-    setUpdateVersion: uiSlice.setUpdateVersion,
-    setUpdateProgress: uiSlice.setUpdateProgress,
-    setExportStatus: uiSlice.setExportStatus,
-    setLspStatus: uiSlice.setLspStatus,
-    setLspError: uiSlice.setLspError,
-    setDocumentSymbols: uiSlice.setDocumentSymbols,
-    requestCiteSearchFocus: uiSlice.requestCiteSearchFocus,
-    clearCiteSearchFocus: uiSlice.clearCiteSearchFocus,
-
-    // Settings
-    settings: settingsSlice.settings,
-    updateSetting: settingsSlice.updateSetting,
-    increaseFontSize: settingsSlice.increaseFontSize,
-    decreaseFontSize: settingsSlice.decreaseFontSize,
-
-    // Composite actions
-    closeProject: getComposedState().closeProject
-  }
-
-  return selector(composed)
-}
-
 // Build the subscribe method that dispatches to domain stores
 type Listener = (state: ComposedState, prevState: ComposedState) => void
 function subscribeComposed(listener: Listener): () => void
@@ -458,7 +313,7 @@ function subscribeComposed<T>(
   return () => unsubs.forEach((u) => u())
 }
 
-// setState that dispatches to domain stores (used by tests and auto-compile)
+// setState that dispatches to domain stores (used by tests)
 function setStateComposed(partial: Partial<ComposedState>): void {
   // Route each key to the appropriate domain store
   const editorKeys = new Set([
@@ -545,9 +400,11 @@ function setStateComposed(partial: Partial<ComposedState>): void {
   if (Object.keys(settingsPartial).length > 0) useSettingsStore.setState(settingsPartial)
 }
 
-// Attach static methods to the hook function
-export const useAppStore = Object.assign(useAppStoreFn, {
+// Expose as an object with static methods only (no React hook).
+// The useAppStoreFn React hook has been removed — all components now
+// import directly from domain stores, eliminating the cascading re-render problem.
+export const useAppStore = {
   getState: getComposedState,
   subscribe: subscribeComposed,
   setState: setStateComposed
-})
+}

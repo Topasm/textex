@@ -1,6 +1,6 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAppStore } from '../../store/useAppStore'
+import { useSettingsStore } from '../../store/useSettingsStore'
 import { Link } from 'lucide-react'
 import { Toggle } from './Toggle'
 
@@ -45,8 +45,8 @@ const ZoteroStatusProbe = ({ port }: { port: number }) => {
 
 export const IntegrationsTab = () => {
   const { t } = useTranslation()
-  const settings = useAppStore((state) => state.settings)
-  const updateSetting = useAppStore((state) => state.updateSetting)
+  const settings = useSettingsStore((state) => state.settings)
+  const updateSetting = useSettingsStore((state) => state.updateSetting)
 
   return (
     <div className="settings-tab-content settings-animate-in">

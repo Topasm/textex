@@ -1,13 +1,13 @@
 import { useTranslation } from 'react-i18next'
-import { useAppStore } from '../../store/useAppStore'
+import { useSettingsStore } from '../../store/useSettingsStore'
 import type { UserSettings } from '../../../shared/types'
 import { Moon, Sun, Monitor, Check } from 'lucide-react'
 import { Toggle } from './Toggle'
 
 export const AppearanceTab = () => {
   const { t } = useTranslation()
-  const settings = useAppStore((state) => state.settings)
-  const updateSetting = useAppStore((state) => state.updateSetting)
+  const settings = useSettingsStore((state) => state.settings)
+  const updateSetting = useSettingsStore((state) => state.updateSetting)
 
   return (
     <div className="settings-tab-content settings-animate-in">

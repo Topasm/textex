@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useProjectStore } from '../../store/useAppStore'
+import { useProjectStore } from '../../store/useProjectStore'
 import type { BibEntry } from '../../../shared/types'
 import type { AuxCitationMap } from '../../../shared/auxparser'
 

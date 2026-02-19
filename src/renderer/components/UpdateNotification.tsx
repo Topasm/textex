@@ -1,13 +1,13 @@
 import { useTranslation } from 'react-i18next'
-import { useAppStore } from '../store/useAppStore'
+import { useUiStore } from '../store/useUiStore'
 
 const DISMISSED_UPDATE_KEY = 'textex-dismissed-update-version'
 
 function UpdateNotification() {
   const { t } = useTranslation()
-  const status = useAppStore((s) => s.updateStatus)
-  const version = useAppStore((s) => s.updateVersion)
-  const progress = useAppStore((s) => s.updateProgress)
+  const status = useUiStore((s) => s.updateStatus)
+  const version = useUiStore((s) => s.updateVersion)
+  const progress = useUiStore((s) => s.updateProgress)
 
   if (status === 'idle') return null
 
@@ -28,7 +28,7 @@ function UpdateNotification() {
         // localStorage may be unavailable
       }
     }
-    useAppStore.getState().setUpdateStatus('idle')
+    useUiStore.getState().setUpdateStatus('idle')
   }
 
   return (

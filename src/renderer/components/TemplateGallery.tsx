@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAppStore } from '../store/useAppStore'
+import { useUiStore } from '../store/useUiStore'
+import { useSettingsStore } from '../store/useSettingsStore'
 import { openProject } from '../utils/openProject'
 import type { Template } from '../data/templates'
 
 function TemplateGallery() {
   const { t } = useTranslation()
-  const isOpen = useAppStore((s) => s.isTemplateGalleryOpen)
-  const setOpen = useAppStore((s) => s.setTemplateGalleryOpen)
+  const isOpen = useUiStore((s) => s.isTemplateGalleryOpen)
+  const setOpen = useUiStore((s) => s.setTemplateGalleryOpen)
 
   const [templates, setTemplates] = useState<Template[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -39,7 +40,7 @@ function TemplateGallery() {
   const handleSelect = useCallback(
     async (templateName: string, content: string) => {
       try {
-        const settings = useAppStore.getState().settings
+        const settings = useSettingsStore.getState().settings
         const finalContent = content
           .replace(/{{AUTHOR}}/g, settings.name || 'Author Name')
           .replace(/{{EMAIL}}/g, settings.email || 'your.email@example.com')

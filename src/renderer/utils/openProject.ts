@@ -1,28 +1,29 @@
-import { useAppStore } from '../store/useAppStore'
+import { useEditorStore } from '../store/useEditorStore'
+import { useProjectStore } from '../store/useProjectStore'
 import type { DirectoryEntry } from '../../shared/types'
 
 export async function openProject(dirPath: string): Promise<void> {
-  useAppStore.getState().setProjectRoot(dirPath)
+  useProjectStore.getState().setProjectRoot(dirPath)
 
   let tree: DirectoryEntry[] = []
   try {
     tree = await window.api.readDirectory(dirPath)
-    useAppStore.getState().setDirectoryTree(tree)
+    useProjectStore.getState().setDirectoryTree(tree)
   } catch {
     // ignore
   }
 
-  if (!useAppStore.getState().isSidebarOpen) {
-    useAppStore.getState().toggleSidebar()
+  if (!useProjectStore.getState().isSidebarOpen) {
+    useProjectStore.getState().toggleSidebar()
   }
-  useAppStore.getState().setSidebarView('files')
+  useProjectStore.getState().setSidebarView('files')
 
   // Auto-open first .tex file
   const texFile = tree.find((e) => e.type === 'file' && e.name.endsWith('.tex'))
   if (texFile) {
     try {
       const result = await window.api.readFile(texFile.path)
-      const s = useAppStore.getState()
+      const s = useEditorStore.getState()
       s.openFileInTab(result.filePath, result.content)
       s.setFilePath(result.filePath)
       s.setDirty(false)
@@ -39,7 +40,7 @@ export async function openProject(dirPath: string): Promise<void> {
 
   try {
     const isRepo = await window.api.gitIsRepo(dirPath)
-    const s = useAppStore.getState()
+    const s = useProjectStore.getState()
     s.setIsGitRepo(isRepo)
     if (isRepo) {
       const status = await window.api.gitStatus(dirPath)
@@ -47,19 +48,19 @@ export async function openProject(dirPath: string): Promise<void> {
       s.setGitBranch(status.branch)
     }
   } catch {
-    useAppStore.getState().setIsGitRepo(false)
+    useProjectStore.getState().setIsGitRepo(false)
   }
 
   try {
     const entries = await window.api.findBibInProject(dirPath)
-    useAppStore.getState().setBibEntries(entries)
+    useProjectStore.getState().setBibEntries(entries)
   } catch {
     // ignore
   }
 
   try {
     const labels = await window.api.scanLabels(dirPath)
-    useAppStore.getState().setLabels(labels)
+    useProjectStore.getState().setLabels(labels)
   } catch {
     // ignore
   }

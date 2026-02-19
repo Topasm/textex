@@ -1,21 +1,25 @@
 import React, { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAppStore } from '../store/useAppStore'
+import { useCompileStore } from '../store/useCompileStore'
+import { useEditorStore } from '../store/useEditorStore'
+import { useProjectStore } from '../store/useProjectStore'
+import { useSettingsStore } from '../store/useSettingsStore'
+import { useUiStore } from '../store/useUiStore'
 
 const StatusBar = React.memo(function StatusBar() {
   const { t } = useTranslation()
-  const compileStatus = useAppStore((s) => s.compileStatus)
-  const cursorLine = useAppStore((s) => s.cursorLine)
-  const cursorColumn = useAppStore((s) => s.cursorColumn)
-  const diagnostics = useAppStore((s) => s.diagnostics)
-  const isGitRepo = useAppStore((s) => s.isGitRepo)
-  const gitBranch = useAppStore((s) => s.gitBranch)
-  const spellCheckEnabled = useAppStore((s) => s.settings.spellCheckEnabled)
-  const sectionHighlightEnabled = useAppStore((s) => s.settings.sectionHighlightEnabled)
-  const lspStatus = useAppStore((s) => s.lspStatus)
-  const lspEnabled = useAppStore((s) => s.settings.lspEnabled)
+  const compileStatus = useCompileStore((s) => s.compileStatus)
+  const cursorLine = useEditorStore((s) => s.cursorLine)
+  const cursorColumn = useEditorStore((s) => s.cursorColumn)
+  const diagnostics = useCompileStore((s) => s.diagnostics)
+  const isGitRepo = useProjectStore((s) => s.isGitRepo)
+  const gitBranch = useProjectStore((s) => s.gitBranch)
+  const spellCheckEnabled = useSettingsStore((s) => s.settings.spellCheckEnabled)
+  const sectionHighlightEnabled = useSettingsStore((s) => s.settings.sectionHighlightEnabled)
+  const lspStatus = useUiStore((s) => s.lspStatus)
+  const lspEnabled = useSettingsStore((s) => s.settings.lspEnabled)
 
-  const toggleLogPanel = useAppStore((s) => s.toggleLogPanel)
+  const toggleLogPanel = useCompileStore((s) => s.toggleLogPanel)
 
   const STATUS_CONFIG = {
     idle: { dotClass: 'green', label: t('statusBar.ready') },
@@ -93,7 +97,7 @@ const StatusBar = React.memo(function StatusBar() {
         <span
           className="status-spellcheck"
           onClick={() =>
-            useAppStore
+            useSettingsStore
               .getState()
               .updateSetting('sectionHighlightEnabled', !sectionHighlightEnabled)
           }
@@ -103,7 +107,7 @@ const StatusBar = React.memo(function StatusBar() {
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault()
-              useAppStore
+              useSettingsStore
                 .getState()
                 .updateSetting('sectionHighlightEnabled', !sectionHighlightEnabled)
             }
@@ -114,7 +118,7 @@ const StatusBar = React.memo(function StatusBar() {
         <span
           className="status-spellcheck"
           onClick={() =>
-            useAppStore.getState().updateSetting('spellCheckEnabled', !spellCheckEnabled)
+            useSettingsStore.getState().updateSetting('spellCheckEnabled', !spellCheckEnabled)
           }
           title={t('statusBar.toggleSpellCheck')}
           role="button"
@@ -122,7 +126,7 @@ const StatusBar = React.memo(function StatusBar() {
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault()
-              useAppStore.getState().updateSetting('spellCheckEnabled', !spellCheckEnabled)
+              useSettingsStore.getState().updateSetting('spellCheckEnabled', !spellCheckEnabled)
             }
           }}
         >

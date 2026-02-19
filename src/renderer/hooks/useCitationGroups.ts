@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react'
-import { useAppStore } from '../store/useAppStore'
+import { useProjectStore } from '../store/useProjectStore'
 import type { BibEntry, CitationGroup } from '../../shared/types'
 import { logError } from '../utils/errorMessage'
 
@@ -42,9 +42,9 @@ function groupEntries(entries: BibEntry[], mode: BibGroupMode): GroupedBib[] {
 }
 
 export function useCitationGroupOps() {
-  const citationGroups = useAppStore((s) => s.citationGroups)
-  const setCitationGroups = useAppStore((s) => s.setCitationGroups)
-  const projectRoot = useAppStore((s) => s.projectRoot)
+  const citationGroups = useProjectStore((s) => s.citationGroups)
+  const setCitationGroups = useProjectStore((s) => s.setCitationGroups)
+  const projectRoot = useProjectStore((s) => s.projectRoot)
 
   const saveGroups = useCallback(
     (groups: CitationGroup[]) => {

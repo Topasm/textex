@@ -1,15 +1,16 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAppStore } from '../store/useAppStore'
+import { useCompileStore } from '../store/useCompileStore'
+import { useEditorStore } from '../store/useEditorStore'
 
 type SeverityFilter = 'error' | 'warning' | 'info'
 
 function LogPanel() {
   const { t } = useTranslation()
-  const isLogPanelOpen = useAppStore((s) => s.isLogPanelOpen)
-  const logs = useAppStore((s) => s.logs)
-  const diagnostics = useAppStore((s) => s.diagnostics)
-  const logViewMode = useAppStore((s) => s.logViewMode)
+  const isLogPanelOpen = useCompileStore((s) => s.isLogPanelOpen)
+  const logs = useCompileStore((s) => s.logs)
+  const diagnostics = useCompileStore((s) => s.diagnostics)
+  const logViewMode = useCompileStore((s) => s.logViewMode)
   const scrollRef = useRef<HTMLPreElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const [collapsedFiles, setCollapsedFiles] = useState<Set<string>>(new Set())
@@ -40,7 +41,7 @@ function LogPanel() {
   if (!isLogPanelOpen) return null
 
   const handleEntryClick = (line: number, column?: number): void => {
-    useAppStore.getState().requestJumpToLine(line, column ?? 1)
+    useEditorStore.getState().requestJumpToLine(line, column ?? 1)
   }
 
   const severityIcon = (severity: DiagnosticSeverity): string => {
@@ -90,18 +91,18 @@ function LogPanel() {
         <div className="log-actions">
           <button
             className={logViewMode === 'structured' ? 'log-tab-active' : ''}
-            onClick={() => useAppStore.getState().setLogViewMode('structured')}
+            onClick={() => useCompileStore.getState().setLogViewMode('structured')}
           >
             {problemsLabel}
           </button>
           <button
             className={logViewMode === 'raw' ? 'log-tab-active' : ''}
-            onClick={() => useAppStore.getState().setLogViewMode('raw')}
+            onClick={() => useCompileStore.getState().setLogViewMode('raw')}
           >
             {t('logPanel.output')}
           </button>
-          <button onClick={() => useAppStore.getState().clearLogs()}>{t('logPanel.clear')}</button>
-          <button onClick={() => useAppStore.getState().toggleLogPanel()}>{t('logPanel.close')}</button>
+          <button onClick={() => useCompileStore.getState().clearLogs()}>{t('logPanel.clear')}</button>
+          <button onClick={() => useCompileStore.getState().toggleLogPanel()}>{t('logPanel.close')}</button>
         </div>
       </div>
       {logViewMode === 'raw' ? (

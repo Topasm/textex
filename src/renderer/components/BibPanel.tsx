@@ -1,6 +1,8 @@
 import { useState, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAppStore } from '../store/useAppStore'
+import { useEditorStore } from '../store/useEditorStore'
+import { useProjectStore } from '../store/useProjectStore'
+import { useSettingsStore } from '../store/useSettingsStore'
 import type { BibEntry } from '../../shared/types'
 import { BibPanelHeader } from './bib/BibPanelHeader'
 import { BibGroupHeader } from './bib/BibGroupHeader'
@@ -10,9 +12,9 @@ import type { BibGroupMode } from '../hooks/useCitationGroups'
 
 function BibPanel() {
   const { t } = useTranslation()
-  const bibEntries = useAppStore((s) => s.bibEntries)
-  const bibGroupMode = useAppStore((s) => s.settings.bibGroupMode) as BibGroupMode
-  const updateSetting = useAppStore((s) => s.updateSetting)
+  const bibEntries = useProjectStore((s) => s.bibEntries)
+  const bibGroupMode = useSettingsStore((s) => s.settings.bibGroupMode) as BibGroupMode
+  const updateSetting = useSettingsStore((s) => s.updateSetting)
   const [filter, setFilter] = useState('')
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
 
@@ -27,7 +29,7 @@ function BibPanel() {
   } = useCitationGroupOps()
 
   const handleInsert = useCallback((citeText: string) => {
-    const state = useAppStore.getState()
+    const state = useEditorStore.getState()
     const { content, cursorLine, cursorColumn } = state
     const lines = content.split('\n')
     const lineIdx = cursorLine - 1

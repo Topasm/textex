@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { lspRequestDocumentSymbols } from '../../lsp/lspClient'
-import { useAppStore } from '../../store/useAppStore'
+import { useEditorStore } from '../../store/useEditorStore'
+import { useSettingsStore } from '../../store/useSettingsStore'
+import { useUiStore } from '../../store/useUiStore'
 import type { DocumentSymbolNode, SectionNode } from '../../../shared/types'
 
 /**
@@ -37,8 +39,7 @@ let outlineGeneration = 0
 let pendingFetchFile: string | null = null
 
 function fetchOutline(currentFile: string, content: string): void {
-  const state = useAppStore.getState()
-  const lspAvailable = state.settings.lspEnabled && state.lspStatus === 'running'
+  const lspAvailable = useSettingsStore.getState().settings.lspEnabled && useUiStore.getState().lspStatus === 'running'
 
   // Deduplicate: skip if a request for the same file is already in flight
   if (pendingFetchFile === currentFile) return
@@ -56,8 +57,8 @@ function fetchOutline(currentFile: string, content: string): void {
         onComplete()
         // Stale check: only apply if this is still the latest request
         if (outlineGeneration !== generation) return
-        if (useAppStore.getState().filePath === currentFile) {
-          useAppStore.getState().setDocumentSymbols(symbols)
+        if (useEditorStore.getState().filePath === currentFile) {
+          useUiStore.getState().setDocumentSymbols(symbols)
         }
       })
       .catch(() => {
@@ -71,8 +72,8 @@ function fetchOutline(currentFile: string, content: string): void {
 }
 
 export function useDocumentSymbols(content: string): void {
-  const filePath = useAppStore((s) => s.filePath)
-  const lspStatus = useAppStore((s) => s.lspStatus)
+  const filePath = useEditorStore((s) => s.filePath)
+  const lspStatus = useUiStore((s) => s.lspStatus)
   const prevFilePathRef = useRef<string | null>(null)
 
   // Immediate outline fetch when file changes (open / tab switch / startup)
@@ -88,9 +89,9 @@ export function useDocumentSymbols(content: string): void {
   // Debounced outline refresh on content edits (typing) and LSP status changes
   useEffect(() => {
     const timer = setTimeout(() => {
-      const state = useAppStore.getState()
-      if (!state.filePath) return
-      fetchOutline(state.filePath, content)
+      const editorState = useEditorStore.getState()
+      if (!editorState.filePath) return
+      fetchOutline(editorState.filePath, content)
     }, OUTLINE_DEBOUNCE_MS)
 
     return () => clearTimeout(timer)
@@ -114,8 +115,8 @@ function fetchFallbackOutline(
     .getDocumentOutline(currentFile, content)
     .then((sectionNodes) => {
       if (outlineGeneration !== generation) return
-      if (useAppStore.getState().filePath === currentFile) {
-        useAppStore.getState().setDocumentSymbols(sectionNodesToSymbols(sectionNodes))
+      if (useEditorStore.getState().filePath === currentFile) {
+        useUiStore.getState().setDocumentSymbols(sectionNodesToSymbols(sectionNodes))
       }
     })
     .catch(() => {})

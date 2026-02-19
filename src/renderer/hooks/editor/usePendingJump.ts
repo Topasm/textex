@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import type { MutableRefObject } from 'react'
 import type { editor as monacoEditor } from 'monaco-editor'
-import { useAppStore } from '../../store/useAppStore'
+import { useEditorStore } from '../../store/useEditorStore'
 
 type MonacoInstance = typeof import('monaco-editor')
 
@@ -12,7 +12,7 @@ interface UsePendingJumpParams {
 
 export function usePendingJump({ editorRef, monacoRef }: UsePendingJumpParams): void {
   useEffect(() => {
-    return useAppStore.subscribe(
+    return useEditorStore.subscribe(
       (state) => state.pendingJump,
       (pendingJump) => {
         if (!pendingJump) return
@@ -34,7 +34,7 @@ export function usePendingJump({ editorRef, monacoRef }: UsePendingJumpParams): 
         ])
         setTimeout(() => collection.clear(), 1000)
 
-        useAppStore.getState().clearPendingJump()
+        useEditorStore.getState().clearPendingJump()
       }
     )
   }, [editorRef, monacoRef])
