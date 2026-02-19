@@ -16,7 +16,7 @@ const NO_TIMEOUT_CHANNELS = new Set<string>([
  * Only read-only channels are deduplicated (not writes or mutations).
  */
 const DEDUP_CHANNELS = new Set<string>([
-  'fs:read-file', 'fs:read-directory', 'settings:load',
+  'fs:read-file', 'fs:read-file-base64', 'fs:read-directory', 'settings:load',
   'bib:parse', 'bib:find-in-project', 'spell:check', 'spell:suggest',
   'git:is-repo', 'git:status', 'git:diff', 'git:log', 'git:file-log',
   'latex:scan-labels', 'latex:load-package-data', 'export:formats',
@@ -124,6 +124,7 @@ contextBridge.exposeInMainWorld('api', {
   createFile: (filePath: string) => invoke('fs:create-file', filePath),
   copyFile: (source: string, dest: string) => invoke('fs:copy-file', source, dest),
   createDirectory: (dirPath: string) => invoke('fs:create-directory', dirPath),
+  readFileBase64: (filePath: string) => invoke('fs:read-file-base64', filePath),
   watchDirectory: (dirPath: string) => invoke('fs:watch-directory', dirPath),
   unwatchDirectory: () => invoke('fs:unwatch-directory'),
   onDirectoryChanged: (cb: (change: { type: string; filename: string }) => void) => {

@@ -56,6 +56,7 @@ export interface ElectronAPI {
   createFile(filePath: string): Promise<{ success: boolean }>
   createDirectory(dirPath: string): Promise<{ success: boolean }>
   copyFile(source: string, dest: string): Promise<{ success: boolean }>
+  readFileBase64(filePath: string): Promise<{ data: string; mimeType: string }>
   readDirectory(dirPath: string): Promise<DirectoryEntry[]>
   watchDirectory(dirPath: string): Promise<{ success: boolean }>
   unwatchDirectory(): Promise<{ success: boolean }>

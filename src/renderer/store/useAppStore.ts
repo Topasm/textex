@@ -61,6 +61,7 @@ function getComposedState() {
     cursorLine: editor.cursorLine,
     cursorColumn: editor.cursorColumn,
     pendingJump: editor.pendingJump,
+    pendingInsertText: editor.pendingInsertText,
     _sessionOpenPaths: editor._sessionOpenPaths,
     _sessionActiveFile: editor._sessionActiveFile,
 
@@ -74,6 +75,8 @@ function getComposedState() {
     setCursorPosition: editor.setCursorPosition,
     requestJumpToLine: editor.requestJumpToLine,
     clearPendingJump: editor.clearPendingJump,
+    requestInsertAtCursor: editor.requestInsertAtCursor,
+    clearPendingInsert: editor.clearPendingInsert,
 
     // Compile
     compileStatus: compile.compileStatus,
@@ -102,6 +105,7 @@ function getComposedState() {
     sidebarWidth: project.sidebarWidth,
     bibEntries: project.bibEntries,
     citationGroups: project.citationGroups,
+    auxCitationMap: project.auxCitationMap,
     labels: project.labels,
     packageData: project.packageData,
     detectedPackages: project.detectedPackages,
@@ -117,6 +121,7 @@ function getComposedState() {
     setSidebarWidth: project.setSidebarWidth,
     setBibEntries: project.setBibEntries,
     setCitationGroups: project.setCitationGroups,
+    setAuxCitationMap: project.setAuxCitationMap,
     setLabels: project.setLabels,
     setPackageData: project.setPackageData,
     setDetectedPackages: project.setDetectedPackages,
@@ -187,6 +192,7 @@ function getComposedState() {
         cursorLine: 1,
         cursorColumn: 1,
         pendingJump: null,
+        pendingInsertText: null,
         _sessionOpenPaths: [],
         _sessionActiveFile: null
       })
@@ -206,6 +212,7 @@ function getComposedState() {
         gitStatus: null,
         bibEntries: [],
         citationGroups: [],
+        auxCitationMap: null,
         labels: [],
         packageData: {},
         detectedPackages: []
@@ -253,6 +260,7 @@ function useAppStoreFn<T>(selector: (state: ComposedState) => T): T {
     cursorLine: editorSlice.cursorLine,
     cursorColumn: editorSlice.cursorColumn,
     pendingJump: editorSlice.pendingJump,
+    pendingInsertText: editorSlice.pendingInsertText,
     _sessionOpenPaths: editorSlice._sessionOpenPaths,
     _sessionActiveFile: editorSlice._sessionActiveFile,
     setContent: editorSlice.setContent,
@@ -264,6 +272,8 @@ function useAppStoreFn<T>(selector: (state: ComposedState) => T): T {
     setCursorPosition: editorSlice.setCursorPosition,
     requestJumpToLine: editorSlice.requestJumpToLine,
     clearPendingJump: editorSlice.clearPendingJump,
+    requestInsertAtCursor: editorSlice.requestInsertAtCursor,
+    clearPendingInsert: editorSlice.clearPendingInsert,
 
     // Compile
     compileStatus: compileSlice.compileStatus,
@@ -290,6 +300,7 @@ function useAppStoreFn<T>(selector: (state: ComposedState) => T): T {
     sidebarWidth: projectSlice.sidebarWidth,
     bibEntries: projectSlice.bibEntries,
     citationGroups: projectSlice.citationGroups,
+    auxCitationMap: projectSlice.auxCitationMap,
     labels: projectSlice.labels,
     packageData: projectSlice.packageData,
     detectedPackages: projectSlice.detectedPackages,
@@ -303,6 +314,7 @@ function useAppStoreFn<T>(selector: (state: ComposedState) => T): T {
     setSidebarWidth: projectSlice.setSidebarWidth,
     setBibEntries: projectSlice.setBibEntries,
     setCitationGroups: projectSlice.setCitationGroups,
+    setAuxCitationMap: projectSlice.setAuxCitationMap,
     setLabels: projectSlice.setLabels,
     setPackageData: projectSlice.setPackageData,
     setDetectedPackages: projectSlice.setDetectedPackages,
@@ -458,6 +470,7 @@ function setStateComposed(partial: Partial<ComposedState>): void {
     'cursorLine',
     'cursorColumn',
     'pendingJump',
+    'pendingInsertText',
     '_sessionOpenPaths',
     '_sessionActiveFile'
   ])
@@ -478,6 +491,7 @@ function setStateComposed(partial: Partial<ComposedState>): void {
     'sidebarWidth',
     'bibEntries',
     'citationGroups',
+    'auxCitationMap',
     'labels',
     'packageData',
     'detectedPackages',

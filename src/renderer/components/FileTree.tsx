@@ -2,6 +2,9 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../store/useAppStore'
 import { logError } from '../utils/errorMessage'
+import { isImageFile } from '../utils/imageExtensions'
+import { generateFigureSnippet } from '../utils/figureSnippet'
+import { ImagePreviewTooltip } from './ImagePreviewTooltip'
 
 function getFileIcon(name: string, type: 'file' | 'directory', expanded?: boolean): string {
   if (type === 'directory') return expanded ? '\u{1F4C2}' : '\u{1F4C1}'
@@ -84,7 +87,13 @@ function FileTreeNode({ entry, depth, gitFiles }: FileTreeNodeProps) {
   const [expanded, setExpanded] = useState(depth < 1)
   const [children, setChildren] = useState<DirectoryEntry[] | null>(null)
   const [creatingType, setCreatingType] = useState<'file' | 'folder' | null>(null)
+  const [hoverPreview, setHoverPreview] = useState<DOMRect | null>(null)
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const itemRef = useRef<HTMLDivElement>(null)
   const activeFilePath = useAppStore((s) => s.activeFilePath)
+  const projectRoot = useAppStore((s) => s.projectRoot)
+
+  const isImage = entry.type === 'file' && isImageFile(entry.name)
 
   const loadChildren = useCallback(async () => {
     try {
@@ -101,6 +110,14 @@ function FileTreeNode({ entry, depth, gitFiles }: FileTreeNodeProps) {
         await loadChildren()
       }
       setExpanded(!expanded)
+    } else if (isImage && projectRoot) {
+      // Insert figure snippet at cursor for image files
+      const sep = projectRoot.includes('\\') ? '\\' : '/'
+      const relPath = entry.path.startsWith(projectRoot + sep)
+        ? entry.path.slice(projectRoot.length + 1).replace(/\\/g, '/')
+        : entry.name
+      const snippet = generateFigureSnippet(relPath, entry.name)
+      useAppStore.getState().requestInsertAtCursor(snippet)
     } else {
       try {
         const result = await window.api.readFile(entry.path)
@@ -109,7 +126,39 @@ function FileTreeNode({ entry, depth, gitFiles }: FileTreeNodeProps) {
         logError('FileTree:readFile', err)
       }
     }
-  }, [entry, expanded, children, loadChildren])
+  }, [entry, expanded, children, loadChildren, isImage, projectRoot])
+
+  const handleDragStart = useCallback(
+    (e: React.DragEvent) => {
+      if (!isImage) return
+      e.dataTransfer.setData('application/x-textex-image-path', entry.path)
+      e.dataTransfer.effectAllowed = 'copy'
+    },
+    [isImage, entry.path]
+  )
+
+  const handleMouseEnter = useCallback(() => {
+    if (!isImage) return
+    hoverTimerRef.current = setTimeout(() => {
+      if (itemRef.current) {
+        setHoverPreview(itemRef.current.getBoundingClientRect())
+      }
+    }, 300)
+  }, [isImage])
+
+  const handleMouseLeave = useCallback(() => {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current)
+      hoverTimerRef.current = null
+    }
+    setHoverPreview(null)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current)
+    }
+  }, [])
 
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
@@ -177,10 +226,15 @@ function FileTreeNode({ entry, depth, gitFiles }: FileTreeNodeProps) {
   return (
     <>
       <div
-        className={`file-tree-item${isSelected ? ' selected' : ''}`}
+        ref={itemRef}
+        className={`file-tree-item${isSelected ? ' selected' : ''}${isImage ? ' draggable-image' : ''}`}
         style={{ paddingLeft: `${8 + depth * 16}px` }}
         onClick={handleClick}
         onContextMenu={handleContextMenu}
+        draggable={isImage}
+        onDragStart={handleDragStart}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
       >
         <span className="file-tree-icon">{getFileIcon(entry.name, entry.type, expanded)}</span>
         <span className="file-tree-name">{entry.name}</span>
@@ -206,6 +260,13 @@ function FileTreeNode({ entry, depth, gitFiles }: FileTreeNodeProps) {
         )}
         {gitDeco && <span className={`file-tree-git ${gitDeco.className}`}>{gitDeco.label}</span>}
       </div>
+      {hoverPreview && (
+        <ImagePreviewTooltip
+          filePath={entry.path}
+          fileName={entry.name}
+          anchorRect={hoverPreview}
+        />
+      )}
       {expanded && entry.type === 'directory' && (
         <>
           {creatingType && (

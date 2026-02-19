@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useAppStore } from '../store/useAppStore'
 import { errorMessage } from '../utils/errorMessage'
 import { AUTO_COMPILE_DELAY_MS } from '../constants'
+import { parseAuxContent } from '../../shared/auxparser'
 
 export function useAutoCompile(): void {
   const content = useAppStore((s) => s.content)
@@ -64,6 +65,15 @@ export function useAutoCompile(): void {
         const result = await window.api.compile(currentFilePath)
         useAppStore.getState().setPdfPath(result.pdfPath)
         useAppStore.getState().setCompileStatus('success')
+
+        // Load .aux file for citation tooltip reverse-lookup
+        try {
+          const auxPath = currentFilePath.replace(/\.tex$/, '.aux')
+          const { content: auxContent } = await window.api.readFile(auxPath)
+          useAppStore.getState().setAuxCitationMap(parseAuxContent(auxContent))
+        } catch {
+          useAppStore.getState().setAuxCitationMap(null)
+        }
       } catch (err: unknown) {
         const message = errorMessage(err)
         if (message.includes('Compilation was cancelled')) return

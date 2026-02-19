@@ -5,7 +5,9 @@ import PdfSearchBar from './PdfSearchBar'
 import { usePreviewZoom } from '../hooks/preview/usePreviewZoom'
 import { useSynctex } from '../hooks/preview/useSynctex'
 import { usePdfSearch } from '../hooks/preview/usePdfSearch'
+import { useCitationTooltip } from '../hooks/preview/useCitationTooltip'
 import { useContainerSize } from '../hooks/preview/useContainerSize'
+import CitationTooltip from './CitationTooltip'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
 
@@ -63,6 +65,7 @@ function PreviewPane() {
     handleSearchClose,
     setSearchQuery
   } = usePdfSearch(containerRef, numPages)
+  const { tooltipData } = useCitationTooltip(containerRef, pdfRevision)
 
   /** Calculate estimated height for a page. */
   const getPageHeight = useCallback(
@@ -345,6 +348,14 @@ function PreviewPane() {
             </div>
           )}
           {highlightStyle && <div className="synctex-indicator" style={highlightStyle} />}
+          {tooltipData && (
+            <CitationTooltip
+              entries={tooltipData.entries}
+              x={tooltipData.x}
+              y={tooltipData.y}
+              containerRect={tooltipData.containerRect}
+            />
+          )}
         </>
       )}
     </div>

@@ -8,6 +8,7 @@ import zh from './locales/zh.json'
 import fr from './locales/fr.json'
 import de from './locales/de.json'
 import pt from './locales/pt.json'
+import ko from './locales/ko.json'
 
 export const SUPPORTED_LANGUAGES = [
   { code: 'en', label: 'English' },
@@ -15,7 +16,8 @@ export const SUPPORTED_LANGUAGES = [
   { code: 'zh', label: '中文' },
   { code: 'fr', label: 'Français' },
   { code: 'de', label: 'Deutsch' },
-  { code: 'pt', label: 'Português' }
+  { code: 'pt', label: 'Português' },
+  { code: 'ko', label: '한국어' }
 ] as const
 
 i18n.use(initReactI18next).init({
@@ -25,7 +27,8 @@ i18n.use(initReactI18next).init({
     zh: { translation: zh },
     fr: { translation: fr },
     de: { translation: de },
-    pt: { translation: pt }
+    pt: { translation: pt },
+    ko: { translation: ko }
   },
   lng: useSettingsStore.getState().settings.language || 'en',
   fallbackLng: 'en',

@@ -8,6 +8,7 @@ import type {
   LabelInfo,
   PackageData
 } from '../../shared/types'
+import type { AuxCitationMap } from '../../shared/auxparser'
 import type { GitStatusResult } from '../types/api'
 
 export type SidebarView = 'files' | 'git' | 'bib' | 'outline' | 'todo' | 'timeline'
@@ -26,6 +27,9 @@ interface ProjectState {
   // Labels
   labels: LabelInfo[]
 
+  // Aux citation map (for PDF citation tooltips)
+  auxCitationMap: AuxCitationMap | null
+
   // Package data
   packageData: Record<string, PackageData>
   detectedPackages: string[]
@@ -43,6 +47,7 @@ interface ProjectState {
   setSidebarWidth: (width: number) => void
   setBibEntries: (entries: BibEntry[]) => void
   setCitationGroups: (groups: CitationGroup[]) => void
+  setAuxCitationMap: (map: AuxCitationMap | null) => void
   setLabels: (labels: LabelInfo[]) => void
   setPackageData: (data: Record<string, PackageData>) => void
   setDetectedPackages: (packages: string[]) => void
@@ -62,6 +67,7 @@ export const useProjectStore = create<ProjectState>()(
 
       bibEntries: [],
       citationGroups: [],
+      auxCitationMap: null,
       labels: [],
       packageData: {},
       detectedPackages: [],
@@ -79,6 +85,7 @@ export const useProjectStore = create<ProjectState>()(
         }),
       setBibEntries: (bibEntries) => set({ bibEntries }),
       setCitationGroups: (citationGroups) => set({ citationGroups }),
+      setAuxCitationMap: (auxCitationMap) => set({ auxCitationMap }),
       setLabels: (labels) => set({ labels }),
       setPackageData: (packageData) => set({ packageData }),
       setDetectedPackages: (detectedPackages) => set({ detectedPackages }),

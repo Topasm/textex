@@ -1,10 +1,10 @@
 import { useCallback } from 'react'
 import { useAppStore } from '../../store/useAppStore'
+import { IMAGE_EXTENSIONS } from '../../utils/imageExtensions'
+import { generateFigureSnippet } from '../../utils/figureSnippet'
 import type { editor as monacoEditor } from 'monaco-editor'
 
 type Monaco = typeof import('monaco-editor')
-
-const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.svg', '.webp'])
 
 export function useSmartImageDrop() {
   const projectRoot = useAppStore((s) => s.projectRoot)
@@ -67,15 +67,7 @@ export function useSmartImageDrop() {
 
         // 3. Generate LaTeX Snippet
         const relPath = `images/${file.name}`
-        const label = `fig:${file.name.replace(/\.[^/.]+$/, '').replace(/\s+/g, '-')}`
-        const snippet = `
-\\begin{figure}[htbp]
-  \\centering
-  \\includegraphics[width=0.8\\linewidth]{${relPath}}
-  \\caption{Caption for ${file.name}}
-  \\label{${label}}
-\\end{figure}
-`
+        const snippet = generateFigureSnippet(relPath, file.name)
 
         // 4. Insert into Editor
         const target = editor.getTargetAtClientPoint(e.clientX, e.clientY)

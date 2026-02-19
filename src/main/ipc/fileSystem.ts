@@ -414,6 +414,33 @@ export function registerFileSystemHandlers(getWindow: () => BrowserWindow | null
     return { success: true }
   })
 
+  // ----- fs:read-file-base64 ------------------------------------------------
+
+  const MIME_MAP: Record<string, string> = {
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.bmp': 'image/bmp',
+    '.svg': 'image/svg+xml',
+    '.webp': 'image/webp'
+  }
+
+  const MAX_BASE64_SIZE = 10 * 1024 * 1024 // 10MB
+
+  ipcMain.handle('fs:read-file-base64', async (_event, filePath: string) => {
+    const validPath = validateFilePath(filePath)
+    const stat = await retryTransient(() => fs.stat(validPath))
+    if (stat.size > MAX_BASE64_SIZE) {
+      throw new Error(`File too large for base64 encoding (${Math.round(stat.size / 1024 / 1024)}MB)`)
+    }
+    const ext = path.extname(validPath).toLowerCase()
+    const mimeType = MIME_MAP[ext] || 'application/octet-stream'
+    const buffer = await retryTransient(() => fs.readFile(validPath))
+    const data = `data:${mimeType};base64,${buffer.toString('base64')}`
+    return { data, mimeType }
+  })
+
   // ----- fs:unwatch-directory ----------------------------------------------
 
   ipcMain.handle('fs:unwatch-directory', () => {

@@ -5,6 +5,7 @@ import zh from '../../renderer/i18n/locales/zh.json'
 import fr from '../../renderer/i18n/locales/fr.json'
 import de from '../../renderer/i18n/locales/de.json'
 import pt from '../../renderer/i18n/locales/pt.json'
+import ko from '../../renderer/i18n/locales/ko.json'
 
 function flattenKeys(obj: Record<string, unknown>, prefix = ''): string[] {
   const keys: string[] = []
@@ -37,7 +38,7 @@ function flattenValues(obj: Record<string, unknown>, prefix = ''): Map<string, s
 const enKeys = flattenKeys(en)
 const enValues = flattenValues(en)
 
-const locales: Record<string, Record<string, unknown>> = { es, zh, fr, de, pt }
+const locales: Record<string, Record<string, unknown>> = { es, zh, fr, de, pt, ko }
 
 describe('English translations', () => {
   it('should have at least 200 keys', () => {

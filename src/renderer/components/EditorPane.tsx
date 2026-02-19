@@ -8,6 +8,7 @@ import { useDocumentSymbols } from '../hooks/editor/useDocumentSymbols'
 import { useCompletion } from '../hooks/editor/useCompletion'
 import { useEditorDiagnostics } from '../hooks/editor/useEditorDiagnostics'
 import { usePendingJump } from '../hooks/editor/usePendingJump'
+import { usePendingInsert } from '../hooks/editor/usePendingInsert'
 import { usePackageDetection } from '../hooks/editor/usePackageDetection'
 import { useMathPreview } from '../hooks/editor/useMathPreview'
 import { useSmartImageDrop } from '../hooks/editor/useSmartImageDrop'
@@ -20,6 +21,7 @@ import { DiffEditor } from '@monaco-editor/react'
 import type { editor as monacoEditor } from 'monaco-editor'
 import { registerAiActions } from './editor/editorAiActions'
 import { configureMonacoLanguages, getMonacoTheme } from '../data/monacoConfig'
+import { generateFigureSnippet } from '../utils/figureSnippet'
 
 // Lazy-load heavy modals that are rarely shown
 const TableEditorModal = lazy(() =>
@@ -35,6 +37,7 @@ function EditorPane() {
   const content = useAppStore((s) => s.content)
   const setContent = useAppStore((s) => s.setContent)
   const setCursorPosition = useAppStore((s) => s.setCursorPosition)
+  const projectRoot = useAppStore((s) => s.projectRoot)
   const settings = useAppStore((s) => s.settings)
   const theme = settings.theme
   const fontSize = settings.fontSize
@@ -58,6 +61,7 @@ function EditorPane() {
   useDocumentSymbols(content)
   useEditorDiagnostics({ editorRef, monacoRef })
   usePendingJump({ editorRef, monacoRef })
+  usePendingInsert({ editorRef, monacoRef })
   usePackageDetection(content)
   const mathData = useMathPreview({ editorRef, enabled: mathPreviewEnabled })
   useSectionHighlight({ editorRef, monacoRef })
@@ -157,9 +161,39 @@ function EditorPane() {
         onDrop={async (e) => {
           e.preventDefault()
 
-          // Try smart image drop first
+          // Try smart image drop first (OS file manager drops)
           if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             await handleSmartImageDrop(e, editorRef.current, monacoRef.current)
+            return
+          }
+
+          // Handle FileTree image drops (internal drag)
+          const imagePath = e.dataTransfer.getData('application/x-textex-image-path')
+          if (imagePath && projectRoot) {
+            const editor = editorRef.current
+            const monaco = monacoRef.current
+            if (!editor || !monaco) return
+
+            const sep = projectRoot.includes('\\') ? '\\' : '/'
+            const relPath = imagePath.startsWith(projectRoot + sep)
+              ? imagePath.slice(projectRoot.length + 1).replace(/\\/g, '/')
+              : imagePath.split(/[\\/]/).pop() || imagePath
+            const fileName = imagePath.split(/[\\/]/).pop() || 'image'
+            const snippet = generateFigureSnippet(relPath, fileName)
+
+            const target = editor.getTargetAtClientPoint(e.clientX, e.clientY)
+            if (target?.position) {
+              const pos = target.position
+              editor.executeEdits('image-drop', [
+                {
+                  range: new monaco.Range(pos.lineNumber, pos.column, pos.lineNumber, pos.column),
+                  text: snippet,
+                  forceMoveMarkers: true
+                }
+              ])
+              editor.setPosition(pos)
+              editor.focus()
+            }
             return
           }
 

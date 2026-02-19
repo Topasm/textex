@@ -25,6 +25,9 @@ interface EditorState {
   // Navigation
   pendingJump: { line: number; column: number } | null
 
+  // Pending insert (for click-to-insert from FileTree)
+  pendingInsertText: string | null
+
   // Session restore metadata
   _sessionOpenPaths: string[]
   _sessionActiveFile: string | null
@@ -39,6 +42,8 @@ interface EditorState {
   setCursorPosition: (line: number, column: number) => void
   requestJumpToLine: (line: number, column: number) => void
   clearPendingJump: () => void
+  requestInsertAtCursor: (text: string) => void
+  clearPendingInsert: () => void
 }
 
 export type { OpenFileData }
@@ -54,6 +59,7 @@ export const useEditorStore = create<EditorState>()(
       cursorLine: 1,
       cursorColumn: 1,
       pendingJump: null,
+      pendingInsertText: null,
       _sessionOpenPaths: [],
       _sessionActiveFile: null,
 
@@ -178,7 +184,9 @@ export const useEditorStore = create<EditorState>()(
       },
       setCursorPosition: (cursorLine, cursorColumn) => set({ cursorLine, cursorColumn }),
       requestJumpToLine: (line, column) => set({ pendingJump: { line, column } }),
-      clearPendingJump: () => set({ pendingJump: null })
+      clearPendingJump: () => set({ pendingJump: null }),
+      requestInsertAtCursor: (text) => set({ pendingInsertText: text }),
+      clearPendingInsert: () => set({ pendingInsertText: null })
     })),
     {
       name: 'textex-editor-session',

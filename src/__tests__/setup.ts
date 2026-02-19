@@ -1,4 +1,31 @@
 import '@testing-library/jest-dom'
+
+// Mock react-i18next to avoid dual React instance issue in tests.
+// The real react-i18next resolves React from the parent node_modules while
+// test components use the local copy, causing "Invalid hook call" errors.
+vi.mock('react-i18next', async () => {
+  const i18next = await import('i18next')
+  const i18n = i18next.default
+  const React = await import('react')
+
+  return {
+    initReactI18next: { type: '3rdParty', init: () => {} },
+    useTranslation: () => ({
+      t: i18n.t.bind(i18n),
+      i18n,
+      ready: true
+    }),
+    withTranslation: () => (Component: React.ComponentType<any>) => {
+      const Wrapped = (props: Record<string, unknown>) =>
+        React.createElement(Component, { ...props, t: i18n.t.bind(i18n), i18n, tReady: true })
+      Wrapped.displayName = `withTranslation(${Component.displayName || Component.name})`
+      return Wrapped
+    },
+    I18nextProvider: ({ children }: { children: React.ReactNode }) => children,
+    Trans: ({ children }: { children: React.ReactNode }) => children
+  }
+})
+
 import '../renderer/i18n'
 
 // Mock window.api for all tests

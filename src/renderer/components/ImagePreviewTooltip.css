@@ -1,0 +1,58 @@
+.image-preview-tooltip {
+  position: fixed;
+  z-index: 10000;
+  min-width: 160px;
+  max-width: 280px;
+  border-radius: 8px;
+  overflow: hidden;
+  animation: image-preview-fade-in 0.15s ease-out;
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.2),
+    0 1px 4px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  pointer-events: none;
+}
+
+@keyframes image-preview-fade-in {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.image-preview-tooltip-header {
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.image-preview-tooltip-body {
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-preview-tooltip-body img {
+  max-width: 260px;
+  max-height: 200px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.image-preview-tooltip-loading {
+  padding: 20px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
