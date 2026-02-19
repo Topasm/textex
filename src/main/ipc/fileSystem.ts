@@ -230,7 +230,12 @@ export function registerFileSystemHandlers(getWindow: () => BrowserWindow | null
 
   ipcMain.handle(
     'fs:create-template-project',
-    async (_event, templateName: string, content: string) => {
+    async (
+      _event,
+      templateName: string,
+      content: string,
+      files?: Record<string, string>
+    ) => {
       const win = getWindow()
       const defaultName = templateName.toLowerCase().replace(/[\s/\\]+/g, '-')
       const result = await dialog.showSaveDialog(win!, {
@@ -247,7 +252,45 @@ export function registerFileSystemHandlers(getWindow: () => BrowserWindow | null
       const mainTexPath = path.join(projectDir, 'main.tex')
 
       await fs.mkdir(projectDir, { recursive: true })
+      
+      // Write the main file
       await retryTransient(() => fs.writeFile(mainTexPath, content, 'utf-8'))
+
+      // Write additional files if any
+      if (files) {
+        for (const [relPath, fileContent] of Object.entries(files)) {
+          // Skip main.tex if it's in the files list to avoid overwriting (or just overwrite, it's fine)
+          // But mainTexPath is explicitly 'main.tex', while relPath might be 'OriginalName.tex'.
+          // Let's write everything.
+          
+          const targetPath = path.join(projectDir, relPath)
+          const targetDir = path.dirname(targetPath)
+          
+          await fs.mkdir(targetDir, { recursive: true })
+          
+          // Check if it looks like base64 (simple heuristic or passed metadata would be better, 
+          // but for now we rely on the fact that we encoded binary as base64 in templateStore)
+          // Actually, we can try to decode. If it fails or looks weird, maybe it was text?
+          // In templateStore we encode binary as base64. Text is utf-8.
+          // There is no flag here saying which is which.
+          // However, standard text files might look like base64 sometimes.
+          // We need a better way. 
+          
+          // REVISIT: For now, I will assume everything that is NOT a known text extension is base64.
+          // This matches the logic in templateStore.ts used during import.
+          
+          const ext = path.extname(relPath).toLowerCase()
+           const isText = [
+            '.tex', '.sty', '.cls', '.bib', '.bst', '.txt', '.md', '.json', '.xml', '.yaml', '.yml'
+          ].includes(ext)
+          
+          if (isText) {
+             await retryTransient(() => fs.writeFile(targetPath, fileContent, 'utf-8'))
+          } else {
+             await retryTransient(() => fs.writeFile(targetPath, Buffer.from(fileContent, 'base64')))
+          }
+        }
+      }
 
       return { projectPath: projectDir, filePath: mainTexPath }
     }

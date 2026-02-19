@@ -4,6 +4,7 @@ export interface Template {
   description: string
   content: string
   builtIn: boolean
+  files?: Record<string, string> // relative path -> content (base64 or text)
 }
 
 export const builtInTemplates: Template[] = [

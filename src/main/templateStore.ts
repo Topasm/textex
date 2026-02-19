@@ -43,14 +43,16 @@ export async function listAllTemplates(): Promise<Template[]> {
 export async function addCustomTemplate(
   name: string,
   description: string,
-  content: string
+  content: string,
+  files?: Record<string, string>
 ): Promise<Template> {
   const template: Template = {
     id: `custom-${Date.now()}`,
     name,
     description,
     content,
-    builtIn: false
+    builtIn: false,
+    files
   }
   const custom = await loadCustomTemplates()
   custom.push(template)
@@ -75,12 +77,57 @@ export async function importTemplateFromZip(zipPath: string): Promise<Template> 
   const zip = new AdmZip(zipPath)
   const entries = zip.getEntries()
 
-  // Find .tex file
-  const texEntry = entries.find((e) => !e.isDirectory && e.entryName.endsWith('.tex'))
-  if (!texEntry) {
+  const files: Record<string, string> = {}
+  let mainTexEntry = null
+  let mainTexContent = ''
+
+  // Heuristic to find the "main" tex file
+  // 1. "main.tex"
+  // 2. Same name as zip file
+  // 3. First .tex file found
+
+  const zipName = path.basename(zipPath, '.zip').toLowerCase()
+
+  for (const entry of entries) {
+    if (entry.isDirectory) continue
+
+    const entryName = entry.entryName
+    const ext = path.extname(entryName).toLowerCase()
+    
+    // Check if it's a text file we can read directly
+    const isText = [
+      '.tex', '.sty', '.cls', '.bib', '.bst', '.txt', '.md', '.json', '.xml', '.yaml', '.yml'
+    ].includes(ext)
+
+    let content = ''
+    if (isText) {
+      content = entry.getData().toString('utf-8')
+    } else {
+      // Binary file - store as base64
+      content = entry.getData().toString('base64')
+    }
+
+    files[entryName] = content
+
+    // Main tex detection logic
+    if (ext === '.tex') {
+      const base = path.basename(entryName, '.tex').toLowerCase()
+      if (!mainTexEntry) {
+        mainTexEntry = entry
+        mainTexContent = content
+      } else if (base === 'main') {
+        mainTexEntry = entry
+        mainTexContent = content
+      } else if (base === zipName && mainTexEntry.name !== 'main.tex') {
+         mainTexEntry = entry
+         mainTexContent = content
+      }
+    }
+  }
+
+  if (!mainTexEntry) {
     throw new Error('ZIP file does not contain a .tex file')
   }
-  const content = texEntry.getData().toString('utf-8')
 
   // Look for template.json metadata
   let name = path.basename(zipPath, '.zip')
@@ -103,5 +150,24 @@ export async function importTemplateFromZip(zipPath: string): Promise<Template> 
     }
   }
 
-  return addCustomTemplate(name, description, content)
+  // Remove template.json from the files list as we don't need to copy it to the project
+  const metaKey = metaEntry?.entryName
+  if(metaKey && files[metaKey]) {
+      delete files[metaKey]
+  }
+
+  // Remove the main tex file from the files list to avoid overwriting it (it's passed as content)
+  // actually, keeping it in files is fine, just need to make sure createTemplateProject handles it.
+  // But strictly speaking, the old logic passed content separately.
+  // Let's keep it in 'files' but also return it as content for backward compatibility if needed,
+  // or just rely on 'files' in the new handler.
+  // The 'addCustomTemplate' function signature expects 'content'.
+  // We should pass the main tex content there.
+  
+  // Note: addCustomTemplate stores 'content' in the template object.
+  // We need to update addCustomTemplate to also store 'files'.
+  
+  // Wait, I need to update addCustomTemplate first.
+  
+  return addCustomTemplate(name, description, mainTexContent, files)
 }

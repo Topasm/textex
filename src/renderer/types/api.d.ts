@@ -49,7 +49,8 @@ export interface ElectronAPI {
   saveFileAs(content: string): Promise<SaveAsResult | null>
   createTemplateProject(
     templateName: string,
-    content: string
+    content: string,
+    files?: Record<string, string>
   ): Promise<{ projectPath: string; filePath: string } | null>
   readFile(filePath: string): Promise<OpenFileResult>
   openDirectory(): Promise<string | null>

@@ -37,15 +37,15 @@ function TemplateGallery() {
   }, [isOpen, loadTemplates])
 
   const handleSelect = useCallback(
-    async (templateName: string, content: string) => {
+    async (template: Template) => {
       try {
         const settings = useAppStore.getState().settings
-        const finalContent = content
+        const finalContent = template.content
           .replace(/{{AUTHOR}}/g, settings.name || 'Author Name')
           .replace(/{{EMAIL}}/g, settings.email || 'your.email@example.com')
           .replace(/{{AFFILIATION}}/g, settings.affiliation || 'Institution')
 
-        const result = await window.api.createTemplateProject(templateName, finalContent)
+        const result = await window.api.createTemplateProject(template.name, finalContent, template.files)
         if (result) {
           await openProject(result.projectPath)
         }
@@ -171,7 +171,7 @@ function TemplateGallery() {
             <div
               key={tmpl.id}
               className="template-card"
-              onClick={() => handleSelect(tmpl.name, tmpl.content)}
+              onClick={() => handleSelect(tmpl)}
             >
               <h3>{tmpl.name}</h3>
               <p>{tmpl.description}</p>
@@ -187,7 +187,7 @@ function TemplateGallery() {
                 <div
                   key={tmpl.id}
                   className="template-card"
-                  onClick={() => handleSelect(tmpl.name, tmpl.content)}
+                  onClick={() => handleSelect(tmpl)}
                 >
                   <h3>{tmpl.name}</h3>
                   <p>{tmpl.description}</p>

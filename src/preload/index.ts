@@ -116,8 +116,8 @@ contextBridge.exposeInMainWorld('api', {
   saveFileBatch: (files: Array<{ content: string; filePath: string }>) =>
     invoke('fs:save-batch', files),
   saveFileAs: (content: string) => invoke('fs:save-as', content),
-  createTemplateProject: (templateName: string, content: string) =>
-    invoke('fs:create-template-project', templateName, content),
+  createTemplateProject: (templateName: string, content: string, files?: Record<string, string>) =>
+    invoke('fs:create-template-project', templateName, content, files),
   readFile: (filePath: string) => invoke('fs:read-file', filePath),
   openDirectory: () => invoke('fs:open-directory'),
   readDirectory: (dirPath: string) => invoke('fs:read-directory', dirPath),
