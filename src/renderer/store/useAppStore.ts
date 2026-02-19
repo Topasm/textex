@@ -77,7 +77,8 @@ function getComposedState() {
 
     // Compile
     compileStatus: compile.compileStatus,
-    pdfBase64: compile.pdfBase64,
+    pdfPath: compile.pdfPath,
+    pdfRevision: compile.pdfRevision,
     logs: compile.logs,
     isLogPanelOpen: compile.isLogPanelOpen,
     diagnostics: compile.diagnostics,
@@ -85,7 +86,7 @@ function getComposedState() {
 
     // Compile actions
     setCompileStatus: compile.setCompileStatus,
-    setPdfBase64: compile.setPdfBase64,
+    setPdfPath: compile.setPdfPath,
     appendLog: compile.appendLog,
     clearLogs: compile.clearLogs,
     toggleLogPanel: compile.toggleLogPanel,
@@ -191,7 +192,8 @@ function getComposedState() {
       })
       useCompileStore.setState({
         compileStatus: 'idle',
-        pdfBase64: null,
+        pdfPath: null,
+        pdfRevision: 0,
         logs: '',
         isLogPanelOpen: false,
         diagnostics: []
@@ -265,13 +267,14 @@ function useAppStoreFn<T>(selector: (state: ComposedState) => T): T {
 
     // Compile
     compileStatus: compileSlice.compileStatus,
-    pdfBase64: compileSlice.pdfBase64,
+    pdfPath: compileSlice.pdfPath,
+    pdfRevision: compileSlice.pdfRevision,
     logs: compileSlice.logs,
     isLogPanelOpen: compileSlice.isLogPanelOpen,
     diagnostics: compileSlice.diagnostics,
     logViewMode: compileSlice.logViewMode,
     setCompileStatus: compileSlice.setCompileStatus,
-    setPdfBase64: compileSlice.setPdfBase64,
+    setPdfPath: compileSlice.setPdfPath,
     appendLog: compileSlice.appendLog,
     clearLogs: compileSlice.clearLogs,
     toggleLogPanel: compileSlice.toggleLogPanel,
@@ -460,7 +463,8 @@ function setStateComposed(partial: Partial<ComposedState>): void {
   ])
   const compileKeys = new Set([
     'compileStatus',
-    'pdfBase64',
+    'pdfPath',
+    'pdfRevision',
     'logs',
     'isLogPanelOpen',
     'diagnostics',

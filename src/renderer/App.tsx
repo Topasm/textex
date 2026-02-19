@@ -85,7 +85,7 @@ function App() {
     state.clearLogs()
     try {
       const result = await window.api.compile(state.filePath)
-      useAppStore.getState().setPdfBase64(result.pdfBase64)
+      useAppStore.getState().setPdfPath(result.pdfPath)
       useAppStore.getState().setCompileStatus('success')
       const root = useAppStore.getState().projectRoot
       if (root) {
@@ -102,7 +102,6 @@ function App() {
       const s = useAppStore.getState()
       s.appendLog(errorMessage(err))
       s.setCompileStatus('error')
-      s.setLogPanelOpen(true)
     }
   }, [])
 

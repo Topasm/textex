@@ -148,8 +148,8 @@ async function doCompile(filePath: string, win: BrowserWindow): Promise<CompileR
   const cachedPdfPath = await checkCompileCache(filePath)
   if (cachedPdfPath) {
     try {
-      const pdfBuffer = await fs.readFile(cachedPdfPath)
-      return { pdfBase64: pdfBuffer.toString('base64') }
+      await fs.access(cachedPdfPath)
+      return { pdfPath: cachedPdfPath }
     } catch {
       // Cache pointed to a missing PDF, proceed with compilation
     }

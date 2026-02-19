@@ -7,7 +7,8 @@ const initialState = {
   content: '',
   isDirty: false,
   compileStatus: 'idle' as const,
-  pdfBase64: null,
+  pdfPath: null,
+  pdfRevision: 0,
   logs: '',
   isLogPanelOpen: false,
   cursorLine: 1,
@@ -50,7 +51,7 @@ describe('useAppStore', () => {
       expect(state.content).toBe('')
       expect(state.isDirty).toBe(false)
       expect(state.compileStatus).toBe('idle')
-      expect(state.pdfBase64).toBeNull()
+      expect(state.pdfPath).toBeNull()
       expect(state.logs).toBe('')
       expect(state.isLogPanelOpen).toBe(false)
       expect(state.cursorLine).toBe(1)
@@ -127,16 +128,23 @@ describe('useAppStore', () => {
     })
   })
 
-  describe('setPdfBase64', () => {
-    it('updates pdfBase64', () => {
-      useAppStore.getState().setPdfBase64('abc123base64data')
-      expect(useAppStore.getState().pdfBase64).toBe('abc123base64data')
+  describe('setPdfPath', () => {
+    it('updates pdfPath and increments pdfRevision', () => {
+      useAppStore.getState().setPdfPath('/path/to/output.pdf')
+      expect(useAppStore.getState().pdfPath).toBe('/path/to/output.pdf')
+      expect(useAppStore.getState().pdfRevision).toBe(1)
     })
 
-    it('can set pdfBase64 to null', () => {
-      useAppStore.getState().setPdfBase64('data')
-      useAppStore.getState().setPdfBase64(null)
-      expect(useAppStore.getState().pdfBase64).toBeNull()
+    it('can set pdfPath to null', () => {
+      useAppStore.getState().setPdfPath('/path/to/output.pdf')
+      useAppStore.getState().setPdfPath(null)
+      expect(useAppStore.getState().pdfPath).toBeNull()
+    })
+
+    it('increments pdfRevision on each call', () => {
+      useAppStore.getState().setPdfPath('/path/a.pdf')
+      useAppStore.getState().setPdfPath('/path/b.pdf')
+      expect(useAppStore.getState().pdfRevision).toBe(2)
     })
   })
 

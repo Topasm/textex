@@ -637,6 +637,19 @@ body,
   background-color: var(--error);
 }
 
+.status-compile-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 0 4px;
+  border-radius: 3px;
+}
+
+.status-compile-indicator:hover {
+  background-color: var(--hover);
+}
+
 /* Error Boundary */
 .error-boundary {
   height: 100vh;
@@ -1531,6 +1544,124 @@ body,
   font-size: 12px;
   color: var(--text-secondary);
   margin-bottom: 0;
+}
+
+.template-card {
+  position: relative;
+}
+
+.template-card-delete {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 4px;
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, background-color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.template-card:hover .template-card-delete {
+  opacity: 1;
+}
+
+.template-card-delete:hover {
+  background: var(--error);
+  color: white;
+}
+
+.template-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.template-action-btn {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.template-action-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.template-action-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.template-section-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 16px 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.template-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  background: rgba(244, 71, 71, 0.15);
+  border: 1px solid var(--error);
+  border-radius: 4px;
+  color: var(--error);
+  font-size: 13px;
+}
+
+.template-error button {
+  background: none;
+  border: none;
+  color: var(--error);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 0 0 8px;
+}
+
+.template-add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.template-add-form input,
+.template-add-form textarea {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.template-add-form input:focus,
+.template-add-form textarea:focus {
+  outline: none;
+  border-color: var(--accent);
 }
 
 .modal-close {

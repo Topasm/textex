@@ -6,14 +6,16 @@ export type CompileStatus = 'idle' | 'compiling' | 'success' | 'error'
 
 interface CompileState {
   compileStatus: CompileStatus
-  pdfBase64: string | null
+  pdfPath: string | null
+  /** Monotonic counter bumped on each successful compile to signal PDF reload. */
+  pdfRevision: number
   logs: string
   isLogPanelOpen: boolean
   diagnostics: Diagnostic[]
   logViewMode: 'raw' | 'structured'
 
   setCompileStatus: (status: CompileStatus) => void
-  setPdfBase64: (data: string | null) => void
+  setPdfPath: (pdfPath: string | null) => void
   appendLog: (text: string) => void
   clearLogs: () => void
   toggleLogPanel: () => void
@@ -25,14 +27,15 @@ interface CompileState {
 export const useCompileStore = create<CompileState>()(
   subscribeWithSelector((set) => ({
     compileStatus: 'idle',
-    pdfBase64: null,
+    pdfPath: null,
+    pdfRevision: 0,
     logs: '',
     isLogPanelOpen: false,
     diagnostics: [],
     logViewMode: 'structured',
 
     setCompileStatus: (compileStatus) => set({ compileStatus }),
-    setPdfBase64: (pdfBase64) => set({ pdfBase64 }),
+    setPdfPath: (pdfPath) => set((state) => ({ pdfPath, pdfRevision: state.pdfRevision + 1 })),
     appendLog: (text) => set((state) => ({ logs: state.logs + text })),
     clearLogs: () => set({ logs: '' }),
     toggleLogPanel: () => set((state) => ({ isLogPanelOpen: !state.isLogPanelOpen })),

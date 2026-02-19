@@ -7,7 +7,8 @@ const DEFAULT_TIMEOUT_MS = 30_000
 // Channels that involve user interaction (dialogs) should never time out
 const NO_TIMEOUT_CHANNELS = new Set<string>([
   'fs:open', 'fs:save-as', 'fs:open-directory',
-  'fs:create-template-project', 'export:convert'
+  'fs:create-template-project', 'export:convert',
+  'templates:import-zip'
 ])
 
 /**
@@ -20,7 +21,8 @@ const DEDUP_CHANNELS = new Set<string>([
   'git:is-repo', 'git:status', 'git:diff', 'git:log', 'git:file-log',
   'latex:scan-labels', 'latex:load-package-data', 'export:formats',
   'lsp:status', 'ai:has-api-key', 'structure:outline',
-  'history:list', 'zotero:probe', 'zotero:search'
+  'history:list', 'zotero:probe', 'zotero:search',
+  'templates:list'
 ])
 
 const inflight = new Map<string, Promise<unknown>>()
@@ -272,5 +274,12 @@ contextBridge.exposeInMainWorld('api', {
   saveHistorySnapshot: (filePath: string, content: string) =>
     invoke('history:save', filePath, content),
   getHistoryList: (filePath: string) => invoke('history:list', filePath),
-  loadHistorySnapshot: (snapshotPath: string) => invoke('history:load', snapshotPath)
+  loadHistorySnapshot: (snapshotPath: string) => invoke('history:load', snapshotPath),
+
+  // Templates
+  listTemplates: () => invoke('templates:list'),
+  addTemplate: (name: string, description: string, content: string) =>
+    invoke('templates:add', name, description, content),
+  removeTemplate: (id: string) => invoke('templates:remove', id),
+  importTemplateZip: () => invoke('templates:import-zip')
 })

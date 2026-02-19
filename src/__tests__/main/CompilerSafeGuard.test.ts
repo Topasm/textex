@@ -51,7 +51,7 @@ describe('compileLatex Loop Safeguard', () => {
         pdfPath: 'test.pdf',
         logPath: 'test.log',
         status: 'success',
-        pdfBase64: 'mockbase64'
+        pdfPath: '/test/file.pdf'
       }
     })
 
@@ -79,7 +79,7 @@ describe('compileLatex Loop Safeguard', () => {
         pdfPath: 'test.pdf',
         logPath: 'test.log',
         status: 'success',
-        pdfBase64: 'mockbase64'
+        pdfPath: '/test/file.pdf'
       }
     })
 

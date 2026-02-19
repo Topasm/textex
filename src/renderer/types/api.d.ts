@@ -14,6 +14,7 @@ import {
   HistoryItem,
   SectionNode
 } from '../../shared/types'
+import { Template } from '../../shared/templates'
 
 export interface OpenFileResult {
   content: string
@@ -29,7 +30,7 @@ export interface SaveAsResult {
 }
 
 export interface CompileResult {
-  pdfBase64: string
+  pdfPath: string
 }
 
 export interface GitStatusResult {
@@ -169,6 +170,12 @@ export interface ElectronAPI {
   saveHistorySnapshot(filePath: string, content: string): Promise<void>
   getHistoryList(filePath: string): Promise<HistoryItem[]>
   loadHistorySnapshot(snapshotPath: string): Promise<string>
+
+  // Templates
+  listTemplates(): Promise<Template[]>
+  addTemplate(name: string, description: string, content: string): Promise<Template>
+  removeTemplate(id: string): Promise<{ success: boolean }>
+  importTemplateZip(): Promise<Template | null>
 }
 
 declare global {

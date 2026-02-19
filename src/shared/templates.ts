@@ -1,11 +1,15 @@
 export interface Template {
+  id: string
   name: string
   description: string
   content: string
+  builtIn: boolean
 }
 
-export const templates: Template[] = [
+export const builtInTemplates: Template[] = [
   {
+    id: 'article',
+    builtIn: true,
     name: 'Article',
     description: 'Standard academic article with sections, bibliography, and common packages.',
     content: `\\documentclass[12pt,a4paper]{article}
@@ -45,6 +49,8 @@ Start writing your introduction here.
 `
   },
   {
+    id: 'report',
+    builtIn: true,
     name: 'Report',
     description: 'Technical or academic report with chapters, table of contents, and appendices.',
     content: `\\documentclass[12pt,a4paper]{report}
@@ -88,6 +94,8 @@ Begin your report here.
 `
   },
   {
+    id: 'beamer-presentation',
+    builtIn: true,
     name: 'Beamer Presentation',
     description: 'Slide presentation using the Beamer class with a clean theme.',
     content: `\\documentclass{beamer}
@@ -142,6 +150,8 @@ Your content here.
 `
   },
   {
+    id: 'letter',
+    builtIn: true,
     name: 'Letter',
     description: 'Formal letter using the LaTeX letter class.',
     content: `\\documentclass{letter}
@@ -168,6 +178,8 @@ Write your letter content here.
 `
   },
   {
+    id: 'cv-resume',
+    builtIn: true,
     name: 'CV / Resume',
     description: 'Curriculum vitae with sections for education, experience, and skills.',
     content: `\\documentclass[11pt,a4paper]{article}
@@ -214,3 +226,6 @@ Your Name et al. \`\`Paper Title,'' \\textit{Journal Name}, 2024.
 `
   }
 ]
+
+/** Backward-compatible alias */
+export const templates = builtInTemplates

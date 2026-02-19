@@ -40,7 +40,8 @@ export const useHasUnsavedFiles = () =>
 
 // ---- Compile ----
 export const useCompileStatus = () => useCompileStore((s) => s.compileStatus)
-export const usePdfBase64 = () => useCompileStore((s) => s.pdfBase64)
+export const usePdfPath = () => useCompileStore((s) => s.pdfPath)
+export const usePdfRevision = () => useCompileStore((s) => s.pdfRevision)
 export const useLogs = () => useCompileStore((s) => s.logs)
 export const useIsLogPanelOpen = () => useCompileStore((s) => s.isLogPanelOpen)
 export const useDiagnostics = () => useCompileStore((s) => s.diagnostics)

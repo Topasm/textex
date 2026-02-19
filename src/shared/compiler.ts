@@ -39,7 +39,7 @@ export function getTectonicPath(options: TectonicPathOptions): string {
 }
 
 export interface CompileResult {
-  pdfBase64: string
+  pdfPath: string
 }
 
 export interface CompileOptions {
@@ -117,8 +117,8 @@ export async function compileLatex(
       if (code === 0) {
         const pdfPath = filePath.replace(/\.tex$/, '.pdf')
         try {
-          const pdfBuffer = await fs.readFile(pdfPath)
-          resolve({ pdfBase64: pdfBuffer.toString('base64') })
+          await fs.access(pdfPath)
+          resolve({ pdfPath })
         } catch {
           reject(new Error(`Compilation succeeded but PDF not found at ${pdfPath}`))
         }

@@ -11,6 +11,7 @@ import { registerLspHandlers } from './lsp'
 import { registerAiHandlers } from './ai'
 import { registerHistoryHandlers } from './history'
 import { registerMiscHandlers } from './misc'
+import { registerTemplateHandlers } from './templates'
 
 let currentWindow: BrowserWindow | null = null
 let handlersRegistered = false
@@ -39,6 +40,7 @@ export function registerIpcHandlers(win: BrowserWindow): void {
   registerAiHandlers()
   registerHistoryHandlers()
   registerMiscHandlers(getWindow)
+  registerTemplateHandlers(getWindow)
 }
 
 /**

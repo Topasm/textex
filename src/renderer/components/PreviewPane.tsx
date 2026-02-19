@@ -29,7 +29,8 @@ const ESTIMATED_PAGE_HEIGHT = 1100
 const SCROLL_DEBOUNCE_MS = 100
 
 function PreviewPane() {
-  const pdfBase64 = useAppStore((s) => s.pdfBase64)
+  const pdfPath = useAppStore((s) => s.pdfPath)
+  const pdfRevision = useAppStore((s) => s.pdfRevision)
   const compileStatus = useAppStore((s) => s.compileStatus)
   const zoomLevel = useAppStore((s) => s.zoomLevel)
   const pdfInvertMode = useAppStore((s) => s.settings.pdfInvertMode)
@@ -139,15 +140,12 @@ function PreviewPane() {
     }
   }, [])
 
-  const pdfData = useMemo(() => {
-    if (!pdfBase64) return null
-    const binaryString = atob(pdfBase64)
-    const bytes = new Uint8Array(binaryString.length)
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i) & 0xff
-    }
-    return { data: bytes }
-  }, [pdfBase64])
+  // Use file URL with revision query param to force react-pdf to reload on recompile.
+  // This avoids the expensive base64 encode → IPC transfer → decode pipeline.
+  const pdfFileUrl = useMemo(() => {
+    if (!pdfPath) return null
+    return `file://${pdfPath}?v=${pdfRevision}`
+  }, [pdfPath, pdfRevision])
 
   const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
     setNumPages(numPages)
@@ -226,11 +224,11 @@ function PreviewPane() {
       onClick={handleContainerClick}
       style={{ position: 'relative' }}
     >
-      {compileStatus === 'error' && !pdfBase64 ? (
+      {compileStatus === 'error' && !pdfFileUrl ? (
         <div className="preview-center preview-error">
           <p>Compilation failed. Check the log panel.</p>
         </div>
-      ) : !pdfData ? (
+      ) : !pdfFileUrl ? (
         <div className="preview-center preview-empty">
           <div>
             <p>No PDF to display</p>
@@ -265,7 +263,7 @@ function PreviewPane() {
             }
           >
             <Document
-              file={pdfData}
+              file={pdfFileUrl}
               onLoadSuccess={onDocumentLoadSuccess}
               onLoadError={onDocumentLoadError}
               loading={

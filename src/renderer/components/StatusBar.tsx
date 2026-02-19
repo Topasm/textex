@@ -20,6 +20,7 @@ const StatusBar = React.memo(function StatusBar() {
   const lspStatus = useAppStore((s) => s.lspStatus)
   const lspEnabled = useAppStore((s) => s.settings.lspEnabled)
 
+  const toggleLogPanel = useAppStore((s) => s.toggleLogPanel)
   const { dotClass, label } = STATUS_CONFIG[compileStatus]
 
   const errorCount = useMemo(
@@ -34,22 +35,36 @@ const StatusBar = React.memo(function StatusBar() {
   return (
     <div className="status-bar">
       <div className="status-left">
-        <span className={`status-dot ${dotClass}`} />
-        <span>{label}</span>
-        {(errorCount > 0 || warnCount > 0) && (
-          <span className="status-diagnostics">
-            {errorCount > 0 && (
-              <span className="status-errors">
-                {'\u2716'} {errorCount}
-              </span>
-            )}
-            {warnCount > 0 && (
-              <span className="status-warnings">
-                {'\u26A0'} {warnCount}
-              </span>
-            )}
-          </span>
-        )}
+        <span
+          className="status-compile-indicator"
+          onClick={toggleLogPanel}
+          role="button"
+          tabIndex={0}
+          title="Toggle log panel"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              toggleLogPanel()
+            }
+          }}
+        >
+          <span className={`status-dot ${dotClass}`} />
+          <span>{label}</span>
+          {(errorCount > 0 || warnCount > 0) && (
+            <span className="status-diagnostics">
+              {errorCount > 0 && (
+                <span className="status-errors">
+                  {'\u2716'} {errorCount}
+                </span>
+              )}
+              {warnCount > 0 && (
+                <span className="status-warnings">
+                  {'\u26A0'} {warnCount}
+                </span>
+              )}
+            </span>
+          )}
+        </span>
         {isGitRepo && gitBranch && (
           <span className="status-git-branch" title={`Git branch: ${gitBranch}`}>
             {'\u2387'} {gitBranch}

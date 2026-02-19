@@ -22,6 +22,7 @@ import type {
   SectionNode,
   HistoryItem
 } from './types'
+import type { Template } from './templates'
 
 // ---- Helpers ----
 
@@ -36,7 +37,7 @@ interface OpenFileResult {
 }
 
 interface CompileResult {
-  pdfBase64: string
+  pdfPath: string
 }
 
 interface GitStatusResult {
@@ -168,6 +169,12 @@ export interface IpcChannelMap {
   'history:save': [[filePath: string, content: string], void]
   'history:list': [[filePath: string], HistoryItem[]]
   'history:load': [[snapshotPath: string], string]
+
+  // Templates
+  'templates:list': [[], Template[]]
+  'templates:add': [[name: string, description: string, content: string], Template]
+  'templates:remove': [[id: string], SuccessResult]
+  'templates:import-zip': [[], Template | null]
 }
 
 /** All valid invoke channel names. */

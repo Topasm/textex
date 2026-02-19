@@ -15,7 +15,7 @@ export function useAutoCompile(): void {
 
     clearTimeout(timerRef.current)
     timerRef.current = setTimeout(async () => {
-      const { appendLog, setCompileStatus, setLogPanelOpen, clearLogs } = useAppStore.getState()
+      const { appendLog, setCompileStatus, clearLogs } = useAppStore.getState()
 
       // Save ALL dirty files before compiling (multi-file awareness)
       // Use batch save IPC to write all dirty files concurrently in a single call
@@ -38,7 +38,6 @@ export function useAutoCompile(): void {
         } catch (err: unknown) {
           appendLog(`Save failed, skipping compile: ${errorMessage(err)}`)
           setCompileStatus('error')
-          setLogPanelOpen(true)
           return
         }
       }
@@ -56,7 +55,6 @@ export function useAutoCompile(): void {
       } catch (err: unknown) {
         appendLog(`Save failed, skipping compile: ${errorMessage(err)}`)
         setCompileStatus('error')
-        setLogPanelOpen(true)
         return
       }
 
@@ -64,14 +62,13 @@ export function useAutoCompile(): void {
       clearLogs()
       try {
         const result = await window.api.compile(currentFilePath)
-        useAppStore.getState().setPdfBase64(result.pdfBase64)
+        useAppStore.getState().setPdfPath(result.pdfPath)
         useAppStore.getState().setCompileStatus('success')
       } catch (err: unknown) {
         const message = errorMessage(err)
         if (message.includes('Compilation was cancelled')) return
         useAppStore.getState().appendLog(message)
         useAppStore.getState().setCompileStatus('error')
-        useAppStore.getState().setLogPanelOpen(true)
       }
     }, AUTO_COMPILE_DELAY_MS)
 
