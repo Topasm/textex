@@ -1,7 +1,11 @@
 import React, { useState, useCallback, useRef } from 'react'
 import { Settings, Home, ChevronDown } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { useAppStore } from '../store/useAppStore'
+import { useEditorStore } from '../store/useEditorStore'
+import { useCompileStore } from '../store/useCompileStore'
+import { useProjectStore } from '../store/useProjectStore'
+import { usePdfStore } from '../store/usePdfStore'
+import { useSettingsStore } from '../store/useSettingsStore'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { ZoteroCiteSearch } from './ZoteroCiteSearch'
 import { isFeatureEnabled } from '../utils/featureFlags'
@@ -36,14 +40,14 @@ const Toolbar = React.memo(function Toolbar({
   onOpenSettings
 }: ToolbarProps) {
   const { t } = useTranslation()
-  const filePath = useAppStore((s) => s.filePath)
-  const isDirty = useAppStore((s) => s.isDirty)
-  const compileStatus = useAppStore((s) => s.compileStatus)
-  const settings = useAppStore((s) => s.settings)
+  const filePath = useEditorStore((s) => s.filePath)
+  const isDirty = useEditorStore((s) => s.isDirty)
+  const compileStatus = useCompileStore((s) => s.compileStatus)
+  const settings = useSettingsStore((s) => s.settings)
   const aiEnabled = isFeatureEnabled(settings, 'ai')
   const zoteroEnabled = isFeatureEnabled(settings, 'zotero')
-  const zoomLevel = useAppStore((s) => s.zoomLevel)
-  const projectRoot = useAppStore((s) => s.projectRoot)
+  const zoomLevel = usePdfStore((s) => s.zoomLevel)
+  const projectRoot = useProjectStore((s) => s.projectRoot)
 
   const [isFileMenuOpen, setIsFileMenuOpen] = useState(false)
   const fileMenuRef = useRef<HTMLDivElement>(null)
@@ -55,15 +59,15 @@ const Toolbar = React.memo(function Toolbar({
 
   // Sync Handlers
   const handleSyncToCode = useCallback(() => {
-    useAppStore.getState().triggerSyncToCode()
+    usePdfStore.getState().triggerSyncToCode()
   }, [])
 
   const handleSyncToPdf = useCallback(() => {
-    const state = useAppStore.getState()
-    if (!state.filePath) return
-    window.api.synctexForward(state.filePath, state.cursorLine).then((result) => {
+    const editorState = useEditorStore.getState()
+    if (!editorState.filePath) return
+    window.api.synctexForward(editorState.filePath, editorState.cursorLine).then((result) => {
       if (result) {
-        useAppStore.getState().setSynctexHighlight(result)
+        usePdfStore.getState().setSynctexHighlight(result)
       }
     })
   }, [])
@@ -209,7 +213,7 @@ const Toolbar = React.memo(function Toolbar({
           <div className="toolbar-separator" />
           <button
             className="toolbar-compact-btn"
-            onClick={() => useAppStore.getState().zoomOut()}
+            onClick={() => usePdfStore.getState().zoomOut()}
             disabled={zoomLevel <= ZOOM_MIN}
             title={t('toolbar.zoomOut')}
             aria-label={t('toolbar.zoomOut')}
@@ -219,7 +223,7 @@ const Toolbar = React.memo(function Toolbar({
           <span className="toolbar-zoom-label">{zoomLevel}%</span>
           <button
             className="toolbar-compact-btn"
-            onClick={() => useAppStore.getState().zoomIn()}
+            onClick={() => usePdfStore.getState().zoomIn()}
             disabled={zoomLevel >= ZOOM_MAX}
             title={t('toolbar.zoomIn')}
             aria-label={t('toolbar.zoomIn')}
@@ -228,7 +232,7 @@ const Toolbar = React.memo(function Toolbar({
           </button>
           <button
             className="toolbar-compact-btn"
-            onClick={() => useAppStore.getState().resetZoom()}
+            onClick={() => usePdfStore.getState().resetZoom()}
             title={t('toolbar.fitWidth')}
           >
             {t('toolbar.fitWidth')}

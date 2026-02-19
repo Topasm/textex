@@ -3,7 +3,7 @@ import type { editor as monacoEditor, languages as monacoLanguages } from 'monac
 import { snippets } from '../../data/snippets'
 import { environments } from '../../data/environments'
 import { registerHoverProvider } from '../../providers/hoverProvider'
-import { useAppStore } from '../../store/useAppStore'
+import { useProjectStore } from '../../store/useProjectStore'
 
 type MonacoInstance = typeof import('monaco-editor')
 
@@ -37,7 +37,7 @@ export function useCompletion(
             filterText: snippet.prefix
           }))
 
-          const packageData = useAppStore.getState().packageData
+          const packageData = useProjectStore.getState().packageData
           const seenNames = new Set(snippets.map((s) => s.prefix))
           for (const [pkgName, pkg] of Object.entries(packageData)) {
             for (const macro of pkg.macros) {
@@ -71,7 +71,7 @@ export function useCompletion(
           const citeMatch = textBefore.match(/\\cite[tp]?\*?\{([^}]*)$/)
           if (!citeMatch) return { suggestions: [] }
 
-          const bibEntries = useAppStore.getState().bibEntries
+          const bibEntries = useProjectStore.getState().bibEntries
           const word = model.getWordUntilPosition(position)
           const range = {
             startLineNumber: position.lineNumber,
@@ -103,7 +103,7 @@ export function useCompletion(
           )
           if (!refMatch) return { suggestions: [] }
 
-          const labels = useAppStore.getState().labels
+          const labels = useProjectStore.getState().labels
           const word = model.getWordUntilPosition(position)
           const range = {
             startLineNumber: position.lineNumber,
@@ -140,7 +140,7 @@ export function useCompletion(
             endColumn: word.endColumn
           }
 
-          const packageData = useAppStore.getState().packageData
+          const packageData = useProjectStore.getState().packageData
           const allEnvs = [...environments]
           for (const pkg of Object.values(packageData)) {
             for (const env of pkg.envs) {
@@ -235,8 +235,8 @@ export function useCompletion(
       disposables.push(codeActionDisposable)
 
       const hoverDisposable = registerHoverProvider(monaco, {
-        getLabels: () => useAppStore.getState().labels,
-        getBibEntries: () => useAppStore.getState().bibEntries
+        getLabels: () => useProjectStore.getState().labels,
+        getBibEntries: () => useProjectStore.getState().bibEntries
       })
       disposables.push(hoverDisposable)
 

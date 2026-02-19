@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useAppStore } from '../../store/useAppStore'
+import { useEditorStore } from '../../store/useEditorStore'
 import type { HistoryItem } from '../../../shared/types'
 
 export interface HistoryPanelState {
@@ -22,7 +22,7 @@ export function useHistoryPanel(): HistoryPanelState {
   // Load history items when panel opens
   useEffect(() => {
     if (showHistory) {
-      const activeFilePath = useAppStore.getState().activeFilePath
+      const activeFilePath = useEditorStore.getState().activeFilePath
       if (activeFilePath) {
         window.api.getHistoryList(activeFilePath).then(setHistoryItems)
       }

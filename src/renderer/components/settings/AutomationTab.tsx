@@ -1,12 +1,12 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAppStore } from '../../store/useAppStore'
+import { useSettingsStore } from '../../store/useSettingsStore'
 import { Toggle } from './Toggle'
 
 export const AutomationTab = () => {
   const { t } = useTranslation()
-  const settings = useAppStore((state) => state.settings)
-  const updateSetting = useAppStore((state) => state.updateSetting)
+  const settings = useSettingsStore((state) => state.settings)
+  const updateSetting = useSettingsStore((state) => state.updateSetting)
 
   return (
     <div className="settings-tab-content settings-animate-in">

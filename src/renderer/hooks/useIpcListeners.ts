@@ -1,4 +1,6 @@
-import { useAppStore } from '../store/useAppStore'
+import { useUiStore } from '../store/useUiStore'
+import { useCompileStore } from '../store/useCompileStore'
+import { useProjectStore } from '../store/useProjectStore'
 import { toDisposable } from '../utils/disposable'
 import { useDisposable } from './useDisposable'
 import type { Diagnostic } from '../../shared/types'
@@ -14,22 +16,22 @@ export function useIpcListeners(projectRoot: string | null): void {
   // Update event listeners
   useDisposable((store) => {
     window.api.onUpdateEvent('available', (version: unknown) => {
-      useAppStore.getState().setUpdateStatus('available')
+      useUiStore.getState().setUpdateStatus('available')
       if (typeof version === 'string') {
-        useAppStore.getState().setUpdateVersion(version)
+        useUiStore.getState().setUpdateVersion(version)
       }
     })
     window.api.onUpdateEvent('download-progress', (progress: unknown) => {
-      useAppStore.getState().setUpdateStatus('downloading')
+      useUiStore.getState().setUpdateStatus('downloading')
       if (typeof progress === 'number') {
-        useAppStore.getState().setUpdateProgress(progress)
+        useUiStore.getState().setUpdateProgress(progress)
       }
     })
     window.api.onUpdateEvent('downloaded', () => {
-      useAppStore.getState().setUpdateStatus('ready')
+      useUiStore.getState().setUpdateStatus('ready')
     })
     window.api.onUpdateEvent('error', () => {
-      useAppStore.getState().setUpdateStatus('error')
+      useUiStore.getState().setUpdateStatus('error')
     })
     store.add(toDisposable(() => window.api.removeUpdateListeners()))
   }, [])
@@ -37,7 +39,7 @@ export function useIpcListeners(projectRoot: string | null): void {
   // Compile log listener
   useDisposable((store) => {
     window.api.onCompileLog((log: string) => {
-      useAppStore.getState().appendLog(log)
+      useCompileStore.getState().appendLog(log)
     })
     store.add(toDisposable(() => window.api.removeCompileLogListener()))
   }, [])
@@ -45,7 +47,7 @@ export function useIpcListeners(projectRoot: string | null): void {
   // Diagnostics listener
   useDisposable((store) => {
     window.api.onDiagnostics((diagnostics: Diagnostic[]) => {
-      useAppStore.getState().setDiagnostics(diagnostics)
+      useCompileStore.getState().setDiagnostics(diagnostics)
     })
     store.add(toDisposable(() => window.api.removeDiagnosticsListener()))
   }, [])
@@ -57,7 +59,7 @@ export function useIpcListeners(projectRoot: string | null): void {
       window.api.onDirectoryChanged(async () => {
         try {
           const tree = await window.api.readDirectory(projectRoot)
-          useAppStore.getState().setDirectoryTree(tree)
+          useProjectStore.getState().setDirectoryTree(tree)
         } catch {
           // ignore
         }

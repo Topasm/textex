@@ -1,6 +1,8 @@
 import React, { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAppStore } from '../store/useAppStore'
+import { useEditorStore } from '../store/useEditorStore'
+import { useUiStore } from '../store/useUiStore'
+import { useSettingsStore } from '../store/useSettingsStore'
 import type { DocumentSymbolNode } from '../../shared/types'
 
 type SymbolCategory =
@@ -86,7 +88,7 @@ const OutlineNode = React.memo(function OutlineNode({
   const [expanded, setExpanded] = useState(true)
 
   const handleClick = useCallback(() => {
-    useAppStore
+    useEditorStore
       .getState()
       .requestJumpToLine(node.selectionRange.startLine, node.selectionRange.startColumn)
   }, [node.selectionRange.startLine, node.selectionRange.startColumn])
@@ -140,12 +142,12 @@ const OutlineNode = React.memo(function OutlineNode({
 
 function OutlinePanel() {
   const { t } = useTranslation()
-  const documentSymbols = useAppStore((s) => s.documentSymbols)
-  const filePath = useAppStore((s) => s.filePath)
-  const sectionHighlightEnabled = useAppStore((s) => s.settings.sectionHighlightEnabled)
+  const documentSymbols = useUiStore((s) => s.documentSymbols)
+  const filePath = useEditorStore((s) => s.filePath)
+  const sectionHighlightEnabled = useSettingsStore((s) => s.settings.sectionHighlightEnabled)
 
   const toggleHighlight = useCallback(() => {
-    useAppStore.getState().updateSetting('sectionHighlightEnabled', !sectionHighlightEnabled)
+    useSettingsStore.getState().updateSetting('sectionHighlightEnabled', !sectionHighlightEnabled)
   }, [sectionHighlightEnabled])
 
   if (!filePath) {

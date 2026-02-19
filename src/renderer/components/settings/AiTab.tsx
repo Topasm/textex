@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAppStore } from '../../store/useAppStore'
+import { useSettingsStore } from '../../store/useSettingsStore'
 import type { UserSettings } from '../../../shared/types'
 import {
   Bot,
@@ -61,8 +61,8 @@ const DEFAULT_PROMPTS: Record<
 
 const AiPromptsEditor = () => {
   const { t } = useTranslation()
-  const settings = useAppStore((state) => state.settings)
-  const updateSetting = useAppStore((state) => state.updateSetting)
+  const settings = useSettingsStore((state) => state.settings)
+  const updateSetting = useSettingsStore((state) => state.updateSetting)
   const [expandedPrompt, setExpandedPrompt] = useState<string | null>(null)
 
   const promptEntries = Object.entries(DEFAULT_PROMPTS)
@@ -132,8 +132,8 @@ const AiPromptsEditor = () => {
 
 export const AiTab = () => {
   const { t } = useTranslation()
-  const settings = useAppStore((state) => state.settings)
-  const updateSetting = useAppStore((state) => state.updateSetting)
+  const settings = useSettingsStore((state) => state.settings)
+  const updateSetting = useSettingsStore((state) => state.updateSetting)
 
   const [apiKey, setApiKey] = useState('')
   const [showKey, setShowKey] = useState(false)

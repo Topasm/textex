@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { useAppStore } from '../../store/useAppStore'
+import { useProjectStore } from '../../store/useProjectStore'
 import { IMAGE_EXTENSIONS } from '../../utils/imageExtensions'
 import { generateFigureSnippet } from '../../utils/figureSnippet'
 import type { editor as monacoEditor } from 'monaco-editor'
@@ -7,7 +7,7 @@ import type { editor as monacoEditor } from 'monaco-editor'
 type Monaco = typeof import('monaco-editor')
 
 export function useSmartImageDrop() {
-  const projectRoot = useAppStore((s) => s.projectRoot)
+  const projectRoot = useProjectStore((s) => s.projectRoot)
 
   const handleDrop = useCallback(
     async (

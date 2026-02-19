@@ -24,8 +24,13 @@ import { useBibAutoLoad } from './hooks/useBibAutoLoad'
 import { useLspLifecycle } from './hooks/useLspLifecycle'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { useDragResize } from './hooks/useDragResize'
-import { useAppStore } from './store/useAppStore'
-import type { SidebarView } from './store/useAppStore'
+import { useEditorStore } from './store/useEditorStore'
+import { useCompileStore } from './store/useCompileStore'
+import { useProjectStore } from './store/useProjectStore'
+import type { SidebarView } from './store/useProjectStore'
+import { usePdfStore } from './store/usePdfStore'
+import { useUiStore } from './store/useUiStore'
+import { useSettingsStore } from './store/useSettingsStore'
 import { openProject } from './utils/openProject'
 import { errorMessage, logError } from './utils/errorMessage'
 import { isFeatureEnabled } from './utils/featureFlags'
@@ -47,19 +52,19 @@ function App() {
   const { handleOpen, handleSave, handleSaveAs } = useFileOps()
 
   // Only subscribe to state needed for rendering
-  const splitRatio = useAppStore((s) => s.splitRatio)
-  const isSidebarOpen = useAppStore((s) => s.isSidebarOpen)
-  const sidebarView = useAppStore((s) => s.sidebarView)
-  const sidebarWidth = useAppStore((s) => s.sidebarWidth)
-  const filePath = useAppStore((s) => s.filePath)
-  const projectRoot = useAppStore((s) => s.projectRoot)
-  const isGitRepo = useAppStore((s) => s.isGitRepo)
-  const settings = useAppStore((s) => s.settings)
+  const splitRatio = usePdfStore((s) => s.splitRatio)
+  const isSidebarOpen = useProjectStore((s) => s.isSidebarOpen)
+  const sidebarView = useProjectStore((s) => s.sidebarView)
+  const sidebarWidth = useProjectStore((s) => s.sidebarWidth)
+  const filePath = useEditorStore((s) => s.filePath)
+  const projectRoot = useProjectStore((s) => s.projectRoot)
+  const isGitRepo = useProjectStore((s) => s.isGitRepo)
+  const settings = useSettingsStore((s) => s.settings)
   const lspEnabled = settings.lspEnabled
   const zoteroEnabled = settings.zoteroEnabled
   const gitEnabled = isFeatureEnabled(settings, 'git')
-  const autoHideSidebar = useAppStore((s) => s.settings.autoHideSidebar)
-  const showStatusBar = useAppStore((s) => s.settings.showStatusBar)
+  const autoHideSidebar = useSettingsStore((s) => s.settings.autoHideSidebar)
+  const showStatusBar = useSettingsStore((s) => s.settings.showStatusBar)
 
   const [isDraftModalOpen, setIsDraftModalOpen] = useState(false)
   const [draftPrefill, setDraftPrefill] = useState<string | undefined>(undefined)
@@ -70,40 +75,39 @@ function App() {
   }, [])
 
   const handleDraftInsert = useCallback((latex: string) => {
-    useAppStore.getState().setContent(latex)
+    useEditorStore.getState().setContent(latex)
   }, [])
 
   // ---- Compile handler ----
   const handleCompile = useCallback(async (): Promise<void> => {
-    const state = useAppStore.getState()
-    if (!state.filePath) return
-    if (!state.filePath.toLowerCase().endsWith('.tex')) return
+    const editorState = useEditorStore.getState()
+    if (!editorState.filePath) return
+    if (!editorState.filePath.toLowerCase().endsWith('.tex')) return
     try {
-      await window.api.saveFile(state.content, state.filePath)
+      await window.api.saveFile(editorState.content, editorState.filePath)
     } catch (err) {
       logError('App:preSave', err)
     }
-    state.setCompileStatus('compiling')
-    state.clearLogs()
+    useCompileStore.getState().setCompileStatus('compiling')
+    useCompileStore.getState().clearLogs()
     try {
-      const result = await window.api.compile(state.filePath)
-      useAppStore.getState().setPdfPath(result.pdfPath)
-      useAppStore.getState().setCompileStatus('success')
-      const root = useAppStore.getState().projectRoot
+      const result = await window.api.compile(editorState.filePath)
+      useCompileStore.getState().setPdfPath(result.pdfPath)
+      useCompileStore.getState().setCompileStatus('success')
+      const root = useProjectStore.getState().projectRoot
       if (root) {
         window.api
           .scanLabels(root)
           .then((labels) => {
-            useAppStore.getState().setLabels(labels)
+            useProjectStore.getState().setLabels(labels)
           })
           .catch((err) => {
             logError('App:scanLabels', err)
           })
       }
     } catch (err: unknown) {
-      const s = useAppStore.getState()
-      s.appendLog(errorMessage(err))
-      s.setCompileStatus('error')
+      useCompileStore.getState().appendLog(errorMessage(err))
+      useCompileStore.getState().setCompileStatus('error')
     }
   }, [])
 
@@ -122,20 +126,63 @@ function App() {
       logError('App:unwatchDirectory', err)
     }
     stopLspClient()
-    useAppStore.getState().closeProject()
+    // Reset all stores on project close
+    useEditorStore.setState({
+      filePath: null,
+      content: '',
+      isDirty: false,
+      openFiles: {},
+      activeFilePath: null,
+      cursorLine: 1,
+      cursorColumn: 1,
+      pendingJump: null,
+      pendingInsertText: null,
+      _sessionOpenPaths: [],
+      _sessionActiveFile: null
+    })
+    useCompileStore.setState({
+      compileStatus: 'idle',
+      pdfPath: null,
+      pdfRevision: 0,
+      logs: '',
+      isLogPanelOpen: false,
+      diagnostics: []
+    })
+    useProjectStore.setState({
+      projectRoot: null,
+      directoryTree: null,
+      isGitRepo: false,
+      gitBranch: '',
+      gitStatus: null,
+      bibEntries: [],
+      citationGroups: [],
+      auxCitationMap: null,
+      labels: [],
+      packageData: {},
+      detectedPackages: []
+    })
+    usePdfStore.setState({
+      pdfSearchVisible: false,
+      pdfSearchQuery: '',
+      synctexHighlight: null
+    })
+    useUiStore.setState({
+      lspStatus: 'stopped',
+      lspError: null,
+      documentSymbols: []
+    })
   }, [])
 
   const handleExport = useCallback(async (format: string): Promise<void> => {
-    const s = useAppStore.getState()
-    if (!s.filePath) return
-    s.setExportStatus('exporting')
+    const fp = useEditorStore.getState().filePath
+    if (!fp) return
+    useUiStore.getState().setExportStatus('exporting')
     try {
-      const result = await window.api.exportDocument(s.filePath, format)
-      useAppStore.getState().setExportStatus(result?.success ? 'success' : 'error')
+      const result = await window.api.exportDocument(fp, format)
+      useUiStore.getState().setExportStatus(result?.success ? 'success' : 'error')
     } catch (err: unknown) {
-      const s2 = useAppStore.getState()
-      s2.appendLog(`Export failed: ${errorMessage(err)}`)
-      s2.setExportStatus('error')
+      useCompileStore.getState().appendLog(`Export failed: ${errorMessage(err)}`)
+      useUiStore.getState().setExportStatus('error')
     }
   }, [])
 
@@ -184,10 +231,10 @@ function App() {
         onSave={handleSave}
         onSaveAs={handleSaveAs}
         onCompile={handleCompile}
-        onToggleLog={() => useAppStore.getState().toggleLogPanel()}
+        onToggleLog={() => useCompileStore.getState().toggleLogPanel()}
         onOpenFolder={handleOpenFolder}
         onReturnHome={handleCloseProject}
-        onNewFromTemplate={() => useAppStore.getState().toggleTemplateGallery()}
+        onNewFromTemplate={() => useUiStore.getState().toggleTemplateGallery()}
         onAiDraft={() => handleAiDraft()}
         onExport={handleExport}
         onOpenSettings={() => setIsSettingsOpen(true)}
@@ -212,7 +259,7 @@ function App() {
       {showHomeScreen ? (
         <HomeScreen
           onOpenFolder={handleOpenFolder}
-          onNewFromTemplate={() => useAppStore.getState().toggleTemplateGallery()}
+          onNewFromTemplate={() => useUiStore.getState().toggleTemplateGallery()}
           onAiDraft={handleAiDraft}
           onOpenSettings={() => setIsSettingsOpen(true)}
         />
@@ -231,7 +278,7 @@ function App() {
                     <button
                       key={tab.key}
                       className={`sidebar-tab${sidebarView === tab.key ? ' active' : ''}`}
-                      onClick={() => useAppStore.getState().setSidebarView(tab.key)}
+                      onClick={() => useProjectStore.getState().setSidebarView(tab.key)}
                     >
                       {tab.label}
                     </button>
@@ -240,14 +287,13 @@ function App() {
                     className="sidebar-pin-btn"
                     title={autoHideSidebar ? t('sidebar.pinSidebar') : t('sidebar.unpinSidebar')}
                     onClick={() => {
-                      const store = useAppStore.getState()
-                      if (autoHideSidebar) {
-                        store.updateSetting('autoHideSidebar', false)
-                        if (!store.isSidebarOpen) {
-                          store.toggleSidebar()
+                        if (autoHideSidebar) {
+                        useSettingsStore.getState().updateSetting('autoHideSidebar', false)
+                        if (!useProjectStore.getState().isSidebarOpen) {
+                          useProjectStore.getState().toggleSidebar()
                         }
                       } else {
-                        store.updateSetting('autoHideSidebar', true)
+                        useSettingsStore.getState().updateSetting('autoHideSidebar', true)
                       }
                     }}
                   >

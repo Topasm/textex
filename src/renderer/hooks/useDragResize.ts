@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useAppStore } from '../store/useAppStore'
-import type { SidebarView } from '../store/useAppStore'
+import { useProjectStore } from '../store/useProjectStore'
+import type { SidebarView } from '../store/useProjectStore'
+import { usePdfStore } from '../store/usePdfStore'
 import { SWIPE_LOCK_MS } from '../constants'
 
 export type SlideAnim = 'exit-left' | 'exit-right' | 'enter-left' | 'enter-right' | null
@@ -47,7 +48,7 @@ export function useDragResize(): DragResizeHandlers {
       if (!isDragging.current || !mainContentRef.current) return
       const rect = mainContentRef.current.getBoundingClientRect()
       const ratio = (moveEvent.clientX - rect.left) / rect.width
-      useAppStore.getState().setSplitRatio(Math.min(0.8, Math.max(0.2, ratio)))
+      usePdfStore.getState().setSplitRatio(Math.min(0.8, Math.max(0.2, ratio)))
     }
 
     const onMouseUp = (): void => {
@@ -63,7 +64,7 @@ export function useDragResize(): DragResizeHandlers {
   }, [])
 
   const handleDividerDoubleClick = useCallback(() => {
-    useAppStore.getState().setSplitRatio(0.5)
+    usePdfStore.getState().setSplitRatio(0.5)
   }, [])
 
   // ---- Sidebar resize drag ----
@@ -81,7 +82,7 @@ export function useDragResize(): DragResizeHandlers {
 
     const onMouseMove = (moveEvent: MouseEvent): void => {
       if (!isSidebarDragging.current) return
-      useAppStore.getState().setSidebarWidth(moveEvent.clientX - sidebarLeft)
+      useProjectStore.getState().setSidebarWidth(moveEvent.clientX - sidebarLeft)
     }
 
     const onMouseUp = (): void => {
@@ -98,7 +99,7 @@ export function useDragResize(): DragResizeHandlers {
   }, [])
 
   const handleSidebarDividerDoubleClick = useCallback(() => {
-    useAppStore.getState().setSidebarWidth(240)
+    useProjectStore.getState().setSidebarWidth(240)
   }, [])
 
   // ---- Sidebar trackpad swipe to switch tabs ----
@@ -133,7 +134,7 @@ export function useDragResize(): DragResizeHandlers {
     clearTimeout(slideAnimTimer.current)
     clearTimeout(slideAnimClearTimer.current)
 
-    const s = useAppStore.getState()
+    const s = useProjectStore.getState()
     const tabs: SidebarView[] = ['files', 'bib', 'outline', 'todo', 'timeline', 'git']
     const idx = tabs.indexOf(s.sidebarView)
     const next = tabs[(idx + direction + tabs.length) % tabs.length]

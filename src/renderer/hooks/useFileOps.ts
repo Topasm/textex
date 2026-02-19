@@ -1,5 +1,7 @@
 import { useCallback } from 'react'
-import { useAppStore } from '../store/useAppStore'
+import { useEditorStore } from '../store/useEditorStore'
+import { useCompileStore } from '../store/useCompileStore'
+import { useSettingsStore } from '../store/useSettingsStore'
 import { formatLatex } from '../utils/formatter'
 import { openProject } from '../utils/openProject'
 import { errorMessage } from '../utils/errorMessage'
@@ -19,7 +21,7 @@ export function useFileOps(): FileOps {
       await openProject(parentDir)
 
       // Open the specific file the user selected (overrides openProject's auto-open)
-      const { openFileInTab, setFilePath, setDirty } = useAppStore.getState()
+      const { openFileInTab, setFilePath, setDirty } = useEditorStore.getState()
       openFileInTab(result.filePath, result.content)
       setFilePath(result.filePath)
       setDirty(false)
@@ -27,11 +29,12 @@ export function useFileOps(): FileOps {
   }, [])
 
   const handleSave = useCallback(async () => {
-    const state = useAppStore.getState()
-    const { filePath, setFilePath, setDirty, appendLog, setLogPanelOpen, settings, setContent } =
-      state
+    const editorState = useEditorStore.getState()
+    const { filePath, setFilePath, setDirty, setContent } = editorState
+    const { appendLog, setLogPanelOpen } = useCompileStore.getState()
+    const { settings } = useSettingsStore.getState()
 
-    let contentToSave = state.content
+    let contentToSave = editorState.content
 
     if (settings.formatOnSave) {
       try {
@@ -60,7 +63,7 @@ export function useFileOps(): FileOps {
   }, [])
 
   const handleSaveAs = useCallback(async () => {
-    const { content, setFilePath, setDirty } = useAppStore.getState()
+    const { content, setFilePath, setDirty } = useEditorStore.getState()
     // Trigger format on save-as as well? Spec doesn't say, but consistent.
     // However, usually "Format on Save" applies to explicit save actions.
     // For now, let's keep Save As simple or we can add it if needed.

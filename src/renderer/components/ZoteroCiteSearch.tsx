@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { useAppStore } from '../store/useAppStore'
+import { useEditorStore } from '../store/useEditorStore'
+import { useSettingsStore } from '../store/useSettingsStore'
+import { useUiStore } from '../store/useUiStore'
 import { useClickOutside } from '../hooks/useClickOutside'
 import type { ZoteroSearchResult } from '../types/api'
 
@@ -9,8 +11,8 @@ import type { ZoteroSearchResult } from '../types/api'
  * multi-select with Ctrl+Enter insert, badge showing selection count.
  */
 export function ZoteroCiteSearch() {
-  const zoteroPort = useAppStore((s) => s.settings.zoteroPort)
-  const citeSearchFocusRequested = useAppStore((s) => s.citeSearchFocusRequested)
+  const zoteroPort = useSettingsStore((s) => s.settings.zoteroPort)
+  const citeSearchFocusRequested = useUiStore((s) => s.citeSearchFocusRequested)
 
   const [searchTerm, setSearchTerm] = useState('')
   const [results, setResults] = useState<ZoteroSearchResult[]>([])
@@ -57,7 +59,7 @@ export function ZoteroCiteSearch() {
   useEffect(() => {
     if (citeSearchFocusRequested) {
       citeInputRef.current?.focus()
-      useAppStore.getState().clearCiteSearchFocus()
+      useUiStore.getState().clearCiteSearchFocus()
     }
   }, [citeSearchFocusRequested])
 
@@ -83,7 +85,7 @@ export function ZoteroCiteSearch() {
     if (!keys.length) return
 
     const citeCmd = `\\cite{${keys.join(',')}}`
-    const state = useAppStore.getState()
+    const state = useEditorStore.getState()
     const lines = state.content.split('\n')
     const lineIdx = state.cursorLine - 1
     const colIdx = state.cursorColumn - 1

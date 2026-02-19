@@ -1,6 +1,6 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAppStore } from '../../store/useAppStore'
+import { useSettingsStore } from '../../store/useSettingsStore'
 import { Toggle } from './Toggle'
 
 const DEFAULT_RAINBOW: string[] = [
@@ -15,8 +15,8 @@ const DEFAULT_RAINBOW: string[] = [
 
 const SectionColorPalette = () => {
   const { t } = useTranslation()
-  const colors = useAppStore((s) => s.settings.sectionHighlightColors) ?? DEFAULT_RAINBOW
-  const updateSetting = useAppStore((s) => s.updateSetting)
+  const colors = useSettingsStore((s) => s.settings.sectionHighlightColors) ?? DEFAULT_RAINBOW
+  const updateSetting = useSettingsStore((s) => s.updateSetting)
 
   const setColor = (index: number, value: string) => {
     const next = [...colors]
@@ -86,8 +86,8 @@ const SectionColorPalette = () => {
 
 export const EditorTab = () => {
   const { t } = useTranslation()
-  const settings = useAppStore((state) => state.settings)
-  const updateSetting = useAppStore((state) => state.updateSetting)
+  const settings = useSettingsStore((state) => state.settings)
+  const updateSetting = useSettingsStore((state) => state.updateSetting)
 
   return (
     <div className="settings-tab-content settings-animate-in">

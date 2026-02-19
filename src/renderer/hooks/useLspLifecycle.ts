@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react'
-import { useAppStore } from '../store/useAppStore'
-import type { LspStatus } from '../store/useAppStore'
+import { useEditorStore } from '../store/useEditorStore'
+import { useSettingsStore } from '../store/useSettingsStore'
+import { useUiStore } from '../store/useUiStore'
+import type { LspStatus } from '../store/useUiStore'
 import {
   startLspClient,
   stopLspClient,
@@ -29,7 +31,7 @@ export function useLspLifecycle(
   useEffect(() => {
     if (!projectRoot || !lspEnabled) {
       stopLspClient()
-      useAppStore.getState().setLspStatus('stopped')
+      useUiStore.getState().setLspStatus('stopped')
       return
     }
 
@@ -39,8 +41,8 @@ export function useLspLifecycle(
       startLspClient(
         projectRoot,
         monacoInstance,
-        () => useAppStore.getState().filePath,
-        () => useAppStore.getState().content
+        () => useEditorStore.getState().filePath,
+        () => useEditorStore.getState().content
       ).catch(() => {})
     })
 
@@ -53,8 +55,8 @@ export function useLspLifecycle(
   // LSP status listener
   useEffect(() => {
     window.api.onLspStatus((status: string, error?: string) => {
-      useAppStore.getState().setLspStatus(status as LspStatus)
-      useAppStore.getState().setLspError(error || null)
+      useUiStore.getState().setLspStatus(status as LspStatus)
+      useUiStore.getState().setLspError(error || null)
     })
     return () => {
       window.api.removeLspStatusListener()
@@ -64,14 +66,14 @@ export function useLspLifecycle(
   // Notify LSP of document changes (debounced via store subscription)
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined
-    const unsub = useAppStore.subscribe(
+    const unsub = useEditorStore.subscribe(
       (state) => state.content,
       (newContent) => {
         clearTimeout(timer)
         timer = setTimeout(() => {
-          const state = useAppStore.getState()
-          if (state.filePath && state.settings.lspEnabled) {
-            lspNotifyDidChange(state.filePath, newContent)
+          const editorState = useEditorStore.getState()
+          if (editorState.filePath && useSettingsStore.getState().settings.lspEnabled) {
+            lspNotifyDidChange(editorState.filePath, newContent)
           }
         }, 300)
       }
@@ -92,15 +94,15 @@ export function useLspLifecycle(
     }
 
     if (filePath) {
-      lspNotifyDidOpen(filePath, useAppStore.getState().content)
-      const state = useAppStore.getState()
-      if (state.settings.lspEnabled && state.lspStatus === 'running') {
+      lspNotifyDidOpen(filePath, useEditorStore.getState().content)
+      const lspRunning = useSettingsStore.getState().settings.lspEnabled && useUiStore.getState().lspStatus === 'running'
+      if (lspRunning) {
         const switchedFile = filePath
         const timer = setTimeout(() => {
-          if (useAppStore.getState().filePath === switchedFile) {
+          if (useEditorStore.getState().filePath === switchedFile) {
             lspRequestDocumentSymbols(switchedFile).then((symbols) => {
-              if (useAppStore.getState().filePath === switchedFile) {
-                useAppStore.getState().setDocumentSymbols(symbols)
+              if (useEditorStore.getState().filePath === switchedFile) {
+                useUiStore.getState().setDocumentSymbols(symbols)
               }
             })
           }
@@ -108,7 +110,7 @@ export function useLspLifecycle(
         return () => clearTimeout(timer)
       }
     } else {
-      useAppStore.getState().setDocumentSymbols([])
+      useUiStore.getState().setDocumentSymbols([])
     }
   }, [filePath])
 }

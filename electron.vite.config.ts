@@ -29,8 +29,20 @@ export default defineConfig({
     root: resolve(__dirname, 'src/renderer'),
     build: {
       outDir: resolve(__dirname, 'out/renderer'),
+      chunkSizeWarningLimit: 1500,
       rollupOptions: {
-        input: resolve(__dirname, 'src/renderer/index.html')
+        input: resolve(__dirname, 'src/renderer/index.html'),
+        output: {
+          manualChunks: {
+            'monaco-editor': ['monaco-editor', '@monaco-editor/react'],
+            'pdfjs': ['pdfjs-dist', 'react-pdf'],
+            'katex': ['katex'],
+            'mathlive': ['mathlive'],
+            'vendor-react': ['react', 'react-dom', 'zustand'],
+            'vendor-i18n': ['i18next', 'react-i18next'],
+            'vendor-ui': ['lucide-react']
+          }
+        }
       }
     },
     plugins: [react()]

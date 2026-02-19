@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
-import { useAppStore } from '../store/useAppStore'
+import { useEditorStore } from '../store/useEditorStore'
+import { useProjectStore } from '../store/useProjectStore'
+import { useSettingsStore } from '../store/useSettingsStore'
 
 /**
  * Restores the previous editing session on mount:
@@ -17,8 +19,10 @@ export function useSessionRestore(): boolean {
 
   useEffect(() => {
     const restoreSession = async (): Promise<void> => {
-      const state = useAppStore.getState()
-      const { projectRoot: savedRoot, _sessionOpenPaths, _sessionActiveFile } = state
+      const projectState = useProjectStore.getState()
+      const editorState = useEditorStore.getState()
+      const savedRoot = projectState.projectRoot
+      const { _sessionOpenPaths, _sessionActiveFile } = editorState
       if (!savedRoot || _sessionOpenPaths.length === 0) {
         setSessionRestored(true)
         return
@@ -27,10 +31,10 @@ export function useSessionRestore(): boolean {
       // Read directory tree
       try {
         const tree = await window.api.readDirectory(savedRoot)
-        useAppStore.getState().setDirectoryTree(tree)
+        useProjectStore.getState().setDirectoryTree(tree)
       } catch {
         // Directory no longer exists — bail out
-        useAppStore.getState().setProjectRoot(null)
+        useProjectStore.getState().setProjectRoot(null)
         setSessionRestored(true)
         return
       }
@@ -39,15 +43,15 @@ export function useSessionRestore(): boolean {
       for (const fp of _sessionOpenPaths) {
         try {
           const result = await window.api.readFile(fp)
-          useAppStore.getState().openFileInTab(result.filePath, result.content)
+          useEditorStore.getState().openFileInTab(result.filePath, result.content)
         } catch {
           // File may have been deleted — skip
         }
       }
 
       // Restore active tab
-      if (_sessionActiveFile && useAppStore.getState().openFiles[_sessionActiveFile]) {
-        useAppStore.getState().setActiveTab(_sessionActiveFile)
+      if (_sessionActiveFile && useEditorStore.getState().openFiles[_sessionActiveFile]) {
+        useEditorStore.getState().setActiveTab(_sessionActiveFile)
       }
 
       // Watch directory
@@ -60,7 +64,7 @@ export function useSessionRestore(): boolean {
       // Git status
       try {
         const isRepo = await window.api.gitIsRepo(savedRoot)
-        const s = useAppStore.getState()
+        const s = useProjectStore.getState()
         s.setIsGitRepo(isRepo)
         if (isRepo) {
           const status = await window.api.gitStatus(savedRoot)
@@ -68,13 +72,13 @@ export function useSessionRestore(): boolean {
           s.setGitBranch(status.branch)
         }
       } catch {
-        useAppStore.getState().setIsGitRepo(false)
+        useProjectStore.getState().setIsGitRepo(false)
       }
 
       // Bib entries
       try {
         const entries = await window.api.findBibInProject(savedRoot)
-        useAppStore.getState().setBibEntries(entries)
+        useProjectStore.getState().setBibEntries(entries)
       } catch {
         /* ignore */
       }
@@ -82,7 +86,7 @@ export function useSessionRestore(): boolean {
       // Labels
       try {
         const labels = await window.api.scanLabels(savedRoot)
-        useAppStore.getState().setLabels(labels)
+        useProjectStore.getState().setLabels(labels)
       } catch {
         /* ignore */
       }
@@ -102,7 +106,7 @@ export function useSessionRestore(): boolean {
 
   // Also init spell check and check for updates on mount
   useEffect(() => {
-    const settings = useAppStore.getState().settings
+    const settings = useSettingsStore.getState().settings
     if (settings.spellCheckEnabled) {
       window.api
         .loadSettings()
@@ -111,7 +115,7 @@ export function useSessionRestore(): boolean {
         })
         .catch(() => {})
     }
-    if (useAppStore.getState().settings.autoUpdateEnabled !== false) {
+    if (useSettingsStore.getState().settings.autoUpdateEnabled !== false) {
       window.api.updateCheck()
     }
   }, [])

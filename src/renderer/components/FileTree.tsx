@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAppStore } from '../store/useAppStore'
+import { useEditorStore } from '../store/useEditorStore'
+import { useProjectStore } from '../store/useProjectStore'
 import { logError } from '../utils/errorMessage'
 import { isImageFile } from '../utils/imageExtensions'
 import { generateFigureSnippet } from '../utils/figureSnippet'
@@ -90,8 +91,8 @@ function FileTreeNode({ entry, depth, gitFiles }: FileTreeNodeProps) {
   const [hoverPreview, setHoverPreview] = useState<DOMRect | null>(null)
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const itemRef = useRef<HTMLDivElement>(null)
-  const activeFilePath = useAppStore((s) => s.activeFilePath)
-  const projectRoot = useAppStore((s) => s.projectRoot)
+  const activeFilePath = useEditorStore((s) => s.activeFilePath)
+  const projectRoot = useProjectStore((s) => s.projectRoot)
 
   const isImage = entry.type === 'file' && isImageFile(entry.name)
 
@@ -117,11 +118,11 @@ function FileTreeNode({ entry, depth, gitFiles }: FileTreeNodeProps) {
         ? entry.path.slice(projectRoot.length + 1).replace(/\\/g, '/')
         : entry.name
       const snippet = generateFigureSnippet(relPath, entry.name)
-      useAppStore.getState().requestInsertAtCursor(snippet)
+      useEditorStore.getState().requestInsertAtCursor(snippet)
     } else {
       try {
         const result = await window.api.readFile(entry.path)
-        useAppStore.getState().openFileInTab(result.filePath, result.content)
+        useEditorStore.getState().openFileInTab(result.filePath, result.content)
       } catch (err) {
         logError('FileTree:readFile', err)
       }
@@ -208,7 +209,7 @@ function FileTreeNode({ entry, depth, gitFiles }: FileTreeNodeProps) {
           await window.api.createFile(fullPath)
           // Open the newly created file
           const result = await window.api.readFile(fullPath)
-          useAppStore.getState().openFileInTab(result.filePath, result.content)
+          useEditorStore.getState().openFileInTab(result.filePath, result.content)
         }
         // Refresh children
         await loadChildren()
@@ -289,9 +290,9 @@ function FileTreeNode({ entry, depth, gitFiles }: FileTreeNodeProps) {
 
 function FileTree() {
   const { t } = useTranslation()
-  const directoryTree = useAppStore((s) => s.directoryTree)
-  const gitStatus = useAppStore((s) => s.gitStatus)
-  const projectRoot = useAppStore((s) => s.projectRoot)
+  const directoryTree = useProjectStore((s) => s.directoryTree)
+  const gitStatus = useProjectStore((s) => s.gitStatus)
+  const projectRoot = useProjectStore((s) => s.projectRoot)
   const [creatingType, setCreatingType] = useState<'file' | 'folder' | null>(null)
 
   const handleRootCreate = useCallback(
@@ -304,7 +305,7 @@ function FileTree() {
         } else {
           await window.api.createFile(fullPath)
           const result = await window.api.readFile(fullPath)
-          useAppStore.getState().openFileInTab(result.filePath, result.content)
+          useEditorStore.getState().openFileInTab(result.filePath, result.content)
         }
         // Tree refreshes via directory watcher
       } catch (err) {

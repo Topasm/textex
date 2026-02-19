@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatDistanceToNow } from 'date-fns'
-import { useAppStore } from '../store/useAppStore'
+import { useEditorStore } from '../store/useEditorStore'
+import { useProjectStore } from '../store/useProjectStore'
 import { logError } from '../utils/errorMessage'
 import type { GitLogEntry, HistoryItem } from '../../shared/types'
 
@@ -42,10 +43,10 @@ function mergeTimeline(commits: GitLogEntry[], snapshots: HistoryItem[]): Timeli
 
 export function TimelinePanel() {
   const { t } = useTranslation()
-  const activeFilePath = useAppStore((s) => s.activeFilePath)
-  const projectRoot = useAppStore((s) => s.projectRoot)
-  const isGitRepo = useAppStore((s) => s.isGitRepo)
-  const isDirty = useAppStore((s) => s.isDirty)
+  const activeFilePath = useEditorStore((s) => s.activeFilePath)
+  const projectRoot = useProjectStore((s) => s.projectRoot)
+  const isGitRepo = useProjectStore((s) => s.isGitRepo)
+  const isDirty = useEditorStore((s) => s.isDirty)
 
   const [entries, setEntries] = useState<TimelineEntry[]>([])
   const [loading, setLoading] = useState(false)

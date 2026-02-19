@@ -1,5 +1,6 @@
 import { useEffect, useRef, type MutableRefObject } from 'react'
-import { useAppStore } from '../../store/useAppStore'
+import { useSettingsStore } from '../../store/useSettingsStore'
+import { useUiStore } from '../../store/useUiStore'
 import type { editor as monacoEditor } from 'monaco-editor'
 
 type MonacoInstance = typeof import('monaco-editor')
@@ -49,9 +50,9 @@ function injectPaletteStyles(colors: string[]): HTMLStyleElement {
  * Colors are user-configurable in settings and cycle through the palette.
  */
 export function useSectionHighlight({ editorRef, monacoRef }: UseSectionHighlightArgs): void {
-  const enabled = useAppStore((s) => s.settings.sectionHighlightEnabled)
-  const colors = useAppStore((s) => s.settings.sectionHighlightColors) ?? DEFAULT_COLORS
-  const documentSymbols = useAppStore((s) => s.documentSymbols)
+  const enabled = useSettingsStore((s) => s.settings.sectionHighlightEnabled)
+  const colors = useSettingsStore((s) => s.settings.sectionHighlightColors) ?? DEFAULT_COLORS
+  const documentSymbols = useUiStore((s) => s.documentSymbols)
   const collectionRef = useRef<monacoEditor.IEditorDecorationsCollection | null>(null)
 
   // Keep palette CSS in sync with colors

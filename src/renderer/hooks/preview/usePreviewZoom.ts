@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useAppStore } from '../../store/useAppStore'
+import { usePdfStore } from '../../store/usePdfStore'
 import { ZOOM_MIN, ZOOM_MAX, DEBOUNCE_ZOOM_MS } from '../../constants'
 
 export interface PreviewZoomState {
@@ -24,7 +24,7 @@ export function usePreviewZoom(
       if (!(e.ctrlKey || e.metaKey)) return
       e.preventDefault()
 
-      const s = useAppStore.getState()
+      const s = usePdfStore.getState()
       const rawStep = Math.abs(e.deltaY) * 0.15
       const step = Math.max(1, Math.min(rawStep, 5))
       const baseZoom = pendingZoomRef.current ?? s.zoomLevel
@@ -40,7 +40,7 @@ export function usePreviewZoom(
       transientTimerRef.current = setTimeout(() => {
         const finalZoom = pendingZoomRef.current ?? newZoom
         pendingZoomRef.current = null
-        useAppStore.getState().setZoomLevel(finalZoom)
+        usePdfStore.getState().setZoomLevel(finalZoom)
         setTransientScale(null)
       }, DEBOUNCE_ZOOM_MS)
     }

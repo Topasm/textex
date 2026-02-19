@@ -1,6 +1,8 @@
 import Editor, { BeforeMount, OnMount } from '@monaco-editor/react'
 import { useEffect, useRef, useState, useCallback, lazy, Suspense } from 'react'
-import { useAppStore } from '../store/useAppStore'
+import { useEditorStore } from '../store/useEditorStore'
+import { useProjectStore } from '../store/useProjectStore'
+import { useSettingsStore } from '../store/useSettingsStore'
 import { stopLspClient } from '../lsp/lspClient'
 import { useClickNavigation } from '../hooks/editor/useClickNavigation'
 import { useSpelling } from '../hooks/editor/useSpelling'
@@ -34,11 +36,11 @@ const HistoryPanel = lazy(() =>
 type MonacoInstance = typeof import('monaco-editor')
 
 function EditorPane() {
-  const content = useAppStore((s) => s.content)
-  const setContent = useAppStore((s) => s.setContent)
-  const setCursorPosition = useAppStore((s) => s.setCursorPosition)
-  const projectRoot = useAppStore((s) => s.projectRoot)
-  const settings = useAppStore((s) => s.settings)
+  const content = useEditorStore((s) => s.content)
+  const setContent = useEditorStore((s) => s.setContent)
+  const setCursorPosition = useEditorStore((s) => s.setCursorPosition)
+  const projectRoot = useProjectStore((s) => s.projectRoot)
+  const settings = useSettingsStore((s) => s.settings)
   const theme = settings.theme
   const fontSize = settings.fontSize
   const spellCheckEnabled = settings.spellCheckEnabled
