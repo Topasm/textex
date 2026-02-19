@@ -40,13 +40,8 @@ function TemplateGallery() {
   const handleSelect = useCallback(
     async (template: Template) => {
       try {
-<<<<<<< HEAD
-        const settings = useAppStore.getState().settings
-        const finalContent = template.content
-=======
         const settings = useSettingsStore.getState().settings
-        const finalContent = content
->>>>>>> f0b80159e7a64733e1e3b407dd428bb19f775f68
+        const finalContent = template.content
           .replace(/{{AUTHOR}}/g, settings.name || 'Author Name')
           .replace(/{{EMAIL}}/g, settings.email || 'your.email@example.com')
           .replace(/{{AFFILIATION}}/g, settings.affiliation || 'Institution')
