@@ -117,7 +117,9 @@
       "pdfViewModeContinuous": "연속",
       "pdfViewModeSingle": "단일 페이지",
       "showPdfToolbarControls": "PDF 도구 모음 컨트롤",
-      "showPdfToolbarControlsDesc": "도구 모음에 페이지 탐색 및 확대/축소 컨트롤을 표시합니다."
+      "showPdfToolbarControlsDesc": "도구 모음에 페이지 탐색 및 확대/축소 컨트롤을 표시합니다.",
+      "scrollSync": "스크롤 동기화",
+      "scrollSyncDesc": "코드 편집기와 PDF 미리보기 간의 스크롤 위치를 동기화합니다."
     },
     "editor": {
       "typography": "서체",
@@ -304,12 +306,24 @@
     "toggleInfo": "정보 전환",
     "ln": "줄"
   },
-  "pdfSearch": {
-    "placeholder": "PDF에서 검색...",
+  "omniSearch": {
+    "searchCitations": "인용 검색...",
+    "searchZotero": "Zotero 검색...",
+    "searchPdf": "PDF에서 검색...",
+    "findInEditor": "편집기에서 찾기...",
+    "citations": "인용",
+    "zotero": "Zotero",
+    "pdf": "PDF",
+    "tex": "TeX",
+    "zoteroNotConnected": "Zotero가 연결되지 않았습니다. 설정 → 통합에서 활성화하세요.",
+    "noResults": "결과 없음",
+    "enterToSelect": "Enter로 선택 · Ctrl+Enter로 삽입",
+    "selectedInsert": "{{count}}개 선택됨 · Ctrl+Enter로 삽입",
+    "matches": "{{current}}/{{total}}",
     "noMatches": "일치 항목 없음",
-    "previous": "이전 (Shift+Enter)",
-    "next": "다음 (Enter)",
-    "close": "닫기 (Escape)"
+    "prevMatch": "이전",
+    "nextMatch": "다음",
+    "goToLine": "{{line}}번 줄로 이동"
   },
   "errorBoundary": {
     "title": "문제가 발생했습니다",

@@ -23,6 +23,21 @@ const MAIN_PROCESS_KEYS = new Set<keyof UserSettings>([
   'language'
 ])
 
+/** Resolve the effective theme: 'system' → OS preference, others pass through */
+export function resolveTheme(theme: string): string {
+  if (theme === 'system') {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    }
+    return 'dark'
+  }
+  return theme
+}
+
+function applyTheme(theme: string): void {
+  document.documentElement.dataset.theme = resolveTheme(theme)
+}
+
 let syncTimer: ReturnType<typeof setTimeout> | undefined
 function syncToMain(): void {
   clearTimeout(syncTimer)
@@ -88,7 +103,8 @@ const defaultSettings: UserSettings = {
   tabSize: 4,
   language: 'en',
   pdfViewMode: 'continuous',
-  showPdfToolbarControls: true
+  showPdfToolbarControls: true,
+  scrollSyncEnabled: false
 }
 
 interface SettingsState {
@@ -108,7 +124,9 @@ export const useSettingsStore = create<SettingsState>()(
         set((state) => ({ settings: { ...state.settings, [key]: value } }))
         // Handle side effects of specific settings
         if (key === 'theme') {
-          document.documentElement.dataset.theme = value as string
+          applyTheme(value as string)
+          // Update native title bar overlay to match the new theme
+          window.api?.setTheme?.(value as string).catch(() => {})
         }
         // Sync main-process-relevant fields via IPC
         if (MAIN_PROCESS_KEYS.has(key)) {
@@ -133,7 +151,7 @@ export const useSettingsStore = create<SettingsState>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (state && state.settings.theme) {
-          document.documentElement.dataset.theme = state.settings.theme
+          applyTheme(state.settings.theme)
         }
         // Backfill sectionHighlightColors for pre-existing settings
         if (state && !state.settings.sectionHighlightColors) {
@@ -151,3 +169,15 @@ export const useSettingsStore = create<SettingsState>()(
     }
   )
 )
+
+// Listen for OS theme changes and re-apply when using 'system' theme
+if (typeof window !== 'undefined' && window.matchMedia) {
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    const { theme } = useSettingsStore.getState().settings
+    if (theme === 'system') {
+      applyTheme('system')
+    }
+  })
+}
+// Note: the main process listens to nativeTheme.on('updated') separately
+// to update the title bar overlay when OS theme changes with 'system' selected.

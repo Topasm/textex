@@ -10,6 +10,7 @@ import type {
   Diagnostic,
   SyncTeXForwardResult,
   SyncTeXInverseResult,
+  SyncTeXLineMapEntry,
   DirectoryEntry,
   BibEntry,
   GitFileStatus,
@@ -89,10 +90,12 @@ export interface IpcChannelMap {
     [texFile: string, page: number, x: number, y: number],
     SyncTeXInverseResult | null
   ]
+  'synctex:build-line-map': [[texFile: string], SyncTeXLineMapEntry[]]
 
   // Settings
   'settings:load': [[], UserSettings]
   'settings:save': [[partial: Record<string, unknown>], UserSettings]
+  'settings:set-theme': [[theme: string], void]
   'settings:add-recent-project': [[projectPath: string], UserSettings]
   'settings:remove-recent-project': [[projectPath: string], UserSettings]
   'settings:update-recent-project': [

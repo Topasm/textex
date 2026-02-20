@@ -121,7 +121,7 @@ export function useClickNavigation(): (editor: monacoEditor.IStandaloneCodeEdito
         if (result) {
           usePdfStore.getState().setSynctexHighlight(result)
         }
-      })
+      }).catch(() => {})
     })
   }, [])
 }

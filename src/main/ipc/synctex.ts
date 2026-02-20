@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron'
 import path from 'path'
-import { forwardSync, inverseSync } from '../synctex'
+import { forwardSync, inverseSync, buildLineMap } from '../synctex'
 
 function validateFilePath(filePath: unknown): string {
   if (typeof filePath !== 'string' || filePath.length === 0) {
@@ -25,4 +25,9 @@ export function registerSynctexHandlers(): void {
       return inverseSync(validPath, page, x, y)
     }
   )
+
+  ipcMain.handle('synctex:build-line-map', async (_event, texFile: string) => {
+    const validPath = validateFilePath(texFile)
+    return buildLineMap(validPath)
+  })
 }

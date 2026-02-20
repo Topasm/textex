@@ -20,6 +20,7 @@ const DEDUP_CHANNELS = new Set<string>([
   'fs:read-file', 'fs:read-file-base64', 'fs:read-directory', 'settings:load',
   'bib:parse', 'bib:find-in-project', 'spell:check', 'spell:suggest',
   'git:is-repo', 'git:status', 'git:diff', 'git:log', 'git:file-log',
+  'synctex:build-line-map',
   'latex:scan-labels', 'latex:load-package-data', 'export:formats',
   'lsp:status', 'ai:has-api-key', 'structure:outline',
   'history:list', 'zotero:probe', 'zotero:search',
@@ -159,10 +160,13 @@ contextBridge.exposeInMainWorld('api', {
     invoke('synctex:forward', texFile, line),
   synctexInverse: (texFile: string, page: number, x: number, y: number) =>
     invoke('synctex:inverse', texFile, page, x, y),
+  synctexBuildLineMap: (texFile: string) =>
+    invoke('synctex:build-line-map', texFile),
 
   // Settings
   loadSettings: () => invoke('settings:load'),
   saveSettings: (partial: Record<string, unknown>) => invoke('settings:save', partial),
+  setTheme: (theme: string) => invoke('settings:set-theme', theme),
   addRecentProject: (projectPath: string) =>
     invoke('settings:add-recent-project', projectPath),
   removeRecentProject: (projectPath: string) =>

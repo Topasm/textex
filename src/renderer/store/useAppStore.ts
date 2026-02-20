@@ -159,7 +159,8 @@ function getComposedState() {
     lspStatus: ui.lspStatus,
     lspError: ui.lspError,
     documentSymbols: ui.documentSymbols,
-    citeSearchFocusRequested: ui.citeSearchFocusRequested,
+    omniSearchFocusRequested: ui.omniSearchFocusRequested,
+    omniSearchFocusMode: ui.omniSearchFocusMode,
 
     // UI actions
     setDraftModalOpen: ui.setDraftModalOpen,
@@ -173,8 +174,8 @@ function getComposedState() {
     setLspStatus: ui.setLspStatus,
     setLspError: ui.setLspError,
     setDocumentSymbols: ui.setDocumentSymbols,
-    requestCiteSearchFocus: ui.requestCiteSearchFocus,
-    clearCiteSearchFocus: ui.clearCiteSearchFocus,
+    requestOmniSearchFocus: ui.requestOmniSearchFocus,
+    clearOmniSearchFocus: ui.clearOmniSearchFocus,
 
     // Settings
     settings: settingsStore.settings,
@@ -372,7 +373,8 @@ function setStateComposed(partial: Partial<ComposedState>): void {
     'lspStatus',
     'lspError',
     'documentSymbols',
-    'citeSearchFocusRequested'
+    'omniSearchFocusRequested',
+    'omniSearchFocusMode'
   ])
   const settingsKeys = new Set(['settings'])
 

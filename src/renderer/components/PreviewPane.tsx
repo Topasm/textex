@@ -4,9 +4,9 @@ import { useCompileStore } from '../store/useCompileStore'
 import { usePdfStore } from '../store/usePdfStore'
 import { useSettingsStore } from '../store/useSettingsStore'
 import { useProjectStore } from '../store/useProjectStore'
-import PdfSearchBar from './PdfSearchBar'
 import { usePreviewZoom } from '../hooks/preview/usePreviewZoom'
 import { useSynctex } from '../hooks/preview/useSynctex'
+import { useScrollSync } from '../hooks/preview/useScrollSync'
 import { usePdfSearch } from '../hooks/preview/usePdfSearch'
 import { useCitationTooltip } from '../hooks/preview/useCitationTooltip'
 import { useContainerSize } from '../hooks/preview/useContainerSize'
@@ -34,10 +34,12 @@ const ESTIMATED_PAGE_HEIGHT = 1100
 const SCROLL_DEBOUNCE_MS = 100
 /** Debounce delay for persisting scroll position. */
 const SCROLL_PERSIST_DEBOUNCE_MS = 500
-/** Accumulated horizontal delta threshold to trigger page navigation in single-page mode. */
+/** Accumulated delta threshold to trigger page navigation in single-page mode (vertical scroll). */
 const SWIPE_THRESHOLD = 150
+/** Lower threshold for pure horizontal scroll (e.g. MX Master thumb wheel). */
+const SWIPE_THRESHOLD_HORIZONTAL = 30
 /** Cooldown between swipe-triggered page navigations. */
-const SWIPE_COOLDOWN_MS = 300
+const SWIPE_COOLDOWN_MS = 400
 
 function PreviewPane() {
   const pdfPath = useCompileStore((s) => s.pdfPath)
@@ -70,15 +72,9 @@ function PreviewPane() {
     pageViewportsRef,
     containerWidth
   )
-  const {
-    searchVisible,
-    searchMatches,
-    currentMatchIndex,
-    handleSearchNext,
-    handleSearchPrev,
-    handleSearchClose,
-    setSearchQuery
-  } = usePdfSearch(containerRef, numPages)
+  useScrollSync({ containerRef, pageViewportsRef, containerWidth })
+  // usePdfSearch handles DOM highlighting and communicates with OmniSearch via store
+  usePdfSearch(containerRef, numPages)
   const { tooltipData } = useCitationTooltip(containerRef, pdfRevision)
 
   /** Calculate estimated height for a page. */
@@ -222,6 +218,9 @@ function PreviewPane() {
     }, SCROLL_PERSIST_DEBOUNCE_MS)
   }, [computeVisiblePages, projectRoot, pdfViewMode])
 
+  // Slide animation direction for single-page mode
+  const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null)
+
   // Horizontal scroll / swipe navigation
   // In continuous mode: horizontal scroll support for mice with horizontal wheels.
   // In single-page mode: accumulate deltaX/deltaY for page navigation.
@@ -237,18 +236,25 @@ function PreviewPane() {
 
       if (pdfViewMode === 'single') {
         // In single-page mode, accumulate delta for swipe navigation
-        const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY
+        const isHorizontal = Math.abs(e.deltaX) > Math.abs(e.deltaY)
+        const delta = isHorizontal ? e.deltaX : e.deltaY
         if (delta === 0) return
         e.preventDefault()
 
         if (swipeCooldownRef.current) return
 
+        // Use lower threshold for pure horizontal scroll (MX Master thumb wheel)
+        const threshold = (isHorizontal && e.deltaY === 0) ? SWIPE_THRESHOLD_HORIZONTAL : SWIPE_THRESHOLD
+
         swipeAccumRef.current += delta
-        if (Math.abs(swipeAccumRef.current) >= SWIPE_THRESHOLD) {
+        if (Math.abs(swipeAccumRef.current) >= threshold) {
           const { currentPage: cp, numPages: np } = usePdfStore.getState()
-          if (swipeAccumRef.current > 0 && cp < np) {
+          const forward = swipeAccumRef.current > 0
+          if (forward && cp < np) {
+            setSlideDirection('left')
             usePdfStore.getState().setCurrentPage(cp + 1)
-          } else if (swipeAccumRef.current < 0 && cp > 1) {
+          } else if (!forward && cp > 1) {
+            setSlideDirection('right')
             usePdfStore.getState().setCurrentPage(cp - 1)
           }
           swipeAccumRef.current = 0
@@ -300,11 +306,13 @@ function PreviewPane() {
         if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
           if (cp < np) {
             e.preventDefault()
+            setSlideDirection('left')
             usePdfStore.getState().setCurrentPage(cp + 1)
           }
         } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
           if (cp > 1) {
             e.preventDefault()
+            setSlideDirection('right')
             usePdfStore.getState().setCurrentPage(cp - 1)
           }
         }
@@ -471,15 +479,6 @@ function PreviewPane() {
         </div>
       ) : (
         <>
-          <PdfSearchBar
-            visible={searchVisible}
-            onClose={handleSearchClose}
-            onSearch={setSearchQuery}
-            onNext={handleSearchNext}
-            onPrev={handleSearchPrev}
-            matchCount={searchMatches.length}
-            currentMatch={currentMatchIndex}
-          />
           {compileStatus === 'compiling' && (
             <div className="preview-compiling-overlay">
               <div className="preview-spinner" />
@@ -511,7 +510,10 @@ function PreviewPane() {
             >
               {/* Virtual scrolling: use a container with total height and only render visible pages */}
               {pdfViewMode === 'single' ? (
-                <div className="preview-single-page-container">
+                <div
+                  className={`preview-single-page-container${slideDirection ? ` preview-slide-${slideDirection}` : ''}`}
+                  onAnimationEnd={() => setSlideDirection(null)}
+                >
                   <Page
                     key={`single_page_${currentPage}`}
                     pageNumber={currentPage}

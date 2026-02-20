@@ -104,6 +104,19 @@ export const AppearanceTab = () => {
           onChange={(checked) => updateSetting('showPdfToolbarControls', checked)}
         />
       </div>
+
+      <div className="settings-row">
+        <div>
+          <div className="settings-row-label">{t('settings.appearance.scrollSync')}</div>
+          <div className="settings-row-description">
+            {t('settings.appearance.scrollSyncDesc')}
+          </div>
+        </div>
+        <Toggle
+          checked={!!settings.scrollSyncEnabled}
+          onChange={(checked) => updateSetting('scrollSyncEnabled', checked)}
+        />
+      </div>
     </div>
   )
 }

@@ -117,7 +117,9 @@
       "pdfViewModeContinuous": "Continuous",
       "pdfViewModeSingle": "Single Page",
       "showPdfToolbarControls": "PDF Toolbar Controls",
-      "showPdfToolbarControlsDesc": "Show page navigation and zoom controls in the toolbar."
+      "showPdfToolbarControlsDesc": "Show page navigation and zoom controls in the toolbar.",
+      "scrollSync": "Scroll Sync",
+      "scrollSyncDesc": "Synchronize scroll position between the code editor and PDF preview."
     },
     "editor": {
       "typography": "Typography",
@@ -304,12 +306,24 @@
     "toggleInfo": "Toggle info",
     "ln": "Ln"
   },
-  "pdfSearch": {
-    "placeholder": "Search in PDF...",
+  "omniSearch": {
+    "searchCitations": "Search citations...",
+    "searchZotero": "Search Zotero...",
+    "searchPdf": "Search in PDF...",
+    "findInEditor": "Find in editor...",
+    "citations": "Citations",
+    "zotero": "Zotero",
+    "pdf": "PDF",
+    "tex": "TeX",
+    "zoteroNotConnected": "Zotero not connected. Enable in Settings \u2192 Integrations.",
+    "noResults": "No results",
+    "enterToSelect": "Enter to select \u00b7 Ctrl+Enter to insert",
+    "selectedInsert": "{{count}} selected \u00b7 Ctrl+Enter to insert",
+    "matches": "{{current}}/{{total}}",
     "noMatches": "No matches",
-    "previous": "Previous (Shift+Enter)",
-    "next": "Next (Enter)",
-    "close": "Close (Escape)"
+    "prevMatch": "Previous",
+    "nextMatch": "Next",
+    "goToLine": "Go to line {{line}}"
   },
   "errorBoundary": {
     "title": "Something went wrong",

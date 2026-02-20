@@ -117,7 +117,9 @@
       "pdfViewModeContinuous": "Contínuo",
       "pdfViewModeSingle": "Página única",
       "showPdfToolbarControls": "Controles da barra de ferramentas do PDF",
-      "showPdfToolbarControlsDesc": "Mostrar controles de navegação de página e zoom na barra de ferramentas."
+      "showPdfToolbarControlsDesc": "Mostrar controles de navegação de página e zoom na barra de ferramentas.",
+      "scrollSync": "Sincronização de rolagem",
+      "scrollSyncDesc": "Sincronizar a posição de rolagem entre o editor de código e a pré-visualização do PDF."
     },
     "editor": {
       "typography": "Tipografia",
@@ -304,12 +306,24 @@
     "toggleInfo": "Alternar informações",
     "ln": "Lin"
   },
-  "pdfSearch": {
-    "placeholder": "Pesquisar no PDF...",
-    "noMatches": "Sem resultados",
-    "previous": "Anterior (Shift+Enter)",
-    "next": "Próximo (Enter)",
-    "close": "Fechar (Escape)"
+  "omniSearch": {
+    "searchCitations": "Pesquisar citações...",
+    "searchZotero": "Pesquisar no Zotero...",
+    "searchPdf": "Pesquisar no PDF...",
+    "findInEditor": "Encontrar no editor...",
+    "citations": "Citações",
+    "zotero": "Zotero",
+    "pdf": "PDF",
+    "tex": "TeX",
+    "zoteroNotConnected": "Zotero não conectado. Ative em Configurações → Integrações.",
+    "noResults": "Sem resultados",
+    "enterToSelect": "Enter para selecionar · Ctrl+Enter para inserir",
+    "selectedInsert": "{{count}} selecionado(s) · Ctrl+Enter para inserir",
+    "matches": "{{current}}/{{total}}",
+    "noMatches": "Sem correspondências",
+    "prevMatch": "Anterior",
+    "nextMatch": "Próximo",
+    "goToLine": "Ir para linha {{line}}"
   },
   "errorBoundary": {
     "title": "Algo deu errado",

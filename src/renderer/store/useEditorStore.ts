@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { subscribeWithSelector, persist } from 'zustand/middleware'
+import type { editor as monacoEditor } from 'monaco-editor'
 
 interface OpenFileData {
   content: string
@@ -23,10 +24,13 @@ interface EditorState {
   cursorColumn: number
 
   // Navigation
-  pendingJump: { line: number; column: number } | null
+  pendingJump: { line: number; column: number; skipFocus?: boolean } | null
 
   // Pending insert (for click-to-insert from FileTree)
   pendingInsertText: string | null
+
+  // Shared editor instance for scroll sync
+  editorInstance: monacoEditor.IStandaloneCodeEditor | null
 
   // Session restore metadata
   _sessionOpenPaths: string[]
@@ -40,10 +44,11 @@ interface EditorState {
   closeTab: (filePath: string) => void
   setActiveTab: (filePath: string) => void
   setCursorPosition: (line: number, column: number) => void
-  requestJumpToLine: (line: number, column: number) => void
+  requestJumpToLine: (line: number, column: number, skipFocus?: boolean) => void
   clearPendingJump: () => void
   requestInsertAtCursor: (text: string) => void
   clearPendingInsert: () => void
+  setEditorInstance: (editor: monacoEditor.IStandaloneCodeEditor | null) => void
 }
 
 export type { OpenFileData }
@@ -60,6 +65,7 @@ export const useEditorStore = create<EditorState>()(
       cursorColumn: 1,
       pendingJump: null,
       pendingInsertText: null,
+      editorInstance: null,
       _sessionOpenPaths: [],
       _sessionActiveFile: null,
 
@@ -183,10 +189,11 @@ export const useEditorStore = create<EditorState>()(
         }
       },
       setCursorPosition: (cursorLine, cursorColumn) => set({ cursorLine, cursorColumn }),
-      requestJumpToLine: (line, column) => set({ pendingJump: { line, column } }),
+      requestJumpToLine: (line, column, skipFocus) => set({ pendingJump: { line, column, skipFocus } }),
       clearPendingJump: () => set({ pendingJump: null }),
       requestInsertAtCursor: (text) => set({ pendingInsertText: text }),
-      clearPendingInsert: () => set({ pendingInsertText: null })
+      clearPendingInsert: () => set({ pendingInsertText: null }),
+      setEditorInstance: (editor) => set({ editorInstance: editor })
     })),
     {
       name: 'textex-editor-session',

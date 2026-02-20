@@ -23,7 +23,9 @@ export function usePendingJump({ editorRef, monacoRef }: UsePendingJumpParams): 
 
         editor.revealLineInCenter(pendingJump.line)
         editor.setPosition({ lineNumber: pendingJump.line, column: pendingJump.column })
-        editor.focus()
+        if (!pendingJump.skipFocus) {
+          editor.focus()
+        }
 
         // Flash the target line to draw attention
         const collection = editor.createDecorationsCollection([

@@ -17,7 +17,7 @@ import { useProjectStore } from '../store/useProjectStore'
 import { usePdfStore } from '../store/usePdfStore'
 import { useSettingsStore } from '../store/useSettingsStore'
 import { useClickOutside } from '../hooks/useClickOutside'
-import { ZoteroCiteSearch } from './ZoteroCiteSearch'
+import { OmniSearch } from './OmniSearch'
 import PdfZoomDropdown from './PdfZoomDropdown'
 import { isFeatureEnabled } from '../utils/featureFlags'
 
@@ -30,12 +30,12 @@ interface ToolbarProps {
   onOpenFolder: () => void
   onReturnHome: () => void
   onNewFromTemplate: () => void
-  onAiDraft: () => void
+  onAiDraft: (prefill?: string) => void
   onExport: (format: string) => void
   onOpenSettings: () => void
 }
 
-import { EXPORT_FORMATS, ZOOM_MIN, ZOOM_MAX } from '../constants'
+import { EXPORT_FORMATS } from '../constants'
 
 const Toolbar = React.memo(function Toolbar({
   onOpen,
@@ -56,8 +56,6 @@ const Toolbar = React.memo(function Toolbar({
   const compileStatus = useCompileStore((s) => s.compileStatus)
   const settings = useSettingsStore((s) => s.settings)
   const aiEnabled = isFeatureEnabled(settings, 'ai')
-  const zoteroEnabled = isFeatureEnabled(settings, 'zotero')
-  const zoomLevel = usePdfStore((s) => s.zoomLevel)
   const currentPage = usePdfStore((s) => s.currentPage)
   const numPages = usePdfStore((s) => s.numPages)
   const projectRoot = useProjectStore((s) => s.projectRoot)
@@ -86,22 +84,9 @@ const Toolbar = React.memo(function Toolbar({
       if (result) {
         usePdfStore.getState().setSynctexHighlight(result)
       }
+    }).catch((err) => {
+      console.warn('[SyncTeX UI] forward sync failed:', err)
     })
-  }, [])
-
-  // Page navigation handlers
-  const handlePrevPage = useCallback(() => {
-    const { scrollToPage, currentPage } = usePdfStore.getState()
-    if (scrollToPage && currentPage > 1) {
-      scrollToPage(currentPage - 1)
-    }
-  }, [])
-
-  const handleNextPage = useCallback(() => {
-    const { scrollToPage, currentPage, numPages } = usePdfStore.getState()
-    if (scrollToPage && currentPage < numPages) {
-      scrollToPage(currentPage + 1)
-    }
   }, [])
 
   const handlePageInputFocus = useCallback(() => {
@@ -229,10 +214,6 @@ const Toolbar = React.memo(function Toolbar({
         {compileStatus === 'compiling' ? <Loader size={16} className="spin" /> : <Play size={16} />}
       </button>
 
-      <button onClick={onToggleLog} title={t('toolbar.toggleLog')}>
-        <ScrollText size={16} />
-      </button>
-
       {aiEnabled && (
         <button onClick={onAiDraft} title={t('toolbar.aiDraftShortcut')}>
           <Sparkles size={16} />
@@ -243,12 +224,13 @@ const Toolbar = React.memo(function Toolbar({
         <Settings size={16} />
       </button>
 
-      {zoteroEnabled && (
-        <>
-          <span className="toolbar-separator" />
-          <ZoteroCiteSearch />
-        </>
-      )}
+      <span className="toolbar-separator" />
+      <OmniSearch
+        onOpenFolder={onOpenFolder}
+        onNewFromTemplate={onNewFromTemplate}
+        onAiDraft={onAiDraft}
+        onOpenSettings={onOpenSettings}
+      />
 
       {/* Right side: PDF Controls & File Info */}
       <div className="toolbar-group-right">
@@ -274,15 +256,6 @@ const Toolbar = React.memo(function Toolbar({
           {/* Page Navigation */}
           {numPages > 0 && (
             <>
-              <button
-                className="toolbar-compact-btn"
-                onClick={handlePrevPage}
-                disabled={currentPage <= 1}
-                title={t('toolbar.prevPage')}
-                aria-label={t('toolbar.prevPage')}
-              >
-                {'\u25B2'}
-              </button>
               <span className="toolbar-page-nav">
                 <input
                   className="toolbar-page-input"
@@ -300,45 +273,22 @@ const Toolbar = React.memo(function Toolbar({
                   {t('toolbar.pageOf')} {numPages}
                 </span>
               </span>
-              <button
-                className="toolbar-compact-btn"
-                onClick={handleNextPage}
-                disabled={currentPage >= numPages}
-                title={t('toolbar.nextPage')}
-                aria-label={t('toolbar.nextPage')}
-              >
-                {'\u25BC'}
-              </button>
               <div className="toolbar-separator" />
             </>
           )}
 
           {/* Zoom Controls */}
-          <button
-            className="toolbar-compact-btn"
-            onClick={() => usePdfStore.getState().zoomOut()}
-            disabled={zoomLevel <= ZOOM_MIN}
-            title={t('toolbar.zoomOut')}
-            aria-label={t('toolbar.zoomOut')}
-          >
-            -
-          </button>
           <PdfZoomDropdown />
-          <button
-            className="toolbar-compact-btn"
-            onClick={() => usePdfStore.getState().zoomIn()}
-            disabled={zoomLevel >= ZOOM_MAX}
-            title={t('toolbar.zoomIn')}
-            aria-label={t('toolbar.zoomIn')}
-          >
-            +
-          </button>
         </div>}
 
         <span className="file-name">
           {isDirty && <span className="dirty-dot" />}
           {fileName}
         </span>
+
+        <button onClick={onToggleLog} title={t('toolbar.toggleLog')}>
+          <ScrollText size={16} />
+        </button>
       </div>
     </div>
   )

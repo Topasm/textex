@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { usePdfStore } from '../../store/usePdfStore'
+import { useUiStore } from '../../store/useUiStore'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import { formatLatex } from '../../utils/formatter'
 import { HIDDEN_EDITOR_ACTIONS } from '../../constants'
@@ -36,6 +37,7 @@ export function useEditorCommands({
           const text = model.getValueInRange(selection)
           if (text.trim().length > 0) {
             pdfState.setPdfSearchQuery(text)
+            useUiStore.getState().requestOmniSearchFocus('pdf')
           }
         }
 

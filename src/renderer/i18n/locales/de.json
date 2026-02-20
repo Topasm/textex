@@ -117,7 +117,9 @@
       "pdfViewModeContinuous": "Fortlaufend",
       "pdfViewModeSingle": "Einzelseite",
       "showPdfToolbarControls": "PDF-Symbolleistensteuerung",
-      "showPdfToolbarControlsDesc": "Seitennavigation und Zoomsteuerung in der Symbolleiste anzeigen."
+      "showPdfToolbarControlsDesc": "Seitennavigation und Zoomsteuerung in der Symbolleiste anzeigen.",
+      "scrollSync": "Scroll-Synchronisation",
+      "scrollSyncDesc": "Scrollposition zwischen dem Code-Editor und der PDF-Vorschau synchronisieren."
     },
     "editor": {
       "typography": "Typografie",
@@ -304,12 +306,24 @@
     "toggleInfo": "Informationen ein-/ausblenden",
     "ln": "Zl"
   },
-  "pdfSearch": {
-    "placeholder": "Im PDF suchen...",
+  "omniSearch": {
+    "searchCitations": "Zitate suchen...",
+    "searchZotero": "In Zotero suchen...",
+    "searchPdf": "Im PDF suchen...",
+    "findInEditor": "Im Editor suchen...",
+    "citations": "Zitate",
+    "zotero": "Zotero",
+    "pdf": "PDF",
+    "tex": "TeX",
+    "zoteroNotConnected": "Zotero nicht verbunden. Aktivieren unter Einstellungen → Integrationen.",
+    "noResults": "Keine Ergebnisse",
+    "enterToSelect": "Enter zum Auswählen · Strg+Enter zum Einfügen",
+    "selectedInsert": "{{count}} ausgewählt · Strg+Enter zum Einfügen",
+    "matches": "{{current}}/{{total}}",
     "noMatches": "Keine Treffer",
-    "previous": "Vorheriger (Shift+Enter)",
-    "next": "Nächster (Enter)",
-    "close": "Schließen (Escape)"
+    "prevMatch": "Vorheriger",
+    "nextMatch": "Nächster",
+    "goToLine": "Gehe zu Zeile {{line}}"
   },
   "errorBoundary": {
     "title": "Etwas ist schiefgelaufen",

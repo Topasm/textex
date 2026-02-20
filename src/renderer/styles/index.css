@@ -10,14 +10,14 @@
   --text-secondary: #999999;
   --text-kbd: #666666;
   --text-kbd-hover: #888888;
-  --accent: #007acc;
-  --accent-hover: #005f99;
+  --accent: #2ea043;
+  --accent-hover: #238636;
   --border: #333333;
   --error: #f44747;
   --warning: #cca700;
   --success: #6a9955;
   --info: #3794ff;
-  --status-bar-bg: #007acc;
+  --status-bar-bg: #2ea043;
   --status-bar-text: white;
   --scrollbar-track: #1e1e1e;
   --scrollbar-thumb: #424242;
@@ -29,12 +29,12 @@
   --overlay-bg: rgba(30, 30, 30, 0.7);
   --zoom-bg: rgba(37, 37, 38, 0.95);
   --log-entry-hover: #2a2d2e;
-  --location-color: #569cd6;
+  --location-color: #56d68c;
   --shadow-color: rgba(0, 0, 0, 0.3);
-  --synctex-border: #007acc;
-  --synctex-bg: rgba(0, 122, 204, 0.3);
-  --synctex-line-bg: rgba(0, 122, 204, 0.15);
-  --synctex-flash-bg: rgba(0, 122, 204, 0.25);
+  --synctex-border: #2ea043;
+  --synctex-bg: rgba(46, 160, 67, 0.3);
+  --synctex-line-bg: rgba(46, 160, 67, 0.15);
+  --synctex-flash-bg: rgba(46, 160, 67, 0.25);
   --tab-active-bg: #1e1e1e;
   --tab-inactive-bg: #2d2d2d;
   --tab-hover-bg: #353535;
@@ -51,10 +51,10 @@
   --card-bg: #2d2d2d;
   --card-hover: #353535;
   --card-border: #404040;
-  --update-banner-bg: #1b3a4b;
-  --update-banner-border: #007acc;
+  --update-banner-bg: #1b3a2b;
+  --update-banner-border: #2ea043;
   --progress-bar-bg: #333333;
-  --progress-bar-fill: #007acc;
+  --progress-bar-fill: #2ea043;
 }
 
 [data-theme='light'] {
@@ -367,7 +367,7 @@ body,
 .toolbar a,
 .toolbar .menu-dropdown,
 .toolbar .toolbar-pdf-controls,
-.toolbar .zotero-cite-search {
+.toolbar .omni-search-wrapper {
   -webkit-app-region: no-drag;
   app-region: no-drag;
 }
@@ -2183,62 +2183,6 @@ body,
   min-height: 0;
 }
 
-/* PDF Search Bar */
-.pdf-search-bar {
-  position: sticky;
-  top: 34px;
-  z-index: 6;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background-color: var(--zoom-bg);
-  border-bottom: 1px solid var(--border);
-}
-
-.pdf-search-bar input {
-  flex: 1;
-  padding: 4px 8px;
-  font-size: 13px;
-  background-color: var(--bg-input);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  min-width: 120px;
-}
-
-.pdf-search-bar input:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-
-.pdf-search-count {
-  font-size: 12px;
-  color: var(--text-secondary);
-  white-space: nowrap;
-  min-width: 70px;
-  text-align: center;
-}
-
-.pdf-search-bar button {
-  padding: 2px 8px;
-  font-size: 12px;
-  background-color: var(--bg-toolbar);
-  color: var(--text-primary);
-  border: none;
-  border-radius: 3px;
-  cursor: pointer;
-}
-
-.pdf-search-bar button:hover {
-  background-color: var(--bg-hover);
-}
-
-.pdf-search-bar button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
 /* PDF Search Highlights */
 .pdf-search-highlight {
   background-color: rgba(255, 255, 0, 0.4) !important;
@@ -2251,36 +2195,107 @@ body,
   border-radius: 2px;
 }
 
-/* Cite Search (Inline Toolbar) */
-.cite-search-wrapper {
+/* OmniSearch (Unified Toolbar Search) */
+.omni-search-wrapper {
   position: relative;
   display: flex;
   align-items: center;
+  gap: 0;
 }
 
-.cite-search-input {
-  width: 200px;
+.omni-search-mode-btn-wrapper {
+  position: relative;
+}
+
+.omni-search-mode-btn {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  font-size: 12px;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-right: none;
+  border-radius: 4px 0 0 4px;
+  cursor: pointer;
+  height: 28px;
+}
+
+.omni-search-mode-btn:hover {
+  background-color: var(--bg-hover);
+}
+
+.omni-search-mode-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 200px;
+  background-color: var(--modal-bg, var(--bg-secondary));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  z-index: 210;
+  padding: 4px;
+}
+
+.omni-search-mode-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--text-primary);
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.omni-search-mode-item:hover {
+  background-color: var(--bg-hover);
+}
+
+.omni-search-mode-item.active {
+  background-color: var(--sidebar-selected);
+}
+
+.omni-search-mode-item kbd {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background-color: var(--bg-secondary);
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+}
+
+.omni-search-input {
+  width: 260px;
   padding: 4px 10px;
   font-size: 13px;
   border: 1px solid var(--border);
   background-color: var(--bg-input, var(--bg-secondary));
   color: var(--text-primary);
-  border-radius: 4px;
+  border-radius: 0 4px 4px 0;
+  height: 28px;
   transition:
     border-color 0.15s,
     width 0.2s;
 }
 
-.cite-search-input:focus {
-  width: 280px;
+.omni-search-input:focus {
+  width: 360px;
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
-.cite-search-badge {
+.omni-search-badge {
   position: absolute;
-  right: 6px;
+  right: 26px;
   background: var(--accent);
   color: white;
   font-size: 10px;
@@ -2290,7 +2305,25 @@ body,
   pointer-events: none;
 }
 
-.cite-search-dropdown {
+.omni-search-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 2px;
+  padding: 2px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.omni-search-clear:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-hover);
+}
+
+.omni-search-dropdown {
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
@@ -2305,7 +2338,7 @@ body,
   padding: 4px;
 }
 
-.cite-search-result {
+.omni-search-result {
   display: flex;
   align-items: flex-start;
   gap: 8px;
@@ -2314,20 +2347,20 @@ body,
   cursor: pointer;
 }
 
-.cite-search-result.highlighted {
+.omni-search-result.highlighted {
   background-color: var(--bg-hover);
 }
 
-.cite-search-result.selected {
+.omni-search-result.selected {
   background-color: var(--sidebar-selected);
 }
 
-.cite-search-result input[type='checkbox'] {
+.omni-search-result input[type='checkbox'] {
   margin-top: 3px;
   cursor: pointer;
 }
 
-.cite-search-result-text {
+.omni-search-result-text {
   flex: 1;
   min-width: 0;
   display: flex;
@@ -2335,7 +2368,7 @@ body,
   gap: 1px;
 }
 
-.cite-search-result-title {
+.omni-search-result-title {
   font-size: 13px;
   font-weight: 500;
   color: var(--text-primary);
@@ -2344,7 +2377,7 @@ body,
   text-overflow: ellipsis;
 }
 
-.cite-search-result-meta {
+.omni-search-result-meta {
   font-size: 11px;
   color: var(--text-secondary);
   white-space: nowrap;
@@ -2352,18 +2385,165 @@ body,
   text-overflow: ellipsis;
 }
 
-.cite-search-footer {
+.omni-search-footer {
   font-size: 11px;
   text-align: center;
   color: var(--text-secondary);
   padding: 6px 8px 4px;
 }
 
-.cite-search-loading {
+.omni-search-message {
   text-align: center;
   color: var(--text-secondary);
   padding: 12px 8px;
   font-size: 12px;
+}
+
+.omni-search-pdf-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+}
+
+.omni-search-pdf-count {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  min-width: 60px;
+  text-align: center;
+}
+
+.omni-search-pdf-controls button {
+  padding: 2px 8px;
+  font-size: 12px;
+  background-color: var(--bg-toolbar);
+  color: var(--text-primary);
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.omni-search-pdf-controls button:hover {
+  background-color: var(--bg-hover);
+}
+
+.omni-search-pdf-controls button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.omni-search-tex-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2px;
+}
+
+.omni-search-tex-count {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  min-width: 50px;
+}
+
+.omni-search-tex-nav button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 4px;
+  background-color: var(--bg-toolbar);
+  color: var(--text-primary);
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.omni-search-tex-nav button:hover {
+  background-color: var(--bg-hover);
+}
+
+.omni-search-tex-nav button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.omni-search-tex-result {
+  gap: 6px;
+  align-items: center;
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+}
+
+.omni-search-line-number {
+  min-width: 36px;
+  text-align: right;
+  color: var(--text-secondary);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.omni-search-line-text {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-primary);
+}
+
+/* OmniSearch Home Mode */
+.omni-search-home-mode .omni-search-input {
+  width: 340px;
+  border-radius: 0 4px 4px 0;
+}
+
+.omni-search-home-mode .omni-search-input:focus {
+  width: 480px;
+}
+
+.omni-search-home-mode .omni-search-dropdown {
+  width: 520px;
+}
+
+.omni-search-home-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-right: none;
+  border-radius: 4px 0 0 4px;
+  color: var(--text-secondary);
+  height: 28px;
+}
+
+.omni-search-home-result {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.omni-search-home-result-icon {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+}
+
+.omni-search-home-badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 9999px;
+  background-color: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 /* Bib Panel */
@@ -4441,13 +4621,25 @@ body,
   justify-content: center;
 }
 
-.preview-single-page-container .react-pdf__Page {
-  animation: page-fade-in 0.15s ease-out;
+/* Slide animations for single-page navigation — app drawer style */
+.preview-single-page-container.preview-slide-left {
+  animation: preview-slide-from-right 0.3s cubic-bezier(0.2, 0, 0, 1);
 }
 
-@keyframes page-fade-in {
-  from { opacity: 0.7; }
-  to { opacity: 1; }
+.preview-single-page-container.preview-slide-right {
+  animation: preview-slide-from-left 0.3s cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* Next page: slide entire container in from the right */
+@keyframes preview-slide-from-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+/* Previous page: slide entire container in from the left */
+@keyframes preview-slide-from-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
 }
 
 /* Segmented control for settings */

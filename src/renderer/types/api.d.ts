@@ -2,6 +2,7 @@ import {
   Diagnostic,
   SyncTeXForwardResult,
   SyncTeXInverseResult,
+  SyncTeXLineMapEntry,
   DirectoryEntry,
   BibEntry,
   GitFileStatus,
@@ -85,10 +86,12 @@ export interface ElectronAPI {
     x: number,
     y: number
   ): Promise<SyncTeXInverseResult | null>
+  synctexBuildLineMap(texFile: string): Promise<SyncTeXLineMapEntry[]>
 
   // Settings
   loadSettings(): Promise<UserSettings>
   saveSettings(partial: Partial<UserSettings>): Promise<UserSettings>
+  setTheme(theme: string): Promise<void>
   addRecentProject(projectPath: string): Promise<UserSettings>
   removeRecentProject(projectPath: string): Promise<UserSettings>
   updateRecentProject(

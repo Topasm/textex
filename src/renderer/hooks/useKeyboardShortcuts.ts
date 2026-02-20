@@ -13,7 +13,6 @@ interface KeyboardShortcutsOpts {
   handleSaveAs: () => void
   handleCompile: () => void
   handleAiDraft: () => void
-  zoteroEnabled: boolean
 }
 
 /**
@@ -21,7 +20,7 @@ interface KeyboardShortcutsOpts {
  * Replaces the monolithic if/else chain that was in App.tsx.
  */
 export function useKeyboardShortcuts(opts: KeyboardShortcutsOpts): void {
-  const { handleOpen, handleSave, handleSaveAs, handleCompile, handleAiDraft, zoteroEnabled } = opts
+  const { handleOpen, handleSave, handleSaveAs, handleCompile, handleAiDraft } = opts
 
   useEffect(() => {
     commandRegistry.register('file.open', { key: 'o', mod: true }, handleOpen)
@@ -64,11 +63,14 @@ export function useKeyboardShortcuts(opts: KeyboardShortcutsOpts): void {
     )
     commandRegistry.register('ai.draft', { key: ['d', 'D'], mod: true, shift: true }, handleAiDraft)
     commandRegistry.register('zotero.search', { key: ['z', 'Z'], mod: true, shift: true }, () => {
-      if (zoteroEnabled) useUiStore.getState().requestCiteSearchFocus()
+      useUiStore.getState().requestOmniSearchFocus('zotero')
+    })
+    commandRegistry.register('pdf.search', { key: ['f', 'F'], mod: true, shift: true }, () => {
+      useUiStore.getState().requestOmniSearchFocus('pdf')
     })
 
     const handler = (e: KeyboardEvent): void => commandRegistry.handleKeyDown(e)
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [handleOpen, handleSave, handleSaveAs, handleCompile, handleAiDraft, zoteroEnabled])
+  }, [handleOpen, handleSave, handleSaveAs, handleCompile, handleAiDraft])
 }

@@ -117,7 +117,9 @@
       "pdfViewModeContinuous": "连续",
       "pdfViewModeSingle": "单页",
       "showPdfToolbarControls": "PDF 工具栏控件",
-      "showPdfToolbarControlsDesc": "在工具栏中显示页面导航和缩放控件。"
+      "showPdfToolbarControlsDesc": "在工具栏中显示页面导航和缩放控件。",
+      "scrollSync": "滚动同步",
+      "scrollSyncDesc": "在代码编辑器和 PDF 预览之间同步滚动位置。"
     },
     "editor": {
       "typography": "排版",
@@ -304,12 +306,24 @@
     "toggleInfo": "切换信息",
     "ln": "行"
   },
-  "pdfSearch": {
-    "placeholder": "在 PDF 中搜索...",
+  "omniSearch": {
+    "searchCitations": "搜索引用...",
+    "searchZotero": "搜索 Zotero...",
+    "searchPdf": "在 PDF 中搜索...",
+    "findInEditor": "在编辑器中查找...",
+    "citations": "引用",
+    "zotero": "Zotero",
+    "pdf": "PDF",
+    "tex": "TeX",
+    "zoteroNotConnected": "Zotero 未连接。请在设置 → 集成中启用。",
+    "noResults": "无结果",
+    "enterToSelect": "回车选择 · Ctrl+回车插入",
+    "selectedInsert": "已选 {{count}} 项 · Ctrl+回车插入",
+    "matches": "{{current}}/{{total}}",
     "noMatches": "无匹配项",
-    "previous": "上一个 (Shift+Enter)",
-    "next": "下一个 (Enter)",
-    "close": "关闭 (Escape)"
+    "prevMatch": "上一个",
+    "nextMatch": "下一个",
+    "goToLine": "跳转到第 {{line}} 行"
   },
   "errorBoundary": {
     "title": "出了点问题",

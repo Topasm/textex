@@ -51,13 +51,16 @@ export function useSynctex(
 
     const positionHighlights = (
       viewport: PageViewportInfo['viewport'],
-      element: HTMLDivElement,
-      pageHeight: number
+      element: HTMLDivElement
     ): void => {
-      const pdfY = pageHeight - y
+      // Convert SyncTeX top-down y to PDF bottom-up user space using viewBox[3]
+      // (the max Y of the page's MediaBox). This matches how Overleaf converts
+      // synctex coordinates and correctly handles non-standard page origins.
+      const viewBoxTop = viewport.viewBox[3]
+      const pdfY = viewBoxTop - y
       const [vx, vy] = viewport.convertToViewportPoint(x, pdfY)
       console.log(
-        `[SyncTeX UI] pageHeight=${pageHeight.toFixed(2)}, pdfY=${pdfY.toFixed(2)} -> viewport vx=${vx.toFixed(1)}, vy=${vy.toFixed(1)}`
+        `[SyncTeX UI] viewBoxTop=${viewBoxTop.toFixed(2)}, pdfY=${pdfY.toFixed(2)} -> viewport vx=${vx.toFixed(1)}, vy=${vy.toFixed(1)}`
       )
 
       if (!isSinglePage) {
@@ -82,8 +85,7 @@ export function useSynctex(
           position: 'absolute',
           left: pageLeft,
           top: pageTop + vy,
-          width: pageRect.width,
-          height: 0 // set via CSS
+          width: pageRect.width
         },
         dotStyle: {
           position: 'absolute',
@@ -105,8 +107,13 @@ export function useSynctex(
 
       const info = pageViewportsRef.current?.get(page)
       if (info) {
-        positionHighlights(info.viewport, info.element, info.pageHeight)
-        return
+        // Verify the cached DOM element is still in the document (it may have been
+        // unmounted by virtual scrolling). If stale, remove and fall through to retry.
+        if (info.element.isConnected) {
+          positionHighlights(info.viewport, info.element)
+          return
+        }
+        pageViewportsRef.current.delete(page)
       }
 
       // Page viewport not ready — navigate/scroll to page and retry

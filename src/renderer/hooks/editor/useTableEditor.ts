@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { registerTableEditorCodeLens } from '../../components/editor/editorCodeLens'
 import type { editor as monacoEditor, IDisposable, IRange } from 'monaco-editor'
 
@@ -26,22 +26,22 @@ export function useTableEditor(): TableEditorState {
 
   const disposablesRef = useRef<IDisposable[]>([])
 
-  const registerTableEditor = (
-    editor: monacoEditor.IStandaloneCodeEditor,
-    monaco: MonacoInstance
-  ) => {
-    disposablesRef.current.push(...registerTableEditorCodeLens(editor, monaco, setTableModal))
-  }
+  const registerTableEditor = useCallback(
+    (editor: monacoEditor.IStandaloneCodeEditor, monaco: MonacoInstance) => {
+      disposablesRef.current.push(...registerTableEditorCodeLens(editor, monaco, setTableModal))
+    },
+    []
+  )
 
-  const disposeTableEditor = () => {
+  const disposeTableEditor = useCallback(() => {
     for (const d of disposablesRef.current) d.dispose()
     disposablesRef.current = []
-  }
+  }, [])
 
   // Cleanup on unmount
   useEffect(() => {
     return () => disposeTableEditor()
-  }, [])
+  }, [disposeTableEditor])
 
   return {
     tableModal,

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, nativeTheme, shell } from 'electron'
 import path from 'path'
 import { registerIpcHandlers } from './ipc'
 import { loadSettings } from './settings'
@@ -13,7 +13,8 @@ function sendToRenderer(channel: string, ...args: unknown[]): void {
 }
 
 function getBackgroundColor(theme: string): string {
-  switch (theme) {
+  const resolved = resolveTheme(theme)
+  switch (resolved) {
     case 'light':
       return '#faf6f0'
     case 'high-contrast':
@@ -25,8 +26,16 @@ function getBackgroundColor(theme: string): string {
   }
 }
 
+function resolveTheme(theme: string): string {
+  if (theme === 'system') {
+    return nativeTheme.shouldUseDarkColors ? 'dark' : 'light'
+  }
+  return theme
+}
+
 function getTitleBarOverlay(theme: string): { color: string; symbolColor: string; height: number } {
-  switch (theme) {
+  const resolved = resolveTheme(theme)
+  switch (resolved) {
     case 'light':
       return { color: '#eae3d8', symbolColor: '#3b3530', height: 36 }
     case 'high-contrast':
@@ -122,18 +131,42 @@ function createWindow(theme: string): void {
   })
 }
 
+let currentTheme = 'dark'
+
+function updateTitleBarOverlay(): void {
+  if (process.platform !== 'win32' || !mainWindow || mainWindow.isDestroyed()) return
+  try {
+    mainWindow.setTitleBarOverlay(getTitleBarOverlay(currentTheme))
+  } catch {
+    // setTitleBarOverlay may not be available on older Electron versions
+  }
+}
+
 app.whenReady().then(async () => {
   // Load persistent compile cache from disk
   await loadPersistentCache().catch(() => {})
 
   const settings = await loadSettings()
-  const theme = settings.theme
+  currentTheme = settings.theme
 
-  createWindow(theme)
+  createWindow(currentTheme)
+
+  // Update title bar overlay when renderer changes theme
+  ipcMain.handle('settings:set-theme', (_event, theme: string) => {
+    currentTheme = theme
+    updateTitleBarOverlay()
+  })
+
+  // When OS dark/light mode changes, update overlay if using 'system' theme
+  nativeTheme.on('updated', () => {
+    if (currentTheme === 'system') {
+      updateTitleBarOverlay()
+    }
+  })
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow(theme)
+      createWindow(currentTheme)
     }
   })
 })

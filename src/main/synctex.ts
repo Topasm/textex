@@ -3,7 +3,11 @@ import * as fsSync from 'fs'
 import * as path from 'path'
 import * as zlib from 'zlib'
 import { promisify } from 'util'
-import type { SyncTeXForwardResult, SyncTeXInverseResult } from '../shared/types'
+import type {
+  SyncTeXForwardResult,
+  SyncTeXInverseResult,
+  SyncTeXLineMapEntry
+} from '../shared/types'
 
 const gunzip = promisify(zlib.gunzip)
 
@@ -361,6 +365,23 @@ function toRect(blocks: Block | Block[]): Rectangle {
   }
 }
 
+/**
+ * Get the first eligible block's position for forward sync.
+ * Matches the behavior of `synctex view` CLI (used by Overleaf), which returns
+ * records in TeX typesetting order and scrolls to the first one. This avoids
+ * outlier blocks like page footers (e.g., \maketitle generating both title and
+ * footer content attributed to the same source line).
+ */
+function getFirstEligibleBlock(blocks: Block[]): Block | null {
+  for (const b of blocks) {
+    if (b.elements !== undefined || b.type === 'k' || b.type === 'r') {
+      continue
+    }
+    return b
+  }
+  return null
+}
+
 // --- SyncTeX file loading with cache ---
 
 let cachedSyncObject: PdfSyncObject | undefined
@@ -481,44 +502,44 @@ export async function forwardSync(
     // Line is beyond all known lines — use the last one
     const l = lineNums[lineNums.length - 1]
     const blocks = getBlocks(linePageBlocks, l)
-    if (blocks.length === 0) return null
-    const c = toRect(blocks)
+    const first = getFirstEligibleBlock(blocks)
+    if (!first) return null
     result = {
-      page: blocks[0].page,
-      x: c.left + pdfSyncObject.offset.x,
-      y: c.bottom + pdfSyncObject.offset.y
+      page: first.page,
+      x: first.left + pdfSyncObject.offset.x,
+      y: first.bottom + pdfSyncObject.offset.y
     }
   } else if (i === 0 || lineNums[i] === line) {
     const l = lineNums[i]
     const blocks = getBlocks(linePageBlocks, l)
-    if (blocks.length === 0) return null
-    const c = toRect(blocks)
+    const first = getFirstEligibleBlock(blocks)
+    if (!first) return null
     result = {
-      page: blocks[0].page,
-      x: c.left + pdfSyncObject.offset.x,
-      y: c.bottom + pdfSyncObject.offset.y
+      page: first.page,
+      x: first.left + pdfSyncObject.offset.x,
+      y: first.bottom + pdfSyncObject.offset.y
     }
   } else {
     const line0 = lineNums[i - 1]
     const blocks0 = getBlocks(linePageBlocks, line0)
-    const c0 = toRect(blocks0)
+    const first0 = getFirstEligibleBlock(blocks0)
     const line1 = lineNums[i]
     const blocks1 = getBlocks(linePageBlocks, line1)
-    if (blocks1.length === 0) return null
-    const c1 = toRect(blocks1)
+    const first1 = getFirstEligibleBlock(blocks1)
+    if (!first1) return null
 
     let bottom: number
-    if (c0.bottom < c1.bottom) {
+    if (first0 && first0.bottom < first1.bottom) {
       bottom =
-        (c0.bottom * (line1 - line)) / (line1 - line0) +
-        (c1.bottom * (line - line0)) / (line1 - line0)
+        (first0.bottom * (line1 - line)) / (line1 - line0) +
+        (first1.bottom * (line - line0)) / (line1 - line0)
     } else {
-      bottom = c1.bottom
+      bottom = first1.bottom
     }
 
     result = {
-      page: blocks1[0].page,
-      x: c1.left + pdfSyncObject.offset.x,
+      page: first1.page,
+      x: first1.left + pdfSyncObject.offset.x,
       y: bottom + pdfSyncObject.offset.y
     }
   }
@@ -593,4 +614,31 @@ export async function inverseSync(
   }
 
   return { file: candidate, line: record.line, column: 0 }
+}
+
+export async function buildLineMap(texFile: string): Promise<SyncTeXLineMapEntry[]> {
+  const pdfSyncObject = await loadSyncTexForFile(texFile)
+  if (!pdfSyncObject) return []
+
+  const inputFilePath = findInputFilePath(texFile, pdfSyncObject)
+  if (!inputFilePath) return []
+
+  const linePageBlocks = pdfSyncObject.blockNumberLine[inputFilePath]
+  const lineNums = Object.keys(linePageBlocks)
+    .map(Number)
+    .sort((a, b) => a - b)
+
+  const entries: SyncTeXLineMapEntry[] = []
+  for (const lineNum of lineNums) {
+    const blocks = getBlocks(linePageBlocks, lineNum)
+    const first = getFirstEligibleBlock(blocks)
+    if (!first) continue
+    entries.push({
+      line: lineNum,
+      page: first.page,
+      y: first.bottom + pdfSyncObject.offset.y
+    })
+  }
+
+  return entries
 }

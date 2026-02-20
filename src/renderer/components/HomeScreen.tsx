@@ -3,21 +3,16 @@ import { useTranslation } from 'react-i18next'
 import { FolderOpen, FileText } from 'lucide-react'
 import type { RecentProject } from '../../shared/types'
 import { logError } from '../utils/errorMessage'
-import { SearchBar } from './home/SearchBar'
 import { RecentProjectList } from './home/RecentProjectList'
 
 interface HomeScreenProps {
   onOpenFolder: () => void
   onNewFromTemplate: () => void
-  onAiDraft: (prefill?: string) => void
-  onOpenSettings: () => void
 }
 
 function HomeScreen({
   onOpenFolder,
-  onNewFromTemplate,
-  onAiDraft,
-  onOpenSettings
+  onNewFromTemplate
 }: HomeScreenProps) {
   const { t } = useTranslation()
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([])
@@ -37,15 +32,6 @@ function HomeScreen({
         <h1 className="home-title">TextEx</h1>
         <p className="home-subtitle">{t('homeScreen.subtitle')}</p>
       </div>
-
-      <SearchBar
-        recentProjects={recentProjects}
-        setRecentProjects={setRecentProjects}
-        onOpenFolder={onOpenFolder}
-        onNewFromTemplate={onNewFromTemplate}
-        onAiDraft={onAiDraft}
-        onOpenSettings={onOpenSettings}
-      />
 
       <div className="home-actions">
         <button className="home-action-btn home-action-primary" onClick={onOpenFolder}>

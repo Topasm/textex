@@ -28,8 +28,9 @@ interface UiState {
   // Document symbols
   documentSymbols: DocumentSymbolNode[]
 
-  // Cite search focus request
-  citeSearchFocusRequested: boolean
+  // OmniSearch focus request
+  omniSearchFocusRequested: boolean
+  omniSearchFocusMode: 'cite' | 'zotero' | 'pdf' | 'tex' | null
 
   // Actions
   setDraftModalOpen: (open: boolean) => void
@@ -43,8 +44,8 @@ interface UiState {
   setLspStatus: (status: LspStatus) => void
   setLspError: (error: string | null) => void
   setDocumentSymbols: (symbols: DocumentSymbolNode[]) => void
-  requestCiteSearchFocus: () => void
-  clearCiteSearchFocus: () => void
+  requestOmniSearchFocus: (mode?: 'cite' | 'zotero' | 'pdf' | 'tex') => void
+  clearOmniSearchFocus: () => void
 }
 
 export const useUiStore = create<UiState>()(
@@ -58,7 +59,8 @@ export const useUiStore = create<UiState>()(
     lspStatus: 'stopped',
     lspError: null,
     documentSymbols: [],
-    citeSearchFocusRequested: false,
+    omniSearchFocusRequested: false,
+    omniSearchFocusMode: null,
 
     setDraftModalOpen: (isDraftModalOpen) => set({ isDraftModalOpen }),
     toggleDraftModal: () => set((state) => ({ isDraftModalOpen: !state.isDraftModalOpen })),
@@ -72,7 +74,9 @@ export const useUiStore = create<UiState>()(
     setLspStatus: (lspStatus) => set({ lspStatus }),
     setLspError: (lspError) => set({ lspError }),
     setDocumentSymbols: (documentSymbols) => set({ documentSymbols }),
-    requestCiteSearchFocus: () => set({ citeSearchFocusRequested: true }),
-    clearCiteSearchFocus: () => set({ citeSearchFocusRequested: false })
+    requestOmniSearchFocus: (mode) =>
+      set({ omniSearchFocusRequested: true, omniSearchFocusMode: mode ?? 'cite' }),
+    clearOmniSearchFocus: () =>
+      set({ omniSearchFocusRequested: false, omniSearchFocusMode: null })
   }))
 )

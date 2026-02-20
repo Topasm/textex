@@ -1,4 +1,4 @@
-import { useState, useDeferredValue, useEffect, useCallback } from 'react'
+import { useState, useDeferredValue, useEffect, useCallback, useRef } from 'react'
 import { usePdfStore } from '../../store/usePdfStore'
 
 export interface PdfSearchState {
@@ -20,31 +20,13 @@ export function usePdfSearch(
   const searchQuery = usePdfStore((s) => s.pdfSearchQuery)
   const setSearchVisible = usePdfStore((s) => s.setPdfSearchVisible)
   const setSearchQuery = usePdfStore((s) => s.setPdfSearchQuery)
+  const nextRequest = usePdfStore((s) => s.pdfSearchNextRequest)
+  const prevRequest = usePdfStore((s) => s.pdfSearchPrevRequest)
 
   const [searchMatches, setSearchMatches] = useState<HTMLElement[]>([])
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0)
   // Defer search query so DOM scanning doesn't block input responsiveness
   const deferredSearchQuery = useDeferredValue(searchQuery)
-
-  // Keyboard handler for Ctrl+F search toggle
-  useEffect(() => {
-    const handler = (e: KeyboardEvent): void => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-        const container = containerRef.current
-        if (!container) return
-        if (!container.matches(':hover') && !container.contains(document.activeElement)) return
-        e.preventDefault()
-        e.stopPropagation()
-        setSearchVisible(true)
-      }
-      if (e.key === 'Escape' && searchVisible) {
-        setSearchVisible(false)
-        setSearchQuery('')
-      }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [searchVisible, setSearchVisible, setSearchQuery, containerRef])
 
   // Perform search in text layer spans
   useEffect(() => {
@@ -59,6 +41,8 @@ export function usePdfSearch(
     if (!deferredSearchQuery || !searchVisible) {
       setSearchMatches([])
       setCurrentMatchIndex(0)
+      usePdfStore.getState().setPdfMatchCount(0)
+      usePdfStore.getState().setPdfCurrentMatch(0)
       return
     }
 
@@ -77,6 +61,8 @@ export function usePdfSearch(
 
     setSearchMatches(matches)
     setCurrentMatchIndex(0)
+    usePdfStore.getState().setPdfMatchCount(matches.length)
+    usePdfStore.getState().setPdfCurrentMatch(0)
 
     if (matches.length > 0) {
       matches[0].classList.add('pdf-search-current')
@@ -91,6 +77,7 @@ export function usePdfSearch(
     setCurrentMatchIndex(next)
     searchMatches[next]?.classList.add('pdf-search-current')
     searchMatches[next]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    usePdfStore.getState().setPdfCurrentMatch(next)
   }, [searchMatches, currentMatchIndex])
 
   const handleSearchPrev = useCallback(() => {
@@ -100,12 +87,28 @@ export function usePdfSearch(
     setCurrentMatchIndex(prev)
     searchMatches[prev]?.classList.add('pdf-search-current')
     searchMatches[prev]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    usePdfStore.getState().setPdfCurrentMatch(prev)
   }, [searchMatches, currentMatchIndex])
 
   const handleSearchClose = useCallback(() => {
     setSearchVisible(false)
     setSearchQuery('')
   }, [setSearchVisible, setSearchQuery])
+
+  // Use refs so the store-driven effects always call the latest handler
+  const handleSearchNextRef = useRef(handleSearchNext)
+  handleSearchNextRef.current = handleSearchNext
+  const handleSearchPrevRef = useRef(handleSearchPrev)
+  handleSearchPrevRef.current = handleSearchPrev
+
+  // React to next/prev requests from OmniSearch via store timestamps
+  useEffect(() => {
+    if (nextRequest) handleSearchNextRef.current()
+  }, [nextRequest])
+
+  useEffect(() => {
+    if (prevRequest) handleSearchPrevRef.current()
+  }, [prevRequest])
 
   return {
     searchVisible,

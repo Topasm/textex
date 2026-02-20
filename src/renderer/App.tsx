@@ -69,7 +69,6 @@ function App() {
   const isGitRepo = useProjectStore((s) => s.isGitRepo)
   const settings = useSettingsStore((s) => s.settings)
   const lspEnabled = settings.lspEnabled
-  const zoteroEnabled = settings.zoteroEnabled
   const gitEnabled = isFeatureEnabled(settings, 'git')
   const autoHideSidebar = useSettingsStore((s) => s.settings.autoHideSidebar)
   const showStatusBar = useSettingsStore((s) => s.settings.showStatusBar)
@@ -205,8 +204,7 @@ function App() {
     handleSave,
     handleSaveAs,
     handleCompile,
-    handleAiDraft,
-    zoteroEnabled
+    handleAiDraft
   })
   const {
     mainContentRef,
@@ -244,7 +242,7 @@ function App() {
         onOpenFolder={handleOpenFolder}
         onReturnHome={handleCloseProject}
         onNewFromTemplate={() => useUiStore.getState().toggleTemplateGallery()}
-        onAiDraft={() => handleAiDraft()}
+        onAiDraft={handleAiDraft}
         onExport={handleExport}
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
@@ -269,8 +267,6 @@ function App() {
         <HomeScreen
           onOpenFolder={handleOpenFolder}
           onNewFromTemplate={() => useUiStore.getState().toggleTemplateGallery()}
-          onAiDraft={handleAiDraft}
-          onOpenSettings={() => setIsSettingsOpen(true)}
         />
       ) : (
         <div className="workspace">

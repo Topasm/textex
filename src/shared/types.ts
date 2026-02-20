@@ -20,6 +20,12 @@ export interface SyncTeXInverseResult {
   column: number
 }
 
+export interface SyncTeXLineMapEntry {
+  line: number
+  page: number
+  y: number
+}
+
 export interface DirectoryEntry {
   name: string
   path: string
@@ -172,6 +178,7 @@ export interface UserSettings {
   language?: string
   pdfViewMode?: 'continuous' | 'single'
   showPdfToolbarControls?: boolean
+  scrollSyncEnabled?: boolean
 }
 
 export interface CitationGroup {

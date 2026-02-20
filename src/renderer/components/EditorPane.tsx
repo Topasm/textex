@@ -2,7 +2,7 @@ import Editor, { BeforeMount, OnMount } from '@monaco-editor/react'
 import { useEffect, useRef, useState, useCallback, lazy, Suspense } from 'react'
 import { useEditorStore } from '../store/useEditorStore'
 import { useProjectStore } from '../store/useProjectStore'
-import { useSettingsStore } from '../store/useSettingsStore'
+import { useSettingsStore, resolveTheme } from '../store/useSettingsStore'
 import { stopLspClient } from '../lsp/lspClient'
 import { useClickNavigation } from '../hooks/editor/useClickNavigation'
 import { useSpelling } from '../hooks/editor/useSpelling'
@@ -39,6 +39,7 @@ function EditorPane() {
   const content = useEditorStore((s) => s.content)
   const setContent = useEditorStore((s) => s.setContent)
   const setCursorPosition = useEditorStore((s) => s.setCursorPosition)
+  const setEditorInstance = useEditorStore((s) => s.setEditorInstance)
   const projectRoot = useProjectStore((s) => s.projectRoot)
   const settings = useSettingsStore((s) => s.settings)
   const theme = settings.theme
@@ -106,6 +107,7 @@ function EditorPane() {
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor
+    setEditorInstance(editor)
     aiEnabledKeyRef.current = editor.createContextKey('textex.aiEnabled', aiEnabled)
     monacoRef.current = monaco
     cursorDisposableRef.current = editor.onDidChangeCursorPosition((e) => {
@@ -167,12 +169,13 @@ function EditorPane() {
       for (const d of completionDisposables.current) d.dispose()
       disposeTableEditor()
       stopLspClient()
+      setEditorInstance(null)
       if ((window as any).vimMode) {
         ;(window as any).vimMode.dispose()
         ;(window as any).vimMode = null
       }
     }
-  }, [disposeTableEditor])
+  }, [disposeTableEditor, setEditorInstance])
 
   const handleChange = useCallback(
     (value: string | undefined): void => {
@@ -255,7 +258,7 @@ function EditorPane() {
             <DiffEditor
               height="100%"
               language="latex"
-              theme={getMonacoTheme(theme === 'system' ? 'light' : theme)}
+              theme={getMonacoTheme(resolveTheme(theme))}
               original={snapshotContent}
               modified={content}
               options={{
@@ -269,7 +272,7 @@ function EditorPane() {
             <Editor
               height="100%"
               defaultLanguage="latex"
-              theme={getMonacoTheme(theme === 'system' ? 'light' : theme)}
+              theme={getMonacoTheme(resolveTheme(theme))}
               value={content}
               onChange={handleChange}
               beforeMount={handleEditorWillMount}
