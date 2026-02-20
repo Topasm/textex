@@ -3,7 +3,7 @@
 [![Build Status](https://github.com/Topasm/textex/actions/workflows/build.yml/badge.svg)](https://github.com/Topasm/textex/actions/workflows/build.yml)
 [![Release](https://img.shields.io/github/v/release/Topasm/textex?include_prereleases&label=latest)](https://github.com/Topasm/textex/releases/latest)
 
-A self-contained desktop LaTeX editor built on Electron. TextEx provides a split-pane interface with a Monaco code editor on the left and live PDF preview on the right. It comes with a bundled [Tectonic](https://tectonic-typesetting.github.io/) engine, so you **do not** need to install TeX Live, MiKTeX, or any other TeX distribution.
+A **free**, **local-first** desktop LaTeX editor. TextEx runs entirely on your machine — no account, no cloud, no internet required. It provides a split-pane interface with a Monaco code editor on the left and live PDF preview on the right, with a bundled [Tectonic](https://tectonic-typesetting.github.io/) engine so you **do not** need to install TeX Live, MiKTeX, or any other TeX distribution.
 
 <p align="center">
   <img src="docs/images/main-editor.png" alt="TextEx — Split-pane LaTeX editor with live PDF preview" width="900" />
@@ -13,6 +13,7 @@ A self-contained desktop LaTeX editor built on Electron. TextEx provides a split
 
 | Feature | Description |
 |---------|-------------|
+| **Free & Local-First** | No account, no cloud, no internet — your documents stay on your machine |
 | **Zero Setup** | Bundled Tectonic engine — no TeX installation required |
 | **Live PDF Preview** | Auto-compile on save with instant split-pane preview |
 | **Scroll Sync** | Bidirectional scroll synchronization between editor and PDF |
