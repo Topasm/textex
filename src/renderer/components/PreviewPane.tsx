@@ -11,6 +11,21 @@ import { usePdfSearch } from '../hooks/preview/usePdfSearch'
 import { useCitationTooltip } from '../hooks/preview/useCitationTooltip'
 import { useContainerSize } from '../hooks/preview/useContainerSize'
 import CitationTooltip from './CitationTooltip'
+import {
+  ESTIMATED_PAGE_HEIGHT,
+  SCROLL_DEBOUNCE_MS,
+  SCROLL_PERSIST_DEBOUNCE_MS,
+  SWIPE_THRESHOLD,
+  SWIPE_THRESHOLD_HORIZONTAL,
+  SWIPE_COOLDOWN_MS,
+  calcPageWidth,
+  estimatePageHeight,
+  buildCumulativeLayout,
+  binarySearchPage,
+  computeVisibleRange,
+  calcFitHeightZoom,
+  clampPage
+} from './previewUtils'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
 
@@ -24,40 +39,6 @@ interface PageViewportInfo {
   element: HTMLDivElement
   pageWidth: number // actual PDF page width in points
   pageHeight: number // actual PDF page height in points
-}
-
-/** Number of pages to render beyond the visible viewport in each direction. */
-const PAGE_OVERSCAN = 2
-/** Estimated page height in pixels when actual height is unknown. */
-const ESTIMATED_PAGE_HEIGHT = 1100
-/** Debounce scroll events to reduce visible-page recalculation frequency. */
-const SCROLL_DEBOUNCE_MS = 100
-/** Debounce delay for persisting scroll position. */
-const SCROLL_PERSIST_DEBOUNCE_MS = 500
-/** Accumulated delta threshold to trigger page navigation in single-page mode (vertical scroll). */
-const SWIPE_THRESHOLD = 150
-/** Lower threshold for pure horizontal scroll (e.g. MX Master thumb wheel). */
-const SWIPE_THRESHOLD_HORIZONTAL = 30
-/** Cooldown between swipe-triggered page navigations. */
-const SWIPE_COOLDOWN_MS = 400
-
-/**
- * Binary search on sorted cumulative-heights array.
- * Returns the 1-indexed page number whose top offset is the last one <= scrollY.
- */
-function binarySearchPage(cumHeights: number[], scrollY: number): number {
-  if (cumHeights.length === 0) return 1
-  let lo = 0
-  let hi = cumHeights.length - 1
-  while (lo < hi) {
-    const mid = (lo + hi + 1) >>> 1
-    if (cumHeights[mid] <= scrollY) {
-      lo = mid
-    } else {
-      hi = mid - 1
-    }
-  }
-  return lo + 1
 }
 
 function PreviewPane() {
@@ -99,29 +80,18 @@ function PreviewPane() {
   /** Calculate estimated height for a page. */
   const getPageHeight = useCallback(
     (pageNum: number): number => {
-      const cached = pageHeightsRef.current.get(pageNum)
-      if (cached) return cached
-      // Estimate based on A4 aspect ratio and current page width
-      const pw = containerWidth ? (containerWidth - 32) * (zoomLevel / 100) : 595
-      return pw * (842 / 595) // A4 aspect ratio
+      return estimatePageHeight(containerWidth, zoomLevel, pageHeightsRef.current.get(pageNum))
     },
     [containerWidth, zoomLevel]
   )
 
-  const pageWidth = containerWidth ? (containerWidth - 32) * (zoomLevel / 100) : undefined
+  const pageWidth = calcPageWidth(containerWidth, zoomLevel)
 
   // Pre-compute cumulative page heights and offsets for O(log N) binary search
-  const { totalHeight, pageOffsets, cumulativeHeights } = useMemo(() => {
-    const offsets = new Map<number, number>()
-    const cumHeights: number[] = []
-    let total = 0
-    for (let i = 1; i <= numPages; i++) {
-      offsets.set(i, total)
-      cumHeights.push(total)
-      total += getPageHeight(i) + 16 // 16px gap between pages
-    }
-    return { totalHeight: total, pageOffsets: offsets, cumulativeHeights: cumHeights }
-  }, [numPages, getPageHeight])
+  const { totalHeight, pageOffsets, cumulativeHeights } = useMemo(
+    () => buildCumulativeLayout(numPages, getPageHeight),
+    [numPages, getPageHeight]
+  )
 
   /** Compute which pages are currently in the viewport using O(log N) binary search. */
   const computeVisiblePages = useCallback(() => {
@@ -139,12 +109,11 @@ function PreviewPane() {
     usePdfStore.getState().setCurrentPage(startPage)
 
     // Add overscan
-    const start = Math.max(1, startPage - PAGE_OVERSCAN)
-    const end = Math.min(numPages, endPage + PAGE_OVERSCAN)
+    const range = computeVisibleRange(startPage, endPage, numPages)
 
     setVisibleRange((prev) => {
-      if (prev.start === start && prev.end === end) return prev
-      return { start, end }
+      if (prev.start === range.start && prev.end === range.end) return prev
+      return range
     })
   }, [numPages, cumulativeHeights])
 
@@ -153,7 +122,7 @@ function PreviewPane() {
     (page: number) => {
       const container = containerRef.current
       if (!container || numPages === 0) return
-      const clamped = Math.max(1, Math.min(numPages, page))
+      const clamped = clampPage(page, numPages)
 
       if (pdfViewMode === 'single') {
         usePdfStore.getState().setCurrentPage(clamped)
@@ -199,11 +168,7 @@ function PreviewPane() {
       const firstPage = pageViewportsRef.current.get(1)
       const pageW = firstPage?.pageWidth ?? 595
       const pageH = firstPage?.pageHeight ?? 842
-      // At zoom Z%, page rendered width = (cw - 32) * Z/100
-      // Rendered height = pageH * ((cw - 32) * Z/100) / pageW
-      // We want rendered height = containerHeight
-      // => Z = (containerHeight * pageW) / (pageH * (cw - 32)) * 100
-      const zoom = Math.round((containerHeight * pageW) / (pageH * (cw - 32)) * 100)
+      const zoom = calcFitHeightZoom(containerHeight, cw, pageW, pageH)
       usePdfStore.getState().setZoomLevel(zoom)
     }
     usePdfStore.getState().clearFitRequest()
@@ -339,7 +304,7 @@ function PreviewPane() {
     if (pdfViewMode === 'single') {
       // Clamp currentPage to valid range
       const cp = usePdfStore.getState().currentPage
-      const clamped = Math.max(1, Math.min(numPages, cp))
+      const clamped = clampPage(cp, numPages)
       if (clamped !== cp) usePdfStore.getState().setCurrentPage(clamped)
     } else {
       // Switching to continuous — scroll to the current page position

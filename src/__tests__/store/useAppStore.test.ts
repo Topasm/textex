@@ -1,25 +1,47 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useAppStore, Theme, UserSettings } from '../../renderer/store/useAppStore'
-import type { Diagnostic, DocumentSymbolNode } from '../../shared/types'
+import { useEditorStore } from '../../renderer/store/useEditorStore'
+import { useCompileStore } from '../../renderer/store/useCompileStore'
+import { usePdfStore } from '../../renderer/store/usePdfStore'
+import { useUiStore } from '../../renderer/store/useUiStore'
+import { useSettingsStore } from '../../renderer/store/useSettingsStore'
+import type { Theme } from '../../renderer/store/useSettingsStore'
+import type { UserSettings, Diagnostic, DocumentSymbolNode } from '../../shared/types'
 
-const initialState = {
+const initialEditorState = {
   filePath: null,
   content: '',
   isDirty: false,
+  openFiles: {},
+  activeFilePath: null,
+  cursorLine: 1,
+  cursorColumn: 1,
+  pendingJump: null,
+  pendingInsertText: null,
+  _sessionOpenPaths: [] as string[],
+  _sessionActiveFile: null
+}
+
+const initialCompileState = {
   compileStatus: 'idle' as const,
   pdfPath: null,
   pdfRevision: 0,
   logs: '',
   isLogPanelOpen: false,
-  cursorLine: 1,
-  cursorColumn: 1,
-  diagnostics: [],
-  logViewMode: 'structured' as const,
-  pendingJump: null,
-  synctexHighlight: null,
+  diagnostics: [] as Diagnostic[],
+  logViewMode: 'structured' as const
+}
+
+const initialPdfState = {
   splitRatio: 0.5,
   zoomLevel: 100,
-  documentSymbols: [],
+  synctexHighlight: null
+}
+
+const initialUiState = {
+  documentSymbols: [] as DocumentSymbolNode[]
+}
+
+const initialSettings = {
   settings: {
     theme: 'system' as Theme,
     pdfInvertMode: false,
@@ -40,166 +62,173 @@ const initialState = {
 }
 
 beforeEach(() => {
-  useAppStore.setState(initialState)
+  useEditorStore.setState(initialEditorState)
+  useCompileStore.setState(initialCompileState)
+  usePdfStore.setState(initialPdfState)
+  useUiStore.setState(initialUiState)
+  useSettingsStore.setState(initialSettings)
 })
 
 describe('useAppStore', () => {
   describe('initial state', () => {
     it('has correct default values', () => {
-      const state = useAppStore.getState()
-      expect(state.filePath).toBeNull()
-      expect(state.content).toBe('')
-      expect(state.isDirty).toBe(false)
-      expect(state.compileStatus).toBe('idle')
-      expect(state.pdfPath).toBeNull()
-      expect(state.logs).toBe('')
-      expect(state.isLogPanelOpen).toBe(false)
-      expect(state.cursorLine).toBe(1)
-      expect(state.cursorColumn).toBe(1)
-      expect(state.diagnostics).toEqual([])
-      expect(state.logViewMode).toBe('structured')
-      expect(state.pendingJump).toBeNull()
-      expect(state.synctexHighlight).toBeNull()
-      expect(state.splitRatio).toBe(0.5)
-      expect(state.zoomLevel).toBe(100)
+      const editor = useEditorStore.getState()
+      const compile = useCompileStore.getState()
+      const pdf = usePdfStore.getState()
+
+      expect(editor.filePath).toBeNull()
+      expect(editor.content).toBe('')
+      expect(editor.isDirty).toBe(false)
+      expect(compile.compileStatus).toBe('idle')
+      expect(compile.pdfPath).toBeNull()
+      expect(compile.logs).toBe('')
+      expect(compile.isLogPanelOpen).toBe(false)
+      expect(editor.cursorLine).toBe(1)
+      expect(editor.cursorColumn).toBe(1)
+      expect(compile.diagnostics).toEqual([])
+      expect(compile.logViewMode).toBe('structured')
+      expect(editor.pendingJump).toBeNull()
+      expect(pdf.synctexHighlight).toBeNull()
+      expect(pdf.splitRatio).toBe(0.5)
+      expect(pdf.zoomLevel).toBe(100)
     })
   })
 
   describe('setContent', () => {
     it('updates content and sets isDirty to true', () => {
-      useAppStore.getState().setContent('\\documentclass{article}')
-      const state = useAppStore.getState()
+      useEditorStore.getState().setContent('\\documentclass{article}')
+      const state = useEditorStore.getState()
       expect(state.content).toBe('\\documentclass{article}')
       expect(state.isDirty).toBe(true)
     })
 
     it('sets isDirty even when content is empty string', () => {
-      useAppStore.getState().setContent('')
-      expect(useAppStore.getState().isDirty).toBe(true)
+      useEditorStore.getState().setContent('')
+      expect(useEditorStore.getState().isDirty).toBe(true)
     })
   })
 
   describe('setFilePath', () => {
     it('updates filePath', () => {
-      useAppStore.getState().setFilePath('/home/user/doc.tex')
-      expect(useAppStore.getState().filePath).toBe('/home/user/doc.tex')
+      useEditorStore.getState().setFilePath('/home/user/doc.tex')
+      expect(useEditorStore.getState().filePath).toBe('/home/user/doc.tex')
     })
 
     it('can set filePath to null', () => {
-      useAppStore.getState().setFilePath('/some/file.tex')
-      useAppStore.getState().setFilePath(null)
-      expect(useAppStore.getState().filePath).toBeNull()
+      useEditorStore.getState().setFilePath('/some/file.tex')
+      useEditorStore.getState().setFilePath(null)
+      expect(useEditorStore.getState().filePath).toBeNull()
     })
   })
 
   describe('setDirty', () => {
     it('sets isDirty to true', () => {
-      useAppStore.getState().setDirty(true)
-      expect(useAppStore.getState().isDirty).toBe(true)
+      useEditorStore.getState().setDirty(true)
+      expect(useEditorStore.getState().isDirty).toBe(true)
     })
 
     it('sets isDirty to false', () => {
-      useAppStore.getState().setDirty(true)
-      useAppStore.getState().setDirty(false)
-      expect(useAppStore.getState().isDirty).toBe(false)
+      useEditorStore.getState().setDirty(true)
+      useEditorStore.getState().setDirty(false)
+      expect(useEditorStore.getState().isDirty).toBe(false)
     })
   })
 
   describe('setCompileStatus', () => {
     it('updates compileStatus to compiling', () => {
-      useAppStore.getState().setCompileStatus('compiling')
-      expect(useAppStore.getState().compileStatus).toBe('compiling')
+      useCompileStore.getState().setCompileStatus('compiling')
+      expect(useCompileStore.getState().compileStatus).toBe('compiling')
     })
 
     it('updates compileStatus to success', () => {
-      useAppStore.getState().setCompileStatus('success')
-      expect(useAppStore.getState().compileStatus).toBe('success')
+      useCompileStore.getState().setCompileStatus('success')
+      expect(useCompileStore.getState().compileStatus).toBe('success')
     })
 
     it('updates compileStatus to error', () => {
-      useAppStore.getState().setCompileStatus('error')
-      expect(useAppStore.getState().compileStatus).toBe('error')
+      useCompileStore.getState().setCompileStatus('error')
+      expect(useCompileStore.getState().compileStatus).toBe('error')
     })
 
     it('updates compileStatus to idle', () => {
-      useAppStore.getState().setCompileStatus('compiling')
-      useAppStore.getState().setCompileStatus('idle')
-      expect(useAppStore.getState().compileStatus).toBe('idle')
+      useCompileStore.getState().setCompileStatus('compiling')
+      useCompileStore.getState().setCompileStatus('idle')
+      expect(useCompileStore.getState().compileStatus).toBe('idle')
     })
   })
 
   describe('setPdfPath', () => {
     it('updates pdfPath and increments pdfRevision', () => {
-      useAppStore.getState().setPdfPath('/path/to/output.pdf')
-      expect(useAppStore.getState().pdfPath).toBe('/path/to/output.pdf')
-      expect(useAppStore.getState().pdfRevision).toBe(1)
+      useCompileStore.getState().setPdfPath('/path/to/output.pdf')
+      expect(useCompileStore.getState().pdfPath).toBe('/path/to/output.pdf')
+      expect(useCompileStore.getState().pdfRevision).toBe(1)
     })
 
     it('can set pdfPath to null', () => {
-      useAppStore.getState().setPdfPath('/path/to/output.pdf')
-      useAppStore.getState().setPdfPath(null)
-      expect(useAppStore.getState().pdfPath).toBeNull()
+      useCompileStore.getState().setPdfPath('/path/to/output.pdf')
+      useCompileStore.getState().setPdfPath(null)
+      expect(useCompileStore.getState().pdfPath).toBeNull()
     })
 
     it('increments pdfRevision on each call', () => {
-      useAppStore.getState().setPdfPath('/path/a.pdf')
-      useAppStore.getState().setPdfPath('/path/b.pdf')
-      expect(useAppStore.getState().pdfRevision).toBe(2)
+      useCompileStore.getState().setPdfPath('/path/a.pdf')
+      useCompileStore.getState().setPdfPath('/path/b.pdf')
+      expect(useCompileStore.getState().pdfRevision).toBe(2)
     })
   })
 
   describe('appendLog', () => {
     it('appends text to logs', () => {
-      useAppStore.getState().appendLog('line 1\n')
-      useAppStore.getState().appendLog('line 2\n')
-      expect(useAppStore.getState().logs).toBe('line 1\nline 2\n')
+      useCompileStore.getState().appendLog('line 1\n')
+      useCompileStore.getState().appendLog('line 2\n')
+      expect(useCompileStore.getState().logs).toBe('line 1\nline 2\n')
     })
 
     it('concatenates to existing logs', () => {
-      useAppStore.setState({ logs: 'existing ' })
-      useAppStore.getState().appendLog('new')
-      expect(useAppStore.getState().logs).toBe('existing new')
+      useCompileStore.setState({ logs: 'existing ' })
+      useCompileStore.getState().appendLog('new')
+      expect(useCompileStore.getState().logs).toBe('existing new')
     })
   })
 
   describe('clearLogs', () => {
     it('resets logs to empty string', () => {
-      useAppStore.setState({ logs: 'some logs here' })
-      useAppStore.getState().clearLogs()
-      expect(useAppStore.getState().logs).toBe('')
+      useCompileStore.setState({ logs: 'some logs here' })
+      useCompileStore.getState().clearLogs()
+      expect(useCompileStore.getState().logs).toBe('')
     })
   })
 
   describe('toggleLogPanel', () => {
     it('flips isLogPanelOpen from false to true', () => {
-      useAppStore.getState().toggleLogPanel()
-      expect(useAppStore.getState().isLogPanelOpen).toBe(true)
+      useCompileStore.getState().toggleLogPanel()
+      expect(useCompileStore.getState().isLogPanelOpen).toBe(true)
     })
 
     it('flips isLogPanelOpen from true to false', () => {
-      useAppStore.setState({ isLogPanelOpen: true })
-      useAppStore.getState().toggleLogPanel()
-      expect(useAppStore.getState().isLogPanelOpen).toBe(false)
+      useCompileStore.setState({ isLogPanelOpen: true })
+      useCompileStore.getState().toggleLogPanel()
+      expect(useCompileStore.getState().isLogPanelOpen).toBe(false)
     })
   })
 
   describe('setLogPanelOpen', () => {
     it('sets isLogPanelOpen directly', () => {
-      useAppStore.getState().setLogPanelOpen(true)
-      expect(useAppStore.getState().isLogPanelOpen).toBe(true)
+      useCompileStore.getState().setLogPanelOpen(true)
+      expect(useCompileStore.getState().isLogPanelOpen).toBe(true)
     })
 
     it('can close log panel', () => {
-      useAppStore.setState({ isLogPanelOpen: true })
-      useAppStore.getState().setLogPanelOpen(false)
-      expect(useAppStore.getState().isLogPanelOpen).toBe(false)
+      useCompileStore.setState({ isLogPanelOpen: true })
+      useCompileStore.getState().setLogPanelOpen(false)
+      expect(useCompileStore.getState().isLogPanelOpen).toBe(false)
     })
   })
 
   describe('setCursorPosition', () => {
     it('updates cursorLine and cursorColumn', () => {
-      useAppStore.getState().setCursorPosition(10, 25)
-      const state = useAppStore.getState()
+      useEditorStore.getState().setCursorPosition(10, 25)
+      const state = useEditorStore.getState()
       expect(state.cursorLine).toBe(10)
       expect(state.cursorColumn).toBe(25)
     })
@@ -211,53 +240,53 @@ describe('useAppStore', () => {
         { file: 'test.tex', line: 5, severity: 'error', message: 'Undefined control sequence' },
         { file: 'test.tex', line: 10, severity: 'warning', message: 'Overfull hbox' }
       ]
-      useAppStore.getState().setDiagnostics(diags)
-      expect(useAppStore.getState().diagnostics).toEqual(diags)
+      useCompileStore.getState().setDiagnostics(diags)
+      expect(useCompileStore.getState().diagnostics).toEqual(diags)
     })
 
     it('can clear diagnostics with empty array', () => {
-      useAppStore.setState({
+      useCompileStore.setState({
         diagnostics: [{ file: 'test.tex', line: 1, severity: 'error', message: 'err' }]
       })
-      useAppStore.getState().setDiagnostics([])
-      expect(useAppStore.getState().diagnostics).toEqual([])
+      useCompileStore.getState().setDiagnostics([])
+      expect(useCompileStore.getState().diagnostics).toEqual([])
     })
   })
 
   describe('setLogViewMode', () => {
     it('sets mode to raw', () => {
-      useAppStore.getState().setLogViewMode('raw')
-      expect(useAppStore.getState().logViewMode).toBe('raw')
+      useCompileStore.getState().setLogViewMode('raw')
+      expect(useCompileStore.getState().logViewMode).toBe('raw')
     })
 
     it('sets mode to structured', () => {
-      useAppStore.setState({ logViewMode: 'raw' })
-      useAppStore.getState().setLogViewMode('structured')
-      expect(useAppStore.getState().logViewMode).toBe('structured')
+      useCompileStore.setState({ logViewMode: 'raw' })
+      useCompileStore.getState().setLogViewMode('structured')
+      expect(useCompileStore.getState().logViewMode).toBe('structured')
     })
   })
 
   describe('requestJumpToLine', () => {
     it('sets pendingJump with line and column', () => {
-      useAppStore.getState().requestJumpToLine(42, 8)
-      expect(useAppStore.getState().pendingJump).toEqual({ line: 42, column: 8 })
+      useEditorStore.getState().requestJumpToLine(42, 8)
+      expect(useEditorStore.getState().pendingJump).toEqual({ line: 42, column: 8 })
     })
   })
 
   describe('clearPendingJump', () => {
     it('sets pendingJump to null', () => {
-      useAppStore.setState({ pendingJump: { line: 10, column: 1 } })
-      useAppStore.getState().clearPendingJump()
-      expect(useAppStore.getState().pendingJump).toBeNull()
+      useEditorStore.setState({ pendingJump: { line: 10, column: 1 } })
+      useEditorStore.getState().clearPendingJump()
+      expect(useEditorStore.getState().pendingJump).toBeNull()
     })
   })
 
   describe('setSynctexHighlight', () => {
     it('sets highlight with timestamp', () => {
       const before = Date.now()
-      useAppStore.getState().setSynctexHighlight({ page: 1, x: 100, y: 200 })
+      usePdfStore.getState().setSynctexHighlight({ page: 1, x: 100, y: 200 })
       const after = Date.now()
-      const highlight = useAppStore.getState().synctexHighlight
+      const highlight = usePdfStore.getState().synctexHighlight
       expect(highlight).not.toBeNull()
       expect(highlight!.page).toBe(1)
       expect(highlight!.x).toBe(100)
@@ -267,67 +296,67 @@ describe('useAppStore', () => {
     })
 
     it('sets highlight to null', () => {
-      useAppStore.getState().setSynctexHighlight({ page: 1, x: 0, y: 0 })
-      useAppStore.getState().setSynctexHighlight(null)
-      expect(useAppStore.getState().synctexHighlight).toBeNull()
+      usePdfStore.getState().setSynctexHighlight({ page: 1, x: 0, y: 0 })
+      usePdfStore.getState().setSynctexHighlight(null)
+      expect(usePdfStore.getState().synctexHighlight).toBeNull()
     })
   })
 
   describe('setSplitRatio', () => {
     it('updates splitRatio', () => {
-      useAppStore.getState().setSplitRatio(0.7)
-      expect(useAppStore.getState().splitRatio).toBe(0.7)
+      usePdfStore.getState().setSplitRatio(0.7)
+      expect(usePdfStore.getState().splitRatio).toBe(0.7)
     })
   })
 
   describe('setZoomLevel', () => {
     it('sets zoom level', () => {
-      useAppStore.getState().setZoomLevel(150)
-      expect(useAppStore.getState().zoomLevel).toBe(150)
+      usePdfStore.getState().setZoomLevel(150)
+      expect(usePdfStore.getState().zoomLevel).toBe(150)
     })
 
     it('clamps zoom level to minimum of 25', () => {
-      useAppStore.getState().setZoomLevel(10)
-      expect(useAppStore.getState().zoomLevel).toBe(25)
+      usePdfStore.getState().setZoomLevel(10)
+      expect(usePdfStore.getState().zoomLevel).toBe(25)
     })
 
     it('clamps zoom level to maximum of 400', () => {
-      useAppStore.getState().setZoomLevel(500)
-      expect(useAppStore.getState().zoomLevel).toBe(400)
+      usePdfStore.getState().setZoomLevel(500)
+      expect(usePdfStore.getState().zoomLevel).toBe(400)
     })
   })
 
   describe('zoomIn', () => {
     it('increases zoom by 25', () => {
-      useAppStore.getState().zoomIn()
-      expect(useAppStore.getState().zoomLevel).toBe(125)
+      usePdfStore.getState().zoomIn()
+      expect(usePdfStore.getState().zoomLevel).toBe(125)
     })
 
     it('does not exceed maximum of 400', () => {
-      useAppStore.setState({ zoomLevel: 400 })
-      useAppStore.getState().zoomIn()
-      expect(useAppStore.getState().zoomLevel).toBe(400)
+      usePdfStore.setState({ zoomLevel: 400 })
+      usePdfStore.getState().zoomIn()
+      expect(usePdfStore.getState().zoomLevel).toBe(400)
     })
   })
 
   describe('zoomOut', () => {
     it('decreases zoom by 25', () => {
-      useAppStore.getState().zoomOut()
-      expect(useAppStore.getState().zoomLevel).toBe(75)
+      usePdfStore.getState().zoomOut()
+      expect(usePdfStore.getState().zoomLevel).toBe(75)
     })
 
     it('does not go below minimum of 25', () => {
-      useAppStore.setState({ zoomLevel: 25 })
-      useAppStore.getState().zoomOut()
-      expect(useAppStore.getState().zoomLevel).toBe(25)
+      usePdfStore.setState({ zoomLevel: 25 })
+      usePdfStore.getState().zoomOut()
+      expect(usePdfStore.getState().zoomLevel).toBe(25)
     })
   })
 
   describe('resetZoom', () => {
     it('resets zoom to 100', () => {
-      useAppStore.setState({ zoomLevel: 250 })
-      useAppStore.getState().resetZoom()
-      expect(useAppStore.getState().zoomLevel).toBe(100)
+      usePdfStore.setState({ zoomLevel: 250 })
+      usePdfStore.getState().resetZoom()
+      expect(usePdfStore.getState().zoomLevel).toBe(100)
     })
   })
 
@@ -352,12 +381,12 @@ describe('useAppStore', () => {
           ]
         }
       ]
-      useAppStore.getState().setDocumentSymbols(symbols)
-      expect(useAppStore.getState().documentSymbols).toEqual(symbols)
+      useUiStore.getState().setDocumentSymbols(symbols)
+      expect(useUiStore.getState().documentSymbols).toEqual(symbols)
     })
 
     it('can clear document symbols with empty array', () => {
-      useAppStore.getState().setDocumentSymbols([
+      useUiStore.getState().setDocumentSymbols([
         {
           name: 'Test',
           detail: '',
@@ -367,15 +396,15 @@ describe('useAppStore', () => {
           children: []
         }
       ])
-      useAppStore.getState().setDocumentSymbols([])
-      expect(useAppStore.getState().documentSymbols).toEqual([])
+      useUiStore.getState().setDocumentSymbols([])
+      expect(useUiStore.getState().documentSymbols).toEqual([])
     })
   })
 
   describe('openFileInTab', () => {
     it('opens a new file and sets it as active', () => {
-      useAppStore.getState().openFileInTab('/path/a.tex', 'content A')
-      const state = useAppStore.getState()
+      useEditorStore.getState().openFileInTab('/path/a.tex', 'content A')
+      const state = useEditorStore.getState()
       expect(state.activeFilePath).toBe('/path/a.tex')
       expect(state.filePath).toBe('/path/a.tex')
       expect(state.content).toBe('content A')
@@ -386,31 +415,31 @@ describe('useAppStore', () => {
 
     it('refreshes content when reopening an already-open file', () => {
       // Open file with original content
-      useAppStore.getState().openFileInTab('/path/a.tex', 'original content')
+      useEditorStore.getState().openFileInTab('/path/a.tex', 'original content')
       // Edit it
-      useAppStore.getState().setContent('edited content')
-      expect(useAppStore.getState().openFiles['/path/a.tex'].content).toBe('edited content')
+      useEditorStore.getState().setContent('edited content')
+      expect(useEditorStore.getState().openFiles['/path/a.tex'].content).toBe('edited content')
 
       // Reopen with fresh content from disk
-      useAppStore.getState().openFileInTab('/path/a.tex', 'fresh from disk')
-      const state = useAppStore.getState()
+      useEditorStore.getState().openFileInTab('/path/a.tex', 'fresh from disk')
+      const state = useEditorStore.getState()
       expect(state.content).toBe('fresh from disk')
       expect(state.openFiles['/path/a.tex'].content).toBe('fresh from disk')
       expect(state.isDirty).toBe(false)
     })
 
     it('preserves cursor position when reopening an already-open file', () => {
-      useAppStore.getState().openFileInTab('/path/a.tex', 'content')
-      useAppStore.getState().setCursorPosition(10, 5)
+      useEditorStore.getState().openFileInTab('/path/a.tex', 'content')
+      useEditorStore.getState().setCursorPosition(10, 5)
       // Simulate cursor being saved in openFiles via setActiveTab flow
-      useAppStore.setState({
+      useEditorStore.setState({
         openFiles: {
           '/path/a.tex': { content: 'content', isDirty: false, cursorLine: 10, cursorColumn: 5 }
         }
       })
 
-      useAppStore.getState().openFileInTab('/path/a.tex', 'refreshed')
-      const state = useAppStore.getState()
+      useEditorStore.getState().openFileInTab('/path/a.tex', 'refreshed')
+      const state = useEditorStore.getState()
       expect(state.content).toBe('refreshed')
       expect(state.cursorLine).toBe(10)
       expect(state.cursorColumn).toBe(5)
@@ -418,11 +447,11 @@ describe('useAppStore', () => {
 
     it('does not corrupt other open files when opening a new file', () => {
       // Open file A
-      useAppStore.getState().openFileInTab('/path/a.tex', 'content A')
+      useEditorStore.getState().openFileInTab('/path/a.tex', 'content A')
 
       // Open file B — this should NOT overwrite A's content
-      useAppStore.getState().openFileInTab('/path/b.tex', 'content B')
-      const state = useAppStore.getState()
+      useEditorStore.getState().openFileInTab('/path/b.tex', 'content B')
+      const state = useEditorStore.getState()
       expect(state.activeFilePath).toBe('/path/b.tex')
       expect(state.content).toBe('content B')
       expect(state.openFiles['/path/a.tex'].content).toBe('content A')
@@ -433,15 +462,15 @@ describe('useAppStore', () => {
   describe('setActiveTab', () => {
     it('persists current content when switching tabs', () => {
       // Open file A and edit it
-      useAppStore.getState().openFileInTab('/path/a.tex', 'original A')
-      useAppStore.getState().setContent('edited A')
+      useEditorStore.getState().openFileInTab('/path/a.tex', 'original A')
+      useEditorStore.getState().setContent('edited A')
 
       // Open file B
-      useAppStore.getState().openFileInTab('/path/b.tex', 'content B')
+      useEditorStore.getState().openFileInTab('/path/b.tex', 'content B')
 
       // Switch back to A — the edited content should be preserved
-      useAppStore.getState().setActiveTab('/path/a.tex')
-      const state = useAppStore.getState()
+      useEditorStore.getState().setActiveTab('/path/a.tex')
+      const state = useEditorStore.getState()
       expect(state.activeFilePath).toBe('/path/a.tex')
       expect(state.content).toBe('edited A')
       expect(state.openFiles['/path/a.tex'].content).toBe('edited A')
@@ -449,45 +478,45 @@ describe('useAppStore', () => {
 
     it('saves content of current tab before switching away', () => {
       // Open two files
-      useAppStore.getState().openFileInTab('/path/a.tex', 'content A')
-      useAppStore.getState().openFileInTab('/path/b.tex', 'content B')
+      useEditorStore.getState().openFileInTab('/path/a.tex', 'content A')
+      useEditorStore.getState().openFileInTab('/path/b.tex', 'content B')
 
       // Edit B
-      useAppStore.getState().setContent('edited B')
+      useEditorStore.getState().setContent('edited B')
 
       // Switch to A — B's edited content should be saved in openFiles
-      useAppStore.getState().setActiveTab('/path/a.tex')
-      expect(useAppStore.getState().openFiles['/path/b.tex'].content).toBe('edited B')
+      useEditorStore.getState().setActiveTab('/path/a.tex')
+      expect(useEditorStore.getState().openFiles['/path/b.tex'].content).toBe('edited B')
     })
 
     it('preserves cursor position across tab switches', () => {
-      useAppStore.getState().openFileInTab('/path/a.tex', 'content A')
-      useAppStore.getState().setCursorPosition(15, 8)
+      useEditorStore.getState().openFileInTab('/path/a.tex', 'content A')
+      useEditorStore.getState().setCursorPosition(15, 8)
 
-      useAppStore.getState().openFileInTab('/path/b.tex', 'content B')
-      useAppStore.getState().setCursorPosition(3, 12)
+      useEditorStore.getState().openFileInTab('/path/b.tex', 'content B')
+      useEditorStore.getState().setCursorPosition(3, 12)
 
       // Switch back to A
-      useAppStore.getState().setActiveTab('/path/a.tex')
-      expect(useAppStore.getState().cursorLine).toBe(15)
-      expect(useAppStore.getState().cursorColumn).toBe(8)
+      useEditorStore.getState().setActiveTab('/path/a.tex')
+      expect(useEditorStore.getState().cursorLine).toBe(15)
+      expect(useEditorStore.getState().cursorColumn).toBe(8)
 
       // Switch back to B
-      useAppStore.getState().setActiveTab('/path/b.tex')
-      expect(useAppStore.getState().cursorLine).toBe(3)
-      expect(useAppStore.getState().cursorColumn).toBe(12)
+      useEditorStore.getState().setActiveTab('/path/b.tex')
+      expect(useEditorStore.getState().cursorLine).toBe(3)
+      expect(useEditorStore.getState().cursorColumn).toBe(12)
     })
   })
 
   describe('setContent with multi-file', () => {
     it('updates only the active file in openFiles', () => {
-      useAppStore.getState().openFileInTab('/path/a.tex', 'content A')
-      useAppStore.getState().openFileInTab('/path/b.tex', 'content B')
+      useEditorStore.getState().openFileInTab('/path/a.tex', 'content A')
+      useEditorStore.getState().openFileInTab('/path/b.tex', 'content B')
 
       // Edit B (the active file)
-      useAppStore.getState().setContent('modified B')
+      useEditorStore.getState().setContent('modified B')
 
-      const state = useAppStore.getState()
+      const state = useEditorStore.getState()
       expect(state.openFiles['/path/b.tex'].content).toBe('modified B')
       expect(state.openFiles['/path/a.tex'].content).toBe('content A')
     })
@@ -495,19 +524,19 @@ describe('useAppStore', () => {
 
   describe('updateSetting', () => {
     it('updates user info settings', () => {
-      useAppStore.getState().updateSetting('name', 'John Doe')
-      useAppStore.getState().updateSetting('email', 'john@example.com')
-      useAppStore.getState().updateSetting('affiliation', 'OpenAI')
+      useSettingsStore.getState().updateSetting('name', 'John Doe')
+      useSettingsStore.getState().updateSetting('email', 'john@example.com')
+      useSettingsStore.getState().updateSetting('affiliation', 'OpenAI')
 
-      const settings = useAppStore.getState().settings
+      const settings = useSettingsStore.getState().settings
       expect(settings.name).toBe('John Doe')
       expect(settings.email).toBe('john@example.com')
       expect(settings.affiliation).toBe('OpenAI')
     })
 
     it('updates other settings', () => {
-      useAppStore.getState().updateSetting('fontSize', 20)
-      expect(useAppStore.getState().settings.fontSize).toBe(20)
+      useSettingsStore.getState().updateSetting('fontSize', 20)
+      expect(useSettingsStore.getState().settings.fontSize).toBe(20)
     })
   })
 })

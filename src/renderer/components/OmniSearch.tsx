@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo, useDeferredValue } from 'react'
-import { BookOpen, Library, FileSearch, Code, ChevronDown, ChevronUp, X, Search, FolderOpen, Terminal } from 'lucide-react'
+import { BookOpen, Library, FileSearch, Code, ChevronDown, X, Search, FolderOpen, Terminal } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useEditorStore } from '../store/useEditorStore'
 import { useProjectStore } from '../store/useProjectStore'
@@ -11,17 +11,10 @@ import { isFeatureEnabled } from '../utils/featureFlags'
 import { templates } from '../data/templates'
 import { openProject } from '../utils/openProject'
 import { logError } from '../utils/errorMessage'
+import { HomePanel, CitationSearchPanel, ZoteroSearchPanel, PdfSearchPanel, TexSearchPanel } from './omnisearch-panels'
+import type { SearchMode, ModeConfig, HomeSlashCommand, HomeResult, TexSearchResult } from './omnisearch-panels'
 import type { ZoteroSearchResult } from '../types/api'
 import type { BibEntry, RecentProject } from '../../shared/types'
-
-type SearchMode = 'cite' | 'zotero' | 'pdf' | 'tex'
-
-interface ModeConfig {
-  icon: typeof BookOpen
-  placeholder: string
-  label: string
-  shortcut: string
-}
 
 const MODE_CONFIGS: Record<SearchMode, ModeConfig> = {
   cite: { icon: BookOpen, placeholder: 'omniSearch.searchCitations', label: 'omniSearch.citations', shortcut: '/c' },
@@ -41,35 +34,12 @@ const SLASH_PREFIXES: Record<string, SearchMode> = {
   '/tex': 'tex'
 }
 
-interface TexSearchResult {
-  line: number
-  text: string
-}
-
-// ---- Home mode types ----
-interface HomeSlashCommand {
-  command: string
-  label: string
-  descriptionKey: string
-  icon: React.ReactNode
-}
-
 const HOME_SLASH_COMMANDS: HomeSlashCommand[] = [
   { command: '/draft', label: '/draft', descriptionKey: 'searchBar.draftDesc', icon: <Code size={16} /> },
   { command: '/template', label: '/template', descriptionKey: 'searchBar.templateDesc', icon: <BookOpen size={16} /> },
   { command: '/open', label: '/open', descriptionKey: 'searchBar.openDesc', icon: <FolderOpen size={16} /> },
   { command: '/help', label: '/help', descriptionKey: 'searchBar.helpDesc', icon: <Terminal size={16} /> }
 ]
-
-type HomeResultKind = 'project' | 'template' | 'command'
-
-interface HomeResult {
-  kind: HomeResultKind
-  label: string
-  detail: string
-  badgeKey: string
-  data: RecentProject | { name: string; description: string } | HomeSlashCommand
-}
 
 interface OmniSearchProps {
   onOpenFolder?: () => void
@@ -271,17 +241,6 @@ export function OmniSearch({ onOpenFolder, onNewFromTemplate, onAiDraft, onOpenS
     },
     [searchTerm, onOpenFolder, onNewFromTemplate, onAiDraft, onOpenSettings]
   )
-
-  const homeResultIcon = (result: HomeResult): React.ReactNode => {
-    switch (result.kind) {
-      case 'project':
-        return <FolderOpen size={16} />
-      case 'template':
-        return <BookOpen size={16} />
-      case 'command':
-        return <Terminal size={16} />
-    }
-  }
 
   // Slash prefix detection (editor mode only)
   const handleInputChange = useCallback(
@@ -604,150 +563,68 @@ export function OmniSearch({ onOpenFolder, onNewFromTemplate, onAiDraft, onOpenS
 
   // Determine what to render in dropdown
   const renderDropdown = () => {
-    // Home mode dropdown
     if (isHomeMode) {
-      return homeResults.map((result, i) => (
-        <div
-          key={`${result.kind}-${result.label}-${i}`}
-          className={`omni-search-result omni-search-home-result${i === homeHighlightedIndex ? ' highlighted' : ''}`}
-          onMouseEnter={() => setHomeHighlightedIndex(i)}
-          onClick={() => handleHomeSelect(result)}
-        >
-          <span className="omni-search-home-result-icon">{homeResultIcon(result)}</span>
-          <div className="omni-search-result-text">
-            <span className="omni-search-result-title">{result.label}</span>
-            <span className="omni-search-result-meta">{result.detail}</span>
-          </div>
-          <span className="omni-search-home-badge">{t(result.badgeKey)}</span>
-        </div>
-      ))
+      return (
+        <HomePanel
+          homeResults={homeResults}
+          homeHighlightedIndex={homeHighlightedIndex}
+          setHomeHighlightedIndex={setHomeHighlightedIndex}
+          handleHomeSelect={handleHomeSelect}
+        />
+      )
     }
 
     if (mode === 'cite') {
-      if (citeResults.length === 0 && searchTerm) {
-        return <div className="omni-search-message">{t('omniSearch.noResults')}</div>
-      }
       return (
-        <>
-          {citeResults.map((entry, i) => (
-            <div
-              key={entry.key}
-              className={`omni-search-result${i === highlightedIndex ? ' highlighted' : ''}${selectedKeys.has(entry.key) ? ' selected' : ''}`}
-              onClick={() => toggleSelection(entry.key)}
-              onMouseEnter={() => setHighlightedIndex(i)}
-            >
-              <input type="checkbox" checked={selectedKeys.has(entry.key)} readOnly />
-              <div className="omni-search-result-text">
-                <span className="omni-search-result-title">{entry.title || entry.key}</span>
-                <span className="omni-search-result-meta">
-                  {entry.author} · {entry.year} · @{entry.key}
-                </span>
-              </div>
-            </div>
-          ))}
-          <div className="omni-search-footer">
-            {selectedKeys.size === 0
-              ? t('omniSearch.enterToSelect')
-              : t('omniSearch.selectedInsert', { count: selectedKeys.size })}
-          </div>
-        </>
+        <CitationSearchPanel
+          citeResults={citeResults}
+          searchTerm={searchTerm}
+          highlightedIndex={highlightedIndex}
+          setHighlightedIndex={setHighlightedIndex}
+          selectedKeys={selectedKeys}
+          toggleSelection={toggleSelection}
+        />
       )
     }
 
     if (mode === 'zotero') {
-      if (!zoteroEnabled) {
-        return <div className="omni-search-message">{t('omniSearch.zoteroNotConnected')}</div>
-      }
-      if (loading) {
-        return <div className="omni-search-message">Searching...</div>
-      }
-      if (zoteroResults.length === 0 && searchTerm.length > 2) {
-        return <div className="omni-search-message">{t('omniSearch.noResults')}</div>
-      }
       return (
-        <>
-          {zoteroResults.map((item, i) => (
-            <div
-              key={item.citekey}
-              className={`omni-search-result${i === highlightedIndex ? ' highlighted' : ''}${selectedKeys.has(item.citekey) ? ' selected' : ''}`}
-              onClick={() => toggleSelection(item.citekey)}
-              onMouseEnter={() => setHighlightedIndex(i)}
-            >
-              <input type="checkbox" checked={selectedKeys.has(item.citekey)} readOnly />
-              <div className="omni-search-result-text">
-                <span className="omni-search-result-title">{item.title}</span>
-                <span className="omni-search-result-meta">
-                  {item.author} · {item.year} · @{item.citekey}
-                </span>
-              </div>
-            </div>
-          ))}
-          {zoteroResults.length > 0 && (
-            <div className="omni-search-footer">
-              {selectedKeys.size === 0
-                ? t('omniSearch.enterToSelect')
-                : t('omniSearch.selectedInsert', { count: selectedKeys.size })}
-            </div>
-          )}
-        </>
+        <ZoteroSearchPanel
+          zoteroEnabled={zoteroEnabled}
+          loading={loading}
+          zoteroResults={zoteroResults}
+          searchTerm={searchTerm}
+          highlightedIndex={highlightedIndex}
+          setHighlightedIndex={setHighlightedIndex}
+          selectedKeys={selectedKeys}
+          toggleSelection={toggleSelection}
+        />
       )
     }
 
     if (mode === 'pdf') {
       return (
-        <div className="omni-search-pdf-controls">
-          <span className="omni-search-pdf-count">
-            {pdfMatchCount > 0
-              ? t('omniSearch.matches', { current: pdfCurrentMatch + 1, total: pdfMatchCount })
-              : searchTerm ? t('omniSearch.noMatches') : ''}
-          </span>
-          <button onClick={handlePdfPrev} disabled={pdfMatchCount === 0} title={t('omniSearch.prevMatch')}>
-            &#x25B2;
-          </button>
-          <button onClick={handlePdfNext} disabled={pdfMatchCount === 0} title={t('omniSearch.nextMatch')}>
-            &#x25BC;
-          </button>
-        </div>
+        <PdfSearchPanel
+          pdfMatchCount={pdfMatchCount}
+          pdfCurrentMatch={pdfCurrentMatch}
+          searchTerm={searchTerm}
+          handlePdfPrev={handlePdfPrev}
+          handlePdfNext={handlePdfNext}
+        />
       )
     }
 
     if (mode === 'tex') {
-      if (texResults.length === 0 && searchTerm) {
-        return <div className="omni-search-message">{t('omniSearch.noResults')}</div>
-      }
       return (
-        <>
-          <div className="omni-search-tex-nav">
-            <span className="omni-search-tex-count">
-              {texResults.length > 0
-                ? t('omniSearch.matches', { current: highlightedIndex + 1, total: texResults.length })
-                : ''}
-            </span>
-            <button onClick={handleTexPrev} disabled={texResults.length === 0} title={t('omniSearch.prevMatch')}>
-              <ChevronUp size={14} />
-            </button>
-            <button onClick={handleTexNext} disabled={texResults.length === 0} title={t('omniSearch.nextMatch')}>
-              <ChevronDown size={14} />
-            </button>
-          </div>
-          {texResults.map((result, i) => (
-            <div
-              key={`${result.line}-${i}`}
-              className={`omni-search-result omni-search-tex-result${i === highlightedIndex ? ' highlighted' : ''}`}
-              onClick={() => {
-                setHighlightedIndex(i)
-                jumpToLine(result.line)
-              }}
-              onMouseEnter={() => setHighlightedIndex(i)}
-            >
-              <span className="omni-search-line-number">{result.line}</span>
-              <span className="omni-search-line-text">{result.text.trim()}</span>
-            </div>
-          ))}
-          <div className="omni-search-footer">
-            Enter {t('omniSearch.nextMatch')} · Shift+Enter {t('omniSearch.prevMatch')}
-          </div>
-        </>
+        <TexSearchPanel
+          texResults={texResults}
+          searchTerm={searchTerm}
+          highlightedIndex={highlightedIndex}
+          setHighlightedIndex={setHighlightedIndex}
+          jumpToLine={jumpToLine}
+          handleTexPrev={handleTexPrev}
+          handleTexNext={handleTexNext}
+        />
       )
     }
 

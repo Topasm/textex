@@ -1,27 +1,24 @@
 import * as path from 'path'
-import type { Diagnostic, DiagnosticSeverity } from '../shared/types'
-
-// --- Regex patterns (from LaTeX-Workshop latexlog.ts) ---
-
-const latexError = /^(?:(.*):(\d+):|!)(?:\s?(.+) [Ee]rror:)? (.+?)$/
-const latexOverfullBox = /^(Overfull \\[vh]box \([^)]*\)) in paragraph at lines (\d+)--(\d+)$/
-const latexOverfullBoxAlt = /^(Overfull \\[vh]box \([^)]*\)) detected at line (\d+)$/
-const latexOverfullBoxOutput =
-  /^(Overfull \\[vh]box \([^)]*\)) has occurred while \\output is active(?: \[(\d+)\])?/
-const latexUnderfullBox = /^(Underfull \\[vh]box \([^)]*\)) in paragraph at lines (\d+)--(\d+)$/
-const latexUnderfullBoxAlt = /^(Underfull \\[vh]box \([^)]*\)) detected at line (\d+)$/
-const latexUnderfullBoxOutput =
-  /^(Underfull \\[vh]box \([^)]*\)) has occurred while \\output is active(?: \[(\d+)\])?/
-const latexWarn =
-  /^((?:(?:Class|Package|Module) \S*)|LaTeX(?: \S*)?|LaTeX3) (Warning|Info):\s+(.*?)(?: on(?: input)? line (\d+))?(\.|\?|)$/
-const latexPackageWarningExtraLines = /^\((.*)\)\s+(.*?)(?: +on input line (\d+))?(\.)?$/
-const latexMissChar = /^\s*(Missing character:.*?!)/
-const latexNoPageOutput = /^No pages of output\.$/
-const bibEmpty = /^Empty `thebibliography' environment/
-const biberWarn = /^Biber warning:.*WARN - I didn't find a database entry for '([^']+)'/
-const UNDEFINED_REFERENCE =
-  /^LaTeX Warning: (Reference|Citation) `(.*?)' on page (?:\d+) undefined on input line (\d+).$/
-const messageLine = /^l\.\d+\s(\.\.\.)?(.*)$/
+import type { Diagnostic } from '../shared/types'
+import {
+  latexError,
+  latexOverfullBox,
+  latexOverfullBoxAlt,
+  latexOverfullBoxOutput,
+  latexUnderfullBox,
+  latexUnderfullBoxAlt,
+  latexUnderfullBoxOutput,
+  latexWarn,
+  latexPackageWarningExtraLines,
+  latexMissChar,
+  latexNoPageOutput,
+  bibEmpty,
+  biberWarn,
+  UNDEFINED_REFERENCE,
+  messageLine,
+  mapSeverity,
+  parseLaTeXFileStack
+} from './utils/logParseUtils'
 
 // --- Types ---
 
@@ -81,17 +78,6 @@ export function parseLatexLog(log: string, rootFile: string): Diagnostic[] {
     severity: mapSeverity(entry.type),
     message: entry.text.trim()
   }))
-}
-
-function mapSeverity(type: string): DiagnosticSeverity {
-  switch (type) {
-    case 'error':
-      return 'error'
-    case 'warning':
-      return 'warning'
-    default:
-      return 'info'
-  }
 }
 
 function parseLine(line: string, state: ParserState, buildLog: LogEntry[]): string | undefined {
@@ -309,30 +295,3 @@ function parseBadBox(
   return false
 }
 
-function parseLaTeXFileStack(line: string, fileStack: string[], nested: number): number {
-  let remaining = line
-  while (true) {
-    const result = remaining.match(/(\(|\))/)
-    if (!result || result.index === undefined || result.index <= -1) break
-
-    remaining = remaining.substring(result.index + 1)
-    if (result[1] === '(') {
-      const pathResult = remaining.match(/^"?((?:(?:[a-zA-Z]:|\.|\/)?(?:\/|\\\\?))[^"()[\]]*)/)
-      const mikTeXPathResult = remaining.match(/^"?([^"()[\]]*\.[a-z]{3,})/)
-      if (pathResult) {
-        fileStack.push(pathResult[1].trim())
-      } else if (mikTeXPathResult) {
-        fileStack.push(`./${mikTeXPathResult[1].trim()}`)
-      } else {
-        nested += 1
-      }
-    } else {
-      if (nested > 0) {
-        nested -= 1
-      } else {
-        fileStack.pop()
-      }
-    }
-  }
-  return nested
-}

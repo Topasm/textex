@@ -1,7 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import Toolbar from '../../renderer/components/Toolbar'
-import { useAppStore } from '../../renderer/store/useAppStore'
+import { useEditorStore } from '../../renderer/store/useEditorStore'
+import { useCompileStore } from '../../renderer/store/useCompileStore'
+import { useProjectStore } from '../../renderer/store/useProjectStore'
+import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 
 const defaultProps = {
   onOpen: vi.fn(),
@@ -18,9 +21,11 @@ const defaultProps = {
 }
 
 beforeEach(() => {
-  useAppStore.setState({
+  useEditorStore.setState({
     filePath: null,
-    isDirty: false,
+    isDirty: false
+  })
+  useCompileStore.setState({
     compileStatus: 'idle'
   })
   vi.clearAllMocks()
@@ -89,23 +94,23 @@ describe('Toolbar', () => {
   })
 
   it('shows OmniSearch with default citations mode', () => {
-    useAppStore.setState({ projectRoot: '/test' })
+    useProjectStore.setState({ projectRoot: '/test' })
     render(<Toolbar {...defaultProps} />)
     expect(screen.getByPlaceholderText('Search citations...')).toBeInTheDocument()
   })
 
   it('OmniSearch is always visible regardless of zoteroEnabled setting', () => {
-    useAppStore.setState({
-      projectRoot: '/test',
-      settings: { ...useAppStore.getState().settings, zoteroEnabled: false }
+    useProjectStore.setState({ projectRoot: '/test' })
+    useSettingsStore.setState({
+      settings: { ...useSettingsStore.getState().settings, zoteroEnabled: false }
     })
     render(<Toolbar {...defaultProps} />)
     expect(screen.getByPlaceholderText('Search citations...')).toBeInTheDocument()
   })
 
   it('hides PDF toolbar controls when showPdfToolbarControls is false', () => {
-    useAppStore.setState({
-      settings: { ...useAppStore.getState().settings, showPdfToolbarControls: false }
+    useSettingsStore.setState({
+      settings: { ...useSettingsStore.getState().settings, showPdfToolbarControls: false }
     })
     render(<Toolbar {...defaultProps} />)
     expect(screen.queryByTitle(/Sync PDF to Code/)).not.toBeInTheDocument()
