@@ -1,5 +1,5 @@
 import Editor, { BeforeMount, OnMount } from '@monaco-editor/react'
-import { useEffect, useRef, useState, useCallback, lazy, Suspense } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo, lazy, Suspense } from 'react'
 import { useEditorStore } from '../store/useEditorStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { useSettingsStore, resolveTheme } from '../store/useSettingsStore'
@@ -9,8 +9,8 @@ import { useSpelling } from '../hooks/editor/useSpelling'
 import { useDocumentSymbols } from '../hooks/editor/useDocumentSymbols'
 import { useCompletion } from '../hooks/editor/useCompletion'
 import { useEditorDiagnostics } from '../hooks/editor/useEditorDiagnostics'
-import { usePendingJump } from '../hooks/editor/usePendingJump'
-import { usePendingInsert } from '../hooks/editor/usePendingInsert'
+import { usePendingActions } from '../hooks/editor/usePendingActions'
+import { useContentChangeCoordinator } from '../hooks/editor/useContentChangeCoordinator'
 import { usePackageDetection } from '../hooks/editor/usePackageDetection'
 import { useMathPreview } from '../hooks/editor/useMathPreview'
 import { useSmartImageDrop } from '../hooks/editor/useSmartImageDrop'
@@ -55,17 +55,25 @@ function EditorPane() {
   const aiEnabledKeyRef = useRef<{ set(value: boolean): void } | null>(null)
   const registerClickNavigation = useClickNavigation()
   const { runSpellCheck } = useSpelling({
-    content,
     enabled: spellCheckEnabled,
     editorRef,
     monacoRef
   })
   const registerCompletionProviders = useCompletion(runSpellCheck)
-  useDocumentSymbols(content)
+  const { refreshOutline } = useDocumentSymbols(content)
   useEditorDiagnostics({ editorRef, monacoRef })
-  usePendingJump({ editorRef, monacoRef })
-  usePendingInsert({ editorRef, monacoRef })
-  usePackageDetection(content)
+  usePendingActions({ editorRef, monacoRef })
+  const { detectPackages } = usePackageDetection()
+  // Coordinated content-change analysis pipeline:
+  // Replaces 3 independent debounce timers with a single scheduler
+  useContentChangeCoordinator(
+    content,
+    useMemo(() => [
+      { key: 'spellcheck', fn: runSpellCheck, delayMs: 500 },
+      { key: 'packages', fn: detectPackages, delayMs: 1500, idle: true },
+      { key: 'symbols', fn: refreshOutline, delayMs: 2000, idle: true }
+    ], [runSpellCheck, detectPackages, refreshOutline])
+  )
   const mathData = useMathPreview({ editorRef, enabled: mathPreviewEnabled })
   useSectionHighlight({ editorRef, monacoRef })
   const { handleDrop: handleSmartImageDrop } = useSmartImageDrop()

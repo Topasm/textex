@@ -6,7 +6,6 @@ import { useSettingsStore } from '../../store/useSettingsStore'
 type MonacoInstance = typeof import('monaco-editor')
 
 interface UseSpellingParams {
-  content: string
   enabled: boolean
   editorRef: MutableRefObject<monacoEditor.IStandaloneCodeEditor | null>
   monacoRef: MutableRefObject<MonacoInstance | null>
@@ -41,13 +40,10 @@ function extractWordsFromLine(line: string, lineNumber: number): WordInfo[] {
   return words
 }
 
-/** Debounce interval for spell checking after content changes. */
-const SPELL_DEBOUNCE_MS = 500
-
 /** Lazy initialization: skip spell check until first content edit after mount. */
 let spellCheckInitialized = false
 
-export function useSpelling({ content, enabled, editorRef, monacoRef }: UseSpellingParams): {
+export function useSpelling({ enabled, editorRef, monacoRef }: UseSpellingParams): {
   runSpellCheck: () => Promise<void>
 } {
   const spellTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -154,6 +150,8 @@ export function useSpelling({ content, enabled, editorRef, monacoRef }: UseSpell
     }
   }, [editorRef, monacoRef])
 
+  // Handle enabled toggle and initial mount only.
+  // Content-change scheduling is handled by useContentChangeCoordinator in EditorPane.
   useEffect(() => {
     if (!enabled) {
       void runSpellCheck()
@@ -182,14 +180,7 @@ export function useSpelling({ content, enabled, editorRef, monacoRef }: UseSpell
         }
       }
     }
-
-    clearTimeout(spellTimerRef.current)
-    spellTimerRef.current = setTimeout(() => {
-      void runSpellCheck()
-    }, SPELL_DEBOUNCE_MS)
-
-    return () => clearTimeout(spellTimerRef.current)
-  }, [content, enabled, runSpellCheck])
+  }, [enabled, runSpellCheck])
 
   // Cleanup markers on unmount
   useEffect(() => {

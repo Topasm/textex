@@ -30,6 +30,10 @@ A self-contained desktop LaTeX editor built on Electron. TextEx provides a split
 
 ## Getting Started
 
+<p align="center">
+  <img src="docs/images/home-screen.png" alt="TextEx home screen with search bar, Open Folder, and New from Template" width="900" />
+</p>
+
 ### 1. Download & Install
 
 Grab the latest release from the [Releases page](https://github.com/Topasm/textex/releases/latest) or from [GitHub Actions](../../actions/workflows/build.yml) for development builds.
@@ -65,6 +69,18 @@ chmod +x TextEx-1.0.0.AppImage
 - **Open Folder**: Click the file menu > **Open Folder** to select a directory for your project.
 - **Use Templates**: Use **New from Template** to start quickly with a pre-configured LaTeX template (article, beamer, thesis, letter, and more).
 
+<p align="center">
+  <img src="docs/images/template-gallery.png" alt="Template gallery with built-in LaTeX templates" width="900" />
+</p>
+
+### Multi-File Projects
+
+Open any folder to get a full project view with sidebar file tree, tabs, and `\input`/`\include` navigation.
+
+<p align="center">
+  <img src="docs/images/sidebar-files.png" alt="Sidebar file tree with a multi-file LaTeX project" width="900" />
+</p>
+
 ### Writing Your Document
 TextEx features a modern Monaco-based editor with:
 - **Syntax Highlighting**: Full LaTeX syntax support with semantic coloring.
@@ -81,6 +97,10 @@ TextEx features a modern Monaco-based editor with:
 
 ### Scroll Sync
 
+<p align="center">
+  <img src="docs/images/settings-appearance.png" alt="Settings — Appearance tab with Scroll Sync, PDF view mode, and theme options" width="900" />
+</p>
+
 Enable **Scroll Sync** in Settings > Appearance to keep the editor and PDF aligned:
 - Scrolling in the **editor** automatically scrolls the PDF to the matching content.
 - Scrolling in the **PDF** automatically scrolls the editor to the corresponding source line.
@@ -90,6 +110,10 @@ Enable **Scroll Sync** in Settings > Appearance to keep the editor and PDF align
 ### SyncTeX (Click-to-Jump)
 - **Code to PDF**: Click the "Sync Code to PDF" toolbar button to highlight the current line in the PDF.
 - **PDF to Code**: `Ctrl+Click` anywhere on the PDF to jump to the corresponding source line.
+
+<p align="center">
+  <img src="docs/images/synctex-highlight.png" alt="SyncTeX highlight showing source-to-PDF jump" width="900" />
+</p>
 
 ### Inserting Images (Smart Drop)
 - Simply **drag and drop** an image file from your computer directly into the editor.
@@ -112,6 +136,11 @@ Enable **Scroll Sync** in Settings > Appearance to keep the editor and PDF align
 - Supports OpenAI, Anthropic, and Gemini. Configure in Settings > AI.
 
 ### Productivity Tools
+
+<p align="center">
+  <img src="docs/images/omnisearch.png" alt="OmniSearch dialog with search results" width="900" />
+</p>
+
 - **OmniSearch**: Press `Ctrl+P` to search across files, citations, PDF text, and commands.
 - **Todo Panel**: Track writing tasks in the sidebar.
 - **Notes Panel**: Quick scratchpad for ideas.

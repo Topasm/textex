@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { lspRequestDocumentSymbols } from '../../lsp/lspClient'
 import { useEditorStore } from '../../store/useEditorStore'
 import { useSettingsStore } from '../../store/useSettingsStore'
@@ -28,9 +28,6 @@ function sectionNodesToSymbols(nodes: SectionNode[]): DocumentSymbolNode[] {
     children: sectionNodesToSymbols(node.children)
   }))
 }
-
-/** Debounce interval for outline refresh on content edits. */
-const OUTLINE_DEBOUNCE_MS = 2000
 
 // Generation counter to prevent stale LSP responses from overwriting newer data
 let outlineGeneration = 0
@@ -71,10 +68,17 @@ function fetchOutline(currentFile: string, content: string): void {
   }
 }
 
-export function useDocumentSymbols(content: string): void {
+export function useDocumentSymbols(content: string): { refreshOutline: () => void } {
   const filePath = useEditorStore((s) => s.filePath)
   const lspStatus = useUiStore((s) => s.lspStatus)
   const prevFilePathRef = useRef<string | null>(null)
+
+  /** Refresh the document outline using the latest editor content from the store. */
+  const refreshOutline = useCallback(() => {
+    const editorState = useEditorStore.getState()
+    if (!editorState.filePath) return
+    fetchOutline(editorState.filePath, editorState.content)
+  }, [])
 
   // Immediate outline fetch when file changes (open / tab switch / startup)
   useEffect(() => {
@@ -86,16 +90,10 @@ export function useDocumentSymbols(content: string): void {
     fetchOutline(filePath, content)
   }, [filePath, content])
 
-  // Debounced outline refresh on content edits (typing) and LSP status changes
+  // Refresh outline when LSP status changes
   useEffect(() => {
-    const timer = setTimeout(() => {
-      const editorState = useEditorStore.getState()
-      if (!editorState.filePath) return
-      fetchOutline(editorState.filePath, content)
-    }, OUTLINE_DEBOUNCE_MS)
-
-    return () => clearTimeout(timer)
-  }, [content, lspStatus])
+    refreshOutline()
+  }, [lspStatus, refreshOutline])
 
   // Cancel pending generation on unmount to prevent stale updates
   useEffect(() => {
@@ -104,6 +102,8 @@ export function useDocumentSymbols(content: string): void {
       pendingFetchFile = null
     }
   }, [])
+
+  return { refreshOutline }
 }
 
 function fetchFallbackOutline(

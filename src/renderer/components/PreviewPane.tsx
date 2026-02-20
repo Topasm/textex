@@ -41,6 +41,25 @@ const SWIPE_THRESHOLD_HORIZONTAL = 30
 /** Cooldown between swipe-triggered page navigations. */
 const SWIPE_COOLDOWN_MS = 400
 
+/**
+ * Binary search on sorted cumulative-heights array.
+ * Returns the 1-indexed page number whose top offset is the last one <= scrollY.
+ */
+function binarySearchPage(cumHeights: number[], scrollY: number): number {
+  if (cumHeights.length === 0) return 1
+  let lo = 0
+  let hi = cumHeights.length - 1
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >>> 1
+    if (cumHeights[mid] <= scrollY) {
+      lo = mid
+    } else {
+      hi = mid - 1
+    }
+  }
+  return lo + 1
+}
+
 function PreviewPane() {
   const pdfPath = useCompileStore((s) => s.pdfPath)
   const pdfRevision = useCompileStore((s) => s.pdfRevision)
@@ -89,37 +108,32 @@ function PreviewPane() {
     [containerWidth, zoomLevel]
   )
 
-  /** Compute which pages are currently in the viewport. */
+  const pageWidth = containerWidth ? (containerWidth - 32) * (zoomLevel / 100) : undefined
+
+  // Pre-compute cumulative page heights and offsets for O(log N) binary search
+  const { totalHeight, pageOffsets, cumulativeHeights } = useMemo(() => {
+    const offsets = new Map<number, number>()
+    const cumHeights: number[] = []
+    let total = 0
+    for (let i = 1; i <= numPages; i++) {
+      offsets.set(i, total)
+      cumHeights.push(total)
+      total += getPageHeight(i) + 16 // 16px gap between pages
+    }
+    return { totalHeight: total, pageOffsets: offsets, cumulativeHeights: cumHeights }
+  }, [numPages, getPageHeight])
+
+  /** Compute which pages are currently in the viewport using O(log N) binary search. */
   const computeVisiblePages = useCallback(() => {
     const container = containerRef.current
-    if (!container || numPages === 0) return
+    if (!container || numPages === 0 || cumulativeHeights.length === 0) return
 
     const scrollTop = container.scrollTop
     const viewportHeight = container.clientHeight
 
-    let cumHeight = 0
-    let startPage = 1
-    let endPage = numPages
-
-    // Find first visible page
-    for (let i = 1; i <= numPages; i++) {
-      const ph = getPageHeight(i) + 16 // 16px gap between pages
-      if (cumHeight + ph > scrollTop) {
-        startPage = i
-        break
-      }
-      cumHeight += ph
-    }
-
-    // Find last visible page
-    cumHeight = 0
-    for (let i = 1; i <= numPages; i++) {
-      cumHeight += getPageHeight(i) + 16
-      if (cumHeight >= scrollTop + viewportHeight) {
-        endPage = i
-        break
-      }
-    }
+    // Binary search for first and last visible pages
+    const startPage = binarySearchPage(cumulativeHeights, scrollTop)
+    const endPage = binarySearchPage(cumulativeHeights, scrollTop + viewportHeight)
 
     // Update current page in store
     usePdfStore.getState().setCurrentPage(startPage)
@@ -132,7 +146,7 @@ function PreviewPane() {
       if (prev.start === start && prev.end === end) return prev
       return { start, end }
     })
-  }, [numPages, getPageHeight])
+  }, [numPages, cumulativeHeights])
 
   // scrollToPage: scroll the container so the given page is at the top
   const scrollToPage = useCallback(
@@ -146,13 +160,10 @@ function PreviewPane() {
         return
       }
 
-      let offset = 0
-      for (let i = 1; i < clamped; i++) {
-        offset += getPageHeight(i) + 16
-      }
-      container.scrollTop = offset
+      // Direct O(1) lookup from pre-computed offsets
+      container.scrollTop = pageOffsets.get(clamped) ?? 0
     },
-    [numPages, getPageHeight, pdfViewMode]
+    [numPages, pdfViewMode, pageOffsets]
   )
 
   // Expose scrollToPage to the store so Toolbar can call it
@@ -335,14 +346,10 @@ function PreviewPane() {
       const cp = usePdfStore.getState().currentPage
       const container = containerRef.current
       if (container && cp > 1) {
-        let offset = 0
-        for (let i = 1; i < cp; i++) {
-          offset += getPageHeight(i) + 16
-        }
-        container.scrollTop = offset
+        container.scrollTop = pageOffsets.get(cp) ?? 0
       }
     }
-  }, [pdfViewMode, numPages, getPageHeight])
+  }, [pdfViewMode, numPages, pageOffsets])
 
   // Recalculate visible pages when zoom or page count changes
   useEffect(() => {
@@ -441,20 +448,6 @@ function PreviewPane() {
     },
     [containerWidth, zoomLevel]
   )
-
-  const pageWidth = containerWidth ? (containerWidth - 32) * (zoomLevel / 100) : undefined
-
-  // Calculate total content height and page offsets for virtual scrolling placeholder
-  const { totalHeight, pageOffsets } = useMemo(() => {
-    const offsets = new Map<number, number>()
-    let total = 0
-    for (let i = 1; i <= numPages; i++) {
-      offsets.set(i, total)
-      const ph = pageHeightsRef.current.get(i) ?? (pageWidth ? pageWidth * (842 / 595) : ESTIMATED_PAGE_HEIGHT)
-      total += ph + 16 // 16px gap between pages
-    }
-    return { totalHeight: total, pageOffsets: offsets }
-  }, [numPages, pageWidth])
 
   // Always render the container so the ResizeObserver can attach and measure width.
   // Conditional content is rendered inside it.
