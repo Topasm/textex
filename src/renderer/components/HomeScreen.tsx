@@ -10,10 +10,7 @@ interface HomeScreenProps {
   onNewFromTemplate: () => void
 }
 
-function HomeScreen({
-  onOpenFolder,
-  onNewFromTemplate
-}: HomeScreenProps) {
+function HomeScreen({ onOpenFolder, onNewFromTemplate }: HomeScreenProps) {
   const { t } = useTranslation()
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([])
 

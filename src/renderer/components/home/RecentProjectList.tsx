@@ -17,11 +17,15 @@ function formatRelativeDate(iso: string, t: TFunction): string {
   if (diffDays < 7) return t('recentProjects.daysAgo', { count: diffDays })
   if (diffDays < 30) {
     const weeks = Math.floor(diffDays / 7)
-    return weeks === 1 ? t('recentProjects.weekAgo') : t('recentProjects.weeksAgo', { count: weeks })
+    return weeks === 1
+      ? t('recentProjects.weekAgo')
+      : t('recentProjects.weeksAgo', { count: weeks })
   }
   if (diffDays < 365) {
     const months = Math.floor(diffDays / 30)
-    return months === 1 ? t('recentProjects.monthAgo') : t('recentProjects.monthsAgo', { count: months })
+    return months === 1
+      ? t('recentProjects.monthAgo')
+      : t('recentProjects.monthsAgo', { count: months })
   }
   return date.toLocaleDateString()
 }

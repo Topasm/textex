@@ -117,7 +117,9 @@ export const EditorTab = () => {
         <div className="settings-field-mt">
           <div className="settings-flex-row-between">
             <label className="settings-label settings-no-mb">{t('settings.editor.tabSize')}</label>
-            <span className="settings-badge">{settings.tabSize ?? 4} {t('settings.editor.spaces')}</span>
+            <span className="settings-badge">
+              {settings.tabSize ?? 4} {t('settings.editor.spaces')}
+            </span>
           </div>
           <select
             value={settings.tabSize ?? 4}
@@ -139,9 +141,7 @@ export const EditorTab = () => {
           <div className="settings-row">
             <div>
               <div className="settings-row-label">{t('settings.editor.wordWrap')}</div>
-              <div className="settings-row-description">
-                {t('settings.editor.wordWrapDesc')}
-              </div>
+              <div className="settings-row-description">{t('settings.editor.wordWrapDesc')}</div>
             </div>
             <Toggle
               checked={!!settings.wordWrap}
@@ -205,9 +205,7 @@ export const EditorTab = () => {
           <div className="settings-row">
             <div>
               <div className="settings-row-label">{t('settings.editor.mathPreview')}</div>
-              <div className="settings-row-description">
-                {t('settings.editor.mathPreviewDesc')}
-              </div>
+              <div className="settings-row-description">{t('settings.editor.mathPreviewDesc')}</div>
             </div>
             <Toggle
               checked={settings.mathPreviewEnabled !== false}
@@ -233,12 +231,16 @@ export const EditorTab = () => {
       <hr className="settings-divider" />
 
       <div>
-        <h3 className="settings-heading settings-heading-mb">{t('settings.editor.statusBarSection')}</h3>
+        <h3 className="settings-heading settings-heading-mb">
+          {t('settings.editor.statusBarSection')}
+        </h3>
         <div className="settings-column-group">
           <div className="settings-row">
             <div>
               <div className="settings-row-label">{t('settings.editor.showStatusBar')}</div>
-              <div className="settings-row-description">{t('settings.editor.showStatusBarDesc')}</div>
+              <div className="settings-row-description">
+                {t('settings.editor.showStatusBarDesc')}
+              </div>
             </div>
             <Toggle
               checked={!!settings.showStatusBar}

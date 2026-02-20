@@ -76,7 +76,6 @@ export const useUiStore = create<UiState>()(
     setDocumentSymbols: (documentSymbols) => set({ documentSymbols }),
     requestOmniSearchFocus: (mode) =>
       set({ omniSearchFocusRequested: true, omniSearchFocusMode: mode ?? 'cite' }),
-    clearOmniSearchFocus: () =>
-      set({ omniSearchFocusRequested: false, omniSearchFocusMode: null })
+    clearOmniSearchFocus: () => set({ omniSearchFocusRequested: false, omniSearchFocusMode: null })
   }))
 )

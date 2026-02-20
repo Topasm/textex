@@ -191,10 +191,7 @@ export interface ElectronAPI {
   projectInit(projectRoot: string): Promise<ProjectDatabase>
   projectExists(projectRoot: string): Promise<boolean>
   projectLoad(projectRoot: string): Promise<ProjectDatabase>
-  projectSave(
-    projectRoot: string,
-    partial: Partial<ProjectDatabase>
-  ): Promise<ProjectDatabase>
+  projectSave(projectRoot: string, partial: Partial<ProjectDatabase>): Promise<ProjectDatabase>
   projectTouch(projectRoot: string): Promise<{ success: boolean }>
   projectCompileLoad(projectRoot: string): Promise<CompileDatabase>
   projectCompileSave(projectRoot: string, record: CompileRecord): Promise<CompileDatabase>

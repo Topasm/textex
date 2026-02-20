@@ -153,7 +153,9 @@ function GitPanel() {
         </div>
       )}
 
-      {staged.length === 0 && unstaged.length === 0 && <div className="git-empty">{t('gitPanel.noChanges')}</div>}
+      {staged.length === 0 && unstaged.length === 0 && (
+        <div className="git-empty">{t('gitPanel.noChanges')}</div>
+      )}
 
       <div className="git-commit-section">
         <textarea

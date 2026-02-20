@@ -58,7 +58,10 @@ function PreviewPane() {
   const pageViewportsRef = useRef<Map<number, PageViewportInfo>>(new Map())
 
   // Virtual scrolling: track which pages are visible
-  const [visibleRange, setVisibleRange] = useState<{ start: number; end: number }>({ start: 1, end: 5 })
+  const [visibleRange, setVisibleRange] = useState<{ start: number; end: number }>({
+    start: 1,
+    end: 5
+  })
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const scrollPersistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Cache of rendered page heights for accurate positioning
@@ -220,7 +223,8 @@ function PreviewPane() {
         if (swipeCooldownRef.current) return
 
         // Use lower threshold for pure horizontal scroll (MX Master thumb wheel)
-        const threshold = (isHorizontal && e.deltaY === 0) ? SWIPE_THRESHOLD_HORIZONTAL : SWIPE_THRESHOLD
+        const threshold =
+          isHorizontal && e.deltaY === 0 ? SWIPE_THRESHOLD_HORIZONTAL : SWIPE_THRESHOLD
 
         swipeAccumRef.current += delta
         if (Math.abs(swipeAccumRef.current) >= threshold) {
@@ -235,7 +239,9 @@ function PreviewPane() {
           }
           swipeAccumRef.current = 0
           swipeCooldownRef.current = true
-          setTimeout(() => { swipeCooldownRef.current = false }, SWIPE_COOLDOWN_MS)
+          setTimeout(() => {
+            swipeCooldownRef.current = false
+          }, SWIPE_COOLDOWN_MS)
         }
         return
       }
@@ -338,42 +344,50 @@ function PreviewPane() {
       return
     }
     let cancelled = false
-    window.api.readFileBase64(pdfPath).then((result: { data: string }) => {
-      if (cancelled) return
-      // result.data is a data URL: "data:<mime>;base64,<payload>"
-      const base64 = result.data.split(',')[1]
-      const raw = atob(base64)
-      const bytes = new Uint8Array(raw.length)
-      for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i)
-      setPdfData({ data: bytes })
-    }).catch(() => {
-      if (!cancelled) setPdfData(null)
-    })
-    return () => { cancelled = true }
+    window.api
+      .readFileBase64(pdfPath)
+      .then((result: { data: string }) => {
+        if (cancelled) return
+        // result.data is a data URL: "data:<mime>;base64,<payload>"
+        const base64 = result.data.split(',')[1]
+        const raw = atob(base64)
+        const bytes = new Uint8Array(raw.length)
+        for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i)
+        setPdfData({ data: bytes })
+      })
+      .catch(() => {
+        if (!cancelled) setPdfData(null)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [pdfPath, pdfRevision])
 
-  const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
-    setNumPages(numPages)
-    setPdfError(null)
-    pageViewportsRef.current.clear()
-    pageHeightsRef.current.clear()
-    setVisibleRange({ start: 1, end: Math.min(numPages, 5) })
-    // Restore scroll position after new PDF renders
-    requestAnimationFrame(() => {
-      if (containerRef.current) {
-        // Prefer within-session ref for recompile position, then per-project persisted
-        const sessionScroll = scrollPositionRef.current
-        if (sessionScroll > 0) {
-          containerRef.current.scrollTop = sessionScroll
-        } else if (projectRoot) {
-          const saved = usePdfStore.getState().getScrollPosition(projectRoot)
-          if (saved > 0) {
-            containerRef.current.scrollTop = saved
+  const onDocumentLoadSuccess = useCallback(
+    ({ numPages }: { numPages: number }) => {
+      setNumPages(numPages)
+      setPdfError(null)
+      pageViewportsRef.current.clear()
+      pageHeightsRef.current.clear()
+      setVisibleRange({ start: 1, end: Math.min(numPages, 5) })
+      // Restore scroll position after new PDF renders
+      requestAnimationFrame(() => {
+        if (containerRef.current) {
+          // Prefer within-session ref for recompile position, then per-project persisted
+          const sessionScroll = scrollPositionRef.current
+          if (sessionScroll > 0) {
+            containerRef.current.scrollTop = sessionScroll
+          } else if (projectRoot) {
+            const saved = usePdfStore.getState().getScrollPosition(projectRoot)
+            if (saved > 0) {
+              containerRef.current.scrollTop = saved
+            }
           }
         }
-      }
-    })
-  }, [projectRoot])
+      })
+    },
+    [projectRoot]
+  )
 
   const onDocumentLoadError = useCallback((error: Error) => {
     const msg = error.message || 'Unknown PDF loading error'
@@ -547,7 +561,9 @@ function PreviewPane() {
               <p>Check the log panel for details.</p>
             </div>
           )}
-          {highlights.lineStyle && <div className="synctex-line-highlight" style={highlights.lineStyle} />}
+          {highlights.lineStyle && (
+            <div className="synctex-line-highlight" style={highlights.lineStyle} />
+          )}
           {highlights.dotStyle && <div className="synctex-indicator" style={highlights.dotStyle} />}
           {tooltipData && (
             <CitationTooltip

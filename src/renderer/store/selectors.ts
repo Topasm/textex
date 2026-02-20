@@ -27,12 +27,10 @@ export const useCursorPosition = () =>
 export const usePendingJump = () => useEditorStore((s) => s.pendingJump)
 
 /** Number of open tabs -- primitive value, no object allocation. */
-export const useOpenFileCount = () =>
-  useEditorStore((s) => Object.keys(s.openFiles).length)
+export const useOpenFileCount = () => useEditorStore((s) => Object.keys(s.openFiles).length)
 
 /** List of open file paths (stable reference when paths haven't changed). */
-export const useOpenFilePaths = () =>
-  useEditorStore(useShallow((s) => Object.keys(s.openFiles)))
+export const useOpenFilePaths = () => useEditorStore(useShallow((s) => Object.keys(s.openFiles)))
 
 /** Whether any open file has unsaved changes. */
 export const useHasUnsavedFiles = () =>

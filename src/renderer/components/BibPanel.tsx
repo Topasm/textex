@@ -72,9 +72,7 @@ function BibPanel() {
   if (bibEntries.length === 0) {
     return (
       <div className="bib-panel">
-        <div className="git-empty">
-          {t('bibPanel.empty')}
-        </div>
+        <div className="git-empty">{t('bibPanel.empty')}</div>
       </div>
     )
   }

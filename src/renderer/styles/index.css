@@ -351,12 +351,12 @@ body,
 }
 
 /* Reserve space for native window-control overlay on Windows */
-[data-platform="win32"] .toolbar {
+[data-platform='win32'] .toolbar {
   padding-right: 140px;
 }
 
 /* Reserve space for macOS traffic lights */
-[data-platform="darwin"] .toolbar {
+[data-platform='darwin'] .toolbar {
   padding-left: 78px;
 }
 
@@ -1729,7 +1729,9 @@ body,
   font-size: 12px;
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.15s, background-color 0.15s;
+  transition:
+    opacity 0.15s,
+    background-color 0.15s;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4632,14 +4634,22 @@ body,
 
 /* Next page: slide entire container in from the right */
 @keyframes preview-slide-from-right {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 
 /* Previous page: slide entire container in from the left */
 @keyframes preview-slide-from-left {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(0); }
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 
 /* Segmented control for settings */
@@ -4657,7 +4667,9 @@ body,
   color: var(--text-secondary);
   border: none;
   cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
 }
 
 .settings-segmented-control button:not(:last-child) {

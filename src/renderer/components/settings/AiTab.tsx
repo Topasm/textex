@@ -82,9 +82,7 @@ const AiPromptsEditor = () => {
         <MessageSquare size={16} className="settings-icon-secondary" />
         <h3 className="settings-heading settings-no-mb">{t('settings.ai.customPrompts')}</h3>
       </div>
-      <p className="settings-subheading">
-        {t('settings.ai.customPromptsDesc')}
-      </p>
+      <p className="settings-subheading">{t('settings.ai.customPromptsDesc')}</p>
       <div className="ai-prompts-list">
         {promptEntries.map(([id, prompt]) => {
           const isExpanded = expandedPrompt === id
@@ -98,7 +96,9 @@ const AiPromptsEditor = () => {
                 <div className="settings-section-header-row">
                   {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                   <span>{t(prompt.labelKey)}</span>
-                  {isCustom && <span className="settings-configured-tag">{t('settings.ai.custom')}</span>}
+                  {isCustom && (
+                    <span className="settings-configured-tag">{t('settings.ai.custom')}</span>
+                  )}
                 </div>
               </button>
               {isExpanded && (
@@ -182,9 +182,7 @@ export const AiTab = () => {
                 onChange={(checked) => updateSetting('aiEnabled', checked)}
               />
             </div>
-            <p className="settings-section-description">
-              {t('settings.ai.description')}
-            </p>
+            <p className="settings-section-description">{t('settings.ai.description')}</p>
           </div>
         </div>
       </div>
@@ -195,9 +193,7 @@ export const AiTab = () => {
           <hr className="settings-divider" />
           <div>
             <h3 className="settings-heading">{t('settings.ai.provider')}</h3>
-            <p className="settings-subheading">
-              {t('settings.ai.providerDesc')}
-            </p>
+            <p className="settings-subheading">{t('settings.ai.providerDesc')}</p>
             <div className="settings-theme-grid settings-field-mt-sm">
               {(['openai', 'anthropic', 'gemini'] as const).map((p) => (
                 <button
@@ -227,9 +223,7 @@ export const AiTab = () => {
               {/* Model */}
               <div>
                 <h3 className="settings-heading">{t('settings.ai.model')}</h3>
-                <p className="settings-subheading">
-                  {t('settings.ai.modelDesc')}
-                </p>
+                <p className="settings-subheading">{t('settings.ai.modelDesc')}</p>
                 <div className="settings-field-group settings-field-mt-sm">
                   <select
                     value={settings.aiModel}
@@ -257,7 +251,9 @@ export const AiTab = () => {
                     <span className="settings-configured-tag">{t('settings.ai.configured')}</span>
                   )}
                   {keySaved && (
-                    <span className="settings-configured-tag settings-tag-saved">{t('settings.ai.saved')}</span>
+                    <span className="settings-configured-tag settings-tag-saved">
+                      {t('settings.ai.saved')}
+                    </span>
                   )}
                 </div>
                 <p className="settings-subheading">
@@ -312,9 +308,7 @@ export const AiTab = () => {
               <Brain size={16} className="settings-icon-secondary" />
               <h3 className="settings-heading settings-no-mb">{t('settings.ai.thinking')}</h3>
             </div>
-            <p className="settings-subheading">
-              {t('settings.ai.thinkingDesc')}
-            </p>
+            <p className="settings-subheading">{t('settings.ai.thinkingDesc')}</p>
             <div className="settings-column-group">
               <div className="settings-row">
                 <div>

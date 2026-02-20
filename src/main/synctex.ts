@@ -181,7 +181,9 @@ export async function forwardSync(
     }
   }
 
-  console.log(`[SyncTeX] forwardSync result: page=${result?.page}, x=${result?.x?.toFixed(2)}, y=${result?.y?.toFixed(2)}`)
+  console.log(
+    `[SyncTeX] forwardSync result: page=${result?.page}, x=${result?.x?.toFixed(2)}, y=${result?.y?.toFixed(2)}`
+  )
   return result
 }
 

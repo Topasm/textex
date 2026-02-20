@@ -1,5 +1,15 @@
 import { useState, useCallback, useEffect, useRef, useMemo, useDeferredValue } from 'react'
-import { BookOpen, Library, FileSearch, Code, ChevronDown, X, Search, FolderOpen, Terminal } from 'lucide-react'
+import {
+  BookOpen,
+  Library,
+  FileSearch,
+  Code,
+  ChevronDown,
+  X,
+  Search,
+  FolderOpen,
+  Terminal
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useEditorStore } from '../store/useEditorStore'
 import { useProjectStore } from '../store/useProjectStore'
@@ -11,16 +21,48 @@ import { isFeatureEnabled } from '../utils/featureFlags'
 import { templates } from '../data/templates'
 import { openProject } from '../utils/openProject'
 import { logError } from '../utils/errorMessage'
-import { HomePanel, CitationSearchPanel, ZoteroSearchPanel, PdfSearchPanel, TexSearchPanel } from './omnisearch-panels'
-import type { SearchMode, ModeConfig, HomeSlashCommand, HomeResult, TexSearchResult } from './omnisearch-panels'
+import {
+  HomePanel,
+  CitationSearchPanel,
+  ZoteroSearchPanel,
+  PdfSearchPanel,
+  TexSearchPanel
+} from './omnisearch-panels'
+import type {
+  SearchMode,
+  ModeConfig,
+  HomeSlashCommand,
+  HomeResult,
+  TexSearchResult
+} from './omnisearch-panels'
 import type { ZoteroSearchResult } from '../types/api'
 import type { BibEntry, RecentProject } from '../../shared/types'
 
 const MODE_CONFIGS: Record<SearchMode, ModeConfig> = {
-  cite: { icon: BookOpen, placeholder: 'omniSearch.searchCitations', label: 'omniSearch.citations', shortcut: '/c' },
-  zotero: { icon: Library, placeholder: 'omniSearch.searchZotero', label: 'omniSearch.zotero', shortcut: '/z' },
-  pdf: { icon: FileSearch, placeholder: 'omniSearch.searchPdf', label: 'omniSearch.pdf', shortcut: '/p' },
-  tex: { icon: Code, placeholder: 'omniSearch.findInEditor', label: 'omniSearch.tex', shortcut: '/t' }
+  cite: {
+    icon: BookOpen,
+    placeholder: 'omniSearch.searchCitations',
+    label: 'omniSearch.citations',
+    shortcut: '/c'
+  },
+  zotero: {
+    icon: Library,
+    placeholder: 'omniSearch.searchZotero',
+    label: 'omniSearch.zotero',
+    shortcut: '/z'
+  },
+  pdf: {
+    icon: FileSearch,
+    placeholder: 'omniSearch.searchPdf',
+    label: 'omniSearch.pdf',
+    shortcut: '/p'
+  },
+  tex: {
+    icon: Code,
+    placeholder: 'omniSearch.findInEditor',
+    label: 'omniSearch.tex',
+    shortcut: '/t'
+  }
 }
 
 const SLASH_PREFIXES: Record<string, SearchMode> = {
@@ -35,10 +77,30 @@ const SLASH_PREFIXES: Record<string, SearchMode> = {
 }
 
 const HOME_SLASH_COMMANDS: HomeSlashCommand[] = [
-  { command: '/draft', label: '/draft', descriptionKey: 'searchBar.draftDesc', icon: <Code size={16} /> },
-  { command: '/template', label: '/template', descriptionKey: 'searchBar.templateDesc', icon: <BookOpen size={16} /> },
-  { command: '/open', label: '/open', descriptionKey: 'searchBar.openDesc', icon: <FolderOpen size={16} /> },
-  { command: '/help', label: '/help', descriptionKey: 'searchBar.helpDesc', icon: <Terminal size={16} /> }
+  {
+    command: '/draft',
+    label: '/draft',
+    descriptionKey: 'searchBar.draftDesc',
+    icon: <Code size={16} />
+  },
+  {
+    command: '/template',
+    label: '/template',
+    descriptionKey: 'searchBar.templateDesc',
+    icon: <BookOpen size={16} />
+  },
+  {
+    command: '/open',
+    label: '/open',
+    descriptionKey: 'searchBar.openDesc',
+    icon: <FolderOpen size={16} />
+  },
+  {
+    command: '/help',
+    label: '/help',
+    descriptionKey: 'searchBar.helpDesc',
+    icon: <Terminal size={16} />
+  }
 ]
 
 interface OmniSearchProps {
@@ -48,7 +110,12 @@ interface OmniSearchProps {
   onOpenSettings?: () => void
 }
 
-export function OmniSearch({ onOpenFolder, onNewFromTemplate, onAiDraft, onOpenSettings }: OmniSearchProps) {
+export function OmniSearch({
+  onOpenFolder,
+  onNewFromTemplate,
+  onAiDraft,
+  onOpenSettings
+}: OmniSearchProps) {
   const { t } = useTranslation()
   const settings = useSettingsStore((s) => s.settings)
   const zoteroEnabled = isFeatureEnabled(settings, 'zotero')
@@ -132,7 +199,9 @@ export function OmniSearch({ onOpenFolder, onNewFromTemplate, onAiDraft, onOpenS
   useEffect(() => {
     const dropdown = dropdownRef.current
     if (!dropdown) return
-    const highlighted = dropdown.querySelector('.omni-search-result.highlighted') as HTMLElement | null
+    const highlighted = dropdown.querySelector(
+      '.omni-search-result.highlighted'
+    ) as HTMLElement | null
     if (highlighted) {
       highlighted.scrollIntoView({ block: 'nearest' })
     }
@@ -178,7 +247,10 @@ export function OmniSearch({ onOpenFolder, onNewFromTemplate, onAiDraft, onOpenS
     }
 
     for (const tmpl of templates) {
-      if (tmpl.name.toLowerCase().includes(lower) || tmpl.description.toLowerCase().includes(lower)) {
+      if (
+        tmpl.name.toLowerCase().includes(lower) ||
+        tmpl.description.toLowerCase().includes(lower)
+      ) {
         results.push({
           kind: 'template',
           label: tmpl.name,
@@ -407,7 +479,11 @@ export function OmniSearch({ onOpenFolder, onNewFromTemplate, onAiDraft, onOpenS
       selectedKeys.size > 0
         ? Array.from(selectedKeys)
         : currentResults.length > 0
-          ? [mode === 'cite' ? (currentResults[highlightedIndex] as BibEntry).key : (currentResults[highlightedIndex] as ZoteroSearchResult).citekey]
+          ? [
+              mode === 'cite'
+                ? (currentResults[highlightedIndex] as BibEntry).key
+                : (currentResults[highlightedIndex] as ZoteroSearchResult).citekey
+            ]
           : []
     if (!keys.length) return
 
@@ -471,7 +547,8 @@ export function OmniSearch({ onOpenFolder, onNewFromTemplate, onAiDraft, onOpenS
       if (isHomeMode) {
         if (e.key === 'ArrowDown') {
           e.preventDefault()
-          if (homeResults.length) setHomeHighlightedIndex((prev) => Math.min(prev + 1, homeResults.length - 1))
+          if (homeResults.length)
+            setHomeHighlightedIndex((prev) => Math.min(prev + 1, homeResults.length - 1))
         } else if (e.key === 'ArrowUp') {
           e.preventDefault()
           if (homeResults.length) setHomeHighlightedIndex((prev) => Math.max(prev - 1, 0))
@@ -491,16 +568,18 @@ export function OmniSearch({ onOpenFolder, onNewFromTemplate, onAiDraft, onOpenS
           if (results.length) setHighlightedIndex((prev) => (prev + 1) % results.length)
         } else if (e.key === 'ArrowUp') {
           e.preventDefault()
-          if (results.length) setHighlightedIndex((prev) => (prev - 1 + results.length) % results.length)
+          if (results.length)
+            setHighlightedIndex((prev) => (prev - 1 + results.length) % results.length)
         } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
           e.preventDefault()
           insertCitation()
         } else if (e.key === 'Enter') {
           e.preventDefault()
           if (results.length > 0) {
-            const key = mode === 'cite'
-              ? (results[highlightedIndex] as BibEntry).key
-              : (results[highlightedIndex] as ZoteroSearchResult).citekey
+            const key =
+              mode === 'cite'
+                ? (results[highlightedIndex] as BibEntry).key
+                : (results[highlightedIndex] as ZoteroSearchResult).citekey
             toggleSelection(key)
           }
         }
@@ -536,7 +615,24 @@ export function OmniSearch({ onOpenFolder, onNewFromTemplate, onAiDraft, onOpenS
         }
       }
     },
-    [isHomeMode, homeResults, homeHighlightedIndex, handleHomeSelect, mode, citeResults, zoteroResults, texResults, highlightedIndex, insertCitation, toggleSelection, jumpToLine, handlePdfNext, handlePdfPrev, handleTexNext, handleTexPrev]
+    [
+      isHomeMode,
+      homeResults,
+      homeHighlightedIndex,
+      handleHomeSelect,
+      mode,
+      citeResults,
+      zoteroResults,
+      texResults,
+      highlightedIndex,
+      insertCitation,
+      toggleSelection,
+      jumpToLine,
+      handlePdfNext,
+      handlePdfPrev,
+      handleTexNext,
+      handleTexPrev
+    ]
   )
 
   // Clear
@@ -637,13 +733,19 @@ export function OmniSearch({ onOpenFolder, onNewFromTemplate, onAiDraft, onOpenS
       (mode === 'pdf'
         ? searchTerm.length > 0
         : mode === 'cite'
-          ? citeResults.length > 0 || (searchTerm.length > 0)
+          ? citeResults.length > 0 || searchTerm.length > 0
           : mode === 'zotero'
-            ? (!zoteroEnabled && searchTerm.length > 0) || zoteroResults.length > 0 || loading || (searchTerm.length > 2)
-            : texResults.length > 0 || (searchTerm.length > 0))
+            ? (!zoteroEnabled && searchTerm.length > 0) ||
+              zoteroResults.length > 0 ||
+              loading ||
+              searchTerm.length > 2
+            : texResults.length > 0 || searchTerm.length > 0)
 
   return (
-    <div className={`omni-search-wrapper${isHomeMode ? ' omni-search-home-mode' : ''}`} ref={wrapperRef}>
+    <div
+      className={`omni-search-wrapper${isHomeMode ? ' omni-search-home-mode' : ''}`}
+      ref={wrapperRef}
+    >
       {isHomeMode ? (
         <div className="omni-search-home-icon">
           <Search size={14} />
@@ -691,13 +793,19 @@ export function OmniSearch({ onOpenFolder, onNewFromTemplate, onAiDraft, onOpenS
           if (isHomeMode) {
             if (homeResults.length > 0) setIsDropdownOpen(true)
           } else if (mode === 'cite' && citeResults.length > 0) setIsDropdownOpen(true)
-          else if (mode === 'zotero' && (zoteroResults.length > 0 || (!zoteroEnabled && searchTerm.length > 0))) setIsDropdownOpen(true)
+          else if (
+            mode === 'zotero' &&
+            (zoteroResults.length > 0 || (!zoteroEnabled && searchTerm.length > 0))
+          )
+            setIsDropdownOpen(true)
           else if (mode === 'tex' && texResults.length > 0) setIsDropdownOpen(true)
           else if (mode === 'pdf' && searchTerm.length > 0) setIsDropdownOpen(true)
         }}
       />
 
-      {!isHomeMode && selectedKeys.size > 0 && <span className="omni-search-badge">{selectedKeys.size}</span>}
+      {!isHomeMode && selectedKeys.size > 0 && (
+        <span className="omni-search-badge">{selectedKeys.size}</span>
+      )}
 
       {searchTerm && (
         <button className="omni-search-clear" onClick={handleClear} title="Clear">

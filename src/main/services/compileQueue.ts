@@ -68,10 +68,7 @@ export function enqueueCompile(
   })
 }
 
-async function runCompile(
-  filePath: string,
-  compileFn: CompileFunction
-): Promise<CompileResult> {
+async function runCompile(filePath: string, compileFn: CompileFunction): Promise<CompileResult> {
   isCompiling = true
   const abort = new AbortController()
   currentAbort = abort
@@ -128,9 +125,7 @@ function drainPending(compileFn: CompileFunction): void {
   runCompile(entry.filePath, compileFn).then(
     (result) => coalesced.forEach((e) => e.resolve(result)),
     (error) =>
-      coalesced.forEach((e) =>
-        e.reject(error instanceof Error ? error : new Error(String(error)))
-      )
+      coalesced.forEach((e) => e.reject(error instanceof Error ? error : new Error(String(error))))
   )
 }
 
@@ -164,8 +159,7 @@ export function getCompileMetrics(): {
 } {
   return {
     totalCompiles: metrics.totalCompiles,
-    avgCompileTimeMs:
-      metrics.totalCompiles > 0 ? metrics.totalTimeMs / metrics.totalCompiles : 0,
+    avgCompileTimeMs: metrics.totalCompiles > 0 ? metrics.totalTimeMs / metrics.totalCompiles : 0,
     timeouts: metrics.timeouts,
     cancellations: metrics.cancellations,
     queueDepth: pending.length

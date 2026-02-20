@@ -1,13 +1,6 @@
 import { useCallback, useState, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  FolderTree,
-  BookOpen,
-  ListTree,
-  StickyNote,
-  Clock,
-  GitBranch
-} from 'lucide-react'
+import { FolderTree, BookOpen, ListTree, StickyNote, Clock, GitBranch } from 'lucide-react'
 import Toolbar from './components/Toolbar'
 import EditorPane from './components/EditorPane'
 import PreviewPane from './components/PreviewPane'
@@ -294,7 +287,7 @@ function App() {
                     className="sidebar-pin-btn"
                     title={autoHideSidebar ? t('sidebar.pinSidebar') : t('sidebar.unpinSidebar')}
                     onClick={() => {
-                        if (autoHideSidebar) {
+                      if (autoHideSidebar) {
                         useSettingsStore.getState().updateSetting('autoHideSidebar', false)
                         if (!useProjectStore.getState().isSidebarOpen) {
                           useProjectStore.getState().toggleSidebar()

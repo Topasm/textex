@@ -11,7 +11,9 @@ export const AutomationTab = () => {
   return (
     <div className="settings-tab-content settings-animate-in">
       <div>
-        <h3 className="settings-heading settings-heading-mb">{t('settings.automation.compilerTools')}</h3>
+        <h3 className="settings-heading settings-heading-mb">
+          {t('settings.automation.compilerTools')}
+        </h3>
         <div className="settings-column-group">
           <div className="settings-row">
             <div>

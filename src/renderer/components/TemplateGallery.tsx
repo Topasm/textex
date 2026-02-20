@@ -46,7 +46,11 @@ function TemplateGallery() {
           .replace(/{{EMAIL}}/g, settings.email || 'your.email@example.com')
           .replace(/{{AFFILIATION}}/g, settings.affiliation || 'Institution')
 
-        const result = await window.api.createTemplateProject(template.name, finalContent, template.files)
+        const result = await window.api.createTemplateProject(
+          template.name,
+          finalContent,
+          template.files
+        )
         if (result) {
           await openProject(result.projectPath)
         }
@@ -125,10 +129,7 @@ function TemplateGallery() {
         )}
 
         <div className="template-actions">
-          <button
-            className="template-action-btn"
-            onClick={() => setShowAddForm(!showAddForm)}
-          >
+          <button className="template-action-btn" onClick={() => setShowAddForm(!showAddForm)}>
             {showAddForm ? t('templateGallery.cancel') : t('templateGallery.addCustom')}
           </button>
           <button className="template-action-btn" onClick={handleImportZip}>
@@ -169,11 +170,7 @@ function TemplateGallery() {
         <h3 className="template-section-label">{t('templateGallery.builtIn')}</h3>
         <div className="template-grid">
           {builtIn.map((tmpl) => (
-            <div
-              key={tmpl.id}
-              className="template-card"
-              onClick={() => handleSelect(tmpl)}
-            >
+            <div key={tmpl.id} className="template-card" onClick={() => handleSelect(tmpl)}>
               <h3>{tmpl.name}</h3>
               <p>{tmpl.description}</p>
             </div>
@@ -185,11 +182,7 @@ function TemplateGallery() {
             <h3 className="template-section-label">{t('templateGallery.custom')}</h3>
             <div className="template-grid">
               {custom.map((tmpl) => (
-                <div
-                  key={tmpl.id}
-                  className="template-card"
-                  onClick={() => handleSelect(tmpl)}
-                >
+                <div key={tmpl.id} className="template-card" onClick={() => handleSelect(tmpl)}>
                   <h3>{tmpl.name}</h3>
                   <p>{tmpl.description}</p>
                   <button

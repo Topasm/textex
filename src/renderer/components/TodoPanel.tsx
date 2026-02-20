@@ -201,7 +201,11 @@ export function TodoPanel() {
   if (!exists) {
     return (
       <div className="todo-panel todo-panel--empty">
-        <button className="panel-create-icon-btn" onClick={handleCreate} title={t('todoPanel.createTodo')}>
+        <button
+          className="panel-create-icon-btn"
+          onClick={handleCreate}
+          title={t('todoPanel.createTodo')}
+        >
           <svg
             width="28"
             height="28"

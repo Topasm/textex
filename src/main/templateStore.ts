@@ -93,10 +93,20 @@ export async function importTemplateFromZip(zipPath: string): Promise<Template> 
 
     const entryName = entry.entryName
     const ext = path.extname(entryName).toLowerCase()
-    
+
     // Check if it's a text file we can read directly
     const isText = [
-      '.tex', '.sty', '.cls', '.bib', '.bst', '.txt', '.md', '.json', '.xml', '.yaml', '.yml'
+      '.tex',
+      '.sty',
+      '.cls',
+      '.bib',
+      '.bst',
+      '.txt',
+      '.md',
+      '.json',
+      '.xml',
+      '.yaml',
+      '.yml'
     ].includes(ext)
 
     let content = ''
@@ -119,8 +129,8 @@ export async function importTemplateFromZip(zipPath: string): Promise<Template> 
         mainTexEntry = entry
         mainTexContent = content
       } else if (base === zipName && mainTexEntry.name !== 'main.tex') {
-         mainTexEntry = entry
-         mainTexContent = content
+        mainTexEntry = entry
+        mainTexContent = content
       }
     }
   }
@@ -152,8 +162,8 @@ export async function importTemplateFromZip(zipPath: string): Promise<Template> 
 
   // Remove template.json from the files list as we don't need to copy it to the project
   const metaKey = metaEntry?.entryName
-  if(metaKey && files[metaKey]) {
-      delete files[metaKey]
+  if (metaKey && files[metaKey]) {
+    delete files[metaKey]
   }
 
   // Remove the main tex file from the files list to avoid overwriting it (it's passed as content)
@@ -163,11 +173,11 @@ export async function importTemplateFromZip(zipPath: string): Promise<Template> 
   // or just rely on 'files' in the new handler.
   // The 'addCustomTemplate' function signature expects 'content'.
   // We should pass the main tex content there.
-  
+
   // Note: addCustomTemplate stores 'content' in the template object.
   // We need to update addCustomTemplate to also store 'files'.
-  
+
   // Wait, I need to update addCustomTemplate first.
-  
+
   return addCustomTemplate(name, description, mainTexContent, files)
 }

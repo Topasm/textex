@@ -73,7 +73,9 @@ describe.each(Object.entries(locales))('%s translations', (lang, locale) => {
   it('should warn about missing keys vs English', () => {
     const missing = enKeys.filter((k) => !localeKeys.includes(k))
     if (missing.length > 0) {
-      console.warn(`[${lang}] Missing ${missing.length} keys: ${missing.slice(0, 5).join(', ')}${missing.length > 5 ? '...' : ''}`)
+      console.warn(
+        `[${lang}] Missing ${missing.length} keys: ${missing.slice(0, 5).join(', ')}${missing.length > 5 ? '...' : ''}`
+      )
     }
     // Allow up to 10% missing — fallback to English covers these
     const threshold = Math.floor(enKeys.length * 0.1)
@@ -93,7 +95,9 @@ describe.each(Object.entries(locales))('%s translations', (lang, locale) => {
       const localePlaceholders = (localeValue.match(/\{\{[^}]+\}\}/g) ?? []).sort()
 
       if (JSON.stringify(enPlaceholders) !== JSON.stringify(localePlaceholders)) {
-        mismatches.push(`${key}: expected ${enPlaceholders.join(',')} got ${localePlaceholders.join(',')}`)
+        mismatches.push(
+          `${key}: expected ${enPlaceholders.join(',')} got ${localePlaceholders.join(',')}`
+        )
       }
     }
 

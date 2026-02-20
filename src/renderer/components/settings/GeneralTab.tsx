@@ -19,9 +19,7 @@ export const GeneralTab = () => {
           </div>
           <div className="settings-section-body">
             <h3 className="settings-section-title">{t('settings.general.userInfo')}</h3>
-            <p className="settings-section-description">
-              {t('settings.general.userInfoDesc')}
-            </p>
+            <p className="settings-section-description">{t('settings.general.userInfoDesc')}</p>
 
             <div className="settings-field-group">
               <div>
@@ -81,9 +79,7 @@ export const GeneralTab = () => {
           <div className="settings-row">
             <div>
               <div className="settings-row-label">{t('settings.general.language')}</div>
-              <div className="settings-row-description">
-                {t('settings.general.languageDesc')}
-              </div>
+              <div className="settings-row-description">{t('settings.general.languageDesc')}</div>
             </div>
             <select
               value={settings.language || 'en'}

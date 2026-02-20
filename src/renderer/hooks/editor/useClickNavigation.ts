@@ -117,11 +117,14 @@ export function useClickNavigation(): (editor: monacoEditor.IStandaloneCodeEdito
       }
 
       const line = e.target.position.lineNumber
-      window.api.synctexForward(currentFilePath, line).then((result) => {
-        if (result) {
-          usePdfStore.getState().setSynctexHighlight(result)
-        }
-      }).catch(() => {})
+      window.api
+        .synctexForward(currentFilePath, line)
+        .then((result) => {
+          if (result) {
+            usePdfStore.getState().setSynctexHighlight(result)
+          }
+        })
+        .catch(() => {})
     })
   }, [])
 }

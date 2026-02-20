@@ -29,9 +29,7 @@ import { generateFigureSnippet } from '../utils/figureSnippet'
 const TableEditorModal = lazy(() =>
   import('./TableEditorModal').then((m) => ({ default: m.TableEditorModal }))
 )
-const HistoryPanel = lazy(() =>
-  import('./HistoryPanel').then((m) => ({ default: m.HistoryPanel }))
-)
+const HistoryPanel = lazy(() => import('./HistoryPanel').then((m) => ({ default: m.HistoryPanel })))
 
 type MonacoInstance = typeof import('monaco-editor')
 
@@ -68,11 +66,14 @@ function EditorPane() {
   // Replaces 3 independent debounce timers with a single scheduler
   useContentChangeCoordinator(
     content,
-    useMemo(() => [
-      { key: 'spellcheck', fn: runSpellCheck, delayMs: 500 },
-      { key: 'packages', fn: detectPackages, delayMs: 1500, idle: true },
-      { key: 'symbols', fn: refreshOutline, delayMs: 2000, idle: true }
-    ], [runSpellCheck, detectPackages, refreshOutline])
+    useMemo(
+      () => [
+        { key: 'spellcheck', fn: runSpellCheck, delayMs: 500 },
+        { key: 'packages', fn: detectPackages, delayMs: 1500, idle: true },
+        { key: 'symbols', fn: refreshOutline, delayMs: 2000, idle: true }
+      ],
+      [runSpellCheck, detectPackages, refreshOutline]
+    )
   )
   const mathData = useMathPreview({ editorRef, enabled: mathPreviewEnabled })
   useSectionHighlight({ editorRef, monacoRef })

@@ -7,8 +7,11 @@ import type { CompileRecord, ProjectSnippet, ProjectBookmark } from '../shared/t
 const DEFAULT_TIMEOUT_MS = 30_000
 // Channels that involve user interaction (dialogs) should never time out
 const NO_TIMEOUT_CHANNELS = new Set<string>([
-  'fs:open', 'fs:save-as', 'fs:open-directory',
-  'fs:create-template-project', 'export:convert',
+  'fs:open',
+  'fs:save-as',
+  'fs:open-directory',
+  'fs:create-template-project',
+  'export:convert',
   'templates:import-zip'
 ])
 
@@ -17,16 +20,35 @@ const NO_TIMEOUT_CHANNELS = new Set<string>([
  * Only read-only channels are deduplicated (not writes or mutations).
  */
 const DEDUP_CHANNELS = new Set<string>([
-  'fs:read-file', 'fs:read-file-base64', 'fs:read-directory', 'settings:load',
-  'bib:parse', 'bib:find-in-project', 'spell:check', 'spell:suggest',
-  'git:is-repo', 'git:status', 'git:diff', 'git:log', 'git:file-log',
+  'fs:read-file',
+  'fs:read-file-base64',
+  'fs:read-directory',
+  'settings:load',
+  'bib:parse',
+  'bib:find-in-project',
+  'spell:check',
+  'spell:suggest',
+  'git:is-repo',
+  'git:status',
+  'git:diff',
+  'git:log',
+  'git:file-log',
   'synctex:build-line-map',
-  'latex:scan-labels', 'latex:load-package-data', 'export:formats',
-  'lsp:status', 'ai:has-api-key', 'structure:outline',
-  'history:list', 'zotero:probe', 'zotero:search',
+  'latex:scan-labels',
+  'latex:load-package-data',
+  'export:formats',
+  'lsp:status',
+  'ai:has-api-key',
+  'structure:outline',
+  'history:list',
+  'zotero:probe',
+  'zotero:search',
   'templates:list',
-  'project:exists', 'project:load', 'project:compile-load',
-  'project:snippets-load', 'project:bookmarks-load',
+  'project:exists',
+  'project:load',
+  'project:compile-load',
+  'project:snippets-load',
+  'project:bookmarks-load',
   'project:compile-log-load'
 ])
 
@@ -39,10 +61,7 @@ function makeKey(channel: string, args: unknown[]): string {
 /**
  * Type-safe IPC invoke with optional deduplication and timeout.
  */
-function invoke<C extends IpcChannel>(
-  channel: C,
-  ...args: IpcRequest<C>
-): Promise<IpcResponse<C>> {
+function invoke<C extends IpcChannel>(channel: C, ...args: IpcRequest<C>): Promise<IpcResponse<C>> {
   const shouldDedup = DEDUP_CHANNELS.has(channel)
   const key = shouldDedup ? makeKey(channel, args) : ''
 
@@ -156,19 +175,16 @@ contextBridge.exposeInMainWorld('api', {
   },
 
   // SyncTeX
-  synctexForward: (texFile: string, line: number) =>
-    invoke('synctex:forward', texFile, line),
+  synctexForward: (texFile: string, line: number) => invoke('synctex:forward', texFile, line),
   synctexInverse: (texFile: string, page: number, x: number, y: number) =>
     invoke('synctex:inverse', texFile, page, x, y),
-  synctexBuildLineMap: (texFile: string) =>
-    invoke('synctex:build-line-map', texFile),
+  synctexBuildLineMap: (texFile: string) => invoke('synctex:build-line-map', texFile),
 
   // Settings
   loadSettings: () => invoke('settings:load'),
   saveSettings: (partial: Record<string, unknown>) => invoke('settings:save', partial),
   setTheme: (theme: string) => invoke('settings:set-theme', theme),
-  addRecentProject: (projectPath: string) =>
-    invoke('settings:add-recent-project', projectPath),
+  addRecentProject: (projectPath: string) => invoke('settings:add-recent-project', projectPath),
   removeRecentProject: (projectPath: string) =>
     invoke('settings:remove-recent-project', projectPath),
   updateRecentProject: (projectPath: string, updates: { tag?: string; pinned?: boolean }) =>
@@ -189,16 +205,12 @@ contextBridge.exposeInMainWorld('api', {
   gitIsRepo: (workDir: string) => invoke('git:is-repo', workDir),
   gitInit: (workDir: string) => invoke('git:init', workDir),
   gitStatus: (workDir: string) => invoke('git:status', workDir),
-  gitStage: (workDir: string, filePath: string) =>
-    invoke('git:stage', workDir, filePath),
-  gitUnstage: (workDir: string, filePath: string) =>
-    invoke('git:unstage', workDir, filePath),
-  gitCommit: (workDir: string, message: string) =>
-    invoke('git:commit', workDir, message),
+  gitStage: (workDir: string, filePath: string) => invoke('git:stage', workDir, filePath),
+  gitUnstage: (workDir: string, filePath: string) => invoke('git:unstage', workDir, filePath),
+  gitCommit: (workDir: string, message: string) => invoke('git:commit', workDir, message),
   gitDiff: (workDir: string) => invoke('git:diff', workDir),
   gitLog: (workDir: string) => invoke('git:log', workDir),
-  gitFileLog: (workDir: string, filePath: string) =>
-    invoke('git:file-log', workDir, filePath),
+  gitFileLog: (workDir: string, filePath: string) => invoke('git:file-log', workDir, filePath),
 
   // Auto Update
   updateCheck: () => invoke('update:check'),
@@ -223,8 +235,7 @@ contextBridge.exposeInMainWorld('api', {
   scanLabels: (projectRoot: string) => invoke('latex:scan-labels', projectRoot),
 
   // Package Data
-  loadPackageData: (packageNames: string[]) =>
-    invoke('latex:load-package-data', packageNames),
+  loadPackageData: (packageNames: string[]) => invoke('latex:load-package-data', packageNames),
 
   // Export
   exportDocument: (inputPath: string, format: string) =>
@@ -266,8 +277,7 @@ contextBridge.exposeInMainWorld('api', {
   // AI Draft
   aiGenerate: (input: string, provider: string, model: string) =>
     invoke('ai:generate', input, provider, model),
-  aiSaveApiKey: (provider: string, apiKey: string) =>
-    invoke('ai:save-api-key', provider, apiKey),
+  aiSaveApiKey: (provider: string, apiKey: string) => invoke('ai:save-api-key', provider, apiKey),
   aiHasApiKey: (provider: string) => invoke('ai:has-api-key', provider),
   aiProcess: (action: 'fix' | 'academic' | 'summarize' | 'longer' | 'shorter', text: string) =>
     invoke('ai:process', action, text),

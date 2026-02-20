@@ -155,7 +155,9 @@ export function TimelinePanel() {
             )}
           </div>
           <div className="timeline-info">
-            <span className="timeline-message">{entry.message === '__LOCAL_SAVE__' ? t('timelinePanel.localSave') : entry.message}</span>
+            <span className="timeline-message">
+              {entry.message === '__LOCAL_SAVE__' ? t('timelinePanel.localSave') : entry.message}
+            </span>
             <span className="timeline-meta">
               {formatDistanceToNow(entry.date, { addSuffix: true })}
               {entry.author && ` · ${entry.author}`}

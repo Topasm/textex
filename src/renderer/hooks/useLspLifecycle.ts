@@ -95,7 +95,9 @@ export function useLspLifecycle(
 
     if (filePath) {
       lspNotifyDidOpen(filePath, useEditorStore.getState().content)
-      const lspRunning = useSettingsStore.getState().settings.lspEnabled && useUiStore.getState().lspStatus === 'running'
+      const lspRunning =
+        useSettingsStore.getState().settings.lspEnabled &&
+        useUiStore.getState().lspStatus === 'running'
       if (lspRunning) {
         const switchedFile = filePath
         const timer = setTimeout(() => {

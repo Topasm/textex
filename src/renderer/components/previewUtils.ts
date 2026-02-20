@@ -46,7 +46,10 @@ const A4_HEIGHT = 842
  *
  * Returns `undefined` when `containerWidth` is falsy (container not yet measured).
  */
-export function calcPageWidth(containerWidth: number | undefined, zoomLevel: number): number | undefined {
+export function calcPageWidth(
+  containerWidth: number | undefined,
+  zoomLevel: number
+): number | undefined {
   return containerWidth ? (containerWidth - 32) * (zoomLevel / 100) : undefined
 }
 
@@ -171,7 +174,7 @@ export function calcFitHeightZoom(
   pageWidth: number = A4_WIDTH,
   pageHeight: number = A4_HEIGHT
 ): number {
-  return Math.round((containerHeight * pageWidth) / (pageHeight * (containerWidth - 32)) * 100)
+  return Math.round(((containerHeight * pageWidth) / (pageHeight * (containerWidth - 32))) * 100)
 }
 
 // ---------------------------------------------------------------------------

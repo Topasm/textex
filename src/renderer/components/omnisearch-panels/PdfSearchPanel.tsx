@@ -22,12 +22,22 @@ export function PdfSearchPanel({
       <span className="omni-search-pdf-count">
         {pdfMatchCount > 0
           ? t('omniSearch.matches', { current: pdfCurrentMatch + 1, total: pdfMatchCount })
-          : searchTerm ? t('omniSearch.noMatches') : ''}
+          : searchTerm
+            ? t('omniSearch.noMatches')
+            : ''}
       </span>
-      <button onClick={handlePdfPrev} disabled={pdfMatchCount === 0} title={t('omniSearch.prevMatch')}>
+      <button
+        onClick={handlePdfPrev}
+        disabled={pdfMatchCount === 0}
+        title={t('omniSearch.prevMatch')}
+      >
         &#x25B2;
       </button>
-      <button onClick={handlePdfNext} disabled={pdfMatchCount === 0} title={t('omniSearch.nextMatch')}>
+      <button
+        onClick={handlePdfNext}
+        disabled={pdfMatchCount === 0}
+        title={t('omniSearch.nextMatch')}
+      >
         &#x25BC;
       </button>
     </div>

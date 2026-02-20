@@ -25,56 +25,50 @@ export function useCitationTooltip(
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const activeTargetRef = useRef<EventTarget | null>(null)
 
-  const resolveFromAnnotationLink = useCallback(
-    (anchor: HTMLAnchorElement): BibEntry[] | null => {
-      const href = anchor.getAttribute('href') || ''
-      // hyperref internal links use fragment identifiers like #cite.KEY or destinations
-      // Also check data-dest attribute used by some PDF renderers
-      const dest = anchor.getAttribute('data-dest') || ''
-      const combined = href + ' ' + dest
+  const resolveFromAnnotationLink = useCallback((anchor: HTMLAnchorElement): BibEntry[] | null => {
+    const href = anchor.getAttribute('href') || ''
+    // hyperref internal links use fragment identifiers like #cite.KEY or destinations
+    // Also check data-dest attribute used by some PDF renderers
+    const dest = anchor.getAttribute('data-dest') || ''
+    const combined = href + ' ' + dest
 
-      // Match cite.KEY pattern (hyperref default)
-      const citeMatch = combined.match(/cite\.([^\s#&]+)/)
-      if (!citeMatch) return null
+    // Match cite.KEY pattern (hyperref default)
+    const citeMatch = combined.match(/cite\.([^\s#&]+)/)
+    if (!citeMatch) return null
 
-      const citeKey = citeMatch[1]
-      const bibEntries = useProjectStore.getState().bibEntries
-      const entry = bibEntries.find((e) => e.key === citeKey)
-      return entry ? [entry] : null
-    },
-    []
-  )
+    const citeKey = citeMatch[1]
+    const bibEntries = useProjectStore.getState().bibEntries
+    const entry = bibEntries.find((e) => e.key === citeKey)
+    return entry ? [entry] : null
+  }, [])
 
-  const resolveFromTextSpan = useCallback(
-    (span: HTMLSpanElement): BibEntry[] | null => {
-      const text = span.textContent?.trim()
-      if (!text) return null
+  const resolveFromTextSpan = useCallback((span: HTMLSpanElement): BibEntry[] | null => {
+    const text = span.textContent?.trim()
+    if (!text) return null
 
-      // Match citation patterns: [1], [2,3], [1, 2, 3]
-      const match = text.match(/^\[(\d+(?:\s*,\s*\d+)*)\]$/)
-      if (!match) return null
+    // Match citation patterns: [1], [2,3], [1, 2, 3]
+    const match = text.match(/^\[(\d+(?:\s*,\s*\d+)*)\]$/)
+    if (!match) return null
 
-      const auxCitationMap = useProjectStore.getState().auxCitationMap as AuxCitationMap | null
-      if (!auxCitationMap) return null
+    const auxCitationMap = useProjectStore.getState().auxCitationMap as AuxCitationMap | null
+    if (!auxCitationMap) return null
 
-      const bibEntries = useProjectStore.getState().bibEntries
-      const numbers = match[1].split(',').map((s) => s.trim())
-      const results: BibEntry[] = []
+    const bibEntries = useProjectStore.getState().bibEntries
+    const numbers = match[1].split(',').map((s) => s.trim())
+    const results: BibEntry[] = []
 
-      for (const num of numbers) {
-        const keys = auxCitationMap.labelToKeys.get(num)
-        if (keys) {
-          for (const key of keys) {
-            const entry = bibEntries.find((e) => e.key === key)
-            if (entry) results.push(entry)
-          }
+    for (const num of numbers) {
+      const keys = auxCitationMap.labelToKeys.get(num)
+      if (keys) {
+        for (const key of keys) {
+          const entry = bibEntries.find((e) => e.key === key)
+          if (entry) results.push(entry)
         }
       }
+    }
 
-      return results.length > 0 ? results : null
-    },
-    []
-  )
+    return results.length > 0 ? results : null
+  }, [])
 
   useEffect(() => {
     const container = containerRef.current
@@ -132,7 +126,10 @@ export function useCitationTooltip(
     const handleMouseOut = (e: MouseEvent) => {
       const related = e.relatedTarget as HTMLElement | null
       // If moving to another citation element, let mouseover handle it
-      if (related?.closest?.('.annotationLayer a') || related?.closest?.('.react-pdf__Page__textContent span')) {
+      if (
+        related?.closest?.('.annotationLayer a') ||
+        related?.closest?.('.react-pdf__Page__textContent span')
+      ) {
         return
       }
       activeTargetRef.current = null

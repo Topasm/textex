@@ -6,9 +6,7 @@ import {
   importTemplateFromZip
 } from '../templateStore'
 
-export function registerTemplateHandlers(
-  getWindow: () => BrowserWindow | null
-): void {
+export function registerTemplateHandlers(getWindow: () => BrowserWindow | null): void {
   ipcMain.handle('templates:list', async () => {
     return listAllTemplates()
   })

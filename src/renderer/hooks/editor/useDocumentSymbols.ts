@@ -36,7 +36,8 @@ let outlineGeneration = 0
 let pendingFetchFile: string | null = null
 
 function fetchOutline(currentFile: string, content: string): void {
-  const lspAvailable = useSettingsStore.getState().settings.lspEnabled && useUiStore.getState().lspStatus === 'running'
+  const lspAvailable =
+    useSettingsStore.getState().settings.lspEnabled && useUiStore.getState().lspStatus === 'running'
 
   // Deduplicate: skip if a request for the same file is already in flight
   if (pendingFetchFile === currentFile) return

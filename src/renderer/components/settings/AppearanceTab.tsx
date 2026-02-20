@@ -72,9 +72,7 @@ export const AppearanceTab = () => {
       <div className="settings-row">
         <div>
           <div className="settings-row-label">{t('settings.appearance.pdfViewMode')}</div>
-          <div className="settings-row-description">
-            {t('settings.appearance.pdfViewModeDesc')}
-          </div>
+          <div className="settings-row-description">{t('settings.appearance.pdfViewModeDesc')}</div>
         </div>
         <div className="settings-segmented-control">
           <button
@@ -94,7 +92,9 @@ export const AppearanceTab = () => {
 
       <div className="settings-row">
         <div>
-          <div className="settings-row-label">{t('settings.appearance.showPdfToolbarControls')}</div>
+          <div className="settings-row-label">
+            {t('settings.appearance.showPdfToolbarControls')}
+          </div>
           <div className="settings-row-description">
             {t('settings.appearance.showPdfToolbarControlsDesc')}
           </div>
@@ -108,9 +108,7 @@ export const AppearanceTab = () => {
       <div className="settings-row">
         <div>
           <div className="settings-row-label">{t('settings.appearance.scrollSync')}</div>
-          <div className="settings-row-description">
-            {t('settings.appearance.scrollSyncDesc')}
-          </div>
+          <div className="settings-row-description">{t('settings.appearance.scrollSyncDesc')}</div>
         </div>
         <Toggle
           checked={!!settings.scrollSyncEnabled}

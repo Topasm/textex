@@ -78,15 +78,20 @@ const Toolbar = React.memo(function Toolbar({
   const handleSyncToPdf = useCallback(() => {
     const editorState = useEditorStore.getState()
     if (!editorState.filePath) return
-    console.log(`[SyncTeX UI] forward sync: cursorLine=${editorState.cursorLine}, file=${editorState.filePath}`)
-    window.api.synctexForward(editorState.filePath, editorState.cursorLine).then((result) => {
-      console.log('[SyncTeX UI] forward sync result:', result)
-      if (result) {
-        usePdfStore.getState().setSynctexHighlight(result)
-      }
-    }).catch((err) => {
-      console.warn('[SyncTeX UI] forward sync failed:', err)
-    })
+    console.log(
+      `[SyncTeX UI] forward sync: cursorLine=${editorState.cursorLine}, file=${editorState.filePath}`
+    )
+    window.api
+      .synctexForward(editorState.filePath, editorState.cursorLine)
+      .then((result) => {
+        console.log('[SyncTeX UI] forward sync result:', result)
+        if (result) {
+          usePdfStore.getState().setSynctexHighlight(result)
+        }
+      })
+      .catch((err) => {
+        console.warn('[SyncTeX UI] forward sync failed:', err)
+      })
   }, [])
 
   const handlePageInputFocus = useCallback(() => {
@@ -104,18 +109,15 @@ const Toolbar = React.memo(function Toolbar({
     setPageInputValue('')
   }, [pageInputValue, numPages])
 
-  const handlePageInputKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter') {
-        e.currentTarget.blur()
-      } else if (e.key === 'Escape') {
-        setPageInputValue('')
-        setIsPageInputFocused(false)
-        e.currentTarget.blur()
-      }
-    },
-    []
-  )
+  const handlePageInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.currentTarget.blur()
+    } else if (e.key === 'Escape') {
+      setPageInputValue('')
+      setIsPageInputFocused(false)
+      e.currentTarget.blur()
+    }
+  }, [])
 
   return (
     <div className="toolbar">
@@ -131,7 +133,10 @@ const Toolbar = React.memo(function Toolbar({
 
       {/* File Menu */}
       <div className="menu-dropdown" ref={fileMenuRef}>
-        <button onClick={() => setIsFileMenuOpen(!isFileMenuOpen)} title={t('toolbar.fileOperations')}>
+        <button
+          onClick={() => setIsFileMenuOpen(!isFileMenuOpen)}
+          title={t('toolbar.fileOperations')}
+        >
           <FileText size={16} /> <ChevronDown size={12} />
         </button>
         {isFileMenuOpen && (
@@ -220,7 +225,11 @@ const Toolbar = React.memo(function Toolbar({
         </button>
       )}
 
-      <button onClick={onOpenSettings} title={t('toolbar.settings')} aria-label={t('toolbar.settings')}>
+      <button
+        onClick={onOpenSettings}
+        title={t('toolbar.settings')}
+        aria-label={t('toolbar.settings')}
+      >
         <Settings size={16} />
       </button>
 
@@ -234,52 +243,54 @@ const Toolbar = React.memo(function Toolbar({
 
       {/* Right side: PDF Controls & File Info */}
       <div className="toolbar-group-right">
-        {settings.showPdfToolbarControls !== false && <div className="toolbar-pdf-controls">
-          <button
-            className="toolbar-compact-btn"
-            onClick={handleSyncToCode}
-            title={t('toolbar.syncPdfToCode')}
-            aria-label={t('toolbar.syncPdfToCode')}
-          >
-            {'\u2190'}
-          </button>
-          <button
-            className="toolbar-compact-btn"
-            onClick={handleSyncToPdf}
-            title={t('toolbar.syncCodeToPdf')}
-            aria-label={t('toolbar.syncCodeToPdf')}
-          >
-            {'\u2192'}
-          </button>
-          <div className="toolbar-separator" />
+        {settings.showPdfToolbarControls !== false && (
+          <div className="toolbar-pdf-controls">
+            <button
+              className="toolbar-compact-btn"
+              onClick={handleSyncToCode}
+              title={t('toolbar.syncPdfToCode')}
+              aria-label={t('toolbar.syncPdfToCode')}
+            >
+              {'\u2190'}
+            </button>
+            <button
+              className="toolbar-compact-btn"
+              onClick={handleSyncToPdf}
+              title={t('toolbar.syncCodeToPdf')}
+              aria-label={t('toolbar.syncCodeToPdf')}
+            >
+              {'\u2192'}
+            </button>
+            <div className="toolbar-separator" />
 
-          {/* Page Navigation */}
-          {numPages > 0 && (
-            <>
-              <span className="toolbar-page-nav">
-                <input
-                  className="toolbar-page-input"
-                  type="text"
-                  inputMode="numeric"
-                  value={isPageInputFocused ? pageInputValue : String(currentPage)}
-                  onChange={(e) => setPageInputValue(e.target.value.replace(/\D/g, ''))}
-                  onFocus={handlePageInputFocus}
-                  onBlur={handlePageInputBlur}
-                  onKeyDown={handlePageInputKeyDown}
-                  title={t('toolbar.goToPage')}
-                  aria-label={t('toolbar.goToPage')}
-                />
-                <span className="toolbar-page-label">
-                  {t('toolbar.pageOf')} {numPages}
+            {/* Page Navigation */}
+            {numPages > 0 && (
+              <>
+                <span className="toolbar-page-nav">
+                  <input
+                    className="toolbar-page-input"
+                    type="text"
+                    inputMode="numeric"
+                    value={isPageInputFocused ? pageInputValue : String(currentPage)}
+                    onChange={(e) => setPageInputValue(e.target.value.replace(/\D/g, ''))}
+                    onFocus={handlePageInputFocus}
+                    onBlur={handlePageInputBlur}
+                    onKeyDown={handlePageInputKeyDown}
+                    title={t('toolbar.goToPage')}
+                    aria-label={t('toolbar.goToPage')}
+                  />
+                  <span className="toolbar-page-label">
+                    {t('toolbar.pageOf')} {numPages}
+                  </span>
                 </span>
-              </span>
-              <div className="toolbar-separator" />
-            </>
-          )}
+                <div className="toolbar-separator" />
+              </>
+            )}
 
-          {/* Zoom Controls */}
-          <PdfZoomDropdown />
-        </div>}
+            {/* Zoom Controls */}
+            <PdfZoomDropdown />
+          </div>
+        )}
 
         <span className="file-name">
           {isDirty && <span className="dirty-dot" />}

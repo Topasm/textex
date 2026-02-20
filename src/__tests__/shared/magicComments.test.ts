@@ -12,9 +12,7 @@ describe('findRootFile', () => {
   it('parses standard magic comment', () => {
     const content = '%! TeX root = ./main.tex\n\\section{Chapter 1}'
     const currentFile = path.resolve('/project/chapters/chapter1.tex')
-    expect(findRootFile(content, currentFile)).toBe(
-      path.resolve('/project/chapters/main.tex')
-    )
+    expect(findRootFile(content, currentFile)).toBe(path.resolve('/project/chapters/main.tex'))
   })
 
   it('resolves parent directory reference', () => {
@@ -26,25 +24,19 @@ describe('findRootFile', () => {
   it('handles case-insensitive matching', () => {
     const content = '%! tex ROOT = ./main.tex\n\\section{Chapter 1}'
     const currentFile = path.resolve('/project/chapters/chapter1.tex')
-    expect(findRootFile(content, currentFile)).toBe(
-      path.resolve('/project/chapters/main.tex')
-    )
+    expect(findRootFile(content, currentFile)).toBe(path.resolve('/project/chapters/main.tex'))
   })
 
   it('handles quoted paths', () => {
     const content = '%! TeX root = "./main.tex"\n\\section{Chapter 1}'
     const currentFile = path.resolve('/project/chapters/chapter1.tex')
-    expect(findRootFile(content, currentFile)).toBe(
-      path.resolve('/project/chapters/main.tex')
-    )
+    expect(findRootFile(content, currentFile)).toBe(path.resolve('/project/chapters/main.tex'))
   })
 
   it('handles single-quoted paths', () => {
     const content = "%! TeX root = './main.tex'\n\\section{Chapter 1}"
     const currentFile = path.resolve('/project/chapters/chapter1.tex')
-    expect(findRootFile(content, currentFile)).toBe(
-      path.resolve('/project/chapters/main.tex')
-    )
+    expect(findRootFile(content, currentFile)).toBe(path.resolve('/project/chapters/main.tex'))
   })
 
   it('only checks first 5 lines', () => {
@@ -58,17 +50,13 @@ describe('findRootFile', () => {
   it('finds magic comment on any of the first 5 lines', () => {
     const content = '% Some comment\n% Another comment\n%! TeX root = ../main.tex\n\\section{Intro}'
     const currentFile = path.resolve('/project/src/intro.tex')
-    expect(findRootFile(content, currentFile)).toBe(
-      path.resolve('/project/main.tex')
-    )
+    expect(findRootFile(content, currentFile)).toBe(path.resolve('/project/main.tex'))
   })
 
   it('handles extra whitespace in magic comment', () => {
     const content = '%!   TeX   root   =   ./main.tex\n\\section{Chapter 1}'
     const currentFile = path.resolve('/project/chapters/chapter1.tex')
-    expect(findRootFile(content, currentFile)).toBe(
-      path.resolve('/project/chapters/main.tex')
-    )
+    expect(findRootFile(content, currentFile)).toBe(path.resolve('/project/chapters/main.tex'))
   })
 
   it('returns current file for empty content', () => {

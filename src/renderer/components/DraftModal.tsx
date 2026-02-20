@@ -106,9 +106,7 @@ export const DraftModal: React.FC<DraftModalProps> = ({
         <div className="modal-body">
           {phase === 'input' && (
             <>
-              <p className="draft-hint">
-                {t('draftModal.hint')}
-              </p>
+              <p className="draft-hint">{t('draftModal.hint')}</p>
               <textarea
                 ref={inputRef}
                 className="draft-input"
@@ -130,9 +128,7 @@ export const DraftModal: React.FC<DraftModalProps> = ({
 
           {phase === 'preview' && (
             <>
-              <p className="draft-hint">
-                {t('draftModal.reviewHint')}
-              </p>
+              <p className="draft-hint">{t('draftModal.reviewHint')}</p>
               <textarea
                 className="draft-preview"
                 value={generatedLatex}

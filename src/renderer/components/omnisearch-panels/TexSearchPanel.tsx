@@ -35,10 +35,18 @@ export function TexSearchPanel({
             ? t('omniSearch.matches', { current: highlightedIndex + 1, total: texResults.length })
             : ''}
         </span>
-        <button onClick={handleTexPrev} disabled={texResults.length === 0} title={t('omniSearch.prevMatch')}>
+        <button
+          onClick={handleTexPrev}
+          disabled={texResults.length === 0}
+          title={t('omniSearch.prevMatch')}
+        >
           <ChevronUp size={14} />
         </button>
-        <button onClick={handleTexNext} disabled={texResults.length === 0} title={t('omniSearch.nextMatch')}>
+        <button
+          onClick={handleTexNext}
+          disabled={texResults.length === 0}
+          title={t('omniSearch.nextMatch')}
+        >
           <ChevronDown size={14} />
         </button>
       </div>

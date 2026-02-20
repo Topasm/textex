@@ -73,7 +73,10 @@ const StatusBar = React.memo(function StatusBar() {
           )}
         </span>
         {isGitRepo && gitBranch && (
-          <span className="status-git-branch" title={t('statusBar.gitBranch', { branch: gitBranch })}>
+          <span
+            className="status-git-branch"
+            title={t('statusBar.gitBranch', { branch: gitBranch })}
+          >
             {'\u2387'} {gitBranch}
           </span>
         )}
@@ -82,7 +85,11 @@ const StatusBar = React.memo(function StatusBar() {
         {lspEnabled && (
           <span
             className={`status-lsp${lspStatus === 'error' ? ' status-lsp-error' : ''}`}
-            title={lspStatus === 'error' ? t('statusBar.lspErrorTitle') : t('statusBar.lspTitle', { status: lspStatus })}
+            title={
+              lspStatus === 'error'
+                ? t('statusBar.lspErrorTitle')
+                : t('statusBar.lspTitle', { status: lspStatus })
+            }
           >
             {t('statusBar.lsp')}:{' '}
             {lspStatus === 'running'
@@ -113,7 +120,8 @@ const StatusBar = React.memo(function StatusBar() {
             }
           }}
         >
-          {t('statusBar.sections')}: {sectionHighlightEnabled ? t('statusBar.on') : t('statusBar.off')}
+          {t('statusBar.sections')}:{' '}
+          {sectionHighlightEnabled ? t('statusBar.on') : t('statusBar.off')}
         </span>
         <span
           className="status-spellcheck"

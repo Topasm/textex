@@ -189,7 +189,8 @@ export const useEditorStore = create<EditorState>()(
         }
       },
       setCursorPosition: (cursorLine, cursorColumn) => set({ cursorLine, cursorColumn }),
-      requestJumpToLine: (line, column, skipFocus) => set({ pendingJump: { line, column, skipFocus } }),
+      requestJumpToLine: (line, column, skipFocus) =>
+        set({ pendingJump: { line, column, skipFocus } }),
       clearPendingJump: () => set({ pendingJump: null }),
       requestInsertAtCursor: (text) => set({ pendingInsertText: text }),
       clearPendingInsert: () => set({ pendingInsertText: null }),

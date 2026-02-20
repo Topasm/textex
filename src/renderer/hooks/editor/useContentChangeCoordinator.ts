@@ -17,10 +17,7 @@ export interface ContentTask {
  * - Lower-priority tasks deferred via requestIdleCallback to avoid jank
  * - Reduces timer overhead and GC pressure
  */
-export function useContentChangeCoordinator(
-  content: string,
-  tasks: ContentTask[]
-): void {
+export function useContentChangeCoordinator(content: string, tasks: ContentTask[]): void {
   const tasksRef = useRef(tasks)
   tasksRef.current = tasks
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
@@ -48,7 +45,9 @@ export function useContentChangeCoordinator(
       const timer = setTimeout(() => {
         if (task.idle && typeof requestIdleCallback !== 'undefined') {
           const handle = requestIdleCallback(
-            () => { task.fn() },
+            () => {
+              task.fn()
+            },
             { timeout: task.delayMs + 2000 }
           )
           idleHandlesRef.current.push(handle)

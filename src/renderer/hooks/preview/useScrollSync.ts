@@ -89,11 +89,14 @@ export function useScrollSync({
       lineMapRef.current = []
       return
     }
-    window.api.synctexBuildLineMap(filePath).then((map) => {
-      lineMapRef.current = map
-    }).catch(() => {
-      lineMapRef.current = []
-    })
+    window.api
+      .synctexBuildLineMap(filePath)
+      .then((map) => {
+        lineMapRef.current = map
+      })
+      .catch(() => {
+        lineMapRef.current = []
+      })
   }, [pdfRevision, filePath, scrollSyncEnabled])
 
   // Editor → PDF scroll sync
@@ -153,13 +156,7 @@ export function useScrollSync({
       disposable.dispose()
       if (debounceTimer) clearTimeout(debounceTimer)
     }
-  }, [
-    pdfRevision,
-    containerRef,
-    pageViewportsRef,
-    editorInstance,
-    scrollSyncEnabled
-  ])
+  }, [pdfRevision, containerRef, pageViewportsRef, editorInstance, scrollSyncEnabled])
 
   // PDF → Editor scroll sync
   useEffect(() => {
@@ -192,7 +189,12 @@ export function useScrollSync({
           const overlapTop = Math.max(rect.top, containerRect.top)
           const overlapBottom = Math.min(rect.bottom, containerRect.bottom)
           const visibleHeight = Math.max(0, overlapBottom - overlapTop)
-          const area = visibleHeight * Math.max(0, Math.min(rect.right, containerRect.right) - Math.max(rect.left, containerRect.left))
+          const area =
+            visibleHeight *
+            Math.max(
+              0,
+              Math.min(rect.right, containerRect.right) - Math.max(rect.left, containerRect.left)
+            )
           if (area > bestVisibleArea) {
             bestVisibleArea = area
             bestPage = pageNum
@@ -213,9 +215,7 @@ export function useScrollSync({
 
         // Convert pixel center to SyncTeX y coordinates
         const zoomLevel = usePdfStore.getState().zoomLevel
-        const pw = containerWidth
-          ? (containerWidth - 32) * (zoomLevel / 100)
-          : info.pageWidth
+        const pw = containerWidth ? (containerWidth - 32) * (zoomLevel / 100) : info.pageWidth
         const scale = pw / info.pageWidth
         const pdfCenterY = centerY / scale // top-down PDF user-space y
 
@@ -243,13 +243,7 @@ export function useScrollSync({
       container.removeEventListener('scroll', handleScroll)
       if (debounceTimer) clearTimeout(debounceTimer)
     }
-  }, [
-    pdfRevision,
-    containerRef,
-    pageViewportsRef,
-    containerWidth,
-    scrollSyncEnabled
-  ])
+  }, [pdfRevision, containerRef, pageViewportsRef, containerWidth, scrollSyncEnabled])
 
   // Cleanup lock timer on unmount
   useEffect(() => {

@@ -82,7 +82,8 @@ function LogPanel() {
 
   // Problems tab label
   const totalCount = diagnostics.length
-  const problemsLabel = totalCount === 0 ? t('logPanel.problems') : t('logPanel.problemsCount', { count: totalCount })
+  const problemsLabel =
+    totalCount === 0 ? t('logPanel.problems') : t('logPanel.problemsCount', { count: totalCount })
 
   return (
     <div className="log-panel">
@@ -101,8 +102,12 @@ function LogPanel() {
           >
             {t('logPanel.output')}
           </button>
-          <button onClick={() => useCompileStore.getState().clearLogs()}>{t('logPanel.clear')}</button>
-          <button onClick={() => useCompileStore.getState().toggleLogPanel()}>{t('logPanel.close')}</button>
+          <button onClick={() => useCompileStore.getState().clearLogs()}>
+            {t('logPanel.clear')}
+          </button>
+          <button onClick={() => useCompileStore.getState().toggleLogPanel()}>
+            {t('logPanel.close')}
+          </button>
         </div>
       </div>
       {logViewMode === 'raw' ? (
@@ -240,7 +245,9 @@ const StructuredProblems = React.memo(function StructuredProblems({
                     onClick={() => onEntryClick(d.line, d.column)}
                   >
                     <span className="log-entry-icon">{severityIcon(d.severity)}</span>
-                    <span className="log-entry-location">{t('logPanel.ln')} {d.line}</span>
+                    <span className="log-entry-location">
+                      {t('logPanel.ln')} {d.line}
+                    </span>
                     <span className="log-entry-message">{d.message}</span>
                   </div>
                 ))}

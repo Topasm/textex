@@ -220,10 +220,7 @@ export async function loadSnippets(projectRoot: string): Promise<ProjectSnippet[
   return readJson(getSnippetsPath(projectRoot), [])
 }
 
-export async function saveSnippets(
-  projectRoot: string,
-  snippets: ProjectSnippet[]
-): Promise<void> {
+export async function saveSnippets(projectRoot: string, snippets: ProjectSnippet[]): Promise<void> {
   await writeJson(getSnippetsPath(projectRoot), snippets)
 }
 

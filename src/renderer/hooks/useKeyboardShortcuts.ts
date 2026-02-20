@@ -27,17 +27,27 @@ export function useKeyboardShortcuts(opts: KeyboardShortcutsOpts): void {
     commandRegistry.register('file.saveAs', { key: 's', mod: true, shift: true }, handleSaveAs)
     commandRegistry.register('file.save', { key: 's', mod: true }, handleSave)
     commandRegistry.register('compile', { key: 'Enter', mod: true }, handleCompile)
-    commandRegistry.register('log.toggle', { key: 'l', mod: true }, () => useCompileStore.getState().toggleLogPanel())
+    commandRegistry.register('log.toggle', { key: 'l', mod: true }, () =>
+      useCompileStore.getState().toggleLogPanel()
+    )
     commandRegistry.register('font.increase', { key: ['=', '+'], mod: true, shift: true }, () =>
       useSettingsStore.getState().increaseFontSize()
     )
     commandRegistry.register('font.decrease', { key: '-', mod: true, shift: true }, () =>
       useSettingsStore.getState().decreaseFontSize()
     )
-    commandRegistry.register('zoom.in', { key: ['=', '+'], mod: true }, () => usePdfStore.getState().zoomIn())
-    commandRegistry.register('zoom.out', { key: '-', mod: true }, () => usePdfStore.getState().zoomOut())
-    commandRegistry.register('zoom.reset', { key: '0', mod: true }, () => usePdfStore.getState().resetZoom())
-    commandRegistry.register('sidebar.toggle', { key: 'b', mod: true }, () => useProjectStore.getState().toggleSidebar())
+    commandRegistry.register('zoom.in', { key: ['=', '+'], mod: true }, () =>
+      usePdfStore.getState().zoomIn()
+    )
+    commandRegistry.register('zoom.out', { key: '-', mod: true }, () =>
+      usePdfStore.getState().zoomOut()
+    )
+    commandRegistry.register('zoom.reset', { key: '0', mod: true }, () =>
+      usePdfStore.getState().resetZoom()
+    )
+    commandRegistry.register('sidebar.toggle', { key: 'b', mod: true }, () =>
+      useProjectStore.getState().toggleSidebar()
+    )
     commandRegistry.register('tab.close', { key: 'w', mod: true }, () => {
       const state = useEditorStore.getState()
       if (state.activeFilePath) state.closeTab(state.activeFilePath)

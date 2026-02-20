@@ -132,14 +132,24 @@ const OutlineNode = React.memo(function OutlineNode({
         ) : (
           <span className="outline-toggle-spacer" />
         )}
-        <span className={`outline-icon outline-icon-${category}`} style={bandColor ? { color: bandColor } : undefined}>{getSymbolIcon(category)}</span>
+        <span
+          className={`outline-icon outline-icon-${category}`}
+          style={bandColor ? { color: bandColor } : undefined}
+        >
+          {getSymbolIcon(category)}
+        </span>
         <span className="outline-name">{node.name}</span>
         {node.detail && <span className="outline-detail">{node.detail}</span>}
       </div>
       {hasChildren && expanded && (
         <div className="outline-children">
           {node.children.map((child, i) => (
-            <OutlineNode key={`${child.name}-${i}`} node={child} depth={depth + 1} bandColor={bandColor} />
+            <OutlineNode
+              key={`${child.name}-${i}`}
+              node={child}
+              depth={depth + 1}
+              bandColor={bandColor}
+            />
           ))}
         </div>
       )}
@@ -174,9 +184,7 @@ function OutlinePanel() {
             className={`outline-highlight-toggle${sectionHighlightEnabled ? ' active' : ''}`}
             onClick={toggleHighlight}
             title={
-              sectionHighlightEnabled
-                ? t('outlinePanel.hideBands')
-                : t('outlinePanel.showBands')
+              sectionHighlightEnabled ? t('outlinePanel.hideBands') : t('outlinePanel.showBands')
             }
           >
             {'\u2261'} {t('outlinePanel.bands')}
@@ -194,9 +202,7 @@ function OutlinePanel() {
           className={`outline-highlight-toggle${sectionHighlightEnabled ? ' active' : ''}`}
           onClick={toggleHighlight}
           title={
-            sectionHighlightEnabled
-              ? t('outlinePanel.hideBands')
-              : t('outlinePanel.showBands')
+            sectionHighlightEnabled ? t('outlinePanel.hideBands') : t('outlinePanel.showBands')
           }
         >
           {'\u2261'} {t('outlinePanel.bands')}

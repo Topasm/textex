@@ -47,12 +47,22 @@ function UpdateNotification() {
       )}
 
       {status === 'available' && (
-        <button onClick={() => window.api.updateDownload()}>{t('updateNotification.download')}</button>
+        <button onClick={() => window.api.updateDownload()}>
+          {t('updateNotification.download')}
+        </button>
       )}
 
-      {status === 'ready' && <button onClick={() => window.api.updateInstall()}>{t('updateNotification.restart')}</button>}
+      {status === 'ready' && (
+        <button onClick={() => window.api.updateInstall()}>
+          {t('updateNotification.restart')}
+        </button>
+      )}
 
-      <button className="update-dismiss" onClick={handleDismiss} title={t('updateNotification.dismiss')}>
+      <button
+        className="update-dismiss"
+        onClick={handleDismiss}
+        title={t('updateNotification.dismiss')}
+      >
         {'\u00D7'}
       </button>
     </div>
