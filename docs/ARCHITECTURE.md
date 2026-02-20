@@ -35,7 +35,7 @@ Runs inside a sandboxed Chromium tab.
 | UI | React component tree rendered with Vite HMR |
 | Code editing | Monaco Editor (`@monaco-editor/react`) |
 | PDF display | `react-pdf` (PDF.js wrapper) |
-| State | Zustand store: file path, dirty flag, compile status, logs |
+| State | 6 split Zustand stores: project, editor, compile, PDF, settings, UI |
 
 ### Sidecar Binary: Tectonic (LaTeX Compiler)
 
@@ -68,7 +68,7 @@ Main Process (TexLabManager)
 TexLab child process
 ```
 
-### CLI Process (Planned)
+### CLI Process
 
 A standalone Node.js entry point (`src/cli/index.ts`) that reuses shared compiler
 and pandoc logic without any Electron dependencies.
@@ -80,7 +80,7 @@ and pandoc logic without any Electron dependencies.
 | File watching | `chokidar` for `--watch` mode |
 | Export | Delegates to `src/shared/pandoc.ts` |
 
-### MCP Server (Planned)
+### MCP Server
 
 A stdio-based [Model Context Protocol](https://modelcontextprotocol.io/) server
 (`src/mcp/server.ts`) that exposes TextEx compilation as AI-callable tools.
@@ -143,7 +143,7 @@ Channel namespaces: `fs:*`, `latex:*`, `lsp:*`, `synctex:*`, `settings:*`,
                                           Silently ignored
 ```
 
-### CLI Compile (Planned)
+### CLI Compile
 
 ```
  textex compile <file.tex>
@@ -164,7 +164,7 @@ Channel namespaces: `fs:*`, `latex:*`, `lsp:*`, `synctex:*`, `settings:*`,
  --watch? Re-run on file change (chokidar)
 ```
 
-### MCP Compile (Planned)
+### MCP Compile
 
 ```
  AI client sends JSON-RPC request

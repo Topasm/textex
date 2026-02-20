@@ -1,6 +1,6 @@
 {
   "name": "textex",
-  "version": "1.0.0-beta.8",
+  "version": "1.0.0-beta.9",
   "description": "A self-contained desktop LaTeX editor built on Electron",
   "main": "./out/main/main.js",
   "bin": {
@@ -22,7 +22,9 @@
     "format": "prettier --write src/",
     "format:check": "prettier --check src/",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "check": "node scripts/quick-check.js",
+    "pre-commit": "node scripts/pre-commit.js"
   },
   "keywords": [
     "latex",

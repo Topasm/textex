@@ -172,11 +172,17 @@ Enable **Scroll Sync** in Settings > Appearance to keep the editor and PDF align
 
 - [Development Guide](docs/DEVELOPMENT.md)
 - [Architecture](docs/ARCHITECTURE.md)
+- [File Structure](docs/FILE_STRUCTURE.md)
 - [IPC Specification](docs/IPC_SPEC.md)
+- [Tech Stack](docs/TECH_STACK.md)
+- [UI Specification](docs/UI_SPEC.md)
 - [Settings Reference](docs/SETTINGS.md)
+- [Packaging](docs/PACKAGING.md)
 - [Zotero Integration](docs/ZOTERO.md)
 - [CLI Reference](docs/CLI.md)
 - [MCP Server](docs/MCP.md)
+- [Licenses](docs/LICENSES.md)
+- [TODO / Status](docs/TODO.md)
 
 ## License
 

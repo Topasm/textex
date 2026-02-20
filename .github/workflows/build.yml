@@ -14,8 +14,53 @@ on:
     tags:
       - 'v*'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    name: Lint & Typecheck
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Format check
+        run: npm run format:check
+
+  test:
+    runs-on: ubuntu-latest
+    name: Test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test
+
   build:
+    needs: [lint, test]
     strategy:
       matrix:
         include:
@@ -57,12 +102,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Typecheck
-        run: npm run typecheck
 
       - name: Download Tectonic binary
         shell: bash
@@ -111,6 +150,7 @@ jobs:
           name: TextEx-${{ matrix.platform }}
           path: |
             dist/*.AppImage
+            dist/*.deb
             dist/*.dmg
             dist/*.exe
           if-no-files-found: warn
@@ -130,9 +170,56 @@ jobs:
         with:
           path: artifacts
 
+      - name: Extract version
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare release artifacts
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          mkdir -p release-artifacts
+
+          # Linux
+          find artifacts/TextEx-linux -name "*.AppImage" -exec cp {} "release-artifacts/TextEx-${VERSION}-linux.AppImage" \; 2>/dev/null || true
+          find artifacts/TextEx-linux -name "*.deb" -exec cp {} "release-artifacts/TextEx-${VERSION}-linux.deb" \; 2>/dev/null || true
+
+          # macOS
+          find artifacts/TextEx-mac-x64 -name "*.dmg" -exec cp {} "release-artifacts/TextEx-${VERSION}-macos-x64.dmg" \; 2>/dev/null || true
+          find artifacts/TextEx-mac-arm64 -name "*.dmg" -exec cp {} "release-artifacts/TextEx-${VERSION}-macos-arm64.dmg" \; 2>/dev/null || true
+
+          # Windows
+          find artifacts/TextEx-win -name "*.exe" -exec cp {} "release-artifacts/TextEx-${VERSION}-windows.exe" \; 2>/dev/null || true
+
+          # Generate checksums
+          cd release-artifacts
+          sha256sum * > checksums.txt
+
+          echo "Release artifacts:"
+          ls -lh
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          draft: true
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
           generate_release_notes: true
-          files: artifacts/**/*
+          files: release-artifacts/*
+          body: |
+            ## Installation
+
+            | Platform | File | Notes |
+            |----------|------|-------|
+            | Windows | `TextEx-${{ steps.version.outputs.version }}-windows.exe` | NSIS installer |
+            | macOS (Intel) | `TextEx-${{ steps.version.outputs.version }}-macos-x64.dmg` | Drag to Applications |
+            | macOS (Apple Silicon) | `TextEx-${{ steps.version.outputs.version }}-macos-arm64.dmg` | Drag to Applications |
+            | Linux (.deb) | `TextEx-${{ steps.version.outputs.version }}-linux.deb` | `sudo dpkg -i TextEx-*.deb` |
+            | Linux (.AppImage) | `TextEx-${{ steps.version.outputs.version }}-linux.AppImage` | `chmod +x` and run |
+
+            ## Security Notes
+
+            - **Windows:** SmartScreen may show a warning. Click "More info" then "Run anyway".
+            - **macOS:** Gatekeeper may block the app. Run `xattr -cr "/Applications/TextEx.app"` in Terminal.
+            - **Linux:** Verify SHA256 checksums against `checksums.txt` before installation.
+
+            ## What's Changed

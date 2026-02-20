@@ -57,7 +57,7 @@ electron-builder config (NSIS/DMG/AppImage), Tectonic binaries for all platforms
 - **CI/CD** — GitHub Actions matrix (Linux, macOS x64/arm64, Windows), tag-triggered
 - **App icons** — icon.png/ico/icns
 - **ESLint + Prettier** — v9 flat config, typescript-eslint, format scripts
-- **Unit tests** — Vitest + @testing-library/react, 53 tests across 3 files
+- **Unit tests** — Vitest + @testing-library/react, 133 tests across 9 files
 - **Font size setting** — Ctrl+Shift+=/- shortcuts, persisted, 8–32px range
 - **BibTeX support** — .bib parser, BibPanel sidebar, \cite{} completion
 - **Git integration** — git.ts backend, GitPanel (stage/unstage/commit), branch in status bar
