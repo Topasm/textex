@@ -187,8 +187,9 @@ export function useSpelling({ enabled, editorRef, monacoRef }: UseSpellingParams
     const monacoInstance = monacoRef.current
     const editorInstance = editorRef.current
     const markersMap = prevMarkersRef.current
+    const timerId = spellTimerRef.current
     return () => {
-      clearTimeout(spellTimerRef.current)
+      clearTimeout(timerId)
       if (monacoInstance && editorInstance) {
         const model = editorInstance.getModel()
         if (model) {

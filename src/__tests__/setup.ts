@@ -15,6 +15,7 @@ vi.mock('react-i18next', async () => {
       i18n,
       ready: true
     }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     withTranslation: () => (Component: React.ComponentType<any>) => {
       const Wrapped = (props: Record<string, unknown>) =>
         React.createElement(Component, { ...props, t: i18n.t.bind(i18n), i18n, tReady: true })

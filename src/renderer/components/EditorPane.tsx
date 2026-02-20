@@ -147,9 +147,9 @@ function EditorPane() {
   useEffect(() => {
     const editor = editorRef.current
     if (!editor || !settings.vimMode) {
-      if ((window as any).vimMode) {
-        ;(window as any).vimMode.dispose()
-        ;(window as any).vimMode = null
+      if (window.vimMode) {
+        ;window.vimMode.dispose()
+        ;window.vimMode = null
       }
       return
     }
@@ -157,15 +157,15 @@ function EditorPane() {
     // Load monaco-vim dynamically to avoid issues if not needed
     import('monaco-vim').then(({ initVimMode }) => {
       const statusNode = document.getElementById('vim-status-bar')
-      if (editor && settings.vimMode && !(window as any).vimMode) {
-        ;(window as any).vimMode = initVimMode(editor, statusNode)
+      if (editor && settings.vimMode && !window.vimMode) {
+        ;window.vimMode = initVimMode(editor, statusNode)
       }
     })
 
     return () => {
-      if ((window as any).vimMode) {
-        ;(window as any).vimMode.dispose()
-        ;(window as any).vimMode = null
+      if (window.vimMode) {
+        ;window.vimMode.dispose()
+        ;window.vimMode = null
       }
     }
   }, [settings.vimMode])
@@ -179,9 +179,9 @@ function EditorPane() {
       disposeTableEditor()
       stopLspClient()
       setEditorInstance(null)
-      if ((window as any).vimMode) {
-        ;(window as any).vimMode.dispose()
-        ;(window as any).vimMode = null
+      if (window.vimMode) {
+        ;window.vimMode.dispose()
+        ;window.vimMode = null
       }
     }
   }, [disposeTableEditor, setEditorInstance])
