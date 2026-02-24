@@ -1,3 +1,5 @@
+[**한국어**](README.ko.md)
+
 # TextEx
 
 [![Build Status](https://github.com/Topasm/textex/actions/workflows/build.yml/badge.svg)](https://github.com/Topasm/textex/actions/workflows/build.yml)

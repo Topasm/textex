@@ -1,3 +1,5 @@
+[**English**](README.md)
+
 # TextEx
 
 [![Build Status](https://github.com/Topasm/textex/actions/workflows/build.yml/badge.svg)](https://github.com/Topasm/textex/actions/workflows/build.yml)
