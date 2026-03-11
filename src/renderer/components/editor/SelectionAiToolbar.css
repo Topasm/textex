@@ -1,0 +1,86 @@
+.selection-ai-toolbar {
+  position: absolute;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-secondary) 94%, transparent);
+  box-shadow:
+    0 12px 32px var(--shadow-color),
+    0 2px 8px color-mix(in srgb, var(--shadow-color) 50%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  animation: selection-ai-toolbar-fade-in 0.16s ease-out;
+  white-space: nowrap;
+}
+
+@keyframes selection-ai-toolbar-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.selection-ai-toolbar.flipped {
+  animation-name: selection-ai-toolbar-fade-in-up;
+}
+
+@keyframes selection-ai-toolbar-fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.selection-ai-toolbar-btn {
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-primary);
+  padding: 7px 11px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.selection-ai-toolbar-btn:hover {
+  background: var(--bg-hover);
+}
+
+.selection-ai-toolbar-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.selection-ai-toolbar-btn.is-primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.selection-ai-toolbar-btn.is-primary:hover {
+  background: var(--accent-hover);
+}
+
+[data-theme='light'] .selection-ai-toolbar,
+[data-theme='glass'] .selection-ai-toolbar {
+  box-shadow:
+    0 12px 28px rgba(60, 50, 40, 0.14),
+    0 2px 8px rgba(60, 50, 40, 0.08);
+}

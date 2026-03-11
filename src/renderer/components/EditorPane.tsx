@@ -21,7 +21,8 @@ import { useTableEditor } from '../hooks/editor/useTableEditor'
 import { MathPreviewWidget } from './MathPreviewWidget'
 import { DiffEditor } from '@monaco-editor/react'
 import type { editor as monacoEditor } from 'monaco-editor'
-import { registerAiActions } from './editor/editorAiActions'
+import { AI_ACTIONS, registerAiActions, runAiAction, type AiActionDef } from './editor/editorAiActions'
+import { SelectionAiToolbar } from './editor/SelectionAiToolbar'
 import { configureMonacoLanguages, getMonacoTheme } from '../data/monacoConfig'
 import { generateFigureSnippet } from '../utils/figureSnippet'
 
@@ -49,8 +50,15 @@ function EditorPane() {
   const monacoRef = useRef<MonacoInstance | null>(null)
   const cursorDisposableRef = useRef<{ dispose(): void } | null>(null)
   const mouseDisposableRef = useRef<{ dispose(): void } | null>(null)
+  const selectionDisposableRef = useRef<{ dispose(): void } | null>(null)
+  const selectionMouseDownDisposableRef = useRef<{ dispose(): void } | null>(null)
+  const selectionMouseUpDisposableRef = useRef<{ dispose(): void } | null>(null)
+  const selectionScrollDisposableRef = useRef<{ dispose(): void } | null>(null)
+  const selectionBlurDisposableRef = useRef<{ dispose(): void } | null>(null)
   const completionDisposablesRef = useRef<{ dispose(): void }[]>([])
   const aiEnabledKeyRef = useRef<{ set(value: boolean): void } | null>(null)
+  const mouseSelectionStartedRef = useRef(false)
+  const pendingMouseSelectionRef = useRef<monacoEditor.ISelection | null>(null)
   const registerClickNavigation = useClickNavigation()
   const { runSpellCheck } = useSpelling({
     enabled: spellCheckEnabled,
@@ -79,6 +87,8 @@ function EditorPane() {
   useSectionHighlight({ editorRef, monacoRef })
   const { handleDrop: handleSmartImageDrop } = useSmartImageDrop()
   const [showMathPreview, setShowMathPreview] = useState(true)
+  const [selectionAiToolbarSelection, setSelectionAiToolbarSelection] =
+    useState<monacoEditor.ISelection | null>(null)
   const prevMathRangeRef = useRef<string | null>(null)
 
   // History panel hook
@@ -98,6 +108,21 @@ function EditorPane() {
 
   // Editor commands hook
   const registerEditorCommands = useEditorCommands({ setShowHistory, showHistory, setHistoryMode })
+
+  const hideSelectionAiToolbar = useCallback(() => {
+    pendingMouseSelectionRef.current = null
+    setSelectionAiToolbarSelection(null)
+  }, [])
+
+  const handleSelectionAiAction = useCallback(
+    async (action: AiActionDef) => {
+      const editor = editorRef.current
+      hideSelectionAiToolbar()
+      if (!editor) return
+      await runAiAction(editor, action)
+    },
+    [hideSelectionAiToolbar]
+  )
 
   // Re-show the preview when the cursor moves to a different math expression
   useEffect(() => {
@@ -134,6 +159,58 @@ function EditorPane() {
 
     // Register AI Actions (extracted to editorAiActions.ts)
     registerAiActions(editor)
+
+    selectionDisposableRef.current = editor.onDidChangeCursorSelection((e) => {
+      if (!aiEnabled) {
+        hideSelectionAiToolbar()
+        return
+      }
+
+      if (e.selection.isEmpty()) {
+        hideSelectionAiToolbar()
+        return
+      }
+
+      if (e.source === 'mouse' && mouseSelectionStartedRef.current) {
+        pendingMouseSelectionRef.current = e.selection
+        return
+      }
+
+      if (e.source !== 'mouse') {
+        hideSelectionAiToolbar()
+      }
+    })
+
+    selectionMouseDownDisposableRef.current = editor.onMouseDown((e) => {
+      const isContentTarget =
+        e.target.type === monaco.editor.MouseTargetType.CONTENT_TEXT ||
+        e.target.type === monaco.editor.MouseTargetType.CONTENT_EMPTY
+      if (!isContentTarget) return
+      mouseSelectionStartedRef.current = true
+      hideSelectionAiToolbar()
+    })
+
+    selectionMouseUpDisposableRef.current = editor.onMouseUp(() => {
+      if (!mouseSelectionStartedRef.current) return
+      mouseSelectionStartedRef.current = false
+
+      const selection = editor.getSelection()
+      if (!aiEnabled || !selection || selection.isEmpty() || !pendingMouseSelectionRef.current) {
+        hideSelectionAiToolbar()
+        return
+      }
+
+      setSelectionAiToolbarSelection(selection)
+      pendingMouseSelectionRef.current = null
+    })
+
+    selectionScrollDisposableRef.current = editor.onDidScrollChange(() => {
+      hideSelectionAiToolbar()
+    })
+
+    selectionBlurDisposableRef.current = editor.onDidBlurEditorText(() => {
+      hideSelectionAiToolbar()
+    })
   }
 
   // Keep the aiEnabled context key in sync with settings
@@ -142,6 +219,12 @@ function EditorPane() {
       aiEnabledKeyRef.current.set(aiEnabled)
     }
   }, [aiEnabled])
+
+  useEffect(() => {
+    if (!aiEnabled) {
+      hideSelectionAiToolbar()
+    }
+  }, [aiEnabled, hideSelectionAiToolbar])
 
   // Vim Mode
   useEffect(() => {
@@ -175,6 +258,11 @@ function EditorPane() {
     return () => {
       cursorDisposableRef.current?.dispose()
       mouseDisposableRef.current?.dispose()
+      selectionDisposableRef.current?.dispose()
+      selectionMouseDownDisposableRef.current?.dispose()
+      selectionMouseUpDisposableRef.current?.dispose()
+      selectionScrollDisposableRef.current?.dispose()
+      selectionBlurDisposableRef.current?.dispose()
       for (const d of completionDisposables.current) d.dispose()
       disposeTableEditor()
       stopLspClient()
@@ -306,6 +394,15 @@ function EditorPane() {
               mathData={mathData}
               editorRef={editorRef}
               onClose={() => setShowMathPreview(false)}
+            />
+          )}
+          {selectionAiToolbarSelection && (
+            <SelectionAiToolbar
+              editorRef={editorRef}
+              selection={selectionAiToolbarSelection}
+              actions={AI_ACTIONS}
+              onAction={handleSelectionAiAction}
+              onClose={hideSelectionAiToolbar}
             />
           )}
         </div>

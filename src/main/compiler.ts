@@ -221,8 +221,11 @@ export async function compileLatex(
   win: BrowserWindow,
   priority?: CompilePriority
 ): Promise<CompileResult> {
-  return enqueueCompile(filePath, (fp) => doCompile(fp, win, { priority }), priority, () =>
-    cancelCompilation()
+  return enqueueCompile(
+    filePath,
+    (fp) => doCompile(fp, win, { priority }),
+    priority,
+    () => cancelCompilation()
   )
 }
 

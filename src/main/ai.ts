@@ -15,9 +15,9 @@ interface ThinkingConfig {
 // ---- Default models ----
 
 const DEFAULT_MODELS: Record<string, string> = {
-  openai: 'gpt-5.2',
-  anthropic: 'claude-sonnet-4-5',
-  gemini: 'gemini-3-flash-preview'
+  openai: 'gpt-5.4',
+  anthropic: 'claude-sonnet-4-6',
+  gemini: 'gemini-3.1-pro-preview'
 }
 
 // ---- Default prompts (used when user hasn't customized) ----

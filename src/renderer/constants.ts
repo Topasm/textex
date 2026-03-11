@@ -34,10 +34,11 @@ export const EXPORT_FORMATS = [
 // ── AI Provider metadata ────────────────────────────────────
 export const AI_MODEL_OPTIONS: Record<string, { value: string; label: string }[]> = {
   openai: [
+    { value: 'gpt-5.4', label: 'GPT-5.4' },
     { value: 'gpt-5.2', label: 'GPT-5.2' },
-    { value: 'gpt-5.1', label: 'GPT-5.1' },
     { value: 'gpt-5', label: 'GPT-5' },
     { value: 'gpt-5-mini', label: 'GPT-5 Mini' },
+    { value: 'gpt-5-nano', label: 'GPT-5 Nano' },
     { value: 'gpt-4.1', label: 'GPT-4.1' },
     { value: 'gpt-4.1-mini', label: 'GPT-4.1 Mini' },
     { value: 'o4-mini', label: 'o4 Mini' },
@@ -48,6 +49,8 @@ export const AI_MODEL_OPTIONS: Record<string, { value: string; label: string }[]
     { value: 'o1-mini', label: 'o1 Mini' }
   ],
   anthropic: [
+    { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6' },
+    { value: 'claude-opus-4-6', label: 'Claude Opus 4.6' },
     { value: 'claude-sonnet-4-5', label: 'Claude Sonnet 4.5' },
     { value: 'claude-opus-4-5', label: 'Claude Opus 4.5' },
     { value: 'claude-haiku-4-5', label: 'Claude Haiku 4.5' },
@@ -55,8 +58,8 @@ export const AI_MODEL_OPTIONS: Record<string, { value: string; label: string }[]
     { value: 'claude-3-5-sonnet-latest', label: 'Claude 3.5 Sonnet' }
   ],
   gemini: [
-    { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview' },
-    { value: 'gemini-3-pro-preview', label: 'Gemini 3 Pro Preview' },
+    { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro Preview' },
+    { value: 'gemini-3.1-flash-lite-preview', label: 'Gemini 3.1 Flash-Lite Preview' },
     { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
     { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
     { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' }

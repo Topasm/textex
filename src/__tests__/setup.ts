@@ -71,6 +71,8 @@ Object.defineProperty(window, 'api', {
     saveSettings: vi.fn(),
     addRecentProject: vi.fn().mockResolvedValue({}),
     removeRecentProject: vi.fn().mockResolvedValue({}),
+    setTheme: vi.fn(),
+    updateRecentProject: vi.fn().mockResolvedValue({}),
 
     // BibTeX
     parseBibFile: vi.fn(),
@@ -102,7 +104,62 @@ Object.defineProperty(window, 'api', {
 
     // Export
     exportDocument: vi.fn(),
-    getExportFormats: vi.fn()
+    getExportFormats: vi.fn(),
+
+    // AI
+    aiGenerate: vi.fn(),
+    aiSaveApiKey: vi.fn(),
+    aiHasApiKey: vi.fn().mockResolvedValue(false),
+    aiProcess: vi.fn(),
+
+    // Labels / Packages / External
+    scanLabels: vi.fn(),
+    loadPackageData: vi.fn(),
+    openExternal: vi.fn(),
+
+    // LSP
+    lspStart: vi.fn(),
+    lspStop: vi.fn(),
+    lspSend: vi.fn(),
+    lspStatus: vi.fn(),
+    onLspMessage: vi.fn(),
+    removeLspMessageListener: vi.fn(),
+    onLspStatus: vi.fn(),
+    removeLspStatusListener: vi.fn(),
+
+    // Zotero
+    zoteroProbe: vi.fn(),
+    zoteroSearch: vi.fn(),
+    zoteroCiteCAYW: vi.fn(),
+    zoteroExportBibtex: vi.fn(),
+
+    // Citation groups / history / templates / project data
+    loadCitationGroups: vi.fn(),
+    saveCitationGroups: vi.fn(),
+    saveHistorySnapshot: vi.fn(),
+    getHistoryList: vi.fn(),
+    loadHistorySnapshot: vi.fn(),
+    listTemplates: vi.fn(),
+    addTemplate: vi.fn(),
+    removeTemplate: vi.fn(),
+    importTemplateZip: vi.fn(),
+    projectInit: vi.fn(),
+    projectExists: vi.fn(),
+    projectLoad: vi.fn(),
+    projectSave: vi.fn(),
+    projectTouch: vi.fn(),
+    projectCompileLoad: vi.fn(),
+    projectCompileSave: vi.fn(),
+    projectCompileClear: vi.fn(),
+    projectCompileLogSave: vi.fn(),
+    projectCompileLogLoad: vi.fn(),
+    projectSnippetsLoad: vi.fn(),
+    projectSnippetsAdd: vi.fn(),
+    projectSnippetsRemove: vi.fn(),
+    projectBookmarksLoad: vi.fn(),
+    projectBookmarksAdd: vi.fn(),
+    projectBookmarksRemove: vi.fn(),
+    getDocumentOutline: vi.fn()
   },
   writable: true
 })

@@ -34,7 +34,7 @@ describe('tex warmup service', () => {
 
   it('runs when no manifest exists and writes a completion manifest', async () => {
     const userData = await fs.mkdtemp(path.join(os.tmpdir(), 'textex-userdata-'))
-    appMock.getPath.mockImplementation((name: string) => userData)
+    appMock.getPath.mockImplementation(() => userData)
 
     try {
       const mod = await import('../../main/services/texWarmup')
@@ -57,7 +57,7 @@ describe('tex warmup service', () => {
 
   it('skips warmup when the manifest matches app version and package hash', async () => {
     const userData = await fs.mkdtemp(path.join(os.tmpdir(), 'textex-userdata-'))
-    appMock.getPath.mockImplementation((name: string) => userData)
+    appMock.getPath.mockImplementation(() => userData)
 
     try {
       const mod = await import('../../main/services/texWarmup')
@@ -80,7 +80,7 @@ describe('tex warmup service', () => {
 
   it('invalidates the manifest when the warm package hash changes', async () => {
     const userData = await fs.mkdtemp(path.join(os.tmpdir(), 'textex-userdata-'))
-    appMock.getPath.mockImplementation((name: string) => userData)
+    appMock.getPath.mockImplementation(() => userData)
 
     try {
       const mod = await import('../../main/services/texWarmup')
@@ -101,7 +101,7 @@ describe('tex warmup service', () => {
 
   it('builds a warmup document and compiles it through the warmup compiler path', async () => {
     const userData = await fs.mkdtemp(path.join(os.tmpdir(), 'textex-userdata-'))
-    appMock.getPath.mockImplementation((name: string) => userData)
+    appMock.getPath.mockImplementation(() => userData)
     let compiledContent = ''
     compileWarmupDocument.mockImplementation(async (texPath: string) => {
       compiledContent = await fs.readFile(texPath, 'utf-8')
