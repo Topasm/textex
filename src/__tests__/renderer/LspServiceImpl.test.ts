@@ -165,4 +165,42 @@ describe('LspClient', () => {
     expect(client.initialized).toBe(false)
     expect(client.currentDocUri()).toBe('')
   })
+
+  it('opens the current file immediately after successful startup', async () => {
+    const monaco = createMonacoMock([])
+    const client = new LspClient()
+    const listeners: Array<(message: object) => void> = []
+
+    window.api = {
+      ...createWindowApiMock(),
+      onLspMessage: vi.fn((listener: (message: object) => void) => {
+        listeners.push(listener)
+      }),
+      lspSend: vi.fn((message: { id?: number; method?: string }) => {
+        if (message.method === 'initialize' && message.id) {
+          listeners[0]?.({
+            jsonrpc: '2.0',
+            id: message.id,
+            result: { capabilities: {} }
+          })
+        }
+      })
+    } as Window['api']
+
+    await client.start(
+      '/workspace/project',
+      monaco,
+      () => '/workspace/project/main.tex',
+      () => '\\section{Intro}'
+    )
+
+    const sentMethods = vi
+      .mocked(window.api.lspSend)
+      .mock.calls.map(([message]) => (message as { method?: string }).method)
+
+    expect(sentMethods).toContain('textDocument/didOpen')
+    expect(sentMethods.indexOf('initialized')).toBeLessThan(
+      sentMethods.indexOf('textDocument/didOpen')
+    )
+  })
 })

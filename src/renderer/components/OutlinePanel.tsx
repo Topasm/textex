@@ -6,6 +6,7 @@ import { useSettingsStore } from '../store/useSettingsStore'
 import type { DocumentSymbolNode } from '../../shared/types'
 
 type SymbolCategory =
+  | 'frontmatter'
   | 'section'
   | 'subsection'
   | 'subsubsection'
@@ -19,7 +20,14 @@ type SymbolCategory =
   | 'label'
   | 'default'
 
-function getSymbolCategory(kind: number, name: string, depth: number): SymbolCategory {
+function isBandSymbol(node: DocumentSymbolNode): boolean {
+  return node.semanticKind === 'section' || node.semanticKind === 'frontmatter'
+}
+
+function getSymbolCategory(node: DocumentSymbolNode, depth: number): SymbolCategory {
+  if (node.semanticKind === 'frontmatter') return 'frontmatter'
+
+  const { kind, name } = node
   switch (kind) {
     case 2: // Module (section)
     case 3: // Namespace
@@ -51,6 +59,8 @@ function getSymbolCategory(kind: number, name: string, depth: number): SymbolCat
 
 function getSymbolIcon(category: SymbolCategory): string {
   switch (category) {
+    case 'frontmatter':
+      return '\u204B' // ⁋
     case 'section':
       return '\u00A7' // §
     case 'subsection':
@@ -103,7 +113,7 @@ const OutlineNode = React.memo(function OutlineNode({
   }, [])
 
   const hasChildren = node.children.length > 0
-  const category = getSymbolCategory(node.kind, node.name, depth)
+  const category = getSymbolCategory(node, depth)
 
   return (
     <>
@@ -209,12 +219,10 @@ function OutlinePanel() {
         </button>
       </div>
       {documentSymbols.map((sym, i) => {
-        const isSection = sym.kind === 2 || sym.kind === 3
+        const isSection = isBandSymbol(sym)
         let sectionColor: string | undefined
         if (sectionHighlightEnabled && isSection) {
-          const sectionIndex = documentSymbols
-            .slice(0, i)
-            .filter((s) => s.kind === 2 || s.kind === 3).length
+          const sectionIndex = documentSymbols.slice(0, i).filter(isBandSymbol).length
           sectionColor = colors[sectionIndex % colors.length]
         }
         return (

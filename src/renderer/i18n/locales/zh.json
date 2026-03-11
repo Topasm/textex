@@ -253,7 +253,9 @@
   "fileTree": {
     "noFolder": "未打开文件夹",
     "newFile": "新建文件",
-    "newFolder": "新建文件夹"
+    "newFolder": "新建文件夹",
+    "expandFolder": "展开文件夹",
+    "collapseFolder": "折叠文件夹"
   },
   "todoPanel": {
     "openProject": "打开一个项目以使用 TODO",

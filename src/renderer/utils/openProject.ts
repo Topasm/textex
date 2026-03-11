@@ -2,7 +2,15 @@ import { useEditorStore } from '../store/useEditorStore'
 import { useProjectStore } from '../store/useProjectStore'
 import type { DirectoryEntry } from '../../shared/types'
 
-export async function openProject(dirPath: string): Promise<void> {
+interface OpenProjectOptions {
+  autoOpenFirstTex?: boolean
+}
+
+export async function openProject(
+  dirPath: string,
+  options: OpenProjectOptions = {}
+): Promise<void> {
+  const { autoOpenFirstTex = true } = options
   useProjectStore.getState().setProjectRoot(dirPath)
 
   let tree: DirectoryEntry[] = []
@@ -20,7 +28,7 @@ export async function openProject(dirPath: string): Promise<void> {
 
   // Auto-open first .tex file
   const texFile = tree.find((e) => e.type === 'file' && e.name.endsWith('.tex'))
-  if (texFile) {
+  if (autoOpenFirstTex && texFile) {
     try {
       const result = await window.api.readFile(texFile.path)
       const s = useEditorStore.getState()

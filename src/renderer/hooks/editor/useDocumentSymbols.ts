@@ -8,11 +8,11 @@ import type { DocumentSymbolNode, SectionNode } from '../../../shared/types'
 /**
  * Convert SectionNode[] (from regex parser) to DocumentSymbolNode[] (used by OutlinePanel).
  */
-function sectionNodesToSymbols(nodes: SectionNode[]): DocumentSymbolNode[] {
+export function sectionNodesToSymbols(nodes: SectionNode[]): DocumentSymbolNode[] {
   return nodes.map((node) => ({
     name: node.title || '(untitled)',
     detail: '',
-    kind: 2, // LSP SymbolKind.Module — rendered as section sign
+    kind: node.semanticKind === 'frontmatter' ? 1 : 2,
     range: {
       startLine: node.startLine,
       startColumn: 0,
@@ -25,8 +25,48 @@ function sectionNodesToSymbols(nodes: SectionNode[]): DocumentSymbolNode[] {
       endLine: node.startLine,
       endColumn: 0
     },
+    semanticKind: node.semanticKind ?? 'section',
     children: sectionNodesToSymbols(node.children)
   }))
+}
+
+function annotateSemanticKinds(nodes: DocumentSymbolNode[]): DocumentSymbolNode[] {
+  return nodes.map((node) => ({
+    ...node,
+    semanticKind: node.semanticKind ?? (node.kind === 2 || node.kind === 3 ? 'section' : 'other'),
+    children: annotateSemanticKinds(node.children)
+  }))
+}
+
+function isSameNode(a: DocumentSymbolNode, b: DocumentSymbolNode): boolean {
+  return (
+    a.name === b.name &&
+    a.range.startLine === b.range.startLine &&
+    a.range.endLine === b.range.endLine &&
+    a.semanticKind === b.semanticKind
+  )
+}
+
+export function mergeFrontMatterSymbols(
+  symbols: DocumentSymbolNode[],
+  frontMatterSymbols: DocumentSymbolNode[]
+): DocumentSymbolNode[] {
+  if (frontMatterSymbols.length === 0) return symbols
+
+  const annotatedSymbols = annotateSemanticKinds(symbols)
+  const merged = [...annotatedSymbols]
+
+  for (const frontMatterSymbol of frontMatterSymbols) {
+    if (!merged.some((existing) => isSameNode(existing, frontMatterSymbol))) {
+      merged.push(frontMatterSymbol)
+    }
+  }
+
+  return merged.sort((a, b) => a.range.startLine - b.range.startLine)
+}
+
+export function extractFrontMatterSymbols(sectionNodes: SectionNode[]): DocumentSymbolNode[] {
+  return sectionNodesToSymbols(sectionNodes).filter((node) => node.semanticKind === 'frontmatter')
 }
 
 // Generation counter to prevent stale LSP responses from overwriting newer data
@@ -50,13 +90,20 @@ function fetchOutline(currentFile: string, content: string): void {
   }
 
   if (lspAvailable) {
-    lspRequestDocumentSymbols(currentFile)
-      .then((symbols) => {
+    Promise.all([
+      lspRequestDocumentSymbols(currentFile),
+      window.api.getDocumentOutline(currentFile, content).catch(() => [])
+    ])
+      .then(([symbols, fallbackOutline]) => {
         onComplete()
         // Stale check: only apply if this is still the latest request
         if (outlineGeneration !== generation) return
         if (useEditorStore.getState().filePath === currentFile) {
-          useUiStore.getState().setDocumentSymbols(symbols)
+          useUiStore
+            .getState()
+            .setDocumentSymbols(
+              mergeFrontMatterSymbols(symbols, extractFrontMatterSymbols(fallbackOutline))
+            )
         }
       })
       .catch(() => {

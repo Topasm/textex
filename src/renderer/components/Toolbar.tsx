@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react'
-import { Home, Save, Play, Loader, ScrollText, Sparkles } from 'lucide-react'
+import { Play, Loader, ScrollText, Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useEditorStore } from '../store/useEditorStore'
 import { useCompileStore } from '../store/useCompileStore'
@@ -19,6 +19,22 @@ interface ToolbarProps {
   onNewFromTemplate: () => void
   onAiDraft: (prefill?: string) => void
   onOpenSettings: () => void
+}
+
+function HomeSolidIcon() {
+  return (
+    <svg className="toolbar-icon-solid" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 3.8 4.9 9.4a1.8 1.8 0 0 0-.7 1.4v8.3c0 1 .8 1.8 1.8 1.8h4.1c.4 0 .8-.4.8-.8v-4.2c0-.7.5-1.2 1.2-1.2h.1c.7 0 1.2.5 1.2 1.2v4.2c0 .4.4.8.8.8h4.1c1 0 1.8-.8 1.8-1.8v-8.3c0-.6-.3-1.1-.7-1.4L12 3.8Z" />
+    </svg>
+  )
+}
+
+function SaveSolidIcon() {
+  return (
+    <svg className="toolbar-icon-solid" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M5.8 3.8h9.4c.5 0 .9.2 1.3.5l3.2 3.2c.3.3.5.8.5 1.3v9.4c0 1.1-.9 2-2 2H5.8c-1.1 0-2-.9-2-2V5.8c0-1.1.9-2 2-2Zm2 0v4.7c0 .5.4.9.9.9h6.6c.5 0 .9-.4.9-.9V3.8h-1.6v3.1c0 .4-.3.7-.7.7h-3.8c-.4 0-.7-.3-.7-.7V3.8H7.8Zm4.2 9.1c-2.1 0-3.9 1.7-3.9 3.9v1.4h7.8v-1.4c0-2.2-1.8-3.9-3.9-3.9Z" />
+    </svg>
+  )
 }
 
 const Toolbar = React.memo(function Toolbar({
@@ -105,7 +121,7 @@ const Toolbar = React.memo(function Toolbar({
             title={t('toolbar.returnHome')}
             aria-label={t('toolbar.returnHome')}
           >
-            <Home size={16} />
+            <HomeSolidIcon />
           </button>
         )}
 
@@ -114,7 +130,7 @@ const Toolbar = React.memo(function Toolbar({
           onClick={onSave}
           title={t('toolbar.quickSave')}
         >
-          <Save size={16} />
+          <SaveSolidIcon />
         </button>
 
         <button

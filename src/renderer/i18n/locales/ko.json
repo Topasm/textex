@@ -253,7 +253,9 @@
   "fileTree": {
     "noFolder": "열린 폴더 없음",
     "newFile": "새 파일",
-    "newFolder": "새 폴더"
+    "newFolder": "새 폴더",
+    "expandFolder": "폴더 펼치기",
+    "collapseFolder": "폴더 접기"
   },
   "todoPanel": {
     "openProject": "TODO를 사용하려면 프로젝트를 여세요",

@@ -253,7 +253,9 @@
   "fileTree": {
     "noFolder": "No folder open",
     "newFile": "New File",
-    "newFolder": "New Folder"
+    "newFolder": "New Folder",
+    "expandFolder": "Expand folder",
+    "collapseFolder": "Collapse folder"
   },
   "todoPanel": {
     "openProject": "Open a project to use TODO",

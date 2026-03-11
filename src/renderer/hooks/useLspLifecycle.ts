@@ -12,6 +12,7 @@ import {
   lspRequestDocumentSymbols
 } from '../lsp/lspClient'
 import { loader } from '@monaco-editor/react'
+import { extractFrontMatterSymbols, mergeFrontMatterSymbols } from './editor/useDocumentSymbols'
 
 /**
  * Manages the LSP client lifecycle:
@@ -26,6 +27,7 @@ export function useLspLifecycle(
   filePath: string | null
 ): void {
   const prevFilePathRef = useRef<string | null>(null)
+  const lspStatus = useUiStore((s) => s.lspStatus)
 
   // LSP start/stop
   useEffect(() => {
@@ -93,26 +95,35 @@ export function useLspLifecycle(
       lspNotifyDidClose(prevFile)
     }
 
-    if (filePath) {
-      lspNotifyDidOpen(filePath, useEditorStore.getState().content)
-      const lspRunning =
-        useSettingsStore.getState().settings.lspEnabled &&
-        useUiStore.getState().lspStatus === 'running'
-      if (lspRunning) {
-        const switchedFile = filePath
-        const timer = setTimeout(() => {
-          if (useEditorStore.getState().filePath === switchedFile) {
-            lspRequestDocumentSymbols(switchedFile).then((symbols) => {
-              if (useEditorStore.getState().filePath === switchedFile) {
-                useUiStore.getState().setDocumentSymbols(symbols)
-              }
-            })
-          }
-        }, 200)
-        return () => clearTimeout(timer)
-      }
-    } else {
+    if (!filePath) {
       useUiStore.getState().setDocumentSymbols([])
     }
   }, [filePath])
+
+  useEffect(() => {
+    const lspRunning = lspEnabled && lspStatus === 'running'
+
+    if (!filePath || !lspRunning) return
+
+    const activeFile = filePath
+    lspNotifyDidOpen(activeFile, useEditorStore.getState().content)
+
+    const timer = setTimeout(() => {
+      if (useEditorStore.getState().filePath !== activeFile) return
+      Promise.all([
+        lspRequestDocumentSymbols(activeFile),
+        window.api.getDocumentOutline(activeFile, useEditorStore.getState().content).catch(() => [])
+      ]).then(([symbols, fallbackOutline]) => {
+        if (useEditorStore.getState().filePath === activeFile) {
+          useUiStore
+            .getState()
+            .setDocumentSymbols(
+              mergeFrontMatterSymbols(symbols, extractFrontMatterSymbols(fallbackOutline))
+            )
+        }
+      })
+    }, 50)
+
+    return () => clearTimeout(timer)
+  }, [filePath, lspEnabled, lspStatus])
 }

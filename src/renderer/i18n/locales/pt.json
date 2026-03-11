@@ -253,7 +253,9 @@
   "fileTree": {
     "noFolder": "Nenhuma pasta aberta",
     "newFile": "Novo arquivo",
-    "newFolder": "Nova pasta"
+    "newFolder": "Nova pasta",
+    "expandFolder": "Expandir pasta",
+    "collapseFolder": "Recolher pasta"
   },
   "todoPanel": {
     "openProject": "Abra um projeto para usar TODO",

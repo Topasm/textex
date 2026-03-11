@@ -253,7 +253,9 @@
   "fileTree": {
     "noFolder": "No hay carpeta abierta",
     "newFile": "Nuevo archivo",
-    "newFolder": "Nueva carpeta"
+    "newFolder": "Nueva carpeta",
+    "expandFolder": "Expandir carpeta",
+    "collapseFolder": "Contraer carpeta"
   },
   "todoPanel": {
     "openProject": "Abre un proyecto para usar TODO",

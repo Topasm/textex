@@ -18,7 +18,7 @@ export function useFileOps(): FileOps {
     if (result) {
       // Derive parent directory and open it as the project so the workspace renders
       const parentDir = result.filePath.replace(/[/\\][^/\\]+$/, '')
-      await openProject(parentDir)
+      await openProject(parentDir, { autoOpenFirstTex: false })
 
       // Open the specific file the user selected (overrides openProject's auto-open)
       const { openFileInTab, setFilePath, setDirty } = useEditorStore.getState()

@@ -84,6 +84,7 @@ export interface GitLogEntry {
 
 export type SectionLevel = 0 | 1 | 2 | 3
 // 0=chapter, 1=section, 2=subsection, 3=subsubsection
+export type DocumentSemanticKind = 'section' | 'frontmatter' | 'other'
 
 export interface SectionNode {
   title: string
@@ -92,6 +93,7 @@ export interface SectionNode {
   file: string
   startLine: number
   endLine: number
+  semanticKind?: DocumentSemanticKind
   children: SectionNode[]
 }
 
@@ -101,6 +103,7 @@ export interface DocumentSymbolNode {
   kind: number // LSP SymbolKind
   range: { startLine: number; startColumn: number; endLine: number; endColumn: number }
   selectionRange: { startLine: number; startColumn: number; endLine: number; endColumn: number }
+  semanticKind?: DocumentSemanticKind
   children: DocumentSymbolNode[]
 }
 

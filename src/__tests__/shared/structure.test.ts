@@ -4,6 +4,7 @@ import path from 'path'
 import os from 'os'
 import {
   parseDocumentStructure,
+  parseContentOutline,
   getSectionContent,
   updateSectionContent,
   listPapers,
@@ -255,6 +256,53 @@ Line C.
     expect(result.outline[0].endLine).toBe(5)
     expect(result.outline[1].startLine).toBe(6)
   })
+
+  it('includes front matter nodes before the first section', () => {
+    const outline = parseContentOutline(
+      `\\documentclass{article}
+\\begin{document}
+\\begin{abstract}
+Summary text.
+\\end{abstract}
+\\section{Introduction}
+Intro.
+\\end{document}
+`,
+      '/tmp/main.tex'
+    )
+
+    expect(outline).toHaveLength(2)
+    expect(outline[0].title).toBe('Abstract')
+    expect(outline[0].semanticKind).toBe('frontmatter')
+    expect(outline[0].startLine).toBe(3)
+    expect(outline[0].endLine).toBe(5)
+    expect(outline[1].title).toBe('Introduction')
+    expect(outline[1].semanticKind).toBe('section')
+  })
+
+  it('only includes allowlisted front matter before the first section', () => {
+    const outline = parseContentOutline(
+      `\\documentclass{article}
+\\begin{document}
+\\begin{figure}
+Ignored.
+\\end{figure}
+\\begin{keywords}
+token A, token B
+\\end{keywords}
+\\section{Introduction}
+Intro.
+\\begin{abstract}
+Should not appear.
+\\end{abstract}
+\\end{document}
+`,
+      '/tmp/main.tex'
+    )
+
+    expect(outline.map((node) => node.title)).toEqual(['Keywords', 'Introduction'])
+    expect(outline[0].semanticKind).toBe('frontmatter')
+  })
 })
 
 // --- Multi-file ---
@@ -456,6 +504,26 @@ Content in included file.
     expect(result.content).toContain('Content in included file.')
   })
 
+  it('reads front matter content without the environment wrapper', async () => {
+    const filePath = await writeTexFile(
+      'main.tex',
+      `\\documentclass{article}
+\\begin{document}
+\\begin{abstract}
+Abstract line 1.
+Abstract line 2.
+\\end{abstract}
+\\section{Intro}
+Body.
+\\end{document}
+`
+    )
+    const result = await getSectionContent(filePath, 'Abstract')
+    expect(result.content).toContain('Abstract line 1.')
+    expect(result.content).toContain('Abstract line 2.')
+    expect(result.content).not.toContain('\\end{abstract}')
+  })
+
   it('throws for non-existent section', async () => {
     const filePath = await writeTexFile(
       'main.tex',
@@ -530,6 +598,29 @@ Old sub content.
     expect(updated).toContain('\\section{Sub}')
     expect(updated).toContain('New sub content.')
     expect(updated).not.toContain('Old sub content.')
+  })
+
+  it('updates front matter content without removing its wrapper', async () => {
+    const filePath = await writeTexFile(
+      'main.tex',
+      `\\documentclass{article}
+\\begin{document}
+\\begin{abstract}
+Old abstract content.
+\\end{abstract}
+\\section{Intro}
+Body.
+\\end{document}
+`
+    )
+
+    await updateSectionContent(filePath, 'Abstract', 'New abstract content.')
+    const updated = await fs.readFile(filePath, 'utf-8')
+
+    expect(updated).toContain('\\begin{abstract}')
+    expect(updated).toContain('New abstract content.')
+    expect(updated).not.toContain('Old abstract content.')
+    expect(updated).toContain('\\end{abstract}')
   })
 })
 

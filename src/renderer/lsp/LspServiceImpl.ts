@@ -91,6 +91,7 @@ function mapSymbols(symbols: LspDocumentSymbol[]): DocumentSymbolNode[] {
       endLine: sym.selectionRange.end.line + 1,
       endColumn: sym.selectionRange.end.character + 1
     },
+    semanticKind: sym.kind === 2 || sym.kind === 3 ? 'section' : 'other',
     children: sym.children ? mapSymbols(sym.children) : []
   }))
 }
@@ -458,6 +459,11 @@ export class LspClient {
     }
 
     this.registerProviders(monacoInstance)
+
+    const currentFilePath = getDocUri()
+    if (currentFilePath) {
+      this.notifyDidOpen(currentFilePath, getDocContent())
+    }
 
     // Start connection health monitoring
     this.startHealthCheck(workspaceRoot)

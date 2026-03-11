@@ -6,7 +6,7 @@ import { SectionNode } from '../../shared/types'
 
 function printOutline(nodes: SectionNode[], depth: number): void {
   for (const node of nodes) {
-    const indent = '  '.repeat(node.level)
+    const indent = '  '.repeat(depth)
     const star = node.starred ? '*' : ''
     console.log(`  ${indent}${node.title}${star}`)
     if (node.children.length > 0) {

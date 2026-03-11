@@ -10,6 +10,10 @@ interface UseSectionHighlightArgs {
   monacoRef: MutableRefObject<MonacoInstance | null>
 }
 
+function isBandSymbol(symbol: { semanticKind?: string }): boolean {
+  return symbol.semanticKind === 'section' || symbol.semanticKind === 'frontmatter'
+}
+
 const DEFAULT_COLORS = ['#e06c75', '#e5c07b', '#98c379', '#61afef', '#c678dd', '#56b6c2', '#d19a66']
 
 /**
@@ -92,7 +96,7 @@ export function useSectionHighlight({ editorRef, monacoRef }: UseSectionHighligh
       pendingDecorationRef.current = null
       if (!collectionRef.current) return
 
-      const sections = documentSymbols.filter((s) => s.kind === 2 || s.kind === 3)
+      const sections = documentSymbols.filter(isBandSymbol)
 
       if (sections.length === 0) {
         collectionRef.current.set([])

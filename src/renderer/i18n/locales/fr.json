@@ -253,7 +253,9 @@
   "fileTree": {
     "noFolder": "Aucun dossier ouvert",
     "newFile": "Nouveau fichier",
-    "newFolder": "Nouveau dossier"
+    "newFolder": "Nouveau dossier",
+    "expandFolder": "Développer le dossier",
+    "collapseFolder": "Réduire le dossier"
   },
   "todoPanel": {
     "openProject": "Ouvrez un projet pour utiliser TODO",

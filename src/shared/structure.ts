@@ -106,6 +106,31 @@ interface HeadingMatch {
   index: number // index into virtual lines
 }
 
+interface FrontMatterMatch {
+  envName: string
+  title: string
+  startIndex: number
+  endIndex: number
+}
+
+interface OutlineBuildNode extends SectionNode {
+  sourceIndex: number
+}
+
+const FRONT_MATTER_TITLES: Record<string, string> = {
+  abstract: 'Abstract',
+  keyword: 'Keywords',
+  keywords: 'Keywords',
+  acknowledgements: 'Acknowledgements',
+  acknowledgments: 'Acknowledgments'
+}
+
+const FRONT_MATTER_ENV_NAMES = new Set(Object.keys(FRONT_MATTER_TITLES))
+
+function isTopLevelFrontMatterContext(envStack: string[]): boolean {
+  return envStack.length === 0 || (envStack.length === 1 && envStack[0] === 'document')
+}
+
 function findHeadings(virtualLines: VirtualLine[]): HeadingMatch[] {
   const headings: HeadingMatch[] = []
   // Build plain text lines for brace extraction
@@ -167,7 +192,7 @@ function buildOutlineTree(
   totalLines: number
 ): SectionNode[] {
   // Assign end lines: each heading ends where the next same-or-higher-level heading starts, or at EOF
-  const nodes: SectionNode[] = headings.map((h, idx) => {
+  const nodes: OutlineBuildNode[] = headings.map((h, idx) => {
     const vl = virtualLines[h.index]
 
     // Find end line: look for next heading at same or higher (lower number) level
@@ -196,13 +221,15 @@ function buildOutlineTree(
       file: vl.file,
       startLine: vl.lineNumber,
       endLine: endVl.lineNumber,
+      semanticKind: 'section',
+      sourceIndex: h.index,
       children: []
     }
   })
 
   // Build tree using a stack
-  const roots: SectionNode[] = []
-  const stack: SectionNode[] = []
+  const roots: OutlineBuildNode[] = []
+  const stack: OutlineBuildNode[] = []
 
   for (const node of nodes) {
     // Pop stack until we find a parent with a lower level number
@@ -220,6 +247,93 @@ function buildOutlineTree(
   }
 
   return roots
+}
+
+function findFrontMatter(virtualLines: VirtualLine[], stopIndex: number): FrontMatterMatch[] {
+  const matches: FrontMatterMatch[] = []
+  const envStack: string[] = []
+  let activeMatch: FrontMatterMatch | null = null
+
+  for (let i = 0; i < Math.min(stopIndex, virtualLines.length); i++) {
+    const line = virtualLines[i].text.replace(/(^|[^\\])%.*/, '$1')
+    const tokens = Array.from(line.matchAll(/\\(begin|end)\s*\{([^}]+)\}/g))
+
+    for (const token of tokens) {
+      const kind = token[1]
+      const rawEnvName = token[2].trim()
+      const envName = rawEnvName.toLowerCase()
+
+      if (kind === 'begin') {
+        const depthBeforePush = envStack.length
+        envStack.push(envName)
+        if (
+          !activeMatch &&
+          isTopLevelFrontMatterContext(envStack.slice(0, depthBeforePush)) &&
+          FRONT_MATTER_ENV_NAMES.has(envName) &&
+          FRONT_MATTER_TITLES[envName]
+        ) {
+          activeMatch = {
+            envName,
+            title: FRONT_MATTER_TITLES[envName],
+            startIndex: i,
+            endIndex: i
+          }
+        }
+        continue
+      }
+
+      const stackIndex = envStack.lastIndexOf(envName)
+      if (stackIndex === -1) continue
+
+      const parentStack = envStack.slice(0, stackIndex)
+      envStack.splice(stackIndex, 1)
+
+      if (
+        activeMatch &&
+        activeMatch.envName === envName &&
+        isTopLevelFrontMatterContext(parentStack)
+      ) {
+        activeMatch.endIndex = i
+        matches.push(activeMatch)
+        activeMatch = null
+      }
+    }
+  }
+
+  return matches
+}
+
+function buildFrontMatterNodes(
+  matches: FrontMatterMatch[],
+  virtualLines: VirtualLine[]
+): OutlineBuildNode[] {
+  return matches.map((match) => {
+    const start = virtualLines[match.startIndex]
+    const end = virtualLines[match.endIndex] ?? start
+
+    return {
+      title: match.title,
+      level: 1,
+      starred: false,
+      file: start.file,
+      startLine: start.lineNumber,
+      endLine: end.lineNumber,
+      semanticKind: 'frontmatter',
+      sourceIndex: match.startIndex,
+      children: []
+    }
+  })
+}
+
+function mergeTopLevelOutline(
+  outline: SectionNode[],
+  frontMatterNodes: OutlineBuildNode[]
+): SectionNode[] {
+  return [...frontMatterNodes, ...outline].sort((a, b) => {
+    const aIndex = 'sourceIndex' in a ? a.sourceIndex : a.startLine
+    const bIndex = 'sourceIndex' in b ? b.sourceIndex : b.startLine
+    return aIndex - bIndex
+  })
 }
 
 // --- Metadata extraction ---
@@ -328,7 +442,13 @@ export function parseContentOutline(content: string, filePath: string): SectionN
     lineNumber: i + 1
   }))
   const headings = findHeadings(virtualLines)
-  return buildOutlineTree(headings, virtualLines, virtualLines.length)
+  const sectionOutline = buildOutlineTree(headings, virtualLines, virtualLines.length)
+  const firstHeadingIndex = headings[0]?.index ?? virtualLines.length
+  const frontMatterNodes = buildFrontMatterNodes(
+    findFrontMatter(virtualLines, firstHeadingIndex),
+    virtualLines
+  )
+  return mergeTopLevelOutline(sectionOutline, frontMatterNodes)
 }
 
 // --- Public API ---
@@ -345,7 +465,13 @@ export async function parseDocumentStructure(filePath: string): Promise<Document
 
   const metadata = extractMetadata(virtualLines, resolved)
   const headings = findHeadings(virtualLines)
-  const outline = buildOutlineTree(headings, virtualLines, virtualLines.length)
+  const sectionOutline = buildOutlineTree(headings, virtualLines, virtualLines.length)
+  const firstHeadingIndex = headings[0]?.index ?? virtualLines.length
+  const frontMatterNodes = buildFrontMatterNodes(
+    findFrontMatter(virtualLines, firstHeadingIndex),
+    virtualLines
+  )
+  const outline = mergeTopLevelOutline(sectionOutline, frontMatterNodes)
 
   return {
     metadata,
@@ -388,15 +514,16 @@ export async function getSectionContent(
   const lines = fileContent.split('\n')
 
   // Content starts after the heading line, ends at endLine (1-indexed)
+  const isFrontMatter = node.semanticKind === 'frontmatter'
   const startIdx = node.startLine // 0-indexed: startLine is 1-indexed, content starts on next line
-  const endIdx = node.endLine - 1 // 0-indexed inclusive
+  const endIdx = Math.max(startIdx - 1, isFrontMatter ? node.endLine - 2 : node.endLine - 1) // 0-indexed inclusive
   const contentLines = lines.slice(startIdx, endIdx + 1)
 
   return {
     content: contentLines.join('\n'),
     file: node.file,
     startLine: node.startLine + 1,
-    endLine: node.endLine
+    endLine: isFrontMatter ? Math.max(node.startLine + 1, node.endLine - 1) : node.endLine
   }
 }
 
@@ -416,11 +543,12 @@ export async function updateSectionContent(
   const lines = fileContent.split('\n')
 
   // Replace lines after the heading through endLine
+  const isFrontMatter = node.semanticKind === 'frontmatter'
   const startIdx = node.startLine // content starts after heading (0-indexed)
-  const endIdx = node.endLine - 1 // 0-indexed inclusive
+  const endIdx = Math.max(startIdx - 1, isFrontMatter ? node.endLine - 2 : node.endLine - 1) // 0-indexed inclusive
 
   const newLines = newContent.split('\n')
-  lines.splice(startIdx, endIdx - startIdx + 1, ...newLines)
+  lines.splice(startIdx, Math.max(0, endIdx - startIdx + 1), ...newLines)
 
   await fs.writeFile(node.file, lines.join('\n'), 'utf-8')
 

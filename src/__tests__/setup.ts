@@ -161,7 +161,7 @@ Object.defineProperty(window, 'api', {
     projectBookmarksLoad: vi.fn(),
     projectBookmarksAdd: vi.fn(),
     projectBookmarksRemove: vi.fn(),
-    getDocumentOutline: vi.fn()
+    getDocumentOutline: vi.fn().mockResolvedValue([])
   },
   writable: true
 })
