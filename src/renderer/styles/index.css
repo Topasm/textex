@@ -373,9 +373,9 @@ body,
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-height: 52px;
-  padding: 8px 14px;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 10px;
   background-color: var(--chrome-bg);
   border-bottom: 1px solid var(--chrome-border);
   user-select: none;
@@ -404,7 +404,7 @@ body,
 .toolbar-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
 }
 
@@ -416,7 +416,7 @@ body,
 }
 
 .toolbar-center .omni-search-wrapper {
-  width: min(100%, 520px);
+  width: min(100%, 460px);
 }
 
 .toolbar-btn,
@@ -425,14 +425,14 @@ body,
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 34px;
-  min-width: 34px;
-  padding: 0 10px;
+  height: 30px;
+  min-width: 30px;
+  padding: 0 8px;
   font-size: 12px;
   background-color: var(--chrome-pill-bg);
   color: var(--text-primary);
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: 8px;
   cursor: pointer;
   transition:
     background-color 0.15s,
@@ -476,10 +476,10 @@ body,
 
 .toolbar .toolbar-separator {
   width: 1px;
-  height: 22px;
+  height: 18px;
   background-color: var(--chrome-border);
   flex-shrink: 0;
-  margin: 0 2px;
+  margin: 0 1px;
 }
 
 .toolbar .menu-dropdown {
@@ -527,9 +527,9 @@ body,
   align-items: center;
   gap: 8px;
   min-width: 0;
-  max-width: 220px;
-  padding: 0 12px;
-  height: 34px;
+  max-width: 190px;
+  padding: 0 10px;
+  height: 30px;
   border-radius: 999px;
   background-color: var(--chrome-pill-bg);
   border: 1px solid var(--chrome-border);
@@ -4419,20 +4419,20 @@ body,
   display: flex;
   gap: 4px;
   align-items: center;
-  padding: 2px;
-  border-radius: 12px;
+  padding: 1px;
+  border-radius: 10px;
   background-color: var(--chrome-pill-bg);
   border: 1px solid var(--chrome-border);
 }
 
 .toolbar-compact-btn {
-  min-width: 30px;
-  padding: 0 8px;
+  min-width: 28px;
+  padding: 0 6px;
 }
 
 .toolbar-zoom-label {
   font-size: 12px;
-  min-width: 54px;
+  min-width: 48px;
   text-align: center;
   cursor: pointer;
 }
@@ -4446,9 +4446,9 @@ body,
 }
 
 .toolbar-page-input {
-  width: 36px;
-  height: 30px;
-  padding: 0 6px;
+  width: 32px;
+  height: 28px;
+  padding: 0 5px;
   font-size: 12px;
   text-align: center;
   background-color: var(--chrome-elevated-bg);
