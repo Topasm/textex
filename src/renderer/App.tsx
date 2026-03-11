@@ -380,10 +380,7 @@ function App() {
       </Suspense>
       <UpdateNotification />
       {showHomeScreen ? (
-        <HomeScreen
-          onOpenFolder={handleOpenFolder}
-          onNewFromTemplate={handleOpenTemplateGallery}
-        />
+        <HomeScreen onOpenFolder={handleOpenFolder} onNewFromTemplate={handleOpenTemplateGallery} />
       ) : (
         <div className="workspace">
           {sidebarPosition === 'left' && (isSidebarOpen || autoHideSidebar) && sidebarElement}

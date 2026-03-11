@@ -18,7 +18,9 @@ export interface AppCommandContext {
   exportDocument: (format: 'html' | 'docx' | 'odt' | 'epub') => Promise<void>
 }
 
-function isExportCommand(command: AppCommandId): command is Extract<AppCommandId, `file.export.${string}`> {
+function isExportCommand(
+  command: AppCommandId
+): command is Extract<AppCommandId, `file.export.${string}`> {
   return command.startsWith('file.export.')
 }
 

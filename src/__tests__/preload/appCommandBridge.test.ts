@@ -28,8 +28,12 @@ describe('preload app command bridge', () => {
     await import('../../preload/index')
 
     const callback = vi.fn()
-    const onAppCommand = exposedApi?.onAppCommand as ((cb: (command: string) => void) => void) | undefined
-    const removeAppCommandListener = exposedApi?.removeAppCommandListener as (() => void) | undefined
+    const onAppCommand = exposedApi?.onAppCommand as
+      | ((cb: (command: string) => void) => void)
+      | undefined
+    const removeAppCommandListener = exposedApi?.removeAppCommandListener as
+      | (() => void)
+      | undefined
 
     expect(onAppCommand).toBeTypeOf('function')
     expect(removeAppCommandListener).toBeTypeOf('function')

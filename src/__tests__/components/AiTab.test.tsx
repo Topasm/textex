@@ -22,7 +22,9 @@ describe('AiTab', () => {
     render(<AiTab />)
 
     await waitFor(() => {
-      expect(screen.getByText("Couldn't verify whether an API key is already saved.")).toBeInTheDocument()
+      expect(
+        screen.getByText("Couldn't verify whether an API key is already saved.")
+      ).toBeInTheDocument()
     })
   })
 

@@ -71,13 +71,8 @@ vi.mock('../../renderer/components/SettingsModal', () => ({
 }))
 
 vi.mock('../../renderer/components/DraftModal', () => ({
-  DraftModal: ({
-    isOpen,
-    onInsert
-  }: {
-    isOpen: boolean
-    onInsert: (latex: string) => void
-  }) => (isOpen ? <button onClick={() => onInsert('generated latex')}>Insert Draft</button> : null)
+  DraftModal: ({ isOpen, onInsert }: { isOpen: boolean; onInsert: (latex: string) => void }) =>
+    isOpen ? <button onClick={() => onInsert('generated latex')}>Insert Draft</button> : null
 }))
 
 vi.mock('../../renderer/components/TemplateGallery', () => ({

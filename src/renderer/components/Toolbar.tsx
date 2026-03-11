@@ -131,7 +131,11 @@ const Toolbar = React.memo(function Toolbar({
         </button>
 
         {aiEnabled && (
-          <button className="toolbar-btn" onClick={() => onAiDraft()} title={t('toolbar.aiDraftShortcut')}>
+          <button
+            className="toolbar-btn"
+            onClick={() => onAiDraft()}
+            title={t('toolbar.aiDraftShortcut')}
+          >
             <Sparkles size={16} />
           </button>
         )}
