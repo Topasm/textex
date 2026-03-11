@@ -12,7 +12,7 @@ import {
   lspRequestDocumentSymbols
 } from '../lsp/lspClient'
 import { loader } from '@monaco-editor/react'
-import { extractFrontMatterSymbols, mergeFrontMatterSymbols } from './editor/useDocumentSymbols'
+import { extractBandSymbols, mergeBandSymbols } from './editor/useDocumentSymbols'
 
 /**
  * Manages the LSP client lifecycle:
@@ -117,9 +117,7 @@ export function useLspLifecycle(
         if (useEditorStore.getState().filePath === activeFile) {
           useUiStore
             .getState()
-            .setDocumentSymbols(
-              mergeFrontMatterSymbols(symbols, extractFrontMatterSymbols(fallbackOutline))
-            )
+            .setDocumentSymbols(mergeBandSymbols(symbols, extractBandSymbols(fallbackOutline)))
         }
       })
     }, 50)

@@ -47,26 +47,40 @@ function isSameNode(a: DocumentSymbolNode, b: DocumentSymbolNode): boolean {
   )
 }
 
-export function mergeFrontMatterSymbols(
+function isBandSymbol(node: DocumentSymbolNode): boolean {
+  return node.semanticKind === 'section' || node.semanticKind === 'frontmatter'
+}
+
+export function mergeBandSymbols(
   symbols: DocumentSymbolNode[],
-  frontMatterSymbols: DocumentSymbolNode[]
+  bandSymbols: DocumentSymbolNode[]
 ): DocumentSymbolNode[] {
-  if (frontMatterSymbols.length === 0) return symbols
+  if (bandSymbols.length === 0) return annotateSemanticKinds(symbols)
 
   const annotatedSymbols = annotateSemanticKinds(symbols)
   const merged = [...annotatedSymbols]
 
-  for (const frontMatterSymbol of frontMatterSymbols) {
-    if (!merged.some((existing) => isSameNode(existing, frontMatterSymbol))) {
-      merged.push(frontMatterSymbol)
+  for (const bandSymbol of bandSymbols.filter(isBandSymbol)) {
+    const existingIndex = merged.findIndex(
+      (existing) =>
+        existing.range.startLine === bandSymbol.range.startLine || isSameNode(existing, bandSymbol)
+    )
+
+    if (existingIndex >= 0) {
+      merged[existingIndex] = {
+        ...merged[existingIndex],
+        semanticKind: bandSymbol.semanticKind ?? merged[existingIndex].semanticKind
+      }
+    } else {
+      merged.push(bandSymbol)
     }
   }
 
   return merged.sort((a, b) => a.range.startLine - b.range.startLine)
 }
 
-export function extractFrontMatterSymbols(sectionNodes: SectionNode[]): DocumentSymbolNode[] {
-  return sectionNodesToSymbols(sectionNodes).filter((node) => node.semanticKind === 'frontmatter')
+export function extractBandSymbols(sectionNodes: SectionNode[]): DocumentSymbolNode[] {
+  return sectionNodesToSymbols(sectionNodes).filter(isBandSymbol)
 }
 
 // Generation counter to prevent stale LSP responses from overwriting newer data
@@ -101,9 +115,7 @@ function fetchOutline(currentFile: string, content: string): void {
         if (useEditorStore.getState().filePath === currentFile) {
           useUiStore
             .getState()
-            .setDocumentSymbols(
-              mergeFrontMatterSymbols(symbols, extractFrontMatterSymbols(fallbackOutline))
-            )
+            .setDocumentSymbols(mergeBandSymbols(symbols, extractBandSymbols(fallbackOutline)))
         }
       })
       .catch(() => {
