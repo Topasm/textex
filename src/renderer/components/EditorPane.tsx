@@ -21,7 +21,12 @@ import { useTableEditor } from '../hooks/editor/useTableEditor'
 import { MathPreviewWidget } from './MathPreviewWidget'
 import { DiffEditor } from '@monaco-editor/react'
 import type { editor as monacoEditor } from 'monaco-editor'
-import { AI_ACTIONS, registerAiActions, runAiAction, type AiActionDef } from './editor/editorAiActions'
+import {
+  AI_ACTIONS,
+  registerAiActions,
+  runAiAction,
+  type AiActionDef
+} from './editor/editorAiActions'
 import { SelectionAiToolbar } from './editor/SelectionAiToolbar'
 import { configureMonacoLanguages, getMonacoTheme } from '../data/monacoConfig'
 import { generateFigureSnippet } from '../utils/figureSnippet'

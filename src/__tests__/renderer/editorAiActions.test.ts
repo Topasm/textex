@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { AI_ACTIONS, registerAiActions, runAiAction } from '../../renderer/components/editor/editorAiActions'
+import {
+  AI_ACTIONS,
+  registerAiActions,
+  runAiAction
+} from '../../renderer/components/editor/editorAiActions'
 
 function createSelection() {
   return {

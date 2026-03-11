@@ -4,7 +4,9 @@ import EditorPane from '../../renderer/components/EditorPane'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 
 const editorListeners = {
-  selection: [] as Array<(event: { selection: { isEmpty: () => boolean }; source: string }) => void>,
+  selection: [] as Array<
+    (event: { selection: { isEmpty: () => boolean }; source: string }) => void
+  >,
   mouseDown: [] as Array<(event: { target: { type: number } }) => void>,
   mouseUp: [] as Array<() => void>,
   scroll: [] as Array<() => void>,
@@ -12,8 +14,13 @@ const editorListeners = {
   cursor: [] as Array<(event: { position: { lineNumber: number; column: number } }) => void>
 }
 
-let currentSelection: { isEmpty: () => boolean; startLineNumber: number; startColumn: number; endLineNumber: number; endColumn: number } | null =
-  null
+let currentSelection: {
+  isEmpty: () => boolean
+  startLineNumber: number
+  startColumn: number
+  endLineNumber: number
+  endColumn: number
+} | null = null
 
 const mockEditor = {
   createContextKey: vi.fn().mockReturnValue({ set: vi.fn() }),
@@ -203,7 +210,9 @@ describe('EditorPane selection AI toolbar', () => {
     expect(screen.queryByTestId('selection-ai-toolbar')).not.toBeInTheDocument()
 
     act(() => {
-      editorListeners.mouseDown[0]?.({ target: { type: mockMonaco.editor.MouseTargetType.CONTENT_TEXT } })
+      editorListeners.mouseDown[0]?.({
+        target: { type: mockMonaco.editor.MouseTargetType.CONTENT_TEXT }
+      })
       editorListeners.selection[0]?.({ selection: currentSelection!, source: 'mouse' })
       editorListeners.mouseUp[0]?.()
     })
@@ -225,7 +234,9 @@ describe('EditorPane selection AI toolbar', () => {
     }
 
     act(() => {
-      editorListeners.mouseDown[0]?.({ target: { type: mockMonaco.editor.MouseTargetType.CONTENT_TEXT } })
+      editorListeners.mouseDown[0]?.({
+        target: { type: mockMonaco.editor.MouseTargetType.CONTENT_TEXT }
+      })
       editorListeners.selection[0]?.({ selection: currentSelection!, source: 'mouse' })
       editorListeners.mouseUp[0]?.()
     })
@@ -240,7 +251,9 @@ describe('EditorPane selection AI toolbar', () => {
     expect(screen.queryByTestId('selection-ai-toolbar')).not.toBeInTheDocument()
 
     act(() => {
-      editorListeners.mouseDown[0]?.({ target: { type: mockMonaco.editor.MouseTargetType.CONTENT_TEXT } })
+      editorListeners.mouseDown[0]?.({
+        target: { type: mockMonaco.editor.MouseTargetType.CONTENT_TEXT }
+      })
       editorListeners.selection[0]?.({ selection: currentSelection!, source: 'mouse' })
       editorListeners.mouseUp[0]?.()
     })

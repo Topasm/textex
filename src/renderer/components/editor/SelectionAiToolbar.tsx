@@ -49,7 +49,9 @@ function getToolbarPosition(
   const width = editorDom.clientWidth || editorDom.getBoundingClientRect().width
   const height = editorDom.clientHeight || editorDom.getBoundingClientRect().height
   const anchorLeft =
-    startPos && endPos.left >= startPos.left ? startPos.left + (endPos.left - startPos.left) / 2 : endPos.left
+    startPos && endPos.left >= startPos.left
+      ? startPos.left + (endPos.left - startPos.left) / 2
+      : endPos.left
   const maxLeft = Math.max(TOOLBAR_MARGIN, width - TOOLBAR_WIDTH_ESTIMATE - TOOLBAR_MARGIN)
   const left = clamp(anchorLeft - TOOLBAR_WIDTH_ESTIMATE / 2, TOOLBAR_MARGIN, maxLeft)
   const belowTop = endPos.top + endPos.height + TOOLBAR_MARGIN

@@ -1,6 +1,9 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { SelectionAiToolbar, getToolbarPosition } from '../../renderer/components/editor/SelectionAiToolbar'
+import {
+  SelectionAiToolbar,
+  getToolbarPosition
+} from '../../renderer/components/editor/SelectionAiToolbar'
 import { AI_ACTIONS } from '../../renderer/components/editor/editorAiActions'
 
 function createEditor(width = 600, height = 300) {
