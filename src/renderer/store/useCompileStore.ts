@@ -4,6 +4,8 @@ import type { Diagnostic } from '../../shared/types'
 
 export type CompileStatus = 'idle' | 'compiling' | 'success' | 'error'
 
+const MAX_LOG_CHARS = 512_000
+
 interface CompileState {
   compileStatus: CompileStatus
   pdfPath: string | null
@@ -36,7 +38,13 @@ export const useCompileStore = create<CompileState>()(
 
     setCompileStatus: (compileStatus) => set({ compileStatus }),
     setPdfPath: (pdfPath) => set((state) => ({ pdfPath, pdfRevision: state.pdfRevision + 1 })),
-    appendLog: (text) => set((state) => ({ logs: state.logs + text })),
+    appendLog: (text) =>
+      set((state) => {
+        const nextLogs = state.logs + text
+        return {
+          logs: nextLogs.length > MAX_LOG_CHARS ? nextLogs.slice(-MAX_LOG_CHARS) : nextLogs
+        }
+      }),
     clearLogs: () => set({ logs: '' }),
     toggleLogPanel: () => set((state) => ({ isLogPanelOpen: !state.isLogPanelOpen })),
     setLogPanelOpen: (isLogPanelOpen) => set({ isLogPanelOpen }),

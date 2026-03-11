@@ -189,6 +189,15 @@ describe('useAppStore', () => {
       useCompileStore.getState().appendLog('new')
       expect(useCompileStore.getState().logs).toBe('existing new')
     })
+
+    it('caps the raw log buffer to avoid unbounded memory growth', () => {
+      useCompileStore.setState({ logs: 'head' + 'a'.repeat(511_996) })
+      useCompileStore.getState().appendLog('b')
+      const logs = useCompileStore.getState().logs
+      expect(logs).toHaveLength(512_000)
+      expect(logs.startsWith('head')).toBe(false)
+      expect(logs.endsWith('b')).toBe(true)
+    })
   })
 
   describe('clearLogs', () => {

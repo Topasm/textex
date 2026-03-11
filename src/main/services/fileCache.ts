@@ -38,6 +38,7 @@ const LARGE_FILE_REFUSE_BYTES = 50 * 1024 * 1024 // 50 MB
  * a single fs.readFile call, reducing peak memory allocation.
  */
 const STREAM_THRESHOLD_BYTES = 2 * 1024 * 1024 // 2 MB
+const MAX_CACHED_FILE_BYTES = 1 * 1024 * 1024 // 1 MB
 
 /**
  * When total cached content exceeds this limit we start evicting the
@@ -149,6 +150,9 @@ class FileContentCache implements IDisposable {
     this.removeEntry(filePath)
 
     const entryBytes = Buffer.byteLength(content, 'utf-8')
+    if (size > MAX_CACHED_FILE_BYTES || entryBytes > MAX_CACHED_FILE_BYTES) {
+      return
+    }
     this.cache.set(filePath, { content, mtime, size })
     this.totalBytes += entryBytes
 

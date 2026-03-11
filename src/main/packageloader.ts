@@ -3,6 +3,19 @@ import path from 'path'
 import { app } from 'electron'
 import { PackageMacro, PackageEnv, PackageData } from '../shared/types'
 
+const packageCache = new Map<string, PackageData | null>()
+const requestCache = new Map<string, Record<string, PackageData>>()
+const COMMON_PACKAGE_NAMES = [
+  'amsmath',
+  'amssymb',
+  'graphicx',
+  'xcolor',
+  'hyperref',
+  'booktabs',
+  'geometry',
+  'biblatex'
+]
+
 function getPackageDataDir(): string {
   if (app.isPackaged) {
     return path.join(process.resourcesPath, 'data', 'packages')
@@ -81,6 +94,12 @@ function parseEnvs(envs: any): PackageEnv[] {
 export async function loadPackageData(
   packageNames: string[]
 ): Promise<Record<string, PackageData>> {
+  const requestKey = packageNames.slice().sort().join('\0')
+  const cachedRequest = requestCache.get(requestKey)
+  if (cachedRequest) {
+    return cachedRequest
+  }
+
   const result: Record<string, PackageData> = {}
   const dir = getPackageDataDir()
 
@@ -97,6 +116,17 @@ export async function loadPackageData(
     try {
       // Validate package name to prevent path traversal
       if (!/^[a-z0-9_-]+$/i.test(name)) continue
+      const cached = packageCache.get(name)
+      if (cached) {
+        result[name] = cached
+        for (const dep of cached.deps) {
+          if (!loaded.has(dep)) toLoad.add(dep)
+        }
+        continue
+      }
+      if (cached === null) {
+        continue
+      }
       const jsonPath = path.join(dir, `${name}.json`)
       const content = await fs.readFile(jsonPath, 'utf-8')
       const data = JSON.parse(content)
@@ -104,7 +134,9 @@ export async function loadPackageData(
       const macros = parseMacros(data.macros)
       const envs = parseEnvs(data.envs)
       const deps = parseDeps(data.deps)
-      result[name] = { macros, envs, deps }
+      const packageData = { macros, envs, deps }
+      packageCache.set(name, packageData)
+      result[name] = packageData
 
       // Queue transitive deps
       for (const dep of deps) {
@@ -112,8 +144,14 @@ export async function loadPackageData(
       }
     } catch {
       // Package JSON not found, skip
+      packageCache.set(name, null)
     }
   }
 
+  requestCache.set(requestKey, result)
   return result
+}
+
+export async function preloadCommonPackageData(): Promise<void> {
+  await loadPackageData(COMMON_PACKAGE_NAMES)
 }

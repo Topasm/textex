@@ -446,6 +446,22 @@ export function registerFileSystemHandlers(getWindow: () => BrowserWindow | null
     return { data, mimeType }
   })
 
+  // ----- fs:read-file-binary -----------------------------------------------
+
+  ipcMain.handle('fs:read-file-binary', async (_event, filePath: string) => {
+    const validPath = validateFilePath(filePath)
+    const stat = await retryTransient(() => fs.stat(validPath))
+    if (stat.size > MAX_BASE64_SIZE) {
+      throw new Error(
+        `File too large for binary transfer (${Math.round(stat.size / 1024 / 1024)}MB)`
+      )
+    }
+    const ext = path.extname(validPath).toLowerCase()
+    const mimeType = MIME_MAP[ext] || 'application/octet-stream'
+    const buffer = await retryTransient(() => fs.readFile(validPath))
+    return { data: Uint8Array.from(buffer), mimeType }
+  })
+
   // ----- fs:unwatch-directory ----------------------------------------------
 
   ipcMain.handle('fs:unwatch-directory', () => {

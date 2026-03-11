@@ -167,6 +167,7 @@ export interface UserSettings {
   mathPreviewEnabled?: boolean
   pdfInvertMode?: boolean
   autoHideSidebar?: boolean
+  sidebarPosition?: 'left' | 'right'
   showStatusBar?: boolean
   sectionHighlightEnabled?: boolean
   sectionHighlightColors?: string[]

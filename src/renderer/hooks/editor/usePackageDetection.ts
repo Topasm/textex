@@ -3,6 +3,14 @@ import { useEditorStore } from '../../store/useEditorStore'
 import { useProjectStore } from '../../store/useProjectStore'
 import { logError } from '../../utils/errorMessage'
 
+function arraysEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false
+  }
+  return true
+}
+
 /**
  * Detects \usepackage commands in the current editor content and loads package metadata.
  * Content-change scheduling is handled by useContentChangeCoordinator in EditorPane.
@@ -20,7 +28,7 @@ export function usePackageDetection(): { detectPackages: () => void } {
 
     const detected = Array.from(packages).sort()
     const current = useProjectStore.getState().detectedPackages
-    if (JSON.stringify(detected) !== JSON.stringify(current)) {
+    if (!arraysEqual(detected, current)) {
       useProjectStore.getState().setDetectedPackages(detected)
 
       if (detected.length > 0) {

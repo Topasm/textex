@@ -48,6 +48,7 @@ export interface CompileOptions {
   onDiagnostics?: (output: string, filePath: string) => void
   synctex?: boolean
   reruns?: number
+  env?: NodeJS.ProcessEnv
 }
 
 export async function compileLatex(
@@ -81,7 +82,10 @@ export async function compileLatex(
     }
     args.push(filePath)
 
-    const child: ChildProcess = spawn(binary, args, { cwd: workDir })
+    const child: ChildProcess = spawn(binary, args, {
+      cwd: workDir,
+      env: options.env ? { ...process.env, ...options.env } : process.env
+    })
     activeProcess = child
 
     let output = ''

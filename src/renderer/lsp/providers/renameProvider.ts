@@ -1,6 +1,6 @@
 import type { languages as monacoLanguages } from 'monaco-editor'
 import { MonacoInstance } from '../types'
-import { currentDocUri, sendRequest, isInitialized } from '../lspClient'
+import { sendRequest, isInitialized } from '../lspClient'
 
 export const createRenameProvider = (monaco: MonacoInstance): monacoLanguages.RenameProvider => {
   return {
@@ -8,7 +8,7 @@ export const createRenameProvider = (monaco: MonacoInstance): monacoLanguages.Re
       if (!isInitialized()) return null
       try {
         const result = (await sendRequest('textDocument/rename', {
-          textDocument: { uri: currentDocUri() },
+          textDocument: { uri: model.uri.toString() },
           position: { line: position.lineNumber - 1, character: position.column - 1 },
           newName
         })) as {
@@ -56,7 +56,7 @@ export const createRenameProvider = (monaco: MonacoInstance): monacoLanguages.Re
         }
       try {
         const result = (await sendRequest('textDocument/prepareRename', {
-          textDocument: { uri: currentDocUri() },
+          textDocument: { uri: model.uri.toString() },
           position: { line: position.lineNumber - 1, character: position.column - 1 }
         })) as {
           range: {

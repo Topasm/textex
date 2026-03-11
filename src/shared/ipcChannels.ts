@@ -79,6 +79,7 @@ export interface IpcChannelMap {
   'fs:create-directory': [[dirPath: string], SuccessResult]
   'fs:copy-file': [[source: string, dest: string], SuccessResult]
   'fs:read-file-base64': [[filePath: string], { data: string; mimeType: string }]
+  'fs:read-file-binary': [[filePath: string], { data: Uint8Array; mimeType: string }]
 
   // Compilation
   'latex:compile': [[filePath: string], CompileResult]

@@ -1,17 +1,17 @@
 import type { languages as monacoLanguages } from 'monaco-editor'
 import { MonacoInstance } from '../types'
 import { lspSymbolKindToMonaco } from '../utils'
-import { currentDocUri, sendRequest, isInitialized } from '../lspClient'
+import { sendRequest, isInitialized } from '../lspClient'
 
 export const createDocumentSymbolProvider = (
   monaco: MonacoInstance
 ): monacoLanguages.DocumentSymbolProvider => {
   return {
-    provideDocumentSymbols: async (_model) => {
+    provideDocumentSymbols: async (model) => {
       if (!isInitialized()) return []
       try {
         const result = (await sendRequest('textDocument/documentSymbol', {
-          textDocument: { uri: currentDocUri() }
+          textDocument: { uri: model.uri.toString() }
         })) as Array<Record<string, unknown>> | null
 
         if (!result) return []

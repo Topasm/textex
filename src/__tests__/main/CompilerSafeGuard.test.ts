@@ -48,7 +48,6 @@ describe('compileLatex Loop Safeguard', () => {
         opts.onLog('test log')
       }
       return {
-        pdfPath: 'test.pdf',
         logPath: 'test.log',
         status: 'success',
         pdfPath: '/test/file.pdf'
@@ -76,7 +75,6 @@ describe('compileLatex Loop Safeguard', () => {
         opts.onLog('test log')
       }
       return {
-        pdfPath: 'test.pdf',
         logPath: 'test.log',
         status: 'success',
         pdfPath: '/test/file.pdf'

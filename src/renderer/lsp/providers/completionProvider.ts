@@ -1,7 +1,7 @@
 import type { languages as monacoLanguages } from 'monaco-editor'
 import { MonacoInstance } from '../types'
 import { lspCompletionKindToMonaco } from '../utils'
-import { currentDocUri, sendRequest, isInitialized } from '../lspClient'
+import { sendRequest, isInitialized } from '../lspClient'
 
 interface CompletionMapResult {
   label: string
@@ -32,7 +32,7 @@ function makeCompletionProvider(
       if (!isInitialized()) return { suggestions: [] }
       try {
         const result = (await sendRequest('textDocument/completion', {
-          textDocument: { uri: currentDocUri() },
+          textDocument: { uri: model.uri.toString() },
           position: { line: position.lineNumber - 1, character: position.column - 1 }
         })) as { items?: unknown[] } | unknown[] | null
 

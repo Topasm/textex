@@ -8,6 +8,7 @@ import { SWIPE_LOCK_MS } from '../constants'
 const MOUSE_SWIPE_LOCK_MS = 400
 
 export type SlideAnim = 'exit-left' | 'exit-right' | 'enter-left' | 'enter-right' | null
+export type SidebarPosition = 'left' | 'right'
 
 interface DragResizeHandlers {
   /** Ref to attach to the main content area for split ratio calculation. */
@@ -28,13 +29,52 @@ interface DragResizeHandlers {
   slideAnim: SlideAnim
 }
 
+interface DragResizeOptions {
+  sidebarPosition: SidebarPosition
+  sidebarTabs: SidebarView[]
+}
+
+interface SidebarBounds {
+  left: number
+  right: number
+}
+
+export function getSidebarWidthFromPointer(
+  sidebarBounds: SidebarBounds,
+  clientX: number,
+  sidebarPosition: SidebarPosition
+): number {
+  return sidebarPosition === 'right' ? sidebarBounds.right - clientX : clientX - sidebarBounds.left
+}
+
+export function getSidebarSlideAnimation(
+  direction: number,
+  sidebarPosition: SidebarPosition
+): {
+  exit: Extract<SlideAnim, 'exit-left' | 'exit-right'>
+  enter: Extract<SlideAnim, 'enter-left' | 'enter-right'>
+} {
+  if (sidebarPosition === 'right') {
+    return direction > 0
+      ? { exit: 'exit-right', enter: 'enter-left' }
+      : { exit: 'exit-left', enter: 'enter-right' }
+  }
+
+  return direction > 0
+    ? { exit: 'exit-left', enter: 'enter-right' }
+    : { exit: 'exit-right', enter: 'enter-left' }
+}
+
 /**
  * Manages all drag-resize interactions:
  * - Editor ↔ Preview split divider
  * - Sidebar width resize handle
  * - Sidebar trackpad swipe to switch tabs
  */
-export function useDragResize(): DragResizeHandlers {
+export function useDragResize({
+  sidebarPosition,
+  sidebarTabs
+}: DragResizeOptions): DragResizeHandlers {
   const mainContentRef = useRef<HTMLDivElement>(null)
   const sidebarRef = useRef<HTMLDivElement>(null)
   const isDragging = useRef(false)
@@ -71,35 +111,46 @@ export function useDragResize(): DragResizeHandlers {
   }, [])
 
   // ---- Sidebar resize drag ----
-  const handleSidebarDividerMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    isSidebarDragging.current = true
-    document.body.style.cursor = 'col-resize'
-    document.body.style.userSelect = 'none'
+  const handleSidebarDividerMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault()
+      isSidebarDragging.current = true
+      document.body.style.cursor = 'col-resize'
+      document.body.style.userSelect = 'none'
 
-    // Force sidebar visible during drag so auto-hide doesn't collapse it on hover-loss
-    const wrapper = sidebarRef.current?.parentElement
-    wrapper?.classList.add('sidebar-dragging')
+      // Force sidebar visible during drag so auto-hide doesn't collapse it on hover-loss
+      const wrapper = sidebarRef.current?.parentElement
+      wrapper?.classList.add('sidebar-dragging')
 
-    const sidebarLeft = sidebarRef.current?.getBoundingClientRect().left ?? 0
+      const sidebarRect = sidebarRef.current?.getBoundingClientRect()
+      const sidebarBounds = {
+        left: sidebarRect?.left ?? 0,
+        right: sidebarRect?.right ?? 0
+      }
 
-    const onMouseMove = (moveEvent: MouseEvent): void => {
-      if (!isSidebarDragging.current) return
-      useProjectStore.getState().setSidebarWidth(moveEvent.clientX - sidebarLeft)
-    }
+      const onMouseMove = (moveEvent: MouseEvent): void => {
+        if (!isSidebarDragging.current) return
+        useProjectStore
+          .getState()
+          .setSidebarWidth(
+            getSidebarWidthFromPointer(sidebarBounds, moveEvent.clientX, sidebarPosition)
+          )
+      }
 
-    const onMouseUp = (): void => {
-      isSidebarDragging.current = false
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-      wrapper?.classList.remove('sidebar-dragging')
-      window.removeEventListener('mousemove', onMouseMove)
-      window.removeEventListener('mouseup', onMouseUp)
-    }
+      const onMouseUp = (): void => {
+        isSidebarDragging.current = false
+        document.body.style.cursor = ''
+        document.body.style.userSelect = ''
+        wrapper?.classList.remove('sidebar-dragging')
+        window.removeEventListener('mousemove', onMouseMove)
+        window.removeEventListener('mouseup', onMouseUp)
+      }
 
-    window.addEventListener('mousemove', onMouseMove)
-    window.addEventListener('mouseup', onMouseUp)
-  }, [])
+      window.addEventListener('mousemove', onMouseMove)
+      window.addEventListener('mouseup', onMouseUp)
+    },
+    [sidebarPosition]
+  )
 
   const handleSidebarDividerDoubleClick = useCallback(() => {
     useProjectStore.getState().setSidebarWidth(240)
@@ -119,40 +170,45 @@ export function useDragResize(): DragResizeHandlers {
     }
   }, [])
 
-  const handleSidebarWheel = useCallback((e: React.WheelEvent) => {
-    if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return
+  const handleSidebarWheel = useCallback(
+    (e: React.WheelEvent) => {
+      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return
 
-    // Discrete mouse wheel (e.g. MX Master thumb wheel): deltaY===0, lower threshold
-    const isMouseWheel = e.deltaY === 0
-    if (Math.abs(e.deltaX) < (isMouseWheel ? 5 : 30)) return
+      // Discrete mouse wheel (e.g. MX Master thumb wheel): deltaY===0, lower threshold
+      const isMouseWheel = e.deltaY === 0
+      if (Math.abs(e.deltaX) < (isMouseWheel ? 5 : 30)) return
 
-    // Timestamp-based lock: prevent rapid consecutive switches
-    const now = Date.now()
-    const lockMs = isMouseWheel ? MOUSE_SWIPE_LOCK_MS : SWIPE_LOCK_MS
-    if (now - lastSwipeTime.current < lockMs) return
-    lastSwipeTime.current = now
+      // Timestamp-based lock: prevent rapid consecutive switches
+      const now = Date.now()
+      const lockMs = isMouseWheel ? MOUSE_SWIPE_LOCK_MS : SWIPE_LOCK_MS
+      if (now - lastSwipeTime.current < lockMs) return
+      lastSwipeTime.current = now
 
-    const direction = e.deltaX > 0 ? 1 : -1
+      const direction = e.deltaX > 0 ? 1 : -1
 
-    // Clear any in-flight animation timers before starting new ones
-    clearTimeout(slideAnimTimer.current)
-    clearTimeout(slideAnimClearTimer.current)
+      // Clear any in-flight animation timers before starting new ones
+      clearTimeout(slideAnimTimer.current)
+      clearTimeout(slideAnimClearTimer.current)
 
-    const s = useProjectStore.getState()
-    const tabs: SidebarView[] = ['files', 'bib', 'outline', 'todo', 'timeline', 'git']
-    const idx = tabs.indexOf(s.sidebarView)
-    const next = tabs[(idx + direction + tabs.length) % tabs.length]
+      const s = useProjectStore.getState()
+      const tabs = sidebarTabs
+      const idx = tabs.indexOf(s.sidebarView)
+      if (idx === -1 || tabs.length === 0) return
+      const next = tabs[(idx + direction + tabs.length) % tabs.length]
+      const animation = getSidebarSlideAnimation(direction, sidebarPosition)
 
-    // Phase 1: slide out
-    setSlideAnim(direction > 0 ? 'exit-left' : 'exit-right')
-    // Phase 2: switch tab + slide in from opposite side
-    slideAnimTimer.current = setTimeout(() => {
-      s.setSidebarView(next)
-      setSlideAnim(direction > 0 ? 'enter-right' : 'enter-left')
-      // Phase 3: clear animation class
-      slideAnimClearTimer.current = setTimeout(() => setSlideAnim(null), 120)
-    }, 100)
-  }, [])
+      // Phase 1: slide out
+      setSlideAnim(animation.exit)
+      // Phase 2: switch tab + slide in from opposite side
+      slideAnimTimer.current = setTimeout(() => {
+        s.setSidebarView(next)
+        setSlideAnim(animation.enter)
+        // Phase 3: clear animation class
+        slideAnimClearTimer.current = setTimeout(() => setSlideAnim(null), 120)
+      }, 100)
+    },
+    [sidebarPosition, sidebarTabs]
+  )
 
   return {
     mainContentRef,

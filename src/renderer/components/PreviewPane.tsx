@@ -337,7 +337,8 @@ function PreviewPane() {
 
   // Load PDF as binary data via IPC. This works reliably in both dev mode
   // (where http://localhost can't access file:// URLs) and production.
-  const [pdfData, setPdfData] = useState<{ data: Uint8Array } | null>(null)
+  const [pdfData, setPdfData] = useState<Uint8Array | null>(null)
+  const pdfFile = useMemo(() => (pdfData ? { data: pdfData } : null), [pdfData])
   useEffect(() => {
     if (!pdfPath) {
       setPdfData(null)
@@ -345,15 +346,10 @@ function PreviewPane() {
     }
     let cancelled = false
     window.api
-      .readFileBase64(pdfPath)
-      .then((result: { data: string }) => {
+      .readFileBinary(pdfPath)
+      .then((result: { data: Uint8Array }) => {
         if (cancelled) return
-        // result.data is a data URL: "data:<mime>;base64,<payload>"
-        const base64 = result.data.split(',')[1]
-        const raw = atob(base64)
-        const bytes = new Uint8Array(raw.length)
-        for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i)
-        setPdfData({ data: bytes })
+        setPdfData(result.data)
       })
       .catch(() => {
         if (!cancelled) setPdfData(null)
@@ -468,7 +464,7 @@ function PreviewPane() {
             }
           >
             <Document
-              file={pdfData}
+              file={pdfFile}
               onLoadSuccess={onDocumentLoadSuccess}
               onLoadError={onDocumentLoadError}
               loading={

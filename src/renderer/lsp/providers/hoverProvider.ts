@@ -1,6 +1,6 @@
 import type { languages as monacoLanguages, IMarkdownString } from 'monaco-editor'
 import { MonacoInstance } from '../types'
-import { currentDocUri, sendRequest, isInitialized } from '../lspClient'
+import { sendRequest, isInitialized } from '../lspClient'
 
 function formatHoverContents(contents: unknown): IMarkdownString[] {
   if (typeof contents === 'string') {
@@ -29,7 +29,7 @@ export const createHoverProvider = (_monaco: MonacoInstance): monacoLanguages.Ho
       if (!isInitialized()) return null
       try {
         const result = (await sendRequest('textDocument/hover', {
-          textDocument: { uri: currentDocUri() },
+          textDocument: { uri: model.uri.toString() },
           position: { line: position.lineNumber - 1, character: position.column - 1 }
         })) as {
           contents: unknown

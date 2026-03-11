@@ -6,6 +6,10 @@ import { useCompileStore } from '../../renderer/store/useCompileStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 
+vi.mock('../../renderer/components/OmniSearch', () => ({
+  OmniSearch: () => <div data-testid="omni-search-mock">Search citations...</div>
+}))
+
 const defaultProps = {
   onOpen: vi.fn(),
   onSave: vi.fn(),
@@ -96,7 +100,7 @@ describe('Toolbar', () => {
   it('shows OmniSearch with default citations mode', () => {
     useProjectStore.setState({ projectRoot: '/test' })
     render(<Toolbar {...defaultProps} />)
-    expect(screen.getByPlaceholderText('Search citations...')).toBeInTheDocument()
+    expect(screen.getByTestId('omni-search-mock')).toHaveTextContent('Search citations...')
   })
 
   it('OmniSearch is always visible regardless of zoteroEnabled setting', () => {
@@ -105,7 +109,7 @@ describe('Toolbar', () => {
       settings: { ...useSettingsStore.getState().settings, zoteroEnabled: false }
     })
     render(<Toolbar {...defaultProps} />)
-    expect(screen.getByPlaceholderText('Search citations...')).toBeInTheDocument()
+    expect(screen.getByTestId('omni-search-mock')).toHaveTextContent('Search citations...')
   })
 
   it('hides PDF toolbar controls when showPdfToolbarControls is false', () => {

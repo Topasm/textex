@@ -14,6 +14,7 @@ import { checkCompileCache, updateCompileCache } from './services/compileCache'
 import { enqueueCompile } from './services/compileQueue'
 import type { CompilePriority } from './services/compileQueue'
 import type { Diagnostic } from '../shared/types'
+import { ensureTectonicCacheReady } from './services/tectonicCache'
 
 export { cancelCompilation }
 export type { CompileResult }
@@ -143,34 +144,49 @@ function parseLogInWorker(log: string, rootFile: string): Promise<Diagnostic[]> 
   })
 }
 
-async function doCompile(filePath: string, win: BrowserWindow): Promise<CompileResult> {
-  // Check content-hash cache - skip compilation if nothing changed
-  const cachedPdfPath = await checkCompileCache(filePath)
-  if (cachedPdfPath) {
-    try {
-      await fs.access(cachedPdfPath)
-      return { pdfPath: cachedPdfPath }
-    } catch {
-      // Cache pointed to a missing PDF, proceed with compilation
+interface CompileRunOptions {
+  priority?: CompilePriority
+  silent?: boolean
+  skipCompileCache?: boolean
+}
+
+async function doCompile(
+  filePath: string,
+  win: BrowserWindow | null,
+  options: CompileRunOptions = {}
+): Promise<CompileResult> {
+  if (!options.skipCompileCache) {
+    const cachedPdfPath = await checkCompileCache(filePath)
+    if (cachedPdfPath) {
+      try {
+        await fs.access(cachedPdfPath)
+        return { pdfPath: cachedPdfPath }
+      } catch {
+        // Cache pointed to a missing PDF, proceed with compilation
+      }
     }
   }
 
-  // Invalidate SyncTeX cache so it's re-parsed after compilation
   clearSyncTexCache()
 
-  // Send compile progress event
-  if (!win.isDestroyed()) {
+  if (win && !options.silent && !win.isDestroyed()) {
     win.webContents.send('latex:compile-progress', { stage: 'compiling', filePath })
   }
 
   const result = await sharedCompileLatex(filePath, {
     tectonicPath: getTectonicPath(),
+    env: {
+      TECTONIC_CACHE_DIR: await ensureTectonicCacheReady()
+    },
     onLog: (text: string) => {
-      if (!win.isDestroyed()) {
+      if (win && !options.silent && !win.isDestroyed()) {
         win.webContents.send('latex:log', text)
       }
     },
     onDiagnostics: (output: string, file: string) => {
+      if (!win || options.silent) {
+        return
+      }
       // Parse diagnostics in a pooled worker thread to keep main process responsive
       parseLogInWorker(output, file).then((diagnostics) => {
         try {
@@ -187,12 +203,13 @@ async function doCompile(filePath: string, win: BrowserWindow): Promise<CompileR
 
   // Cache the successful compilation result
   const pdfPath = filePath.replace(/\.tex$/, '.pdf')
-  await updateCompileCache(filePath, pdfPath).catch(() => {
-    // Non-critical: cache update failure shouldn't break compilation
-  })
+  if (!options.skipCompileCache) {
+    await updateCompileCache(filePath, pdfPath).catch(() => {
+      // Non-critical: cache update failure shouldn't break compilation
+    })
+  }
 
-  // Send completion progress event
-  if (!win.isDestroyed()) {
+  if (win && !options.silent && !win.isDestroyed()) {
     win.webContents.send('latex:compile-progress', { stage: 'done', filePath })
   }
 
@@ -204,5 +221,15 @@ export async function compileLatex(
   win: BrowserWindow,
   priority?: CompilePriority
 ): Promise<CompileResult> {
-  return enqueueCompile(filePath, (fp) => doCompile(fp, win), priority)
+  return enqueueCompile(filePath, (fp) => doCompile(fp, win, { priority }), priority, () =>
+    cancelCompilation()
+  )
+}
+
+export async function compileWarmupDocument(filePath: string): Promise<CompileResult> {
+  return enqueueCompile(
+    filePath,
+    (fp) => doCompile(fp, null, { priority: 'background', silent: true, skipCompileCache: true }),
+    'background'
+  )
 }

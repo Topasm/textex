@@ -65,6 +65,7 @@ function App() {
   const gitEnabled = isFeatureEnabled(settings, 'git')
   const autoHideSidebar = useSettingsStore((s) => s.settings.autoHideSidebar)
   const showStatusBar = useSettingsStore((s) => s.settings.showStatusBar)
+  const sidebarPosition = settings.sidebarPosition ?? 'left'
 
   const [isDraftModalOpen, setIsDraftModalOpen] = useState(false)
   const [draftPrefill, setDraftPrefill] = useState<string | undefined>(undefined)
@@ -186,6 +187,18 @@ function App() {
     }
   }, [])
 
+  // ---- Sidebar tab definitions ----
+  const iconSize = 14
+  const allSidebarTabs: { key: SidebarView; label: string; icon: React.ReactNode }[] = [
+    { key: 'files', label: t('sidebar.files'), icon: <FolderTree size={iconSize} /> },
+    { key: 'bib', label: t('sidebar.bib'), icon: <BookOpen size={iconSize} /> },
+    { key: 'outline', label: t('sidebar.outline'), icon: <ListTree size={iconSize} /> },
+    { key: 'todo', label: t('sidebar.notes'), icon: <StickyNote size={iconSize} /> },
+    { key: 'timeline', label: t('sidebar.timeline'), icon: <Clock size={iconSize} /> },
+    { key: 'git', label: t('sidebar.git'), icon: <GitBranch size={iconSize} /> }
+  ]
+  const sidebarTabs = gitEnabled ? allSidebarTabs : allSidebarTabs.filter((t) => t.key !== 'git')
+
   // ---- Extracted hooks (formerly inline useEffect blocks) ----
   const sessionRestored = useSessionRestore()
   useIpcListeners(projectRoot)
@@ -208,21 +221,91 @@ function App() {
     handleSidebarDividerDoubleClick,
     handleSidebarWheel,
     slideAnim
-  } = useDragResize()
-
-  // ---- Sidebar tab definitions ----
-  const iconSize = 14
-  const allSidebarTabs: { key: SidebarView; label: string; icon: React.ReactNode }[] = [
-    { key: 'files', label: t('sidebar.files'), icon: <FolderTree size={iconSize} /> },
-    { key: 'bib', label: t('sidebar.bib'), icon: <BookOpen size={iconSize} /> },
-    { key: 'outline', label: t('sidebar.outline'), icon: <ListTree size={iconSize} /> },
-    { key: 'todo', label: t('sidebar.notes'), icon: <StickyNote size={iconSize} /> },
-    { key: 'timeline', label: t('sidebar.timeline'), icon: <Clock size={iconSize} /> },
-    { key: 'git', label: t('sidebar.git'), icon: <GitBranch size={iconSize} /> }
-  ]
-  const sidebarTabs = gitEnabled ? allSidebarTabs : allSidebarTabs.filter((t) => t.key !== 'git')
+  } = useDragResize({
+    sidebarPosition,
+    sidebarTabs: sidebarTabs.map((tab) => tab.key)
+  })
 
   const showHomeScreen = sessionRestored && !projectRoot
+  const sidebarHandleStyle = autoHideSidebar
+    ? sidebarPosition === 'right'
+      ? { right: `${sidebarWidth}px`, left: 'auto' }
+      : { left: `${sidebarWidth}px`, right: 'auto' }
+    : undefined
+  const sidebarWrapperClass = `sidebar-wrapper sidebar-${sidebarPosition}${autoHideSidebar ? ' sidebar-auto-hide' : ''}`
+  const sidebarElement = (
+    <div className={sidebarWrapperClass}>
+      {sidebarPosition === 'right' && (
+        <div
+          className={`sidebar-resize-handle sidebar-${sidebarPosition}`}
+          style={sidebarHandleStyle}
+          onMouseDown={handleSidebarDividerMouseDown}
+          onDoubleClick={handleSidebarDividerDoubleClick}
+        />
+      )}
+      <div
+        className={`sidebar sidebar-${sidebarPosition}`}
+        ref={sidebarRef}
+        style={{ width: `${sidebarWidth}px` }}
+        onWheel={handleSidebarWheel}
+      >
+        <div className="sidebar-tabs">
+          {sidebarTabs.map((tab) => (
+            <button
+              key={tab.key}
+              className={`sidebar-tab${sidebarView === tab.key ? ' active' : ''}`}
+              onClick={() => useProjectStore.getState().setSidebarView(tab.key)}
+              title={tab.label}
+            >
+              {tab.icon}
+              <span className="sidebar-tab-label">{tab.label}</span>
+            </button>
+          ))}
+          <button
+            className="sidebar-pin-btn"
+            title={autoHideSidebar ? t('sidebar.pinSidebar') : t('sidebar.unpinSidebar')}
+            onClick={() => {
+              if (autoHideSidebar) {
+                useSettingsStore.getState().updateSetting('autoHideSidebar', false)
+                if (!useProjectStore.getState().isSidebarOpen) {
+                  useProjectStore.getState().toggleSidebar()
+                }
+              } else {
+                useSettingsStore.getState().updateSetting('autoHideSidebar', true)
+              }
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+              {autoHideSidebar ? (
+                <path
+                  d="M9.828.722a.5.5 0 0 1 .354.146l4.95 4.95a.5.5 0 0 1 0 .707c-.48.48-1.072.588-1.503.588-.177 0-.335-.018-.46-.039l-3.134 3.134a6 6 0 0 1 .16 1.013c.046.702-.032 1.687-.72 2.375a.5.5 0 0 1-.707 0l-2.829-2.828-3.182 3.182a.5.5 0 0 1-.707-.708l3.182-3.181L2.4 7.328a.5.5 0 0 1 0-.707c.688-.688 1.673-.767 2.375-.72a6 6 0 0 1 1.013.16l3.134-3.133a3 3 0 0 1-.04-.461c0-.43.109-1.022.589-1.503a.5.5 0 0 1 .353-.146z"
+                  transform="rotate(45, 8, 8)"
+                />
+              ) : (
+                <path d="M9.828.722a.5.5 0 0 1 .354.146l4.95 4.95a.5.5 0 0 1 0 .707c-.48.48-1.072.588-1.503.588-.177 0-.335-.018-.46-.039l-3.134 3.134a6 6 0 0 1 .16 1.013c.046.702-.032 1.687-.72 2.375a.5.5 0 0 1-.707 0l-2.829-2.828-3.182 3.182a.5.5 0 0 1-.707-.708l3.182-3.181L2.4 7.328a.5.5 0 0 1 0-.707c.688-.688 1.673-.767 2.375-.72a6 6 0 0 1 1.013.16l3.134-3.133a3 3 0 0 1-.04-.461c0-.43.109-1.022.589-1.503a.5.5 0 0 1 .353-.146z" />
+              )}
+            </svg>
+          </button>
+        </div>
+        <div className={`sidebar-content${slideAnim ? ` sidebar-${slideAnim}` : ''}`}>
+          {sidebarView === 'files' && <FileTree />}
+          {sidebarView === 'git' && <GitPanel />}
+          {sidebarView === 'bib' && <BibPanel />}
+          {sidebarView === 'outline' && <OutlinePanel />}
+          {sidebarView === 'todo' && <TodoPanel />}
+          {sidebarView === 'timeline' && <TimelinePanel />}
+        </div>
+      </div>
+      {sidebarPosition === 'left' && (
+        <div
+          className={`sidebar-resize-handle sidebar-${sidebarPosition}`}
+          style={sidebarHandleStyle}
+          onMouseDown={handleSidebarDividerMouseDown}
+          onDoubleClick={handleSidebarDividerDoubleClick}
+        />
+      )}
+    </div>
+  )
 
   return (
     <div className="app-container">
@@ -263,69 +346,7 @@ function App() {
         />
       ) : (
         <div className="workspace">
-          {(isSidebarOpen || autoHideSidebar) && (
-            <div className={`sidebar-wrapper${autoHideSidebar ? ' sidebar-auto-hide' : ''}`}>
-              <div
-                className="sidebar"
-                ref={sidebarRef}
-                style={{ width: `${sidebarWidth}px` }}
-                onWheel={handleSidebarWheel}
-              >
-                <div className="sidebar-tabs">
-                  {sidebarTabs.map((tab) => (
-                    <button
-                      key={tab.key}
-                      className={`sidebar-tab${sidebarView === tab.key ? ' active' : ''}`}
-                      onClick={() => useProjectStore.getState().setSidebarView(tab.key)}
-                      title={tab.label}
-                    >
-                      {tab.icon}
-                      <span className="sidebar-tab-label">{tab.label}</span>
-                    </button>
-                  ))}
-                  <button
-                    className="sidebar-pin-btn"
-                    title={autoHideSidebar ? t('sidebar.pinSidebar') : t('sidebar.unpinSidebar')}
-                    onClick={() => {
-                      if (autoHideSidebar) {
-                        useSettingsStore.getState().updateSetting('autoHideSidebar', false)
-                        if (!useProjectStore.getState().isSidebarOpen) {
-                          useProjectStore.getState().toggleSidebar()
-                        }
-                      } else {
-                        useSettingsStore.getState().updateSetting('autoHideSidebar', true)
-                      }
-                    }}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                      {autoHideSidebar ? (
-                        <path
-                          d="M9.828.722a.5.5 0 0 1 .354.146l4.95 4.95a.5.5 0 0 1 0 .707c-.48.48-1.072.588-1.503.588-.177 0-.335-.018-.46-.039l-3.134 3.134a6 6 0 0 1 .16 1.013c.046.702-.032 1.687-.72 2.375a.5.5 0 0 1-.707 0l-2.829-2.828-3.182 3.182a.5.5 0 0 1-.707-.708l3.182-3.181L2.4 7.328a.5.5 0 0 1 0-.707c.688-.688 1.673-.767 2.375-.72a6 6 0 0 1 1.013.16l3.134-3.133a3 3 0 0 1-.04-.461c0-.43.109-1.022.589-1.503a.5.5 0 0 1 .353-.146z"
-                          transform="rotate(45, 8, 8)"
-                        />
-                      ) : (
-                        <path d="M9.828.722a.5.5 0 0 1 .354.146l4.95 4.95a.5.5 0 0 1 0 .707c-.48.48-1.072.588-1.503.588-.177 0-.335-.018-.46-.039l-3.134 3.134a6 6 0 0 1 .16 1.013c.046.702-.032 1.687-.72 2.375a.5.5 0 0 1-.707 0l-2.829-2.828-3.182 3.182a.5.5 0 0 1-.707-.708l3.182-3.181L2.4 7.328a.5.5 0 0 1 0-.707c.688-.688 1.673-.767 2.375-.72a6 6 0 0 1 1.013.16l3.134-3.133a3 3 0 0 1-.04-.461c0-.43.109-1.022.589-1.503a.5.5 0 0 1 .353-.146z" />
-                      )}
-                    </svg>
-                  </button>
-                </div>
-                <div className={`sidebar-content${slideAnim ? ` sidebar-${slideAnim}` : ''}`}>
-                  {sidebarView === 'files' && <FileTree />}
-                  {sidebarView === 'git' && <GitPanel />}
-                  {sidebarView === 'bib' && <BibPanel />}
-                  {sidebarView === 'outline' && <OutlinePanel />}
-                  {sidebarView === 'todo' && <TodoPanel />}
-                  {sidebarView === 'timeline' && <TimelinePanel />}
-                </div>
-              </div>
-              <div
-                className="sidebar-resize-handle"
-                style={autoHideSidebar ? { left: `${sidebarWidth}px`, right: 'auto' } : undefined}
-                onMouseDown={handleSidebarDividerMouseDown}
-                onDoubleClick={handleSidebarDividerDoubleClick}
-              />
-            </div>
-          )}
+          {sidebarPosition === 'left' && (isSidebarOpen || autoHideSidebar) && sidebarElement}
           <div className="editor-area">
             <div className="editor-main-content" ref={mainContentRef}>
               <div className="editor-pane" style={{ width: `${splitRatio * 100}%` }}>
@@ -344,6 +365,7 @@ function App() {
               </div>
             </div>
           </div>
+          {sidebarPosition === 'right' && (isSidebarOpen || autoHideSidebar) && sidebarElement}
         </div>
       )}
       <LogPanel />

@@ -204,6 +204,22 @@ export const EditorTab = () => {
           </div>
           <div className="settings-row">
             <div>
+              <div className="settings-row-label">{t('settings.editor.sidebarPosition')}</div>
+              <div className="settings-row-description">
+                {t('settings.editor.sidebarPositionDesc')}
+              </div>
+            </div>
+            <select
+              value={settings.sidebarPosition ?? 'left'}
+              onChange={(e) => updateSetting('sidebarPosition', e.target.value as 'left' | 'right')}
+              className="settings-select settings-select-narrow"
+            >
+              <option value="left">{t('settings.editor.sidebarLeft')}</option>
+              <option value="right">{t('settings.editor.sidebarRight')}</option>
+            </select>
+          </div>
+          <div className="settings-row">
+            <div>
               <div className="settings-row-label">{t('settings.editor.mathPreview')}</div>
               <div className="settings-row-description">{t('settings.editor.mathPreviewDesc')}</div>
             </div>

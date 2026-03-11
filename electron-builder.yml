@@ -19,6 +19,10 @@ extraResources:
     to: "data/packages"
     filter:
       - "**/*"
+  - from: "resources/tectonic-cache"
+    to: "tectonic-cache"
+    filter:
+      - "**/*"
   - from: "resources/licenses"
     to: "licenses"
     filter:

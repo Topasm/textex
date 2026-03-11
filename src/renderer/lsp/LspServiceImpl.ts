@@ -392,7 +392,9 @@ export class LspClient {
       )
     }
     if (caps.renameProvider) {
-      this.trackDisposable(monaco.languages.registerRenameProvider('latex', createRenameProvider(monaco)))
+      this.trackDisposable(
+        monaco.languages.registerRenameProvider('latex', createRenameProvider(monaco))
+      )
     }
     if (caps.documentFormattingProvider) {
       this.trackDisposable(
@@ -447,11 +449,11 @@ export class LspClient {
       this.handleMessage(message as Record<string, unknown>)
     })
 
-    await window.api.lspStart(workspaceRoot)
-
     try {
+      await window.api.lspStart(workspaceRoot)
       await this.doInitialize(workspaceRoot)
     } catch {
+      this.stop()
       return
     }
 

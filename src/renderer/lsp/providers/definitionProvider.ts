@@ -1,6 +1,6 @@
 import type { languages as monacoLanguages } from 'monaco-editor'
 import { MonacoInstance } from '../types'
-import { currentDocUri, sendRequest, isInitialized } from '../lspClient'
+import { sendRequest, isInitialized } from '../lspClient'
 
 export const createDefinitionProvider = (
   monaco: MonacoInstance
@@ -10,7 +10,7 @@ export const createDefinitionProvider = (
       if (!isInitialized()) return null
       try {
         const result = (await sendRequest('textDocument/definition', {
-          textDocument: { uri: currentDocUri() },
+          textDocument: { uri: model.uri.toString() },
           position: { line: position.lineNumber - 1, character: position.column - 1 }
         })) as
           | Array<{

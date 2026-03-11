@@ -96,6 +96,7 @@ const defaultSettings: UserSettings = {
   aiPromptLonger: '',
   aiPromptShorter: '',
   autoHideSidebar: false,
+  sidebarPosition: 'left',
   showStatusBar: true,
   bibGroupMode: 'flat',
   lineNumbers: true,
@@ -164,6 +165,9 @@ export const useSettingsStore = create<SettingsState>()(
             '#56b6c2',
             '#d19a66'
           ]
+        }
+        if (state && !state.settings.sidebarPosition) {
+          state.settings.sidebarPosition = 'left'
         }
       }
     }

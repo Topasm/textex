@@ -2,13 +2,15 @@ import type { CompileResult } from '../../shared/compiler'
 
 // --- Types ---
 
-export type CompilePriority = 'high' | 'normal'
+export type CompilePriority = 'high' | 'normal' | 'background'
+type ActiveCancelFn = () => void
 
 type CompileFunction = (filePath: string) => Promise<CompileResult>
 
 interface QueueEntry {
   filePath: string
   priority: CompilePriority
+  compileFn: CompileFunction
   resolve: (result: CompileResult) => void
   reject: (error: Error) => void
 }
@@ -28,6 +30,7 @@ const DEFAULT_TIMEOUT_MS = 120_000 // 2 minutes
 
 let isCompiling = false
 let currentAbort: AbortController | null = null
+let currentPriority: CompilePriority | 'background' | null = null
 const pending: QueueEntry[] = []
 const metrics: CompileMetrics = {
   totalCompiles: 0,
@@ -45,18 +48,38 @@ const metrics: CompileMetrics = {
 export function enqueueCompile(
   filePath: string,
   compileFn: CompileFunction,
-  priority: CompilePriority = 'normal'
+  priority: CompilePriority = 'normal',
+  cancelActive?: ActiveCancelFn
 ): Promise<CompileResult> {
+  if (
+    isCompiling &&
+    currentPriority === 'background' &&
+    priority !== 'background' &&
+    currentAbort &&
+    !currentAbort.signal.aborted
+  ) {
+    currentAbort.abort()
+    cancelActive?.()
+  }
+
   if (!isCompiling) {
-    return runCompile(filePath, compileFn)
+    return runCompile(filePath, compileFn, priority)
   }
 
   return new Promise<CompileResult>((resolve, reject) => {
-    const entry: QueueEntry = { filePath, priority, resolve, reject }
+    const entry: QueueEntry = { filePath, priority, compileFn, resolve, reject }
 
     if (priority === 'high') {
-      // Insert before first normal-priority entry
-      const idx = pending.findIndex((e) => e.priority === 'normal')
+      // Insert before first non-high-priority entry
+      const idx = pending.findIndex((e) => e.priority !== 'high')
+      if (idx === -1) {
+        pending.push(entry)
+      } else {
+        pending.splice(idx, 0, entry)
+      }
+    } else if (priority === 'normal') {
+      // Insert before first background-priority entry
+      const idx = pending.findIndex((e) => e.priority === 'background')
       if (idx === -1) {
         pending.push(entry)
       } else {
@@ -68,10 +91,15 @@ export function enqueueCompile(
   })
 }
 
-async function runCompile(filePath: string, compileFn: CompileFunction): Promise<CompileResult> {
+async function runCompile(
+  filePath: string,
+  compileFn: CompileFunction,
+  priority: CompilePriority
+): Promise<CompileResult> {
   isCompiling = true
   const abort = new AbortController()
   currentAbort = abort
+  currentPriority = priority
 
   const start = performance.now()
   let timedOut = false
@@ -103,12 +131,13 @@ async function runCompile(filePath: string, compileFn: CompileFunction): Promise
     metrics.totalCompiles++
     metrics.totalTimeMs += elapsed
     currentAbort = null
+    currentPriority = null
     isCompiling = false
-    drainPending(compileFn)
+    drainPending()
   }
 }
 
-function drainPending(compileFn: CompileFunction): void {
+function drainPending(): void {
   if (pending.length === 0) return
 
   // Take the first entry (highest priority due to insertion order)
@@ -122,7 +151,7 @@ function drainPending(compileFn: CompileFunction): void {
     }
   }
 
-  runCompile(entry.filePath, compileFn).then(
+  runCompile(entry.filePath, entry.compileFn, entry.priority).then(
     (result) => coalesced.forEach((e) => e.resolve(result)),
     (error) =>
       coalesced.forEach((e) => e.reject(error instanceof Error ? error : new Error(String(error))))
@@ -145,6 +174,13 @@ export function cancelCurrentCompile(): boolean {
  */
 export function isCompileInProgress(): boolean {
   return isCompiling
+}
+
+/**
+ * Get the priority of the compile currently in progress.
+ */
+export function getActiveCompilePriority(): CompilePriority | 'background' | null {
+  return currentPriority
 }
 
 /**

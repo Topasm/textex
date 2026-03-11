@@ -24,6 +24,7 @@ const defaults: UserSettings = {
   mathPreviewEnabled: true,
   pdfInvertMode: false,
   autoHideSidebar: false,
+  sidebarPosition: 'left',
   showStatusBar: true,
   sectionHighlightEnabled: false,
   sectionHighlightColors: [

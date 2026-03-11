@@ -59,11 +59,12 @@ function createTrackingDisposable(id: string): TrackingDisposable {
 }
 
 function createMonacoMock(disposables: TrackingDisposable[]): MonacoInstance {
-  const register = (id: string) => vi.fn(() => {
-    const disposable = createTrackingDisposable(id)
-    disposables.push(disposable)
-    return disposable
-  })
+  const register = (id: string) =>
+    vi.fn(() => {
+      const disposable = createTrackingDisposable(id)
+      disposables.push(disposable)
+      return disposable
+    })
 
   return {
     languages: {
@@ -79,9 +80,25 @@ function createMonacoMock(disposables: TrackingDisposable[]): MonacoInstance {
   } as unknown as MonacoInstance
 }
 
+type LspWindowApiMock = Pick<
+  Window['api'],
+  'lspSend' | 'lspStart' | 'lspStop' | 'onLspMessage' | 'removeLspMessageListener'
+>
+
+function createWindowApiMock(): LspWindowApiMock {
+  return {
+    lspSend: vi.fn(),
+    lspStart: vi.fn(async () => ({ success: true })),
+    lspStop: vi.fn(async () => ({ success: true })),
+    onLspMessage: vi.fn(),
+    removeLspMessageListener: vi.fn()
+  }
+}
+
 describe('LspClient', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    window.api = createWindowApiMock() as Window['api']
   })
 
   it('disposes registered Monaco providers with bound context', () => {
@@ -101,10 +118,9 @@ describe('LspClient', () => {
         legend: { tokenTypes: ['type'], tokenModifiers: ['definition'] }
       }
     }
-
-    ;(client as unknown as { registerProviders: (monaco: MonacoInstance) => void }).registerProviders(
-      monaco
-    )
+    ;(
+      client as unknown as { registerProviders: (monaco: MonacoInstance) => void }
+    ).registerProviders(monaco)
 
     expect(trackedDisposables).toHaveLength(9)
 
@@ -115,5 +131,38 @@ describe('LspClient', () => {
     expect(trackedDisposables.map((disposable) => disposable.disposeCalls)).toEqual(
       Array.from({ length: 9 }, () => 1)
     )
+  })
+
+  it('cleans up the LSP process and listener when startup initialization fails', async () => {
+    const monaco = createMonacoMock([])
+    const client = new LspClient()
+    const windowApi = window.api as unknown as LspWindowApiMock
+
+    const doInitializeSpy = vi
+      .spyOn(
+        client as unknown as { doInitialize: (workspaceRoot: string) => Promise<void> },
+        'doInitialize'
+      )
+      .mockRejectedValue(new Error('initialize failed'))
+    const registerProvidersSpy = vi.spyOn(
+      client as unknown as { registerProviders: (monaco: MonacoInstance) => void },
+      'registerProviders'
+    )
+
+    await client.start(
+      '/workspace/project',
+      monaco,
+      () => '/workspace/project/main.tex',
+      () => ''
+    )
+
+    expect(windowApi.onLspMessage).toHaveBeenCalledOnce()
+    expect(windowApi.lspStart).toHaveBeenCalledWith('/workspace/project')
+    expect(doInitializeSpy).toHaveBeenCalledWith('/workspace/project')
+    expect(registerProvidersSpy).not.toHaveBeenCalled()
+    expect(windowApi.removeLspMessageListener).toHaveBeenCalledOnce()
+    expect(windowApi.lspStop).toHaveBeenCalledOnce()
+    expect(client.initialized).toBe(false)
+    expect(client.currentDocUri()).toBe('')
   })
 })

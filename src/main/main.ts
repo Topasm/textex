@@ -3,6 +3,8 @@ import path from 'path'
 import { registerIpcHandlers } from './ipc'
 import { loadSettings } from './settings'
 import { loadPersistentCache, savePersistentCache } from './services/compileCache'
+import { preloadCommonPackageData } from './packageloader'
+import { scheduleTexWarmup } from './services/texWarmup'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -128,6 +130,10 @@ function createWindow(theme: string): void {
   const win = mainWindow
   win.once('ready-to-show', () => {
     setTimeout(() => initAutoUpdater(), 3000)
+    setTimeout(() => {
+      preloadCommonPackageData().catch(() => {})
+    }, 1500)
+    scheduleTexWarmup()
   })
 }
 

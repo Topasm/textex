@@ -22,6 +22,7 @@ const NO_TIMEOUT_CHANNELS = new Set<string>([
 const DEDUP_CHANNELS = new Set<string>([
   'fs:read-file',
   'fs:read-file-base64',
+  'fs:read-file-binary',
   'fs:read-directory',
   'settings:load',
   'bib:parse',
@@ -149,6 +150,7 @@ contextBridge.exposeInMainWorld('api', {
   copyFile: (source: string, dest: string) => invoke('fs:copy-file', source, dest),
   createDirectory: (dirPath: string) => invoke('fs:create-directory', dirPath),
   readFileBase64: (filePath: string) => invoke('fs:read-file-base64', filePath),
+  readFileBinary: (filePath: string) => invoke('fs:read-file-binary', filePath),
   watchDirectory: (dirPath: string) => invoke('fs:watch-directory', dirPath),
   unwatchDirectory: () => invoke('fs:unwatch-directory'),
   onDirectoryChanged: (cb: (change: { type: string; filename: string }) => void) => {

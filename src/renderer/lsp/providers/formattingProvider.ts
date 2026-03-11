@@ -1,16 +1,16 @@
 import type { languages as monacoLanguages } from 'monaco-editor'
 import { MonacoInstance } from '../types'
-import { currentDocUri, sendRequest, isInitialized } from '../lspClient'
+import { sendRequest, isInitialized } from '../lspClient'
 
 export const createFormattingProvider = (
   _monaco: MonacoInstance
 ): monacoLanguages.DocumentFormattingEditProvider => {
   return {
-    provideDocumentFormattingEdits: async (_model) => {
+    provideDocumentFormattingEdits: async (model) => {
       if (!isInitialized()) return []
       try {
         const result = (await sendRequest('textDocument/formatting', {
-          textDocument: { uri: currentDocUri() },
+          textDocument: { uri: model.uri.toString() },
           options: { tabSize: 2, insertSpaces: true }
         })) as Array<{
           range: {
