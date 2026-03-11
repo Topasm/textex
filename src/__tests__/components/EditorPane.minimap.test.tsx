@@ -39,12 +39,13 @@ vi.mock('@monaco-editor/react', async () => {
     beforeMount?: (monaco: object) => void
     onMount?: (editor: object, monaco: object) => void
   }) => {
-    capturedOptions = props.options ?? null
+    const { beforeMount, onMount, options } = props
+    capturedOptions = options ?? null
 
     React.useEffect(() => {
-      props.beforeMount?.(mockMonaco)
-      props.onMount?.(mockEditor, mockMonaco)
-    }, [props.beforeMount, props.onMount])
+      beforeMount?.(mockMonaco)
+      onMount?.(mockEditor, mockMonaco)
+    }, [beforeMount, onMount])
 
     return React.createElement('div', { 'data-testid': 'mock-monaco-editor' })
   }

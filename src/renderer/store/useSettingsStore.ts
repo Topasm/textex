@@ -57,9 +57,12 @@ function syncToMain(): void {
 
 export function sanitizeSettings(input: unknown): Partial<UserSettings> {
   if (!input || typeof input !== 'object') return {}
-  const { minimap: _minimap, ...settings } = input as Partial<UserSettings> & {
-    minimap?: unknown
+  const settings = {
+    ...(input as Partial<UserSettings> & {
+      minimap?: unknown
+    })
   }
+  delete settings.minimap
   return settings
 }
 
