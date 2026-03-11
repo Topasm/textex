@@ -143,6 +143,10 @@ export const AiTab = () => {
   const provider = settings.aiProvider
   const providerInfo = provider ? AI_PROVIDER_INFO[provider] : null
   const currentModels = provider ? (AI_MODEL_OPTIONS[provider] ?? []) : []
+  const modelSuggestionsId = provider ? `ai-model-suggestions-${provider}` : undefined
+  const modelPlaceholder = currentModels[0]
+    ? `${t('settings.ai.default')} (${currentModels[0].label})`
+    : t('settings.ai.default')
 
   // Check if API key exists for current provider
   useEffect(() => {
@@ -225,18 +229,23 @@ export const AiTab = () => {
                 <h3 className="settings-heading">{t('settings.ai.model')}</h3>
                 <p className="settings-subheading">{t('settings.ai.modelDesc')}</p>
                 <div className="settings-field-group settings-field-mt-sm">
-                  <select
+                  <input
+                    list={modelSuggestionsId}
                     value={settings.aiModel}
                     onChange={(e) => updateSetting('aiModel', e.target.value)}
-                    className="settings-select"
-                  >
-                    <option value="">{t('settings.ai.default')}</option>
+                    placeholder={modelPlaceholder}
+                    className="settings-input"
+                    spellCheck={false}
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                  />
+                  <datalist id={modelSuggestionsId}>
                     {currentModels.map((m) => (
                       <option key={m.value} value={m.value}>
                         {m.label}
                       </option>
                     ))}
-                  </select>
+                  </datalist>
                 </div>
               </div>
 

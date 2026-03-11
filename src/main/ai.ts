@@ -15,9 +15,9 @@ interface ThinkingConfig {
 // ---- Default models ----
 
 const DEFAULT_MODELS: Record<string, string> = {
-  openai: 'gpt-4o',
-  anthropic: 'claude-sonnet-4-5-20250929',
-  gemini: 'gemini-2.5-flash'
+  openai: 'gpt-5.2',
+  anthropic: 'claude-sonnet-4-5',
+  gemini: 'gemini-3-flash-preview'
 }
 
 // ---- Default prompts (used when user hasn't customized) ----
@@ -101,7 +101,7 @@ function callOpenAI(
   thinking: ThinkingConfig
 ): Promise<string> {
   const modelId = model || DEFAULT_MODELS.openai
-  const isReasoning = /^(o1|o3|o4)/.test(modelId)
+  const isReasoning = /^(o1|o3|o4|gpt-5)/.test(modelId)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const body: Record<string, any> = {

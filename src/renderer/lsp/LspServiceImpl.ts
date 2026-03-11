@@ -1,7 +1,7 @@
 import type { editor as monacoEditor, MarkerSeverity } from 'monaco-editor'
 import type { MonacoInstance } from './types'
 import type { DocumentSymbolNode } from '../../shared/types'
-import { DisposableStore, toDisposable } from '../utils/disposable'
+import { DisposableStore, toDisposable, type IDisposable } from '../utils/disposable'
 import {
   createCompletionProvider,
   createBibtexCompletionProvider
@@ -121,6 +121,10 @@ export class LspClient {
 
   get initialized(): boolean {
     return this._initialized
+  }
+
+  private trackDisposable(disposable: IDisposable): void {
+    this.disposables.add(toDisposable(() => disposable.dispose()))
   }
 
   /**
@@ -365,61 +369,42 @@ export class LspClient {
     const caps = this.serverCapabilities
 
     if (caps.completionProvider) {
-      this.disposables.add(
-        toDisposable(
-          monaco.languages.registerCompletionItemProvider('latex', createCompletionProvider(monaco))
-            .dispose
-        )
+      this.trackDisposable(
+        monaco.languages.registerCompletionItemProvider('latex', createCompletionProvider(monaco))
       )
     }
     if (caps.hoverProvider) {
-      this.disposables.add(
-        toDisposable(
-          monaco.languages.registerHoverProvider('latex', createHoverProvider(monaco)).dispose
-        )
+      this.trackDisposable(
+        monaco.languages.registerHoverProvider('latex', createHoverProvider(monaco))
       )
     }
     if (caps.definitionProvider) {
-      this.disposables.add(
-        toDisposable(
-          monaco.languages.registerDefinitionProvider('latex', createDefinitionProvider(monaco))
-            .dispose
-        )
+      this.trackDisposable(
+        monaco.languages.registerDefinitionProvider('latex', createDefinitionProvider(monaco))
       )
     }
     if (caps.documentSymbolProvider) {
-      this.disposables.add(
-        toDisposable(
-          monaco.languages.registerDocumentSymbolProvider(
-            'latex',
-            createDocumentSymbolProvider(monaco)
-          ).dispose
+      this.trackDisposable(
+        monaco.languages.registerDocumentSymbolProvider(
+          'latex',
+          createDocumentSymbolProvider(monaco)
         )
       )
     }
     if (caps.renameProvider) {
-      this.disposables.add(
-        toDisposable(
-          monaco.languages.registerRenameProvider('latex', createRenameProvider(monaco)).dispose
-        )
-      )
+      this.trackDisposable(monaco.languages.registerRenameProvider('latex', createRenameProvider(monaco)))
     }
     if (caps.documentFormattingProvider) {
-      this.disposables.add(
-        toDisposable(
-          monaco.languages.registerDocumentFormattingEditProvider(
-            'latex',
-            createFormattingProvider(monaco)
-          ).dispose
+      this.trackDisposable(
+        monaco.languages.registerDocumentFormattingEditProvider(
+          'latex',
+          createFormattingProvider(monaco)
         )
       )
     }
     if (caps.foldingRangeProvider) {
-      this.disposables.add(
-        toDisposable(
-          monaco.languages.registerFoldingRangeProvider('latex', createFoldingProvider(monaco))
-            .dispose
-        )
+      this.trackDisposable(
+        monaco.languages.registerFoldingRangeProvider('latex', createFoldingProvider(monaco))
       )
     }
     if (caps.semanticTokensProvider) {
@@ -427,22 +412,18 @@ export class LspClient {
         legend: { tokenTypes: string[]; tokenModifiers: string[] }
       }
       const legend = provider.legend || { tokenTypes: [], tokenModifiers: [] }
-      this.disposables.add(
-        toDisposable(
-          monaco.languages.registerDocumentSemanticTokensProvider(
-            'latex',
-            createSemanticTokensProvider(monaco, legend)
-          ).dispose
+      this.trackDisposable(
+        monaco.languages.registerDocumentSemanticTokensProvider(
+          'latex',
+          createSemanticTokensProvider(monaco, legend)
         )
       )
     }
     if (caps.completionProvider) {
-      this.disposables.add(
-        toDisposable(
-          monaco.languages.registerCompletionItemProvider(
-            'bibtex',
-            createBibtexCompletionProvider(monaco)
-          ).dispose
+      this.trackDisposable(
+        monaco.languages.registerCompletionItemProvider(
+          'bibtex',
+          createBibtexCompletionProvider(monaco)
         )
       )
     }
