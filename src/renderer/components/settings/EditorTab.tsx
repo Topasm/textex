@@ -172,16 +172,6 @@ export const EditorTab = () => {
           </div>
           <div className="settings-row">
             <div>
-              <div className="settings-row-label">{t('settings.editor.minimap')}</div>
-              <div className="settings-row-description">{t('settings.editor.minimapDesc')}</div>
-            </div>
-            <Toggle
-              checked={!!settings.minimap}
-              onChange={(checked) => updateSetting('minimap', checked)}
-            />
-          </div>
-          <div className="settings-row">
-            <div>
               <div className="settings-row-label">{t('settings.editor.vimMode')}</div>
               <div className="settings-row-description">{t('settings.editor.vimModeDesc')}</div>
             </div>

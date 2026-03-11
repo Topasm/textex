@@ -18,7 +18,6 @@ TextEx uses a "Zero-Friction" configuration system where settings are applied in
 | `autoCompile` | `boolean` | `true` | Compile automatically on type (debounced). |
 | `formatOnSave` | `boolean` | `false` | Run formatter when saving files. |
 | `wordWrap` | `boolean` | `true` | Soft wrap lines in the editor. |
-| `minimap` | `boolean` | `false` | Show code minimap. |
 | `spellCheckEnabled` | `boolean` | `true` | Enable inline spell checking. |
 | `spellCheckLanguage` | `string` | `'en-US'` | Hunspell dictionary language. |
 | `gitEnabled` | `boolean` | `true` | Enable Git integration features. |

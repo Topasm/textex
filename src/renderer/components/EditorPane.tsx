@@ -25,6 +25,7 @@ import {
   AI_ACTIONS,
   registerAiActions,
   runAiAction,
+  runAiCustomCommand,
   type AiActionDef
 } from './editor/editorAiActions'
 import { SelectionAiToolbar } from './editor/SelectionAiToolbar'
@@ -129,6 +130,16 @@ function EditorPane() {
     [hideSelectionAiToolbar]
   )
 
+  const handleSelectionAiCommand = useCallback(
+    async (command: string) => {
+      const editor = editorRef.current
+      hideSelectionAiToolbar()
+      if (!editor) return
+      await runAiCustomCommand(editor, command)
+    },
+    [hideSelectionAiToolbar]
+  )
+
   // Re-show the preview when the cursor moves to a different math expression
   useEffect(() => {
     const rangeKey = mathData
@@ -214,7 +225,16 @@ function EditorPane() {
     })
 
     selectionBlurDisposableRef.current = editor.onDidBlurEditorText(() => {
-      hideSelectionAiToolbar()
+      window.setTimeout(() => {
+        const activeElement = document.activeElement
+        if (
+          activeElement instanceof HTMLElement &&
+          activeElement.closest('[data-testid="selection-ai-toolbar"]')
+        ) {
+          return
+        }
+        hideSelectionAiToolbar()
+      }, 0)
     })
   }
 
@@ -382,7 +402,7 @@ function EditorPane() {
               options={{
                 fontSize,
                 lineNumbers: settings.lineNumbers !== false ? 'on' : 'off',
-                minimap: { enabled: !!settings.minimap },
+                minimap: { enabled: false },
                 tabSize: settings.tabSize ?? 4,
                 scrollBeyondLastLine: false,
                 automaticLayout: true,
@@ -407,6 +427,7 @@ function EditorPane() {
               selection={selectionAiToolbarSelection}
               actions={AI_ACTIONS}
               onAction={handleSelectionAiAction}
+              onCommand={handleSelectionAiCommand}
               onClose={hideSelectionAiToolbar}
             />
           )}

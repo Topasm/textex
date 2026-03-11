@@ -2,10 +2,13 @@
   position: absolute;
   z-index: 1100;
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
   padding: 6px;
-  border-radius: 999px;
+  min-width: 440px;
+  max-width: min(560px, calc(100% - 16px));
+  border-radius: 16px;
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--bg-secondary) 94%, transparent);
   box-shadow:
@@ -15,6 +18,55 @@
   -webkit-backdrop-filter: blur(16px);
   animation: selection-ai-toolbar-fade-in 0.16s ease-out;
   white-space: nowrap;
+}
+
+.selection-ai-toolbar-command-row,
+.selection-ai-toolbar-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.selection-ai-toolbar-command-input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  padding: 9px 12px;
+  font-size: 12px;
+  outline: none;
+}
+
+.selection-ai-toolbar-command-input::placeholder {
+  color: var(--text-secondary);
+}
+
+.selection-ai-toolbar-command-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.selection-ai-toolbar-submit {
+  border: none;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff;
+  padding: 9px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.selection-ai-toolbar-submit:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.selection-ai-toolbar-submit:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 @keyframes selection-ai-toolbar-fade-in {

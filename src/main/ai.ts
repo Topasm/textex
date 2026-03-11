@@ -25,6 +25,8 @@ const DEFAULT_MODELS: Record<string, string> = {
 const DEFAULT_GENERATE_PROMPT = `You are a LaTeX document generator. Given markdown, plain text notes, or an outline, produce a complete, compilable LaTeX document. Output ONLY the LaTeX source code — no explanations, no commentary. The document must include \\documentclass, \\begin{document}, and \\end{document}. Use appropriate packages for the content (e.g., amsmath for equations, graphicx for figures, hyperref for links). Structure the document with proper sections, subsections, and formatting.`
 
 const DEFAULT_ACTION_SYSTEM = 'You are a helpful academic assistant expert in LaTeX.'
+const DEFAULT_CUSTOM_ACTION_PROMPT =
+  'Apply the user instruction to the provided LaTeX text. Preserve LaTeX commands and structure unless the instruction explicitly asks to change them. Return ONLY the transformed text with no explanation.'
 
 const DEFAULT_PROMPTS: Record<string, string> = {
   fix: 'Fix grammar and spelling in the following LaTeX text. Do not remove LaTeX commands. Return ONLY the fixed text.',
@@ -266,6 +268,37 @@ export async function processText(
     activeModel,
     apiKey,
     DEFAULT_ACTION_SYSTEM,
+    thinking
+  )
+}
+
+export async function processTextWithCommand(
+  command: string,
+  text: string,
+  provider?: string,
+  model?: string
+): Promise<string> {
+  const settings = await loadSettings()
+  const activeProvider = provider || settings.aiProvider
+  const activeModel = model || settings.aiModel
+
+  if (!activeProvider) throw new Error('No AI provider configured')
+
+  const apiKey = settings.aiApiKey
+  if (!apiKey) throw new Error(`No API key configured for ${activeProvider}`)
+
+  const trimmedCommand = command.trim()
+  if (!trimmedCommand) throw new Error('AI command is required')
+
+  const userPrompt = `Instruction:\n${trimmedCommand}\n\nLaTeX text:\n${text}`
+  const thinking = getThinkingConfig(settings)
+
+  return callProvider(
+    activeProvider,
+    userPrompt,
+    activeModel,
+    apiKey,
+    DEFAULT_CUSTOM_ACTION_PROMPT,
     thinking
   )
 }

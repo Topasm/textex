@@ -10,6 +10,8 @@ interface KeyBinding {
   key: string | string[]
   /** Requires Ctrl (or Cmd on macOS) */
   mod: boolean
+  /** Requires Alt/Option. Mirrors shift handling to avoid shortcut collisions. */
+  alt?: boolean
   /** Requires Shift. When `mod` is true and `shift` is false, the binding
    *  only fires when Shift is NOT held (prevents collisions like Ctrl+S vs Ctrl+Shift+S). */
   shift?: boolean
@@ -51,9 +53,12 @@ export class CommandRegistry {
     if (b.mod) {
       if (b.shift && !e.shiftKey) return false
       if (!b.shift && e.shiftKey) return false
+      if (b.alt && !e.altKey) return false
+      if (!b.alt && e.altKey) return false
     } else {
       // For non-mod bindings, only check shift if explicitly required
       if (b.shift && !e.shiftKey) return false
+      if (b.alt && !e.altKey) return false
     }
 
     const keys = Array.isArray(b.key) ? b.key : [b.key]

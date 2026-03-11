@@ -1,4 +1,5 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import EditorPane from '../../renderer/components/EditorPane'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
@@ -265,6 +266,68 @@ describe('EditorPane selection AI toolbar', () => {
     act(() => {
       editorListeners.blur[0]?.()
     })
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('selection-ai-toolbar')).not.toBeInTheDocument()
+    })
+  })
+
+  it('submits a custom command from the toolbar input', async () => {
+    const user = userEvent.setup()
+    window.api.aiProcessCustom = vi.fn().mockResolvedValue('rewritten text')
+    mockEditor.getModel = vi.fn(() => ({
+      getValueInRange: vi.fn(() => 'selected text')
+    }))
+
+    render(<EditorPane />)
+
+    currentSelection = {
+      startLineNumber: 1,
+      startColumn: 1,
+      endLineNumber: 1,
+      endColumn: 10,
+      isEmpty: () => false
+    }
+
+    act(() => {
+      editorListeners.mouseDown[0]?.({
+        target: { type: mockMonaco.editor.MouseTargetType.CONTENT_TEXT }
+      })
+      editorListeners.selection[0]?.({ selection: currentSelection!, source: 'mouse' })
+      editorListeners.mouseUp[0]?.()
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('selection-ai-toolbar')).toBeInTheDocument()
+    })
+
+    const input = screen.getByLabelText('AI command')
+    await user.click(input)
+
+    act(() => {
+      editorListeners.blur[0]?.()
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('selection-ai-toolbar')).toBeInTheDocument()
+    })
+
+    await user.type(input, 'Rewrite with a stronger formal tone')
+    await user.click(screen.getByRole('button', { name: 'Apply' }))
+
+    await waitFor(() => {
+      expect(window.api.aiProcessCustom).toHaveBeenCalledWith(
+        'Rewrite with a stronger formal tone',
+        'selected text'
+      )
+    })
+    expect(mockEditor.executeEdits).toHaveBeenCalledWith('ai-custom-command', [
+      {
+        range: currentSelection,
+        text: 'rewritten text',
+        forceMoveMarkers: true
+      }
+    ])
     expect(screen.queryByTestId('selection-ai-toolbar')).not.toBeInTheDocument()
   })
 })

@@ -1,18 +1,11 @@
 import { useEffect } from 'react'
+import type { AppCommandId } from '../../shared/types'
 import { useEditorStore } from '../store/useEditorStore'
-import { useCompileStore } from '../store/useCompileStore'
-import { useProjectStore } from '../store/useProjectStore'
-import { usePdfStore } from '../store/usePdfStore'
-import { useUiStore } from '../store/useUiStore'
 import { useSettingsStore } from '../store/useSettingsStore'
 import { commandRegistry } from '../services/commandRegistry'
 
 interface KeyboardShortcutsOpts {
-  handleOpen: () => void
-  handleSave: () => void
-  handleSaveAs: () => void
-  handleCompile: () => void
-  handleAiDraft: () => void
+  runCommand: (command: AppCommandId) => void
 }
 
 /**
@@ -20,33 +13,46 @@ interface KeyboardShortcutsOpts {
  * Replaces the monolithic if/else chain that was in App.tsx.
  */
 export function useKeyboardShortcuts(opts: KeyboardShortcutsOpts): void {
-  const { handleOpen, handleSave, handleSaveAs, handleCompile, handleAiDraft } = opts
+  const { runCommand } = opts
 
   useEffect(() => {
-    commandRegistry.register('file.open', { key: 'o', mod: true }, handleOpen)
-    commandRegistry.register('file.saveAs', { key: 's', mod: true, shift: true }, handleSaveAs)
-    commandRegistry.register('file.save', { key: 's', mod: true }, handleSave)
-    commandRegistry.register('compile', { key: 'Enter', mod: true }, handleCompile)
-    commandRegistry.register('log.toggle', { key: 'l', mod: true }, () =>
-      useCompileStore.getState().toggleLogPanel()
+    commandRegistry.clear()
+
+    commandRegistry.register('file.open', { key: 'o', mod: true }, () => runCommand('file.open'))
+    commandRegistry.register('file.openFolder', { key: 'o', mod: true, shift: true }, () =>
+      runCommand('file.openFolder')
     )
-    commandRegistry.register('font.increase', { key: ['=', '+'], mod: true, shift: true }, () =>
+    commandRegistry.register('file.saveAs', { key: 's', mod: true, shift: true }, () =>
+      runCommand('file.saveAs')
+    )
+    commandRegistry.register('file.save', { key: 's', mod: true }, () => runCommand('file.save'))
+    commandRegistry.register('compile.run', { key: 'Enter', mod: true }, () =>
+      runCommand('compile.run')
+    )
+    commandRegistry.register('view.toggleLog', { key: 'l', mod: true }, () =>
+      runCommand('view.toggleLog')
+    )
+    commandRegistry.register('edit.find', { key: 'f', mod: true }, () => runCommand('edit.find'))
+    commandRegistry.register('font.increase', { key: ['=', '+'], mod: true, alt: true }, () =>
       useSettingsStore.getState().increaseFontSize()
     )
-    commandRegistry.register('font.decrease', { key: '-', mod: true, shift: true }, () =>
+    commandRegistry.register('font.decrease', { key: '-', mod: true, alt: true }, () =>
       useSettingsStore.getState().decreaseFontSize()
     )
-    commandRegistry.register('zoom.in', { key: ['=', '+'], mod: true }, () =>
-      usePdfStore.getState().zoomIn()
+    commandRegistry.register('pdf.zoomIn', { key: ['=', '+'], mod: true }, () =>
+      runCommand('pdf.zoomIn')
     )
-    commandRegistry.register('zoom.out', { key: '-', mod: true }, () =>
-      usePdfStore.getState().zoomOut()
+    commandRegistry.register('pdf.zoomOut', { key: '-', mod: true }, () =>
+      runCommand('pdf.zoomOut')
     )
-    commandRegistry.register('zoom.reset', { key: '0', mod: true }, () =>
-      usePdfStore.getState().resetZoom()
+    commandRegistry.register('pdf.fitWidth', { key: '0', mod: true }, () =>
+      runCommand('pdf.fitWidth')
     )
-    commandRegistry.register('sidebar.toggle', { key: 'b', mod: true }, () =>
-      useProjectStore.getState().toggleSidebar()
+    commandRegistry.register('pdf.fitHeight', { key: '9', mod: true }, () =>
+      runCommand('pdf.fitHeight')
+    )
+    commandRegistry.register('view.toggleSidebar', { key: 'b', mod: true }, () =>
+      runCommand('view.toggleSidebar')
     )
     commandRegistry.register('tab.close', { key: 'w', mod: true }, () => {
       const state = useEditorStore.getState()
@@ -68,19 +74,29 @@ export function useKeyboardShortcuts(opts: KeyboardShortcutsOpts): void {
         state.setActiveTab(paths[(idx + 1) % paths.length])
       }
     })
-    commandRegistry.register('template.new', { key: 'n', mod: true, shift: true }, () =>
-      useUiStore.getState().toggleTemplateGallery()
+    commandRegistry.register('file.newTemplate', { key: 'n', mod: true, shift: true }, () =>
+      runCommand('file.newTemplate')
     )
-    commandRegistry.register('ai.draft', { key: ['d', 'D'], mod: true, shift: true }, handleAiDraft)
-    commandRegistry.register('zotero.search', { key: ['z', 'Z'], mod: true, shift: true }, () => {
-      useUiStore.getState().requestOmniSearchFocus('zotero')
-    })
-    commandRegistry.register('pdf.search', { key: ['f', 'F'], mod: true, shift: true }, () => {
-      useUiStore.getState().requestOmniSearchFocus('pdf')
-    })
+    commandRegistry.register('ai.draft', { key: ['d', 'D'], mod: true, shift: true }, () =>
+      runCommand('ai.draft')
+    )
+    commandRegistry.register(
+      'view.search.citations',
+      { key: ['c', 'C'], mod: true, shift: true },
+      () => runCommand('view.search.citations')
+    )
+    commandRegistry.register('view.search.pdf', { key: ['f', 'F'], mod: true, shift: true }, () =>
+      runCommand('view.search.pdf')
+    )
+    commandRegistry.register('app.settings', { key: ',', mod: true }, () =>
+      runCommand('app.settings')
+    )
 
     const handler = (e: KeyboardEvent): void => commandRegistry.handleKeyDown(e)
     window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [handleOpen, handleSave, handleSaveAs, handleCompile, handleAiDraft])
+    return () => {
+      window.removeEventListener('keydown', handler)
+      commandRegistry.clear()
+    }
+  }, [runCommand])
 }

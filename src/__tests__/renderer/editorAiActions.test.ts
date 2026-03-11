@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   AI_ACTIONS,
   registerAiActions,
-  runAiAction
+  runAiAction,
+  runAiCustomCommand
 } from '../../renderer/components/editor/editorAiActions'
 
 function createSelection() {
@@ -37,6 +38,7 @@ describe('editorAiActions', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     window.api.aiProcess = vi.fn().mockResolvedValue('processed')
+    window.api.aiProcessCustom = vi.fn().mockResolvedValue('custom processed')
   })
 
   it('replaces the selected range for replace actions', async () => {
@@ -78,5 +80,20 @@ describe('editorAiActions', () => {
     await firstAction.run(editor)
 
     expect(window.api.aiProcess).toHaveBeenCalledWith('fix', 'text')
+  })
+
+  it('runs a custom command and replaces the selection', async () => {
+    const { editor, selection } = createEditor()
+
+    await runAiCustomCommand(editor as never, 'Make it more concise')
+
+    expect(window.api.aiProcessCustom).toHaveBeenCalledWith('Make it more concise', 'text')
+    expect(editor.executeEdits).toHaveBeenCalledWith('ai-custom-command', [
+      {
+        range: selection,
+        text: 'custom processed',
+        forceMoveMarkers: true
+      }
+    ])
   })
 })

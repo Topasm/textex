@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron'
-import { generateLatex, processText } from '../ai'
+import { generateLatex, processText, processTextWithCommand } from '../ai'
 import { loadSettings, saveSettings } from '../settings'
 
 export function registerAiHandlers(): void {
@@ -23,6 +23,12 @@ export function registerAiHandlers(): void {
       return processText(action, text)
     }
   )
+
+  ipcMain.handle('ai:process-custom', async (_event, command: string, text: string) => {
+    if (!command || typeof command !== 'string') throw new Error('AI command is required')
+    if (!text || typeof text !== 'string') throw new Error('Input text is required')
+    return processTextWithCommand(command, text)
+  })
 
   ipcMain.handle('ai:save-api-key', async (_event, provider: string, apiKey: string) => {
     await saveSettings({

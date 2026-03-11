@@ -64,7 +64,6 @@ Object.defineProperty(window, 'api', {
       gitEnabled: true,
       autoUpdateEnabled: true,
       lineNumbers: true,
-      minimap: false,
       tabSize: 4,
       recentProjects: []
     }),
@@ -101,6 +100,8 @@ Object.defineProperty(window, 'api', {
     updateInstall: vi.fn(),
     onUpdateEvent: vi.fn(),
     removeUpdateListeners: vi.fn(),
+    onAppCommand: vi.fn(),
+    removeAppCommandListener: vi.fn(),
 
     // Export
     exportDocument: vi.fn(),
@@ -111,6 +112,7 @@ Object.defineProperty(window, 'api', {
     aiSaveApiKey: vi.fn(),
     aiHasApiKey: vi.fn().mockResolvedValue(false),
     aiProcess: vi.fn(),
+    aiProcessCustom: vi.fn(),
 
     // Labels / Packages / External
     scanLabels: vi.fn(),

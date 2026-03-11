@@ -55,6 +55,25 @@ function syncToMain(): void {
   }, 500)
 }
 
+export function sanitizeSettings(input: unknown): Partial<UserSettings> {
+  if (!input || typeof input !== 'object') return {}
+  const { minimap: _minimap, ...settings } = input as Partial<UserSettings> & {
+    minimap?: unknown
+  }
+  return settings
+}
+
+export function migratePersistedSettings(
+  persistedState: unknown
+): { settings?: Partial<UserSettings> } | undefined {
+  if (!persistedState || typeof persistedState !== 'object') return undefined
+  const state = persistedState as { settings?: unknown }
+  return {
+    ...state,
+    settings: sanitizeSettings(state.settings)
+  }
+}
+
 const defaultSettings: UserSettings = {
   theme: 'system',
   pdfInvertMode: false,
@@ -100,7 +119,6 @@ const defaultSettings: UserSettings = {
   showStatusBar: true,
   bibGroupMode: 'flat',
   lineNumbers: true,
-  minimap: false,
   tabSize: 4,
   language: 'en',
   pdfViewMode: 'continuous',
@@ -147,10 +165,15 @@ export const useSettingsStore = create<SettingsState>()(
     })),
     {
       name: 'textex-settings-v2',
+      version: 1,
+      migrate: (persistedState) => migratePersistedSettings(persistedState),
       partialize: (state) => ({
         settings: state.settings
       }),
       onRehydrateStorage: () => (state) => {
+        if (state?.settings) {
+          state.settings = { ...defaultSettings, ...sanitizeSettings(state.settings) }
+        }
         if (state && state.settings.theme) {
           applyTheme(state.settings.theme)
         }

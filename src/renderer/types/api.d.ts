@@ -1,4 +1,5 @@
 import {
+  AppCommandId,
   Diagnostic,
   SyncTeXForwardResult,
   SyncTeXInverseResult,
@@ -134,6 +135,8 @@ export interface ElectronAPI {
   updateInstall(): Promise<{ success: boolean; error?: string }>
   onUpdateEvent(event: string, cb: (...args: unknown[]) => void): void
   removeUpdateListeners(): void
+  onAppCommand(cb: (command: AppCommandId) => void): void
+  removeAppCommandListener(): void
 
   // Export
   exportDocument(
@@ -170,6 +173,7 @@ export interface ElectronAPI {
     action: 'fix' | 'academic' | 'summarize' | 'longer' | 'shorter',
     text: string
   ): Promise<string>
+  aiProcessCustom(command: string, text: string): Promise<string>
 
   // Document Structure (fallback outline)
   getDocumentOutline(filePath: string, content: string): Promise<SectionNode[]>

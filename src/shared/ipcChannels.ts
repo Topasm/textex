@@ -7,6 +7,7 @@
  */
 
 import type {
+  AppCommandId,
   Diagnostic,
   SyncTeXForwardResult,
   SyncTeXInverseResult,
@@ -166,6 +167,7 @@ export interface IpcChannelMap {
     [action: 'fix' | 'academic' | 'summarize' | 'longer' | 'shorter', text: string],
     string
   ]
+  'ai:process-custom': [[command: string, text: string], string]
   'ai:save-api-key': [[provider: string, apiKey: string], SuccessResult]
   'ai:has-api-key': [[provider: string], boolean]
 
@@ -229,6 +231,7 @@ export interface IpcPushChannelMap {
   'fs:watch-error': [message: string]
   'lsp:message': [message: object]
   'lsp:status-change': [status: string, error?: string]
+  'app:command': [command: AppCommandId]
 }
 
 export type IpcPushChannel = keyof IpcPushChannelMap

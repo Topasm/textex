@@ -26,7 +26,7 @@ function PdfZoomDropdown() {
   return (
     <div className="menu-dropdown zoom-dropdown" ref={dropdownRef}>
       <button
-        className="toolbar-compact-btn toolbar-zoom-label"
+        className="toolbar-btn toolbar-compact-btn toolbar-zoom-label"
         onClick={() => setIsOpen(!isOpen)}
         title={t('toolbar.zoomPreset')}
         aria-label={t('toolbar.zoomPreset')}

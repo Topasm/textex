@@ -1,10 +1,12 @@
-import { app, BrowserWindow, ipcMain, nativeTheme, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, nativeTheme, shell, Menu } from 'electron'
 import path from 'path'
 import { registerIpcHandlers } from './ipc'
 import { loadSettings } from './settings'
 import { loadPersistentCache, savePersistentCache } from './services/compileCache'
 import { preloadCommonPackageData } from './packageloader'
 import { scheduleTexWarmup } from './services/texWarmup'
+import { buildAppMenu } from './menu'
+import type { AppCommandId } from '../shared/types'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -12,6 +14,10 @@ function sendToRenderer(channel: string, ...args: unknown[]): void {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send(channel, ...args)
   }
+}
+
+function sendAppCommand(command: AppCommandId): void {
+  sendToRenderer('app:command', command)
 }
 
 function getBackgroundColor(theme: string): string {
@@ -92,7 +98,7 @@ function createWindow(theme: string): void {
     minWidth: 800,
     minHeight: 600,
     title: 'TextEx',
-    titleBarStyle: 'hidden',
+    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'hidden',
     ...(process.platform === 'win32' && {
       titleBarOverlay: getTitleBarOverlay(theme)
     }),
@@ -154,6 +160,16 @@ app.whenReady().then(async () => {
 
   const settings = await loadSettings()
   currentTheme = settings.theme
+
+  Menu.setApplicationMenu(
+    buildAppMenu({
+      appName: app.name,
+      openExternal: (url) => {
+        void shell.openExternal(url)
+      },
+      sendCommand: sendAppCommand
+    })
+  )
 
   createWindow(currentTheme)
 

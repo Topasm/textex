@@ -23,7 +23,7 @@ To configure this:
 ## Usage
 
 ### Inserting Citations (Inline Search)
-1.  Press `Ctrl+Shift+Z` (or `Cmd+Shift+Z` on macOS) to focus the Zotero search bar in the toolbar, or click it directly.
+1.  Press `Ctrl+Shift+C` (or `Cmd+Shift+C` on macOS) to focus the citation search bar in the toolbar, or click it directly.
 2.  Type 3+ characters to search your library (title, author, year, etc.).
 3.  A dropdown appears with matching results. Navigate with `Up`/`Down` arrow keys.
 4.  Press `Enter` to toggle selection on the highlighted result (multi-select with checkboxes).
@@ -64,7 +64,7 @@ Ports: Zotero = `23119`, Juris-M = `24119`, or user-defined.
 ### Data Flow
 
 ```
-User presses Ctrl+Shift+Z
+User presses Ctrl+Shift+C
          |
          v
 Renderer (Toolbar search bar)

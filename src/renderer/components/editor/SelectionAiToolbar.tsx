@@ -1,10 +1,10 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { editor as monacoEditor } from 'monaco-editor'
 import type { AiActionDef } from './editorAiActions'
 import './SelectionAiToolbar.css'
 
 const TOOLBAR_WIDTH_ESTIMATE = 430
-const TOOLBAR_HEIGHT_ESTIMATE = 44
+const TOOLBAR_HEIGHT_ESTIMATE = 94
 const TOOLBAR_MARGIN = 8
 
 interface SelectionAiToolbarProps {
@@ -12,6 +12,7 @@ interface SelectionAiToolbarProps {
   selection: monacoEditor.ISelection
   actions: readonly AiActionDef[]
   onAction: (action: AiActionDef) => void
+  onCommand: (command: string) => void
   onClose: () => void
 }
 
@@ -68,8 +69,10 @@ export function SelectionAiToolbar({
   selection,
   actions,
   onAction,
+  onCommand,
   onClose
 }: SelectionAiToolbarProps) {
+  const [command, setCommand] = useState('')
   const position = useMemo(() => {
     const editor = editorRef.current
     if (!editor) return null
@@ -87,26 +90,58 @@ export function SelectionAiToolbar({
 
   if (!position) return null
 
+  const submitCommand = () => {
+    const trimmed = command.trim()
+    if (!trimmed) return
+    onCommand(trimmed)
+    setCommand('')
+  }
+
   return (
     <div
       data-testid="selection-ai-toolbar"
       className={`selection-ai-toolbar${position.flipped ? ' flipped' : ''}`}
       style={{ top: position.top, left: position.left }}
       onMouseDown={(e) => {
-        e.preventDefault()
         e.stopPropagation()
       }}
     >
-      {actions.map((action, index) => (
+      <div className="selection-ai-toolbar-command-row">
+        <input
+          className="selection-ai-toolbar-command-input"
+          type="text"
+          value={command}
+          onChange={(e) => setCommand(e.target.value)}
+          placeholder="Ask AI to transform this selection..."
+          aria-label="AI command"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              submitCommand()
+            }
+          }}
+        />
         <button
-          key={action.id}
           type="button"
-          className={`selection-ai-toolbar-btn${index === 0 ? ' is-primary' : ''}`}
-          onClick={() => onAction(action)}
+          className="selection-ai-toolbar-submit"
+          onClick={submitCommand}
+          disabled={!command.trim()}
         >
-          {action.buttonLabel}
+          Apply
         </button>
-      ))}
+      </div>
+      <div className="selection-ai-toolbar-actions-row">
+        {actions.map((action, index) => (
+          <button
+            key={action.id}
+            type="button"
+            className={`selection-ai-toolbar-btn${index === 0 ? ' is-primary' : ''}`}
+            onClick={() => onAction(action)}
+          >
+            {action.buttonLabel}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

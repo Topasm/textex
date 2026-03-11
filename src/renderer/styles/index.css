@@ -55,6 +55,14 @@
   --update-banner-border: #2ea043;
   --progress-bar-bg: #333333;
   --progress-bar-fill: #2ea043;
+  --chrome-bg: rgba(31, 33, 36, 0.94);
+  --chrome-elevated-bg: rgba(47, 50, 55, 0.96);
+  --chrome-border: rgba(255, 255, 255, 0.08);
+  --chrome-muted: #969ca7;
+  --chrome-pill-bg: rgba(255, 255, 255, 0.05);
+  --chrome-pill-hover: rgba(255, 255, 255, 0.1);
+  --chrome-cta-bg: #2ea043;
+  --chrome-cta-hover: #238636;
 }
 
 [data-theme='light'] {
@@ -112,6 +120,14 @@
   --update-banner-border: #7a6240;
   --progress-bar-bg: #ddd5c8;
   --progress-bar-fill: #7a6240;
+  --chrome-bg: rgba(241, 234, 223, 0.96);
+  --chrome-elevated-bg: rgba(252, 248, 242, 0.98);
+  --chrome-border: rgba(84, 66, 44, 0.12);
+  --chrome-muted: #7f7367;
+  --chrome-pill-bg: rgba(122, 98, 64, 0.08);
+  --chrome-pill-hover: rgba(122, 98, 64, 0.14);
+  --chrome-cta-bg: #7a6240;
+  --chrome-cta-hover: #5e4a30;
 }
 
 [data-theme='high-contrast'] {
@@ -169,6 +185,14 @@
   --update-banner-border: #1aebff;
   --progress-bar-bg: #1a1a1a;
   --progress-bar-fill: #1aebff;
+  --chrome-bg: rgba(0, 0, 0, 0.98);
+  --chrome-elevated-bg: rgba(18, 18, 18, 0.98);
+  --chrome-border: #6fc3df;
+  --chrome-muted: #c7dce2;
+  --chrome-pill-bg: rgba(26, 235, 255, 0.12);
+  --chrome-pill-hover: rgba(26, 235, 255, 0.2);
+  --chrome-cta-bg: #1aebff;
+  --chrome-cta-hover: #00b4cc;
 }
 
 [data-theme='glass'] {
@@ -226,6 +250,14 @@
   --update-banner-border: #007aff;
   --progress-bar-bg: rgba(0, 0, 0, 0.06);
   --progress-bar-fill: #007aff;
+  --chrome-bg: rgba(255, 255, 255, 0.52);
+  --chrome-elevated-bg: rgba(255, 255, 255, 0.72);
+  --chrome-border: rgba(30, 41, 59, 0.1);
+  --chrome-muted: #667085;
+  --chrome-pill-bg: rgba(255, 255, 255, 0.46);
+  --chrome-pill-hover: rgba(255, 255, 255, 0.68);
+  --chrome-cta-bg: #007aff;
+  --chrome-cta-hover: #0060cc;
 }
 
 /* Glass theme: macOS Tahoe-style frosted blur on key panels */
@@ -341,10 +373,11 @@ body,
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  background-color: var(--bg-toolbar);
-  border-bottom: 1px solid var(--bg-secondary);
+  gap: 12px;
+  min-height: 52px;
+  padding: 8px 14px;
+  background-color: var(--chrome-bg);
+  border-bottom: 1px solid var(--chrome-border);
   user-select: none;
   -webkit-app-region: drag;
   app-region: drag;
@@ -353,11 +386,6 @@ body,
 /* Reserve space for native window-control overlay on Windows */
 [data-platform='win32'] .toolbar {
   padding-right: 140px;
-}
-
-/* Reserve space for macOS traffic lights */
-[data-platform='darwin'] .toolbar {
-  padding-left: 78px;
 }
 
 /* All interactive elements inside the toolbar must opt out of the drag region */
@@ -372,40 +400,63 @@ body,
   app-region: no-drag;
 }
 
+.toolbar-left,
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.toolbar-center {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.toolbar-center .omni-search-wrapper {
+  width: min(100%, 520px);
+}
+
+.toolbar-btn,
 .toolbar button {
-  padding: 3px 10px;
-  font-size: 12px;
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.15s;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  min-width: 34px;
+  padding: 0 10px;
+  font-size: 12px;
+  background-color: var(--chrome-pill-bg);
+  color: var(--text-primary);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    transform 0.15s;
 }
 
+.toolbar-btn:hover,
 .toolbar button:hover {
-  background-color: var(--bg-hover);
+  background-color: var(--chrome-pill-hover);
+  border-color: var(--chrome-border);
 }
 
-.toolbar button kbd {
-  font-family: inherit;
-  font-size: 10px;
-  color: var(--text-kbd);
-  padding: 1px 4px;
-  background-color: var(--bg-primary);
-  border-radius: 3px;
-}
-
-.toolbar button:hover kbd {
-  color: var(--text-kbd-hover);
+.toolbar-btn:disabled,
+.toolbar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .toolbar .save-btn-dirty {
   background-color: var(--save-dirty-bg);
   color: var(--save-dirty-text);
+  border-color: color-mix(in srgb, var(--warning) 28%, transparent);
 }
 
 .toolbar .save-btn-dirty:hover {
@@ -413,30 +464,22 @@ body,
 }
 
 .toolbar .compile-btn {
-  background-color: var(--accent);
+  background-color: var(--chrome-cta-bg);
   color: white;
-}
-
-.toolbar .compile-btn kbd {
-  color: rgba(255, 255, 255, 0.45);
-  background-color: rgba(0, 0, 0, 0.2);
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.18);
 }
 
 .toolbar .compile-btn:hover {
-  background-color: var(--accent-hover);
-}
-
-.toolbar .compile-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  background-color: var(--chrome-cta-hover);
+  border-color: transparent;
 }
 
 .toolbar .toolbar-separator {
   width: 1px;
-  height: 20px;
-  background-color: var(--border);
+  height: 22px;
+  background-color: var(--chrome-border);
   flex-shrink: 0;
-  margin: 0 4px;
+  margin: 0 2px;
 }
 
 .toolbar .menu-dropdown {
@@ -450,47 +493,49 @@ body,
   z-index: 100;
   min-width: 180px;
   margin-top: 4px;
-  padding: 4px 0;
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  box-shadow: 0 4px 12px var(--shadow-color);
+  padding: 6px;
+  background-color: var(--chrome-elevated-bg);
+  border: 1px solid var(--chrome-border);
+  border-radius: 12px;
+  box-shadow: 0 12px 30px var(--shadow-color);
 }
 
 .toolbar .menu-dropdown-content button {
   display: flex;
   justify-content: space-between;
   width: 100%;
-  padding: 6px 12px;
+  height: auto;
+  padding: 7px 10px;
   font-size: 13px;
   text-align: left;
-  background: none;
-  border-radius: 0;
+  background: transparent;
+  border-radius: 8px;
 }
 
 .toolbar .menu-dropdown-content button:hover {
-  background-color: var(--bg-hover);
+  background-color: var(--chrome-pill-hover);
 }
 
-.toolbar .toolbar-group-right {
+.toolbar-right {
   margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.toolbar .toolbar-group-right .file-name {
-  margin-left: 8px;
-  border-left: 1px solid var(--border);
-  padding-left: 12px;
 }
 
 .toolbar .file-name {
   font-size: 12px;
-  color: var(--text-secondary);
+  color: var(--chrome-muted);
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
+  min-width: 0;
+  max-width: 220px;
+  padding: 0 12px;
+  height: 34px;
+  border-radius: 999px;
+  background-color: var(--chrome-pill-bg);
+  border: 1px solid var(--chrome-border);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dirty-dot {
@@ -4374,15 +4419,20 @@ body,
   display: flex;
   gap: 4px;
   align-items: center;
+  padding: 2px;
+  border-radius: 12px;
+  background-color: var(--chrome-pill-bg);
+  border: 1px solid var(--chrome-border);
 }
 
 .toolbar-compact-btn {
-  padding: 3px 6px;
+  min-width: 30px;
+  padding: 0 8px;
 }
 
 .toolbar-zoom-label {
   font-size: 12px;
-  min-width: 36px;
+  min-width: 54px;
   text-align: center;
   cursor: pointer;
 }
@@ -4396,14 +4446,15 @@ body,
 }
 
 .toolbar-page-input {
-  width: 32px;
-  padding: 2px 4px;
+  width: 36px;
+  height: 30px;
+  padding: 0 6px;
   font-size: 12px;
   text-align: center;
-  background-color: var(--bg-input);
+  background-color: var(--chrome-elevated-bg);
   color: var(--text-primary);
-  border: 1px solid var(--border);
-  border-radius: 3px;
+  border: 1px solid var(--chrome-border);
+  border-radius: 8px;
   outline: none;
 }
 

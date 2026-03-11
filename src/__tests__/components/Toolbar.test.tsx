@@ -11,16 +11,13 @@ vi.mock('../../renderer/components/OmniSearch', () => ({
 }))
 
 const defaultProps = {
-  onOpen: vi.fn(),
   onSave: vi.fn(),
-  onSaveAs: vi.fn(),
   onCompile: vi.fn(),
   onToggleLog: vi.fn(),
   onOpenFolder: vi.fn(),
   onReturnHome: vi.fn(),
   onNewFromTemplate: vi.fn(),
   onAiDraft: vi.fn(),
-  onExport: vi.fn(),
   onOpenSettings: vi.fn()
 }
 
@@ -36,53 +33,24 @@ beforeEach(() => {
 })
 
 describe('Toolbar', () => {
-  it('renders fixed action buttons', () => {
+  it('renders the slim document toolbar actions', () => {
     render(<Toolbar {...defaultProps} />)
-    expect(screen.getByTitle(/File operations/)).toBeInTheDocument()
     expect(screen.getByTitle(/Quick Save/)).toBeInTheDocument()
     expect(screen.getByTitle(/Compile LaTeX/)).toBeInTheDocument()
     expect(screen.getByTitle(/Toggle log/)).toBeInTheDocument()
-    // PDF controls
     expect(screen.getByTitle(/Sync PDF to Code/)).toBeInTheDocument()
     expect(screen.getByTitle(/Sync Code to PDF/)).toBeInTheDocument()
     expect(screen.getByTitle(/Zoom level/)).toBeInTheDocument()
   })
 
-  it('shows file menu items when File is clicked', async () => {
+  it('does not render the old file operations dropdown', () => {
     render(<Toolbar {...defaultProps} />)
-    const fileBtn = screen.getByTitle(/File operations/)
-    fireEvent.click(fileBtn)
-
-    // Wait for buttons to appear and find the specific one
-    const buttons = await screen.findAllByRole('button')
-    const openBtn = buttons.find(
-      (b) => b.textContent?.includes('Open') && b.textContent?.includes('Ctrl+O')
-    )
-    expect(openBtn).toBeInTheDocument()
-
-    expect(screen.getByText(/Open Folder/)).toBeInTheDocument()
-    expect(screen.getByText(/Save As/)).toBeInTheDocument()
-    expect(screen.getByText(/New from Template/)).toBeInTheDocument()
-    expect(screen.getByText(/Export/i)).toBeInTheDocument()
+    expect(screen.queryByTitle(/File operations/)).not.toBeInTheDocument()
   })
 
   it('shows Untitled when no file is open', () => {
     render(<Toolbar {...defaultProps} />)
     expect(screen.getByText('Untitled')).toBeInTheDocument()
-  })
-  // ...
-  it('calls onOpen when Open button is clicked in menu', async () => {
-    render(<Toolbar {...defaultProps} />)
-    fireEvent.click(screen.getByTitle(/File operations/))
-    // Use findAllByRole to match button with specific text content spanning multiple nodes
-    const buttons = await screen.findAllByRole('button')
-    const openBtn = buttons.find(
-      (b) => b.textContent?.includes('Open') && b.textContent?.includes('Ctrl+O')
-    )
-
-    if (!openBtn) throw new Error('Open button not found')
-    fireEvent.click(openBtn)
-    expect(defaultProps.onOpen).toHaveBeenCalledOnce()
   })
 
   it('calls onSave when Quick Save button is clicked', () => {
@@ -97,10 +65,30 @@ describe('Toolbar', () => {
     expect(defaultProps.onCompile).toHaveBeenCalledOnce()
   })
 
+  it('opens AI Draft without passing the click event as a prompt', () => {
+    useSettingsStore.setState({
+      settings: {
+        ...useSettingsStore.getState().settings,
+        aiEnabled: true,
+        aiProvider: 'openai'
+      }
+    })
+
+    render(<Toolbar {...defaultProps} />)
+    fireEvent.click(screen.getByTitle(/AI Draft/))
+    expect(defaultProps.onAiDraft).toHaveBeenCalledWith()
+  })
+
   it('shows OmniSearch with default citations mode', () => {
     useProjectStore.setState({ projectRoot: '/test' })
     render(<Toolbar {...defaultProps} />)
     expect(screen.getByTestId('omni-search-mock')).toHaveTextContent('Search citations...')
+  })
+
+  it('shows the return home button only when a project is open', () => {
+    useProjectStore.setState({ projectRoot: '/test' })
+    render(<Toolbar {...defaultProps} />)
+    expect(screen.getByTitle('Return to home screen')).toBeInTheDocument()
   })
 
   it('OmniSearch is always visible regardless of zoteroEnabled setting', () => {

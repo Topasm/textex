@@ -1,4 +1,4 @@
-import { useCallback, useState, lazy, Suspense } from 'react'
+import { useCallback, useEffect, useState, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FolderTree, BookOpen, ListTree, StickyNote, Clock, GitBranch } from 'lucide-react'
 import Toolbar from './components/Toolbar'
@@ -25,6 +25,7 @@ import { useBibAutoLoad } from './hooks/useBibAutoLoad'
 import { useLspLifecycle } from './hooks/useLspLifecycle'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { useDragResize } from './hooks/useDragResize'
+import { executeAppCommand, toggleLogPanel } from './services/appCommands'
 import { useEditorStore } from './store/useEditorStore'
 import { useCompileStore } from './store/useCompileStore'
 import { useProjectStore } from './store/useProjectStore'
@@ -36,6 +37,7 @@ import { openProject } from './utils/openProject'
 import { errorMessage, logError } from './utils/errorMessage'
 import { isFeatureEnabled } from './utils/featureFlags'
 import { stopLspClient } from './lsp/lspClient'
+import type { AppCommandId } from '../shared/types'
 
 // Lazy-load heavy modals and panels that are rarely shown
 const SettingsModal = lazy(() =>
@@ -71,12 +73,12 @@ function App() {
   const [draftPrefill, setDraftPrefill] = useState<string | undefined>(undefined)
 
   const handleAiDraft = useCallback((prefill?: string) => {
-    setDraftPrefill(prefill)
+    setDraftPrefill(typeof prefill === 'string' ? prefill : undefined)
     setIsDraftModalOpen(true)
   }, [])
 
   const handleDraftInsert = useCallback((latex: string) => {
-    useEditorStore.getState().setContent(latex)
+    useEditorStore.getState().requestInsertAtCursor(latex)
   }, [])
 
   // ---- Compile handler ----
@@ -187,6 +189,46 @@ function App() {
     }
   }, [])
 
+  const handleOpenTemplateGallery = useCallback(() => {
+    useUiStore.getState().setTemplateGalleryOpen(true)
+  }, [])
+
+  const handleCheckForUpdates = useCallback(async (): Promise<void> => {
+    const result = await window.api.updateCheck()
+    if (!result.success) {
+      useUiStore.getState().setUpdateStatus('error')
+    }
+  }, [])
+
+  const runAppCommand = useCallback(
+    (command: AppCommandId): void => {
+      void executeAppCommand(command, {
+        checkForUpdates: handleCheckForUpdates,
+        compile: handleCompile,
+        openFile: handleOpen,
+        openFolder: handleOpenFolder,
+        openSettings: () => setIsSettingsOpen(true),
+        openTemplateGallery: handleOpenTemplateGallery,
+        runAiDraft: () => handleAiDraft(),
+        save: handleSave,
+        saveAs: handleSaveAs,
+        toggleLog: toggleLogPanel,
+        exportDocument: handleExport
+      })
+    },
+    [
+      handleAiDraft,
+      handleCheckForUpdates,
+      handleCompile,
+      handleExport,
+      handleOpen,
+      handleOpenFolder,
+      handleOpenTemplateGallery,
+      handleSave,
+      handleSaveAs
+    ]
+  )
+
   // ---- Sidebar tab definitions ----
   const iconSize = 14
   const allSidebarTabs: { key: SidebarView; label: string; icon: React.ReactNode }[] = [
@@ -205,13 +247,14 @@ function App() {
   useGitAutoRefresh(projectRoot, isGitRepo, gitEnabled)
   useBibAutoLoad(projectRoot)
   useLspLifecycle(projectRoot, lspEnabled, filePath)
-  useKeyboardShortcuts({
-    handleOpen,
-    handleSave,
-    handleSaveAs,
-    handleCompile,
-    handleAiDraft
-  })
+  useKeyboardShortcuts({ runCommand: runAppCommand })
+
+  useEffect(() => {
+    window.api.onAppCommand(runAppCommand)
+    return () => {
+      window.api.removeAppCommandListener()
+    }
+  }, [runAppCommand])
   const {
     mainContentRef,
     sidebarRef,
@@ -310,16 +353,13 @@ function App() {
   return (
     <div className="app-container">
       <Toolbar
-        onOpen={handleOpen}
         onSave={handleSave}
-        onSaveAs={handleSaveAs}
         onCompile={handleCompile}
-        onToggleLog={() => useCompileStore.getState().toggleLogPanel()}
+        onToggleLog={toggleLogPanel}
         onOpenFolder={handleOpenFolder}
         onReturnHome={handleCloseProject}
-        onNewFromTemplate={() => useUiStore.getState().toggleTemplateGallery()}
+        onNewFromTemplate={handleOpenTemplateGallery}
         onAiDraft={handleAiDraft}
-        onExport={handleExport}
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
       {isSettingsOpen && (
@@ -342,7 +382,7 @@ function App() {
       {showHomeScreen ? (
         <HomeScreen
           onOpenFolder={handleOpenFolder}
-          onNewFromTemplate={() => useUiStore.getState().toggleTemplateGallery()}
+          onNewFromTemplate={handleOpenTemplateGallery}
         />
       ) : (
         <div className="workspace">

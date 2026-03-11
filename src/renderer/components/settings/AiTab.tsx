@@ -139,6 +139,7 @@ export const AiTab = () => {
   const [showKey, setShowKey] = useState(false)
   const [keySaved, setKeySaved] = useState(false)
   const [hasKey, setHasKey] = useState(false)
+  const [keyError, setKeyError] = useState<string | null>(null)
 
   const provider = settings.aiProvider
   const providerInfo = provider ? AI_PROVIDER_INFO[provider] : null
@@ -150,24 +151,49 @@ export const AiTab = () => {
 
   // Check if API key exists for current provider
   useEffect(() => {
+    let cancelled = false
+
     if (provider) {
-      window.api.aiHasApiKey(provider).then(setHasKey)
+      window.api
+        .aiHasApiKey(provider)
+        .then((value) => {
+          if (!cancelled) {
+            setHasKey(value)
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setHasKey(false)
+            setKeyError('checkFailed')
+          }
+        })
     } else {
       setHasKey(false)
     }
     setApiKey('')
     setShowKey(false)
     setKeySaved(false)
+    setKeyError(null)
+
+    return () => {
+      cancelled = true
+    }
   }, [provider])
 
   const handleSaveKey = async () => {
     if (!provider || !apiKey.trim()) return
-    await window.api.aiSaveApiKey(provider, apiKey.trim())
-    setHasKey(true)
-    setKeySaved(true)
-    setApiKey('')
-    setShowKey(false)
-    setTimeout(() => setKeySaved(false), 2000)
+    try {
+      await window.api.aiSaveApiKey(provider, apiKey.trim())
+      setHasKey(true)
+      setKeySaved(true)
+      setKeyError(null)
+      setApiKey('')
+      setShowKey(false)
+      setTimeout(() => setKeySaved(false), 2000)
+    } catch {
+      setKeySaved(false)
+      setKeyError('saveFailed')
+    }
   }
 
   return (
@@ -306,6 +332,12 @@ export const AiTab = () => {
                     {t('settings.ai.saveKey')}
                   </button>
                 </div>
+                {keyError && (
+                  <span className="settings-status-text error settings-status-inline">
+                    <span className="settings-status-dot error" />
+                    {t(`settings.ai.${keyError}`)}
+                  </span>
+                )}
               </div>
             </>
           )}

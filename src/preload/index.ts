@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
 import type { IpcChannel, IpcRequest, IpcResponse } from '../shared/ipcChannels'
+import type { AppCommandId } from '../shared/types'
 import type { CompileRecord, ProjectSnippet, ProjectBookmark } from '../shared/types'
 
 // ---- IPC invoke with deduplication & timeout ----
@@ -131,6 +132,7 @@ const directoryChangedListener =
   createIpcListener<[{ type: string; filename: string }]>('fs:directory-changed')
 const lspMessageListener = createIpcListener<[object]>('lsp:message')
 const lspStatusListener = createIpcListener<[string, string?]>('lsp:status-change')
+const appCommandListener = createIpcListener<[AppCommandId]>('app:command')
 
 let updateHandlers: Record<string, (_event: IpcRendererEvent, ...args: unknown[]) => void> = {}
 
@@ -232,6 +234,12 @@ contextBridge.exposeInMainWorld('api', {
     }
     updateHandlers = {}
   },
+  onAppCommand: (cb: (command: AppCommandId) => void) => {
+    appCommandListener.on(cb)
+  },
+  removeAppCommandListener: () => {
+    appCommandListener.remove()
+  },
 
   // Labels
   scanLabels: (projectRoot: string) => invoke('latex:scan-labels', projectRoot),
@@ -283,6 +291,7 @@ contextBridge.exposeInMainWorld('api', {
   aiHasApiKey: (provider: string) => invoke('ai:has-api-key', provider),
   aiProcess: (action: 'fix' | 'academic' | 'summarize' | 'longer' | 'shorter', text: string) =>
     invoke('ai:process', action, text),
+  aiProcessCustom: (command: string, text: string) => invoke('ai:process-custom', command, text),
 
   // Document Structure (fallback outline)
   getDocumentOutline: (filePath: string, content: string) =>

@@ -80,6 +80,33 @@ export async function runAiAction(
   }
 }
 
+export async function runAiCustomCommand(
+  editor: monacoEditor.IStandaloneCodeEditor,
+  command: string
+): Promise<void> {
+  const selection = editor.getSelection()
+  const model = editor.getModel()
+  if (!selection || !model || selection.isEmpty()) return
+
+  const trimmedCommand = command.trim()
+  if (!trimmedCommand) return
+
+  const text = model.getValueInRange(selection)
+  try {
+    const result = await window.api.aiProcessCustom(trimmedCommand, text)
+    editor.executeEdits('ai-custom-command', [
+      {
+        range: selection,
+        text: result,
+        forceMoveMarkers: true
+      }
+    ])
+  } catch (e) {
+    console.error(e)
+    alert('AI processing failed. Enable AI Draft in Settings > Integrations.')
+  }
+}
+
 export function registerAiActions(editor: monacoEditor.IStandaloneCodeEditor): void {
   for (const def of AI_ACTIONS) {
     editor.addAction({

@@ -38,7 +38,6 @@ const defaults: UserSettings = {
   ],
   bibGroupMode: 'flat',
   lineNumbers: true,
-  minimap: false,
   tabSize: 4,
   aiEnabled: false,
   aiProvider: '',
@@ -56,6 +55,14 @@ const defaults: UserSettings = {
   language: 'en'
 }
 
+function sanitizeSettings(input: unknown): Partial<UserSettings> {
+  if (!input || typeof input !== 'object') return {}
+  const { minimap: _minimap, ...settings } = input as Partial<UserSettings> & {
+    minimap?: unknown
+  }
+  return settings
+}
+
 function getSettingsPath(): string {
   return path.join(app.getPath('userData'), 'settings.json')
 }
@@ -63,16 +70,19 @@ function getSettingsPath(): string {
 export async function loadSettings(): Promise<UserSettings> {
   try {
     const raw = await fs.readFile(getSettingsPath(), 'utf-8')
-    const parsed = JSON.parse(raw)
+    const parsed = sanitizeSettings(JSON.parse(raw))
     return { ...defaults, ...parsed }
   } catch {
     return { ...defaults }
   }
 }
 
-export async function saveSettings(partial: Partial<UserSettings>): Promise<UserSettings> {
-  const current = await loadSettings()
-  const merged = { ...current, ...partial }
+export async function saveSettings(
+  partial: Partial<UserSettings> | Record<string, unknown>
+): Promise<UserSettings> {
+  const current = sanitizeSettings(await loadSettings())
+  const nextPartial = sanitizeSettings(partial)
+  const merged = { ...defaults, ...current, ...nextPartial }
   const settingsPath = getSettingsPath()
   const tmpPath = settingsPath + '.tmp'
   try {

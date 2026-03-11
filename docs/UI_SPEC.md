@@ -6,8 +6,9 @@ The application uses a horizontal split-pane layout:
 
 ```
 +----------------------------------------------------------+
-|  Toolbar: [Open Ctrl+O] [Save Ctrl+S] [Compile] [Log] [Settings] |
-|           file.tex (dot = dirty)                         |
+|  Native App Menu: File  Edit  View  Window  Help         |
+|  Toolbar: [Home] [Save] [Compile] [AI]  [OmniSearch]     |
+|           [Sync] [Page] [Zoom]   file.tex (dot = dirty) [Log] |
 +----------------------------+-----------------------------+
 |                            |                             |
 |                            |                             |
@@ -69,20 +70,23 @@ ErrorBoundary
   and is passed to HomeScreen and Toolbar.
 
 ### `Toolbar.tsx`
-| Button | Action | Shortcut |
-|---|---|---|
-| Open | Calls `window.api.openFile()`, loads content into editor | `Ctrl/Cmd+O` |
-| Save | Calls `window.api.saveFile(content, path)` | `Ctrl/Cmd+S` |
-| Save As | Calls `window.api.saveFileAs(content)` | `Ctrl/Cmd+Shift+S` |
-| Compile | Triggers manual compilation | `Ctrl/Cmd+Enter` |
-| Toggle Log | Shows/hides the LogPanel | `Ctrl/Cmd+L` |
-| Settings | Opens Settings Modal | -- |
-
-Each button displays its keyboard shortcut as a `<kbd>` element.
-
-Displays the current file name (or "Untitled"). The dirty indicator is a yellow
-dot next to the file name (replacing the previous `*` suffix). The Save button
-highlights with a yellow background when the file is dirty.
+- Acts as a slim document toolbar beneath the native app menu.
+- Left group:
+  - `Home` closes the current project and returns to the home screen.
+  - `Save` calls `window.api.saveFile(...)` / `saveFileAs(...)` through shared app commands.
+  - `Compile` triggers manual compilation.
+  - `AI Draft` opens the DraftModal when enabled.
+- Center group:
+  - `OmniSearch` stays visible as the primary command/search surface.
+- Right group:
+  - SyncTeX buttons (`PDF → Code`, `Code → PDF`)
+  - PDF page jump input + total page count
+  - Zoom dropdown with presets and fit actions
+  - Current file badge (`Untitled` fallback, dirty dot when unsaved)
+  - `Log` toggle button
+- File operations that do not need constant visibility (`Open`, `Open Folder`, `Save As`,
+  `New from Template`, `Export`, `Settings`) live in the native application menu instead of a
+  renderer dropdown.
 
 ### `EditorPane.tsx`
 - Wraps `@monaco-editor/react`.
@@ -97,7 +101,6 @@ highlights with a yellow background when the file is dirty.
   a yellow fade-out highlight draws attention to the target line (1s animation).
 - Config:
   - `wordWrap: 'on'`
-  - `minimap: { enabled: false }` (save space)
   - `fontSize: from store (8–32px)`
   - `lineNumbers: 'on'`
   - `scrollBeyondLastLine: false`

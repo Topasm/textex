@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   SelectionAiToolbar,
@@ -54,6 +55,7 @@ describe('SelectionAiToolbar', () => {
         selection={selection as never}
         actions={AI_ACTIONS}
         onAction={onAction}
+        onCommand={vi.fn()}
         onClose={vi.fn()}
       />
     )
@@ -91,11 +93,58 @@ describe('SelectionAiToolbar', () => {
         selection={selection as never}
         actions={AI_ACTIONS}
         onAction={vi.fn()}
+        onCommand={vi.fn()}
         onClose={onClose}
       />
     )
 
     fireEvent.keyDown(window, { key: 'Escape' })
     expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it('submits the custom command from the input box', () => {
+    const editor = createEditor()
+    const onCommand = vi.fn()
+
+    render(
+      <SelectionAiToolbar
+        editorRef={{ current: editor as never }}
+        selection={selection as never}
+        actions={AI_ACTIONS}
+        onAction={vi.fn()}
+        onCommand={onCommand}
+        onClose={vi.fn()}
+      />
+    )
+
+    fireEvent.change(screen.getByLabelText('AI command'), {
+      target: { value: 'Translate to a more formal tone' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
+
+    expect(onCommand).toHaveBeenCalledWith('Translate to a more formal tone')
+  })
+
+  it('keeps the custom command input focusable for typing', async () => {
+    const user = userEvent.setup()
+    const editor = createEditor()
+
+    render(
+      <SelectionAiToolbar
+        editorRef={{ current: editor as never }}
+        selection={selection as never}
+        actions={AI_ACTIONS}
+        onAction={vi.fn()}
+        onCommand={vi.fn()}
+        onClose={vi.fn()}
+      />
+    )
+
+    const input = screen.getByLabelText('AI command')
+    await user.click(input)
+    expect(input).toHaveFocus()
+
+    await user.type(input, 'Make this more concise')
+    expect(input).toHaveValue('Make this more concise')
   })
 })

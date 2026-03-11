@@ -8,6 +8,31 @@ export interface Diagnostic {
   message: string
 }
 
+export type AppCommandId =
+  | 'file.open'
+  | 'file.openFolder'
+  | 'file.save'
+  | 'file.saveAs'
+  | 'file.newTemplate'
+  | 'file.export.html'
+  | 'file.export.docx'
+  | 'file.export.odt'
+  | 'file.export.epub'
+  | 'compile.run'
+  | 'ai.draft'
+  | 'edit.find'
+  | 'view.toggleSidebar'
+  | 'view.toggleLog'
+  | 'view.search.citations'
+  | 'view.search.pdf'
+  | 'pdf.zoomIn'
+  | 'pdf.zoomOut'
+  | 'pdf.zoomReset'
+  | 'pdf.fitWidth'
+  | 'pdf.fitHeight'
+  | 'app.settings'
+  | 'app.checkUpdates'
+
 export interface SyncTeXForwardResult {
   page: number
   x: number
@@ -173,7 +198,6 @@ export interface UserSettings {
   sectionHighlightColors?: string[]
   bibGroupMode?: 'flat' | 'author' | 'year' | 'type' | 'custom'
   lineNumbers?: boolean
-  minimap?: boolean
   tabSize?: number
   recentProjects?: RecentProject[]
   language?: string

@@ -30,7 +30,7 @@ export const DraftModal: React.FC<DraftModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setPhase('input')
-      setInput(initialPrompt || '')
+      setInput(typeof initialPrompt === 'string' ? initialPrompt : '')
       setGeneratedLatex('')
       setError(null)
       setTimeout(() => inputRef.current?.focus(), 100)
