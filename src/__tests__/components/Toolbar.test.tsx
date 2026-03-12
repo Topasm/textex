@@ -143,8 +143,8 @@ describe('Toolbar', () => {
     fireEvent.click(screen.getByTitle(/Zoom level/))
 
     const presetButtons = screen.getAllByRole('button', { name: '100%' })
-    expect(
-      presetButtons.some((button) => button.classList.contains('zoom-preset-active'))
-    ).toBe(true)
+    expect(presetButtons.some((button) => button.classList.contains('zoom-preset-active'))).toBe(
+      true
+    )
   })
 })
