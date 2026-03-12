@@ -127,7 +127,10 @@ describe('main recent project updates', () => {
 
   it('updates path, name, title, and preserves lastOpened for a valid new directory', async () => {
     const oldPath = '/projects/old-paper'
-    const newPath = path.join(await fs.mkdtemp(path.join(os.tmpdir(), 'textex-project-')), 'renamed-paper')
+    const newPath = path.join(
+      await fs.mkdtemp(path.join(os.tmpdir(), 'textex-project-')),
+      'renamed-paper'
+    )
     await fs.mkdir(newPath, { recursive: true })
 
     const initialSettings = {
@@ -143,7 +146,8 @@ describe('main recent project updates', () => {
     }
     const { settingsModule, settingsPath, userDataDir } = await setupSettingsModule(
       initialSettings,
-      async (projectPath) => (projectPath === path.normalize(newPath) ? [{ title: 'Renamed Paper' }] : [])
+      async (projectPath) =>
+        projectPath === path.normalize(newPath) ? [{ title: 'Renamed Paper' }] : []
     )
 
     try {

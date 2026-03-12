@@ -101,7 +101,10 @@ export interface IpcChannelMap {
   'settings:set-theme': [[theme: string], void]
   'settings:add-recent-project': [[projectPath: string], UserSettings]
   'settings:remove-recent-project': [[projectPath: string], UserSettings]
-  'settings:update-recent-project': [[projectPath: string, updates: RecentProjectUpdates], UserSettings]
+  'settings:update-recent-project': [
+    [projectPath: string, updates: RecentProjectUpdates],
+    UserSettings
+  ]
 
   // BibTeX
   'bib:parse': [[filePath: string], BibEntry[]]

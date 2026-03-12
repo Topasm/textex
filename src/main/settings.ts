@@ -237,7 +237,9 @@ export async function updateRecentProject(
     delete merged.title
   }
 
-  const updated = existing.filter((_project, index) => index !== sourceIndex && index !== targetIndex)
+  const updated = existing.filter(
+    (_project, index) => index !== sourceIndex && index !== targetIndex
+  )
   const insertIndex = targetIndex >= 0 ? Math.min(sourceIndex, targetIndex) : sourceIndex
   updated.splice(insertIndex, 0, merged)
 
