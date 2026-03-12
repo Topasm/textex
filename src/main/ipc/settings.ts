@@ -6,6 +6,7 @@ import {
   removeRecentProject,
   updateRecentProject
 } from '../settings'
+import type { RecentProjectUpdates } from '../../shared/types'
 
 export function registerSettingsHandlers(): void {
   ipcMain.handle('settings:load', async () => {
@@ -32,7 +33,7 @@ export function registerSettingsHandlers(): void {
 
   ipcMain.handle(
     'settings:update-recent-project',
-    async (_event, projectPath: string, updates: { tag?: string; pinned?: boolean }) => {
+    async (_event, projectPath: string, updates: RecentProjectUpdates) => {
       if (typeof projectPath !== 'string' || projectPath.length === 0) {
         throw new Error('Invalid project path')
       }

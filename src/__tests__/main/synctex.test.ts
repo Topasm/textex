@@ -16,11 +16,7 @@ async function createProject(): Promise<{ rootFile: string; chapterFile: string 
 
   await fs.mkdir(chapterDir, { recursive: true })
   await fs.writeFile(rootFile, '\\input{chapters/chapter1}\n', 'utf-8')
-  await fs.writeFile(
-    chapterFile,
-    '%! TeX root = ../main.tex\n\\section{Intro}\nBody\n',
-    'utf-8'
-  )
+  await fs.writeFile(chapterFile, '%! TeX root = ../main.tex\n\\section{Intro}\nBody\n', 'utf-8')
   await fs.writeFile(
     path.join(projectDir, 'main.synctex'),
     [
@@ -42,7 +38,9 @@ async function createProject(): Promise<{ rootFile: string; chapterFile: string 
 
 afterEach(async () => {
   clearSyncTexCache()
-  await Promise.all(createdDirs.splice(0).map((dir) => fs.rm(dir, { recursive: true, force: true })))
+  await Promise.all(
+    createdDirs.splice(0).map((dir) => fs.rm(dir, { recursive: true, force: true }))
+  )
 })
 
 describe('main synctex root resolution', () => {

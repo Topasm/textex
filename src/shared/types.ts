@@ -163,6 +163,12 @@ export interface RecentProject {
   pinned?: boolean
 }
 
+export interface RecentProjectUpdates {
+  path?: string
+  tag?: string
+  pinned?: boolean
+}
+
 export interface UserSettings {
   theme: 'system' | 'dark' | 'light' | 'high-contrast' | 'glass'
   fontSize: number

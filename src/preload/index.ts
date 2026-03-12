@@ -1,7 +1,12 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
 import type { IpcChannel, IpcRequest, IpcResponse } from '../shared/ipcChannels'
 import type { AppCommandId } from '../shared/types'
-import type { CompileRecord, ProjectSnippet, ProjectBookmark } from '../shared/types'
+import type {
+  CompileRecord,
+  ProjectSnippet,
+  ProjectBookmark,
+  RecentProjectUpdates
+} from '../shared/types'
 
 // ---- IPC invoke with deduplication & timeout ----
 
@@ -191,7 +196,7 @@ contextBridge.exposeInMainWorld('api', {
   addRecentProject: (projectPath: string) => invoke('settings:add-recent-project', projectPath),
   removeRecentProject: (projectPath: string) =>
     invoke('settings:remove-recent-project', projectPath),
-  updateRecentProject: (projectPath: string, updates: { tag?: string; pinned?: boolean }) =>
+  updateRecentProject: (projectPath: string, updates: RecentProjectUpdates) =>
     invoke('settings:update-recent-project', projectPath, updates),
 
   // BibTeX

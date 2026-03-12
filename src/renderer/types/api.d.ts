@@ -9,6 +9,7 @@ import {
   GitFileStatus,
   GitLogEntry,
   UserSettings,
+  RecentProjectUpdates,
   LabelInfo,
   PackageData,
   CitationGroup,
@@ -96,10 +97,7 @@ export interface ElectronAPI {
   setTheme(theme: string): Promise<void>
   addRecentProject(projectPath: string): Promise<UserSettings>
   removeRecentProject(projectPath: string): Promise<UserSettings>
-  updateRecentProject(
-    projectPath: string,
-    updates: { tag?: string; pinned?: boolean }
-  ): Promise<UserSettings>
+  updateRecentProject(projectPath: string, updates: RecentProjectUpdates): Promise<UserSettings>
 
   // BibTeX
   parseBibFile(filePath: string): Promise<BibEntry[]>
