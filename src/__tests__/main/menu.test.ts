@@ -14,6 +14,7 @@ describe('createAppMenuTemplate', () => {
       appName: 'TextEx',
       platform: 'darwin',
       openExternal: vi.fn(),
+      openOpenSourceLicenses: vi.fn(),
       sendCommand: vi.fn()
     })
 
@@ -31,9 +32,11 @@ describe('createAppMenuTemplate', () => {
   })
 
   it('builds the shared File/View menus on non-mac platforms', () => {
+    const openOpenSourceLicenses = vi.fn()
     const template = createAppMenuTemplate({
       platform: 'linux',
       openExternal: vi.fn(),
+      openOpenSourceLicenses,
       sendCommand: vi.fn()
     })
 
@@ -66,7 +69,18 @@ describe('createAppMenuTemplate', () => {
     )
 
     expect(helpMenu?.submenu).toEqual(
-      expect.arrayContaining([expect.objectContaining({ label: 'Check for Updates' })])
+      expect.arrayContaining([
+        expect.objectContaining({ label: 'Open Source Licenses' }),
+        expect.objectContaining({ label: 'Check for Updates' })
+      ])
     )
+
+    const licensesItem = helpMenu?.submenu?.find(
+      (item) => 'label' in item && item.label === 'Open Source Licenses'
+    )
+    expect(licensesItem).toBeDefined()
+    expect(typeof licensesItem?.click).toBe('function')
+    licensesItem?.click?.(undefined as never, undefined as never, undefined as never)
+    expect(openOpenSourceLicenses).toHaveBeenCalledTimes(1)
   })
 })

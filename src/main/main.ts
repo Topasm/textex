@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, nativeTheme, shell, Menu } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, nativeTheme, shell, Menu } from 'electron'
 import path from 'path'
 import { registerIpcHandlers } from './ipc'
 import { loadSettings } from './settings'
@@ -18,6 +18,24 @@ function sendToRenderer(channel: string, ...args: unknown[]): void {
 
 function sendAppCommand(command: AppCommandId): void {
   sendToRenderer('app:command', command)
+}
+
+function getOpenSourceLicensesPath(): string {
+  const basePath = app.isPackaged ? process.resourcesPath : path.join(process.cwd(), 'resources')
+  return path.join(basePath, 'licenses', 'THIRD-PARTY-NOTICES.txt')
+}
+
+async function openOpenSourceLicenses(): Promise<void> {
+  const targetPath = getOpenSourceLicensesPath()
+  const error = await shell.openPath(targetPath)
+  if (!error) {
+    return
+  }
+
+  dialog.showErrorBox(
+    'Open Source Licenses',
+    `Could not open the bundled license notices.\n\nPath: ${targetPath}\n\n${error}`
+  )
 }
 
 function getBackgroundColor(theme: string): string {
@@ -166,6 +184,9 @@ app.whenReady().then(async () => {
       appName: app.name,
       openExternal: (url) => {
         void shell.openExternal(url)
+      },
+      openOpenSourceLicenses: () => {
+        void openOpenSourceLicenses()
       },
       sendCommand: sendAppCommand
     })

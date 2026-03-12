@@ -8,6 +8,7 @@ interface BuildAppMenuOptions {
   appName?: string
   platform?: NodeJS.Platform
   openExternal: (url: string) => void
+  openOpenSourceLicenses: () => void
   sendCommand: (command: AppCommandId) => void
 }
 
@@ -28,6 +29,7 @@ export function createAppMenuTemplate({
   appName = 'TextEx',
   platform = process.platform,
   openExternal,
+  openOpenSourceLicenses,
   sendCommand
 }: BuildAppMenuOptions): MenuItemConstructorOptions[] {
   const fileSubmenu: MenuItemConstructorOptions[] = [
@@ -86,6 +88,10 @@ export function createAppMenuTemplate({
     {
       label: 'Open Documentation',
       click: () => openExternal(DOCS_URL)
+    },
+    {
+      label: 'Open Source Licenses',
+      click: () => openOpenSourceLicenses()
     },
     {
       label: 'Report Issue',

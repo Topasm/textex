@@ -87,6 +87,8 @@ resources/
 |       +-- tectonic          # From Tectonic GitHub Releases
 |       +-- texlab            # From TexLab GitHub Releases
 +-- licenses/
+|   +-- THIRD-PARTY-NOTICES.txt # Bundled third-party notices for app/runtime deps
+|   +-- ELECTRON-LICENSES.chromium.html # Chromium/Electron embedded runtime notices
 |   +-- TEXLAB-GPL-3.0.txt   # Full GPL-3.0 license text
 |   +-- TEXLAB-NOTICE.txt    # Attribution and aggregate notice
 +-- dictionaries/            # Spell check dictionaries
@@ -119,6 +121,8 @@ standardized LSP protocol over stdio (separate processes). This constitutes an
 "aggregate" distribution under GPL-3.0 Section 5.
 
 Required files bundled in `resources/licenses/`:
+- `THIRD-PARTY-NOTICES.txt` — bundled third-party notices for app/runtime dependencies
+- `ELECTRON-LICENSES.chromium.html` — Chromium/Electron embedded runtime notices
 - `TEXLAB-GPL-3.0.txt` — Full GPL-3.0 license text
 - `TEXLAB-NOTICE.txt` — Attribution, source code link, aggregate notice
 
