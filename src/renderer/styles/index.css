@@ -412,15 +412,36 @@ body,
   min-width: 0;
 }
 
+.toolbar-left {
+  flex: 1 1 auto;
+}
+
 .toolbar-center {
-  flex: 1;
+  flex: 0 0 auto;
   min-width: 0;
   display: flex;
   justify-content: center;
 }
 
-.toolbar-center .omni-search-wrapper {
+.toolbar-search-slot {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  margin-left: 4px;
+}
+
+.toolbar-search-slot .omni-search-wrapper {
   width: min(100%, 420px);
+}
+
+.toolbar-sync-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px;
+  border-radius: 8px;
+  background-color: var(--chrome-pill-bg);
+  border: 1px solid var(--chrome-border);
 }
 
 .toolbar-btn,
@@ -434,13 +455,14 @@ body,
   padding: 0 7px;
   font-size: 11px;
   background-color: var(--chrome-pill-bg);
-  color: var(--text-primary);
+  color: color-mix(in srgb, var(--text-primary) 72%, var(--text-secondary));
   border: 1px solid transparent;
   border-radius: 7px;
   cursor: pointer;
   transition:
     background-color 0.15s,
     border-color 0.15s,
+    color 0.15s,
     transform 0.15s;
 }
 
@@ -448,6 +470,7 @@ body,
 .toolbar button:hover {
   background-color: var(--chrome-pill-hover);
   border-color: var(--chrome-border);
+  color: var(--text-primary);
 }
 
 .toolbar-btn:disabled,
@@ -455,12 +478,6 @@ body,
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;
-}
-
-.toolbar-icon-solid {
-  width: 16px;
-  height: 16px;
-  display: block;
 }
 
 .toolbar .save-btn-dirty {

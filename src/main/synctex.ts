@@ -15,6 +15,7 @@ import {
   getFirstEligibleBlock,
   toRect
 } from './utils/syncTexMath'
+import { findRootFile } from '../shared/magicComments'
 import type { PdfSyncObject } from './utils/syncTexMath'
 
 const gunzip = promisify(zlib.gunzip)
@@ -22,11 +23,11 @@ const gunzip = promisify(zlib.gunzip)
 // --- SyncTeX file loading with cache ---
 
 let cachedSyncObject: PdfSyncObject | undefined
-let cachedTexFile: string | undefined
+let cachedRootFile: string | undefined
 
 export function clearSyncTexCache(): void {
   cachedSyncObject = undefined
-  cachedTexFile = undefined
+  cachedRootFile = undefined
 }
 
 async function fileExists(filePath: string): Promise<boolean> {
@@ -38,13 +39,29 @@ async function fileExists(filePath: string): Promise<boolean> {
   }
 }
 
-async function loadSyncTexForFile(texFile: string): Promise<PdfSyncObject | undefined> {
-  // Return cached if same file
-  if (cachedTexFile === texFile && cachedSyncObject) {
-    return cachedSyncObject
+interface LoadedSyncTex {
+  rootFile: string
+  syncObject: PdfSyncObject
+}
+
+async function resolveRootFile(texFile: string): Promise<string> {
+  try {
+    const content = await fs.readFile(texFile, 'utf-8')
+    return findRootFile(content, texFile)
+  } catch {
+    return texFile
+  }
+}
+
+async function loadSyncTexForFile(texFile: string): Promise<LoadedSyncTex | undefined> {
+  const rootFile = await resolveRootFile(texFile)
+
+  // Return cached if same root file
+  if (cachedRootFile === rootFile && cachedSyncObject) {
+    return { rootFile, syncObject: cachedSyncObject }
   }
 
-  const basePath = texFile.replace(/\.tex$/, '')
+  const basePath = rootFile.replace(/\.tex$/, '')
   const synctexPath = basePath + '.synctex'
   const synctexGzPath = basePath + '.synctex.gz'
 
@@ -69,19 +86,25 @@ async function loadSyncTexForFile(texFile: string): Promise<PdfSyncObject | unde
 
   if (syncObject) {
     cachedSyncObject = syncObject
-    cachedTexFile = texFile
+    cachedRootFile = rootFile
+    return { rootFile, syncObject }
   }
-  return syncObject
+
+  return undefined
 }
 
-function findInputFilePath(filePath: string, pdfSyncObject: PdfSyncObject): string | undefined {
+function findInputFilePath(
+  filePath: string,
+  rootFile: string,
+  pdfSyncObject: PdfSyncObject
+): string | undefined {
   const resolvedPath = path.resolve(filePath).toLowerCase()
-  const fileDir = path.dirname(filePath)
+  const rootDir = path.dirname(rootFile)
   for (const inputFilePath in pdfSyncObject.blockNumberLine) {
     try {
-      // Resolve relative paths from the SyncTeX file against the tex file's directory
+      // Resolve relative paths from the SyncTeX file against the compiled root file's directory.
       // Use case-insensitive comparison on Windows
-      if (path.resolve(fileDir, inputFilePath).toLowerCase() === resolvedPath) {
+      if (path.resolve(rootDir, inputFilePath).toLowerCase() === resolvedPath) {
         return inputFilePath
       }
     } catch {
@@ -99,13 +122,14 @@ export async function forwardSync(
 ): Promise<SyncTeXForwardResult | null> {
   console.log(`[SyncTeX] forwardSync called: file=${texFile}, line=${line}`)
 
-  const pdfSyncObject = await loadSyncTexForFile(texFile)
-  if (!pdfSyncObject) {
+  const loaded = await loadSyncTexForFile(texFile)
+  if (!loaded) {
     console.warn('[SyncTeX] forwardSync: no sync object for', texFile)
     return null
   }
 
-  const inputFilePath = findInputFilePath(texFile, pdfSyncObject)
+  const { rootFile, syncObject: pdfSyncObject } = loaded
+  const inputFilePath = findInputFilePath(texFile, rootFile, pdfSyncObject)
   if (inputFilePath === undefined) {
     console.warn(
       '[SyncTeX] forwardSync: no input file match for',
@@ -193,10 +217,11 @@ export async function inverseSync(
   x: number,
   y: number
 ): Promise<SyncTeXInverseResult | null> {
-  const pdfSyncObject = await loadSyncTexForFile(texFile)
-  if (!pdfSyncObject) {
+  const loaded = await loadSyncTexForFile(texFile)
+  if (!loaded) {
     return null
   }
+  const { rootFile, syncObject: pdfSyncObject } = loaded
 
   const y0 = y - pdfSyncObject.offset.y
   const x0 = x - pdfSyncObject.offset.x
@@ -247,7 +272,7 @@ export async function inverseSync(
   }
 
   // Resolve relative paths from the SyncTeX file against the tex file's directory
-  const candidate = path.resolve(path.dirname(texFile), record.input)
+  const candidate = path.resolve(path.dirname(rootFile), record.input)
   if (!fsSync.existsSync(candidate)) {
     return null
   }
@@ -256,10 +281,11 @@ export async function inverseSync(
 }
 
 export async function buildLineMap(texFile: string): Promise<SyncTeXLineMapEntry[]> {
-  const pdfSyncObject = await loadSyncTexForFile(texFile)
-  if (!pdfSyncObject) return []
+  const loaded = await loadSyncTexForFile(texFile)
+  if (!loaded) return []
 
-  const inputFilePath = findInputFilePath(texFile, pdfSyncObject)
+  const { rootFile, syncObject: pdfSyncObject } = loaded
+  const inputFilePath = findInputFilePath(texFile, rootFile, pdfSyncObject)
   if (!inputFilePath) return []
 
   const linePageBlocks = pdfSyncObject.blockNumberLine[inputFilePath]
