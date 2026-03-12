@@ -359,8 +359,14 @@
     "pin": "Épingler",
     "unpin": "Désépingler",
     "editTag": "Modifier l'étiquette",
+    "editPath": "Modifier le chemin",
     "remove": "Supprimer",
     "tagPlaceholder": "ex. NeurIPS 2025",
+    "pathPlaceholder": "/chemin/vers/projet",
+    "browse": "Parcourir",
+    "invalidPath": "Saisissez un chemin de dossier absolu.",
+    "pathNotFound": "Le dossier sélectionné n'existe pas ou ne peut pas être ouvert.",
+    "pathSaveFailed": "Impossible de mettre à jour le chemin du projet.",
     "save": "Enregistrer"
   }
 }

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { FolderOpen, Clock, MoreVertical, Pin, Tag, Trash2 } from 'lucide-react'
 import type { RecentProject } from '../../../shared/types'
 import { openProject } from '../../utils/openProject'
-import { logError } from '../../utils/errorMessage'
+import { errorMessage, logError } from '../../utils/errorMessage'
 import type { TFunction } from 'i18next'
 
 function formatRelativeDate(iso: string, t: TFunction): string {
@@ -39,10 +39,30 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
   const { t } = useTranslation()
   const [menuOpenPath, setMenuOpenPath] = useState<string | null>(null)
   const [editingTagPath, setEditingTagPath] = useState<string | null>(null)
+  const [editingProjectPath, setEditingProjectPath] = useState<string | null>(null)
   const [tagInputValue, setTagInputValue] = useState('')
+  const [pathInputValue, setPathInputValue] = useState('')
+  const [pathError, setPathError] = useState<string | null>(null)
+  const [isSavingPath, setIsSavingPath] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const tagEditorRef = useRef<HTMLDivElement>(null)
+  const pathEditorRef = useRef<HTMLDivElement>(null)
   const tagInputRef = useRef<HTMLInputElement>(null)
+  const pathInputRef = useRef<HTMLInputElement>(null)
+
+  const getPathErrorMessage = useCallback(
+    (err: unknown) => {
+      const message = errorMessage(err)
+      if (message.includes('must be absolute') || message.includes('Invalid recent project path')) {
+        return t('recentProjects.invalidPath')
+      }
+      if (message.includes('not found') || message.includes('must be a directory')) {
+        return t('recentProjects.pathNotFound')
+      }
+      return t('recentProjects.pathSaveFailed')
+    },
+    [t]
+  )
 
   // Click-outside handler
   useEffect(() => {
@@ -57,16 +77,30 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
       ) {
         setEditingTagPath(null)
       }
+      if (
+        editingProjectPath &&
+        pathEditorRef.current &&
+        !pathEditorRef.current.contains(e.target as Node)
+      ) {
+        setEditingProjectPath(null)
+        setPathError(null)
+      }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [menuOpenPath, editingTagPath])
+  }, [menuOpenPath, editingTagPath, editingProjectPath])
 
   useEffect(() => {
     if (editingTagPath) {
       setTimeout(() => tagInputRef.current?.focus(), 50)
     }
   }, [editingTagPath])
+
+  useEffect(() => {
+    if (editingProjectPath) {
+      setTimeout(() => pathInputRef.current?.focus(), 50)
+    }
+  }, [editingProjectPath])
 
   const sortedProjects = useMemo(() => {
     const pinned = recentProjects.filter((p) => p.pinned)
@@ -110,6 +144,8 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
     e.stopPropagation()
     setMenuOpenPath((prev) => (prev === projectPath ? null : projectPath))
     setEditingTagPath(null)
+    setEditingProjectPath(null)
+    setPathError(null)
   }, [])
 
   const handleTogglePin = useCallback(
@@ -129,8 +165,19 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
   const handleEditTag = useCallback((e: React.MouseEvent, project: RecentProject) => {
     e.stopPropagation()
     setMenuOpenPath(null)
+    setEditingProjectPath(null)
+    setPathError(null)
     setTagInputValue(project.tag ?? '')
     setEditingTagPath(project.path)
+  }, [])
+
+  const handleEditPath = useCallback((e: React.MouseEvent, project: RecentProject) => {
+    e.stopPropagation()
+    setMenuOpenPath(null)
+    setEditingTagPath(null)
+    setPathError(null)
+    setPathInputValue(project.path)
+    setEditingProjectPath(project.path)
   }, [])
 
   const handleSaveTag = useCallback(
@@ -145,6 +192,39 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
       setEditingTagPath(null)
     },
     [tagInputValue, setRecentProjects]
+  )
+
+  const handleBrowsePath = useCallback(async () => {
+    try {
+      const selectedPath = await window.api.openDirectory()
+      if (!selectedPath) return
+      setPathInputValue(selectedPath)
+      setPathError(null)
+    } catch (err) {
+      logError('recentProject:browsePath', err)
+      setPathError(t('recentProjects.pathSaveFailed'))
+    }
+  }, [t])
+
+  const handleSavePath = useCallback(
+    async (projectPath: string) => {
+      const trimmed = pathInputValue.trim()
+      setIsSavingPath(true)
+      setPathError(null)
+      try {
+        const settings = await window.api.updateRecentProject(projectPath, {
+          path: trimmed
+        })
+        setRecentProjects(settings.recentProjects ?? [])
+        setEditingProjectPath(null)
+      } catch (err) {
+        logError('recentProject:path', err)
+        setPathError(getPathErrorMessage(err))
+      } finally {
+        setIsSavingPath(false)
+      }
+    },
+    [getPathErrorMessage, pathInputValue, setRecentProjects]
   )
 
   if (sortedProjects.length === 0) return null
@@ -186,6 +266,7 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
               <button
                 className="home-recent-item-menu-btn"
                 onClick={(e) => handleToggleMenu(e, project.path)}
+                aria-label={t('recentProjects.moreActions')}
                 title={t('recentProjects.moreActions')}
               >
                 <MoreVertical size={14} />
@@ -200,6 +281,10 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
                   <button onClick={(e) => handleEditTag(e, project)}>
                     <Tag size={14} />
                     {t('recentProjects.editTag')}
+                  </button>
+                  <button onClick={(e) => handleEditPath(e, project)}>
+                    <FolderOpen size={14} />
+                    {t('recentProjects.editPath')}
                   </button>
                   <button className="danger" onClick={(e) => handleRemoveRecent(e, project.path)}>
                     <Trash2 size={14} />
@@ -237,6 +322,56 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
                   >
                     {t('recentProjects.save')}
                   </button>
+                </div>
+              )}
+
+              {editingProjectPath === project.path && (
+                <div
+                  className="home-recent-item-path-editor"
+                  ref={pathEditorRef}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <input
+                    ref={pathInputRef}
+                    className="home-recent-item-path-input"
+                    type="text"
+                    placeholder={t('recentProjects.pathPlaceholder')}
+                    value={pathInputValue}
+                    onChange={(e) => {
+                      setPathInputValue(e.target.value)
+                      if (pathError) {
+                        setPathError(null)
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        void handleSavePath(project.path)
+                      } else if (e.key === 'Escape') {
+                        e.preventDefault()
+                        setEditingProjectPath(null)
+                        setPathError(null)
+                      }
+                    }}
+                  />
+                  <div className="home-recent-item-path-actions">
+                    <button
+                      className="home-recent-item-path-browse"
+                      type="button"
+                      onClick={() => void handleBrowsePath()}
+                    >
+                      {t('recentProjects.browse')}
+                    </button>
+                    <button
+                      className="home-recent-item-tag-save"
+                      type="button"
+                      disabled={isSavingPath}
+                      onClick={() => void handleSavePath(project.path)}
+                    >
+                      {t('recentProjects.save')}
+                    </button>
+                  </div>
+                  {pathError && <div className="home-recent-item-path-error">{pathError}</div>}
                 </div>
               )}
             </div>

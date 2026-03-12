@@ -359,8 +359,14 @@
     "pin": "Fijar",
     "unpin": "Desfijar",
     "editTag": "Editar etiqueta",
+    "editPath": "Editar ruta",
     "remove": "Eliminar",
     "tagPlaceholder": "ej. NeurIPS 2025",
+    "pathPlaceholder": "/ruta/al/proyecto",
+    "browse": "Explorar",
+    "invalidPath": "Introduce una ruta absoluta de carpeta.",
+    "pathNotFound": "La carpeta seleccionada no existe o no se puede abrir.",
+    "pathSaveFailed": "No se pudo actualizar la ruta del proyecto.",
     "save": "Guardar"
   }
 }

@@ -359,8 +359,14 @@
     "pin": "置顶",
     "unpin": "取消置顶",
     "editTag": "编辑标签",
+    "editPath": "编辑路径",
     "remove": "移除",
     "tagPlaceholder": "例如 NeurIPS 2025",
+    "pathPlaceholder": "/path/to/project",
+    "browse": "浏览",
+    "invalidPath": "请输入绝对文件夹路径。",
+    "pathNotFound": "所选文件夹不存在或无法打开。",
+    "pathSaveFailed": "无法更新项目路径。",
     "save": "保存"
   }
 }

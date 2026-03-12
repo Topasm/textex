@@ -359,8 +359,14 @@
     "pin": "Fixar",
     "unpin": "Desfixar",
     "editTag": "Editar tag",
+    "editPath": "Editar caminho",
     "remove": "Remover",
     "tagPlaceholder": "ex. NeurIPS 2025",
+    "pathPlaceholder": "/caminho/do/projeto",
+    "browse": "Procurar",
+    "invalidPath": "Digite um caminho absoluto de pasta.",
+    "pathNotFound": "A pasta selecionada não existe ou não pode ser aberta.",
+    "pathSaveFailed": "Falha ao atualizar o caminho do projeto.",
     "save": "Salvar"
   }
 }

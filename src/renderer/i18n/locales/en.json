@@ -359,8 +359,14 @@
     "pin": "Pin",
     "unpin": "Unpin",
     "editTag": "Edit Tag",
+    "editPath": "Edit Path",
     "remove": "Remove",
     "tagPlaceholder": "e.g. NeurIPS 2025",
+    "pathPlaceholder": "/path/to/project",
+    "browse": "Browse",
+    "invalidPath": "Enter an absolute folder path.",
+    "pathNotFound": "The selected folder does not exist or cannot be opened.",
+    "pathSaveFailed": "Failed to update the project path.",
     "save": "Save"
   }
 }
