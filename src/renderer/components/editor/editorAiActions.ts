@@ -1,4 +1,5 @@
 import type { editor as monacoEditor } from 'monaco-editor'
+import { buildAiCustomProcessRequest, buildAiProcessRequest } from '../../services/aiContext'
 
 export interface AiActionDef {
   id: string
@@ -62,7 +63,8 @@ export async function runAiAction(
 
   const text = model.getValueInRange(selection)
   try {
-    const result = await window.api.aiProcess(def.action, text)
+    const request = await buildAiProcessRequest(def.action, selection, text)
+    const result = await window.api.aiProcess(request)
     if (def.mode === 'replace') {
       editor.executeEdits(def.id, [
         {
@@ -93,7 +95,8 @@ export async function runAiCustomCommand(
 
   const text = model.getValueInRange(selection)
   try {
-    const result = await window.api.aiProcessCustom(trimmedCommand, text)
+    const request = await buildAiCustomProcessRequest(trimmedCommand, selection, text)
+    const result = await window.api.aiProcessCustom(request)
     editor.executeEdits('ai-custom-command', [
       {
         range: selection,

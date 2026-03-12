@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron'
-import { generateLatex, processText, processTextWithCommand } from '../ai'
+import { generateLatex, processText, processTextWithCommand, updateDocumentContext } from '../ai'
 import { loadSettings, saveSettings } from '../settings'
+import type { AiCustomProcessRequest, AiProcessRequest } from '../../shared/types'
 
 export function registerAiHandlers(): void {
   ipcMain.handle('ai:generate', async (_event, input: string, provider: string, model: string) => {
@@ -12,22 +13,26 @@ export function registerAiHandlers(): void {
     return { latex }
   })
 
-  ipcMain.handle(
-    'ai:process',
-    async (
-      _event,
-      action: 'fix' | 'academic' | 'summarize' | 'longer' | 'shorter',
-      text: string
-    ) => {
-      // Use configured settings for provider/model
-      return processText(action, text)
-    }
-  )
+  ipcMain.handle('ai:process', async (_event, request: AiProcessRequest) => {
+    if (!request || typeof request !== 'object') throw new Error('AI request is required')
+    return processText(request)
+  })
 
-  ipcMain.handle('ai:process-custom', async (_event, command: string, text: string) => {
-    if (!command || typeof command !== 'string') throw new Error('AI command is required')
-    if (!text || typeof text !== 'string') throw new Error('Input text is required')
-    return processTextWithCommand(command, text)
+  ipcMain.handle('ai:process-custom', async (_event, request: AiCustomProcessRequest) => {
+    if (!request || typeof request !== 'object') throw new Error('AI request is required')
+    if (!request.command || typeof request.command !== 'string') {
+      throw new Error('AI command is required')
+    }
+    if (!request.selectedText || typeof request.selectedText !== 'string') {
+      throw new Error('Input text is required')
+    }
+    return processTextWithCommand(request)
+  })
+
+  ipcMain.handle('ai:update-context', async (_event, filePath: string, content: string) => {
+    if (!filePath || typeof filePath !== 'string') throw new Error('File path is required')
+    if (!content || typeof content !== 'string') throw new Error('Document content is required')
+    return updateDocumentContext(filePath, content)
   })
 
   ipcMain.handle('ai:save-api-key', async (_event, provider: string, apiKey: string) => {

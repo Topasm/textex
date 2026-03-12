@@ -8,6 +8,9 @@
 
 import type {
   AppCommandId,
+  AiContextEntry,
+  AiCustomProcessRequest,
+  AiProcessRequest,
   Diagnostic,
   SyncTeXForwardResult,
   SyncTeXInverseResult,
@@ -164,11 +167,9 @@ export interface IpcChannelMap {
 
   // AI Draft
   'ai:generate': [[input: string, provider: string, model: string], { latex: string }]
-  'ai:process': [
-    [action: 'fix' | 'academic' | 'summarize' | 'longer' | 'shorter', text: string],
-    string
-  ]
-  'ai:process-custom': [[command: string, text: string], string]
+  'ai:process': [[request: AiProcessRequest], string]
+  'ai:process-custom': [[request: AiCustomProcessRequest], string]
+  'ai:update-context': [[filePath: string, content: string], AiContextEntry]
   'ai:save-api-key': [[provider: string, apiKey: string], SuccessResult]
   'ai:has-api-key': [[provider: string], boolean]
 

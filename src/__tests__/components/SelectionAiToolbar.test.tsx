@@ -56,6 +56,9 @@ describe('SelectionAiToolbar', () => {
         actions={AI_ACTIONS}
         onAction={onAction}
         onCommand={vi.fn()}
+        onUpdateContext={vi.fn()}
+        contextStatus="missing"
+        isUpdatingContext={false}
         onClose={vi.fn()}
       />
     )
@@ -94,6 +97,9 @@ describe('SelectionAiToolbar', () => {
         actions={AI_ACTIONS}
         onAction={vi.fn()}
         onCommand={vi.fn()}
+        onUpdateContext={vi.fn()}
+        contextStatus="missing"
+        isUpdatingContext={false}
         onClose={onClose}
       />
     )
@@ -113,6 +119,9 @@ describe('SelectionAiToolbar', () => {
         actions={AI_ACTIONS}
         onAction={vi.fn()}
         onCommand={onCommand}
+        onUpdateContext={vi.fn()}
+        contextStatus="missing"
+        isUpdatingContext={false}
         onClose={vi.fn()}
       />
     )
@@ -136,6 +145,9 @@ describe('SelectionAiToolbar', () => {
         actions={AI_ACTIONS}
         onAction={vi.fn()}
         onCommand={vi.fn()}
+        onUpdateContext={vi.fn()}
+        contextStatus="missing"
+        isUpdatingContext={false}
         onClose={vi.fn()}
       />
     )
@@ -146,5 +158,43 @@ describe('SelectionAiToolbar', () => {
 
     await user.type(input, 'Make this more concise')
     expect(input).toHaveValue('Make this more concise')
+  })
+
+  it('shows context update state and forwards clicks', () => {
+    const editor = createEditor()
+    const onUpdateContext = vi.fn()
+
+    const { rerender } = render(
+      <SelectionAiToolbar
+        editorRef={{ current: editor as never }}
+        selection={selection as never}
+        actions={AI_ACTIONS}
+        onAction={vi.fn()}
+        onCommand={vi.fn()}
+        onUpdateContext={onUpdateContext}
+        contextStatus="stale"
+        isUpdatingContext={false}
+        onClose={vi.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Context Stale' }))
+    expect(onUpdateContext).toHaveBeenCalledOnce()
+
+    rerender(
+      <SelectionAiToolbar
+        editorRef={{ current: editor as never }}
+        selection={selection as never}
+        actions={AI_ACTIONS}
+        onAction={vi.fn()}
+        onCommand={vi.fn()}
+        onUpdateContext={onUpdateContext}
+        contextStatus="fresh"
+        isUpdatingContext={true}
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(screen.getByRole('button', { name: 'Updating Context...' })).toBeDisabled()
   })
 })

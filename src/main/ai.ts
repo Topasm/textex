@@ -1,5 +1,12 @@
 import { loadSettings } from './settings'
-import { UserSettings } from '../shared/types'
+import {
+  AiContextEntry,
+  AiCustomProcessRequest,
+  AiLightContext,
+  AiProcessRequest,
+  UserSettings
+} from '../shared/types'
+import { hashTextContent } from '../shared/hash'
 
 interface GenerateLatexOptions {
   input: string
@@ -27,6 +34,8 @@ const DEFAULT_GENERATE_PROMPT = `You are a LaTeX document generator. Given markd
 const DEFAULT_ACTION_SYSTEM = 'You are a helpful academic assistant expert in LaTeX.'
 const DEFAULT_CUSTOM_ACTION_PROMPT =
   'Apply the user instruction to the provided LaTeX text. Preserve LaTeX commands and structure unless the instruction explicitly asks to change them. Return ONLY the transformed text with no explanation.'
+const DEFAULT_CONTEXT_SYSTEM =
+  'You create concise working summaries for LaTeX documents. Focus on purpose, structure, terminology, and writing style. Return ONLY the summary text.'
 
 const DEFAULT_PROMPTS: Record<string, string> = {
   fix: 'Fix grammar and spelling in the following LaTeX text. Do not remove LaTeX commands. Return ONLY the fixed text.',
@@ -64,6 +73,50 @@ function getActionPrompt(action: string, settings: UserSettings): string {
     shorter: settings.aiPromptShorter
   }
   return customMap[action]?.trim() || DEFAULT_PROMPTS[action] || ''
+}
+
+function formatLightContext(lightContext: AiLightContext): string {
+  const outline =
+    lightContext.outline.length > 0
+      ? lightContext.outline.map((item) => `- ${item}`).join('\n')
+      : '- (none)'
+  const sectionPath =
+    lightContext.sectionPath.length > 0 ? lightContext.sectionPath.join(' > ') : '(unknown)'
+  const beforeSelection = lightContext.beforeSelection.trim() || '(none)'
+  const afterSelection = lightContext.afterSelection.trim() || '(none)'
+
+  return [
+    `File: ${lightContext.filePath}`,
+    `Current section path: ${sectionPath}`,
+    'Outline summary:',
+    outline,
+    'Context before selection:',
+    beforeSelection,
+    'Context after selection:',
+    afterSelection
+  ].join('\n')
+}
+
+function buildSelectionPrompt(
+  instruction: string,
+  selectedText: string,
+  lightContext: AiLightContext,
+  summaryContext: AiContextEntry | null
+): string {
+  const parts = [
+    instruction,
+    'Return ONLY the output for the selected text. Use document context only as supporting information.',
+    'Selected text:',
+    selectedText,
+    'Document context:',
+    formatLightContext(lightContext)
+  ]
+
+  if (summaryContext?.summary.trim()) {
+    parts.push('Document summary cache:', summaryContext.summary.trim())
+  }
+
+  return parts.join('\n\n')
 }
 
 // ---- Common API call ----
@@ -244,8 +297,7 @@ export async function generateLatex(options: GenerateLatexOptions): Promise<stri
 }
 
 export async function processText(
-  action: 'fix' | 'academic' | 'summarize' | 'longer' | 'shorter',
-  text: string,
+  request: AiProcessRequest,
   provider?: string,
   model?: string
 ): Promise<string> {
@@ -258,8 +310,13 @@ export async function processText(
   const apiKey = settings.aiApiKey
   if (!apiKey) throw new Error(`No API key configured for ${activeProvider}`)
 
-  const actionPrompt = getActionPrompt(action, settings)
-  const userPrompt = `${actionPrompt}:\n\n${text}`
+  const actionPrompt = getActionPrompt(request.action, settings)
+  const userPrompt = buildSelectionPrompt(
+    actionPrompt,
+    request.selectedText,
+    request.lightContext,
+    request.summaryContext
+  )
   const thinking = getThinkingConfig(settings)
 
   return callProvider(
@@ -273,8 +330,7 @@ export async function processText(
 }
 
 export async function processTextWithCommand(
-  command: string,
-  text: string,
+  request: AiCustomProcessRequest,
   provider?: string,
   model?: string
 ): Promise<string> {
@@ -287,10 +343,15 @@ export async function processTextWithCommand(
   const apiKey = settings.aiApiKey
   if (!apiKey) throw new Error(`No API key configured for ${activeProvider}`)
 
-  const trimmedCommand = command.trim()
+  const trimmedCommand = request.command.trim()
   if (!trimmedCommand) throw new Error('AI command is required')
 
-  const userPrompt = `Instruction:\n${trimmedCommand}\n\nLaTeX text:\n${text}`
+  const userPrompt = buildSelectionPrompt(
+    `Instruction: ${trimmedCommand}`,
+    request.selectedText,
+    request.lightContext,
+    request.summaryContext
+  )
   const thinking = getThinkingConfig(settings)
 
   return callProvider(
@@ -301,4 +362,44 @@ export async function processTextWithCommand(
     DEFAULT_CUSTOM_ACTION_PROMPT,
     thinking
   )
+}
+
+export async function updateDocumentContext(
+  filePath: string,
+  content: string,
+  provider?: string,
+  model?: string
+): Promise<AiContextEntry> {
+  const settings = await loadSettings()
+  const activeProvider = provider || settings.aiProvider
+  const activeModel = model || settings.aiModel
+
+  if (!activeProvider) throw new Error('No AI provider configured')
+
+  const apiKey = settings.aiApiKey
+  if (!apiKey) throw new Error(`No API key configured for ${activeProvider}`)
+
+  const thinking = getThinkingConfig(settings)
+  const summary = await callProvider(
+    activeProvider,
+    [
+      'Create a compact working summary for future selection-level editing.',
+      'Capture the document purpose, major sections, terminology, notation, tone, and any important local conventions.',
+      'Do not quote long passages. Keep it concise and practical.',
+      `File: ${filePath}`,
+      'Document content:',
+      content
+    ].join('\n\n'),
+    activeModel,
+    apiKey,
+    DEFAULT_CONTEXT_SYSTEM,
+    thinking
+  )
+
+  return {
+    filePath,
+    contentHash: hashTextContent(content),
+    generatedAt: new Date().toISOString(),
+    summary
+  }
 }

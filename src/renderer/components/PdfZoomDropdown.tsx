@@ -9,6 +9,7 @@ function PdfZoomDropdown() {
   const zoomLevel = usePdfStore((s) => s.zoomLevel)
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const displayZoomLevel = Math.round(zoomLevel)
 
   const close = useCallback(() => setIsOpen(false), [])
   useClickOutside(dropdownRef, close, isOpen)
@@ -31,7 +32,7 @@ function PdfZoomDropdown() {
         title={t('toolbar.zoomPreset')}
         aria-label={t('toolbar.zoomPreset')}
       >
-        {zoomLevel}%
+        {displayZoomLevel}%
       </button>
       {isOpen && (
         <div className="menu-dropdown-content zoom-dropdown-content">
@@ -39,7 +40,7 @@ function PdfZoomDropdown() {
             <button
               key={preset}
               onClick={() => handlePreset(preset)}
-              className={zoomLevel === preset ? 'zoom-preset-active' : undefined}
+              className={displayZoomLevel === preset ? 'zoom-preset-active' : undefined}
             >
               {preset}%
             </button>

@@ -2,7 +2,11 @@ import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import EditorPane from '../../renderer/components/EditorPane'
+import { hashTextContent } from '../../shared/hash'
+import { useAiContextStore } from '../../renderer/store/useAiContextStore'
+import { useEditorStore } from '../../renderer/store/useEditorStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
+import { useUiStore } from '../../renderer/store/useUiStore'
 
 const editorListeners = {
   selection: [] as Array<
@@ -192,6 +196,34 @@ describe('EditorPane selection AI toolbar', () => {
         aiProvider: 'openai'
       }
     }))
+    useEditorStore.setState({
+      filePath: '/tmp/paper.tex',
+      content: '\\section{Intro}\nselected text in context',
+      isDirty: false,
+      openFiles: {},
+      activeFilePath: '/tmp/paper.tex',
+      cursorLine: 1,
+      cursorColumn: 1,
+      pendingJump: null,
+      pendingInsertText: null,
+      editorInstance: null,
+      _sessionOpenPaths: [],
+      _sessionActiveFile: null
+    })
+    useUiStore.setState({
+      documentSymbols: [
+        {
+          name: 'Intro',
+          detail: '',
+          kind: 2,
+          range: { startLine: 1, startColumn: 0, endLine: 3, endColumn: 0 },
+          selectionRange: { startLine: 1, startColumn: 0, endLine: 1, endColumn: 0 },
+          semanticKind: 'section',
+          children: []
+        }
+      ]
+    })
+    useAiContextStore.setState({ entries: {} })
   })
 
   it('shows only after mouse selection completes, not for keyboard selection', async () => {
@@ -317,8 +349,11 @@ describe('EditorPane selection AI toolbar', () => {
 
     await waitFor(() => {
       expect(window.api.aiProcessCustom).toHaveBeenCalledWith(
-        'Rewrite with a stronger formal tone',
-        'selected text'
+        expect.objectContaining({
+          command: 'Rewrite with a stronger formal tone',
+          selectedText: 'selected text',
+          filePath: '/tmp/paper.tex'
+        })
       )
     })
     expect(mockEditor.executeEdits).toHaveBeenCalledWith('ai-custom-command', [
@@ -329,5 +364,48 @@ describe('EditorPane selection AI toolbar', () => {
       }
     ])
     expect(screen.queryByTestId('selection-ai-toolbar')).not.toBeInTheDocument()
+  })
+
+  it('updates document context from the selection toolbar without closing it', async () => {
+    const user = userEvent.setup()
+    window.api.aiUpdateContext = vi.fn().mockResolvedValue({
+      filePath: '/tmp/paper.tex',
+      contentHash: hashTextContent('\\section{Intro}\nselected text in context'),
+      generatedAt: '2026-03-12T00:00:00.000Z',
+      summary: 'fresh context'
+    })
+
+    render(<EditorPane />)
+
+    currentSelection = {
+      startLineNumber: 1,
+      startColumn: 1,
+      endLineNumber: 1,
+      endColumn: 10,
+      isEmpty: () => false
+    }
+
+    act(() => {
+      editorListeners.mouseDown[0]?.({
+        target: { type: mockMonaco.editor.MouseTargetType.CONTENT_TEXT }
+      })
+      editorListeners.selection[0]?.({ selection: currentSelection!, source: 'mouse' })
+      editorListeners.mouseUp[0]?.()
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('selection-ai-toolbar')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Context Update' }))
+
+    await waitFor(() => {
+      expect(window.api.aiUpdateContext).toHaveBeenCalledWith(
+        '/tmp/paper.tex',
+        '\\section{Intro}\nselected text in context'
+      )
+    })
+    expect(screen.getByTestId('selection-ai-toolbar')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Context Fresh' })).toBeInTheDocument()
   })
 })

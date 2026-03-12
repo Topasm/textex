@@ -1,6 +1,7 @@
 import Editor, { BeforeMount, OnMount } from '@monaco-editor/react'
 import { useEffect, useRef, useState, useCallback, useMemo, lazy, Suspense } from 'react'
 import { useEditorStore } from '../store/useEditorStore'
+import { useAiContextStore } from '../store/useAiContextStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { useSettingsStore, resolveTheme } from '../store/useSettingsStore'
 import { stopLspClient } from '../lsp/lspClient'
@@ -29,6 +30,7 @@ import {
   type AiActionDef
 } from './editor/editorAiActions'
 import { SelectionAiToolbar } from './editor/SelectionAiToolbar'
+import { getAiContextStatus, updateCurrentDocumentAiContext } from '../services/aiContext'
 import { configureMonacoLanguages, getMonacoTheme } from '../data/monacoConfig'
 import { generateFigureSnippet } from '../utils/figureSnippet'
 
@@ -42,11 +44,13 @@ type MonacoInstance = typeof import('monaco-editor')
 
 function EditorPane() {
   const content = useEditorStore((s) => s.content)
+  const filePath = useEditorStore((s) => s.filePath)
   const setContent = useEditorStore((s) => s.setContent)
   const setCursorPosition = useEditorStore((s) => s.setCursorPosition)
   const setEditorInstance = useEditorStore((s) => s.setEditorInstance)
   const projectRoot = useProjectStore((s) => s.projectRoot)
   const settings = useSettingsStore((s) => s.settings)
+  const cachedAiContext = useAiContextStore((s) => (filePath ? s.entries[filePath] : null))
   const theme = settings.theme
   const fontSize = settings.fontSize
   const spellCheckEnabled = settings.spellCheckEnabled
@@ -95,7 +99,9 @@ function EditorPane() {
   const [showMathPreview, setShowMathPreview] = useState(true)
   const [selectionAiToolbarSelection, setSelectionAiToolbarSelection] =
     useState<monacoEditor.ISelection | null>(null)
+  const [isUpdatingAiContext, setIsUpdatingAiContext] = useState(false)
   const prevMathRangeRef = useRef<string | null>(null)
+  const aiContextStatus = getAiContextStatus(filePath, content)
 
   // History panel hook
   const {
@@ -139,6 +145,18 @@ function EditorPane() {
     },
     [hideSelectionAiToolbar]
   )
+
+  const handleSelectionContextUpdate = useCallback(async () => {
+    setIsUpdatingAiContext(true)
+    try {
+      await updateCurrentDocumentAiContext()
+    } catch (err) {
+      console.error(err)
+      alert('AI context update failed. Check your AI settings and try again.')
+    } finally {
+      setIsUpdatingAiContext(false)
+    }
+  }, [])
 
   // Re-show the preview when the cursor moves to a different math expression
   useEffect(() => {
@@ -428,6 +446,9 @@ function EditorPane() {
               actions={AI_ACTIONS}
               onAction={handleSelectionAiAction}
               onCommand={handleSelectionAiCommand}
+              onUpdateContext={handleSelectionContextUpdate}
+              contextStatus={cachedAiContext ? aiContextStatus : 'missing'}
+              isUpdatingContext={isUpdatingAiContext}
               onClose={hideSelectionAiToolbar}
             />
           )}

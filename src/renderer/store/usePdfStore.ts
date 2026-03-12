@@ -52,6 +52,19 @@ interface PdfState {
   getScrollPosition: (projectRoot: string) => number
 }
 
+interface PersistedPdfLayoutState {
+  zoomLevel?: number
+  splitRatio?: number
+  savedScrollPositions?: Record<string, number>
+}
+
+const PDF_LAYOUT_PERSIST_VERSION = 1
+
+function normalizeZoomLevel(level: number): number {
+  const roundedLevel = Number.isFinite(level) ? Math.round(level) : 100
+  return Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, roundedLevel))
+}
+
 export const usePdfStore = create<PdfState>()(
   persist(
     subscribeWithSelector((set, get) => ({
@@ -73,11 +86,11 @@ export const usePdfStore = create<PdfState>()(
 
       setSplitRatio: (splitRatio) =>
         set({ splitRatio: Math.max(SPLIT_RATIO_MIN, Math.min(SPLIT_RATIO_MAX, splitRatio)) }),
-      setZoomLevel: (level) => set({ zoomLevel: Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, level)) }),
+      setZoomLevel: (level) => set({ zoomLevel: normalizeZoomLevel(level) }),
       zoomIn: () =>
-        set((state) => ({ zoomLevel: Math.min(ZOOM_MAX, state.zoomLevel + ZOOM_STEP) })),
+        set((state) => ({ zoomLevel: normalizeZoomLevel(state.zoomLevel + ZOOM_STEP) })),
       zoomOut: () =>
-        set((state) => ({ zoomLevel: Math.max(ZOOM_MIN, state.zoomLevel - ZOOM_STEP) })),
+        set((state) => ({ zoomLevel: normalizeZoomLevel(state.zoomLevel - ZOOM_STEP) })),
       resetZoom: () => set({ zoomLevel: 100 }),
       setSynctexHighlight: (highlight) =>
         set({ synctexHighlight: highlight ? { ...highlight, timestamp: Date.now() } : null }),
@@ -101,6 +114,20 @@ export const usePdfStore = create<PdfState>()(
     })),
     {
       name: 'textex-pdf-layout',
+      version: PDF_LAYOUT_PERSIST_VERSION,
+      migrate: (persistedState: unknown) => {
+        if (!persistedState || typeof persistedState !== 'object') {
+          return persistedState as PersistedPdfLayoutState
+        }
+
+        const state = persistedState as PersistedPdfLayoutState
+        if (typeof state.zoomLevel !== 'number') return state
+
+        return {
+          ...state,
+          zoomLevel: normalizeZoomLevel(state.zoomLevel)
+        }
+      },
       partialize: (state) => ({
         zoomLevel: state.zoomLevel,
         splitRatio: state.splitRatio,

@@ -294,9 +294,10 @@ contextBridge.exposeInMainWorld('api', {
     invoke('ai:generate', input, provider, model),
   aiSaveApiKey: (provider: string, apiKey: string) => invoke('ai:save-api-key', provider, apiKey),
   aiHasApiKey: (provider: string) => invoke('ai:has-api-key', provider),
-  aiProcess: (action: 'fix' | 'academic' | 'summarize' | 'longer' | 'shorter', text: string) =>
-    invoke('ai:process', action, text),
-  aiProcessCustom: (command: string, text: string) => invoke('ai:process-custom', command, text),
+  aiProcess: (request) => invoke('ai:process', request),
+  aiProcessCustom: (request) => invoke('ai:process-custom', request),
+  aiUpdateContext: (filePath: string, content: string) =>
+    invoke('ai:update-context', filePath, content),
 
   // Document Structure (fallback outline)
   getDocumentOutline: (filePath: string, content: string) =>

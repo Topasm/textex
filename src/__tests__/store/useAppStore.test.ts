@@ -324,6 +324,11 @@ describe('useAppStore', () => {
       expect(usePdfStore.getState().zoomLevel).toBe(150)
     })
 
+    it('rounds fractional zoom levels to an integer percentage', () => {
+      usePdfStore.getState().setZoomLevel(92.00965826511386)
+      expect(usePdfStore.getState().zoomLevel).toBe(92)
+    })
+
     it('clamps zoom level to minimum of 25', () => {
       usePdfStore.getState().setZoomLevel(10)
       expect(usePdfStore.getState().zoomLevel).toBe(25)
@@ -332,6 +337,32 @@ describe('useAppStore', () => {
     it('clamps zoom level to maximum of 400', () => {
       usePdfStore.getState().setZoomLevel(500)
       expect(usePdfStore.getState().zoomLevel).toBe(400)
+    })
+
+    it('clamps after rounding fractional values', () => {
+      usePdfStore.getState().setZoomLevel(24.6)
+      expect(usePdfStore.getState().zoomLevel).toBe(25)
+
+      usePdfStore.getState().setZoomLevel(400.6)
+      expect(usePdfStore.getState().zoomLevel).toBe(400)
+    })
+  })
+
+  describe('pdf persist migration', () => {
+    it('normalizes persisted fractional zoom during migration', async () => {
+      const migrate = usePdfStore.persist.getOptions().migrate
+      expect(migrate).toBeTypeOf('function')
+
+      const migrated = await migrate?.(
+        {
+          zoomLevel: 92.00965826511386,
+          splitRatio: 0.5,
+          savedScrollPositions: {}
+        },
+        0
+      )
+
+      expect(migrated).toMatchObject({ zoomLevel: 92 })
     })
   })
 

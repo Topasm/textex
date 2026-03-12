@@ -113,6 +113,7 @@ Object.defineProperty(window, 'api', {
     aiHasApiKey: vi.fn().mockResolvedValue(false),
     aiProcess: vi.fn(),
     aiProcessCustom: vi.fn(),
+    aiUpdateContext: vi.fn(),
 
     // Labels / Packages / External
     scanLabels: vi.fn(),

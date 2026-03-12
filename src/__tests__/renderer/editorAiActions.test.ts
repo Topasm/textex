@@ -5,6 +5,10 @@ import {
   runAiAction,
   runAiCustomCommand
 } from '../../renderer/components/editor/editorAiActions'
+import { hashTextContent } from '../../shared/hash'
+import { useAiContextStore } from '../../renderer/store/useAiContextStore'
+import { useEditorStore } from '../../renderer/store/useEditorStore'
+import { useUiStore } from '../../renderer/store/useUiStore'
 
 function createSelection() {
   return {
@@ -39,6 +43,34 @@ describe('editorAiActions', () => {
     vi.clearAllMocks()
     window.api.aiProcess = vi.fn().mockResolvedValue('processed')
     window.api.aiProcessCustom = vi.fn().mockResolvedValue('custom processed')
+    useAiContextStore.setState({ entries: {} })
+    useEditorStore.setState({
+      filePath: '/tmp/paper.tex',
+      content: '\\section{Intro}\ntext around selection',
+      isDirty: false,
+      openFiles: {},
+      activeFilePath: '/tmp/paper.tex',
+      cursorLine: 1,
+      cursorColumn: 1,
+      pendingJump: null,
+      pendingInsertText: null,
+      editorInstance: null,
+      _sessionOpenPaths: [],
+      _sessionActiveFile: null
+    })
+    useUiStore.setState({
+      documentSymbols: [
+        {
+          name: 'Intro',
+          detail: '',
+          kind: 2,
+          range: { startLine: 1, startColumn: 0, endLine: 3, endColumn: 0 },
+          selectionRange: { startLine: 1, startColumn: 0, endLine: 1, endColumn: 0 },
+          semanticKind: 'section',
+          children: []
+        }
+      ]
+    })
   })
 
   it('replaces the selected range for replace actions', async () => {
@@ -46,7 +78,17 @@ describe('editorAiActions', () => {
 
     await runAiAction(editor as never, AI_ACTIONS[0])
 
-    expect(window.api.aiProcess).toHaveBeenCalledWith('fix', 'text')
+    expect(window.api.aiProcess).toHaveBeenCalledWith({
+      action: 'fix',
+      selectedText: 'text',
+      filePath: '/tmp/paper.tex',
+      lightContext: expect.objectContaining({
+        filePath: '/tmp/paper.tex',
+        sectionPath: ['Intro'],
+        outline: ['Intro']
+      }),
+      summaryContext: null
+    })
     expect(editor.executeEdits).toHaveBeenCalledWith('ai-fix-grammar', [
       {
         range: selection,
@@ -62,7 +104,12 @@ describe('editorAiActions', () => {
 
     await runAiAction(editor as never, AI_ACTIONS[2])
 
-    expect(window.api.aiProcess).toHaveBeenCalledWith('summarize', 'text')
+    expect(window.api.aiProcess).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'summarize',
+        selectedText: 'text'
+      })
+    )
     expect(editor.executeEdits).not.toHaveBeenCalled()
     expect(alertSpy).toHaveBeenCalledWith('Summary:\n\nprocessed')
   })
@@ -79,7 +126,12 @@ describe('editorAiActions', () => {
 
     await firstAction.run(editor)
 
-    expect(window.api.aiProcess).toHaveBeenCalledWith('fix', 'text')
+    expect(window.api.aiProcess).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'fix',
+        selectedText: 'text'
+      })
+    )
   })
 
   it('runs a custom command and replaces the selection', async () => {
@@ -87,7 +139,15 @@ describe('editorAiActions', () => {
 
     await runAiCustomCommand(editor as never, 'Make it more concise')
 
-    expect(window.api.aiProcessCustom).toHaveBeenCalledWith('Make it more concise', 'text')
+    expect(window.api.aiProcessCustom).toHaveBeenCalledWith({
+      command: 'Make it more concise',
+      selectedText: 'text',
+      filePath: '/tmp/paper.tex',
+      lightContext: expect.objectContaining({
+        sectionPath: ['Intro']
+      }),
+      summaryContext: null
+    })
     expect(editor.executeEdits).toHaveBeenCalledWith('ai-custom-command', [
       {
         range: selection,
@@ -95,5 +155,50 @@ describe('editorAiActions', () => {
         forceMoveMarkers: true
       }
     ])
+  })
+
+  it('uses only a fresh summary cache and ignores stale entries', async () => {
+    const { editor } = createEditor()
+    useAiContextStore.setState({
+      entries: {
+        '/tmp/paper.tex': {
+          filePath: '/tmp/paper.tex',
+          contentHash: 'stale-hash',
+          generatedAt: '2026-03-12T00:00:00.000Z',
+          summary: 'stale summary'
+        }
+      }
+    })
+
+    await runAiAction(editor as never, AI_ACTIONS[3])
+
+    expect(window.api.aiProcess).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'longer',
+        summaryContext: null
+      })
+    )
+
+    useAiContextStore.setState({
+      entries: {
+        '/tmp/paper.tex': {
+          filePath: '/tmp/paper.tex',
+          contentHash: hashTextContent('\\section{Intro}\ntext around selection'),
+          generatedAt: '2026-03-12T00:00:00.000Z',
+          summary: 'fresh summary'
+        }
+      }
+    })
+
+    await runAiAction(editor as never, AI_ACTIONS[4])
+
+    expect(window.api.aiProcess).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        action: 'shorter',
+        summaryContext: expect.objectContaining({
+          summary: 'fresh summary'
+        })
+      })
+    )
   })
 })

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { editor as monacoEditor } from 'monaco-editor'
 import type { AiActionDef } from './editorAiActions'
+import type { AiContextStatus } from '../../services/aiContext'
 import './SelectionAiToolbar.css'
 
 const TOOLBAR_WIDTH_ESTIMATE = 430
-const TOOLBAR_HEIGHT_ESTIMATE = 94
+const TOOLBAR_HEIGHT_ESTIMATE = 132
 const TOOLBAR_MARGIN = 8
 
 interface SelectionAiToolbarProps {
@@ -13,6 +14,9 @@ interface SelectionAiToolbarProps {
   actions: readonly AiActionDef[]
   onAction: (action: AiActionDef) => void
   onCommand: (command: string) => void
+  onUpdateContext: () => void
+  contextStatus: AiContextStatus
+  isUpdatingContext: boolean
   onClose: () => void
 }
 
@@ -70,6 +74,9 @@ export function SelectionAiToolbar({
   actions,
   onAction,
   onCommand,
+  onUpdateContext,
+  contextStatus,
+  isUpdatingContext,
   onClose
 }: SelectionAiToolbarProps) {
   const [command, setCommand] = useState('')
@@ -90,6 +97,13 @@ export function SelectionAiToolbar({
 
   if (!position) return null
 
+  const contextButtonLabel =
+    contextStatus === 'fresh'
+      ? 'Context Fresh'
+      : contextStatus === 'stale'
+        ? 'Context Stale'
+        : 'Context Update'
+
   const submitCommand = () => {
     const trimmed = command.trim()
     if (!trimmed) return
@@ -106,6 +120,19 @@ export function SelectionAiToolbar({
         e.stopPropagation()
       }}
     >
+      <div className="selection-ai-toolbar-context-row">
+        <button
+          type="button"
+          className={`selection-ai-toolbar-context-btn status-${contextStatus}`}
+          onClick={onUpdateContext}
+          disabled={isUpdatingContext}
+        >
+          {isUpdatingContext && (
+            <span className="selection-ai-toolbar-spinner" aria-hidden="true" />
+          )}
+          <span>{isUpdatingContext ? 'Updating Context...' : contextButtonLabel}</span>
+        </button>
+      </div>
       <div className="selection-ai-toolbar-command-row">
         <input
           className="selection-ai-toolbar-command-input"

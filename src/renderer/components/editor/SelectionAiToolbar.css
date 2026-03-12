@@ -21,10 +21,55 @@
 }
 
 .selection-ai-toolbar-command-row,
-.selection-ai-toolbar-actions-row {
+.selection-ai-toolbar-actions-row,
+.selection-ai-toolbar-context-row {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+.selection-ai-toolbar-context-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-primary) 65%, transparent);
+  color: var(--text-primary);
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.selection-ai-toolbar-context-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.selection-ai-toolbar-context-btn:disabled {
+  opacity: 0.72;
+  cursor: default;
+}
+
+.selection-ai-toolbar-context-btn.status-fresh {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+}
+
+.selection-ai-toolbar-context-btn.status-stale {
+  border-color: color-mix(in srgb, #d97706 45%, var(--border));
+}
+
+.selection-ai-toolbar-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid color-mix(in srgb, var(--text-secondary) 30%, transparent);
+  border-top-color: currentColor;
+  border-radius: 999px;
+  animation: selection-ai-toolbar-spin 0.7s linear infinite;
 }
 
 .selection-ai-toolbar-command-input {
@@ -94,6 +139,16 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes selection-ai-toolbar-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
   }
 }
 

@@ -1,9 +1,8 @@
+import type { AiProcessRequest } from '../../shared/types'
+
 export class AIService {
-  public async processText(
-    action: 'fix' | 'academic' | 'summarize' | 'longer' | 'shorter',
-    text: string
-  ): Promise<string> {
-    return window.api.aiProcess(action, text)
+  public async processText(request: AiProcessRequest): Promise<string> {
+    return window.api.aiProcess(request)
   }
 }
 

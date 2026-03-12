@@ -4,6 +4,7 @@ import Toolbar from '../../renderer/components/Toolbar'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
 import { useCompileStore } from '../../renderer/store/useCompileStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
+import { usePdfStore } from '../../renderer/store/usePdfStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 
 vi.mock('../../renderer/components/OmniSearch', () => ({
@@ -28,6 +29,23 @@ beforeEach(() => {
   })
   useCompileStore.setState({
     compileStatus: 'idle'
+  })
+  useProjectStore.setState({
+    projectRoot: null
+  })
+  usePdfStore.setState({
+    zoomLevel: 100,
+    currentPage: 1,
+    numPages: 0,
+    fitRequest: null
+  })
+  useSettingsStore.setState({
+    settings: {
+      ...useSettingsStore.getState().settings,
+      aiEnabled: false,
+      aiProvider: '',
+      showPdfToolbarControls: true
+    }
   })
   vi.clearAllMocks()
 })
@@ -108,5 +126,25 @@ describe('Toolbar', () => {
     expect(screen.queryByTitle(/Sync PDF to Code/)).not.toBeInTheDocument()
     expect(screen.queryByTitle(/Sync Code to PDF/)).not.toBeInTheDocument()
     expect(screen.queryByTitle(/Zoom level/)).not.toBeInTheDocument()
+  })
+
+  it('renders fractional zoom values as integer percentages', () => {
+    usePdfStore.setState({ zoomLevel: 92.00965826511386 })
+
+    render(<Toolbar {...defaultProps} />)
+
+    expect(screen.getByTitle(/Zoom level/)).toHaveTextContent('92%')
+  })
+
+  it('highlights the rounded preset when opening the zoom dropdown', () => {
+    usePdfStore.setState({ zoomLevel: 99.6 })
+
+    render(<Toolbar {...defaultProps} />)
+    fireEvent.click(screen.getByTitle(/Zoom level/))
+
+    const presetButtons = screen.getAllByRole('button', { name: '100%' })
+    expect(
+      presetButtons.some((button) => button.classList.contains('zoom-preset-active'))
+    ).toBe(true)
   })
 })

@@ -371,7 +371,11 @@ body,
 
 /* Toolbar — acts as the custom title bar (native frame is hidden) */
 .toolbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  position: relative;
+  z-index: 40;
+  isolation: isolate;
   align-items: center;
   gap: 8px;
   min-height: 40px;
@@ -413,18 +417,20 @@ body,
 }
 
 .toolbar-left {
-  flex: 1 1 auto;
+  width: 100%;
+  justify-self: start;
 }
 
 .toolbar-center {
-  flex: 0 0 auto;
   min-width: 0;
   display: flex;
   justify-content: center;
+  justify-self: center;
 }
 
 .toolbar-search-slot {
   display: flex;
+  flex: 1 1 auto;
   align-items: center;
   min-width: 0;
   margin-left: 4px;
@@ -517,7 +523,7 @@ body,
   position: absolute;
   top: 100%;
   left: 0;
-  z-index: 100;
+  z-index: 200;
   min-width: 180px;
   margin-top: 4px;
   padding: 6px;
@@ -544,7 +550,8 @@ body,
 }
 
 .toolbar-right {
-  margin-left: auto;
+  justify-self: end;
+  overflow: visible;
 }
 
 .toolbar .file-name {
@@ -4654,6 +4661,7 @@ body,
 
 .zoom-dropdown {
   position: relative;
+  overflow: visible;
 }
 
 .zoom-dropdown-content {

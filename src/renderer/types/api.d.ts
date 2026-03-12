@@ -1,5 +1,8 @@
 import {
   AppCommandId,
+  AiContextEntry,
+  AiCustomProcessRequest,
+  AiProcessRequest,
   Diagnostic,
   SyncTeXForwardResult,
   SyncTeXInverseResult,
@@ -167,11 +170,9 @@ export interface ElectronAPI {
   aiGenerate(input: string, provider: string, model: string): Promise<{ latex: string }>
   aiSaveApiKey(provider: string, apiKey: string): Promise<{ success: boolean }>
   aiHasApiKey(provider: string): Promise<boolean>
-  aiProcess(
-    action: 'fix' | 'academic' | 'summarize' | 'longer' | 'shorter',
-    text: string
-  ): Promise<string>
-  aiProcessCustom(command: string, text: string): Promise<string>
+  aiProcess(request: AiProcessRequest): Promise<string>
+  aiProcessCustom(request: AiCustomProcessRequest): Promise<string>
+  aiUpdateContext(filePath: string, content: string): Promise<AiContextEntry>
 
   // Document Structure (fallback outline)
   getDocumentOutline(filePath: string, content: string): Promise<SectionNode[]>

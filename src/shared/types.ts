@@ -215,6 +215,39 @@ export interface UserSettings {
   scrollSyncEnabled?: boolean
 }
 
+export type AiAction = 'fix' | 'academic' | 'summarize' | 'longer' | 'shorter'
+
+export interface AiLightContext {
+  filePath: string
+  sectionPath: string[]
+  outline: string[]
+  beforeSelection: string
+  afterSelection: string
+}
+
+export interface AiContextEntry {
+  filePath: string
+  contentHash: string
+  generatedAt: string
+  summary: string
+}
+
+export interface AiProcessRequest {
+  action: AiAction
+  selectedText: string
+  filePath: string
+  lightContext: AiLightContext
+  summaryContext: AiContextEntry | null
+}
+
+export interface AiCustomProcessRequest {
+  command: string
+  selectedText: string
+  filePath: string
+  lightContext: AiLightContext
+  summaryContext: AiContextEntry | null
+}
+
 export interface CitationGroup {
   id: string
   name: string
