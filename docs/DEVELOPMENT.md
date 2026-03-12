@@ -28,6 +28,9 @@ npm run package:win
 
 Requires Node.js 20+ and a Tectonic binary in `resources/bin/{linux,mac,win}/`. The Linux binary is included; see [PACKAGING.md](PACKAGING.md) for downloading Windows/macOS binaries.
 
+Bundled and generated open-source notice artifacts are kept in
+`resources/licenses/` and are committed in the repository alongside the app.
+
 ## All Commands
 
 ```bash
@@ -47,6 +50,7 @@ npm run lint             # Run ESLint on src/
 npm run lint:fix         # Auto-fix ESLint issues
 npm run format           # Format with Prettier
 npm run format:check     # Check formatting without modifying
+npm run licenses:generate # Regenerate bundled third-party notice files
 
 # Packaging
 npm run package:linux    # Build + create AppImage
@@ -58,6 +62,13 @@ npm run build:cli        # Compile CLI to out/cli/
 npm run build:mcp        # Compile MCP server to out/mcp/
 npm run mcp              # Start the MCP server (stdio transport)
 ```
+
+## License Notices
+
+Run `npm run licenses:generate` after dependency or license changes, and before
+packaging or release preparation if the bundled notice artifacts changed. This
+refreshes `resources/licenses/THIRD-PARTY-NOTICES.txt` and the copied
+Electron/Chromium notices file.
 
 ## Check Suite
 

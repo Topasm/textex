@@ -57,7 +57,9 @@ Runs inside a sandboxed Chromium tab.
 - Managed by `TexLabManager` singleton (`src/main/texlab.ts`) with auto-restart
   (up to 3 retries with backoff).
 - Users can override the bundled binary via the `texlabPath` setting.
-- GPL license text and attribution bundled in `resources/licenses/`.
+- Bundled notices in `resources/licenses/` include the TexLab GPL text/notice,
+  generated third-party notices, and Electron/Chromium runtime notices.
+- These notice files are surfaced in-app via `Help > Open Source Licenses`.
 
 **IPC flow for LSP:**
 ```

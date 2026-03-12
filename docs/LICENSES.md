@@ -1,6 +1,14 @@
 # Third-Party Licenses
 
-TextEx is built on these open-source projects:
+This document is a human-readable summary of notable third-party software used
+by TextEx. The authoritative bundled notice set lives in `resources/licenses/`,
+including `THIRD-PARTY-NOTICES.txt`, `ELECTRON-LICENSES.chromium.html`,
+`TEXLAB-NOTICE.txt`, and `TEXLAB-GPL-3.0.txt`.
+
+Pandoc is referenced below as an optional external dependency for export
+workflows. It is not bundled inside the app.
+
+TextEx is built on or integrates with these open-source projects:
 
 | Component | Source | License |
 |-----------|--------|---------|
@@ -13,9 +21,11 @@ TextEx is built on these open-source projects:
 | [electron-vite](https://electron-vite.org/) | Build tooling for Electron + Vite | MIT |
 | [electron-builder](https://www.electron.build/) | Cross-platform packaging and distribution | MIT |
 | [electron-updater](https://www.electron.build/auto-update) | Seamless in-app auto-updates | MIT |
+| [lucide-react](https://lucide.dev/) | Icon library used in the UI | ISC |
 | [simple-git](https://github.com/steveukx/git-js) | Git CLI wrapper for Node.js | MIT |
 | [nspell](https://github.com/wooorm/nspell) | Hunspell-compatible spell checker | MIT |
-| [Pandoc](https://pandoc.org/) | Universal document converter (for export) | GPL-2.0 |
+| [dictionary-en](https://github.com/wooorm/dictionaries/tree/main/dictionaries/en) | Bundled English Hunspell dictionary data | MIT AND BSD |
+| [Pandoc](https://pandoc.org/) | Optional external document converter for export | GPL-2.0 |
 | [Commander.js](https://github.com/tj/commander.js) | CLI argument parsing | MIT |
 | [chokidar](https://github.com/paulmillr/chokidar) | File watching for CLI `--watch` mode | MIT |
 | [MCP SDK](https://github.com/modelcontextprotocol/sdk) | Model Context Protocol server framework | MIT |

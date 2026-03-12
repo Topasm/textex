@@ -60,8 +60,8 @@ Or right-click the app > **Open** > **Open** in Gatekeeper.
 **Linux:**
 Make the AppImage executable:
 ```bash
-chmod +x TextEx-1.0.0.AppImage
-./TextEx-1.0.0.AppImage
+chmod +x TextEx-1.0.1.AppImage
+./TextEx-1.0.1.AppImage
 ```
 
 ---
@@ -185,6 +185,14 @@ Enable **Scroll Sync** in Settings > Appearance to keep the editor and PDF align
 - [MCP Server](docs/MCP.md)
 - [Licenses](docs/LICENSES.md)
 - [TODO / Status](docs/TODO.md)
+
+## Open-Source Notices
+
+Open-source notices are available in the app via `Help > Open Source Licenses`.
+The bundled notice artifacts live in `resources/licenses/`, including
+`THIRD-PARTY-NOTICES.txt`, `ELECTRON-LICENSES.chromium.html`, and the TexLab GPL
+files. [docs/LICENSES.md](docs/LICENSES.md) is a human-readable summary, not the
+full bundled notice set.
 
 ## License
 

@@ -75,7 +75,7 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
 
         {/* Footer */}
         <div className="modal-footer">
-          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>TexTex v1.0.0</span>
+          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>TextEx v1.0.1</span>
           <span
             style={{
               fontSize: 12,

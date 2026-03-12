@@ -31,6 +31,8 @@
 |   |       +-- tectonic
 |   |       +-- texlab
 |   +-- licenses/                  # Third-party license files
+|   |   +-- THIRD-PARTY-NOTICES.txt # Generated bundled notice summary
+|   |   +-- ELECTRON-LICENSES.chromium.html # Electron/Chromium embedded runtime notices
 |   |   +-- TEXLAB-GPL-3.0.txt    # Full GPL-3.0 license text
 |   |   +-- TEXLAB-NOTICE.txt     # Attribution & aggregate notice
 |   +-- dictionaries/             # Spell check dictionaries

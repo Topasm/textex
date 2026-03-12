@@ -159,7 +159,7 @@ The Linux AppImage was successfully built on a headless x86_64 Linux server
 **Output:**
 ```
 dist/
-├── TextEx-1.0.0.AppImage   (155 MB, executable)
+├── TextEx-1.0.1.AppImage   (155 MB, executable)
 ├── latest-linux.yml         (auto-update manifest)
 ├── builder-debug.yml
 └── linux-unpacked/          (uncompressed app directory)
@@ -204,7 +204,7 @@ Cross-compilation from Linux is not supported by electron-builder for DMG target
 
 | Output | Size |
 |---|---|
-| `dist/TextEx-1.0.0.AppImage` | 155 MB |
+| `dist/TextEx-1.0.1.AppImage` | 155 MB |
 | `dist/linux-unpacked/` (uncompressed) | ~255 MB |
 
 ### Component Breakdown (approximate)
