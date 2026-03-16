@@ -305,9 +305,7 @@ export const AiTab = () => {
                         </span>
                       )}
                       {!cliChecking && cliAvailable === true && (
-                        <span className="settings-configured-tag">
-                          {t('settings.ai.cliFound')}
-                        </span>
+                        <span className="settings-configured-tag">{t('settings.ai.cliFound')}</span>
                       )}
                       {!cliChecking && cliAvailable === false && (
                         <span className="settings-status-text error settings-status-inline">
@@ -325,9 +323,7 @@ export const AiTab = () => {
                   <div>
                     <div className="settings-flex-row-start">
                       <Key size={16} className="settings-icon-secondary" />
-                      <h3 className="settings-heading settings-no-mb">
-                        {t('settings.ai.apiKey')}
-                      </h3>
+                      <h3 className="settings-heading settings-no-mb">{t('settings.ai.apiKey')}</h3>
                       {hasKey && !keySaved && (
                         <span className="settings-configured-tag">
                           {t('settings.ai.configured')}
@@ -358,9 +354,7 @@ export const AiTab = () => {
                           type={showKey ? 'text' : 'password'}
                           value={apiKey}
                           onChange={(e) => setApiKey(e.target.value)}
-                          placeholder={
-                            hasKey ? t('settings.ai.enterNewKey') : providerInfo.keyHint
-                          }
+                          placeholder={hasKey ? t('settings.ai.enterNewKey') : providerInfo.keyHint}
                           className="settings-input settings-input-pr"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') handleSaveKey()

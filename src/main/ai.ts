@@ -168,11 +168,7 @@ function getCliEnv(): NodeJS.ProcessEnv {
   }
 }
 
-async function callClaudeCli(
-  input: string,
-  model: string,
-  systemPrompt: string
-): Promise<string> {
+async function callClaudeCli(input: string, model: string, systemPrompt: string): Promise<string> {
   const modelArg = model || DEFAULT_MODELS['claude-cli']
   const combinedPrompt = `${systemPrompt}\n\n${input}`
 
