@@ -1,4 +1,4 @@
-import { execFile } from 'child_process'
+import { execFile, spawn } from 'child_process'
 import { promisify } from 'util'
 import os from 'os'
 import path from 'path'
@@ -168,17 +168,47 @@ function getCliEnv(): NodeJS.ProcessEnv {
   }
 }
 
-async function callClaudeCli(input: string, model: string, systemPrompt: string): Promise<string> {
+function callClaudeCli(input: string, model: string, systemPrompt: string): Promise<string> {
   const modelArg = model || DEFAULT_MODELS['claude-cli']
   const combinedPrompt = `${systemPrompt}\n\n${input}`
 
-  const { stdout } = await execFileAsync('claude', ['-p', combinedPrompt, '--model', modelArg], {
-    env: getCliEnv(),
-    timeout: 120_000,
-    maxBuffer: 10 * 1024 * 1024
-  })
+  return new Promise((resolve, reject) => {
+    const child = spawn('claude', ['-p', combinedPrompt, '--model', modelArg], {
+      env: getCliEnv(),
+      stdio: ['pipe', 'pipe', 'pipe']
+    })
 
-  return stripCodeFences(stdout)
+    let stdout = ''
+    let stderr = ''
+    child.stdout.on('data', (d: Buffer) => {
+      stdout += d.toString()
+    })
+    child.stderr.on('data', (d: Buffer) => {
+      stderr += d.toString()
+    })
+
+    const timer = setTimeout(() => {
+      child.kill()
+      reject(new Error('Claude CLI timed out after 120s'))
+    }, 120_000)
+
+    child.on('close', (code) => {
+      clearTimeout(timer)
+      if (code === 0) {
+        resolve(stripCodeFences(stdout))
+      } else {
+        reject(new Error(stderr.trim() || `Claude CLI exited with code ${code}`))
+      }
+    })
+
+    child.on('error', (err) => {
+      clearTimeout(timer)
+      reject(err)
+    })
+
+    // Close stdin so the CLI doesn't wait for input
+    child.stdin.end()
+  })
 }
 
 export async function checkClaudeCliAvailable(): Promise<boolean> {

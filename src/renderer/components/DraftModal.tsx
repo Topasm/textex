@@ -86,7 +86,9 @@ export const DraftModal: React.FC<DraftModalProps> = ({
         ? 'Anthropic'
         : aiProvider === 'gemini'
           ? 'Gemini'
-          : ''
+          : aiProvider === 'claude-cli'
+            ? 'Claude CLI'
+            : ''
   const providerLabel = providerName
     ? aiModel
       ? `${providerName} / ${aiModel}`

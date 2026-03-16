@@ -18,7 +18,11 @@ const NO_TIMEOUT_CHANNELS = new Set<string>([
   'fs:open-directory',
   'fs:create-template-project',
   'export:convert',
-  'templates:import-zip'
+  'templates:import-zip',
+  'ai:generate',
+  'ai:process',
+  'ai:process-custom',
+  'ai:update-context'
 ])
 
 /**
