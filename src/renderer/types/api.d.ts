@@ -173,6 +173,7 @@ export interface ElectronAPI {
   aiProcess(request: AiProcessRequest): Promise<string>
   aiProcessCustom(request: AiCustomProcessRequest): Promise<string>
   aiUpdateContext(filePath: string, content: string): Promise<AiContextEntry>
+  aiCheckCli(): Promise<boolean>
 
   // Document Structure (fallback outline)
   getDocumentOutline(filePath: string, content: string): Promise<SectionNode[]>

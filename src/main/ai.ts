@@ -1,3 +1,7 @@
+import { execFile } from 'child_process'
+import { promisify } from 'util'
+import os from 'os'
+import path from 'path'
 import { loadSettings } from './settings'
 import {
   AiContextEntry,
@@ -10,7 +14,7 @@ import { hashTextContent } from '../shared/hash'
 
 interface GenerateLatexOptions {
   input: string
-  provider: 'openai' | 'anthropic' | 'gemini'
+  provider: 'openai' | 'anthropic' | 'gemini' | 'claude-cli'
   model: string
 }
 
@@ -24,7 +28,8 @@ interface ThinkingConfig {
 const DEFAULT_MODELS: Record<string, string> = {
   openai: 'gpt-5.4',
   anthropic: 'claude-sonnet-4-6',
-  gemini: 'gemini-3.1-pro-preview'
+  gemini: 'gemini-3.1-pro-preview',
+  'claude-cli': 'sonnet'
 }
 
 // ---- Default prompts (used when user hasn't customized) ----
@@ -144,6 +149,52 @@ async function callAIAPI(
   const text = responseExtractor(data)
   if (!text) throw new Error(`No text in ${providerName} response`)
   return stripCodeFences(text)
+}
+
+// ---- Claude CLI ----
+
+const execFileAsync = promisify(execFile)
+
+function getCliEnv(): NodeJS.ProcessEnv {
+  const extraPaths = [
+    path.join(os.homedir(), '.local', 'bin'),
+    '/opt/homebrew/bin',
+    '/usr/local/bin'
+  ]
+  const currentPath = process.env.PATH || ''
+  return {
+    ...process.env,
+    PATH: [...extraPaths, currentPath].join(path.delimiter)
+  }
+}
+
+async function callClaudeCli(
+  input: string,
+  model: string,
+  systemPrompt: string
+): Promise<string> {
+  const modelArg = model || DEFAULT_MODELS['claude-cli']
+  const combinedPrompt = `${systemPrompt}\n\n${input}`
+
+  const { stdout } = await execFileAsync('claude', ['-p', combinedPrompt, '--model', modelArg], {
+    env: getCliEnv(),
+    timeout: 120_000,
+    maxBuffer: 10 * 1024 * 1024
+  })
+
+  return stripCodeFences(stdout)
+}
+
+export async function checkClaudeCliAvailable(): Promise<boolean> {
+  try {
+    await execFileAsync('claude', ['--version'], {
+      env: getCliEnv(),
+      timeout: 5_000
+    })
+    return true
+  } catch {
+    return false
+  }
 }
 
 // ---- Provider calls ----
@@ -271,6 +322,8 @@ function callProvider(
       return callAnthropic(input, model, apiKey, systemPrompt, thinking)
     case 'gemini':
       return callGemini(input, model, apiKey, systemPrompt, thinking)
+    case 'claude-cli':
+      return callClaudeCli(input, model, systemPrompt)
     default:
       throw new Error(`Unknown AI provider: ${provider}`)
   }
@@ -280,8 +333,10 @@ function callProvider(
 
 export async function generateLatex(options: GenerateLatexOptions): Promise<string> {
   const settings = await loadSettings()
-  const apiKey = settings.aiApiKey
-  if (!apiKey) throw new Error(`No API key configured for ${options.provider}`)
+  const apiKey = settings.aiApiKey ?? ''
+  if (options.provider !== 'claude-cli' && !apiKey) {
+    throw new Error(`No API key configured for ${options.provider}`)
+  }
 
   const systemPrompt = settings.aiPromptGenerate?.trim() || DEFAULT_GENERATE_PROMPT
   const thinking = getThinkingConfig(settings)
@@ -307,8 +362,10 @@ export async function processText(
 
   if (!activeProvider) throw new Error('No AI provider configured')
 
-  const apiKey = settings.aiApiKey
-  if (!apiKey) throw new Error(`No API key configured for ${activeProvider}`)
+  const apiKey = settings.aiApiKey ?? ''
+  if (activeProvider !== 'claude-cli' && !apiKey) {
+    throw new Error(`No API key configured for ${activeProvider}`)
+  }
 
   const actionPrompt = getActionPrompt(request.action, settings)
   const userPrompt = buildSelectionPrompt(
@@ -340,8 +397,10 @@ export async function processTextWithCommand(
 
   if (!activeProvider) throw new Error('No AI provider configured')
 
-  const apiKey = settings.aiApiKey
-  if (!apiKey) throw new Error(`No API key configured for ${activeProvider}`)
+  const apiKey = settings.aiApiKey ?? ''
+  if (activeProvider !== 'claude-cli' && !apiKey) {
+    throw new Error(`No API key configured for ${activeProvider}`)
+  }
 
   const trimmedCommand = request.command.trim()
   if (!trimmedCommand) throw new Error('AI command is required')
@@ -376,8 +435,10 @@ export async function updateDocumentContext(
 
   if (!activeProvider) throw new Error('No AI provider configured')
 
-  const apiKey = settings.aiApiKey
-  if (!apiKey) throw new Error(`No API key configured for ${activeProvider}`)
+  const apiKey = settings.aiApiKey ?? ''
+  if (activeProvider !== 'claude-cli' && !apiKey) {
+    throw new Error(`No API key configured for ${activeProvider}`)
+  }
 
   const thinking = getThinkingConfig(settings)
   const summary = await callProvider(

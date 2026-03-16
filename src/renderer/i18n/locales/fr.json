@@ -192,7 +192,12 @@
       "promptAcademic": "Réécriture académique",
       "promptSummarize": "Résumer",
       "promptLonger": "Allonger",
-      "promptShorter": "Raccourcir"
+      "promptShorter": "Raccourcir",
+      "cliStatus": "Statut CLI",
+      "cliStatusDesc": "Utilise le CLI Claude Code pour les fonctions IA. Aucune clé API nécessaire — utilise votre abonnement Claude existant.",
+      "cliChecking": "Recherche du CLI Claude...",
+      "cliFound": "CLI Claude détecté",
+      "cliNotFound": "CLI Claude introuvable. Installez Claude Code et assurez-vous qu'il est dans votre PATH."
     },
     "integrations": {
       "zotero": "Intégration Zotero",

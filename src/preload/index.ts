@@ -46,6 +46,7 @@ const DEDUP_CHANNELS = new Set<string>([
   'export:formats',
   'lsp:status',
   'ai:has-api-key',
+  'ai:check-cli',
   'structure:outline',
   'history:list',
   'zotero:probe',
@@ -298,6 +299,7 @@ contextBridge.exposeInMainWorld('api', {
   aiProcessCustom: (request) => invoke('ai:process-custom', request),
   aiUpdateContext: (filePath: string, content: string) =>
     invoke('ai:update-context', filePath, content),
+  aiCheckCli: () => invoke('ai:check-cli'),
 
   // Document Structure (fallback outline)
   getDocumentOutline: (filePath: string, content: string) =>

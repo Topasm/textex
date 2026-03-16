@@ -172,6 +172,7 @@ export interface IpcChannelMap {
   'ai:update-context': [[filePath: string, content: string], AiContextEntry]
   'ai:save-api-key': [[provider: string, apiKey: string], SuccessResult]
   'ai:has-api-key': [[provider: string], boolean]
+  'ai:check-cli': [[], boolean]
 
   // Document Structure
   'structure:outline': [[filePath: string, content: string], SectionNode[]]

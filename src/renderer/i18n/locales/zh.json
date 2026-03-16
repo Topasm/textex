@@ -192,7 +192,12 @@
       "promptAcademic": "学术改写",
       "promptSummarize": "摘要",
       "promptLonger": "加长",
-      "promptShorter": "缩短"
+      "promptShorter": "缩短",
+      "cliStatus": "CLI 状态",
+      "cliStatusDesc": "使用 Claude Code CLI 提供 AI 功能。无需 API 密钥，使用您现有的 Claude 订阅。",
+      "cliChecking": "正在检查 Claude CLI...",
+      "cliFound": "已检测到 Claude CLI",
+      "cliNotFound": "未找到 Claude CLI。请安装 Claude Code 并确保其在 PATH 中。"
     },
     "integrations": {
       "zotero": "Zotero 集成",

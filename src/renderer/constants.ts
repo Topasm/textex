@@ -63,6 +63,11 @@ export const AI_MODEL_OPTIONS: Record<string, { value: string; label: string }[]
     { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
     { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
     { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash' }
+  ],
+  'claude-cli': [
+    { value: 'sonnet', label: 'Claude Sonnet' },
+    { value: 'opus', label: 'Claude Opus' },
+    { value: 'haiku', label: 'Claude Haiku' }
   ]
 }
 
@@ -74,7 +79,12 @@ export const AI_PROVIDER_INFO: Record<string, { label: string; keyHint: string; 
       keyHint: 'sk-ant-...',
       keyUrl: 'https://console.anthropic.com/settings/keys'
     },
-    gemini: { label: 'Gemini', keyHint: 'AIza...', keyUrl: 'https://aistudio.google.com/apikey' }
+    gemini: { label: 'Gemini', keyHint: 'AIza...', keyUrl: 'https://aistudio.google.com/apikey' },
+    'claude-cli': {
+      label: 'Claude CLI',
+      keyHint: '',
+      keyUrl: 'https://docs.anthropic.com/en/docs/claude-code'
+    }
   }
 
 // ── Hidden editor actions ────────────────────────────────────

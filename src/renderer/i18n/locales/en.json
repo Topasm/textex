@@ -192,7 +192,12 @@
       "promptAcademic": "Academic Rewrite",
       "promptSummarize": "Summarize",
       "promptLonger": "Make Longer",
-      "promptShorter": "Make Shorter"
+      "promptShorter": "Make Shorter",
+      "cliStatus": "CLI Status",
+      "cliStatusDesc": "Uses the Claude Code CLI for AI features. No API key needed — uses your existing Claude subscription.",
+      "cliChecking": "Checking for Claude CLI...",
+      "cliFound": "Claude CLI detected",
+      "cliNotFound": "Claude CLI not found. Install Claude Code and ensure it is in your PATH."
     },
     "integrations": {
       "zotero": "Zotero Integration",

@@ -140,6 +140,8 @@ export const AiTab = () => {
   const [keySaved, setKeySaved] = useState(false)
   const [hasKey, setHasKey] = useState(false)
   const [keyError, setKeyError] = useState<string | null>(null)
+  const [cliAvailable, setCliAvailable] = useState<boolean | null>(null)
+  const [cliChecking, setCliChecking] = useState(false)
 
   const provider = settings.aiProvider
   const providerInfo = provider ? AI_PROVIDER_INFO[provider] : null
@@ -177,6 +179,20 @@ export const AiTab = () => {
 
     return () => {
       cancelled = true
+    }
+  }, [provider])
+
+  // Check Claude CLI availability
+  useEffect(() => {
+    if (provider === 'claude-cli') {
+      setCliChecking(true)
+      window.api
+        .aiCheckCli()
+        .then(setCliAvailable)
+        .catch(() => setCliAvailable(false))
+        .finally(() => setCliChecking(false))
+    } else {
+      setCliAvailable(null)
     }
   }, [provider])
 
@@ -225,7 +241,7 @@ export const AiTab = () => {
             <h3 className="settings-heading">{t('settings.ai.provider')}</h3>
             <p className="settings-subheading">{t('settings.ai.providerDesc')}</p>
             <div className="settings-theme-grid settings-field-mt-sm">
-              {(['openai', 'anthropic', 'gemini'] as const).map((p) => (
+              {(['openai', 'anthropic', 'gemini', 'claude-cli'] as const).map((p) => (
                 <button
                   key={p}
                   onClick={() => {
@@ -275,70 +291,106 @@ export const AiTab = () => {
                 </div>
               </div>
 
-              <hr className="settings-divider" />
-
-              {/* API Key */}
-              <div>
-                <div className="settings-flex-row-start">
-                  <Key size={16} className="settings-icon-secondary" />
-                  <h3 className="settings-heading settings-no-mb">{t('settings.ai.apiKey')}</h3>
-                  {hasKey && !keySaved && (
-                    <span className="settings-configured-tag">{t('settings.ai.configured')}</span>
-                  )}
-                  {keySaved && (
-                    <span className="settings-configured-tag settings-tag-saved">
-                      {t('settings.ai.saved')}
-                    </span>
-                  )}
-                </div>
-                <p className="settings-subheading">
-                  {t('settings.ai.apiKeyDesc', { provider: providerInfo.label })}{' '}
-                  <a
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      window.api.openExternal(providerInfo.keyUrl)
-                    }}
-                    className="settings-accent-link"
-                  >
-                    {t('settings.ai.getKey')}
-                  </a>
-                </p>
-                <div className="settings-key-row settings-field-mt-sm">
-                  <div className="settings-key-input-wrapper">
-                    <input
-                      type={showKey ? 'text' : 'password'}
-                      value={apiKey}
-                      onChange={(e) => setApiKey(e.target.value)}
-                      placeholder={hasKey ? t('settings.ai.enterNewKey') : providerInfo.keyHint}
-                      className="settings-input settings-input-pr"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleSaveKey()
-                      }}
-                    />
-                    <button
-                      className="settings-key-toggle-btn"
-                      onClick={() => setShowKey(!showKey)}
-                      title={showKey ? t('settings.ai.hideKey') : t('settings.ai.showKey')}
-                    >
-                      {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
+              {provider === 'claude-cli' ? (
+                <>
+                  <hr className="settings-divider" />
+                  {/* CLI Status */}
+                  <div>
+                    <h3 className="settings-heading">{t('settings.ai.cliStatus')}</h3>
+                    <p className="settings-subheading">{t('settings.ai.cliStatusDesc')}</p>
+                    <div className="settings-field-mt-sm">
+                      {cliChecking && (
+                        <span className="settings-status-text settings-status-inline">
+                          {t('settings.ai.cliChecking')}
+                        </span>
+                      )}
+                      {!cliChecking && cliAvailable === true && (
+                        <span className="settings-configured-tag">
+                          {t('settings.ai.cliFound')}
+                        </span>
+                      )}
+                      {!cliChecking && cliAvailable === false && (
+                        <span className="settings-status-text error settings-status-inline">
+                          <span className="settings-status-dot error" />
+                          {t('settings.ai.cliNotFound')}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <button
-                    className="primary-button settings-nowrap"
-                    onClick={handleSaveKey}
-                    disabled={!apiKey.trim()}
-                  >
-                    {t('settings.ai.saveKey')}
-                  </button>
-                </div>
-                {keyError && (
-                  <span className="settings-status-text error settings-status-inline">
-                    <span className="settings-status-dot error" />
-                    {t(`settings.ai.${keyError}`)}
-                  </span>
-                )}
-              </div>
+                </>
+              ) : (
+                <>
+                  <hr className="settings-divider" />
+                  {/* API Key */}
+                  <div>
+                    <div className="settings-flex-row-start">
+                      <Key size={16} className="settings-icon-secondary" />
+                      <h3 className="settings-heading settings-no-mb">
+                        {t('settings.ai.apiKey')}
+                      </h3>
+                      {hasKey && !keySaved && (
+                        <span className="settings-configured-tag">
+                          {t('settings.ai.configured')}
+                        </span>
+                      )}
+                      {keySaved && (
+                        <span className="settings-configured-tag settings-tag-saved">
+                          {t('settings.ai.saved')}
+                        </span>
+                      )}
+                    </div>
+                    <p className="settings-subheading">
+                      {t('settings.ai.apiKeyDesc', { provider: providerInfo.label })}{' '}
+                      <a
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          window.api.openExternal(providerInfo.keyUrl)
+                        }}
+                        className="settings-accent-link"
+                      >
+                        {t('settings.ai.getKey')}
+                      </a>
+                    </p>
+                    <div className="settings-key-row settings-field-mt-sm">
+                      <div className="settings-key-input-wrapper">
+                        <input
+                          type={showKey ? 'text' : 'password'}
+                          value={apiKey}
+                          onChange={(e) => setApiKey(e.target.value)}
+                          placeholder={
+                            hasKey ? t('settings.ai.enterNewKey') : providerInfo.keyHint
+                          }
+                          className="settings-input settings-input-pr"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveKey()
+                          }}
+                        />
+                        <button
+                          className="settings-key-toggle-btn"
+                          onClick={() => setShowKey(!showKey)}
+                          title={showKey ? t('settings.ai.hideKey') : t('settings.ai.showKey')}
+                        >
+                          {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                      <button
+                        className="primary-button settings-nowrap"
+                        onClick={handleSaveKey}
+                        disabled={!apiKey.trim()}
+                      >
+                        {t('settings.ai.saveKey')}
+                      </button>
+                    </div>
+                    {keyError && (
+                      <span className="settings-status-text error settings-status-inline">
+                        <span className="settings-status-dot error" />
+                        {t(`settings.ai.${keyError}`)}
+                      </span>
+                    )}
+                  </div>
+                </>
+              )}
             </>
           )}
 

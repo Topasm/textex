@@ -1,13 +1,24 @@
 import { ipcMain } from 'electron'
-import { generateLatex, processText, processTextWithCommand, updateDocumentContext } from '../ai'
+import {
+  generateLatex,
+  processText,
+  processTextWithCommand,
+  updateDocumentContext,
+  checkClaudeCliAvailable
+} from '../ai'
 import { loadSettings, saveSettings } from '../settings'
 import type { AiCustomProcessRequest, AiProcessRequest } from '../../shared/types'
 
 export function registerAiHandlers(): void {
   ipcMain.handle('ai:generate', async (_event, input: string, provider: string, model: string) => {
     if (!input || typeof input !== 'string') throw new Error('Input text is required')
-    if (provider !== 'openai' && provider !== 'anthropic' && provider !== 'gemini') {
-      throw new Error('Provider must be "openai", "anthropic", or "gemini"')
+    if (
+      provider !== 'openai' &&
+      provider !== 'anthropic' &&
+      provider !== 'gemini' &&
+      provider !== 'claude-cli'
+    ) {
+      throw new Error('Provider must be "openai", "anthropic", "gemini", or "claude-cli"')
     }
     const latex = await generateLatex({ input, provider, model: model || '' })
     return { latex }
@@ -38,7 +49,7 @@ export function registerAiHandlers(): void {
   ipcMain.handle('ai:save-api-key', async (_event, provider: string, apiKey: string) => {
     await saveSettings({
       aiApiKey: apiKey,
-      aiProvider: provider as 'openai' | 'anthropic' | 'gemini' | ''
+      aiProvider: provider as 'openai' | 'anthropic' | 'gemini' | 'claude-cli' | ''
     })
     return { success: true }
   })
@@ -46,5 +57,9 @@ export function registerAiHandlers(): void {
   ipcMain.handle('ai:has-api-key', async (_event, provider: string) => {
     const settings = await loadSettings()
     return !!settings.aiApiKey && settings.aiProvider === provider
+  })
+
+  ipcMain.handle('ai:check-cli', async () => {
+    return checkClaudeCliAvailable()
   })
 }

@@ -192,7 +192,12 @@
       "promptAcademic": "Akademische Umschreibung",
       "promptSummarize": "Zusammenfassen",
       "promptLonger": "Verlängern",
-      "promptShorter": "Verkürzen"
+      "promptShorter": "Verkürzen",
+      "cliStatus": "CLI-Status",
+      "cliStatusDesc": "Verwendet die Claude Code CLI für KI-Funktionen. Kein API-Schlüssel erforderlich — nutzt Ihr bestehendes Claude-Abonnement.",
+      "cliChecking": "Suche nach Claude CLI...",
+      "cliFound": "Claude CLI erkannt",
+      "cliNotFound": "Claude CLI nicht gefunden. Installieren Sie Claude Code und stellen Sie sicher, dass es im PATH ist."
     },
     "integrations": {
       "zotero": "Zotero-Integration",

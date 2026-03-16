@@ -181,7 +181,7 @@ export interface UserSettings {
   zoteroEnabled: boolean
   zoteroPort: number
   aiEnabled?: boolean
-  aiProvider: 'openai' | 'anthropic' | 'gemini' | ''
+  aiProvider: 'openai' | 'anthropic' | 'gemini' | 'claude-cli' | ''
   aiApiKey?: string
   aiModel: string
   aiThinkingEnabled?: boolean
