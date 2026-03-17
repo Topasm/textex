@@ -12,6 +12,16 @@ vi.mock('electron', () => ({
   app: appMock
 }))
 
+function expectedCacheDir(home: string): string {
+  if (process.platform === 'darwin') {
+    return path.join(home, 'Library', 'Caches', 'Tectonic')
+  }
+  if (process.platform === 'win32') {
+    return path.join(home, 'AppData', 'Local', 'Tectonic')
+  }
+  return path.join(home, '.cache', 'Tectonic')
+}
+
 describe('tectonic cache seeding', () => {
   beforeEach(() => {
     vi.resetModules()
@@ -31,8 +41,9 @@ describe('tectonic cache seeding', () => {
     try {
       const mod = await import('../../main/services/tectonicCache')
       const result = await mod.ensureTectonicCacheReady()
-      expect(result).toBe(path.join(home, '.cache', 'Tectonic'))
-      await expect(fs.access(path.join(home, '.cache', 'Tectonic'))).rejects.toThrow()
+      const expected = expectedCacheDir(home)
+      expect(result).toBe(expected)
+      await expect(fs.access(expected)).rejects.toThrow()
     } finally {
       process.chdir(originalCwd)
       process.env.HOME = originalHome
@@ -57,7 +68,7 @@ describe('tectonic cache seeding', () => {
     try {
       const mod = await import('../../main/services/tectonicCache')
       const result = await mod.ensureTectonicCacheReady()
-      expect(result).toBe(path.join(home, '.cache', 'Tectonic'))
+      expect(result).toBe(expectedCacheDir(home))
       await expect(fs.readFile(path.join(result, 'formats.dat'), 'utf-8')).resolves.toBe('seed')
     } finally {
       process.chdir(originalCwd)
