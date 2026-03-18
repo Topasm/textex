@@ -214,6 +214,8 @@
       "compilerTools": "Compiler & Tools",
       "autoCompile": "Auto Compile",
       "autoCompileDesc": "Automatically compile when saving via shortcuts",
+      "watchOpenFiles": "Watch Open Files",
+      "watchOpenFilesDesc": "Automatically reload files changed by external editors",
       "spellCheck": "Spell Check",
       "spellCheckDesc": "Highlight misspelled words while typing",
       "spellLanguage": "Language",
@@ -373,5 +375,10 @@
     "pathNotFound": "The selected folder does not exist or cannot be opened.",
     "pathSaveFailed": "Failed to update the project path.",
     "save": "Save"
+  },
+  "externalChange": {
+    "message": "\"{{file}}\" has been modified externally.",
+    "reload": "Reload",
+    "keep": "Keep Changes"
   }
 }

@@ -214,6 +214,8 @@
       "compilerTools": "Compiler & Werkzeuge",
       "autoCompile": "Automatische Kompilierung",
       "autoCompileDesc": "Beim Speichern über Tastenkürzel automatisch kompilieren",
+      "watchOpenFiles": "Geöffnete Dateien überwachen",
+      "watchOpenFilesDesc": "Von externen Editoren geänderte Dateien automatisch neu laden",
       "spellCheck": "Rechtschreibprüfung",
       "spellCheckDesc": "Falsch geschriebene Wörter beim Tippen hervorheben",
       "spellLanguage": "Sprache",
@@ -373,5 +375,10 @@
     "pathNotFound": "Der ausgewählte Ordner existiert nicht oder kann nicht geöffnet werden.",
     "pathSaveFailed": "Der Projektpfad konnte nicht aktualisiert werden.",
     "save": "Speichern"
+  },
+  "externalChange": {
+    "message": "\"{{file}}\" wurde extern geändert.",
+    "reload": "Neu laden",
+    "keep": "Änderungen behalten"
   }
 }

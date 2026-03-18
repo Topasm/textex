@@ -49,6 +49,7 @@ interface EditorState {
   requestInsertAtCursor: (text: string) => void
   clearPendingInsert: () => void
   setEditorInstance: (editor: monacoEditor.IStandaloneCodeEditor | null) => void
+  reloadFileContent: (filePath: string, newContent: string) => void
 }
 
 export type { OpenFileData }
@@ -194,7 +195,19 @@ export const useEditorStore = create<EditorState>()(
       clearPendingJump: () => set({ pendingJump: null }),
       requestInsertAtCursor: (text) => set({ pendingInsertText: text }),
       clearPendingInsert: () => set({ pendingInsertText: null }),
-      setEditorInstance: (editor) => set({ editorInstance: editor })
+      setEditorInstance: (editor) => set({ editorInstance: editor }),
+      reloadFileContent: (filePath, newContent) => {
+        const state = get()
+        const fileData = state.openFiles[filePath]
+        if (!fileData) return
+        const openFiles = { ...state.openFiles }
+        openFiles[filePath] = { ...fileData, content: newContent, isDirty: false }
+        if (state.activeFilePath === filePath) {
+          set({ openFiles, content: newContent, isDirty: false })
+        } else {
+          set({ openFiles })
+        }
+      }
     })),
     {
       name: 'textex-editor-session',

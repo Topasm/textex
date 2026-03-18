@@ -214,6 +214,8 @@
       "compilerTools": "Compilateur et outils",
       "autoCompile": "Compilation automatique",
       "autoCompileDesc": "Compiler automatiquement lors de l'enregistrement via les raccourcis",
+      "watchOpenFiles": "Surveiller les fichiers ouverts",
+      "watchOpenFilesDesc": "Recharger automatiquement les fichiers modifiés par des éditeurs externes",
       "spellCheck": "Vérification orthographique",
       "spellCheckDesc": "Surligner les mots mal orthographiés pendant la saisie",
       "spellLanguage": "Langue",
@@ -373,5 +375,10 @@
     "pathNotFound": "Le dossier sélectionné n'existe pas ou ne peut pas être ouvert.",
     "pathSaveFailed": "Impossible de mettre à jour le chemin du projet.",
     "save": "Enregistrer"
+  },
+  "externalChange": {
+    "message": "\"{{file}}\" a été modifié en externe.",
+    "reload": "Recharger",
+    "keep": "Conserver les modifications"
   }
 }

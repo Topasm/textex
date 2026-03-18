@@ -20,6 +20,8 @@ import { useAutoCompile } from './hooks/useAutoCompile'
 import { useFileOps } from './hooks/useFileOps'
 import { useSessionRestore } from './hooks/useSessionRestore'
 import { useIpcListeners } from './hooks/useIpcListeners'
+import { useExternalFileReload } from './hooks/useExternalFileReload'
+import ExternalChangeBanner from './components/ExternalChangeBanner'
 import { useGitAutoRefresh } from './hooks/useGitAutoRefresh'
 import { useBibAutoLoad } from './hooks/useBibAutoLoad'
 import { useLspLifecycle } from './hooks/useLspLifecycle'
@@ -172,7 +174,8 @@ function App() {
     useUiStore.setState({
       lspStatus: 'stopped',
       lspError: null,
-      documentSymbols: []
+      documentSymbols: [],
+      externalChangeConflicts: []
     })
   }, [])
 
@@ -243,7 +246,8 @@ function App() {
 
   // ---- Extracted hooks (formerly inline useEffect blocks) ----
   const sessionRestored = useSessionRestore()
-  useIpcListeners(projectRoot)
+  const handleExternalFileChange = useExternalFileReload(projectRoot)
+  useIpcListeners(projectRoot, handleExternalFileChange)
   useGitAutoRefresh(projectRoot, isGitRepo, gitEnabled)
   useBibAutoLoad(projectRoot)
   useLspLifecycle(projectRoot, lspEnabled, filePath)
@@ -379,6 +383,7 @@ function App() {
         />
       </Suspense>
       <UpdateNotification />
+      <ExternalChangeBanner />
       {showHomeScreen ? (
         <HomeScreen onOpenFolder={handleOpenFolder} onNewFromTemplate={handleOpenTemplateGallery} />
       ) : (

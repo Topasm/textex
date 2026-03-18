@@ -214,6 +214,8 @@
       "compilerTools": "Compilador y herramientas",
       "autoCompile": "Compilación automática",
       "autoCompileDesc": "Compilar automáticamente al guardar con atajos de teclado",
+      "watchOpenFiles": "Vigilar archivos abiertos",
+      "watchOpenFilesDesc": "Recargar automáticamente los archivos modificados por editores externos",
       "spellCheck": "Corrección ortográfica",
       "spellCheckDesc": "Resaltar palabras mal escritas al escribir",
       "spellLanguage": "Idioma",
@@ -373,5 +375,10 @@
     "pathNotFound": "La carpeta seleccionada no existe o no se puede abrir.",
     "pathSaveFailed": "No se pudo actualizar la ruta del proyecto.",
     "save": "Guardar"
+  },
+  "externalChange": {
+    "message": "\"{{file}}\" ha sido modificado externamente.",
+    "reload": "Recargar",
+    "keep": "Mantener cambios"
   }
 }

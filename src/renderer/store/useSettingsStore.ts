@@ -88,6 +88,7 @@ const defaultSettings: UserSettings = {
   vimMode: false,
   formatOnSave: true,
   autoCompile: true,
+  watchOpenFiles: true,
   mathPreviewEnabled: true,
   spellCheckEnabled: false,
   spellCheckLanguage: 'en-US',

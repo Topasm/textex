@@ -173,6 +173,7 @@ export interface UserSettings {
   theme: 'system' | 'dark' | 'light' | 'high-contrast' | 'glass'
   fontSize: number
   autoCompile: boolean
+  watchOpenFiles: boolean
   spellCheckEnabled: boolean
   spellCheckLanguage: string
   gitEnabled: boolean

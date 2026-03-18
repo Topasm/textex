@@ -12,7 +12,10 @@ import type { Diagnostic } from '../../shared/types'
  * - Diagnostics
  * - Directory watcher refresh
  */
-export function useIpcListeners(projectRoot: string | null): void {
+export function useIpcListeners(
+  projectRoot: string | null,
+  onFileChange?: (change: { type: string; filename: string }) => void
+): void {
   // Update event listeners
   useDisposable((store) => {
     window.api.onUpdateEvent('available', (version: unknown) => {
@@ -52,20 +55,21 @@ export function useIpcListeners(projectRoot: string | null): void {
     store.add(toDisposable(() => window.api.removeDiagnosticsListener()))
   }, [])
 
-  // Directory watcher refresh
+  // Directory watcher refresh + external file reload
   useDisposable(
     (store) => {
       if (!projectRoot) return
-      window.api.onDirectoryChanged(async () => {
+      window.api.onDirectoryChanged(async (change) => {
         try {
           const tree = await window.api.readDirectory(projectRoot)
           useProjectStore.getState().setDirectoryTree(tree)
         } catch {
           // ignore
         }
+        onFileChange?.(change)
       })
       store.add(toDisposable(() => window.api.removeDirectoryChangedListener()))
     },
-    [projectRoot]
+    [projectRoot, onFileChange]
   )
 }

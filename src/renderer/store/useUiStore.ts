@@ -32,6 +32,9 @@ interface UiState {
   omniSearchFocusRequested: boolean
   omniSearchFocusMode: 'cite' | 'zotero' | 'pdf' | 'tex' | null
 
+  // External file change conflicts
+  externalChangeConflicts: string[]
+
   // Actions
   setDraftModalOpen: (open: boolean) => void
   toggleDraftModal: () => void
@@ -46,6 +49,8 @@ interface UiState {
   setDocumentSymbols: (symbols: DocumentSymbolNode[]) => void
   requestOmniSearchFocus: (mode?: 'cite' | 'zotero' | 'pdf' | 'tex') => void
   clearOmniSearchFocus: () => void
+  addExternalChangeConflict: (filePath: string) => void
+  removeExternalChangeConflict: (filePath: string) => void
 }
 
 export const useUiStore = create<UiState>()(
@@ -61,6 +66,7 @@ export const useUiStore = create<UiState>()(
     documentSymbols: [],
     omniSearchFocusRequested: false,
     omniSearchFocusMode: null,
+    externalChangeConflicts: [],
 
     setDraftModalOpen: (isDraftModalOpen) => set({ isDraftModalOpen }),
     toggleDraftModal: () => set((state) => ({ isDraftModalOpen: !state.isDraftModalOpen })),
@@ -76,6 +82,16 @@ export const useUiStore = create<UiState>()(
     setDocumentSymbols: (documentSymbols) => set({ documentSymbols }),
     requestOmniSearchFocus: (mode) =>
       set({ omniSearchFocusRequested: true, omniSearchFocusMode: mode ?? 'cite' }),
-    clearOmniSearchFocus: () => set({ omniSearchFocusRequested: false, omniSearchFocusMode: null })
+    clearOmniSearchFocus: () => set({ omniSearchFocusRequested: false, omniSearchFocusMode: null }),
+    addExternalChangeConflict: (filePath) =>
+      set((state) => ({
+        externalChangeConflicts: state.externalChangeConflicts.includes(filePath)
+          ? state.externalChangeConflicts
+          : [...state.externalChangeConflicts, filePath]
+      })),
+    removeExternalChangeConflict: (filePath) =>
+      set((state) => ({
+        externalChangeConflicts: state.externalChangeConflicts.filter((p) => p !== filePath)
+      }))
   }))
 )

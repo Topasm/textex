@@ -29,6 +29,18 @@ export const AutomationTab = () => {
           </div>
           <div className="settings-row">
             <div>
+              <div className="settings-row-label">{t('settings.automation.watchOpenFiles')}</div>
+              <div className="settings-row-description">
+                {t('settings.automation.watchOpenFilesDesc')}
+              </div>
+            </div>
+            <Toggle
+              checked={settings.watchOpenFiles}
+              onChange={(checked) => updateSetting('watchOpenFiles', checked)}
+            />
+          </div>
+          <div className="settings-row">
+            <div>
               <div className="settings-row-label">{t('settings.automation.spellCheck')}</div>
               <div className="settings-row-description">
                 {t('settings.automation.spellCheckDesc')}
