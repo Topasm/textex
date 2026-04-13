@@ -204,7 +204,7 @@ jobs:
           ls -lh
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           draft: false
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') || github.event_name == 'workflow_dispatch' && inputs.prerelease == true }}
