@@ -55,12 +55,14 @@ const Toolbar = React.memo(function Toolbar({
     const editorState = useEditorStore.getState()
     if (!editorState.filePath) return
     if (import.meta.env.DEV)
+      // eslint-disable-next-line no-console
       console.log(
         `[SyncTeX UI] forward sync: cursorLine=${editorState.cursorLine}, file=${editorState.filePath}`
       )
     window.api
       .synctexForward(editorState.filePath, editorState.cursorLine)
       .then((result) => {
+        // eslint-disable-next-line no-console
         if (import.meta.env.DEV) console.log('[SyncTeX UI] forward sync result:', result)
         if (result) {
           usePdfStore.getState().setSynctexHighlight(result)
@@ -212,7 +214,12 @@ const Toolbar = React.memo(function Toolbar({
           {fileName}
         </span>
 
-        <button className="toolbar-btn" onClick={onToggleLog} title={t('toolbar.toggleLog')} aria-label={t('toolbar.toggleLog')}>
+        <button
+          className="toolbar-btn"
+          onClick={onToggleLog}
+          title={t('toolbar.toggleLog')}
+          aria-label={t('toolbar.toggleLog')}
+        >
           <ScrollText size={16} />
         </button>
       </div>

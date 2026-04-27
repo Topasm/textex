@@ -28,10 +28,17 @@ export default tseslint.config(
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
-      '@typescript-eslint/no-explicit-any': 'warn'
+      '@typescript-eslint/no-explicit-any': 'warn',
+      'no-console': ['warn', { allow: ['warn', 'error'] }]
     },
     settings: {
       react: { version: 'detect' }
+    }
+  },
+  {
+    files: ['src/cli/**/*.{ts,tsx}', 'src/__tests__/**/*.{ts,tsx}'],
+    rules: {
+      'no-console': 'off'
     }
   },
   prettier

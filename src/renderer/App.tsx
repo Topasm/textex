@@ -219,10 +219,7 @@ function App() {
 \\end{document}
 `
     try {
-      const result = await window.api.createTemplateProject(
-        'blank-project',
-        blankContent
-      )
+      const result = await window.api.createTemplateProject('blank-project', blankContent)
       if (result) {
         await openProject(result.projectPath)
       }
@@ -420,7 +417,11 @@ function App() {
       <UpdateNotification />
       <ExternalChangeBanner />
       {showHomeScreen ? (
-        <HomeScreen onOpenFolder={handleOpenFolder} onNewBlankProject={handleNewBlankProject} onNewFromTemplate={handleOpenTemplateGallery} />
+        <HomeScreen
+          onOpenFolder={handleOpenFolder}
+          onNewBlankProject={handleNewBlankProject}
+          onNewFromTemplate={handleOpenTemplateGallery}
+        />
       ) : (
         <div className="workspace">
           {sidebarPosition === 'left' && (isSidebarOpen || autoHideSidebar) && sidebarElement}

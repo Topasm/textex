@@ -241,7 +241,9 @@ export const EditorTab = () => {
         <div className="settings-column-group">
           <div className="settings-row">
             <div>
-              <div className="settings-row-label">{t('settings.editor.bracketPairColorization')}</div>
+              <div className="settings-row-label">
+                {t('settings.editor.bracketPairColorization')}
+              </div>
               <div className="settings-row-description">
                 {t('settings.editor.bracketPairColorizationDesc')}
               </div>
@@ -290,9 +292,7 @@ export const EditorTab = () => {
           <div className="settings-row">
             <div>
               <div className="settings-row-label">{t('settings.editor.minimap')}</div>
-              <div className="settings-row-description">
-                {t('settings.editor.minimapDesc')}
-              </div>
+              <div className="settings-row-description">{t('settings.editor.minimapDesc')}</div>
             </div>
             <Toggle
               checked={!!settings.minimapEnabled}

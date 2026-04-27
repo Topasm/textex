@@ -18,6 +18,8 @@ import {
 import { findRootFile } from '../shared/magicComments'
 import type { PdfSyncObject } from './utils/syncTexMath'
 
+const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV
+
 const gunzip = promisify(zlib.gunzip)
 
 // --- SyncTeX file loading with cache ---
@@ -120,7 +122,8 @@ export async function forwardSync(
   texFile: string,
   line: number
 ): Promise<SyncTeXForwardResult | null> {
-  console.log(`[SyncTeX] forwardSync called: file=${texFile}, line=${line}`)
+  // eslint-disable-next-line no-console
+  if (isDev) console.log(`[SyncTeX] forwardSync called: file=${texFile}, line=${line}`)
 
   const loaded = await loadSyncTexForFile(texFile)
   if (!loaded) {
@@ -140,7 +143,8 @@ export async function forwardSync(
     return null
   }
 
-  console.log(`[SyncTeX] matched input file: "${inputFilePath}"`)
+  // eslint-disable-next-line no-console
+  if (isDev) console.log(`[SyncTeX] matched input file: "${inputFilePath}"`)
 
   const linePageBlocks = pdfSyncObject.blockNumberLine[inputFilePath]
   const lineNums = Object.keys(linePageBlocks)
@@ -152,9 +156,11 @@ export async function forwardSync(
     return null
   }
 
-  console.log(
-    `[SyncTeX] lineNums range: ${lineNums[0]}..${lineNums[lineNums.length - 1]} (${lineNums.length} entries), requested line=${line}`
-  )
+  if (isDev)
+    // eslint-disable-next-line no-console
+    console.log(
+      `[SyncTeX] lineNums range: ${lineNums[0]}..${lineNums[lineNums.length - 1]} (${lineNums.length} entries), requested line=${line}`
+    )
 
   let result: SyncTeXForwardResult | null = null
 
@@ -205,9 +211,10 @@ export async function forwardSync(
     }
   }
 
-  console.log(
-    `[SyncTeX] forwardSync result: page=${result?.page}, x=${result?.x?.toFixed(2)}, y=${result?.y?.toFixed(2)}`
-  )
+  if (isDev)
+    console.log(
+      `[SyncTeX] forwardSync result: page=${result?.page}, x=${result?.x?.toFixed(2)}, y=${result?.y?.toFixed(2)}`
+    )
   return result
 }
 
