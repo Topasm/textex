@@ -225,6 +225,18 @@ export async function checkClaudeCliAvailable(): Promise<boolean> {
 
 // ---- Provider calls ----
 
+interface OpenAIResponse {
+  choices?: Array<{ message?: { content?: string } }>
+}
+
+interface AnthropicResponse {
+  content?: Array<{ type?: string; text?: string }>
+}
+
+interface GeminiResponse {
+  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>
+}
+
 function callOpenAI(
   input: string,
   model: string,
@@ -235,8 +247,7 @@ function callOpenAI(
   const modelId = model || DEFAULT_MODELS.openai
   const isReasoning = /^(o1|o3|o4|gpt-5)/.test(modelId)
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const body: Record<string, any> = {
+  const body: Record<string, unknown> = {
     model: modelId,
     messages: [
       { role: 'system', content: systemPrompt },
@@ -255,8 +266,7 @@ function callOpenAI(
     body,
     { Authorization: `Bearer ${apiKey}` },
     'OpenAI',
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (data: any) => data?.choices?.[0]?.message?.content
+    (data) => (data as OpenAIResponse)?.choices?.[0]?.message?.content
   )
 }
 
@@ -267,8 +277,7 @@ function callAnthropic(
   systemPrompt: string,
   thinking: ThinkingConfig
 ): Promise<string> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const body: Record<string, any> = {
+  const body: Record<string, unknown> = {
     model: model || DEFAULT_MODELS.anthropic,
     system: systemPrompt,
     messages: [{ role: 'user', content: input }]
@@ -292,8 +301,7 @@ function callAnthropic(
     body,
     { 'x-api-key': apiKey, 'anthropic-version': '2025-04-15' },
     'Anthropic',
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (data: any) => data?.content?.find((b: any) => b.type === 'text')?.text
+    (data) => (data as AnthropicResponse)?.content?.find((b) => b.type === 'text')?.text
   )
 }
 
@@ -306,8 +314,7 @@ function callGemini(
 ): Promise<string> {
   const modelId = model || DEFAULT_MODELS.gemini
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const generationConfig: Record<string, any> = {
+  const generationConfig: Record<string, unknown> = {
     temperature: 0.3
   }
 
@@ -326,8 +333,7 @@ function callGemini(
     },
     {},
     'Gemini',
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (data: any) => data?.candidates?.[0]?.content?.parts?.find((p: any) => p.text)?.text
+    (data) => (data as GeminiResponse)?.candidates?.[0]?.content?.parts?.find((p) => p.text)?.text
   )
 }
 

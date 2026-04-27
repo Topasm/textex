@@ -212,6 +212,7 @@ export async function forwardSync(
   }
 
   if (isDev)
+    // eslint-disable-next-line no-console
     console.log(
       `[SyncTeX] forwardSync result: page=${result?.page}, x=${result?.x?.toFixed(2)}, y=${result?.y?.toFixed(2)}`
     )

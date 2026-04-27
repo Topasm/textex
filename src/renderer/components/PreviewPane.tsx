@@ -1,5 +1,6 @@
 import { useMemo, useRef, useCallback, useState, useEffect } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
+import type { PDFPageProxy } from 'pdfjs-dist'
 import { useCompileStore } from '../store/useCompileStore'
 import { usePdfStore } from '../store/usePdfStore'
 import { useSettingsStore } from '../store/useSettingsStore'
@@ -396,8 +397,7 @@ function PreviewPane() {
   // Capture viewport info when each page renders
   const handlePageRenderSuccess = useCallback(
     (pageNumber: number) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return (page: any) => {
+      return (page: PDFPageProxy) => {
         const container = containerRef.current
         if (!container) return
         const pageEl = container.querySelector(

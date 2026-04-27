@@ -15,6 +15,10 @@ interface ZoteroItem {
   itemType?: string
 }
 
+interface ZoteroJsonRpcResponse<T> {
+  result?: T
+}
+
 const DEFAULT_PORT = 23119
 const BASE_URL = (port: number) => `http://127.0.0.1:${port}/better-bibtex`
 
@@ -75,13 +79,10 @@ export async function zoteroSearch(
       throw new Error(`Search failed: ${response.status} ${response.statusText}`)
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data = (await response.json()) as any
-
-    // ...
+    const data = (await response.json()) as ZoteroJsonRpcResponse<ZoteroItem[]>
 
     // BBT item.search returns an array of objects with citekey + metadata
-    return (data.result || []).map((item: ZoteroItem) => ({
+    return (data.result || []).map((item) => ({
       citekey: item.citekey,
       title: item.title || '',
       author: formatAuthors(item.creators || []),
@@ -114,8 +115,7 @@ export async function zoteroExportBibtex(citekeys: string[], port = DEFAULT_PORT
       throw new Error(`Export failed: ${response.status} ${response.statusText}`)
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const data = (await response.json()) as any
+    const data = (await response.json()) as ZoteroJsonRpcResponse<string>
     return data.result || ''
   } catch (error) {
     console.error('Zotero export error:', error)

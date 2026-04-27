@@ -23,18 +23,31 @@ function getPackageDataDir(): string {
   return path.join(__dirname, '../../resources/data/packages')
 }
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+type RawDep = string | { name?: string } | undefined
+type RawMacro = {
+  name?: string
+  snippet?: string
+  detail?: string
+  doc?: string
+  unusual?: boolean
+  arg?: { snippet?: string }
+}
+type RawEnv = { name?: string; argSnippet?: string; arg?: { snippet?: string }; unusual?: boolean }
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
 
 /**
  * Parse deps from either format:
  * - textex: ["name1", "name2"]
  * - LaTeX-Workshop: [{ "name": "name1" }, ...]
  */
-function parseDeps(deps: any): string[] {
+function parseDeps(deps: unknown): string[] {
   if (!Array.isArray(deps)) return []
-  return deps
-    .map((d: any) => (typeof d === 'string' ? d : d?.name))
-    .filter((d: any): d is string => typeof d === 'string')
+  return (deps as RawDep[])
+    .map((d) => (typeof d === 'string' ? d : d?.name))
+    .filter((d): d is string => typeof d === 'string')
 }
 
 /**
@@ -42,23 +55,24 @@ function parseDeps(deps: any): string[] {
  * - textex object: { "\\cmd": { "snippet": "...", "detail": "..." } }
  * - LaTeX-Workshop array: [{ "name": "cmd", "arg": { "snippet": "..." } }]
  */
-function parseMacros(macros: any): PackageMacro[] {
+function parseMacros(macros: unknown): PackageMacro[] {
   const result: PackageMacro[] = []
 
   if (Array.isArray(macros)) {
     // LaTeX-Workshop format
-    for (const m of macros) {
+    for (const m of macros as RawMacro[]) {
       if (m.unusual) continue
+      if (!m.name) continue
       result.push({
         name: m.name,
         snippet: m.arg?.snippet,
         detail: m.detail || m.doc
       })
     }
-  } else if (macros && typeof macros === 'object') {
+  } else if (isObject(macros)) {
     // textex format
     for (const [cmdName, info] of Object.entries(macros)) {
-      const macroInfo = info as { snippet?: string; detail?: string }
+      const macroInfo = (isObject(info) ? info : {}) as { snippet?: string; detail?: string }
       result.push({
         name: cmdName.replace(/^\\/, ''),
         snippet: macroInfo.snippet,
@@ -76,20 +90,15 @@ function parseMacros(macros: any): PackageMacro[] {
  * - LaTeX-Workshop array: [{ "name": "env", "arg": { "snippet": "..." } }]
  * - textex array: [{ "name": "env", "argSnippet": "..." }]
  */
-function parseEnvs(envs: any): PackageEnv[] {
-  if (!envs) return []
-  if (Array.isArray(envs)) {
-    return envs
-      .filter((e: any) => !e.unusual)
-      .map((e: any) => ({
-        name: e.name,
-        argSnippet: e.argSnippet || e.arg?.snippet
-      }))
-  }
-  return []
+function parseEnvs(envs: unknown): PackageEnv[] {
+  if (!Array.isArray(envs)) return []
+  return (envs as RawEnv[])
+    .filter((e) => !e.unusual && typeof e.name === 'string')
+    .map((e) => ({
+      name: e.name as string,
+      argSnippet: e.argSnippet || e.arg?.snippet
+    }))
 }
-
-/* eslint-enable @typescript-eslint/no-explicit-any */
 
 export async function loadPackageData(
   packageNames: string[]
