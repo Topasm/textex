@@ -67,6 +67,7 @@
   "homeScreen": {
     "subtitle": "LaTeX Editor",
     "openFolder": "Open Folder",
+    "newBlankProject": "New Blank Project",
     "newFromTemplate": "New from Template"
   },
   "updateNotification": {
@@ -150,6 +151,17 @@
       "resetColorsTitle": "Reset to default rainbow",
       "removeColor": "Remove color",
       "addColor": "Add color",
+      "advanced": "Advanced",
+      "bracketPairColorization": "Bracket Pair Colorization",
+      "bracketPairColorizationDesc": "Color matching brackets and show bracket pair guides",
+      "stickyScroll": "Sticky Scroll",
+      "stickyScrollDesc": "Pin enclosing scopes at the top of the editor while scrolling",
+      "smoothScrolling": "Smooth Scrolling",
+      "smoothScrollingDesc": "Enable smooth scrolling and cursor animation",
+      "fontLigatures": "Font Ligatures",
+      "fontLigaturesDesc": "Enable font ligatures for supported fonts like Fira Code",
+      "minimap": "Minimap",
+      "minimapDesc": "Show a minimap overview of the document",
       "statusBarSection": "Status Bar",
       "showStatusBar": "Show Status Bar",
       "showStatusBarDesc": "Show or hide the bottom status bar"

@@ -1,16 +1,17 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FolderOpen, FileText } from 'lucide-react'
+import { FolderOpen, FileText, FilePlus } from 'lucide-react'
 import type { RecentProject } from '../../shared/types'
 import { logError } from '../utils/errorMessage'
 import { RecentProjectList } from './home/RecentProjectList'
 
 interface HomeScreenProps {
   onOpenFolder: () => void
+  onNewBlankProject: () => void
   onNewFromTemplate: () => void
 }
 
-function HomeScreen({ onOpenFolder, onNewFromTemplate }: HomeScreenProps) {
+function HomeScreen({ onOpenFolder, onNewBlankProject, onNewFromTemplate }: HomeScreenProps) {
   const { t } = useTranslation()
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([])
 
@@ -34,6 +35,10 @@ function HomeScreen({ onOpenFolder, onNewFromTemplate }: HomeScreenProps) {
         <button className="home-action-btn home-action-primary" onClick={onOpenFolder}>
           <FolderOpen size={18} />
           {t('homeScreen.openFolder')}
+        </button>
+        <button className="home-action-btn" onClick={onNewBlankProject}>
+          <FilePlus size={18} />
+          {t('homeScreen.newBlankProject')}
         </button>
         <button className="home-action-btn" onClick={onNewFromTemplate}>
           <FileText size={18} />

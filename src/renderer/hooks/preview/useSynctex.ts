@@ -41,7 +41,8 @@ export function useSynctex(
     }
 
     const { page, x, y } = synctexHighlight
-    console.log(`[SyncTeX UI] highlight effect: page=${page}, x=${x.toFixed(2)}, y=${y.toFixed(2)}`)
+    if (import.meta.env.DEV)
+      console.log(`[SyncTeX UI] highlight effect: page=${page}, x=${x.toFixed(2)}, y=${y.toFixed(2)}`)
 
     let cancelled = false
     let retryTimer: ReturnType<typeof setTimeout> | null = null
@@ -59,9 +60,10 @@ export function useSynctex(
       const viewBoxTop = viewport.viewBox[3]
       const pdfY = viewBoxTop - y
       const [vx, vy] = viewport.convertToViewportPoint(x, pdfY)
-      console.log(
-        `[SyncTeX UI] viewBoxTop=${viewBoxTop.toFixed(2)}, pdfY=${pdfY.toFixed(2)} -> viewport vx=${vx.toFixed(1)}, vy=${vy.toFixed(1)}`
-      )
+      if (import.meta.env.DEV)
+        console.log(
+          `[SyncTeX UI] viewBoxTop=${viewBoxTop.toFixed(2)}, pdfY=${pdfY.toFixed(2)} -> viewport vx=${vx.toFixed(1)}, vy=${vy.toFixed(1)}`
+        )
 
       if (!isSinglePage) {
         element.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -76,9 +78,10 @@ export function useSynctex(
       const pageLeft = pageRect.left - containerRect.left + scrollLeft
       const pageTop = pageRect.top - containerRect.top + scrollTop
 
-      console.log(
-        `[SyncTeX UI] positioning: pageTop=${pageTop.toFixed(1)}, pageLeft=${pageLeft.toFixed(1)}, highlight top=${(pageTop + vy).toFixed(1)}`
-      )
+      if (import.meta.env.DEV)
+        console.log(
+          `[SyncTeX UI] positioning: pageTop=${pageTop.toFixed(1)}, pageLeft=${pageLeft.toFixed(1)}, highlight top=${(pageTop + vy).toFixed(1)}`
+        )
 
       setHighlights({
         lineStyle: {
@@ -118,7 +121,8 @@ export function useSynctex(
 
       // Page viewport not ready — navigate/scroll to page and retry
       if (attempt === 0) {
-        console.log(`[SyncTeX UI] page ${page} viewport NOT available, scrolling and retrying`)
+        if (import.meta.env.DEV)
+          console.log(`[SyncTeX UI] page ${page} viewport NOT available, scrolling and retrying`)
         if (isSinglePage) {
           usePdfStore.getState().setCurrentPage(page)
         } else {

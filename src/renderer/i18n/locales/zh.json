@@ -67,6 +67,7 @@
   "homeScreen": {
     "subtitle": "LaTeX 编辑器",
     "openFolder": "打开文件夹",
+    "newBlankProject": "新建空白项目",
     "newFromTemplate": "从模板新建"
   },
   "updateNotification": {
@@ -150,6 +151,17 @@
       "resetColorsTitle": "重置为默认彩虹色",
       "removeColor": "移除颜色",
       "addColor": "添加颜色",
+      "advanced": "高级",
+      "bracketPairColorization": "括号对着色",
+      "bracketPairColorizationDesc": "为匹配的括号着色并显示括号对引导线",
+      "stickyScroll": "粘性滚动",
+      "stickyScrollDesc": "滚动时将当前作用域固定在编辑器顶部",
+      "smoothScrolling": "平滑滚动",
+      "smoothScrollingDesc": "启用平滑滚动和光标动画",
+      "fontLigatures": "字体连字",
+      "fontLigaturesDesc": "为 Fira Code 等支持的字体启用连字",
+      "minimap": "小地图",
+      "minimapDesc": "显示文档的小地图概览",
       "statusBarSection": "状态栏",
       "showStatusBar": "显示状态栏",
       "showStatusBarDesc": "显示或隐藏底部状态栏"

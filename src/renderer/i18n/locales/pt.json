@@ -67,6 +67,7 @@
   "homeScreen": {
     "subtitle": "Editor LaTeX",
     "openFolder": "Abrir pasta",
+    "newBlankProject": "Novo projeto em branco",
     "newFromTemplate": "Novo a partir de modelo"
   },
   "updateNotification": {
@@ -150,6 +151,17 @@
       "resetColorsTitle": "Redefinir para arco-íris padrão",
       "removeColor": "Remover cor",
       "addColor": "Adicionar cor",
+      "advanced": "Avançado",
+      "bracketPairColorization": "Coloração de pares de colchetes",
+      "bracketPairColorizationDesc": "Colorir colchetes correspondentes e mostrar guias de pares",
+      "stickyScroll": "Rolagem fixa",
+      "stickyScrollDesc": "Fixar os escopos envolventes no topo do editor ao rolar",
+      "smoothScrolling": "Rolagem suave",
+      "smoothScrollingDesc": "Ativar rolagem suave e animação do cursor",
+      "fontLigatures": "Ligaduras de fonte",
+      "fontLigaturesDesc": "Ativar ligaduras para fontes compatíveis como Fira Code",
+      "minimap": "Minimapa",
+      "minimapDesc": "Mostrar uma visão geral em miniatura do documento",
       "statusBarSection": "Barra de status",
       "showStatusBar": "Mostrar barra de status",
       "showStatusBarDesc": "Mostrar ou ocultar a barra de status inferior"

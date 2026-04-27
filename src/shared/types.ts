@@ -214,6 +214,11 @@ export interface UserSettings {
   pdfViewMode?: 'continuous' | 'single'
   showPdfToolbarControls?: boolean
   scrollSyncEnabled?: boolean
+  bracketPairColorization?: boolean
+  stickyScrollEnabled?: boolean
+  smoothScrolling?: boolean
+  fontLigatures?: boolean
+  minimapEnabled?: boolean
 }
 
 export type AiAction = 'fix' | 'academic' | 'summarize' | 'longer' | 'shorter'

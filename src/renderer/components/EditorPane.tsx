@@ -420,7 +420,7 @@ function EditorPane() {
               options={{
                 fontSize,
                 lineNumbers: settings.lineNumbers !== false ? 'on' : 'off',
-                minimap: { enabled: false },
+                minimap: { enabled: settings.minimapEnabled ?? false },
                 tabSize: settings.tabSize ?? 4,
                 scrollBeyondLastLine: false,
                 automaticLayout: true,
@@ -428,7 +428,23 @@ function EditorPane() {
                 suggestOnTriggerCharacters: true,
                 padding: { top: 8 },
                 wordWrap: settings.wordWrap ? 'on' : 'off',
-                dropIntoEditor: { enabled: false }
+                dropIntoEditor: { enabled: false },
+                bracketPairColorization: {
+                  enabled: settings.bracketPairColorization !== false
+                },
+                guides: {
+                  bracketPairs: settings.bracketPairColorization !== false,
+                  indentation: true
+                },
+                stickyScroll: {
+                  enabled: settings.stickyScrollEnabled !== false
+                },
+                smoothScrolling: settings.smoothScrolling !== false,
+                cursorSmoothCaretAnimation: settings.smoothScrolling !== false ? 'on' : 'off',
+                cursorBlinking: settings.smoothScrolling !== false ? 'smooth' : 'blink',
+                fontLigatures: settings.fontLigatures ?? false,
+                renderWhitespace: 'selection',
+                foldingHighlight: true
               }}
             />
           )}

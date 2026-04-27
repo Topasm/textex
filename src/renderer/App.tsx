@@ -196,6 +196,41 @@ function App() {
     useUiStore.getState().setTemplateGalleryOpen(true)
   }, [])
 
+  const handleNewBlankProject = useCallback(async () => {
+    const blankContent = `\\documentclass[12pt,a4paper]{article}
+
+\\usepackage[utf8]{inputenc}
+\\usepackage[T1]{fontenc}
+\\usepackage{amsmath,amssymb}
+\\usepackage{graphicx}
+\\usepackage{hyperref}
+\\usepackage[margin=1in]{geometry}
+
+\\title{}
+\\author{}
+\\date{\\today}
+
+\\begin{document}
+
+\\maketitle
+
+
+
+\\end{document}
+`
+    try {
+      const result = await window.api.createTemplateProject(
+        'blank-project',
+        blankContent
+      )
+      if (result) {
+        await openProject(result.projectPath)
+      }
+    } catch {
+      // user cancelled
+    }
+  }, [])
+
   const handleCheckForUpdates = useCallback(async (): Promise<void> => {
     const result = await window.api.updateCheck()
     if (!result.success) {
@@ -385,7 +420,7 @@ function App() {
       <UpdateNotification />
       <ExternalChangeBanner />
       {showHomeScreen ? (
-        <HomeScreen onOpenFolder={handleOpenFolder} onNewFromTemplate={handleOpenTemplateGallery} />
+        <HomeScreen onOpenFolder={handleOpenFolder} onNewBlankProject={handleNewBlankProject} onNewFromTemplate={handleOpenTemplateGallery} />
       ) : (
         <div className="workspace">
           {sidebarPosition === 'left' && (isSidebarOpen || autoHideSidebar) && sidebarElement}

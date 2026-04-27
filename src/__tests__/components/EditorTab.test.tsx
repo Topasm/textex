@@ -17,7 +17,7 @@ describe('EditorTab', () => {
   it('renders the sidebar position selector and updates the store', () => {
     render(<EditorTab />)
 
-    expect(screen.queryByText('Minimap')).not.toBeInTheDocument()
+    expect(screen.queryByText('Minimap')).toBeInTheDocument()
 
     const sidebarLabel = screen.getByText('Sidebar Position')
     const row = sidebarLabel.closest('.settings-row')

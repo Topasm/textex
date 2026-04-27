@@ -237,6 +237,74 @@ export const EditorTab = () => {
       <hr className="settings-divider" />
 
       <div>
+        <h3 className="settings-heading settings-heading-mb">{t('settings.editor.advanced')}</h3>
+        <div className="settings-column-group">
+          <div className="settings-row">
+            <div>
+              <div className="settings-row-label">{t('settings.editor.bracketPairColorization')}</div>
+              <div className="settings-row-description">
+                {t('settings.editor.bracketPairColorizationDesc')}
+              </div>
+            </div>
+            <Toggle
+              checked={settings.bracketPairColorization !== false}
+              onChange={(checked) => updateSetting('bracketPairColorization', checked)}
+            />
+          </div>
+          <div className="settings-row">
+            <div>
+              <div className="settings-row-label">{t('settings.editor.stickyScroll')}</div>
+              <div className="settings-row-description">
+                {t('settings.editor.stickyScrollDesc')}
+              </div>
+            </div>
+            <Toggle
+              checked={settings.stickyScrollEnabled !== false}
+              onChange={(checked) => updateSetting('stickyScrollEnabled', checked)}
+            />
+          </div>
+          <div className="settings-row">
+            <div>
+              <div className="settings-row-label">{t('settings.editor.smoothScrolling')}</div>
+              <div className="settings-row-description">
+                {t('settings.editor.smoothScrollingDesc')}
+              </div>
+            </div>
+            <Toggle
+              checked={settings.smoothScrolling !== false}
+              onChange={(checked) => updateSetting('smoothScrolling', checked)}
+            />
+          </div>
+          <div className="settings-row">
+            <div>
+              <div className="settings-row-label">{t('settings.editor.fontLigatures')}</div>
+              <div className="settings-row-description">
+                {t('settings.editor.fontLigaturesDesc')}
+              </div>
+            </div>
+            <Toggle
+              checked={!!settings.fontLigatures}
+              onChange={(checked) => updateSetting('fontLigatures', checked)}
+            />
+          </div>
+          <div className="settings-row">
+            <div>
+              <div className="settings-row-label">{t('settings.editor.minimap')}</div>
+              <div className="settings-row-description">
+                {t('settings.editor.minimapDesc')}
+              </div>
+            </div>
+            <Toggle
+              checked={!!settings.minimapEnabled}
+              onChange={(checked) => updateSetting('minimapEnabled', checked)}
+            />
+          </div>
+        </div>
+      </div>
+
+      <hr className="settings-divider" />
+
+      <div>
         <h3 className="settings-heading settings-heading-mb">
           {t('settings.editor.statusBarSection')}
         </h3>

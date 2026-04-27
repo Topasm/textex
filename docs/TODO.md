@@ -20,7 +20,7 @@ The MVP is complete when:
 Electron + React + TypeScript project with electron-vite, plain CSS theming, full folder structure.
 
 ### Phase 1: Tectonic Binary Setup (5/5)
-Bundled Tectonic 0.15.0 (musl) for Linux/macOS/Windows. Verified standalone compilation.
+Bundled Tectonic 0.16.9 (musl) for Linux/macOS/Windows. Verified standalone compilation.
 
 ### Phase 2: Main Process — Compiler Service (3/3)
 `compiler.ts` (Tectonic spawn, cancel, binary resolution), `ipc.ts` (fs/latex IPC handlers with path validation), `main.ts` (BrowserWindow with context isolation).

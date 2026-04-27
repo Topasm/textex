@@ -67,6 +67,7 @@
   "homeScreen": {
     "subtitle": "LaTeX 편집기",
     "openFolder": "폴더 열기",
+    "newBlankProject": "새 빈 프로젝트",
     "newFromTemplate": "템플릿에서 새로 만들기"
   },
   "updateNotification": {
@@ -150,6 +151,17 @@
       "resetColorsTitle": "기본 무지개색으로 초기화",
       "removeColor": "색상 제거",
       "addColor": "색상 추가",
+      "advanced": "고급",
+      "bracketPairColorization": "괄호 쌍 색상화",
+      "bracketPairColorizationDesc": "일치하는 괄호에 색상을 지정하고 괄호 쌍 가이드를 표시합니다",
+      "stickyScroll": "스티키 스크롤",
+      "stickyScrollDesc": "스크롤할 때 에디터 상단에 현재 범위를 고정 표시합니다",
+      "smoothScrolling": "부드러운 스크롤",
+      "smoothScrollingDesc": "부드러운 스크롤과 커서 애니메이션을 활성화합니다",
+      "fontLigatures": "폰트 리거처",
+      "fontLigaturesDesc": "Fira Code 등 지원 폰트에서 리거처를 활성화합니다",
+      "minimap": "미니맵",
+      "minimapDesc": "문서의 미니맵 미리보기를 표시합니다",
       "statusBarSection": "상태 표시줄",
       "showStatusBar": "상태 표시줄 표시",
       "showStatusBarDesc": "하단 상태 표시줄 표시 또는 숨기기"

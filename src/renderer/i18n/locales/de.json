@@ -67,6 +67,7 @@
   "homeScreen": {
     "subtitle": "LaTeX-Editor",
     "openFolder": "Ordner öffnen",
+    "newBlankProject": "Neues leeres Projekt",
     "newFromTemplate": "Neu aus Vorlage"
   },
   "updateNotification": {
@@ -150,6 +151,17 @@
       "resetColorsTitle": "Auf Standard-Regenbogen zurücksetzen",
       "removeColor": "Farbe entfernen",
       "addColor": "Farbe hinzufügen",
+      "advanced": "Erweitert",
+      "bracketPairColorization": "Klammerpaar-Farbgebung",
+      "bracketPairColorizationDesc": "Passende Klammern einfärben und Klammerpaar-Hilfslinien anzeigen",
+      "stickyScroll": "Sticky Scroll",
+      "stickyScrollDesc": "Umschließende Bereiche beim Scrollen oben im Editor fixieren",
+      "smoothScrolling": "Sanftes Scrollen",
+      "smoothScrollingDesc": "Sanftes Scrollen und Cursor-Animation aktivieren",
+      "fontLigatures": "Schriftligaturen",
+      "fontLigaturesDesc": "Ligaturen für unterstützte Schriften wie Fira Code aktivieren",
+      "minimap": "Minimap",
+      "minimapDesc": "Eine Minimap-Übersicht des Dokuments anzeigen",
       "statusBarSection": "Statusleiste",
       "showStatusBar": "Statusleiste anzeigen",
       "showStatusBarDesc": "Die untere Statusleiste anzeigen oder ausblenden"

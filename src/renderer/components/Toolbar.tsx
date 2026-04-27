@@ -54,13 +54,14 @@ const Toolbar = React.memo(function Toolbar({
   const handleSyncToPdf = useCallback(() => {
     const editorState = useEditorStore.getState()
     if (!editorState.filePath) return
-    console.log(
-      `[SyncTeX UI] forward sync: cursorLine=${editorState.cursorLine}, file=${editorState.filePath}`
-    )
+    if (import.meta.env.DEV)
+      console.log(
+        `[SyncTeX UI] forward sync: cursorLine=${editorState.cursorLine}, file=${editorState.filePath}`
+      )
     window.api
       .synctexForward(editorState.filePath, editorState.cursorLine)
       .then((result) => {
-        console.log('[SyncTeX UI] forward sync result:', result)
+        if (import.meta.env.DEV) console.log('[SyncTeX UI] forward sync result:', result)
         if (result) {
           usePdfStore.getState().setSynctexHighlight(result)
         }
@@ -113,6 +114,7 @@ const Toolbar = React.memo(function Toolbar({
           className={`toolbar-btn${isDirty ? ' save-btn-dirty' : ''}`}
           onClick={onSave}
           title={t('toolbar.quickSave')}
+          aria-label={t('toolbar.quickSave')}
         >
           <SaveIcon size={16} strokeWidth={1.9} />
         </button>
@@ -122,6 +124,7 @@ const Toolbar = React.memo(function Toolbar({
           onClick={onCompile}
           disabled={compileStatus === 'compiling'}
           title={t('toolbar.compileLaTeX')}
+          aria-label={t('toolbar.compileLaTeX')}
         >
           {compileStatus === 'compiling' ? (
             <Loader size={16} className="spin" />
@@ -135,6 +138,7 @@ const Toolbar = React.memo(function Toolbar({
             className="toolbar-btn"
             onClick={() => onAiDraft()}
             title={t('toolbar.aiDraftShortcut')}
+            aria-label={t('toolbar.aiDraftShortcut')}
           >
             <Sparkles size={16} />
           </button>
@@ -208,7 +212,7 @@ const Toolbar = React.memo(function Toolbar({
           {fileName}
         </span>
 
-        <button className="toolbar-btn" onClick={onToggleLog} title={t('toolbar.toggleLog')}>
+        <button className="toolbar-btn" onClick={onToggleLog} title={t('toolbar.toggleLog')} aria-label={t('toolbar.toggleLog')}>
           <ScrollText size={16} />
         </button>
       </div>

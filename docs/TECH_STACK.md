@@ -43,12 +43,12 @@
 ## Version Constraints
 
 - Node.js: >= 18 (v20.20.0 used in development, installed via nvm)
-- Tectonic: 0.15.0 (musl variant for Linux compatibility)
+- Tectonic: 0.16.9 (musl variant for Linux compatibility)
 
 ## Why These Choices
 
 ### Tectonic over TeX Live
-- Single ~14 MB binary (musl) vs. multi-GB installation.
+- Single ~10 MB binary (musl) vs. multi-GB installation.
 - Auto-downloads only needed packages on first use.
 - Deterministic builds (pinned bundle versions).
 - **Note:** The glibc variant required GLIBC_2.35 which was not available
