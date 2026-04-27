@@ -13,7 +13,8 @@ import { DisposableStore, toDisposable } from '../../shared/lifecycle'
 import {
   validateFilePath,
   readTextFileWithEncoding,
-  shouldIgnoreChange
+  shouldIgnoreChange,
+  resolveInsideDirectory
 } from '../utils/pathValidation'
 
 // ---------------------------------------------------------------------------
@@ -213,7 +214,7 @@ export function registerFileSystemHandlers(getWindow: () => BrowserWindow | null
           // But mainTexPath is explicitly 'main.tex', while relPath might be 'OriginalName.tex'.
           // Let's write everything.
 
-          const targetPath = path.join(projectDir, relPath)
+          const targetPath = resolveInsideDirectory(projectDir, relPath)
           const targetDir = path.dirname(targetPath)
 
           await fs.mkdir(targetDir, { recursive: true })

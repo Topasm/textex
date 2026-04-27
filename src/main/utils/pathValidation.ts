@@ -18,6 +18,48 @@ export function validateFilePath(filePath: unknown): string {
 }
 
 /**
+ * Normalize a user/archive supplied relative path and reject traversal,
+ * absolute paths, Windows drive paths, UNC paths, and empty/self references.
+ */
+export function normalizeSafeRelativePath(relativePath: unknown): string {
+  if (typeof relativePath !== 'string' || relativePath.length === 0) {
+    throw new Error('Invalid relative path')
+  }
+  if (relativePath.includes('\0')) {
+    throw new Error('Invalid relative path')
+  }
+
+  const posixPath = relativePath.replace(/\\/g, '/')
+  if (path.posix.isAbsolute(posixPath) || path.win32.isAbsolute(posixPath)) {
+    throw new Error('Relative path must not be absolute')
+  }
+
+  const normalized = path.posix.normalize(posixPath)
+  if (normalized === '.' || normalized === '..' || normalized.startsWith('../')) {
+    throw new Error('Relative path must stay inside the target directory')
+  }
+
+  return normalized
+}
+
+/**
+ * Resolve a safe relative path inside a base directory. The final resolved path
+ * is checked again so callers are protected even if path semantics change.
+ */
+export function resolveInsideDirectory(basePath: string, relativePath: unknown): string {
+  const safeRelativePath = normalizeSafeRelativePath(relativePath)
+  const base = path.resolve(basePath)
+  const target = path.resolve(base, safeRelativePath)
+  const relativeToBase = path.relative(base, target)
+
+  if (relativeToBase === '' || relativeToBase.startsWith('..') || path.isAbsolute(relativeToBase)) {
+    throw new Error('Resolved path escapes the target directory')
+  }
+
+  return target
+}
+
+/**
  * Decode a raw buffer to a string, respecting BOM markers and falling
  * back through UTF-8 -> latin1 when replacement characters appear.
  */

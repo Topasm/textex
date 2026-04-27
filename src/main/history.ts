@@ -9,11 +9,33 @@ const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV
 const gzip = promisify(zlib.gzip)
 const gunzip = promisify(zlib.gunzip)
 
+function getHistoryDir(filePath: string): string {
+  const projectRoot = path.dirname(filePath)
+  const fileName = path.basename(filePath)
+  return path.join(projectRoot, '.textex', 'history', fileName)
+}
+
+function validateSnapshotPath(filePath: string, snapshotPath: string): string {
+  if (!path.isAbsolute(snapshotPath)) {
+    throw new Error('Snapshot path must be absolute')
+  }
+  if (!/^\d+\.gz$/.test(path.basename(snapshotPath))) {
+    throw new Error('Invalid snapshot path')
+  }
+
+  const historyDir = path.resolve(getHistoryDir(filePath))
+  const resolvedSnapshotPath = path.resolve(snapshotPath)
+  const relative = path.relative(historyDir, resolvedSnapshotPath)
+  if (relative.startsWith('..') || path.isAbsolute(relative) || relative.includes(path.sep)) {
+    throw new Error('Snapshot path must be inside the file history directory')
+  }
+
+  return resolvedSnapshotPath
+}
+
 export async function saveSnapshot(filePath: string, content: string): Promise<void> {
   try {
-    const projectRoot = path.dirname(filePath) // Assumes generic project structure
-    const fileName = path.basename(filePath)
-    const historyDir = path.join(projectRoot, '.textex', 'history', fileName)
+    const historyDir = getHistoryDir(filePath)
 
     await fs.mkdir(historyDir, { recursive: true })
 
@@ -38,9 +60,7 @@ export async function saveSnapshot(filePath: string, content: string): Promise<v
 
 export async function getHistoryList(filePath: string): Promise<HistoryItem[]> {
   try {
-    const projectRoot = path.dirname(filePath)
-    const fileName = path.basename(filePath)
-    const historyDir = path.join(projectRoot, '.textex', 'history', fileName)
+    const historyDir = getHistoryDir(filePath)
 
     try {
       await fs.access(historyDir)
@@ -73,9 +93,10 @@ export async function getHistoryList(filePath: string): Promise<HistoryItem[]> {
   }
 }
 
-export async function loadSnapshot(snapshotPath: string): Promise<string> {
+export async function loadSnapshot(filePath: string, snapshotPath: string): Promise<string> {
   try {
-    const buffer = await fs.readFile(snapshotPath)
+    const validSnapshotPath = validateSnapshotPath(filePath, snapshotPath)
+    const buffer = await fs.readFile(validSnapshotPath)
     const decoded = await gunzip(buffer)
     return decoded.toString()
   } catch (error) {

@@ -23,8 +23,9 @@ export function registerHistoryHandlers(): void {
     return getHistoryList(validPath)
   })
 
-  ipcMain.handle('history:load', async (_event, snapshotPath: string) => {
-    // snapshotPath is absolute within .textex/history
-    return loadSnapshot(snapshotPath)
+  ipcMain.handle('history:load', async (_event, filePath: string, snapshotPath: string) => {
+    const validPath = validateFilePath(filePath)
+    const validSnapshotPath = validateFilePath(snapshotPath)
+    return loadSnapshot(validPath, validSnapshotPath)
   })
 }

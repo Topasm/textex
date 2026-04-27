@@ -72,7 +72,7 @@ export interface IpcChannelMap {
   'fs:save-batch': [[files: Array<{ content: string; filePath: string }>], SuccessResult]
   'fs:save-as': [[content: string], { filePath: string } | null]
   'fs:create-template-project': [
-    [templateName: string, content: string],
+    [templateName: string, content: string, files?: Record<string, string>],
     { projectPath: string; filePath: string } | null
   ]
   'fs:read-file': [[filePath: string], OpenFileResult]
@@ -183,7 +183,7 @@ export interface IpcChannelMap {
   // History
   'history:save': [[filePath: string, content: string], void]
   'history:list': [[filePath: string], HistoryItem[]]
-  'history:load': [[snapshotPath: string], string]
+  'history:load': [[filePath: string, snapshotPath: string], string]
 
   // Templates
   'templates:list': [[], Template[]]

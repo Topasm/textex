@@ -124,7 +124,7 @@ function createWindow(theme: string): void {
       preload: path.join(__dirname, '../preload/index.js'),
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: false
+      sandbox: true
     },
     backgroundColor
   })

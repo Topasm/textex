@@ -31,7 +31,9 @@ export function useHistoryPanel(): HistoryPanelState {
 
   const handleSelectHistoryItem = useCallback(async (item: HistoryItem) => {
     try {
-      const content = await window.api.loadHistorySnapshot(item.path)
+      const activeFilePath = useEditorStore.getState().activeFilePath
+      if (!activeFilePath) return
+      const content = await window.api.loadHistorySnapshot(activeFilePath, item.path)
       setSnapshotContent(content)
       setHistoryMode(true)
     } catch (err) {

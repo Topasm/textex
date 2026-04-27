@@ -184,7 +184,7 @@ export interface ElectronAPI {
   // History
   saveHistorySnapshot(filePath: string, content: string): Promise<void>
   getHistoryList(filePath: string): Promise<HistoryItem[]>
-  loadHistorySnapshot(snapshotPath: string): Promise<string>
+  loadHistorySnapshot(filePath: string, snapshotPath: string): Promise<string>
 
   // Templates
   listTemplates(): Promise<Template[]>

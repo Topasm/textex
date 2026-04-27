@@ -92,7 +92,7 @@ export function TimelinePanel() {
   const handleEntryClick = async (entry: TimelineEntry) => {
     if (entry.type === 'local' && entry.snapshotPath) {
       try {
-        await window.api.loadHistorySnapshot(entry.snapshotPath)
+        await window.api.loadHistorySnapshot(activeFilePath, entry.snapshotPath)
       } catch (err) {
         logError('TimelinePanel:loadSnapshot', err)
       }

@@ -316,7 +316,8 @@ contextBridge.exposeInMainWorld('api', {
   saveHistorySnapshot: (filePath: string, content: string) =>
     invoke('history:save', filePath, content),
   getHistoryList: (filePath: string) => invoke('history:list', filePath),
-  loadHistorySnapshot: (snapshotPath: string) => invoke('history:load', snapshotPath),
+  loadHistorySnapshot: (filePath: string, snapshotPath: string) =>
+    invoke('history:load', filePath, snapshotPath),
 
   // Templates
   listTemplates: () => invoke('templates:list'),

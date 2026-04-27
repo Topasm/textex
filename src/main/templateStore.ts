@@ -3,6 +3,7 @@ import path from 'path'
 import fs from 'fs/promises'
 import AdmZip from 'adm-zip'
 import { Template, builtInTemplates } from '../shared/templates'
+import { normalizeSafeRelativePath } from './utils/pathValidation'
 
 function getCustomTemplatesPath(): string {
   return path.join(app.getPath('userData'), 'custom-templates.json')
@@ -91,7 +92,7 @@ export async function importTemplateFromZip(zipPath: string): Promise<Template> 
   for (const entry of entries) {
     if (entry.isDirectory) continue
 
-    const entryName = entry.entryName
+    const entryName = normalizeSafeRelativePath(entry.entryName)
     const ext = path.extname(entryName).toLowerCase()
 
     // Check if it's a text file we can read directly
@@ -161,7 +162,7 @@ export async function importTemplateFromZip(zipPath: string): Promise<Template> 
   }
 
   // Remove template.json from the files list as we don't need to copy it to the project
-  const metaKey = metaEntry?.entryName
+  const metaKey = metaEntry ? normalizeSafeRelativePath(metaEntry.entryName) : undefined
   if (metaKey && files[metaKey]) {
     delete files[metaKey]
   }
