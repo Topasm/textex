@@ -84,7 +84,7 @@ jobs:
           - os: macos-latest
             platform: mac-arm64
             tectonic_asset: tectonic-0.16.9-aarch64-apple-darwin.tar.gz
-            tectonic_dir: mac
+            tectonic_dir: mac/arm64
             binary_name: tectonic
             build_args: --mac --arm64
           - os: windows-latest

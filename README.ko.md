@@ -60,8 +60,8 @@ xattr -cr /Applications/TextEx.app
 **Linux:**
 AppImage를 실행 가능하게 만드세요:
 ```bash
-chmod +x TextEx-1.0.1.AppImage
-./TextEx-1.0.1.AppImage
+chmod +x TextEx-1.0.7.AppImage
+./TextEx-1.0.7.AppImage
 ```
 
 ---

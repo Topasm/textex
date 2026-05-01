@@ -18,12 +18,23 @@ const RETRY_DELAYS = [1000, 2000, 4000]
 function getDefaultTexLabPath(): string {
   const platform =
     process.platform === 'win32' ? 'win' : process.platform === 'darwin' ? 'mac' : 'linux'
+  const arch = process.arch
   const binary = process.platform === 'win32' ? 'texlab.exe' : 'texlab'
 
   if (isDev) {
-    return path.join(process.cwd(), 'resources', 'bin', platform, binary)
+    const basePath = path.join(process.cwd(), 'resources', 'bin', platform)
+    const archSpecific = path.join(basePath, arch, binary)
+    if (fs.existsSync(archSpecific)) {
+      return archSpecific
+    }
+    return path.join(basePath, binary)
   }
-  return path.join(process.resourcesPath, 'bin', binary)
+  const basePath = path.join(process.resourcesPath, 'bin')
+  const archSpecific = path.join(basePath, arch, binary)
+  if (fs.existsSync(archSpecific)) {
+    return archSpecific
+  }
+  return path.join(basePath, binary)
 }
 
 function findTexLabBinary(): string {

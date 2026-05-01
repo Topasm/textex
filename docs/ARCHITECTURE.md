@@ -219,8 +219,8 @@ Channel namespaces: `fs:*`, `latex:*`, `lsp:*`, `synctex:*`, `settings:*`,
 
 ```
 isDev?
-  +- yes -> <project-root>/resources/bin/<platformDir>/<binary>
-  +- no  -> process.resourcesPath/bin/<binary>
+  +- yes -> <project-root>/resources/bin/<platformDir>/<arch>/<binary>, then legacy platform path
+  +- no  -> process.resourcesPath/bin/<arch>/<binary>, then legacy bin path
 
 process.platform
   +- win32  -> platformDir: win, binary: tectonic.exe / texlab.exe

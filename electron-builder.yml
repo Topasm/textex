@@ -7,29 +7,29 @@ directories:
   buildResources: build
 
 extraResources:
-  - from: "resources/bin/${os}"
-    to: "bin"
+  - from: 'resources/bin/${os}'
+    to: 'bin'
     filter:
-      - "**/*"
-  - from: "resources/dictionaries"
-    to: "dictionaries"
+      - '**/*'
+  - from: 'resources/dictionaries'
+    to: 'dictionaries'
     filter:
-      - "**/*"
-  - from: "resources/data/packages"
-    to: "data/packages"
+      - '**/*'
+  - from: 'resources/data/packages'
+    to: 'data/packages'
     filter:
-      - "**/*"
-  - from: "resources/tectonic-cache"
-    to: "tectonic-cache"
+      - '**/*'
+  - from: 'resources/tectonic-cache'
+    to: 'tectonic-cache'
     filter:
-      - "**/*"
-  - from: "resources/licenses"
-    to: "licenses"
+      - '**/*'
+  - from: 'resources/licenses'
+    to: 'licenses'
     filter:
-      - "**/*"
+      - '**/*'
 
 files:
-  - "out/**/*"
+  - 'out/**/*'
 
 publish:
   - provider: github
@@ -46,6 +46,7 @@ mac:
   icon: build/icon.icns
   target:
     - target: dmg
+      arch: [arm64]
   hardenedRuntime: true
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist

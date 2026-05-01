@@ -22,11 +22,13 @@ npm run build
 
 # Package for your platform
 npm run package:linux
-npm run package:mac
+npm run package:mac        # Apple Silicon by default
 npm run package:win
 ```
 
-Requires Node.js 20+ and a Tectonic binary in `resources/bin/{linux,mac,win}/`. The Linux binary is included; see [PACKAGING.md](PACKAGING.md) for downloading Windows/macOS binaries.
+Requires Node.js 20+ and a Tectonic binary in `resources/bin/{linux,mac,win}/`.
+The macOS Apple Silicon binaries live in `resources/bin/mac/arm64/`; see
+[PACKAGING.md](PACKAGING.md) for downloading or replacing platform binaries.
 
 Bundled and generated open-source notice artifacts are kept in
 `resources/licenses/` and are committed in the repository alongside the app.
@@ -54,7 +56,9 @@ npm run licenses:generate # Regenerate bundled third-party notice files
 
 # Packaging
 npm run package:linux    # Build + create AppImage
-npm run package:mac      # Build + create DMG
+npm run package:mac      # Build + create Apple Silicon DMG
+npm run package:mac:x64  # Build + create Intel DMG
+npm run package:mac:universal # Build + create universal DMG
 npm run package:win      # Build + create NSIS installer
 
 # CLI & MCP

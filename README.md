@@ -60,8 +60,8 @@ Or right-click the app > **Open** > **Open** in Gatekeeper.
 **Linux:**
 Make the AppImage executable:
 ```bash
-chmod +x TextEx-1.0.1.AppImage
-./TextEx-1.0.1.AppImage
+chmod +x TextEx-1.0.7.AppImage
+./TextEx-1.0.7.AppImage
 ```
 
 ---

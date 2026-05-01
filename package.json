@@ -16,7 +16,9 @@
     "mcp": "node out/mcp/mcp/server.js",
     "preview": "electron-vite preview",
     "package:win": "electron-vite build && electron-builder --win",
-    "package:mac": "electron-vite build && electron-builder --mac",
+    "package:mac": "electron-vite build && electron-builder --mac --arm64",
+    "package:mac:x64": "electron-vite build && electron-builder --mac --x64",
+    "package:mac:universal": "electron-vite build && electron-builder --mac --universal",
     "package:linux": "electron-vite build && electron-builder --linux",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
@@ -50,7 +52,7 @@
     "monaco-editor": "^0.55.0",
     "monaco-vim": "^0.4.4",
     "nspell": "^2.1.5",
-    "pdfjs-dist": "^5.6.205",
+    "pdfjs-dist": "5.6.205",
     "prettier-plugin-latex": "^2.0.1",
     "react": "^19.2.4",
     "react-data-grid": "^7.0.0-beta.59",
@@ -87,5 +89,10 @@
     "typescript-eslint": "^8.57.0",
     "vite": "^7.3.1",
     "vitest": "^4.0.18"
+  },
+  "overrides": {
+    "react-pdf": {
+      "pdfjs-dist": "5.6.205"
+    }
   }
 }

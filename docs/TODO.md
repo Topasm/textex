@@ -77,7 +77,7 @@ electron-builder config (NSIS/DMG/AppImage), Tectonic binaries for all platforms
 - **LSP client** — lightweight JSON-RPC client, initialize handshake, Monaco providers (completion, hover, definition, symbols, rename, formatting, folding range), diagnostics routing
 - **App lifecycle** — start/stop on projectRoot change, debounced didChange, didOpen/didClose on file switch
 - **GPL compliance** — TEXLAB-NOTICE.txt, TEXLAB-GPL-3.0.txt, extraResources in builder
-- **Binaries** — TexLab v5.25.1 for Linux/macOS/Windows (x86_64)
+- **Binaries** — TexLab v5.25.1 for Linux/macOS/Windows; macOS includes an Apple Silicon binary
 
 ### Phase 13: IDE Features (5/5)
 - **Magic comment parsing** — `%! TeX root = ./main.tex` support in `src/shared/magicComments.ts`; IPC handler resolves root file before compiling

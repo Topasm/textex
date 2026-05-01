@@ -1,5 +1,6 @@
 import { spawn, ChildProcess } from 'child_process'
 import path from 'path'
+import { existsSync } from 'fs'
 import fs from 'fs/promises'
 
 let activeProcess: ChildProcess | null = null
@@ -21,21 +22,27 @@ export interface TectonicPathOptions {
 
 export function getTectonicPath(options: TectonicPathOptions): string {
   const platform = process.platform
+  const arch = process.arch
   const binName = platform === 'win32' ? 'tectonic.exe' : 'tectonic'
   const platformDir = platform === 'win32' ? 'win' : platform === 'darwin' ? 'mac' : 'linux'
 
-  let basePath: string
   if (options.isDev) {
     const base = options.devBasePath ?? path.join(__dirname, '../../resources/bin')
-    basePath = path.join(base, platformDir)
+    const archSpecific = path.join(base, platformDir, arch, binName)
+    if (existsSync(archSpecific)) {
+      return archSpecific
+    }
+    return path.join(base, platformDir, binName)
   } else {
     if (!options.resourcesPath) {
       throw new Error('resourcesPath is required in production mode')
     }
-    basePath = path.join(options.resourcesPath, 'bin')
+    const archSpecific = path.join(options.resourcesPath, 'bin', arch, binName)
+    if (existsSync(archSpecific)) {
+      return archSpecific
+    }
+    return path.join(options.resourcesPath, 'bin', binName)
   }
-
-  return path.join(basePath, binName)
 }
 
 export interface CompileResult {

@@ -49,7 +49,7 @@ mac:
   icon: build/icon.icns
   target:
     - target: dmg
-      arch: [x64, arm64]   # Universal binary support
+      arch: [arm64]        # Apple Silicon native by default
   hardenedRuntime: true
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
@@ -81,8 +81,10 @@ resources/
 |   |   +-- tectonic.exe     # From Tectonic GitHub Releases
 |   |   +-- texlab.exe       # From TexLab GitHub Releases
 |   +-- mac/
-|   |   +-- tectonic          # From Tectonic GitHub Releases
-|   |   +-- texlab            # From TexLab GitHub Releases
+|   |   +-- arm64/
+|   |   |   +-- tectonic      # From Tectonic GitHub Releases
+|   |   |   +-- texlab        # From TexLab GitHub Releases
+|   |   +-- texlab            # Legacy x86_64 TexLab fallback
 |   +-- linux/
 |       +-- tectonic          # From Tectonic GitHub Releases
 |       +-- texlab            # From TexLab GitHub Releases
@@ -100,7 +102,7 @@ resources/
 | Platform | File | Variant |
 |---|---|---|
 | Linux | `resources/bin/linux/tectonic` | `x86_64-unknown-linux-musl` (statically linked) |
-| macOS | `resources/bin/mac/tectonic` | `x86_64-apple-darwin` (Mach-O 64-bit) |
+| macOS Apple Silicon | `resources/bin/mac/arm64/tectonic` | `aarch64-apple-darwin` (Mach-O arm64) |
 | Windows | `resources/bin/win/tectonic.exe` | `x86_64-pc-windows-msvc` (PE32+ x86-64) |
 
 **TexLab binaries** (latest, GPL-3.0):
@@ -108,11 +110,17 @@ resources/
 | Platform | File |
 |---|---|
 | Linux | `resources/bin/linux/texlab` |
-| macOS | `resources/bin/mac/texlab` |
+| macOS Apple Silicon | `resources/bin/mac/arm64/texlab` |
+| macOS Intel fallback | `resources/bin/mac/texlab` |
 | Windows | `resources/bin/win/texlab.exe` |
 
 The `${os}` variable in `electron-builder.yml` resolves to `win`, `mac`, or
 `linux` at build time, copying only the relevant binaries.
+
+On macOS, TextEx first looks for an architecture-specific binary under
+`Resources/bin/${arch}/` in packaged builds, falling back to the legacy
+`Resources/bin/` location if needed. In development, the equivalent path is
+`resources/bin/mac/${arch}/`.
 
 ### GPL-3.0 Compliance (TexLab)
 
@@ -140,7 +148,9 @@ In `package.json`:
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "package:win": "electron-vite build && electron-builder --win",
-    "package:mac": "electron-vite build && electron-builder --mac",
+    "package:mac": "electron-vite build && electron-builder --mac --arm64",
+    "package:mac:x64": "electron-vite build && electron-builder --mac --x64",
+    "package:mac:universal": "electron-vite build && electron-builder --mac --universal",
     "package:linux": "electron-vite build && electron-builder --linux"
   }
 }
@@ -153,13 +163,13 @@ output in `out/` is up to date before packaging.
 
 ## Build Results (Linux)
 
-The Linux AppImage was successfully built on a headless x86_64 Linux server
-(RHEL 9 / kernel 5.14) using Electron 40.4.1 and electron-builder 26.7.0.
+The Linux AppImage can be built on a headless x86_64 Linux server using the
+current Electron and electron-builder versions from `package-lock.json`.
 
 **Output:**
 ```
 dist/
-├── TextEx-1.0.1.AppImage   (155 MB, executable)
+├── TextEx-1.0.7.AppImage   (executable)
 ├── latest-linux.yml         (auto-update manifest)
 ├── builder-debug.yml
 └── linux-unpacked/          (uncompressed app directory)
@@ -167,13 +177,14 @@ dist/
     └── resources/
         ├── app.asar         (bundled app code, 81 MB)
         └── bin/
-            └── tectonic     (Tectonic 0.15.0, musl, 36 MB)
+            └── tectonic     (Tectonic 0.16.9, musl)
 ```
 
 **Binary path resolution verified:** In the packaged app, the Tectonic binary is
 at `resources/bin/tectonic`. The `getTectonicPath()` function in
-`src/main/compiler.ts` resolves this via `process.resourcesPath + '/bin/tectonic'`
-in production mode, which matches the `extraResources` output location.
+`src/shared/compiler.ts` resolves this via `process.resourcesPath + '/bin/tectonic'`
+or `process.resourcesPath + '/bin/${arch}/tectonic'` in production mode, which
+matches the `extraResources` output location.
 
 **Smoke test not performed:** The build was done on a headless server without a
 display server (X11/Wayland). The AppImage requires a graphical environment to
@@ -204,17 +215,17 @@ Cross-compilation from Linux is not supported by electron-builder for DMG target
 
 | Output | Size |
 |---|---|
-| `dist/TextEx-1.0.1.AppImage` | 155 MB |
-| `dist/linux-unpacked/` (uncompressed) | ~255 MB |
+| `dist/TextEx-1.0.7.AppImage` | varies by release |
+| `dist/linux-unpacked/` (uncompressed) | varies by release |
 
 ### Component Breakdown (approximate)
 
 | Component | Approx. Size |
 |---|---|
 | Electron shell + Chromium | ~200 MB (unpacked) |
-| Tectonic binary (Linux) | 36 MB |
-| app.asar (React + Monaco + PDF.js + app code) | ~81 MB |
-| **AppImage (compressed)** | **155 MB** |
+| Tectonic binary (Linux) | ~36 MB |
+| app.asar (React + Monaco + PDF.js + app code) | varies by release |
+| **AppImage (compressed)** | varies by release |
 
 **Note:** Windows (NSIS) and macOS (DMG) builds will differ in size due to
 different Tectonic binary sizes (48 MB and 50 MB respectively) and
@@ -236,7 +247,8 @@ Example workflow step:
 - name: Download Tectonic (Linux)
   run: |
     mkdir -p resources/bin/linux
-    curl -L -o resources/bin/linux/tectonic \
-      https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.15.0/tectonic-0.15.0-x86_64-unknown-linux-gnu
+    curl -L -o /tmp/tectonic-linux.tar.gz \
+      https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.16.9/tectonic-0.16.9-x86_64-unknown-linux-musl.tar.gz
+    tar -xzf /tmp/tectonic-linux.tar.gz -C resources/bin/linux
     chmod +x resources/bin/linux/tectonic
 ```

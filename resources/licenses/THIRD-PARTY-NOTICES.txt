@@ -38,7 +38,7 @@ Users may substitute their own TexLab binary via the "texlabPath" setting.
 
 ================================================================================
 Package: @modelcontextprotocol/sdk
-Version: 1.27.1
+Version: 1.29.0
 License: MIT
 Source: https://modelcontextprotocol.io
 --------------------------------------------------------------------------------
@@ -98,7 +98,7 @@ SOFTWARE.
 
 ================================================================================
 Package: adm-zip
-Version: 0.5.16
+Version: 0.5.17
 License: MIT
 Source: https://github.com/cthackers/adm-zip
 --------------------------------------------------------------------------------
@@ -575,7 +575,7 @@ Wordlist Command: mk-list --accents=strip en_US 60
 
 ================================================================================
 Package: electron
-Version: 40.6.0
+Version: 41.4.0
 License: MIT
 Source: https://github.com/electron/electron
 --------------------------------------------------------------------------------
@@ -635,7 +635,7 @@ SOFTWARE.
 
 ================================================================================
 Package: i18next
-Version: 25.8.18
+Version: 26.0.8
 License: MIT
 Source: https://www.i18next.com
 --------------------------------------------------------------------------------
@@ -643,7 +643,7 @@ File: LICENSE
 
 The MIT License (MIT)
 
-Copyright (c) 2025 i18next
+Copyright (c) 2011-present i18next
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -665,7 +665,7 @@ SOFTWARE.
 
 ================================================================================
 Package: katex
-Version: 0.16.38
+Version: 0.16.45
 License: MIT
 Source: https://katex.org
 --------------------------------------------------------------------------------
@@ -695,7 +695,7 @@ SOFTWARE.
 
 ================================================================================
 Package: lucide-react
-Version: 0.577.0
+Version: 1.14.0
 License: ISC
 Source: https://lucide.dev
 --------------------------------------------------------------------------------
@@ -703,7 +703,7 @@ File: LICENSE
 
 ISC License
 
-Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2026 as part of Feather (MIT). All other copyright (c) for Lucide are held by Lucide Contributors 2026.
+Copyright (c) 2026 Lucide Icons and Contributors
 
 Permission to use, copy, modify, and/or distribute this software for any
 purpose with or without fee is hereby granted, provided that the above
@@ -719,9 +719,13 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 ---
 
-The MIT License (MIT) (for portions derived from Feather)
+The following Lucide icons are derived from the Feather project:
 
-Copyright (c) 2013-2026 Cole Bemis
+airplay, alert-circle, alert-octagon, alert-triangle, aperture, arrow-down-circle, arrow-down-left, arrow-down-right, arrow-down, arrow-left-circle, arrow-left, arrow-right-circle, arrow-right, arrow-up-circle, arrow-up-left, arrow-up-right, arrow-up, at-sign, calendar, cast, check, chevron-down, chevron-left, chevron-right, chevron-up, chevrons-down, chevrons-left, chevrons-right, chevrons-up, circle, clipboard, clock, code, columns, command, compass, corner-down-left, corner-down-right, corner-left-down, corner-left-up, corner-right-down, corner-right-up, corner-up-left, corner-up-right, crosshair, database, divide-circle, divide-square, dollar-sign, download, external-link, feather, frown, hash, headphones, help-circle, info, italic, key, layout, life-buoy, link-2, link, loader, lock, log-in, log-out, maximize, meh, minimize, minimize-2, minus-circle, minus-square, minus, monitor, moon, more-horizontal, more-vertical, move, music, navigation-2, navigation, octagon, pause-circle, percent, plus-circle, plus-square, plus, power, radio, rss, search, server, share, shopping-bag, sidebar, smartphone, smile, square, table-2, tablet, target, terminal, trash-2, trash, triangle, tv, type, upload, x-circle, x-octagon, x-square, x, zoom-in, zoom-out
+
+The MIT License (MIT) (for the icons listed above)
+
+Copyright (c) 2013-present Cole Bemis
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -743,7 +747,7 @@ SOFTWARE.
 
 ================================================================================
 Package: mathlive
-Version: 0.109.0
+Version: 0.109.2
 License: MIT
 Source: git+https://github.com/arnog/mathlive.git
 --------------------------------------------------------------------------------
@@ -771,7 +775,7 @@ DEALINGS IN THE SOFTWARE.
 
 ================================================================================
 Package: monaco-editor
-Version: 0.55.0
+Version: 0.55.1
 License: MIT
 Source: https://github.com/microsoft/monaco-editor
 --------------------------------------------------------------------------------
@@ -885,7 +889,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ================================================================================
 Package: pdfjs-dist
-Version: 5.4.296
+Version: 5.6.205
 License: Apache-2.0
 Source: https://mozilla.github.io/pdf.js/
 --------------------------------------------------------------------------------
@@ -1101,7 +1105,7 @@ SOFTWARE.
 
 ================================================================================
 Package: react
-Version: 19.2.4
+Version: 19.2.5
 License: MIT
 Source: https://react.dev/
 --------------------------------------------------------------------------------
@@ -1164,7 +1168,7 @@ THE SOFTWARE.
 
 ================================================================================
 Package: react-dom
-Version: 19.2.4
+Version: 19.2.5
 License: MIT
 Source: https://react.dev/
 --------------------------------------------------------------------------------
@@ -1194,7 +1198,7 @@ SOFTWARE.
 
 ================================================================================
 Package: react-i18next
-Version: 16.5.8
+Version: 17.0.6
 License: MIT
 Source: https://github.com/i18next/react-i18next
 --------------------------------------------------------------------------------
@@ -1254,7 +1258,7 @@ SOFTWARE.
 
 ================================================================================
 Package: simple-git
-Version: 3.33.0
+Version: 3.36.0
 License: MIT
 Source: https://github.com/steveukx/git-js.git
 --------------------------------------------------------------------------------
@@ -1282,7 +1286,7 @@ THE SOFTWARE IS PROVIDED *AS IS*, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 ================================================================================
 Package: zod
-Version: 4.3.6
+Version: 4.4.1
 License: MIT
 Source: https://zod.dev
 --------------------------------------------------------------------------------
@@ -1312,7 +1316,7 @@ SOFTWARE.
 
 ================================================================================
 Package: zustand
-Version: 5.0.11
+Version: 5.0.12
 License: MIT
 Source: https://github.com/pmndrs/zustand
 --------------------------------------------------------------------------------

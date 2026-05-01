@@ -27,6 +27,9 @@
 |   |   +-- mac/
 |   |   |   +-- tectonic
 |   |   |   +-- texlab
+|   |   |   +-- arm64/
+|   |   |       +-- tectonic
+|   |   |       +-- texlab
 |   |   +-- linux/
 |   |       +-- tectonic
 |   |       +-- texlab
@@ -315,8 +318,9 @@
 ## Key Conventions
 
 - **`resources/bin/`** -- Platform binaries are organized into `win/`, `mac/`, `linux/`
-  sub-folders. `electron-builder` copies the correct folder at package time via
-  `extraResources` with `${os}` interpolation.
+  sub-folders. macOS can also use architecture-specific binaries under
+  `mac/arm64/`. `electron-builder` copies the correct platform folder at package
+  time via `extraResources` with `${os}` interpolation.
 
 - **`src/main/`** -- Pure Node.js / Electron code. No DOM, no React. Built as SSR
   environment by electron-vite.

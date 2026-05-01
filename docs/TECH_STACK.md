@@ -4,46 +4,46 @@
 
 | Layer | Package | Version | Role |
 |---|---|---|---|
-| Runtime | **Electron** | 40.4.1 | Desktop shell (Chromium + Node.js) |
+| Runtime | **Electron** | 41.4.0 | Desktop shell (Chromium + Node.js) |
 | Tooling | **electron-vite** | 5.0.0 | Build / HMR for main, preload, renderer |
-| Bundler | **Vite** | 7.3.1 | Fast dev builds + production bundling |
-| Language | **TypeScript** | 5.9.3 | Type safety across all processes |
-| UI | **React** | 19.2.4 | Component model (functional + hooks) |
+| Bundler | **Vite** | 7.3.2 | Fast dev builds + production bundling |
+| Language | **TypeScript** | 6.0.3 | Type safety across all processes |
+| UI | **React** | 19.2.5 | Component model (functional + hooks) |
 | Editor | **@monaco-editor/react** | 4.7.0 | VS Code editor engine, LaTeX mode |
-| PDF | **react-pdf** | 10.3.0 | PDF display (wraps PDF.js) |
-| PDF Engine | **pdfjs-dist** | 5.4.296 | PDF rendering engine (Web Worker) |
-| State | **Zustand** | 5.0.11 | Global state management |
+| PDF | **react-pdf** | 10.4.1 | PDF display (wraps PDF.js) |
+| PDF Engine | **pdfjs-dist** | 5.6.205 | PDF rendering engine (Web Worker) |
+| State | **Zustand** | 5.0.12 | Global state management |
 | Styling | **Plain CSS** | -- | VS Code dark theme, flexbox layout |
-| LaTeX | **Tectonic** | latest | Compilation (sidecar binary) |
-| LSP | **TexLab** | latest | LaTeX language server (GPL-3.0, separate process) |
-| LSP Transport | **vscode-jsonrpc** | latest | JSON-RPC message types for LSP IPC bridge |
-| Packaging | **electron-builder** | 26.7.0 | Installers (NSIS / DMG / AppImage) |
+| LaTeX | **Tectonic** | 0.16.9 | Compilation (sidecar binary) |
+| LSP | **TexLab** | 5.25.1 | LaTeX language server (GPL-3.0, separate process) |
+| LSP Transport | **vscode-jsonrpc** | 8.2.1 | JSON-RPC message types for LSP IPC bridge |
+| Packaging | **electron-builder** | 26.8.1 | Installers (NSIS / DMG / AppImage) |
 | CLI | **commander** | 14.0.3 | CLI argument parsing |
 | File Watch | **chokidar** | 5.0.0 | File watching for CLI `--watch` mode |
-| MCP | **@modelcontextprotocol/sdk** | 1.26.0 | MCP server framework (stdio transport) |
+| MCP | **@modelcontextprotocol/sdk** | 1.29.0 | MCP server framework (stdio transport) |
 | Spell Check | **nspell** | 2.1.5 | Dictionary-based spell checking |
-| Git | **simple-git** | 3.27.0 | Git CLI wrapper |
-| Math | **katex** | 0.16.28 | Math formula rendering for hover preview |
-| Validation | **zod** | 4.3.6 | Runtime schema validation |
-| Auto-update | **electron-updater** | 6.3.9 | GitHub-based auto-update |
+| Git | **simple-git** | 3.36.0 | Git CLI wrapper |
+| Math | **katex** | 0.16.45 | Math formula rendering for hover preview |
+| Validation | **zod** | 4.4.1 | Runtime schema validation |
+| Auto-update | **electron-updater** | 6.8.3 | GitHub-based auto-update |
 
 ## Dev Dependencies (Installed)
 
 | Package | Version | Purpose |
 |---|---|---|
-| `@vitejs/plugin-react` | 5.1.4 | React fast refresh for Vite |
+| `@vitejs/plugin-react` | 5.2.0 | React fast refresh for Vite |
 | `@types/react` | 19.2.14 | TypeScript types for React |
 | `@types/react-dom` | 19.2.3 | TypeScript types for ReactDOM |
-| `eslint` | 9.28.0 | Linting |
-| `prettier` | 3.5.3 | Code formatting |
-| `vitest` | 4.0.18 | Unit testing framework |
+| `eslint` | 9.39.4 | Linting |
+| `prettier` | 3.8.3 | Code formatting |
+| `vitest` | 4.1.5 | Unit testing framework |
 | `@testing-library/react` | 16.3.2 | React component testing |
-| `jsdom` | 28.1.0 | DOM environment for tests |
+| `jsdom` | 29.1.1 | DOM environment for tests |
 
 ## Version Constraints
 
-- Node.js: >= 18 (v20.20.0 used in development, installed via nvm)
-- Tectonic: 0.16.9 (musl variant for Linux compatibility)
+- Node.js: >= 20
+- Tectonic: 0.16.9
 
 ## Why These Choices
 

@@ -23,8 +23,8 @@ getTectonicPath()
 |   +- linux  -> "tectonic"
 |
 +- app.isPackaged?
-|   +- false (dev)  -> <project-root>/resources/bin/<platform>/tectonic[.exe]
-|   +- true  (prod) -> <process.resourcesPath>/bin/tectonic[.exe]
+|   +- false (dev)  -> <project-root>/resources/bin/<platform>/<arch>/tectonic[.exe], then platform fallback
+|   +- true  (prod) -> <process.resourcesPath>/bin/<arch>/tectonic[.exe], then bin fallback
 |
 +- return absolute path
 ```
