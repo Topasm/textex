@@ -71,11 +71,7 @@ function PreviewPane() {
   // Extracted hooks
   const { containerWidth, ctrlHeld } = useContainerSize(containerRef)
   const { transientScale } = usePreviewZoom(containerRef)
-  const { highlights, handleContainerClick } = useSynctex(
-    containerRef,
-    pageViewportsRef,
-    containerWidth
-  )
+  const { highlights, handleContainerClick } = useSynctex(containerRef, pageViewportsRef)
   useScrollSync({ containerRef, pageViewportsRef, containerWidth })
   // usePdfSearch handles DOM highlighting and communicates with OmniSearch via store
   usePdfSearch(containerRef, numPages)

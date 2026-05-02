@@ -3,6 +3,7 @@ import { useEditorStore } from '../../store/useEditorStore'
 import { usePdfStore } from '../../store/usePdfStore'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import { SYNCTEX_HIGHLIGHT_MS } from '../../constants'
+import type { SyncTeXInverseResult } from '../../../shared/types'
 
 interface PageViewportInfo {
   viewport: { convertToViewportPoint(x: number, y: number): [number, number]; viewBox: number[] }
@@ -22,10 +23,36 @@ export interface SynctexState {
   handleContainerClick: (e: React.MouseEvent<HTMLDivElement>) => void
 }
 
+function jumpToSynctexResult(result: SyncTeXInverseResult): void {
+  const line = result.line
+  const column = result.column || 1
+  const editorState = useEditorStore.getState()
+
+  if (editorState.filePath === result.file) {
+    editorState.requestJumpToLine(line, column)
+    return
+  }
+
+  if (editorState.openFiles[result.file]) {
+    editorState.setActiveTab(result.file)
+    setTimeout(() => useEditorStore.getState().requestJumpToLine(line, column), 50)
+    return
+  }
+
+  window.api
+    .readFile(result.file)
+    .then((fileResult) => {
+      useEditorStore.getState().openFileInTab(fileResult.filePath, fileResult.content)
+      setTimeout(() => useEditorStore.getState().requestJumpToLine(line, column), 50)
+    })
+    .catch((err) => {
+      console.warn('[SyncTeX UI] failed to open inverse sync target:', err)
+    })
+}
+
 export function useSynctex(
   containerRef: React.RefObject<HTMLDivElement | null>,
-  pageViewportsRef: React.RefObject<Map<number, PageViewportInfo>>,
-  containerWidth: number | null
+  pageViewportsRef: React.RefObject<Map<number, PageViewportInfo>>
 ): SynctexState {
   const synctexHighlight = usePdfStore((s) => s.synctexHighlight)
   const [highlights, setHighlights] = useState<SynctexHighlights>({
@@ -57,12 +84,18 @@ export function useSynctex(
       viewport: PageViewportInfo['viewport'],
       element: HTMLDivElement
     ): void => {
+      const pageRect = element.getBoundingClientRect()
+      const viewportWidth =
+        'width' in viewport && typeof viewport.width === 'number' ? viewport.width : pageRect.width
+      const displayScale = viewportWidth > 0 ? pageRect.width / viewportWidth : 1
       // Convert SyncTeX top-down y to PDF bottom-up user space using viewBox[3]
       // (the max Y of the page's MediaBox). This matches how Overleaf converts
       // synctex coordinates and correctly handles non-standard page origins.
       const viewBoxTop = viewport.viewBox[3]
       const pdfY = viewBoxTop - y
-      const [vx, vy] = viewport.convertToViewportPoint(x, pdfY)
+      const [rawVx, rawVy] = viewport.convertToViewportPoint(x, pdfY)
+      const vx = rawVx * displayScale
+      const vy = rawVy * displayScale
       if (import.meta.env.DEV)
         // eslint-disable-next-line no-console
         console.log(
@@ -74,7 +107,6 @@ export function useSynctex(
       }
 
       const containerRect = containerRef.current?.getBoundingClientRect()
-      const pageRect = element.getBoundingClientRect()
       if (!containerRect) return
 
       const scrollLeft = containerRef.current?.scrollLeft ?? 0
@@ -204,19 +236,14 @@ export function useSynctex(
         2 -
       pageRect.top
 
-    const pw = containerWidth
-      ? (containerWidth - 32) * (usePdfStore.getState().zoomLevel / 100)
-      : info.pageWidth
-    const scale = pw / info.pageWidth
+    const scale = pageRect.width / info.pageWidth
     const pdfX = centerX / scale
     const pdfY = centerY / scale
 
     window.api.synctexInverse(filePath, bestPage, pdfX, pdfY).then((result) => {
-      if (result) {
-        useEditorStore.getState().requestJumpToLine(result.line, result.column || 1)
-      }
+      if (result) jumpToSynctexResult(result)
     })
-  }, [containerRef, pageViewportsRef, containerWidth])
+  }, [containerRef, pageViewportsRef])
 
   // Ctrl+Click inverse SyncTeX handler
   const handleContainerClick = useCallback(
@@ -255,20 +282,15 @@ export function useSynctex(
       const clickX = e.clientX - pageRect.left
       const clickY = e.clientY - pageRect.top
 
-      const pw = containerWidth
-        ? (containerWidth - 32) * (usePdfStore.getState().zoomLevel / 100)
-        : info.pageWidth
-      const scale = pw / info.pageWidth
+      const scale = pageRect.width / info.pageWidth
       const pdfX = clickX / scale
       const pdfY = clickY / scale
 
       window.api.synctexInverse(filePath, targetPageNumber, pdfX, pdfY).then((result) => {
-        if (result) {
-          useEditorStore.getState().requestJumpToLine(result.line, result.column || 1)
-        }
+        if (result) jumpToSynctexResult(result)
       })
     },
-    [containerRef, pageViewportsRef, containerWidth]
+    [containerRef, pageViewportsRef]
   )
 
   // Listen for sync requests from toolbar

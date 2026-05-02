@@ -6,7 +6,9 @@ import { buildLineMap, clearSyncTexCache, forwardSync, inverseSync } from '../..
 
 const createdDirs: string[] = []
 
-async function createProject(): Promise<{ rootFile: string; chapterFile: string }> {
+async function createProject(
+  syncTexInputPath = 'chapters/chapter1.tex'
+): Promise<{ rootFile: string; chapterFile: string }> {
   const projectDir = await fs.mkdtemp(path.join(os.tmpdir(), 'textex-synctex-'))
   createdDirs.push(projectDir)
 
@@ -21,7 +23,7 @@ async function createProject(): Promise<{ rootFile: string; chapterFile: string 
     path.join(projectDir, 'main.synctex'),
     [
       'SyncTeX Version:1',
-      'Input:1:chapters/chapter1.tex',
+      `Input:1:${syncTexInputPath}`,
       'X Offset:0',
       'Y Offset:0',
       '{1',
@@ -63,6 +65,19 @@ describe('main synctex root resolution', () => {
   it('resolves inverse sync paths relative to the compiled root file', async () => {
     const { chapterFile } = await createProject()
 
+    await expect(inverseSync(chapterFile, 1, 0.5, 1.2)).resolves.toEqual({
+      file: chapterFile,
+      line: 2,
+      column: 0
+    })
+  })
+
+  it('matches extensionless SyncTeX input paths', async () => {
+    const { chapterFile } = await createProject('chapters/chapter1')
+
+    await expect(forwardSync(chapterFile, 2)).resolves.toEqual(
+      expect.objectContaining({ page: 1, x: 0, y: expect.any(Number) })
+    )
     await expect(inverseSync(chapterFile, 1, 0.5, 1.2)).resolves.toEqual({
       file: chapterFile,
       line: 2,

@@ -100,20 +100,33 @@ function findInputFilePath(
   rootFile: string,
   pdfSyncObject: PdfSyncObject
 ): string | undefined {
-  const resolvedPath = path.resolve(filePath).toLowerCase()
   const rootDir = path.dirname(rootFile)
+  const targetPaths = new Set([normalizePathForCompare(path.resolve(filePath))])
+  if (path.extname(filePath) === '.tex') {
+    targetPaths.add(normalizePathForCompare(path.resolve(filePath.slice(0, -4))))
+  }
+
   for (const inputFilePath in pdfSyncObject.blockNumberLine) {
-    try {
-      // Resolve relative paths from the SyncTeX file against the compiled root file's directory.
-      // Use case-insensitive comparison on Windows
-      if (path.resolve(rootDir, inputFilePath).toLowerCase() === resolvedPath) {
-        return inputFilePath
-      }
-    } catch {
-      /* skip */
+    const inputCandidates = resolveSyncTexInputCandidates(rootDir, inputFilePath)
+    if (inputCandidates.some((candidate) => targetPaths.has(candidate))) {
+      return inputFilePath
     }
   }
   return undefined
+}
+
+function normalizePathForCompare(filePath: string): string {
+  const normalized = path.normalize(filePath)
+  return process.platform === 'win32' ? normalized.toLowerCase() : normalized
+}
+
+function resolveSyncTexInputCandidates(rootDir: string, inputFilePath: string): string[] {
+  const resolved = path.resolve(rootDir, inputFilePath)
+  const candidates = [normalizePathForCompare(resolved)]
+  if (!path.extname(resolved)) {
+    candidates.push(normalizePathForCompare(`${resolved}.tex`))
+  }
+  return candidates
 }
 
 // --- Public API ---
@@ -279,13 +292,20 @@ export async function inverseSync(
     return null
   }
 
-  // Resolve relative paths from the SyncTeX file against the tex file's directory
+  // Resolve relative paths from the SyncTeX file against the compiled root file's directory.
   const candidate = path.resolve(path.dirname(rootFile), record.input)
-  if (!fsSync.existsSync(candidate)) {
+  const resolvedFile =
+    fsSync.existsSync(candidate) || path.extname(candidate)
+      ? candidate
+      : fsSync.existsSync(`${candidate}.tex`)
+        ? `${candidate}.tex`
+        : candidate
+
+  if (!fsSync.existsSync(resolvedFile)) {
     return null
   }
 
-  return { file: candidate, line: record.line, column: 0 }
+  return { file: resolvedFile, line: record.line, column: 0 }
 }
 
 export async function buildLineMap(texFile: string): Promise<SyncTeXLineMapEntry[]> {
