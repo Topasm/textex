@@ -17,6 +17,8 @@
     "toggleLog": "로그 패널 전환 (Ctrl+L)",
     "aiDraft": "AI 초안",
     "aiDraftShortcut": "AI 초안 (Ctrl+Shift+D)",
+    "aiAssistant": "AI 어시스턴트",
+    "terminalPane": "터미널 패널",
     "settings": "설정",
     "syncPdfToCode": "PDF에서 코드로 동기화 (Ctrl+Click in PDF)",
     "syncCodeToPdf": "코드에서 PDF로 동기화",

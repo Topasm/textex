@@ -304,6 +304,7 @@ contextBridge.exposeInMainWorld('api', {
   aiUpdateContext: (filePath: string, content: string) =>
     invoke('ai:update-context', filePath, content),
   aiCheckCli: () => invoke('ai:check-cli'),
+  aiOpenClaudeTerminal: (request) => invoke('ai:open-claude-terminal', request),
 
   // Document Structure (fallback outline)
   getDocumentOutline: (filePath: string, content: string) =>

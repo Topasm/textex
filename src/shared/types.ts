@@ -254,6 +254,17 @@ export interface AiCustomProcessRequest {
   summaryContext: AiContextEntry | null
 }
 
+export interface ClaudeTerminalRequest {
+  workDir: string
+  resume?: boolean
+}
+
+export interface ClaudeTerminalResult {
+  success: boolean
+  workDir: string
+  command: string
+}
+
 export interface CitationGroup {
   id: string
   name: string

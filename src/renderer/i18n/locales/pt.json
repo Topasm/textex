@@ -17,6 +17,8 @@
     "toggleLog": "Alternar painel de log (Ctrl+L)",
     "aiDraft": "Rascunho IA",
     "aiDraftShortcut": "Rascunho IA (Ctrl+Shift+D)",
+    "aiAssistant": "Assistente de IA",
+    "terminalPane": "Painel de terminal",
     "settings": "Configurações",
     "syncPdfToCode": "Sincronizar PDF para código (Ctrl+Clique no PDF)",
     "syncCodeToPdf": "Sincronizar código para PDF",

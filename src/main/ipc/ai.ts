@@ -4,10 +4,15 @@ import {
   processText,
   processTextWithCommand,
   updateDocumentContext,
-  checkClaudeCliAvailable
+  checkClaudeCliAvailable,
+  openClaudeTerminal
 } from '../ai'
 import { loadSettings, saveSettings } from '../settings'
-import type { AiCustomProcessRequest, AiProcessRequest } from '../../shared/types'
+import type {
+  AiCustomProcessRequest,
+  AiProcessRequest,
+  ClaudeTerminalRequest
+} from '../../shared/types'
 
 export function registerAiHandlers(): void {
   ipcMain.handle('ai:generate', async (_event, input: string, provider: string, model: string) => {
@@ -61,5 +66,14 @@ export function registerAiHandlers(): void {
 
   ipcMain.handle('ai:check-cli', async () => {
     return checkClaudeCliAvailable()
+  })
+
+  ipcMain.handle('ai:open-claude-terminal', async (_event, request: ClaudeTerminalRequest) => {
+    if (!request || typeof request !== 'object')
+      throw new Error('Claude terminal request is required')
+    if (!request.workDir || typeof request.workDir !== 'string') {
+      throw new Error('Working directory is required')
+    }
+    return openClaudeTerminal(request.workDir, !!request.resume)
   })
 }

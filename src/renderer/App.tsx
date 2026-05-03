@@ -4,6 +4,7 @@ import { FolderTree, BookOpen, ListTree, StickyNote, Clock, GitBranch } from 'lu
 import Toolbar from './components/Toolbar'
 import EditorPane from './components/EditorPane'
 import PreviewPane from './components/PreviewPane'
+import { TerminalPane } from './components/TerminalPane'
 import LogPanel from './components/LogPanel'
 import StatusBar from './components/StatusBar'
 import FileTree from './components/FileTree'
@@ -48,6 +49,9 @@ const SettingsModal = lazy(() =>
 const DraftModal = lazy(() =>
   import('./components/DraftModal').then((m) => ({ default: m.DraftModal }))
 )
+const AiAssistantModal = lazy(() =>
+  import('./components/AiAssistantModal').then((m) => ({ default: m.AiAssistantModal }))
+)
 const TemplateGallery = lazy(() => import('./components/TemplateGallery'))
 
 function App() {
@@ -58,6 +62,7 @@ function App() {
 
   // Only subscribe to state needed for rendering
   const splitRatio = usePdfStore((s) => s.splitRatio)
+  const terminalRatio = usePdfStore((s) => s.terminalRatio)
   const isSidebarOpen = useProjectStore((s) => s.isSidebarOpen)
   const sidebarView = useProjectStore((s) => s.sidebarView)
   const sidebarWidth = useProjectStore((s) => s.sidebarWidth)
@@ -70,8 +75,11 @@ function App() {
   const autoHideSidebar = useSettingsStore((s) => s.settings.autoHideSidebar)
   const showStatusBar = useSettingsStore((s) => s.settings.showStatusBar)
   const sidebarPosition = settings.sidebarPosition ?? 'left'
+  const isTerminalPaneOpen = useUiStore((s) => s.isTerminalPaneOpen)
+  const toggleTerminalPane = useUiStore((s) => s.toggleTerminalPane)
 
   const [isDraftModalOpen, setIsDraftModalOpen] = useState(false)
+  const [isAiAssistantOpen, setIsAiAssistantOpen] = useState(false)
   const [draftPrefill, setDraftPrefill] = useState<string | undefined>(undefined)
 
   const handleAiDraft = useCallback((prefill?: string) => {
@@ -175,6 +183,7 @@ function App() {
       lspStatus: 'stopped',
       lspError: null,
       documentSymbols: [],
+      isTerminalPaneOpen: false,
       externalChangeConflicts: []
     })
   }, [])
@@ -296,13 +305,17 @@ function App() {
     sidebarRef,
     handleDividerMouseDown,
     handleDividerDoubleClick,
+    handleTerminalDividerMouseDown,
+    handleTerminalDividerDoubleClick,
     handleSidebarDividerMouseDown,
     handleSidebarDividerDoubleClick,
     handleSidebarWheel,
     slideAnim
   } = useDragResize({
     sidebarPosition,
-    sidebarTabs: sidebarTabs.map((tab) => tab.key)
+    sidebarTabs: sidebarTabs.map((tab) => tab.key),
+    terminalPaneOpen: isTerminalPaneOpen,
+    terminalRatio
   })
 
   const showHomeScreen = sessionRestored && !projectRoot
@@ -396,6 +409,9 @@ function App() {
         onReturnHome={handleCloseProject}
         onNewFromTemplate={handleOpenTemplateGallery}
         onAiDraft={handleAiDraft}
+        onAiAssistant={() => setIsAiAssistantOpen(true)}
+        onToggleTerminalPane={toggleTerminalPane}
+        isTerminalPaneOpen={isTerminalPaneOpen}
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
       {isSettingsOpen && (
@@ -403,6 +419,13 @@ function App() {
           <SettingsModal onClose={() => setIsSettingsOpen(false)} />
         </Suspense>
       )}
+      <Suspense fallback={null}>
+        <AiAssistantModal
+          isOpen={isAiAssistantOpen}
+          onClose={() => setIsAiAssistantOpen(false)}
+          onAiDraft={() => handleAiDraft()}
+        />
+      </Suspense>
       <Suspense fallback={null}>
         <DraftModal
           isOpen={isDraftModalOpen}
@@ -427,7 +450,12 @@ function App() {
           {sidebarPosition === 'left' && (isSidebarOpen || autoHideSidebar) && sidebarElement}
           <div className="editor-area">
             <div className="editor-main-content" ref={mainContentRef}>
-              <div className="editor-pane" style={{ width: `${splitRatio * 100}%` }}>
+              <div
+                className="editor-pane"
+                style={{
+                  width: `${splitRatio * (isTerminalPaneOpen ? 1 - terminalRatio : 1) * 100}%`
+                }}
+              >
                 <TabBar />
                 <EditorPane />
               </div>
@@ -436,11 +464,28 @@ function App() {
                 onMouseDown={handleDividerMouseDown}
                 onDoubleClick={handleDividerDoubleClick}
               />
-              <div className="preview-pane" style={{ width: `${(1 - splitRatio) * 100}%` }}>
+              <div
+                className="preview-pane"
+                style={{
+                  width: `${(1 - splitRatio) * (isTerminalPaneOpen ? 1 - terminalRatio : 1) * 100}%`
+                }}
+              >
                 <PreviewErrorBoundary>
                   <PreviewPane />
                 </PreviewErrorBoundary>
               </div>
+              {isTerminalPaneOpen && (
+                <>
+                  <div
+                    className="split-divider terminal-split-divider"
+                    onMouseDown={handleTerminalDividerMouseDown}
+                    onDoubleClick={handleTerminalDividerDoubleClick}
+                  />
+                  <div className="terminal-pane" style={{ width: `${terminalRatio * 100}%` }}>
+                    <TerminalPane />
+                  </div>
+                </>
+              )}
             </div>
           </div>
           {sidebarPosition === 'right' && (isSidebarOpen || autoHideSidebar) && sidebarElement}

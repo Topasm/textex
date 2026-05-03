@@ -8,6 +8,7 @@ import {
   AiCustomProcessRequest,
   AiLightContext,
   AiProcessRequest,
+  ClaudeTerminalResult,
   UserSettings
 } from '../shared/types'
 import { hashTextContent } from '../shared/hash'
@@ -155,6 +156,11 @@ async function callAIAPI(
 
 const execFileAsync = promisify(execFile)
 
+export interface TerminalLaunchSpec {
+  command: string
+  args: string[]
+}
+
 function getCliEnv(): NodeJS.ProcessEnv {
   const extraPaths = [
     path.join(os.homedir(), '.local', 'bin'),
@@ -221,6 +227,129 @@ export async function checkClaudeCliAvailable(): Promise<boolean> {
   } catch {
     return false
   }
+}
+
+function quoteForBash(value: string): string {
+  return `'${value.replace(/'/g, "'\\''")}'`
+}
+
+function quoteForCmd(value: string): string {
+  return `"${value.replace(/"/g, '""')}"`
+}
+
+function quoteForAppleScript(value: string): string {
+  return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
+}
+
+function resolveForPlatform(workDir: string, platform: NodeJS.Platform): string {
+  return platform === 'win32' ? path.win32.resolve(workDir) : path.resolve(workDir)
+}
+
+export function buildClaudeTerminalCommand(
+  workDir: string,
+  resume = false,
+  platform: NodeJS.Platform = process.platform
+): string {
+  const normalizedWorkDir = resolveForPlatform(workDir, platform)
+  const claudeCommand = `claude${resume ? ' --resume' : ''}`
+  if (platform === 'win32') {
+    return `cd /d ${quoteForCmd(normalizedWorkDir)} && ${claudeCommand}`
+  }
+  return `cd ${quoteForBash(normalizedWorkDir)} && ${claudeCommand}`
+}
+
+export function getClaudeTerminalLaunchSpecs(
+  platform: NodeJS.Platform,
+  workDir: string,
+  resume = false
+): TerminalLaunchSpec[] {
+  const command = buildClaudeTerminalCommand(workDir, resume, platform)
+
+  if (platform === 'darwin') {
+    return [
+      {
+        command: 'osascript',
+        args: [
+          '-e',
+          'tell application "Terminal" to activate',
+          '-e',
+          `tell application "Terminal" to do script ${quoteForAppleScript(command)}`
+        ]
+      }
+    ]
+  }
+
+  if (platform === 'win32') {
+    return [
+      {
+        command: 'cmd.exe',
+        args: ['/c', 'start', 'Textex Claude Code', 'cmd.exe', '/k', command]
+      }
+    ]
+  }
+
+  const shellCommand = `${command}; exec bash`
+  return [
+    { command: 'x-terminal-emulator', args: ['-e', 'bash', '-lc', shellCommand] },
+    { command: 'gnome-terminal', args: ['--', 'bash', '-lc', shellCommand] },
+    { command: 'konsole', args: ['-e', 'bash', '-lc', shellCommand] },
+    { command: 'xfce4-terminal', args: ['--command', `bash -lc ${quoteForBash(shellCommand)}`] }
+  ]
+}
+
+function launchDetached(spec: TerminalLaunchSpec, workDir: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(spec.command, spec.args, {
+      cwd: workDir,
+      env: getCliEnv(),
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: false
+    })
+
+    child.once('error', reject)
+    child.once('spawn', () => {
+      child.unref()
+      resolve()
+    })
+  })
+}
+
+export async function openClaudeTerminal(
+  workDir: string,
+  resume = false
+): Promise<ClaudeTerminalResult> {
+  if (!workDir || typeof workDir !== 'string') {
+    throw new Error('Working directory is required')
+  }
+
+  const normalizedWorkDir = resolveForPlatform(workDir, process.platform)
+  const available = await checkClaudeCliAvailable()
+  if (!available) {
+    throw new Error('Claude Code CLI was not found. Install Claude Code and try again.')
+  }
+
+  const specs = getClaudeTerminalLaunchSpecs(process.platform, normalizedWorkDir, resume)
+  let lastError: unknown
+
+  for (const spec of specs) {
+    try {
+      await launchDetached(spec, normalizedWorkDir)
+      return {
+        success: true,
+        workDir: normalizedWorkDir,
+        command: buildClaudeTerminalCommand(normalizedWorkDir, resume)
+      }
+    } catch (err) {
+      lastError = err
+    }
+  }
+
+  throw new Error(
+    lastError instanceof Error
+      ? `Could not open a terminal: ${lastError.message}`
+      : 'Could not open a terminal'
+  )
 }
 
 // ---- Provider calls ----

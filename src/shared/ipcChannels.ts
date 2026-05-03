@@ -11,6 +11,8 @@ import type {
   AiContextEntry,
   AiCustomProcessRequest,
   AiProcessRequest,
+  ClaudeTerminalRequest,
+  ClaudeTerminalResult,
   Diagnostic,
   SyncTeXForwardResult,
   SyncTeXInverseResult,
@@ -173,6 +175,7 @@ export interface IpcChannelMap {
   'ai:save-api-key': [[provider: string, apiKey: string], SuccessResult]
   'ai:has-api-key': [[provider: string], boolean]
   'ai:check-cli': [[], boolean]
+  'ai:open-claude-terminal': [[request: ClaudeTerminalRequest], ClaudeTerminalResult]
 
   // Document Structure
   'structure:outline': [[filePath: string, content: string], SectionNode[]]

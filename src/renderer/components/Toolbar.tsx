@@ -1,5 +1,13 @@
 import React, { useState, useCallback } from 'react'
-import { Play, Loader, ScrollText, Sparkles, House, Save as SaveIcon } from 'lucide-react'
+import {
+  Play,
+  Loader,
+  ScrollText,
+  Sparkles,
+  House,
+  Save as SaveIcon,
+  SquareTerminal
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useEditorStore } from '../store/useEditorStore'
 import { useCompileStore } from '../store/useCompileStore'
@@ -18,6 +26,9 @@ interface ToolbarProps {
   onReturnHome: () => void
   onNewFromTemplate: () => void
   onAiDraft: (prefill?: string) => void
+  onAiAssistant: () => void
+  onToggleTerminalPane: () => void
+  isTerminalPaneOpen: boolean
   onOpenSettings: () => void
 }
 
@@ -29,6 +40,9 @@ const Toolbar = React.memo(function Toolbar({
   onReturnHome,
   onNewFromTemplate,
   onAiDraft,
+  onAiAssistant,
+  onToggleTerminalPane,
+  isTerminalPaneOpen,
   onOpenSettings
 }: ToolbarProps) {
   const { t } = useTranslation()
@@ -136,14 +150,24 @@ const Toolbar = React.memo(function Toolbar({
         </button>
 
         {aiEnabled && (
-          <button
-            className="toolbar-btn"
-            onClick={() => onAiDraft()}
-            title={t('toolbar.aiDraftShortcut')}
-            aria-label={t('toolbar.aiDraftShortcut')}
-          >
-            <Sparkles size={16} />
-          </button>
+          <>
+            <button
+              className="toolbar-btn"
+              onClick={onAiAssistant}
+              title={t('toolbar.aiAssistant')}
+              aria-label={t('toolbar.aiAssistant')}
+            >
+              <Sparkles size={16} />
+            </button>
+            <button
+              className={`toolbar-btn${isTerminalPaneOpen ? ' active' : ''}`}
+              onClick={onToggleTerminalPane}
+              title={t('toolbar.terminalPane')}
+              aria-label={t('toolbar.terminalPane')}
+            >
+              <SquareTerminal size={16} />
+            </button>
+          </>
         )}
 
         <div className="toolbar-search-slot">

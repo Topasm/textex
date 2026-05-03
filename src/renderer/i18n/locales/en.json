@@ -17,6 +17,8 @@
     "toggleLog": "Toggle log panel (Ctrl+L)",
     "aiDraft": "AI Draft",
     "aiDraftShortcut": "AI Draft (Ctrl+Shift+D)",
+    "aiAssistant": "AI Assistant",
+    "terminalPane": "Terminal pane",
     "settings": "Settings",
     "syncPdfToCode": "Sync PDF to Code (Ctrl+Click in PDF)",
     "syncCodeToPdf": "Sync Code to PDF",

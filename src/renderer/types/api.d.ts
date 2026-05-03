@@ -3,6 +3,8 @@ import {
   AiContextEntry,
   AiCustomProcessRequest,
   AiProcessRequest,
+  ClaudeTerminalRequest,
+  ClaudeTerminalResult,
   Diagnostic,
   SyncTeXForwardResult,
   SyncTeXInverseResult,
@@ -174,6 +176,7 @@ export interface ElectronAPI {
   aiProcessCustom(request: AiCustomProcessRequest): Promise<string>
   aiUpdateContext(filePath: string, content: string): Promise<AiContextEntry>
   aiCheckCli(): Promise<boolean>
+  aiOpenClaudeTerminal(request: ClaudeTerminalRequest): Promise<ClaudeTerminalResult>
 
   // Document Structure (fallback outline)
   getDocumentOutline(filePath: string, content: string): Promise<SectionNode[]>

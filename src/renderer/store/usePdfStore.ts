@@ -1,10 +1,19 @@
 import { create } from 'zustand'
 import { subscribeWithSelector, persist } from 'zustand/middleware'
-import { ZOOM_MIN, ZOOM_MAX, ZOOM_STEP, SPLIT_RATIO_MIN, SPLIT_RATIO_MAX } from '../constants'
+import {
+  ZOOM_MIN,
+  ZOOM_MAX,
+  ZOOM_STEP,
+  SPLIT_RATIO_MIN,
+  SPLIT_RATIO_MAX,
+  TERMINAL_RATIO_MIN,
+  TERMINAL_RATIO_MAX
+} from '../constants'
 
 interface PdfState {
   zoomLevel: number
   splitRatio: number
+  terminalRatio: number
   synctexHighlight: { page: number; x: number; y: number; timestamp: number } | null
 
   // PDF Search
@@ -31,6 +40,7 @@ interface PdfState {
 
   // Actions
   setSplitRatio: (ratio: number) => void
+  setTerminalRatio: (ratio: number) => void
   setZoomLevel: (level: number) => void
   zoomIn: () => void
   zoomOut: () => void
@@ -55,6 +65,7 @@ interface PdfState {
 interface PersistedPdfLayoutState {
   zoomLevel?: number
   splitRatio?: number
+  terminalRatio?: number
   savedScrollPositions?: Record<string, number>
 }
 
@@ -70,6 +81,7 @@ export const usePdfStore = create<PdfState>()(
     subscribeWithSelector((set, get) => ({
       zoomLevel: 100,
       splitRatio: 0.5,
+      terminalRatio: 0.28,
       synctexHighlight: null,
       pdfSearchVisible: false,
       pdfSearchQuery: '',
@@ -86,6 +98,10 @@ export const usePdfStore = create<PdfState>()(
 
       setSplitRatio: (splitRatio) =>
         set({ splitRatio: Math.max(SPLIT_RATIO_MIN, Math.min(SPLIT_RATIO_MAX, splitRatio)) }),
+      setTerminalRatio: (terminalRatio) =>
+        set({
+          terminalRatio: Math.max(TERMINAL_RATIO_MIN, Math.min(TERMINAL_RATIO_MAX, terminalRatio))
+        }),
       setZoomLevel: (level) => set({ zoomLevel: normalizeZoomLevel(level) }),
       zoomIn: () =>
         set((state) => ({ zoomLevel: normalizeZoomLevel(state.zoomLevel + ZOOM_STEP) })),
@@ -131,6 +147,7 @@ export const usePdfStore = create<PdfState>()(
       partialize: (state) => ({
         zoomLevel: state.zoomLevel,
         splitRatio: state.splitRatio,
+        terminalRatio: state.terminalRatio,
         savedScrollPositions: state.savedScrollPositions
       })
     }

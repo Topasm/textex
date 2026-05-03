@@ -17,6 +17,8 @@
     "toggleLog": "Alternar panel de registro (Ctrl+L)",
     "aiDraft": "Borrador IA",
     "aiDraftShortcut": "Borrador IA (Ctrl+Shift+D)",
+    "aiAssistant": "Asistente de IA",
+    "terminalPane": "Panel de terminal",
     "settings": "Configuración",
     "syncPdfToCode": "Sincronizar PDF a código (Ctrl+Clic en PDF)",
     "syncCodeToPdf": "Sincronizar código a PDF",

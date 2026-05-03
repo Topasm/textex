@@ -17,6 +17,8 @@
     "toggleLog": "Afficher/masquer le panneau de journal (Ctrl+L)",
     "aiDraft": "Brouillon IA",
     "aiDraftShortcut": "Brouillon IA (Ctrl+Shift+D)",
+    "aiAssistant": "Assistant IA",
+    "terminalPane": "Panneau terminal",
     "settings": "Paramètres",
     "syncPdfToCode": "Synchroniser PDF vers code (Ctrl+Clic dans le PDF)",
     "syncCodeToPdf": "Synchroniser code vers PDF",

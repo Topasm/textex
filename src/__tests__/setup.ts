@@ -114,6 +114,8 @@ Object.defineProperty(window, 'api', {
     aiProcess: vi.fn(),
     aiProcessCustom: vi.fn(),
     aiUpdateContext: vi.fn(),
+    aiCheckCli: vi.fn(),
+    aiOpenClaudeTerminal: vi.fn(),
 
     // Labels / Packages / External
     scanLabels: vi.fn(),

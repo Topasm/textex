@@ -19,6 +19,10 @@ interface DragResizeHandlers {
   handleDividerMouseDown: (e: React.MouseEvent) => void
   /** onDoubleClick for the split divider (reset to 50%). */
   handleDividerDoubleClick: () => void
+  /** onMouseDown for the preview ↔ terminal split divider. */
+  handleTerminalDividerMouseDown: (e: React.MouseEvent) => void
+  /** onDoubleClick for the terminal divider (reset to 28%). */
+  handleTerminalDividerDoubleClick: () => void
   /** onMouseDown for the sidebar resize handle. */
   handleSidebarDividerMouseDown: (e: React.MouseEvent) => void
   /** onDoubleClick for the sidebar resize handle (reset to 240px). */
@@ -32,6 +36,8 @@ interface DragResizeHandlers {
 interface DragResizeOptions {
   sidebarPosition: SidebarPosition
   sidebarTabs: SidebarView[]
+  terminalPaneOpen?: boolean
+  terminalRatio?: number
 }
 
 interface SidebarBounds {
@@ -73,7 +79,9 @@ export function getSidebarSlideAnimation(
  */
 export function useDragResize({
   sidebarPosition,
-  sidebarTabs
+  sidebarTabs,
+  terminalPaneOpen = false,
+  terminalRatio = 0.28
 }: DragResizeOptions): DragResizeHandlers {
   const mainContentRef = useRef<HTMLDivElement>(null)
   const sidebarRef = useRef<HTMLDivElement>(null)
@@ -81,7 +89,40 @@ export function useDragResize({
   const isSidebarDragging = useRef(false)
 
   // ---- Split divider drag ----
-  const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
+  const handleDividerMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault()
+      isDragging.current = true
+      document.body.style.cursor = 'col-resize'
+      document.body.style.userSelect = 'none'
+
+      const onMouseMove = (moveEvent: MouseEvent): void => {
+        if (!isDragging.current || !mainContentRef.current) return
+        const rect = mainContentRef.current.getBoundingClientRect()
+        const availableWidth = terminalPaneOpen ? rect.width * (1 - terminalRatio) : rect.width
+        const ratio = (moveEvent.clientX - rect.left) / availableWidth
+        usePdfStore.getState().setSplitRatio(Math.min(0.8, Math.max(0.2, ratio)))
+      }
+
+      const onMouseUp = (): void => {
+        isDragging.current = false
+        document.body.style.cursor = ''
+        document.body.style.userSelect = ''
+        window.removeEventListener('mousemove', onMouseMove)
+        window.removeEventListener('mouseup', onMouseUp)
+      }
+
+      window.addEventListener('mousemove', onMouseMove)
+      window.addEventListener('mouseup', onMouseUp)
+    },
+    [terminalPaneOpen, terminalRatio]
+  )
+
+  const handleDividerDoubleClick = useCallback(() => {
+    usePdfStore.getState().setSplitRatio(0.5)
+  }, [])
+
+  const handleTerminalDividerMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     isDragging.current = true
     document.body.style.cursor = 'col-resize'
@@ -90,8 +131,8 @@ export function useDragResize({
     const onMouseMove = (moveEvent: MouseEvent): void => {
       if (!isDragging.current || !mainContentRef.current) return
       const rect = mainContentRef.current.getBoundingClientRect()
-      const ratio = (moveEvent.clientX - rect.left) / rect.width
-      usePdfStore.getState().setSplitRatio(Math.min(0.8, Math.max(0.2, ratio)))
+      const pointerRatio = (moveEvent.clientX - rect.left) / rect.width
+      usePdfStore.getState().setTerminalRatio(1 - pointerRatio)
     }
 
     const onMouseUp = (): void => {
@@ -106,8 +147,8 @@ export function useDragResize({
     window.addEventListener('mouseup', onMouseUp)
   }, [])
 
-  const handleDividerDoubleClick = useCallback(() => {
-    usePdfStore.getState().setSplitRatio(0.5)
+  const handleTerminalDividerDoubleClick = useCallback(() => {
+    usePdfStore.getState().setTerminalRatio(0.28)
   }, [])
 
   // ---- Sidebar resize drag ----
@@ -215,6 +256,8 @@ export function useDragResize({
     sidebarRef,
     handleDividerMouseDown,
     handleDividerDoubleClick,
+    handleTerminalDividerMouseDown,
+    handleTerminalDividerDoubleClick,
     handleSidebarDividerMouseDown,
     handleSidebarDividerDoubleClick,
     handleSidebarWheel,

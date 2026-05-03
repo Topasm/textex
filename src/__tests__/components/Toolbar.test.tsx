@@ -19,6 +19,9 @@ const defaultProps = {
   onReturnHome: vi.fn(),
   onNewFromTemplate: vi.fn(),
   onAiDraft: vi.fn(),
+  onAiAssistant: vi.fn(),
+  onToggleTerminalPane: vi.fn(),
+  isTerminalPaneOpen: false,
   onOpenSettings: vi.fn()
 }
 
@@ -83,7 +86,7 @@ describe('Toolbar', () => {
     expect(defaultProps.onCompile).toHaveBeenCalledOnce()
   })
 
-  it('opens AI Draft without passing the click event as a prompt', () => {
+  it('opens AI Assistant from the topbar AI button', () => {
     useSettingsStore.setState({
       settings: {
         ...useSettingsStore.getState().settings,
@@ -93,8 +96,23 @@ describe('Toolbar', () => {
     })
 
     render(<Toolbar {...defaultProps} />)
-    fireEvent.click(screen.getByTitle(/AI Draft/))
-    expect(defaultProps.onAiDraft).toHaveBeenCalledWith()
+    fireEvent.click(screen.getByTitle(/AI Assistant/))
+    expect(defaultProps.onAiAssistant).toHaveBeenCalledOnce()
+    expect(defaultProps.onAiDraft).not.toHaveBeenCalled()
+  })
+
+  it('toggles the terminal pane from the toolbar', () => {
+    useSettingsStore.setState({
+      settings: {
+        ...useSettingsStore.getState().settings,
+        aiEnabled: true,
+        aiProvider: 'openai'
+      }
+    })
+
+    render(<Toolbar {...defaultProps} />)
+    fireEvent.click(screen.getByTitle(/Terminal pane/))
+    expect(defaultProps.onToggleTerminalPane).toHaveBeenCalledOnce()
   })
 
   it('shows OmniSearch with default citations mode', () => {

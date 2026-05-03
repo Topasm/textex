@@ -17,6 +17,8 @@
     "toggleLog": "Protokollbereich ein-/ausblenden (Ctrl+L)",
     "aiDraft": "KI-Entwurf",
     "aiDraftShortcut": "KI-Entwurf (Ctrl+Shift+D)",
+    "aiAssistant": "KI-Assistent",
+    "terminalPane": "Terminalbereich",
     "settings": "Einstellungen",
     "syncPdfToCode": "PDF zu Code synchronisieren (Ctrl+Klick im PDF)",
     "syncCodeToPdf": "Code zu PDF synchronisieren",
