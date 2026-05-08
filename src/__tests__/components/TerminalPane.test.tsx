@@ -35,6 +35,15 @@ vi.mock('@xterm/addon-web-links', () => {
   return { WebLinksAddon: class {} }
 })
 
+vi.mock('@xterm/addon-webgl', () => {
+  return {
+    WebglAddon: class {
+      onContextLoss = vi.fn()
+      dispose = vi.fn()
+    }
+  }
+})
+
 vi.mock('@xterm/xterm/css/xterm.css', () => ({}))
 
 describe('TerminalPane', () => {

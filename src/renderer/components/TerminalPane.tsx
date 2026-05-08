@@ -3,6 +3,7 @@ import { RotateCcw, Terminal, X } from 'lucide-react'
 import { Terminal as XTerm } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
+import { WebglAddon } from '@xterm/addon-webgl'
 import '@xterm/xterm/css/xterm.css'
 import { useEditorStore } from '../store/useEditorStore'
 import { useProjectStore } from '../store/useProjectStore'
@@ -93,6 +94,15 @@ export function TerminalPane() {
     term.loadAddon(fit)
     term.loadAddon(new WebLinksAddon())
     term.open(containerRef.current)
+
+    try {
+      const webgl = new WebglAddon()
+      // Fall back to DOM renderer if the WebGL context is lost.
+      webgl.onContextLoss(() => webgl.dispose())
+      term.loadAddon(webgl)
+    } catch {
+      // WebGL unavailable — DOM renderer is used by default.
+    }
     // Let global shortcuts (e.g. Ctrl+`) bubble out of xterm.
     term.attachCustomKeyEventHandler((ev) => {
       if ((ev.ctrlKey || ev.metaKey) && ev.key === '`') return false

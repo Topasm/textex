@@ -4,7 +4,6 @@ import { FolderTree, BookOpen, ListTree, StickyNote, Clock, GitBranch } from 'lu
 import Toolbar from './components/Toolbar'
 import EditorPane from './components/EditorPane'
 import PreviewPane from './components/PreviewPane'
-import { TerminalPane } from './components/TerminalPane'
 import LogPanel from './components/LogPanel'
 import StatusBar from './components/StatusBar'
 import FileTree from './components/FileTree'
@@ -53,6 +52,9 @@ const AiAssistantModal = lazy(() =>
   import('./components/AiAssistantModal').then((m) => ({ default: m.AiAssistantModal }))
 )
 const TemplateGallery = lazy(() => import('./components/TemplateGallery'))
+const TerminalPane = lazy(() =>
+  import('./components/TerminalPane').then((m) => ({ default: m.TerminalPane }))
+)
 
 function App() {
   const { t } = useTranslation()
@@ -484,7 +486,9 @@ function App() {
                     onDoubleClick={handleTerminalDividerDoubleClick}
                   />
                   <div className="terminal-pane" style={{ width: `${terminalRatio * 100}%` }}>
-                    <TerminalPane />
+                    <Suspense fallback={null}>
+                      <TerminalPane />
+                    </Suspense>
                   </div>
                 </>
               )}
