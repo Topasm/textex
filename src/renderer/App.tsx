@@ -257,6 +257,7 @@ function App() {
         save: handleSave,
         saveAs: handleSaveAs,
         toggleLog: toggleLogPanel,
+        toggleTerminal: toggleTerminalPane,
         exportDocument: handleExport
       })
     },
@@ -269,7 +270,8 @@ function App() {
       handleOpenFolder,
       handleOpenTemplateGallery,
       handleSave,
-      handleSaveAs
+      handleSaveAs,
+      toggleTerminalPane
     ]
   )
 

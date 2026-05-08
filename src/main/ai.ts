@@ -1,8 +1,8 @@
 import { execFile, spawn } from 'child_process'
 import { promisify } from 'util'
-import os from 'os'
 import path from 'path'
 import { loadSettings } from './settings'
+import { getCliEnv } from './utils/cliEnv'
 import {
   AiContextEntry,
   AiCustomProcessRequest,
@@ -159,19 +159,6 @@ const execFileAsync = promisify(execFile)
 export interface TerminalLaunchSpec {
   command: string
   args: string[]
-}
-
-function getCliEnv(): NodeJS.ProcessEnv {
-  const extraPaths = [
-    path.join(os.homedir(), '.local', 'bin'),
-    '/opt/homebrew/bin',
-    '/usr/local/bin'
-  ]
-  const currentPath = process.env.PATH || ''
-  return {
-    ...process.env,
-    PATH: [...extraPaths, currentPath].join(path.delimiter)
-  }
 }
 
 function callClaudeCli(input: string, model: string, systemPrompt: string): Promise<string> {

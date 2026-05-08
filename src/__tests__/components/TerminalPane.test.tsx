@@ -6,6 +6,33 @@ import { useEditorStore } from '../../renderer/store/useEditorStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { useUiStore } from '../../renderer/store/useUiStore'
 
+// xterm.js requires DOM measurement APIs that jsdom does not provide.
+vi.mock('@xterm/xterm', () => {
+  class FakeTerminal {
+    cols = 80
+    rows = 24
+    onData = vi.fn()
+    onResize = vi.fn()
+    loadAddon = vi.fn()
+    open = vi.fn()
+    write = vi.fn()
+    focus = vi.fn()
+    dispose = vi.fn()
+    attachCustomKeyEventHandler = vi.fn()
+  }
+  return { Terminal: FakeTerminal }
+})
+
+vi.mock('@xterm/addon-fit', () => {
+  return { FitAddon: class { fit = vi.fn() } }
+})
+
+vi.mock('@xterm/addon-web-links', () => {
+  return { WebLinksAddon: class {} }
+})
+
+vi.mock('@xterm/xterm/css/xterm.css', () => ({}))
+
 describe('TerminalPane', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -24,50 +51,39 @@ describe('TerminalPane', () => {
       _sessionActiveFile: null
     })
     useUiStore.setState({ isTerminalPaneOpen: true })
-    window.api.aiCheckCli = vi.fn().mockResolvedValue(true)
-    window.api.aiOpenClaudeTerminal = vi.fn().mockResolvedValue({
-      success: true,
-      workDir: '/projects/paper',
-      command: "cd '/projects/paper' && claude"
+    window.api.ptyCreate = vi.fn().mockResolvedValue({ id: 'pty-1' })
+    window.api.ptyWrite = vi.fn().mockResolvedValue({ success: true })
+    window.api.ptyResize = vi.fn().mockResolvedValue({ success: true })
+    window.api.ptyDispose = vi.fn().mockResolvedValue({ success: true })
+    window.api.onPtyData = vi.fn().mockReturnValue(() => {})
+    window.api.onPtyExit = vi.fn().mockReturnValue(() => {})
+  })
+
+  it('starts a PTY session for the working directory on mount', async () => {
+    render(<TerminalPane />)
+    await waitFor(() => {
+      expect(window.api.ptyCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ cwd: '/projects/paper' })
+      )
     })
   })
 
-  it('opens Claude Code from the docked terminal pane', async () => {
+  it('restarts the shell when the restart button is clicked', async () => {
     const user = userEvent.setup()
     render(<TerminalPane />)
-
-    await user.click(screen.getByRole('button', { name: /Claude Code/i }))
-
     await waitFor(() => {
-      expect(window.api.aiCheckCli).toHaveBeenCalled()
-      expect(window.api.aiOpenClaudeTerminal).toHaveBeenCalledWith({
-        workDir: '/projects/paper',
-        resume: false
-      })
+      expect(window.api.ptyCreate).toHaveBeenCalledTimes(1)
     })
-    expect(screen.getByText('Claude Code opened.')).toBeInTheDocument()
-  })
-
-  it('opens Claude Code resume mode', async () => {
-    const user = userEvent.setup()
-    render(<TerminalPane />)
-
-    await user.click(screen.getByRole('button', { name: /Resume/i }))
-
+    await user.click(screen.getByRole('button', { name: /Restart shell/i }))
     await waitFor(() => {
-      expect(window.api.aiOpenClaudeTerminal).toHaveBeenCalledWith({
-        workDir: '/projects/paper',
-        resume: true
-      })
+      expect(window.api.ptyCreate).toHaveBeenCalledTimes(2)
     })
   })
 
   it('closes the terminal pane', async () => {
     const user = userEvent.setup()
     render(<TerminalPane />)
-
     await user.click(screen.getByRole('button', { name: /Close terminal pane/i }))
-
     expect(useUiStore.getState().isTerminalPaneOpen).toBe(false)
   })
 })

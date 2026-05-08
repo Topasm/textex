@@ -15,6 +15,7 @@ export interface AppCommandContext {
   save: () => Promise<void>
   saveAs: () => Promise<void>
   toggleLog: () => void
+  toggleTerminal: () => void
   exportDocument: (format: 'html' | 'docx' | 'odt' | 'epub') => Promise<void>
 }
 
@@ -62,6 +63,9 @@ export async function executeAppCommand(
       return
     case 'view.toggleLog':
       context.toggleLog()
+      return
+    case 'view.toggleTerminal':
+      context.toggleTerminal()
       return
     case 'view.search.citations':
       useUiStore.getState().requestOmniSearchFocus('cite')

@@ -32,6 +32,9 @@ export function useKeyboardShortcuts(opts: KeyboardShortcutsOpts): void {
     commandRegistry.register('view.toggleLog', { key: 'l', mod: true }, () =>
       runCommand('view.toggleLog')
     )
+    commandRegistry.register('view.toggleTerminal', { key: '`', mod: true }, () =>
+      runCommand('view.toggleTerminal')
+    )
     commandRegistry.register('edit.find', { key: 'f', mod: true }, () => runCommand('edit.find'))
     commandRegistry.register('font.increase', { key: ['=', '+'], mod: true, alt: true }, () =>
       useSettingsStore.getState().increaseFontSize()

@@ -13,6 +13,7 @@ import { registerHistoryHandlers } from './history'
 import { registerMiscHandlers } from './misc'
 import { registerTemplateHandlers } from './templates'
 import { registerProjectDataHandlers } from './projectData'
+import { registerPtyHandlers, disposeAllPtyHandlers } from './pty'
 
 let currentWindow: BrowserWindow | null = null
 let handlersRegistered = false
@@ -43,6 +44,7 @@ export function registerIpcHandlers(win: BrowserWindow): void {
   registerMiscHandlers(getWindow)
   registerTemplateHandlers(getWindow)
   registerProjectDataHandlers()
+  registerPtyHandlers(getWindow)
 }
 
 /**
@@ -50,6 +52,7 @@ export function registerIpcHandlers(win: BrowserWindow): void {
  * to ensure deterministic cleanup (no dangling listeners between reload cycles).
  */
 export function disposeIpcHandlers(): void {
+  disposeAllPtyHandlers()
   ipcDisposables.dispose()
   currentWindow = null
   handlersRegistered = false

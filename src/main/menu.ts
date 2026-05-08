@@ -68,6 +68,7 @@ export function createAppMenuTemplate({
   const viewSubmenu: MenuItemConstructorOptions[] = [
     commandItem('Toggle Sidebar', 'view.toggleSidebar', sendCommand, 'CmdOrCtrl+B'),
     commandItem('Toggle Log', 'view.toggleLog', sendCommand, 'CmdOrCtrl+L'),
+    commandItem('Toggle Terminal', 'view.toggleTerminal', sendCommand, 'CmdOrCtrl+`'),
     { type: 'separator' },
     commandItem('Focus Citation Search', 'view.search.citations', sendCommand, 'CmdOrCtrl+Shift+C'),
     commandItem('Focus PDF Search', 'view.search.pdf', sendCommand, 'CmdOrCtrl+Shift+F'),

@@ -23,6 +23,7 @@ export type AppCommandId =
   | 'edit.find'
   | 'view.toggleSidebar'
   | 'view.toggleLog'
+  | 'view.toggleTerminal'
   | 'view.search.citations'
   | 'view.search.pdf'
   | 'pdf.zoomIn'

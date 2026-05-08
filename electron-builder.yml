@@ -31,6 +31,9 @@ extraResources:
 files:
   - 'out/**/*'
 
+asarUnpack:
+  - 'node_modules/node-pty/**/*'
+
 publish:
   - provider: github
     owner: Topasm

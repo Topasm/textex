@@ -1,78 +1,171 @@
-import { useCallback, useMemo, useState } from 'react'
-import { Copy, RotateCcw, Terminal, X } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { RotateCcw, Terminal, X } from 'lucide-react'
+import { Terminal as XTerm } from '@xterm/xterm'
+import { FitAddon } from '@xterm/addon-fit'
+import { WebLinksAddon } from '@xterm/addon-web-links'
+import '@xterm/xterm/css/xterm.css'
 import { useEditorStore } from '../store/useEditorStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { useUiStore } from '../store/useUiStore'
 import { errorMessage } from '../utils/errorMessage'
+import { dirname } from '../utils/path'
 
-type LaunchState = 'idle' | 'checking' | 'opening' | 'opened' | 'error'
-
-function dirname(filePath: string): string {
-  const index = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'))
-  return index > 0 ? filePath.slice(0, index) : filePath
+function readCssVar(name: string, fallback: string): string {
+  if (typeof window === 'undefined') return fallback
+  const val = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+  return val || fallback
 }
 
-function quoteForDisplay(value: string): string {
-  return `'${value.replace(/'/g, "'\\''")}'`
-}
-
-function buildCommandPreview(workDir: string, resume: boolean): string {
-  return `cd ${quoteForDisplay(workDir)} && claude${resume ? ' --resume' : ''}`
+function buildTheme() {
+  return {
+    background: readCssVar('--bg-primary', '#1e1e1e'),
+    foreground: readCssVar('--text-primary', '#d4d4d4'),
+    cursor: readCssVar('--accent', '#569cd6'),
+    cursorAccent: readCssVar('--bg-primary', '#1e1e1e'),
+    selectionBackground: readCssVar('--bg-hover', '#264f78')
+  }
 }
 
 export function TerminalPane() {
   const projectRoot = useProjectStore((s) => s.projectRoot)
   const filePath = useEditorStore((s) => s.filePath)
-  const isDirty = useEditorStore((s) => s.isDirty)
   const setTerminalPaneOpen = useUiStore((s) => s.setTerminalPaneOpen)
-  const [launchState, setLaunchState] = useState<LaunchState>('idle')
-  const [message, setMessage] = useState('Ready')
-  const [copied, setCopied] = useState(false)
+
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const termRef = useRef<XTerm | null>(null)
+  const fitRef = useRef<FitAddon | null>(null)
+  const sessionIdRef = useRef<string | null>(null)
+  const dataDisposeRef = useRef<(() => void) | null>(null)
+  const exitDisposeRef = useRef<(() => void) | null>(null)
+  const resizeObserverRef = useRef<ResizeObserver | null>(null)
+
+  const [exited, setExited] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   const workDir = useMemo(
     () => projectRoot || (filePath ? dirname(filePath) : ''),
     [filePath, projectRoot]
   )
-  const commandPreview = workDir ? buildCommandPreview(workDir, false) : 'claude'
 
-  const openClaudeTerminal = useCallback(
-    async (resume: boolean) => {
-      if (!workDir) {
-        setLaunchState('error')
-        setMessage('Open a project or file first.')
-        return
-      }
-
-      setCopied(false)
-      setLaunchState('checking')
-      setMessage('Checking Claude Code...')
-
+  const teardown = useCallback(async () => {
+    dataDisposeRef.current?.()
+    dataDisposeRef.current = null
+    exitDisposeRef.current?.()
+    exitDisposeRef.current = null
+    resizeObserverRef.current?.disconnect()
+    resizeObserverRef.current = null
+    const id = sessionIdRef.current
+    sessionIdRef.current = null
+    if (id) {
       try {
-        const available = await window.api.aiCheckCli()
-        if (!available) {
-          setLaunchState('error')
-          setMessage('Claude Code CLI was not found.')
-          return
-        }
-
-        setLaunchState('opening')
-        setMessage('Opening terminal...')
-        await window.api.aiOpenClaudeTerminal({ workDir, resume })
-        setLaunchState('opened')
-        setMessage(resume ? 'Resume session opened.' : 'Claude Code opened.')
-      } catch (err) {
-        setLaunchState('error')
-        setMessage(errorMessage(err))
+        await window.api.ptyDispose(id)
+      } catch {
+        // PTY may already be gone
       }
-    },
-    [workDir]
-  )
+    }
+    termRef.current?.dispose()
+    termRef.current = null
+    fitRef.current = null
+  }, [])
 
-  const copyCommand = useCallback(async () => {
-    if (!workDir) return
-    await navigator.clipboard?.writeText(commandPreview)
-    setCopied(true)
-  }, [commandPreview, workDir])
+  const startSession = useCallback(async () => {
+    if (!workDir) {
+      setErrorMsg('Open a project or file first.')
+      return
+    }
+    if (!containerRef.current) return
+
+    await teardown()
+    setExited(false)
+    setErrorMsg(null)
+
+    const term = new XTerm({
+      cursorBlink: true,
+      fontFamily:
+        'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+      fontSize: 13,
+      theme: buildTheme(),
+      allowProposedApi: true,
+      scrollback: 5000,
+      convertEol: false
+    })
+    const fit = new FitAddon()
+    term.loadAddon(fit)
+    term.loadAddon(new WebLinksAddon())
+    term.open(containerRef.current)
+    // Let global shortcuts (e.g. Ctrl+`) bubble out of xterm.
+    term.attachCustomKeyEventHandler((ev) => {
+      if ((ev.ctrlKey || ev.metaKey) && ev.key === '`') return false
+      return true
+    })
+    try {
+      fit.fit()
+    } catch {
+      // container not yet sized
+    }
+    termRef.current = term
+    fitRef.current = fit
+
+    try {
+      const { id } = await window.api.ptyCreate({
+        cwd: workDir,
+        cols: term.cols,
+        rows: term.rows
+      })
+      sessionIdRef.current = id
+
+      dataDisposeRef.current = window.api.onPtyData(id, (data) => term.write(data))
+      exitDisposeRef.current = window.api.onPtyExit(id, () => setExited(true))
+
+      term.onData((data) => {
+        window.api.ptyWrite(id, data).catch(() => {})
+      })
+      term.onResize(({ cols, rows }) => {
+        window.api.ptyResize(id, cols, rows).catch(() => {})
+      })
+
+      if (containerRef.current) {
+        const ro = new ResizeObserver(() => {
+          try {
+            fit.fit()
+          } catch {
+            // ignore
+          }
+        })
+        ro.observe(containerRef.current)
+        resizeObserverRef.current = ro
+      }
+
+      term.focus()
+    } catch (err) {
+      setErrorMsg(errorMessage(err))
+      await teardown()
+    }
+  }, [teardown, workDir])
+
+  useEffect(() => {
+    if (!workDir || sessionIdRef.current) return
+    void startSession()
+    return () => {
+      void teardown()
+    }
+  }, [startSession, teardown, workDir])
+
+  useEffect(() => {
+    const handler = () => {
+      try {
+        fitRef.current?.fit()
+      } catch {
+        // ignore
+      }
+    }
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [])
+
+  const restart = useCallback(() => {
+    void startSession()
+  }, [startSession])
 
   return (
     <div className="terminal-pane-surface">
@@ -80,49 +173,43 @@ export function TerminalPane() {
         <div className="terminal-pane-title">
           <Terminal size={15} />
           <span>Terminal</span>
+          {workDir && <code className="terminal-pane-cwd">{workDir}</code>}
         </div>
-        <button
-          className="terminal-pane-icon-btn"
-          onClick={() => setTerminalPaneOpen(false)}
-          title="Close terminal pane"
-          aria-label="Close terminal pane"
-        >
-          <X size={15} />
-        </button>
-      </div>
-
-      <div className="terminal-pane-body">
-        <div className="terminal-pane-workdir">
-          <span>cwd</span>
-          <code>{workDir || 'No project or file open'}</code>
-        </div>
-
-        {isDirty && (
-          <div className="terminal-pane-warning">
-            Save the editor buffer before asking Claude Code to modify files.
-          </div>
-        )}
-
-        <div className="terminal-pane-actions">
-          <button onClick={() => openClaudeTerminal(false)} disabled={!workDir}>
-            <Terminal size={15} />
-            <span>Claude Code</span>
+        <div className="terminal-pane-header-actions">
+          <button
+            className="terminal-pane-icon-btn"
+            onClick={restart}
+            disabled={!workDir}
+            title="Restart shell"
+            aria-label="Restart shell"
+          >
+            <RotateCcw size={14} />
           </button>
-          <button onClick={() => openClaudeTerminal(true)} disabled={!workDir}>
-            <RotateCcw size={15} />
-            <span>Resume</span>
-          </button>
-        </div>
-
-        <div className={`terminal-pane-console ${launchState}`}>
-          <div className="terminal-pane-console-status">{message}</div>
-          <pre>{commandPreview}</pre>
-          <button onClick={copyCommand} disabled={!workDir}>
-            <Copy size={14} />
-            <span>{copied ? 'Copied' : 'Copy'}</span>
+          <button
+            className="terminal-pane-icon-btn"
+            onClick={() => setTerminalPaneOpen(false)}
+            title="Close terminal pane"
+            aria-label="Close terminal pane"
+          >
+            <X size={15} />
           </button>
         </div>
       </div>
+
+      {errorMsg && (
+        <div className="terminal-pane-warning" role="alert">
+          {errorMsg}
+        </div>
+      )}
+
+      <div className="terminal-pane-xterm" ref={containerRef} />
+
+      {exited && (
+        <div className="terminal-pane-exit-bar">
+          <span>Shell exited.</span>
+          <button onClick={restart}>Restart</button>
+        </div>
+      )}
     </div>
   )
 }

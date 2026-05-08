@@ -167,6 +167,23 @@ export interface IpcChannelMap {
   'lsp:send': [[message: object], SuccessResult]
   'lsp:status': [[], { status: string }]
 
+  // PTY (embedded terminal)
+  'pty:create': [
+    [
+      options: {
+        cwd: string
+        cols?: number
+        rows?: number
+        shell?: string
+        env?: Record<string, string>
+      }
+    ],
+    { id: string }
+  ]
+  'pty:write': [[id: string, data: string], SuccessResult]
+  'pty:resize': [[id: string, cols: number, rows: number], SuccessResult]
+  'pty:dispose': [[id: string], SuccessResult]
+
   // AI Draft
   'ai:generate': [[input: string, provider: string, model: string], { latex: string }]
   'ai:process': [[request: AiProcessRequest], string]
@@ -238,6 +255,8 @@ export interface IpcPushChannelMap {
   'lsp:message': [message: object]
   'lsp:status-change': [status: string, error?: string]
   'app:command': [command: AppCommandId]
+  'pty:data': [id: string, data: string]
+  'pty:exit': [id: string, exitCode: number, signal: number | null]
 }
 
 export type IpcPushChannel = keyof IpcPushChannelMap

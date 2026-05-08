@@ -46,3 +46,5 @@ export {
   WATCH_EXCLUDE_DIRS,
   shouldIgnoreChange
 } from './pathValidation'
+
+export { getCliEnv } from './cliEnv'

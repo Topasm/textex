@@ -1,5 +1,16 @@
 import '@testing-library/jest-dom'
 
+// jsdom does not implement ResizeObserver — provide a minimal stub.
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  class ResizeObserverStub {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(globalThis as any).ResizeObserver = ResizeObserverStub
+}
+
 // Mock react-i18next to avoid dual React instance issue in tests.
 // The real react-i18next resolves React from the parent node_modules while
 // test components use the local copy, causing "Invalid hook call" errors.
@@ -116,6 +127,14 @@ Object.defineProperty(window, 'api', {
     aiUpdateContext: vi.fn(),
     aiCheckCli: vi.fn(),
     aiOpenClaudeTerminal: vi.fn(),
+
+    // PTY (embedded terminal)
+    ptyCreate: vi.fn().mockResolvedValue({ id: 'pty-test' }),
+    ptyWrite: vi.fn().mockResolvedValue({ success: true }),
+    ptyResize: vi.fn().mockResolvedValue({ success: true }),
+    ptyDispose: vi.fn().mockResolvedValue({ success: true }),
+    onPtyData: vi.fn().mockReturnValue(() => {}),
+    onPtyExit: vi.fn().mockReturnValue(() => {}),
 
     // Labels / Packages / External
     scanLabels: vi.fn(),

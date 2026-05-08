@@ -306,6 +306,37 @@ contextBridge.exposeInMainWorld('api', {
   aiCheckCli: () => invoke('ai:check-cli'),
   aiOpenClaudeTerminal: (request) => invoke('ai:open-claude-terminal', request),
 
+  // PTY (embedded terminal)
+  ptyCreate: (options: {
+    cwd: string
+    cols?: number
+    rows?: number
+    shell?: string
+    env?: Record<string, string>
+  }) => invoke('pty:create', options),
+  ptyWrite: (id: string, data: string) => invoke('pty:write', id, data),
+  ptyResize: (id: string, cols: number, rows: number) => invoke('pty:resize', id, cols, rows),
+  ptyDispose: (id: string) => invoke('pty:dispose', id),
+  onPtyData: (id: string, cb: (data: string) => void) => {
+    const handler = (_event: IpcRendererEvent, sessionId: string, data: string) => {
+      if (sessionId === id) cb(data)
+    }
+    ipcRenderer.on('pty:data', handler)
+    return () => ipcRenderer.removeListener('pty:data', handler)
+  },
+  onPtyExit: (id: string, cb: (exitCode: number, signal: number | null) => void) => {
+    const handler = (
+      _event: IpcRendererEvent,
+      sessionId: string,
+      exitCode: number,
+      signal: number | null
+    ) => {
+      if (sessionId === id) cb(exitCode, signal)
+    }
+    ipcRenderer.on('pty:exit', handler)
+    return () => ipcRenderer.removeListener('pty:exit', handler)
+  },
+
   // Document Structure (fallback outline)
   getDocumentOutline: (filePath: string, content: string) =>
     invoke('structure:outline', filePath, content),

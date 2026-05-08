@@ -178,6 +178,20 @@ export interface ElectronAPI {
   aiCheckCli(): Promise<boolean>
   aiOpenClaudeTerminal(request: ClaudeTerminalRequest): Promise<ClaudeTerminalResult>
 
+  // PTY (embedded terminal)
+  ptyCreate(options: {
+    cwd: string
+    cols?: number
+    rows?: number
+    shell?: string
+    env?: Record<string, string>
+  }): Promise<{ id: string }>
+  ptyWrite(id: string, data: string): Promise<{ success: boolean }>
+  ptyResize(id: string, cols: number, rows: number): Promise<{ success: boolean }>
+  ptyDispose(id: string): Promise<{ success: boolean }>
+  onPtyData(id: string, cb: (data: string) => void): () => void
+  onPtyExit(id: string, cb: (exitCode: number, signal: number | null) => void): () => void
+
   // Document Structure (fallback outline)
   getDocumentOutline(filePath: string, content: string): Promise<SectionNode[]>
 

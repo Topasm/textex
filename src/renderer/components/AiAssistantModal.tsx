@@ -3,6 +3,7 @@ import { FileText, RotateCcw, Sparkles, Terminal } from 'lucide-react'
 import { useEditorStore } from '../store/useEditorStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { errorMessage } from '../utils/errorMessage'
+import { dirname } from '../utils/path'
 
 interface AiAssistantModalProps {
   isOpen: boolean
@@ -11,11 +12,6 @@ interface AiAssistantModalProps {
 }
 
 type LaunchState = 'idle' | 'checking' | 'opening' | 'opened' | 'error'
-
-function dirname(filePath: string): string {
-  const index = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'))
-  return index > 0 ? filePath.slice(0, index) : filePath
-}
 
 function quoteForDisplay(value: string): string {
   return `'${value.replace(/'/g, "'\\''")}'`
