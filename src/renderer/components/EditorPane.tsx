@@ -100,8 +100,14 @@ function EditorPane() {
   const [selectionAiToolbarSelection, setSelectionAiToolbarSelection] =
     useState<monacoEditor.ISelection | null>(null)
   const [isUpdatingAiContext, setIsUpdatingAiContext] = useState(false)
+  const [isNarrow, setIsNarrow] = useState(false)
+  const editorContainerRef = useRef<HTMLDivElement | null>(null)
   const prevMathRangeRef = useRef<string | null>(null)
   const aiContextStatus = getAiContextStatus(filePath, content)
+  // Force word-wrap when the editor pane is too narrow (e.g. terminal pane open),
+  // even if the user setting is off, so long LaTeX lines don't get clipped.
+  const NARROW_WIDTH_PX = 600
+  const effectiveWordWrap = settings.wordWrap || isNarrow ? 'on' : 'off'
 
   // History panel hook
   const {
@@ -156,6 +162,19 @@ function EditorPane() {
     } finally {
       setIsUpdatingAiContext(false)
     }
+  }, [])
+
+  // Track editor container width so we can auto-enable word wrap when it gets narrow
+  // (e.g., when the terminal pane is open and shrinks the editor).
+  useEffect(() => {
+    const node = editorContainerRef.current
+    if (!node || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width ?? node.clientWidth
+      setIsNarrow(width > 0 && width < NARROW_WIDTH_PX)
+    })
+    observer.observe(node)
+    return () => observer.disconnect()
   }, [])
 
   // Re-show the preview when the cursor moves to a different math expression
@@ -393,7 +412,7 @@ function EditorPane() {
           }
         }}
       >
-        <div style={{ flex: 1, position: 'relative' }}>
+        <div ref={editorContainerRef} style={{ flex: 1, position: 'relative', minWidth: 0 }}>
           {historyMode ? (
             <DiffEditor
               height="100%"
@@ -405,7 +424,7 @@ function EditorPane() {
                 fontSize,
                 readOnly: true,
                 originalEditable: false,
-                wordWrap: settings.wordWrap ? 'on' : 'off'
+                wordWrap: effectiveWordWrap
               }}
             />
           ) : (
@@ -427,7 +446,7 @@ function EditorPane() {
                 quickSuggestions: true,
                 suggestOnTriggerCharacters: true,
                 padding: { top: 8 },
-                wordWrap: settings.wordWrap ? 'on' : 'off',
+                wordWrap: effectiveWordWrap,
                 dropIntoEditor: { enabled: false },
                 bracketPairColorization: {
                   enabled: settings.bracketPairColorization !== false
