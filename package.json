@@ -58,7 +58,7 @@
     "monaco-vim": "^0.4.4",
     "node-pty": "^1.1.0",
     "nspell": "^2.1.5",
-    "pdfjs-dist": "5.6.205",
+    "pdfjs-dist": "5.7.284",
     "prettier-plugin-latex": "^2.0.1",
     "react": "^19.2.4",
     "react-data-grid": "^7.0.0-beta.59",
