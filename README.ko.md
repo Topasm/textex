@@ -136,7 +136,7 @@ TextEx는 다음과 같은 기능을 갖춘 최신 Monaco 기반 에디터를 �
 - 툴바의 **AI Draft**를 클릭하거나 `Ctrl+Shift+D`를 누르세요.
 - LaTeX 콘텐츠를 생성할 프롬프트를 입력하세요.
 - 에디터 내 기능: 텍스트를 선택한 후 문법 수정, 학술 스타일 변환, 요약, 더 길게/짧게 만들기 사용.
-- OpenAI, Anthropic, Gemini 지원. 설정 > AI에서 구성하세요.
+- OpenAI, Anthropic, Gemini, Claude CLI, Codex CLI 지원. 설정 > AI에서 구성하세요.
 
 ### 생산성 도구
 

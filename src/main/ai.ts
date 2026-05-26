@@ -1,6 +1,8 @@
 import { execFile, spawn } from 'child_process'
 import { promisify } from 'util'
 import path from 'path'
+import fs from 'fs/promises'
+import os from 'os'
 import { loadSettings } from './settings'
 import { getCliEnv } from './utils/cliEnv'
 import {
@@ -15,7 +17,7 @@ import { hashTextContent } from '../shared/hash'
 
 interface GenerateLatexOptions {
   input: string
-  provider: 'openai' | 'anthropic' | 'gemini' | 'claude-cli'
+  provider: 'openai' | 'anthropic' | 'gemini' | 'claude-cli' | 'codex-cli'
   model: string
 }
 
@@ -30,7 +32,8 @@ const DEFAULT_MODELS: Record<string, string> = {
   openai: 'gpt-5.4',
   anthropic: 'claude-sonnet-4-6',
   gemini: 'gemini-3.1-pro-preview',
-  'claude-cli': 'sonnet'
+  'claude-cli': 'sonnet',
+  'codex-cli': ''
 }
 
 // ---- Default prompts (used when user hasn't customized) ----
@@ -216,6 +219,87 @@ export async function checkClaudeCliAvailable(): Promise<boolean> {
   }
 }
 
+async function callCodexCli(input: string, model: string, systemPrompt: string): Promise<string> {
+  const combinedPrompt = `${systemPrompt}\n\n${input}`
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'textex-codex-'))
+  const outputPath = path.join(tempDir, 'last-message.txt')
+  const modelArg = model.trim()
+
+  try {
+    const stdout = await new Promise<string>((resolve, reject) => {
+      const args = [
+        'exec',
+        '--skip-git-repo-check',
+        '--sandbox',
+        'read-only',
+        '--ask-for-approval',
+        'never',
+        '--color',
+        'never',
+        '--output-last-message',
+        outputPath,
+        '-'
+      ]
+
+      if (modelArg) {
+        args.splice(1, 0, '--model', modelArg)
+      }
+
+      const child = spawn('codex', args, {
+        env: getCliEnv(),
+        stdio: ['pipe', 'pipe', 'pipe']
+      })
+
+      let stdout = ''
+      let stderr = ''
+      child.stdout.on('data', (d: Buffer) => {
+        stdout += d.toString()
+      })
+      child.stderr.on('data', (d: Buffer) => {
+        stderr += d.toString()
+      })
+
+      const timer = setTimeout(() => {
+        child.kill()
+        reject(new Error('Codex CLI timed out after 120s'))
+      }, 120_000)
+
+      child.on('close', (code) => {
+        clearTimeout(timer)
+        if (code === 0) {
+          resolve(stdout)
+        } else {
+          reject(new Error(stderr.trim() || `Codex CLI exited with code ${code}`))
+        }
+      })
+
+      child.on('error', (err) => {
+        clearTimeout(timer)
+        reject(err)
+      })
+
+      child.stdin.end(combinedPrompt)
+    })
+
+    const finalMessage = await fs.readFile(outputPath, 'utf-8').catch(() => stdout)
+    return stripCodeFences(finalMessage || stdout)
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true }).catch(() => undefined)
+  }
+}
+
+export async function checkCodexCliAvailable(): Promise<boolean> {
+  try {
+    await execFileAsync('codex', ['--version'], {
+      env: getCliEnv(),
+      timeout: 5_000
+    })
+    return true
+  } catch {
+    return false
+  }
+}
+
 function quoteForBash(value: string): string {
   return `'${value.replace(/'/g, "'\\''")}'`
 }
@@ -245,13 +329,42 @@ export function buildClaudeTerminalCommand(
   return `cd ${quoteForBash(normalizedWorkDir)} && ${claudeCommand}`
 }
 
+export function buildCodexTerminalCommand(
+  workDir: string,
+  resume = false,
+  platform: NodeJS.Platform = process.platform
+): string {
+  const normalizedWorkDir = resolveForPlatform(workDir, platform)
+  const codexCommand = `codex${resume ? ' resume' : ''}`
+  if (platform === 'win32') {
+    return `cd /d ${quoteForCmd(normalizedWorkDir)} && ${codexCommand}`
+  }
+  return `cd ${quoteForBash(normalizedWorkDir)} && ${codexCommand}`
+}
+
 export function getClaudeTerminalLaunchSpecs(
   platform: NodeJS.Platform,
   workDir: string,
   resume = false
 ): TerminalLaunchSpec[] {
   const command = buildClaudeTerminalCommand(workDir, resume, platform)
+  return getTerminalLaunchSpecs(platform, command, 'Textex Claude Code')
+}
 
+export function getCodexTerminalLaunchSpecs(
+  platform: NodeJS.Platform,
+  workDir: string,
+  resume = false
+): TerminalLaunchSpec[] {
+  const command = buildCodexTerminalCommand(workDir, resume, platform)
+  return getTerminalLaunchSpecs(platform, command, 'Textex Codex')
+}
+
+function getTerminalLaunchSpecs(
+  platform: NodeJS.Platform,
+  command: string,
+  title: string
+): TerminalLaunchSpec[] {
   if (platform === 'darwin') {
     return [
       {
@@ -270,7 +383,7 @@ export function getClaudeTerminalLaunchSpecs(
     return [
       {
         command: 'cmd.exe',
-        args: ['/c', 'start', 'Textex Claude Code', 'cmd.exe', '/k', command]
+        args: ['/c', 'start', title, 'cmd.exe', '/k', command]
       }
     ]
   }
@@ -326,6 +439,43 @@ export async function openClaudeTerminal(
         success: true,
         workDir: normalizedWorkDir,
         command: buildClaudeTerminalCommand(normalizedWorkDir, resume)
+      }
+    } catch (err) {
+      lastError = err
+    }
+  }
+
+  throw new Error(
+    lastError instanceof Error
+      ? `Could not open a terminal: ${lastError.message}`
+      : 'Could not open a terminal'
+  )
+}
+
+export async function openCodexTerminal(
+  workDir: string,
+  resume = false
+): Promise<ClaudeTerminalResult> {
+  if (!workDir || typeof workDir !== 'string') {
+    throw new Error('Working directory is required')
+  }
+
+  const normalizedWorkDir = resolveForPlatform(workDir, process.platform)
+  const available = await checkCodexCliAvailable()
+  if (!available) {
+    throw new Error('Codex CLI was not found. Install Codex CLI and try again.')
+  }
+
+  const specs = getCodexTerminalLaunchSpecs(process.platform, normalizedWorkDir, resume)
+  let lastError: unknown
+
+  for (const spec of specs) {
+    try {
+      await launchDetached(spec, normalizedWorkDir)
+      return {
+        success: true,
+        workDir: normalizedWorkDir,
+        command: buildCodexTerminalCommand(normalizedWorkDir, resume)
       }
     } catch (err) {
       lastError = err
@@ -472,6 +622,8 @@ function callProvider(
       return callGemini(input, model, apiKey, systemPrompt, thinking)
     case 'claude-cli':
       return callClaudeCli(input, model, systemPrompt)
+    case 'codex-cli':
+      return callCodexCli(input, model, systemPrompt)
     default:
       throw new Error(`Unknown AI provider: ${provider}`)
   }
@@ -482,7 +634,7 @@ function callProvider(
 export async function generateLatex(options: GenerateLatexOptions): Promise<string> {
   const settings = await loadSettings()
   const apiKey = settings.aiApiKey ?? ''
-  if (options.provider !== 'claude-cli' && !apiKey) {
+  if (options.provider !== 'claude-cli' && options.provider !== 'codex-cli' && !apiKey) {
     throw new Error(`No API key configured for ${options.provider}`)
   }
 
@@ -511,7 +663,7 @@ export async function processText(
   if (!activeProvider) throw new Error('No AI provider configured')
 
   const apiKey = settings.aiApiKey ?? ''
-  if (activeProvider !== 'claude-cli' && !apiKey) {
+  if (activeProvider !== 'claude-cli' && activeProvider !== 'codex-cli' && !apiKey) {
     throw new Error(`No API key configured for ${activeProvider}`)
   }
 
@@ -546,7 +698,7 @@ export async function processTextWithCommand(
   if (!activeProvider) throw new Error('No AI provider configured')
 
   const apiKey = settings.aiApiKey ?? ''
-  if (activeProvider !== 'claude-cli' && !apiKey) {
+  if (activeProvider !== 'claude-cli' && activeProvider !== 'codex-cli' && !apiKey) {
     throw new Error(`No API key configured for ${activeProvider}`)
   }
 
@@ -584,7 +736,7 @@ export async function updateDocumentContext(
   if (!activeProvider) throw new Error('No AI provider configured')
 
   const apiKey = settings.aiApiKey ?? ''
-  if (activeProvider !== 'claude-cli' && !apiKey) {
+  if (activeProvider !== 'claude-cli' && activeProvider !== 'codex-cli' && !apiKey) {
     throw new Error(`No API key configured for ${activeProvider}`)
   }
 

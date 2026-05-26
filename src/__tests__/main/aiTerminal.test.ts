@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { buildClaudeTerminalCommand, getClaudeTerminalLaunchSpecs } from '../../main/ai'
+import {
+  buildClaudeTerminalCommand,
+  buildCodexTerminalCommand,
+  getClaudeTerminalLaunchSpecs,
+  getCodexTerminalLaunchSpecs
+} from '../../main/ai'
 
 describe('Claude terminal launcher', () => {
   it('builds a bash command for macOS and Linux', () => {
@@ -48,5 +53,24 @@ describe('Claude terminal launcher', () => {
       'konsole',
       'xfce4-terminal'
     ])
+  })
+
+  it('builds Codex terminal commands', () => {
+    expect(buildCodexTerminalCommand('/tmp/my paper', true, 'linux')).toBe(
+      "cd '/tmp/my paper' && codex resume"
+    )
+    expect(buildCodexTerminalCommand('C:\\Users\\me\\paper', false, 'win32')).toBe(
+      'cd /d "C:\\Users\\me\\paper" && codex'
+    )
+  })
+
+  it('uses a Codex terminal title on Windows', () => {
+    const specs = getCodexTerminalLaunchSpecs('win32', 'C:\\paper', true)
+
+    expect(specs).toHaveLength(1)
+    expect(specs[0]).toEqual({
+      command: 'cmd.exe',
+      args: ['/c', 'start', 'Textex Codex', 'cmd.exe', '/k', 'cd /d "C:\\paper" && codex resume']
+    })
   })
 })

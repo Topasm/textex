@@ -5,6 +5,8 @@ import {
   AiProcessRequest,
   ClaudeTerminalRequest,
   ClaudeTerminalResult,
+  CodexTerminalRequest,
+  CodexTerminalResult,
   Diagnostic,
   SyncTeXForwardResult,
   SyncTeXInverseResult,
@@ -176,7 +178,9 @@ export interface ElectronAPI {
   aiProcessCustom(request: AiCustomProcessRequest): Promise<string>
   aiUpdateContext(filePath: string, content: string): Promise<AiContextEntry>
   aiCheckCli(): Promise<boolean>
+  aiCheckCodexCli(): Promise<boolean>
   aiOpenClaudeTerminal(request: ClaudeTerminalRequest): Promise<ClaudeTerminalResult>
+  aiOpenCodexTerminal(request: CodexTerminalRequest): Promise<CodexTerminalResult>
 
   // PTY (embedded terminal)
   ptyCreate(options: {

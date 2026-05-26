@@ -30,7 +30,7 @@ TextEx uses a "Zero-Friction" configuration system where settings are applied in
 | `name` | `string` | `''` | User's full name (for templates/metadata). |
 | `email` | `string` | `''` | User's email address (for templates/metadata). |
 | `affiliation` | `string` | `''` | User's institution (for templates/metadata). |
-| `aiProvider` | `'' \| 'openai' \| 'anthropic'` | `''` | AI Draft provider. |
+| `aiProvider` | `'' \| 'openai' \| 'anthropic' \| 'gemini' \| 'claude-cli' \| 'codex-cli'` | `''` | AI Draft provider. |
 | `aiModel` | `string` | `''` | AI Draft model name. |
 
 ### Settings Modal

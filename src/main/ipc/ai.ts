@@ -5,13 +5,16 @@ import {
   processTextWithCommand,
   updateDocumentContext,
   checkClaudeCliAvailable,
-  openClaudeTerminal
+  checkCodexCliAvailable,
+  openClaudeTerminal,
+  openCodexTerminal
 } from '../ai'
 import { loadSettings, saveSettings } from '../settings'
 import type {
   AiCustomProcessRequest,
   AiProcessRequest,
-  ClaudeTerminalRequest
+  ClaudeTerminalRequest,
+  CodexTerminalRequest
 } from '../../shared/types'
 
 export function registerAiHandlers(): void {
@@ -21,9 +24,12 @@ export function registerAiHandlers(): void {
       provider !== 'openai' &&
       provider !== 'anthropic' &&
       provider !== 'gemini' &&
-      provider !== 'claude-cli'
+      provider !== 'claude-cli' &&
+      provider !== 'codex-cli'
     ) {
-      throw new Error('Provider must be "openai", "anthropic", "gemini", or "claude-cli"')
+      throw new Error(
+        'Provider must be "openai", "anthropic", "gemini", "claude-cli", or "codex-cli"'
+      )
     }
     const latex = await generateLatex({ input, provider, model: model || '' })
     return { latex }
@@ -54,7 +60,7 @@ export function registerAiHandlers(): void {
   ipcMain.handle('ai:save-api-key', async (_event, provider: string, apiKey: string) => {
     await saveSettings({
       aiApiKey: apiKey,
-      aiProvider: provider as 'openai' | 'anthropic' | 'gemini' | 'claude-cli' | ''
+      aiProvider: provider as 'openai' | 'anthropic' | 'gemini' | 'claude-cli' | 'codex-cli' | ''
     })
     return { success: true }
   })
@@ -68,6 +74,10 @@ export function registerAiHandlers(): void {
     return checkClaudeCliAvailable()
   })
 
+  ipcMain.handle('ai:check-codex-cli', async () => {
+    return checkCodexCliAvailable()
+  })
+
   ipcMain.handle('ai:open-claude-terminal', async (_event, request: ClaudeTerminalRequest) => {
     if (!request || typeof request !== 'object')
       throw new Error('Claude terminal request is required')
@@ -75,5 +85,14 @@ export function registerAiHandlers(): void {
       throw new Error('Working directory is required')
     }
     return openClaudeTerminal(request.workDir, !!request.resume)
+  })
+
+  ipcMain.handle('ai:open-codex-terminal', async (_event, request: CodexTerminalRequest) => {
+    if (!request || typeof request !== 'object')
+      throw new Error('Codex terminal request is required')
+    if (!request.workDir || typeof request.workDir !== 'string') {
+      throw new Error('Working directory is required')
+    }
+    return openCodexTerminal(request.workDir, !!request.resume)
   })
 }

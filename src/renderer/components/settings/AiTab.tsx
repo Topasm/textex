@@ -182,12 +182,13 @@ export const AiTab = () => {
     }
   }, [provider])
 
-  // Check Claude CLI availability
+  // Check CLI availability
   useEffect(() => {
-    if (provider === 'claude-cli') {
+    if (provider === 'claude-cli' || provider === 'codex-cli') {
       setCliChecking(true)
-      window.api
-        .aiCheckCli()
+      const checkPromise =
+        provider === 'claude-cli' ? window.api.aiCheckCli() : window.api.aiCheckCodexCli()
+      checkPromise
         .then(setCliAvailable)
         .catch(() => setCliAvailable(false))
         .finally(() => setCliChecking(false))
@@ -241,7 +242,7 @@ export const AiTab = () => {
             <h3 className="settings-heading">{t('settings.ai.provider')}</h3>
             <p className="settings-subheading">{t('settings.ai.providerDesc')}</p>
             <div className="settings-theme-grid settings-field-mt-sm">
-              {(['openai', 'anthropic', 'gemini', 'claude-cli'] as const).map((p) => (
+              {(['openai', 'anthropic', 'gemini', 'claude-cli', 'codex-cli'] as const).map((p) => (
                 <button
                   key={p}
                   onClick={() => {
@@ -291,26 +292,30 @@ export const AiTab = () => {
                 </div>
               </div>
 
-              {provider === 'claude-cli' ? (
+              {provider === 'claude-cli' || provider === 'codex-cli' ? (
                 <>
                   <hr className="settings-divider" />
                   {/* CLI Status */}
                   <div>
                     <h3 className="settings-heading">{t('settings.ai.cliStatus')}</h3>
-                    <p className="settings-subheading">{t('settings.ai.cliStatusDesc')}</p>
+                    <p className="settings-subheading">
+                      {t('settings.ai.cliStatusDesc', { provider: providerInfo.label })}
+                    </p>
                     <div className="settings-field-mt-sm">
                       {cliChecking && (
                         <span className="settings-status-text settings-status-inline">
-                          {t('settings.ai.cliChecking')}
+                          {t('settings.ai.cliChecking', { provider: providerInfo.label })}
                         </span>
                       )}
                       {!cliChecking && cliAvailable === true && (
-                        <span className="settings-configured-tag">{t('settings.ai.cliFound')}</span>
+                        <span className="settings-configured-tag">
+                          {t('settings.ai.cliFound', { provider: providerInfo.label })}
+                        </span>
                       )}
                       {!cliChecking && cliAvailable === false && (
                         <span className="settings-status-text error settings-status-inline">
                           <span className="settings-status-dot error" />
-                          {t('settings.ai.cliNotFound')}
+                          {t('settings.ai.cliNotFound', { provider: providerInfo.label })}
                         </span>
                       )}
                     </div>

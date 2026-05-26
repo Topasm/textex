@@ -208,10 +208,10 @@
       "promptLonger": "더 길게",
       "promptShorter": "더 짧게",
       "cliStatus": "CLI 상태",
-      "cliStatusDesc": "Claude Code CLI를 사용하여 AI 기능을 제공합니다. API 키가 필요 없으며 기존 Claude 구독을 사용합니다.",
-      "cliChecking": "Claude CLI 확인 중...",
-      "cliFound": "Claude CLI 감지됨",
-      "cliNotFound": "Claude CLI를 찾을 수 없습니다. Claude Code를 설치하고 PATH에 추가하세요."
+      "cliStatusDesc": "{{provider}}를 사용하여 AI 기능을 제공합니다. API 키가 필요 없으며 기존 CLI 로그인을 사용합니다.",
+      "cliChecking": "{{provider}} 확인 중...",
+      "cliFound": "{{provider}} 감지됨",
+      "cliNotFound": "{{provider}}를 찾을 수 없습니다. 설치 후 PATH에 추가하세요."
     },
     "integrations": {
       "zotero": "Zotero 연동",

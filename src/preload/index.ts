@@ -51,6 +51,7 @@ const DEDUP_CHANNELS = new Set<string>([
   'lsp:status',
   'ai:has-api-key',
   'ai:check-cli',
+  'ai:check-codex-cli',
   'structure:outline',
   'history:list',
   'zotero:probe',
@@ -304,7 +305,9 @@ contextBridge.exposeInMainWorld('api', {
   aiUpdateContext: (filePath: string, content: string) =>
     invoke('ai:update-context', filePath, content),
   aiCheckCli: () => invoke('ai:check-cli'),
+  aiCheckCodexCli: () => invoke('ai:check-codex-cli'),
   aiOpenClaudeTerminal: (request) => invoke('ai:open-claude-terminal', request),
+  aiOpenCodexTerminal: (request) => invoke('ai:open-codex-terminal', request),
 
   // PTY (embedded terminal)
   ptyCreate: (options: {

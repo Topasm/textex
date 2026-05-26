@@ -70,6 +70,12 @@ export const AI_MODEL_OPTIONS: Record<string, { value: string; label: string }[]
     { value: 'sonnet', label: 'Claude Sonnet' },
     { value: 'opus', label: 'Claude Opus' },
     { value: 'haiku', label: 'Claude Haiku' }
+  ],
+  'codex-cli': [
+    { value: 'gpt-5.3-codex', label: 'GPT-5.3 Codex' },
+    { value: 'gpt-5.2-codex', label: 'GPT-5.2 Codex' },
+    { value: 'gpt-5-codex', label: 'GPT-5 Codex' },
+    { value: 'codex-mini-latest', label: 'Codex Mini' }
   ]
 }
 
@@ -86,6 +92,11 @@ export const AI_PROVIDER_INFO: Record<string, { label: string; keyHint: string; 
       label: 'Claude CLI',
       keyHint: '',
       keyUrl: 'https://docs.anthropic.com/en/docs/claude-code'
+    },
+    'codex-cli': {
+      label: 'Codex CLI',
+      keyHint: '',
+      keyUrl: 'https://developers.openai.com/codex'
     }
   }
 

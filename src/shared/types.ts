@@ -183,7 +183,7 @@ export interface UserSettings {
   zoteroEnabled: boolean
   zoteroPort: number
   aiEnabled?: boolean
-  aiProvider: 'openai' | 'anthropic' | 'gemini' | 'claude-cli' | ''
+  aiProvider: 'openai' | 'anthropic' | 'gemini' | 'claude-cli' | 'codex-cli' | ''
   aiApiKey?: string
   aiModel: string
   aiThinkingEnabled?: boolean
@@ -265,6 +265,9 @@ export interface ClaudeTerminalResult {
   workDir: string
   command: string
 }
+
+export type CodexTerminalRequest = ClaudeTerminalRequest
+export type CodexTerminalResult = ClaudeTerminalResult
 
 export interface CitationGroup {
   id: string

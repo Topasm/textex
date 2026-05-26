@@ -126,7 +126,9 @@ Object.defineProperty(window, 'api', {
     aiProcessCustom: vi.fn(),
     aiUpdateContext: vi.fn(),
     aiCheckCli: vi.fn(),
+    aiCheckCodexCli: vi.fn(),
     aiOpenClaudeTerminal: vi.fn(),
+    aiOpenCodexTerminal: vi.fn(),
 
     // PTY (embedded terminal)
     ptyCreate: vi.fn().mockResolvedValue({ id: 'pty-test' }),

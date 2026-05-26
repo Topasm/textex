@@ -12,13 +12,21 @@ interface AiAssistantModalProps {
 }
 
 type LaunchState = 'idle' | 'checking' | 'opening' | 'opened' | 'error'
+type CliProvider = 'claude' | 'codex'
+
+const CLI_LABELS: Record<CliProvider, string> = {
+  claude: 'Claude Code',
+  codex: 'Codex CLI'
+}
 
 function quoteForDisplay(value: string): string {
   return `'${value.replace(/'/g, "'\\''")}'`
 }
 
-function buildCommandPreview(workDir: string, resume: boolean): string {
-  return `cd ${quoteForDisplay(workDir)} && claude${resume ? ' --resume' : ''}`
+function buildCommandPreview(workDir: string, cli: CliProvider, resume: boolean): string {
+  const command =
+    cli === 'claude' ? `claude${resume ? ' --resume' : ''}` : `codex${resume ? ' resume' : ''}`
+  return `cd ${quoteForDisplay(workDir)} && ${command}`
 }
 
 export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
@@ -43,39 +51,44 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
     if (isOpen) {
       setLaunchState('idle')
       setMessage('')
-      setLastCommand(workDir ? buildCommandPreview(workDir, false) : '')
+      setLastCommand(workDir ? buildCommandPreview(workDir, 'claude', false) : '')
       setCopied(false)
     }
   }, [isOpen, workDir])
 
-  const openClaudeTerminal = useCallback(
-    async (resume: boolean) => {
+  const openCliTerminal = useCallback(
+    async (cli: CliProvider, resume: boolean) => {
+      const label = CLI_LABELS[cli]
       if (!workDir) {
         setLaunchState('error')
-        setMessage('Open a project or file before starting Claude Code.')
+        setMessage(`Open a project or file before starting ${label}.`)
         return
       }
 
-      const commandPreview = buildCommandPreview(workDir, resume)
+      const commandPreview = buildCommandPreview(workDir, cli, resume)
       setLastCommand(commandPreview)
       setCopied(false)
       setLaunchState('checking')
-      setMessage('Checking Claude Code CLI...')
+      setMessage(`Checking ${label}...`)
 
       try {
-        const available = await window.api.aiCheckCli()
+        const available =
+          cli === 'claude' ? await window.api.aiCheckCli() : await window.api.aiCheckCodexCli()
         if (!available) {
           setLaunchState('error')
-          setMessage('Claude Code CLI was not found. Install it, then run the command below.')
+          setMessage(`${label} was not found. Install it, then run the command below.`)
           return
         }
 
         setLaunchState('opening')
         setMessage('Opening terminal...')
-        const result = await window.api.aiOpenClaudeTerminal({ workDir, resume })
+        const result =
+          cli === 'claude'
+            ? await window.api.aiOpenClaudeTerminal({ workDir, resume })
+            : await window.api.aiOpenCodexTerminal({ workDir, resume })
         setLastCommand(result.command || commandPreview)
         setLaunchState('opened')
-        setMessage('Claude Code opened in an external terminal.')
+        setMessage(`${label} opened in an external terminal.`)
       } catch (err) {
         setLaunchState('error')
         setMessage(errorMessage(err))
@@ -126,7 +139,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
           <div className="ai-assistant-actions">
             <button
               className="ai-assistant-action"
-              onClick={() => openClaudeTerminal(false)}
+              onClick={() => openCliTerminal('claude', false)}
               disabled={!canLaunch}
               aria-label="Open Claude Code"
             >
@@ -139,7 +152,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
 
             <button
               className="ai-assistant-action"
-              onClick={() => openClaudeTerminal(true)}
+              onClick={() => openCliTerminal('claude', true)}
               disabled={!canLaunch}
               aria-label="Resume Claude Code"
             >
@@ -147,6 +160,32 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
               <span>
                 <strong>Resume</strong>
                 <small>Run Claude Code with --resume.</small>
+              </span>
+            </button>
+
+            <button
+              className="ai-assistant-action"
+              onClick={() => openCliTerminal('codex', false)}
+              disabled={!canLaunch}
+              aria-label="Open Codex CLI"
+            >
+              <Terminal size={20} />
+              <span>
+                <strong>Codex CLI</strong>
+                <small>Open Codex in this project.</small>
+              </span>
+            </button>
+
+            <button
+              className="ai-assistant-action"
+              onClick={() => openCliTerminal('codex', true)}
+              disabled={!canLaunch}
+              aria-label="Resume Codex CLI"
+            >
+              <RotateCcw size={20} />
+              <span>
+                <strong>Resume Codex</strong>
+                <small>Run Codex resume.</small>
               </span>
             </button>
 

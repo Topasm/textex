@@ -208,10 +208,10 @@
       "promptLonger": "Allonger",
       "promptShorter": "Raccourcir",
       "cliStatus": "Statut CLI",
-      "cliStatusDesc": "Utilise le CLI Claude Code pour les fonctions IA. Aucune clé API nécessaire — utilise votre abonnement Claude existant.",
-      "cliChecking": "Recherche du CLI Claude...",
-      "cliFound": "CLI Claude détecté",
-      "cliNotFound": "CLI Claude introuvable. Installez Claude Code et assurez-vous qu'il est dans votre PATH."
+      "cliStatusDesc": "Utilise {{provider}} pour les fonctions IA. Aucune clé API nécessaire — utilise votre connexion CLI existante.",
+      "cliChecking": "Recherche de {{provider}}...",
+      "cliFound": "{{provider}} détecté",
+      "cliNotFound": "{{provider}} introuvable. Installez-le et assurez-vous qu'il est dans votre PATH."
     },
     "integrations": {
       "zotero": "Intégration Zotero",

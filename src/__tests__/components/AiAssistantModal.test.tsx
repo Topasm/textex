@@ -23,10 +23,16 @@ describe('AiAssistantModal', () => {
       _sessionActiveFile: null
     })
     window.api.aiCheckCli = vi.fn().mockResolvedValue(true)
+    window.api.aiCheckCodexCli = vi.fn().mockResolvedValue(true)
     window.api.aiOpenClaudeTerminal = vi.fn().mockResolvedValue({
       success: true,
       workDir: '/projects/paper',
       command: "cd '/projects/paper' && claude"
+    })
+    window.api.aiOpenCodexTerminal = vi.fn().mockResolvedValue({
+      success: true,
+      workDir: '/projects/paper',
+      command: "cd '/projects/paper' && codex"
     })
   })
 
@@ -60,6 +66,36 @@ describe('AiAssistantModal', () => {
     })
   })
 
+  it('opens Codex CLI from the current project directory', async () => {
+    const user = userEvent.setup()
+    render(<AiAssistantModal isOpen onClose={vi.fn()} onAiDraft={vi.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: 'Open Codex CLI' }))
+
+    await waitFor(() => {
+      expect(window.api.aiCheckCodexCli).toHaveBeenCalled()
+      expect(window.api.aiOpenCodexTerminal).toHaveBeenCalledWith({
+        workDir: '/projects/paper',
+        resume: false
+      })
+    })
+    expect(screen.getByText('Codex CLI opened in an external terminal.')).toBeInTheDocument()
+  })
+
+  it('opens Codex CLI with resume mode', async () => {
+    const user = userEvent.setup()
+    render(<AiAssistantModal isOpen onClose={vi.fn()} onAiDraft={vi.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: 'Resume Codex CLI' }))
+
+    await waitFor(() => {
+      expect(window.api.aiOpenCodexTerminal).toHaveBeenCalledWith({
+        workDir: '/projects/paper',
+        resume: true
+      })
+    })
+  })
+
   it('shows the manual command when Claude CLI is unavailable', async () => {
     const user = userEvent.setup()
     window.api.aiCheckCli = vi.fn().mockResolvedValue(false)
@@ -68,7 +104,7 @@ describe('AiAssistantModal', () => {
     await user.click(screen.getByRole('button', { name: 'Open Claude Code' }))
 
     await waitFor(() => {
-      expect(screen.getByText(/Claude Code CLI was not found/)).toBeInTheDocument()
+      expect(screen.getByText(/Claude Code was not found/)).toBeInTheDocument()
     })
     expect(screen.getByText("cd '/projects/paper' && claude")).toBeInTheDocument()
     expect(window.api.aiOpenClaudeTerminal).not.toHaveBeenCalled()

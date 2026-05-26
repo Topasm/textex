@@ -136,7 +136,7 @@ Enable **Scroll Sync** in Settings > Appearance to keep the editor and PDF align
 - Click **AI Draft** in the toolbar or press `Ctrl+Shift+D`.
 - Enter your prompt to generate LaTeX content.
 - In-editor actions: select text and use Fix Grammar, Academic Rewrite, Summarize, Make Longer/Shorter.
-- Supports OpenAI, Anthropic, and Gemini. Configure in Settings > AI.
+- Supports OpenAI, Anthropic, Gemini, Claude CLI, and Codex CLI. Configure in Settings > AI.
 
 ### Productivity Tools
 
