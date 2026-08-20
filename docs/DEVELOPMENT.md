@@ -99,3 +99,10 @@ metadata, or GitHub Actions must also follow the blocking steps in
 [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md). In particular, validate a release
 commit on `main` across Linux, Windows, and macOS universal before creating its
 version tag.
+
+## Maintainer Handoff
+
+When another person will take over development or repository administration,
+follow [HANDOFF.md](HANDOFF.md). It covers GitHub access, a clean local setup,
+the first verification run, current release responsibilities, branch cleanup,
+and safe removal of the previous maintainer's access.

@@ -9,6 +9,7 @@
 |   +-- COMPILER_SERVICE.md        # Tectonic integration details
 |   +-- DEVELOPMENT.md             # Setup, build, and dev commands
 |   +-- FILE_STRUCTURE.md          # This file
+|   +-- HANDOFF.md                 # Maintainer access and project handoff guide
 |   +-- IPC_SPEC.md                # IPC channels, payloads, type definitions
 |   +-- LICENSES.md                # Third-party license summary
 |   +-- MCP.md                     # MCP server tools & config

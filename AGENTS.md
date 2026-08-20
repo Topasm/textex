@@ -42,6 +42,9 @@ capabilities only through the typed preload API.
   literals for cross-process contracts.
 - Update documentation when commands, packaging, IPC behavior, or public
   integrations change.
+- Follow [docs/HANDOFF.md](docs/HANDOFF.md) when transferring repository or
+  maintainer ownership. Never copy personal access tokens or signing keys into
+  the repository or chat history.
 
 ## Dependency Update Guardrails
 
