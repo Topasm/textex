@@ -302,6 +302,30 @@ pub enum CompileEvent {
         stage: CompileStage,
         file_path: String,
     },
+    Diagnostics {
+        #[serde(flatten)]
+        identity: CompileIdentity,
+        diagnostics: Vec<CompileDiagnostic>,
+    },
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CompileDiagnosticSeverity {
+    Error,
+    Warning,
+    Info,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompileDiagnostic {
+    pub file: String,
+    pub line: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub column: Option<u64>,
+    pub severity: CompileDiagnosticSeverity,
+    pub message: String,
 }
 
 #[derive(Clone, Copy, Debug, Serialize)]
@@ -348,13 +372,6 @@ pub struct SaveFileAsResult {
 #[serde(rename_all = "camelCase")]
 pub struct Base64FileResult {
     pub data: String,
-    pub mime_type: String,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct BinaryFileResult {
-    pub data: Vec<u8>,
     pub mime_type: String,
 }
 
@@ -422,7 +439,10 @@ pub struct DirectoryEntry {
 
 #[cfg(test)]
 mod tests {
-    use super::{CompileEvent, CompileIdentity, CompilePriority, CompileRequest, CompileResponse};
+    use super::{
+        CompileDiagnostic, CompileDiagnosticSeverity, CompileEvent, CompileIdentity,
+        CompilePriority, CompileRequest, CompileResponse,
+    };
 
     #[test]
     fn compile_request_matches_the_shared_camel_case_contract() {
@@ -475,6 +495,37 @@ mod tests {
                 "documentId": "paper.tex",
                 "documentRevision": 9,
                 "text": "Running TeX ...\n"
+            })
+        );
+
+        let diagnostics_event = CompileEvent::Diagnostics {
+            identity: CompileIdentity {
+                request_id: 14,
+                document_id: "paper.tex".to_owned(),
+                document_revision: 9,
+            },
+            diagnostics: vec![CompileDiagnostic {
+                file: "/project/paper.tex".to_owned(),
+                line: 7,
+                column: Some(3),
+                severity: CompileDiagnosticSeverity::Error,
+                message: "Undefined control sequence".to_owned(),
+            }],
+        };
+        assert_eq!(
+            serde_json::to_value(diagnostics_event).expect("serialize diagnostics event"),
+            serde_json::json!({
+                "event": "diagnostics",
+                "requestId": 14,
+                "documentId": "paper.tex",
+                "documentRevision": 9,
+                "diagnostics": [{
+                    "file": "/project/paper.tex",
+                    "line": 7,
+                    "column": 3,
+                    "severity": "error",
+                    "message": "Undefined control sequence"
+                }]
             })
         );
     }

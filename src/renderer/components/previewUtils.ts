@@ -13,11 +13,8 @@
 /** Number of pages to render beyond the visible viewport in each direction. */
 export const PAGE_OVERSCAN = 2
 
-/** Estimated page height in pixels when actual height is unknown. */
-export const ESTIMATED_PAGE_HEIGHT = 1100
-
-/** Debounce scroll events to reduce visible-page recalculation frequency. */
-export const SCROLL_DEBOUNCE_MS = 100
+/** Documents at or below this size render every page. */
+export const VIRTUALIZATION_THRESHOLD = 10
 
 /** Debounce delay for persisting scroll position. */
 export const SCROLL_PERSIST_DEBOUNCE_MS = 500
@@ -56,18 +53,17 @@ export function calcPageWidth(
 /**
  * Estimate the rendered height of a page.
  *
- * If a `cachedHeight` is provided (from a previous render) it is returned as-is.
- * Otherwise the height is estimated using the A4 aspect ratio and the current
- * page width derived from `containerWidth` and `zoomLevel`.
+ * Uses a measured page aspect ratio when available, otherwise the A4 ratio.
+ * The height is always derived from the current width and zoom so cached page
+ * geometry cannot become stale after resizing or zooming.
  */
 export function estimatePageHeight(
   containerWidth: number | undefined,
   zoomLevel: number,
-  cachedHeight?: number
+  pageAspectRatio: number = A4_HEIGHT / A4_WIDTH
 ): number {
-  if (cachedHeight !== undefined) return cachedHeight
   const pw = containerWidth ? (containerWidth - 32) * (zoomLevel / 100) : A4_WIDTH
-  return pw * (A4_HEIGHT / A4_WIDTH)
+  return pw * pageAspectRatio
 }
 
 // ---------------------------------------------------------------------------
@@ -153,6 +149,19 @@ export function computeVisibleRange(
     start: Math.max(1, startPage - overscan),
     end: Math.min(numPages, endPage + overscan)
   }
+}
+
+/**
+ * Build the exact set of page numbers that should exist in the DOM for a
+ * virtualized document. The returned array is proportional to the visible
+ * range, never to the document's total page count.
+ */
+export function buildVirtualPageNumbers(visibleRange: VisibleRange, numPages: number): number[] {
+  if (numPages <= 0) return []
+
+  const start = Math.max(1, Math.min(numPages, Math.trunc(visibleRange.start)))
+  const end = Math.max(start, Math.min(numPages, Math.trunc(visibleRange.end)))
+  return Array.from({ length: end - start + 1 }, (_, index) => start + index)
 }
 
 // ---------------------------------------------------------------------------

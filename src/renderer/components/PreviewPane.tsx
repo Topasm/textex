@@ -14,15 +14,15 @@ import { useContainerSize } from '../hooks/preview/useContainerSize'
 import CitationTooltip from './CitationTooltip'
 import { runtimePerformance } from '../services/runtimePerformance'
 import {
-  ESTIMATED_PAGE_HEIGHT,
-  SCROLL_DEBOUNCE_MS,
   SCROLL_PERSIST_DEBOUNCE_MS,
   SWIPE_THRESHOLD,
   SWIPE_THRESHOLD_HORIZONTAL,
   SWIPE_COOLDOWN_MS,
+  VIRTUALIZATION_THRESHOLD,
   calcPageWidth,
   estimatePageHeight,
   buildCumulativeLayout,
+  buildVirtualPageNumbers,
   binarySearchPage,
   computeVisibleRange,
   calcFitHeightZoom,
@@ -64,10 +64,13 @@ function PreviewPane() {
     start: 1,
     end: 5
   })
-  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const scrollFrameRef = useRef<number | null>(null)
   const scrollPersistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  // Cache of rendered page heights for accurate positioning
-  const pageHeightsRef = useRef<Map<number, number>>(new Map())
+  // Cache intrinsic ratios rather than pixel heights so zoom/resize cannot
+  // make the virtual layout stale.
+  const [pageAspectRatios, setPageAspectRatios] = useState<ReadonlyMap<number, number>>(
+    () => new Map()
+  )
 
   // Extracted hooks
   const { containerWidth, ctrlHeld } = useContainerSize(containerRef)
@@ -81,9 +84,9 @@ function PreviewPane() {
   /** Calculate estimated height for a page. */
   const getPageHeight = useCallback(
     (pageNum: number): number => {
-      return estimatePageHeight(containerWidth, zoomLevel, pageHeightsRef.current.get(pageNum))
+      return estimatePageHeight(containerWidth, zoomLevel, pageAspectRatios.get(pageNum))
     },
-    [containerWidth, zoomLevel]
+    [containerWidth, pageAspectRatios, zoomLevel]
   )
 
   const pageWidth = calcPageWidth(containerWidth, zoomLevel)
@@ -92,6 +95,10 @@ function PreviewPane() {
   const { totalHeight, pageOffsets, cumulativeHeights } = useMemo(
     () => buildCumulativeLayout(numPages, getPageHeight),
     [numPages, getPageHeight]
+  )
+  const virtualPageNumbers = useMemo(
+    () => buildVirtualPageNumbers(visibleRange, numPages),
+    [visibleRange, numPages]
   )
 
   /** Compute which pages are currently in the viewport using O(log N) binary search. */
@@ -129,6 +136,11 @@ function PreviewPane() {
         usePdfStore.getState().setCurrentPage(clamped)
         return
       }
+
+      // Render the destination window immediately so direct navigation never
+      // waits for the next scroll frame before the target page can mount.
+      usePdfStore.getState().setCurrentPage(clamped)
+      setVisibleRange(computeVisibleRange(clamped, clamped, numPages))
 
       // Direct O(1) lookup from pre-computed offsets
       container.scrollTop = pageOffsets.get(clamped) ?? 0
@@ -175,7 +187,7 @@ function PreviewPane() {
     usePdfStore.getState().clearFitRequest()
   }, [fitRequest, containerWidth])
 
-  // Track scroll position and update visible pages with debouncing
+  // Track scroll position and update virtual pages at most once per frame.
   const handleScroll = useCallback(() => {
     runtimePerformance.recordPdfScrollEvent()
     if (pdfViewMode === 'single') return
@@ -184,8 +196,12 @@ function PreviewPane() {
       scrollPositionRef.current = containerRef.current.scrollTop
     }
 
-    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current)
-    scrollTimerRef.current = setTimeout(computeVisiblePages, SCROLL_DEBOUNCE_MS)
+    if (scrollFrameRef.current === null) {
+      scrollFrameRef.current = requestAnimationFrame(() => {
+        scrollFrameRef.current = null
+        computeVisiblePages()
+      })
+    }
 
     // Debounced persist of scroll position per project
     if (scrollPersistTimerRef.current) clearTimeout(scrollPersistTimerRef.current)
@@ -326,10 +342,24 @@ function PreviewPane() {
     computeVisiblePages()
   }, [computeVisiblePages, zoomLevel])
 
+  // Drop DOM-backed viewport entries once their virtual page is unmounted.
+  // Page ratios remain cached so the cumulative scroll layout stays accurate.
+  useEffect(() => {
+    for (const [pageNumber, info] of pageViewportsRef.current) {
+      const shouldKeep =
+        info.element.isConnected &&
+        (pdfViewMode === 'single'
+          ? pageNumber === currentPage
+          : numPages <= VIRTUALIZATION_THRESHOLD ||
+            (pageNumber >= visibleRange.start && pageNumber <= visibleRange.end))
+      if (!shouldKeep) pageViewportsRef.current.delete(pageNumber)
+    }
+  }, [currentPage, numPages, pdfViewMode, visibleRange])
+
   // Cleanup timers
   useEffect(() => {
     return () => {
-      if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current)
+      if (scrollFrameRef.current !== null) cancelAnimationFrame(scrollFrameRef.current)
       if (scrollPersistTimerRef.current) clearTimeout(scrollPersistTimerRef.current)
     }
   }, [])
@@ -363,7 +393,7 @@ function PreviewPane() {
       setNumPages(numPages)
       setPdfError(null)
       pageViewportsRef.current.clear()
-      pageHeightsRef.current.clear()
+      setPageAspectRatios(new Map())
       setVisibleRange({ start: 1, end: Math.min(numPages, 5) })
       // Restore scroll position after new PDF renders
       requestAnimationFrame(() => {
@@ -416,8 +446,21 @@ function PreviewPane() {
           pageWidth: actualPageWidth,
           pageHeight: actualPageHeight
         })
-        // Cache the rendered height for virtual scrolling calculations
-        pageHeightsRef.current.set(pageNumber, actualPageHeight * scale)
+        // Cache intrinsic geometry for virtual layout calculations. Recompute
+        // offsets only when this page reveals a new aspect ratio.
+        const aspectRatio = actualPageHeight / actualPageWidth
+        setPageAspectRatios((previous) => {
+          const previousAspectRatio = previous.get(pageNumber)
+          if (
+            previousAspectRatio !== undefined &&
+            Math.abs(previousAspectRatio - aspectRatio) <= 0.0001
+          ) {
+            return previous
+          }
+          const next = new Map(previous)
+          next.set(pageNumber, aspectRatio)
+          return next
+        })
       }
     },
     [containerWidth, pdfRevision, zoomLevel]
@@ -488,7 +531,7 @@ function PreviewPane() {
                     onRenderSuccess={handlePageRenderSuccess(currentPage)}
                   />
                 </div>
-              ) : numPages <= 10 ? (
+              ) : numPages <= VIRTUALIZATION_THRESHOLD ? (
                 // For small documents, render all pages (no virtualization overhead)
                 Array.from({ length: numPages }, (_, i) => (
                   <Page
@@ -500,34 +543,13 @@ function PreviewPane() {
                 ))
               ) : (
                 <div style={{ height: totalHeight, position: 'relative' }}>
-                  {Array.from({ length: numPages }, (_, i) => {
-                    const pageNum = i + 1
-                    const isVisible = pageNum >= visibleRange.start && pageNum <= visibleRange.end
+                  {virtualPageNumbers.map((pageNum) => {
                     const offset = pageOffsets.get(pageNum) ?? 0
-                    const estimatedHeight =
-                      pageHeightsRef.current.get(pageNum) ??
-                      (pageWidth ? pageWidth * (842 / 595) : ESTIMATED_PAGE_HEIGHT)
-
-                    if (!isVisible) {
-                      // Placeholder for non-visible pages to maintain scroll position
-                      return (
-                        <div
-                          key={`page_placeholder_${pageNum}`}
-                          style={{
-                            position: 'absolute',
-                            top: offset,
-                            left: 0,
-                            right: 0,
-                            height: estimatedHeight
-                          }}
-                          data-page-number={pageNum}
-                        />
-                      )
-                    }
 
                     return (
                       <div
                         key={`page_${pageNum}`}
+                        data-virtual-page-number={pageNum}
                         style={{
                           position: 'absolute',
                           top: offset,

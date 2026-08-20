@@ -1,10 +1,10 @@
-use tauri::{AppHandle, State};
+use tauri::{ipc::Response, AppHandle, State};
 
 use crate::{
     error::AppResult,
     models::{
-        Base64FileResult, BinaryFileResult, DirectoryEntry, OpenFileResult, SaveFileAsResult,
-        SaveFileInput, SuccessResult,
+        Base64FileResult, DirectoryEntry, OpenFileResult, SaveFileAsResult, SaveFileInput,
+        SuccessResult,
     },
     services::filesystem,
     state::AppState,
@@ -120,6 +120,26 @@ pub async fn read_file_base64(
 pub async fn read_file_binary(
     state: State<'_, AppState>,
     file_path: String,
-) -> AppResult<BinaryFileResult> {
-    filesystem::read_file_binary(state.inner(), &file_path).await
+) -> AppResult<Response> {
+    let bytes = filesystem::read_file_binary(state.inner(), &file_path).await?;
+    Ok(raw_binary_response(bytes))
+}
+
+fn raw_binary_response(bytes: Vec<u8>) -> Response {
+    Response::new(bytes)
+}
+
+#[cfg(test)]
+mod tests {
+    use tauri::ipc::{InvokeResponseBody, IpcResponse};
+
+    use super::raw_binary_response;
+
+    #[test]
+    fn binary_files_use_a_raw_ipc_body_instead_of_json() {
+        let body = raw_binary_response(vec![37, 80, 68, 70])
+            .body()
+            .expect("resolve IPC response");
+        assert!(matches!(body, InvokeResponseBody::Raw(bytes) if bytes == b"%PDF"));
+    }
 }

@@ -2,7 +2,12 @@ import { Channel, invoke } from '@tauri-apps/api/core'
 import type { DesktopApi, OpenFileResult, SaveAsResult, SaveResult } from '../types/api'
 import type { DirectoryEntry } from '../../shared/types'
 import { TAURI_COMMANDS } from '../../shared/tauriCommands'
-import type { CompileLogEvent, CompileRequest, CompileResponse } from '../../shared/compileProtocol'
+import type {
+  CompileDiagnosticsEvent,
+  CompileLogEvent,
+  CompileRequest,
+  CompileResponse
+} from '../../shared/compileProtocol'
 import { parseContentOutline } from '../../shared/contentOutline'
 
 type MigratedDesktopApi = Pick<
@@ -41,6 +46,8 @@ type MigratedDesktopApi = Pick<
   | 'cancelCompile'
   | 'onCompileLog'
   | 'removeCompileLogListener'
+  | 'onDiagnostics'
+  | 'removeDiagnosticsListener'
   | 'loadSettings'
   | 'saveSettings'
   | 'addRecentProject'
@@ -55,6 +62,7 @@ type MigratedDesktopApi = Pick<
 
 type TauriCompileEvent =
   | (CompileLogEvent & { event: 'log' })
+  | (CompileDiagnosticsEvent & { event: 'diagnostics' })
   | {
       event: 'progress'
       requestId: number
@@ -82,6 +90,7 @@ type TauriUpdateDownloadEvent =
   | { event: 'finished' }
 
 let compileLogCallback: ((event: CompileLogEvent) => void) | null = null
+let diagnosticsCallback: ((event: CompileDiagnosticsEvent) => void) | null = null
 let directoryChangeCallback: ((change: { type: string; filename: string }) => void) | null = null
 const updateCallbacks = new Map<string, (...args: unknown[]) => void>()
 
@@ -135,13 +144,36 @@ const deletePath: DesktopApi['deletePath'] = (path) =>
 const readFileBase64: DesktopApi['readFileBase64'] = (filePath) =>
   invoke<{ data: string; mimeType: string }>(TAURI_COMMANDS.readFileBase64, { filePath })
 
+function binaryMimeType(filePath: string): string {
+  const extension = filePath.match(/\.([^.\\/]+)$/)?.[1]?.toLowerCase()
+  switch (extension) {
+    case 'pdf':
+      return 'application/pdf'
+    case 'png':
+      return 'image/png'
+    case 'jpg':
+    case 'jpeg':
+      return 'image/jpeg'
+    case 'gif':
+      return 'image/gif'
+    case 'bmp':
+      return 'image/bmp'
+    case 'svg':
+      return 'image/svg+xml'
+    case 'webp':
+      return 'image/webp'
+    default:
+      return 'application/octet-stream'
+  }
+}
+
 const readFileBinary: DesktopApi['readFileBinary'] = async (filePath) => {
-  const result = await invoke<{ data: number[]; mimeType: string }>(TAURI_COMMANDS.readFileBinary, {
+  const bytes = await invoke<ArrayBuffer | Uint8Array | number[]>(TAURI_COMMANDS.readFileBinary, {
     filePath
   })
   return {
-    mimeType: result.mimeType,
-    data: new Uint8Array(result.data)
+    mimeType: binaryMimeType(filePath),
+    data: bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)
   }
 }
 
@@ -198,6 +230,9 @@ const compile: DesktopApi['compile'] = (request: CompileRequest) => {
     if (event.event === 'log') {
       const { requestId, documentId, documentRevision, text } = event
       compileLogCallback?.({ requestId, documentId, documentRevision, text })
+    } else if (event.event === 'diagnostics') {
+      const { requestId, documentId, documentRevision, diagnostics } = event
+      diagnosticsCallback?.({ requestId, documentId, documentRevision, diagnostics })
     }
   }
   return invoke<CompileResponse>(TAURI_COMMANDS.compile, { request, onEvent })
@@ -212,6 +247,14 @@ const onCompileLog: DesktopApi['onCompileLog'] = (callback) => {
 
 const removeCompileLogListener: DesktopApi['removeCompileLogListener'] = () => {
   compileLogCallback = null
+}
+
+const onDiagnostics: DesktopApi['onDiagnostics'] = (callback) => {
+  diagnosticsCallback = callback
+}
+
+const removeDiagnosticsListener: DesktopApi['removeDiagnosticsListener'] = () => {
+  diagnosticsCallback = null
 }
 
 const loadSettings: DesktopApi['loadSettings'] = () => invoke(TAURI_COMMANDS.loadSettings)
@@ -318,6 +361,8 @@ const migratedApi: MigratedDesktopApi = {
   cancelCompile,
   onCompileLog,
   removeCompileLogListener,
+  onDiagnostics,
+  removeDiagnosticsListener,
   loadSettings,
   saveSettings,
   addRecentProject,
@@ -338,10 +383,6 @@ function unsupported(method: string): (...args: unknown[]) => Promise<never> {
 }
 
 const listenerFallbacks: Partial<DesktopApi> = {
-  onDiagnostics: () => {},
-  removeDiagnosticsListener: () => {},
-  onUpdateEvent: () => {},
-  removeUpdateListeners: () => {},
   onAppCommand: () => {},
   removeAppCommandListener: () => {},
   onLspMessage: () => {},

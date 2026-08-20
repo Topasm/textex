@@ -17,15 +17,16 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use crate::{
     error::{AppError, AppResult},
     models::{
-        Base64FileResult, BinaryFileResult, DirectoryEntry, DirectoryEntryType, OpenFileResult,
-        SaveFileAsResult, SaveFileInput, SuccessResult,
+        Base64FileResult, DirectoryEntry, DirectoryEntryType, OpenFileResult, SaveFileAsResult,
+        SaveFileInput, SuccessResult,
     },
     state::AppState,
 };
 
 const LARGE_FILE_WARN_BYTES: u64 = 5 * 1024 * 1024;
 const LARGE_FILE_REFUSE_BYTES: u64 = 50 * 1024 * 1024;
-const BINARY_TRANSFER_LIMIT_BYTES: u64 = 10 * 1024 * 1024;
+const BASE64_TRANSFER_LIMIT_BYTES: u64 = 10 * 1024 * 1024;
+const RAW_BINARY_TRANSFER_LIMIT_BYTES: u64 = 256 * 1024 * 1024;
 const MEBIBYTE: u64 = 1024 * 1024;
 const TEMP_FILE_ATTEMPTS: usize = 32;
 static TEMP_FILE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
@@ -378,18 +379,22 @@ pub async fn delete_path(state: &AppState, path: &str) -> AppResult<SuccessResul
 pub async fn read_file_base64(state: &AppState, file_path: &str) -> AppResult<Base64FileResult> {
     let canonical =
         resolve_existing_file(state, require_absolute_str(file_path)?, "read base64 file").await?;
-    let bytes = read_limited_binary(&canonical, "base64 encoding").await?;
+    let bytes =
+        read_limited_binary(&canonical, "base64 encoding", BASE64_TRANSFER_LIMIT_BYTES).await?;
     let mime_type = mime_type_for_path(&canonical).to_owned();
     let data = format!("data:{mime_type};base64,{}", encode_base64(&bytes));
     Ok(Base64FileResult { data, mime_type })
 }
 
-pub async fn read_file_binary(state: &AppState, file_path: &str) -> AppResult<BinaryFileResult> {
+pub async fn read_file_binary(state: &AppState, file_path: &str) -> AppResult<Vec<u8>> {
     let canonical =
         resolve_existing_file(state, require_absolute_str(file_path)?, "read binary file").await?;
-    let data = read_limited_binary(&canonical, "binary transfer").await?;
-    let mime_type = mime_type_for_path(&canonical).to_owned();
-    Ok(BinaryFileResult { data, mime_type })
+    read_limited_binary(
+        &canonical,
+        "raw binary transfer",
+        RAW_BINARY_TRANSFER_LIMIT_BYTES,
+    )
+    .await
 }
 
 pub(crate) async fn resolve_project_directory(
@@ -600,7 +605,7 @@ async fn rename_case_only_if_needed(
 
     #[cfg(not(windows))]
     {
-        return Ok(SuccessResult::ok());
+        Ok(SuccessResult::ok())
     }
 
     #[cfg(windows)]
@@ -717,7 +722,7 @@ async fn resolve_directory_target(state: &AppState, requested: PathBuf) -> AppRe
     }
 }
 
-async fn read_limited_binary(path: &Path, purpose: &'static str) -> AppResult<Vec<u8>> {
+async fn read_limited_binary(path: &Path, purpose: &'static str, limit: u64) -> AppResult<Vec<u8>> {
     let display_path = path_to_string(path)?;
     let metadata = fs::metadata(path)
         .await
@@ -725,22 +730,22 @@ async fn read_limited_binary(path: &Path, purpose: &'static str) -> AppResult<Ve
     if !metadata.is_file() {
         return Err(AppError::NotAFile(display_path));
     }
-    ensure_binary_size(metadata.len(), purpose, &display_path)?;
+    ensure_binary_size(metadata.len(), purpose, &display_path, limit)?;
 
     let file = fs::File::open(path)
         .await
         .map_err(|source| AppError::io("open file", display_path.clone(), source))?;
     let mut bytes = Vec::with_capacity(metadata.len() as usize);
-    file.take(BINARY_TRANSFER_LIMIT_BYTES + 1)
+    file.take(limit + 1)
         .read_to_end(&mut bytes)
         .await
         .map_err(|source| AppError::io("read file", display_path.clone(), source))?;
-    ensure_binary_size(bytes.len() as u64, purpose, &display_path)?;
+    ensure_binary_size(bytes.len() as u64, purpose, &display_path, limit)?;
     Ok(bytes)
 }
 
-fn ensure_binary_size(size: u64, purpose: &'static str, path: &str) -> AppResult<()> {
-    if size <= BINARY_TRANSFER_LIMIT_BYTES {
+fn ensure_binary_size(size: u64, purpose: &'static str, path: &str, limit: u64) -> AppResult<()> {
+    if size <= limit {
         return Ok(());
     }
     Err(AppError::io(
@@ -749,8 +754,9 @@ fn ensure_binary_size(size: u64, purpose: &'static str, path: &str) -> AppResult
         io::Error::new(
             io::ErrorKind::InvalidData,
             format!(
-                "file too large for {purpose} ({}MB; limit is 10MB)",
-                rounded_mebibytes(size)
+                "file too large for {purpose} ({}MB; limit is {}MB)",
+                rounded_mebibytes(size),
+                rounded_mebibytes(limit)
             ),
         ),
     ))
@@ -1160,7 +1166,7 @@ mod tests {
         create_directory, create_file, decode_text_file, delete_path, encode_base64,
         ensure_binary_size, mime_type_for_path, open_selected_file, read_file_base64,
         read_file_binary, rename_path, save_as_selected, save_file_batch,
-        BINARY_TRANSFER_LIMIT_BYTES,
+        BASE64_TRANSFER_LIMIT_BYTES, RAW_BINARY_TRANSFER_LIMIT_BYTES,
     };
     use crate::{models::SaveFileInput, state::AppState};
     use std::{
@@ -1256,15 +1262,38 @@ mod tests {
     }
 
     #[test]
-    fn enforces_the_ten_mebibyte_binary_limit() {
-        assert!(ensure_binary_size(BINARY_TRANSFER_LIMIT_BYTES, "binary transfer", "x").is_ok());
-        let error = ensure_binary_size(
-            BINARY_TRANSFER_LIMIT_BYTES + 1,
-            "binary transfer",
-            "preview.pdf",
+    fn enforces_separate_base64_and_raw_binary_limits() {
+        assert!(ensure_binary_size(
+            BASE64_TRANSFER_LIMIT_BYTES,
+            "base64 encoding",
+            "x",
+            BASE64_TRANSFER_LIMIT_BYTES,
         )
-        .expect_err("oversized transfer must fail");
-        assert!(error.to_string().contains("limit is 10MB"));
+        .is_ok());
+        let base64_error = ensure_binary_size(
+            BASE64_TRANSFER_LIMIT_BYTES + 1,
+            "base64 encoding",
+            "figure.png",
+            BASE64_TRANSFER_LIMIT_BYTES,
+        )
+        .expect_err("oversized base64 transfer must fail");
+        assert!(base64_error.to_string().contains("limit is 10MB"));
+
+        assert!(ensure_binary_size(
+            RAW_BINARY_TRANSFER_LIMIT_BYTES,
+            "raw binary transfer",
+            "preview.pdf",
+            RAW_BINARY_TRANSFER_LIMIT_BYTES,
+        )
+        .is_ok());
+        let raw_error = ensure_binary_size(
+            RAW_BINARY_TRANSFER_LIMIT_BYTES + 1,
+            "raw binary transfer",
+            "preview.pdf",
+            RAW_BINARY_TRANSFER_LIMIT_BYTES,
+        )
+        .expect_err("oversized raw transfer must fail");
+        assert!(raw_error.to_string().contains("limit is 256MB"));
     }
 
     #[test]
@@ -1482,7 +1511,7 @@ mod tests {
     }
 
     #[test]
-    fn binary_and_base64_reads_match_renderer_payloads() {
+    fn binary_and_base64_reads_match_their_transport_payloads() {
         let project = TestDirectory::new("binary");
         let state = AppState::default();
         state
@@ -1494,8 +1523,7 @@ mod tests {
         fs::write(&image, b"Man").expect("write image");
 
         let binary = block_on(read_file_binary(&state, &path_string(&pdf))).expect("read binary");
-        assert_eq!(binary.data, b"%PDF-1.7");
-        assert_eq!(binary.mime_type, "application/pdf");
+        assert_eq!(binary, b"%PDF-1.7");
 
         let base64 = block_on(read_file_base64(&state, &path_string(&image))).expect("read base64");
         assert_eq!(base64.data, "data:image/png;base64,TWFu");

@@ -25,16 +25,18 @@ revision-aware Tectonic compile, system Git vertical slice다. 새 기능은 Tau
 | 파일 저장 | 지원 | 기존 파일과, 존재하는 project 폴더 안의 새 경로에 저장한다. |
 | Save As/파일·폴더 생성/복사/이름 변경/삭제 | 지원 | Rust command가 project root와 symlink 경계를 검증하며 root 삭제와 기존 대상 덮어쓰기를 거부한다. |
 | 열린 파일 일괄 저장 | 지원 | 하나의 `save_file_batch` command가 검증 후 atomic replacement를 수행한다. |
-| binary/base64 읽기 | 지원 | project root 내부 파일만 허용한다. PDF tile transport로 쓰지는 않는다. |
+| binary/base64 읽기 | 지원 | project root 내부 파일만 허용한다. base64는 10 MiB, raw IPC response는 256 MiB safety cap을 적용한다. |
 | directory watcher | 지원 | Rust가 watcher를 소유하고 100ms batch/dedupe 후 Tauri Channel로 전달한다. |
 | 설정/최근 프로젝트 | 지원 | app config의 typed JSON을 Rust가 원자 저장하며 최근 프로젝트 목록을 경로 권한으로도 사용한다. |
 | 세션 프로젝트 복원 | 지원 | renderer 저장 경로를 직접 신뢰하지 않고 Rust에 저장된 최근 프로젝트만 재활성화한다. |
 | Tectonic compile | 지원 | bundled 0.17 sidecar, magic root, timeout, cancel과 log Channel을 지원한다. |
 | compile scheduling | 지원 | priority queue, revision identity, latest-wins coalescing과 preemption을 적용한다. |
+| compile diagnostics | 지원 | Rust가 Tectonic log를 구조화하고 revision-tagged Channel event로 전달해 stale marker 게시를 차단한다. |
 | Git | 지원 | project root로 제한된 system Git service가 init/status/stage/unstage/commit/diff/log/file log를 제공한다. |
 | LaTeX package metadata | 지원 | bundled JSON resource를 Rust가 검증·cache하고 transitive dependency까지 반환한다. |
 | fallback document outline | 지원 | filesystem 접근 없는 shared parser를 Tauri renderer에서 직접 실행한다. |
-| PDF preview | 조건부 지원 | 기존 PDF.js UI를 유지하며 현재는 10 MiB 이하 PDF를 binary command로 전달한다. |
+| updater | 지원 | Rust가 GitHub `latest.json`을 확인하고 signed artifact를 Channel progress와 함께 설치한다. release build에는 signing key 설정이 필요하다. |
+| PDF preview | 지원 | Rust raw IPC body를 `Uint8Array`로 연결하며, 10페이지 초과 문서는 visible+overscan page만 DOM에 두고 scroll frame마다 virtual window를 갱신한다. |
 | 나머지 desktop API | 미지원 | 호출 시 `has not been migrated` 오류를 반환한다. |
 
 파일 읽기는 5 MiB를 넘으면 renderer에 경고 정보를 전달하고, editor 정지를 막기
@@ -63,9 +65,9 @@ Tauri runtime인지 확인한 뒤 `src/renderer/platform/tauriApi.ts`를 동적�
 따라서 Tauri 관련 JavaScript는 Electron renderer의 초기 chunk에 포함되지 않는다.
 
 Tauri adapter는 아직 이관하지 않은 command를 조용히 성공시켜서는 안 된다. 일반
-method는 명시적인 rejected promise를 반환한다. 앱 부팅에 필요한 listener 등록은
-현재 임시 no-op이고, updater 확인은 미지원 결과를 반환한다. 이 fallback은 기능
-구현으로 간주하지 않는다.
+method는 명시적인 rejected promise를 반환한다. 앱 부팅에 필요한 일부 listener 등록은
+현재 임시 no-op이다. updater는 Rust command와 Channel을 기존 `DesktopApi` notification
+contract에 연결하며 renderer에 updater plugin 권한을 직접 노출하지 않는다.
 
 M0에서는 닫기/최소화/최대화 control을 잃지 않도록 Tauri native window frame을
 유지한다. runtime 표식으로 Electron 전용 toolbar drag 영역과 window-control 여백은
@@ -114,6 +116,9 @@ Electron preload, Tauri adapter, 공유 타입과 테스트를 함께 갱신한�
 - `update_recent_project`
 - `compile_latex`
 - `cancel_compile`
+- `check_app_update`
+- `download_and_install_update`
+- `restart_app`
 
 `src-tauri/build.rs`의 app manifest와
 `src-tauri/capabilities/main-window.json`에서 동일한 allow-list를 유지한다.
@@ -249,6 +254,7 @@ slice를 다시 검사한다. `lipo`를 사용할 수 없는 non-macOS host에�
 | `npm run package:*` | 현재 host/target의 Tauri installer를 만든다. public release용은 아직 아니다. |
 | `npm run package:linux:deb` | Linux DEB만 만들며 AppImage tool download가 필요 없다. |
 | `npm run package:linux:deb:container` | 고정된 Podman 환경에서 clean install 후 Linux DEB를 만든다. |
+| `npm run package:updater:*` | 별도 config를 병합해 signed updater artifact를 만든다. signing 환경변수가 반드시 필요하다. |
 | `npm run package:electron:*` | 현재 public release 형식의 legacy Electron installer를 만든다. |
 
 `dev`/`dev:tauri`와 `build`/`build:tauri`는 각각 `tauri.conf.json`의 `beforeDevCommand`와
@@ -266,6 +272,37 @@ artifact를 같은 release에 섞지 않는다.
 pull request와 manual dispatch에서 Tauri만 검증한다. Node/Rust/npm audit, Rust 테스트,
 세 플랫폼 sidecar와 package, package 내부 Tectonic, artifact hash/size를 로그로 남기고
 14일 동안 migration artifact를 보관한다. 이 workflow에는 tag 또는 release job이 없다.
+
+## Updater and Signing
+
+Tauri updater는 renderer plugin API를 열지 않고 다음 narrow command만 사용한다.
+
+```text
+check_app_update
+download_and_install_update + Channel<started|progress|finished>
+restart_app
+```
+
+endpoint는 `https://github.com/Topasm/textex/releases/latest/download/latest.json`이다.
+일반 개발 build는 signing key 없이 compile할 수 있지만 updater check는 명시적인
+configuration error를 반환한다. signed release build에는 다음 환경변수가 필요하다.
+
+```text
+TEXTEX_UPDATER_PUBLIC_KEY
+TAURI_SIGNING_PRIVATE_KEY
+TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+```
+
+public key는 release build에 embed되며 공유할 수 있다. private key와 password는 repository,
+config file, chat history에 넣지 않고 CI secret 또는 maintainer의 secure storage에만 둔다.
+`package:updater:linux`, `package:updater:win`, `package:updater:mac:universal`은
+`src-tauri/tauri.updater.conf.json`의 `createUpdaterArtifacts: true`를 적용한다. 기존
+`package:*`와 migration CI는 key가 준비되기 전에도 unsigned validation package를 계속
+만들 수 있다.
+
+Linux updater artifact는 DEB가 아니라 AppImage와 `.sig`다. Tauri public release 전환
+gate에는 AppImage 생성, signature 검증, 이전 설치본에서의 update installation test와
+`latest.json` platform map 검증이 모두 포함돼야 한다.
 
 ### Verified Linux artifact
 
@@ -318,17 +355,16 @@ host에서도 기본 gate를 실행할 수 있다. Rust 동작 변경에는 위 
 현재 기본 Tauri runtime은 전체 TextEx workflow를 지원하지 않는다. 다음 기능은 legacy
 Electron에서만 동작한다.
 
-- 파일·폴더 이름 변경과 삭제
-- structured compile diagnostics, 10 MiB 초과 PDF transport와 generation-aware preview swap
+- generation-aware preview swap과 custom protocol/PDFium A/B
 - TexLab lifecycle와 LSP JSON-RPC
 - history와 project metadata
 - BibTeX/label scan, spellcheck, templates, Pandoc export와 SyncTeX
 - AI provider, Claude/Codex CLI integration과 Zotero
 - PTY terminal
-- menu/window integration, updater, 세 플랫폼 release CI, signing과 notarization
+- menu/window integration, 세 플랫폼 signed release CI와 notarization
 
 Tectonic은 필수 sidecar로 등록되어 package 전 검증되지만 TexLab은 아직 등록되어 있지
-않다. 기본 `build`와 `package:*`가 성공하더라도 structured diagnostics, 대형 PDF와
+않다. 기본 `build`와 `package:*`가 성공하더라도 큰 PDF의 scroll latency와
 나머지 LaTeX workflow의 기능 동등성 또는 public release 준비를 의미하지 않는다.
 
 현재 bundled cache directory에는 안내 파일만 있고 curated support-file seed는 없다.
@@ -340,14 +376,13 @@ Tectonic은 필수 sidecar로 등록되어 package 전 검증되지만 TexLab은
 
 다음 순서로 작은 vertical slice를 추가한다.
 
-1. 파일·폴더 이름 변경/삭제를 이관한다.
-2. compile log parser와 revision-tagged structured diagnostics를 연결한다.
-3. PDF를 큰 JSON 배열로 복사하지 않는다. app cache의 좁은 asset protocol scope나
-   `tauri::ipc::Response`를 비교 측정한 뒤 선택한다.
-4. TexLab stdout/stdin을 `Channel` 기반 manager로 이관한다.
-5. SyncTeX, Pandoc, bibliography, history, AI/Zotero 등 나머지 service를 이관한다.
-6. PTY는 마지막에 cross-platform 구현과 Windows console QA를 함께 진행한다.
-7. updater, menu, signing을 완료하고 세 플랫폼 package를 다시 검증한 뒤 임시 Electron 경로를
+1. 새 PDF generation의 현재 page가 준비된 뒤 atomic swap한다. raw IPC보다 큰 문서에는
+   project-scoped custom protocol을 A/B 측정한다.
+2. SyncTeX, Pandoc, bibliography, history, AI/Zotero 등 나머지 service를 이관한다.
+3. TexLab은 project-wide definition/rename/semantic diagnostics의 실사용 필요성을 측정할
+   때까지 HOLD한다.
+4. PTY는 마지막에 cross-platform 구현과 Windows console QA를 함께 진행한다.
+5. menu와 release signing을 완료하고 세 플랫폼 updater package를 다시 검증한 뒤 임시 Electron 경로를
    제거한다.
 
 sidecar 파일은 `-$TARGET_TRIPLE` 이름을 사용하며 Windows는 triple 뒤에 `.exe`를
@@ -399,7 +434,7 @@ manual chunk 분리는 실제 lazy import와 함께 사용할 때만 초기 실�
   setup download와 release preflight를 같은 암묵적 단계로 합치지 않는다.
 - 재현 가능한 Rust dependency graph를 위해 `src-tauri/Cargo.lock`을 포함하고 dependency
   변경 때마다 diff를 검토한다.
-- release 전환은 Linux, Windows, macOS universal에서 Tectonic/TexLab, updater,
+- release 전환은 Linux, Windows, macOS universal에서 Tectonic, updater,
   signing/notarization과 설치/업그레이드까지 검증한 별도 변경으로 진행한다.
 - 전환 release도 [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)의 version 동기화,
   `main` workflow 선검증, tag 불변성과 artifact 검증 규칙을 따른다.

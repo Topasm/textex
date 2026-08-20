@@ -161,19 +161,9 @@ export function useSynctex(
         if (import.meta.env.DEV)
           // eslint-disable-next-line no-console
           console.log(`[SyncTeX UI] page ${page} viewport NOT available, scrolling and retrying`)
-        if (isSinglePage) {
-          usePdfStore.getState().setCurrentPage(page)
-        } else {
-          const container = containerRef.current
-          if (container) {
-            const pageEl = container.querySelector(
-              `[data-page-number="${page}"]`
-            ) as HTMLDivElement | null
-            if (pageEl) {
-              pageEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
-            }
-          }
-        }
+        const pdfState = usePdfStore.getState()
+        if (pdfState.scrollToPage) pdfState.scrollToPage(page)
+        else if (isSinglePage) pdfState.setCurrentPage(page)
       }
 
       // Retry up to 15 times (1.5 seconds total) — enough for page to render
@@ -206,6 +196,7 @@ export function useSynctex(
 
     const containerRect = container.getBoundingClientRect()
     for (const [pageNum, info] of pageViewportsRef.current) {
+      if (!info.element.isConnected) continue
       const rect = info.element.getBoundingClientRect()
       const overlapTop = Math.max(rect.top, containerRect.top)
       const overlapBottom = Math.min(rect.bottom, containerRect.bottom)
@@ -260,6 +251,7 @@ export function useSynctex(
       let targetPageEl: HTMLDivElement | null = null
 
       for (const [pageNum, info] of pageViewportsRef.current) {
+        if (!info.element.isConnected) continue
         const rect = info.element.getBoundingClientRect()
         if (
           e.clientX >= rect.left &&

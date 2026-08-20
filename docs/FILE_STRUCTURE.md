@@ -112,8 +112,8 @@
 |   |   |   +-- HomeScreen.tsx     # Landing page: search bar, slash commands, grid tiles
 |   |   |   +-- DraftModal.tsx     # AI draft modal (supports initialPrompt prefill)
 |   |   |   +-- EditorPane.tsx     # Monaco Editor wrapper (LaTeX, vs-dark theme)
-|   |   |   +-- PreviewPane.tsx    # react-pdf viewer (Base64 -> Uint8Array -> PDF.js)
-|   |   |   +-- previewUtils.ts    # Preview helper functions (extracted)
+|   |   |   +-- PreviewPane.tsx    # Virtualized react-pdf viewer (DesktopApi bytes -> PDF.js)
+|   |   |   +-- previewUtils.ts    # Preview layout and virtual-window helpers
 |   |   |   +-- PreviewErrorBoundary.tsx  # Error boundary for PDF preview
 |   |   |   +-- Toolbar.tsx        # File actions + compile button + keyboard hints
 |   |   |   +-- TabBar.tsx         # Multi-file tab bar

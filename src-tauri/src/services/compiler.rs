@@ -17,7 +17,10 @@ use tokio::{
 
 use crate::{
     error::{AppError, AppResult},
-    models::{CompileEvent, CompileIdentity, CompileRequest, CompileResponse, CompileStage},
+    models::{
+        CompileDiagnostic, CompileDiagnosticSeverity, CompileEvent, CompileIdentity,
+        CompileRequest, CompileResponse, CompileStage,
+    },
     state::AppState,
 };
 
@@ -25,6 +28,7 @@ const TECTONIC_BASENAME: &str = "tectonic";
 const COMPILE_TIMEOUT: Duration = Duration::from_secs(120);
 const BUILD_TARGET_TRIPLE: &str = env!("TAURI_ENV_TARGET_TRIPLE");
 const MAX_JAVASCRIPT_SAFE_INTEGER: u64 = 9_007_199_254_740_991;
+const MAX_DIAGNOSTIC_LOG_BYTES: usize = 4 * 1024 * 1024;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum RuntimeMode {
@@ -36,6 +40,11 @@ enum ChildOutcome {
     Exited(ExitStatus),
     Cancelled,
     TimedOut,
+}
+
+struct ChildRun {
+    status: ExitStatus,
+    output: String,
 }
 
 pub async fn compile_latex(
@@ -59,6 +68,10 @@ pub async fn compile_latex(
         CompileStage::Compiling,
         display_tex_path.clone(),
     );
+    let _ = on_event.send(CompileEvent::Diagnostics {
+        identity: identity.clone(),
+        diagnostics: Vec::new(),
+    });
 
     let result = run_tectonic(
         &tectonic_path,
@@ -162,19 +175,25 @@ async fn run_tectonic(
     let child = command
         .spawn()
         .map_err(|source| AppError::compiler_io("start", display_tectonic_path.clone(), source))?;
-    let status = monitor_child(
+    let child_run = monitor_child(
         child,
         cancel_receiver,
         timeout,
-        identity,
-        on_event,
+        identity.clone(),
+        on_event.clone(),
         &display_tectonic_path,
     )
     .await?;
 
-    if !status.success() {
+    let diagnostics = parse_tectonic_diagnostics(&child_run.output, tex_path);
+    let _ = on_event.send(CompileEvent::Diagnostics {
+        identity: identity.clone(),
+        diagnostics,
+    });
+
+    if !child_run.status.success() {
         return Err(AppError::CompilerFailed {
-            status: format_exit_status(status),
+            status: format_exit_status(child_run.status),
         });
     }
 
@@ -201,7 +220,7 @@ async fn monitor_child(
     identity: CompileIdentity,
     on_event: Channel<CompileEvent>,
     display_tectonic_path: &str,
-) -> AppResult<ExitStatus> {
+) -> AppResult<ChildRun> {
     let stdout = child.stdout.take().ok_or_else(|| {
         AppError::CompilerWorker("Tectonic stdout pipe was not created".to_owned())
     })?;
@@ -228,10 +247,10 @@ async fn monitor_child(
         }
     };
 
-    join_output_tasks(stdout_task, stderr_task, display_tectonic_path).await?;
+    let output = join_output_tasks(stdout_task, stderr_task, display_tectonic_path).await?;
 
     match outcome {
-        ChildOutcome::Exited(status) => Ok(status),
+        ChildOutcome::Exited(status) => Ok(ChildRun { status, output }),
         ChildOutcome::Cancelled => Err(AppError::CompilationCancelled),
         ChildOutcome::TimedOut => Err(AppError::CompilationTimedOut {
             seconds: timeout.as_secs(),
@@ -328,19 +347,23 @@ async fn forward_output<R>(
     output: R,
     identity: CompileIdentity,
     on_event: Channel<CompileEvent>,
-) -> io::Result<()>
+) -> io::Result<String>
 where
     R: AsyncRead + Unpin,
 {
     let mut reader = BufReader::new(output);
     let mut buffer = Vec::with_capacity(4096);
+    let mut captured = Vec::with_capacity(16 * 1024);
 
     loop {
         buffer.clear();
         let read = reader.read_until(b'\n', &mut buffer).await?;
         if read == 0 {
-            return Ok(());
+            return Ok(String::from_utf8_lossy(&captured).into_owned());
         }
+
+        let remaining = MAX_DIAGNOSTIC_LOG_BYTES.saturating_sub(captured.len());
+        captured.extend_from_slice(&buffer[..buffer.len().min(remaining)]);
 
         // A closed renderer channel must not turn a successful compilation
         // into a failure, so channel delivery is intentionally best-effort.
@@ -352,24 +375,247 @@ where
 }
 
 async fn join_output_tasks(
-    stdout_task: JoinHandle<io::Result<()>>,
-    stderr_task: JoinHandle<io::Result<()>>,
+    stdout_task: JoinHandle<io::Result<String>>,
+    stderr_task: JoinHandle<io::Result<String>>,
     display_tectonic_path: &str,
-) -> AppResult<()> {
+) -> AppResult<String> {
     let (stdout_result, stderr_result) = tokio::join!(stdout_task, stderr_task);
-    finish_output_task(stdout_result, "read stdout from", display_tectonic_path)?;
-    finish_output_task(stderr_result, "read stderr from", display_tectonic_path)?;
-    Ok(())
+    let stdout = finish_output_task(stdout_result, "read stdout from", display_tectonic_path)?;
+    let stderr = finish_output_task(stderr_result, "read stderr from", display_tectonic_path)?;
+    Ok(format!("{stdout}{stderr}"))
 }
 
 fn finish_output_task(
-    result: Result<io::Result<()>, tokio::task::JoinError>,
+    result: Result<io::Result<String>, tokio::task::JoinError>,
     operation: &'static str,
     display_tectonic_path: &str,
-) -> AppResult<()> {
+) -> AppResult<String> {
     result
         .map_err(|error| AppError::CompilerWorker(error.to_string()))?
         .map_err(|source| AppError::compiler_io(operation, display_tectonic_path, source))
+}
+
+fn parse_tectonic_diagnostics(output: &str, root_file: &Path) -> Vec<CompileDiagnostic> {
+    let lines: Vec<&str> = output.lines().collect();
+    let mut diagnostics = Vec::new();
+
+    for (index, raw_line) in lines.iter().enumerate() {
+        let line = raw_line.trim();
+        if line.is_empty() {
+            continue;
+        }
+
+        let parsed = if let Some(message) = line.strip_prefix("error:") {
+            Some(parse_prefixed_diagnostic(
+                CompileDiagnosticSeverity::Error,
+                message,
+                &lines,
+                index,
+                root_file,
+            ))
+        } else if let Some(message) = line.strip_prefix("warning:") {
+            Some(parse_prefixed_diagnostic(
+                CompileDiagnosticSeverity::Warning,
+                message,
+                &lines,
+                index,
+                root_file,
+            ))
+        } else if let Some(message) = line.strip_prefix('!') {
+            let line_number = lines
+                .iter()
+                .skip(index + 1)
+                .take(5)
+                .find_map(|candidate| parse_classic_error_line(candidate));
+            Some(CompileDiagnostic {
+                file: diagnostic_file(root_file, None),
+                line: line_number.unwrap_or(1),
+                column: None,
+                severity: CompileDiagnosticSeverity::Error,
+                message: message.trim().to_owned(),
+            })
+        } else if is_latex_warning(line) {
+            Some(CompileDiagnostic {
+                file: diagnostic_file(root_file, None),
+                line: parse_input_line(line).unwrap_or(1),
+                column: None,
+                severity: CompileDiagnosticSeverity::Warning,
+                message: line.to_owned(),
+            })
+        } else if line.starts_with(r"Overfull \") || line.starts_with(r"Underfull \") {
+            Some(CompileDiagnostic {
+                file: diagnostic_file(root_file, None),
+                line: parse_bad_box_line(line).unwrap_or(1),
+                column: None,
+                severity: CompileDiagnosticSeverity::Info,
+                message: line.to_owned(),
+            })
+        } else {
+            None
+        };
+
+        if let Some(diagnostic) = parsed {
+            if !diagnostic.message.is_empty() && !diagnostics.contains(&diagnostic) {
+                diagnostics.push(diagnostic);
+            }
+        }
+    }
+
+    diagnostics
+}
+
+fn parse_prefixed_diagnostic(
+    severity: CompileDiagnosticSeverity,
+    raw_message: &str,
+    lines: &[&str],
+    index: usize,
+    root_file: &Path,
+) -> CompileDiagnostic {
+    if let Some((file, line, column, message)) = parse_location(raw_message) {
+        return CompileDiagnostic {
+            file: diagnostic_file(root_file, Some(file)),
+            line,
+            column,
+            severity,
+            message: if message.is_empty() {
+                raw_message.trim().to_owned()
+            } else {
+                message.to_owned()
+            },
+        };
+    }
+
+    let location = find_following_location(lines, index);
+    let (file, line, column) = location
+        .map(|(file, line, column, _)| (Some(file), line, column))
+        .unwrap_or((None, 1, None));
+    CompileDiagnostic {
+        file: diagnostic_file(root_file, file),
+        line,
+        column,
+        severity,
+        message: raw_message.trim().to_owned(),
+    }
+}
+
+fn find_following_location<'a>(
+    lines: &'a [&'a str],
+    diagnostic_index: usize,
+) -> Option<(&'a str, u64, Option<u64>, &'a str)> {
+    for candidate in lines.iter().skip(diagnostic_index + 1).take(5) {
+        let trimmed = candidate.trim();
+        if trimmed.starts_with("error:")
+            || trimmed.starts_with("warning:")
+            || trimmed.starts_with('!')
+            || is_latex_warning(trimmed)
+        {
+            break;
+        }
+        if let Some(location) = parse_location(candidate) {
+            return Some(location);
+        }
+    }
+    None
+}
+
+fn parse_location(value: &str) -> Option<(&str, u64, Option<u64>, &str)> {
+    let value = value
+        .trim()
+        .trim_start_matches("-->")
+        .trim_start_matches(['┌', '╭', '─'])
+        .trim();
+
+    for (separator, _) in value.match_indices(':') {
+        let after_separator = &value[separator + 1..];
+        let line_digits = after_separator
+            .chars()
+            .take_while(|character| character.is_ascii_digit())
+            .count();
+        if line_digits == 0 {
+            continue;
+        }
+        let line = after_separator[..line_digits].parse().ok()?;
+        let after_line = &after_separator[line_digits..];
+        let Some(after_line_separator) = after_line.strip_prefix(':') else {
+            continue;
+        };
+        let column_digits = after_line_separator
+            .chars()
+            .take_while(|character| character.is_ascii_digit())
+            .count();
+        let (column, message) = if column_digits > 0 {
+            let column = after_line_separator[..column_digits].parse().ok();
+            let message = after_line_separator[column_digits..]
+                .strip_prefix(':')
+                .unwrap_or_default()
+                .trim();
+            (column, message)
+        } else {
+            (None, after_line_separator.trim())
+        };
+        let file = value[..separator].trim().trim_matches(['"', '`']);
+        if !file.is_empty() {
+            return Some((file, line, column, message));
+        }
+    }
+    None
+}
+
+fn diagnostic_file(root_file: &Path, reported_file: Option<&str>) -> String {
+    let Some(reported_file) = reported_file.filter(|file| !file.is_empty()) else {
+        return root_file.to_string_lossy().into_owned();
+    };
+    let reported_path = Path::new(reported_file);
+    let resolved = if reported_path.is_absolute() {
+        reported_path.to_path_buf()
+    } else {
+        root_file
+            .parent()
+            .unwrap_or_else(|| Path::new(""))
+            .join(reported_path)
+    };
+    resolved.to_string_lossy().into_owned()
+}
+
+fn parse_classic_error_line(line: &str) -> Option<u64> {
+    let line = line.trim_start();
+    let digits = line.strip_prefix("l.")?;
+    let digits = digits
+        .chars()
+        .take_while(|character| character.is_ascii_digit())
+        .collect::<String>();
+    digits.parse().ok()
+}
+
+fn is_latex_warning(line: &str) -> bool {
+    (line.starts_with("LaTeX")
+        || line.starts_with("Package ")
+        || line.starts_with("Class ")
+        || line.starts_with("Module "))
+        && (line.contains(" Warning:") || line.starts_with("LaTeX Warning:"))
+}
+
+fn parse_input_line(line: &str) -> Option<u64> {
+    let suffix = line.split("on input line ").nth(1)?;
+    suffix
+        .chars()
+        .take_while(|character| character.is_ascii_digit())
+        .collect::<String>()
+        .parse()
+        .ok()
+}
+
+fn parse_bad_box_line(line: &str) -> Option<u64> {
+    let suffix = line
+        .split(" at lines ")
+        .nth(1)
+        .or_else(|| line.split(" at line ").nth(1))?;
+    suffix
+        .chars()
+        .take_while(|character| character.is_ascii_digit())
+        .collect::<String>()
+        .parse()
+        .ok()
 }
 
 fn send_progress(
@@ -700,8 +946,9 @@ mod tests {
     use std::{process::Stdio, time::Instant};
 
     use super::{
-        development_candidates, extract_magic_root, packaged_candidates, resolve_magic_root,
-        sidecar_source_filename, validate_compile_request, validate_project_tex_file,
+        development_candidates, extract_magic_root, packaged_candidates,
+        parse_tectonic_diagnostics, resolve_magic_root, sidecar_source_filename,
+        validate_compile_request, validate_project_tex_file,
     };
     #[cfg(unix)]
     use super::{isolate_process_group, monitor_child};
@@ -713,6 +960,45 @@ mod tests {
     use tauri::ipc::Channel;
     #[cfg(unix)]
     use tokio::{process::Command, sync::oneshot, time::Duration};
+
+    #[test]
+    fn parses_structured_classic_and_typesetting_diagnostics() {
+        let root = Path::new("/project/main.tex");
+        let output = concat!(
+            "error: chapters/one.tex:12:4: Undefined control sequence\n",
+            "warning: Citation `missing` is undefined\n",
+            "  ┌─ main.tex:18:2\n",
+            "! Missing $ inserted.\n",
+            "l.27 \\section{Broken}\n",
+            "LaTeX Warning: Label(s) may have changed on input line 31.\n",
+            "Overfull \\hbox (3.0pt too wide) in paragraph at lines 40--41\n"
+        );
+
+        let diagnostics = parse_tectonic_diagnostics(output, root);
+        assert_eq!(diagnostics.len(), 5);
+        assert_eq!(diagnostics[0].file, "/project/chapters/one.tex");
+        assert_eq!(diagnostics[0].line, 12);
+        assert_eq!(diagnostics[0].column, Some(4));
+        assert_eq!(diagnostics[0].message, "Undefined control sequence");
+        assert_eq!(diagnostics[1].file, "/project/main.tex");
+        assert_eq!(diagnostics[1].line, 18);
+        assert_eq!(diagnostics[2].line, 27);
+        assert_eq!(diagnostics[3].line, 31);
+        assert_eq!(diagnostics[4].line, 40);
+    }
+
+    #[test]
+    fn diagnostics_are_deduplicated_and_unlocated_errors_use_the_root() {
+        let root = Path::new("/project/main.tex");
+        let diagnostics = parse_tectonic_diagnostics(
+            "error: compilation failed\nerror: compilation failed\n",
+            root,
+        );
+
+        assert_eq!(diagnostics.len(), 1);
+        assert_eq!(diagnostics[0].file, "/project/main.tex");
+        assert_eq!(diagnostics[0].line, 1);
+    }
 
     #[test]
     fn target_specific_sidecar_filenames_match_tauri_convention() {

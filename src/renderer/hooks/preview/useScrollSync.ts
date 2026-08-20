@@ -114,11 +114,13 @@ export function useScrollSync({
     if (!editorAdapter) return
 
     let debounceTimer: ReturnType<typeof setTimeout> | null = null
+    let renderRetryTimer: ReturnType<typeof setTimeout> | null = null
 
     const disposable = editorAdapter.onDidScroll(() => {
       if (scrollSourceRef.current === 'pdf') return
 
       if (debounceTimer) clearTimeout(debounceTimer)
+      if (renderRetryTimer) clearTimeout(renderRetryTimer)
       debounceTimer = setTimeout(() => {
         const map = lineMapRef.current
         if (map.length === 0) return
@@ -134,34 +136,45 @@ export function useScrollSync({
         if (idx === -1) return
 
         const entry = map[idx]
-        const info = pageViewportsRef.current?.get(entry.page)
-        if (!info || !info.element.isConnected) return
+        const scrollWhenRendered = (attempt: number): void => {
+          const info = pageViewportsRef.current?.get(entry.page)
+          if (!info || !info.element.isConnected) {
+            if (attempt === 0) usePdfStore.getState().scrollToPage?.(entry.page)
+            if (attempt < 15) {
+              renderRetryTimer = setTimeout(() => scrollWhenRendered(attempt + 1), 100)
+            }
+            return
+          }
 
-        // Convert SyncTeX y to viewport pixels
-        const viewBoxTop = info.viewport.viewBox[3]
-        const pdfY = viewBoxTop - entry.y
-        const [, vy] = info.viewport.convertToViewportPoint(0, pdfY)
+          // Convert SyncTeX y to viewport pixels
+          const viewBoxTop = info.viewport.viewBox[3]
+          const pdfY = viewBoxTop - entry.y
+          const [, vy] = info.viewport.convertToViewportPoint(0, pdfY)
 
-        const containerRect = container.getBoundingClientRect()
-        const pageRect = info.element.getBoundingClientRect()
-        const pageTop = pageRect.top - containerRect.top + container.scrollTop
+          const containerRect = container.getBoundingClientRect()
+          const pageRect = info.element.getBoundingClientRect()
+          const pageTop = pageRect.top - containerRect.top + container.scrollTop
 
-        const targetScrollTop = pageTop + vy - containerRect.height / 3
+          const targetScrollTop = pageTop + vy - containerRect.height / 3
 
-        // Set lock to prevent feedback loop
-        scrollSourceRef.current = 'editor'
-        if (lockTimerRef.current) clearTimeout(lockTimerRef.current)
-        lockTimerRef.current = setTimeout(() => {
-          scrollSourceRef.current = null
-        }, LOCK_MS)
+          // Set lock to prevent feedback loop
+          scrollSourceRef.current = 'editor'
+          if (lockTimerRef.current) clearTimeout(lockTimerRef.current)
+          lockTimerRef.current = setTimeout(() => {
+            scrollSourceRef.current = null
+          }, LOCK_MS)
 
-        container.scrollTo({ top: targetScrollTop, behavior: 'smooth' })
+          container.scrollTo({ top: targetScrollTop, behavior: 'smooth' })
+        }
+
+        scrollWhenRendered(0)
       }, DEBOUNCE_MS)
     })
 
     return () => {
       disposable.dispose()
       if (debounceTimer) clearTimeout(debounceTimer)
+      if (renderRetryTimer) clearTimeout(renderRetryTimer)
     }
   }, [pdfRevision, containerRef, pageViewportsRef, editorAdapter, scrollSyncEnabled])
 

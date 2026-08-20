@@ -27,6 +27,7 @@ describe('Tauri DesktopApi adapter', () => {
     channelInstances.length = 0
     const api = createTauriApi()
     api.removeCompileLogListener()
+    api.removeDiagnosticsListener()
     api.removeDirectoryChangedListener()
     api.removeUpdateListeners()
   })
@@ -102,7 +103,7 @@ describe('Tauri DesktopApi adapter', () => {
       .mockResolvedValueOnce({ success: true })
       .mockResolvedValueOnce({ success: true })
       .mockResolvedValueOnce({ data: 'data:image/png;base64,iVBORw==', mimeType: 'image/png' })
-      .mockResolvedValueOnce({ data: [37, 80, 68, 70], mimeType: 'application/pdf' })
+      .mockResolvedValueOnce(new Uint8Array([37, 80, 68, 70]).buffer)
 
     const api = createTauriApi()
 
@@ -143,6 +144,16 @@ describe('Tauri DesktopApi adapter', () => {
       ['read_file_base64', { filePath: '/project/source.png' }],
       ['read_file_binary', { filePath: '/project/main.pdf' }]
     ])
+  })
+
+  it('preserves MIME inference for platform byte-array fallbacks', async () => {
+    invokeMock.mockResolvedValueOnce([137, 80, 78, 71])
+
+    const api = createTauriApi()
+    const binary = await api.readFileBinary('C:\\project\\FIGURE.PNG')
+
+    expect([...binary.data]).toEqual([137, 80, 78, 71])
+    expect(binary.mimeType).toBe('image/png')
   })
 
   it('keeps project activation and settings on the typed Rust boundary', async () => {
@@ -188,7 +199,7 @@ describe('Tauri DesktopApi adapter', () => {
     ])
   })
 
-  it('streams revision-tagged compile logs through a Tauri channel', async () => {
+  it('streams revision-tagged compile logs and diagnostics through a Tauri channel', async () => {
     const request = {
       filePath: '/project/main.tex',
       requestId: 4,
@@ -204,6 +215,7 @@ describe('Tauri DesktopApi adapter', () => {
       compiledFilePath: '/project/main.tex'
     }
     const logListener = vi.fn()
+    const diagnosticsListener = vi.fn()
     invokeMock.mockImplementation(async (command: string, payload: Record<string, unknown>) => {
       expect(command).toBe('compile_latex')
       const channel = payload.onEvent as { onmessage(message: unknown): void }
@@ -214,11 +226,27 @@ describe('Tauri DesktopApi adapter', () => {
         documentRevision: 9,
         text: 'Running TeX\n'
       })
+      channel.onmessage({
+        event: 'diagnostics',
+        requestId: 4,
+        documentId: '/project/main.tex',
+        documentRevision: 9,
+        diagnostics: [
+          {
+            file: '/project/main.tex',
+            line: 7,
+            column: 2,
+            severity: 'error',
+            message: 'Undefined control sequence'
+          }
+        ]
+      })
       return response
     })
 
     const api = createTauriApi()
     api.onCompileLog(logListener)
+    api.onDiagnostics(diagnosticsListener)
 
     await expect(api.compile(request)).resolves.toEqual(response)
     expect(logListener).toHaveBeenCalledWith({
@@ -226,6 +254,20 @@ describe('Tauri DesktopApi adapter', () => {
       documentId: '/project/main.tex',
       documentRevision: 9,
       text: 'Running TeX\n'
+    })
+    expect(diagnosticsListener).toHaveBeenCalledWith({
+      requestId: 4,
+      documentId: '/project/main.tex',
+      documentRevision: 9,
+      diagnostics: [
+        {
+          file: '/project/main.tex',
+          line: 7,
+          column: 2,
+          severity: 'error',
+          message: 'Undefined control sequence'
+        }
+      ]
     })
     expect(invokeMock).toHaveBeenCalledWith('compile_latex', {
       request,
