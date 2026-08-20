@@ -19,7 +19,6 @@ import { useSectionHighlight } from '../hooks/editor/useSectionHighlight'
 import { useEditorCommands } from '../hooks/editor/useEditorCommands'
 import { useHistoryPanel } from '../hooks/editor/useHistoryPanel'
 import { useTableEditor } from '../hooks/editor/useTableEditor'
-import { MathPreviewWidget } from './MathPreviewWidget'
 import { DiffEditor } from '@monaco-editor/react'
 import type { editor as monacoEditor } from 'monaco-editor'
 import {
@@ -33,19 +32,28 @@ import { SelectionAiToolbar } from './editor/SelectionAiToolbar'
 import { getAiContextStatus, updateCurrentDocumentAiContext } from '../services/aiContext'
 import { configureMonacoLanguages, getMonacoTheme } from '../data/monacoConfig'
 import { generateFigureSnippet } from '../utils/figureSnippet'
+import type { EditorAdapter } from '../editor/EditorAdapter'
+import { MonacoEditorAdapter } from '../editor/MonacoEditorAdapter'
+import { runtimePerformance } from '../services/runtimePerformance'
+import { documentRegistry } from '../models/documentRegistry'
 
 // Lazy-load heavy modals that are rarely shown
 const TableEditorModal = lazy(() =>
   import('./TableEditorModal').then((m) => ({ default: m.TableEditorModal }))
 )
 const HistoryPanel = lazy(() => import('./HistoryPanel').then((m) => ({ default: m.HistoryPanel })))
+const MathPreviewWidget = lazy(() =>
+  import('./MathPreviewWidget').then((m) => ({ default: m.MathPreviewWidget }))
+)
 
 type MonacoInstance = typeof import('monaco-editor')
 
 function EditorPane() {
-  const content = useEditorStore((s) => s.content)
   const filePath = useEditorStore((s) => s.filePath)
-  const setContent = useEditorStore((s) => s.setContent)
+  // Programmatic replacements (format/reload) need one controlled Monaco refresh.
+  // Normal editor input never changes this value and does not re-render this component.
+  useEditorStore((s) => s.refreshVersion)
+  const updateActiveDocument = useEditorStore((s) => s.updateActiveDocument)
   const setCursorPosition = useEditorStore((s) => s.setCursorPosition)
   const setEditorInstance = useEditorStore((s) => s.setEditorInstance)
   const projectRoot = useProjectStore((s) => s.projectRoot)
@@ -58,6 +66,7 @@ function EditorPane() {
   const aiEnabled = !!settings.aiEnabled && !!settings.aiProvider
   const editorRef = useRef<monacoEditor.IStandaloneCodeEditor | null>(null)
   const monacoRef = useRef<MonacoInstance | null>(null)
+  const editorAdapterRef = useRef<EditorAdapter | null>(null)
   const cursorDisposableRef = useRef<{ dispose(): void } | null>(null)
   const mouseDisposableRef = useRef<{ dispose(): void } | null>(null)
   const selectionDisposableRef = useRef<{ dispose(): void } | null>(null)
@@ -76,14 +85,14 @@ function EditorPane() {
     monacoRef
   })
   const registerCompletionProviders = useCompletion(runSpellCheck)
-  const { refreshOutline } = useDocumentSymbols(content)
-  useEditorDiagnostics({ editorRef, monacoRef })
-  usePendingActions({ editorRef, monacoRef })
+  const content = filePath ? (documentRegistry.snapshot(filePath)?.text ?? '') : ''
+  const { refreshOutline } = useDocumentSymbols()
+  const refreshEditorDiagnostics = useEditorDiagnostics(editorAdapterRef)
+  usePendingActions(editorAdapterRef)
   const { detectPackages } = usePackageDetection()
   // Coordinated content-change analysis pipeline:
   // Replaces 3 independent debounce timers with a single scheduler
-  useContentChangeCoordinator(
-    content,
+  const scheduleContentTasks = useContentChangeCoordinator(
     useMemo(
       () => [
         { key: 'spellcheck', fn: runSpellCheck, delayMs: 500 },
@@ -194,9 +203,15 @@ function EditorPane() {
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor
+    editorAdapterRef.current?.dispose()
+    editorAdapterRef.current = new MonacoEditorAdapter(editor, monaco, filePath)
+    runtimePerformance.recordEditorInteractive()
+    // Transitional boundary: PDF scroll sync still consumes raw Monaco from
+    // the store. New document operations use editorAdapterRef instead.
     setEditorInstance(editor)
     aiEnabledKeyRef.current = editor.createContextKey('textex.aiEnabled', aiEnabled)
     monacoRef.current = monaco
+    refreshEditorDiagnostics()
     cursorDisposableRef.current = editor.onDidChangeCursorPosition((e) => {
       setCursorPosition(e.position.lineNumber, e.position.column)
     })
@@ -275,6 +290,10 @@ function EditorPane() {
     })
   }
 
+  useEffect(() => {
+    editorAdapterRef.current?.setDocumentId(filePath)
+  }, [filePath])
+
   // Keep the aiEnabled context key in sync with settings
   useEffect(() => {
     if (aiEnabledKeyRef.current) {
@@ -328,6 +347,8 @@ function EditorPane() {
       for (const d of completionDisposables.current) d.dispose()
       disposeTableEditor()
       stopLspClient()
+      editorAdapterRef.current?.dispose()
+      editorAdapterRef.current = null
       setEditorInstance(null)
       if (window.vimMode) {
         window.vimMode.dispose()
@@ -339,16 +360,19 @@ function EditorPane() {
   const handleChange = useCallback(
     (value: string | undefined): void => {
       if (value !== undefined) {
-        setContent(value)
+        updateActiveDocument(value)
+        runtimePerformance.recordDocumentChange()
+        scheduleContentTasks()
       }
     },
-    [setContent]
+    [scheduleContentTasks, updateActiveDocument]
   )
 
   return (
     <>
       <div
         style={{ height: '100%', display: 'flex' }}
+        onBeforeInputCapture={() => runtimePerformance.beginInput()}
         onDragOver={(e) => {
           e.preventDefault()
           e.dataTransfer.dropEffect = 'copy'
@@ -358,16 +382,15 @@ function EditorPane() {
 
           // Try smart image drop first (OS file manager drops)
           if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            await handleSmartImageDrop(e, editorRef.current, monacoRef.current)
+            await handleSmartImageDrop(e, editorAdapterRef.current)
             return
           }
 
           // Handle FileTree image drops (internal drag)
           const imagePath = e.dataTransfer.getData('application/x-textex-image-path')
           if (imagePath && projectRoot) {
-            const editor = editorRef.current
-            const monaco = monacoRef.current
-            if (!editor || !monaco) return
+            const editorAdapter = editorAdapterRef.current
+            if (!editorAdapter) return
 
             const sep = projectRoot.includes('\\') ? '\\' : '/'
             const relPath = imagePath.startsWith(projectRoot + sep)
@@ -376,39 +399,36 @@ function EditorPane() {
             const fileName = imagePath.split(/[\\/]/).pop() || 'image'
             const snippet = generateFigureSnippet(relPath, fileName)
 
-            const target = editor.getTargetAtClientPoint(e.clientX, e.clientY)
-            if (target?.position) {
-              const pos = target.position
-              editor.executeEdits('image-drop', [
+            const targetPosition = editorAdapter.getPositionAtClientPoint(e.clientX, e.clientY)
+            if (targetPosition) {
+              editorAdapter.applyEdits('image-drop', [
                 {
-                  range: new monaco.Range(pos.lineNumber, pos.column, pos.lineNumber, pos.column),
+                  range: { start: targetPosition, end: targetPosition },
                   text: snippet,
                   forceMoveMarkers: true
                 }
               ])
-              editor.setPosition(pos)
-              editor.focus()
+              editorAdapter.setPosition(targetPosition)
+              editorAdapter.focus()
             }
             return
           }
 
           const text = e.dataTransfer.getData('text/plain')
-          const editor = editorRef.current
-          const monaco = monacoRef.current
-          if (!text || !editor || !monaco) return
+          const editorAdapter = editorAdapterRef.current
+          if (!text || !editorAdapter) return
 
-          const target = editor.getTargetAtClientPoint(e.clientX, e.clientY)
-          if (target?.position) {
-            const pos = target.position
-            editor.executeEdits('bib-drop', [
+          const targetPosition = editorAdapter.getPositionAtClientPoint(e.clientX, e.clientY)
+          if (targetPosition) {
+            editorAdapter.applyEdits('bib-drop', [
               {
-                range: new monaco.Range(pos.lineNumber, pos.column, pos.lineNumber, pos.column),
+                range: { start: targetPosition, end: targetPosition },
                 text,
                 forceMoveMarkers: true
               }
             ])
-            editor.setPosition(pos)
-            editor.focus()
+            editorAdapter.setPosition(targetPosition)
+            editorAdapter.focus()
           }
         }}
       >
@@ -468,11 +488,13 @@ function EditorPane() {
             />
           )}
           {mathPreviewEnabled && mathData && showMathPreview && (
-            <MathPreviewWidget
-              mathData={mathData}
-              editorRef={editorRef}
-              onClose={() => setShowMathPreview(false)}
-            />
+            <Suspense fallback={null}>
+              <MathPreviewWidget
+                mathData={mathData}
+                editorRef={editorRef}
+                onClose={() => setShowMathPreview(false)}
+              />
+            </Suspense>
           )}
           {selectionAiToolbarSelection && (
             <SelectionAiToolbar
@@ -506,10 +528,20 @@ function EditorPane() {
             initialLatex={tableModal.latex}
             onClose={() => setTableModal((prev) => ({ ...prev, isOpen: false }))}
             onApply={(newLatex) => {
-              if (editorRef.current && tableModal.range) {
-                editorRef.current.executeEdits('table-editor', [
+              const editorAdapter = editorAdapterRef.current
+              if (editorAdapter && tableModal.range) {
+                editorAdapter.applyEdits('table-editor', [
                   {
-                    range: tableModal.range,
+                    range: {
+                      start: {
+                        line: tableModal.range.startLineNumber,
+                        column: tableModal.range.startColumn
+                      },
+                      end: {
+                        line: tableModal.range.endLineNumber,
+                        column: tableModal.range.endColumn
+                      }
+                    },
                     text: newLatex,
                     forceMoveMarkers: true
                   }

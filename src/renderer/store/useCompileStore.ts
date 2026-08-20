@@ -11,13 +11,15 @@ interface CompileState {
   pdfPath: string | null
   /** Monotonic counter bumped on each successful compile to signal PDF reload. */
   pdfRevision: number
+  pdfDocumentId: string | null
+  pdfDocumentRevision: number | null
   logs: string
   isLogPanelOpen: boolean
   diagnostics: Diagnostic[]
   logViewMode: 'raw' | 'structured'
 
   setCompileStatus: (status: CompileStatus) => void
-  setPdfPath: (pdfPath: string | null) => void
+  setPdfPath: (pdfPath: string | null, source?: { documentId: string; revision: number }) => void
   appendLog: (text: string) => void
   clearLogs: () => void
   toggleLogPanel: () => void
@@ -31,13 +33,21 @@ export const useCompileStore = create<CompileState>()(
     compileStatus: 'idle',
     pdfPath: null,
     pdfRevision: 0,
+    pdfDocumentId: null,
+    pdfDocumentRevision: null,
     logs: '',
     isLogPanelOpen: false,
     diagnostics: [],
     logViewMode: 'structured',
 
     setCompileStatus: (compileStatus) => set({ compileStatus }),
-    setPdfPath: (pdfPath) => set((state) => ({ pdfPath, pdfRevision: state.pdfRevision + 1 })),
+    setPdfPath: (pdfPath, source) =>
+      set((state) => ({
+        pdfPath,
+        pdfRevision: state.pdfRevision + 1,
+        pdfDocumentId: source?.documentId ?? null,
+        pdfDocumentRevision: source?.revision ?? null
+      })),
     appendLog: (text) =>
       set((state) => {
         const nextLogs = state.logs + text

@@ -84,6 +84,11 @@ describe('compileLatex Loop Safeguard', () => {
     await compileLatex('/test/file.tex', mockWin)
 
     expect(mockWin.isDestroyed).toHaveBeenCalled()
-    expect(mockWebContents.send).toHaveBeenCalledWith('latex:log', 'test log')
+    expect(mockWebContents.send).toHaveBeenCalledWith('latex:log', {
+      requestId: 0,
+      documentId: '/test/file.tex',
+      documentRevision: 0,
+      text: 'test log'
+    })
   })
 })

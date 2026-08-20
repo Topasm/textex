@@ -7,7 +7,6 @@ import {
   ClaudeTerminalResult,
   CodexTerminalRequest,
   CodexTerminalResult,
-  Diagnostic,
   SyncTeXForwardResult,
   SyncTeXInverseResult,
   SyncTeXLineMapEntry,
@@ -30,10 +29,18 @@ import {
   ProjectBookmark
 } from '../../shared/types'
 import { Template } from '../../shared/templates'
+import type { PerformanceMemorySample, RuntimePerformanceReport } from '../../shared/performance'
+import type {
+  CompileDiagnosticsEvent,
+  CompileLogEvent,
+  CompileRequest,
+  CompileResponse
+} from '../../shared/compileProtocol'
 
 export interface OpenFileResult {
   content: string
   filePath: string
+  warnLargeFile?: boolean
 }
 
 export interface SaveResult {
@@ -44,10 +51,6 @@ export interface SaveAsResult {
   filePath: string
 }
 
-export interface CompileResult {
-  pdfPath: string
-}
-
 export interface GitStatusResult {
   branch: string
   files: GitFileStatus[]
@@ -56,7 +59,8 @@ export interface GitStatusResult {
   not_added: string[]
 }
 
-export interface ElectronAPI {
+/** Runtime-neutral contract implemented by both the Electron preload and Tauri adapter. */
+export interface DesktopApi {
   // File System
   openFile(): Promise<OpenFileResult | null>
   saveFile(content: string, filePath: string): Promise<SaveResult>
@@ -69,6 +73,8 @@ export interface ElectronAPI {
   ): Promise<{ projectPath: string; filePath: string } | null>
   readFile(filePath: string): Promise<OpenFileResult>
   openDirectory(): Promise<string | null>
+  /** Activates a dialog-authorized or native-persisted recent project root. */
+  activateProject(projectPath: string): Promise<string>
   createFile(filePath: string): Promise<{ success: boolean }>
   createDirectory(dirPath: string): Promise<{ success: boolean }>
   copyFile(source: string, dest: string): Promise<{ success: boolean }>
@@ -81,11 +87,11 @@ export interface ElectronAPI {
   removeDirectoryChangedListener(): void
 
   // Compilation
-  compile(filePath: string): Promise<CompileResult>
+  compile(request: CompileRequest): Promise<CompileResponse>
   cancelCompile(): Promise<boolean>
-  onCompileLog(cb: (log: string) => void): void
+  onCompileLog(cb: (event: CompileLogEvent) => void): void
   removeCompileLogListener(): void
-  onDiagnostics(cb: (diagnostics: Diagnostic[]) => void): void
+  onDiagnostics(cb: (event: CompileDiagnosticsEvent) => void): void
   removeDiagnosticsListener(): void
 
   // SyncTeX
@@ -202,6 +208,9 @@ export interface ElectronAPI {
   // Shell
   openExternal(url: string): Promise<{ success: boolean }>
 
+  // Performance diagnostics
+  getPerformanceMemory(): Promise<PerformanceMemorySample>
+
   // History
   saveHistorySnapshot(filePath: string, content: string): Promise<void>
   getHistoryList(filePath: string): Promise<HistoryItem[]>
@@ -238,8 +247,18 @@ export interface ElectronAPI {
   projectBookmarksRemove(projectRoot: string, id: string): Promise<{ success: boolean }>
 }
 
+/** @deprecated Use DesktopApi for code shared by Electron and Tauri. */
+export type ElectronAPI = DesktopApi
+
 declare global {
   interface Window {
-    api: ElectronAPI
+    api: DesktopApi
+    textexPerformance?: {
+      enabled: true
+      report(): Promise<RuntimePerformanceReport>
+      download(): Promise<RuntimePerformanceReport>
+      reset(): void
+      captureMemory(): Promise<void>
+    }
   }
 }

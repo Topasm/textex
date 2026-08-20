@@ -2,6 +2,11 @@ import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
 import type { IpcChannel, IpcRequest, IpcResponse } from '../shared/ipcChannels'
 import type { AppCommandId } from '../shared/types'
 import type {
+  CompileDiagnosticsEvent,
+  CompileLogEvent,
+  CompileRequest
+} from '../shared/compileProtocol'
+import type {
   CompileRecord,
   ProjectSnippet,
   ProjectBookmark,
@@ -137,8 +142,8 @@ function createIpcListener<TArgs extends unknown[]>(channel: string) {
   }
 }
 
-const compileLogListener = createIpcListener<[string]>('latex:log')
-const diagnosticsListener = createIpcListener<[unknown[]]>('latex:diagnostics')
+const compileLogListener = createIpcListener<[CompileLogEvent]>('latex:log')
+const diagnosticsListener = createIpcListener<[CompileDiagnosticsEvent]>('latex:diagnostics')
 const directoryChangedListener =
   createIpcListener<[{ type: string; filename: string }]>('fs:directory-changed')
 const lspMessageListener = createIpcListener<[object]>('lsp:message')
@@ -158,6 +163,9 @@ contextBridge.exposeInMainWorld('api', {
     invoke('fs:create-template-project', templateName, content, files),
   readFile: (filePath: string) => invoke('fs:read-file', filePath),
   openDirectory: () => invoke('fs:open-directory'),
+  // Electron already validates paths per filesystem request. Tauri overrides
+  // this contract with a native trusted-recent-project authorization command.
+  activateProject: async (projectPath: string) => projectPath,
   readDirectory: (dirPath: string) => invoke('fs:read-directory', dirPath),
   createFile: (filePath: string) => invoke('fs:create-file', filePath),
   copyFile: (source: string, dest: string) => invoke('fs:copy-file', source, dest),
@@ -174,15 +182,15 @@ contextBridge.exposeInMainWorld('api', {
   },
 
   // Compilation
-  compile: (filePath: string) => invoke('latex:compile', filePath),
+  compile: (request: CompileRequest) => invoke('latex:compile', request),
   cancelCompile: () => invoke('latex:cancel'),
-  onCompileLog: (cb: (log: string) => void) => {
+  onCompileLog: (cb: (event: CompileLogEvent) => void) => {
     compileLogListener.on(cb)
   },
   removeCompileLogListener: () => {
     compileLogListener.remove()
   },
-  onDiagnostics: (cb: (diagnostics: unknown[]) => void) => {
+  onDiagnostics: (cb: (event: CompileDiagnosticsEvent) => void) => {
     diagnosticsListener.on(cb)
   },
   removeDiagnosticsListener: () => {
@@ -346,6 +354,9 @@ contextBridge.exposeInMainWorld('api', {
 
   // Shell
   openExternal: (url: string) => invoke('shell:open-external', url),
+
+  // Performance diagnostics
+  getPerformanceMemory: () => invoke('performance:memory'),
 
   // History
   saveHistorySnapshot: (filePath: string, content: string) =>

@@ -4,6 +4,8 @@ import { useEditorStore } from '../../store/useEditorStore'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import { useUiStore } from '../../store/useUiStore'
 import type { DocumentSymbolNode, SectionNode } from '../../../shared/types'
+import { documentRegistry } from '../../models/documentRegistry'
+import type { DocumentSnapshot } from '../../models/documentModel'
 
 /**
  * Convert SectionNode[] (from regex parser) to DocumentSymbolNode[] (used by OutlinePanel).
@@ -87,32 +89,37 @@ export function extractBandSymbols(sectionNodes: SectionNode[]): DocumentSymbolN
 let outlineGeneration = 0
 
 // Track in-flight LSP request file to deduplicate concurrent fetches
-let pendingFetchFile: string | null = null
+let pendingFetchKey: string | null = null
 
-function fetchOutline(currentFile: string, content: string): void {
+function fetchOutline(currentFile: string, snapshot: DocumentSnapshot): void {
   const lspAvailable =
     useSettingsStore.getState().settings.lspEnabled && useUiStore.getState().lspStatus === 'running'
 
   // Deduplicate: skip if a request for the same file is already in flight
-  if (pendingFetchFile === currentFile) return
-  pendingFetchFile = currentFile
+  const requestKey = `${snapshot.documentId}:${snapshot.revision}`
+  if (pendingFetchKey === requestKey) return
+  pendingFetchKey = requestKey
 
   const generation = ++outlineGeneration
 
   const onComplete = (): void => {
-    if (pendingFetchFile === currentFile) pendingFetchFile = null
+    if (pendingFetchKey === requestKey) pendingFetchKey = null
   }
+
+  const isCurrent = (): boolean =>
+    useEditorStore.getState().filePath === currentFile &&
+    (documentRegistry.getModel(currentFile)?.isCurrent(snapshot) ?? false)
 
   if (lspAvailable) {
     Promise.all([
       lspRequestDocumentSymbols(currentFile),
-      window.api.getDocumentOutline(currentFile, content).catch(() => [])
+      window.api.getDocumentOutline(currentFile, snapshot.text).catch(() => [])
     ])
       .then(([symbols, fallbackOutline]) => {
         onComplete()
         // Stale check: only apply if this is still the latest request
         if (outlineGeneration !== generation) return
-        if (useEditorStore.getState().filePath === currentFile) {
+        if (isCurrent()) {
           useUiStore
             .getState()
             .setDocumentSymbols(mergeBandSymbols(symbols, extractBandSymbols(fallbackOutline)))
@@ -121,14 +128,14 @@ function fetchOutline(currentFile: string, content: string): void {
       .catch(() => {
         onComplete()
         if (outlineGeneration !== generation) return
-        fetchFallbackOutline(currentFile, content, generation)
+        fetchFallbackOutline(currentFile, snapshot, generation)
       })
   } else {
-    fetchFallbackOutline(currentFile, content, generation).finally(onComplete)
+    fetchFallbackOutline(currentFile, snapshot, generation).finally(onComplete)
   }
 }
 
-export function useDocumentSymbols(content: string): { refreshOutline: () => void } {
+export function useDocumentSymbols(): { refreshOutline: () => void } {
   const filePath = useEditorStore((s) => s.filePath)
   const lspStatus = useUiStore((s) => s.lspStatus)
   const prevFilePathRef = useRef<string | null>(null)
@@ -137,18 +144,20 @@ export function useDocumentSymbols(content: string): { refreshOutline: () => voi
   const refreshOutline = useCallback(() => {
     const editorState = useEditorStore.getState()
     if (!editorState.filePath) return
-    fetchOutline(editorState.filePath, editorState.content)
+    const snapshot = documentRegistry.snapshot(editorState.filePath)
+    if (snapshot) fetchOutline(editorState.filePath, snapshot)
   }, [])
 
   // Immediate outline fetch when file changes (open / tab switch / startup)
   useEffect(() => {
-    if (!filePath || !content) return
+    if (!filePath) return
     // Only trigger on actual file path changes, not content edits
     if (filePath === prevFilePathRef.current) return
     prevFilePathRef.current = filePath
 
-    fetchOutline(filePath, content)
-  }, [filePath, content])
+    const snapshot = documentRegistry.snapshot(filePath)
+    if (snapshot?.text) fetchOutline(filePath, snapshot)
+  }, [filePath])
 
   // Refresh outline when LSP status changes
   useEffect(() => {
@@ -159,7 +168,7 @@ export function useDocumentSymbols(content: string): { refreshOutline: () => voi
   useEffect(() => {
     return () => {
       outlineGeneration++
-      pendingFetchFile = null
+      pendingFetchKey = null
     }
   }, [])
 
@@ -168,14 +177,17 @@ export function useDocumentSymbols(content: string): { refreshOutline: () => voi
 
 function fetchFallbackOutline(
   currentFile: string,
-  content: string,
+  snapshot: DocumentSnapshot,
   generation: number
 ): Promise<void> {
   return window.api
-    .getDocumentOutline(currentFile, content)
+    .getDocumentOutline(currentFile, snapshot.text)
     .then((sectionNodes) => {
       if (outlineGeneration !== generation) return
-      if (useEditorStore.getState().filePath === currentFile) {
+      if (
+        useEditorStore.getState().filePath === currentFile &&
+        documentRegistry.getModel(currentFile)?.isCurrent(snapshot)
+      ) {
         useUiStore.getState().setDocumentSymbols(sectionNodesToSymbols(sectionNodes))
       }
     })

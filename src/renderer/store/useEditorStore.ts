@@ -1,45 +1,37 @@
 import { create } from 'zustand'
 import { subscribeWithSelector, persist } from 'zustand/middleware'
 import type { editor as monacoEditor } from 'monaco-editor'
+import type { DocumentChangeSource, DocumentSnapshot } from '../models/documentModel'
+import { documentRegistry } from '../models/documentRegistry'
 
 interface OpenFileData {
-  content: string
   isDirty: boolean
   cursorLine: number
   cursorColumn: number
 }
 
 interface EditorState {
-  // File state
   filePath: string | null
-  content: string
-  isDirty: boolean
-
-  // Multi-file
-  openFiles: Record<string, OpenFileData>
   activeFilePath: string | null
+  isDirty: boolean
+  revision: number
+  /** Increments only when code outside Monaco replaces the active buffer. */
+  refreshVersion: number
+  openFiles: Record<string, OpenFileData>
 
-  // Cursor
   cursorLine: number
   cursorColumn: number
-
-  // Navigation
   pendingJump: { line: number; column: number; skipFocus?: boolean } | null
-
-  // Pending insert (for click-to-insert from FileTree)
   pendingInsertText: string | null
 
-  // Shared editor instance for scroll sync
+  // Transitional: PDF scroll sync still consumes the raw Monaco editor.
   editorInstance: monacoEditor.IStandaloneCodeEditor | null
 
-  // Session restore metadata
   _sessionOpenPaths: string[]
   _sessionActiveFile: string | null
 
-  // Actions
-  setContent: (content: string) => void
-  setFilePath: (path: string | null) => void
-  setDirty: (dirty: boolean) => void
+  updateActiveDocument: (text: string, source?: DocumentChangeSource) => DocumentSnapshot | null
+  markDocumentSaved: (filePath: string, revision?: number) => boolean
   openFileInTab: (filePath: string, content: string) => void
   closeTab: (filePath: string) => void
   setActiveTab: (filePath: string) => void
@@ -50,174 +42,225 @@ interface EditorState {
   clearPendingInsert: () => void
   setEditorInstance: (editor: monacoEditor.IStandaloneCodeEditor | null) => void
   reloadFileContent: (filePath: string, newContent: string) => void
+  resetEditor: () => void
 }
 
 export type { OpenFileData }
 
+function withDirtyState(
+  openFiles: Record<string, OpenFileData>,
+  filePath: string,
+  isDirty: boolean
+): Record<string, OpenFileData> {
+  const current = openFiles[filePath]
+  if (!current || current.isDirty === isDirty) return openFiles
+  return { ...openFiles, [filePath]: { ...current, isDirty } }
+}
+
+const emptyEditorState = {
+  filePath: null,
+  activeFilePath: null,
+  isDirty: false,
+  revision: 0,
+  refreshVersion: 0,
+  openFiles: {},
+  cursorLine: 1,
+  cursorColumn: 1,
+  pendingJump: null,
+  pendingInsertText: null,
+  _sessionOpenPaths: [] as string[],
+  _sessionActiveFile: null
+}
+
 export const useEditorStore = create<EditorState>()(
   persist(
     subscribeWithSelector((set, get) => ({
-      filePath: null,
-      content: '',
-      isDirty: false,
-      openFiles: {},
-      activeFilePath: null,
-      cursorLine: 1,
-      cursorColumn: 1,
-      pendingJump: null,
-      pendingInsertText: null,
+      ...emptyEditorState,
       editorInstance: null,
-      _sessionOpenPaths: [],
-      _sessionActiveFile: null,
 
-      setContent: (content) => {
+      updateActiveDocument: (text, source = 'editor') => {
         const state = get()
         const activeFile = state.activeFilePath
-        if (activeFile) {
-          const openFiles = { ...state.openFiles }
-          if (openFiles[activeFile]) {
-            openFiles[activeFile] = { ...openFiles[activeFile], content, isDirty: true }
-          }
-          set({ content, isDirty: true, openFiles })
-        } else {
-          set({ content, isDirty: true })
-        }
-      },
-      setFilePath: (filePath) => set({ filePath }),
-      setDirty: (isDirty) => {
-        const state = get()
-        const activeFile = state.activeFilePath
-        if (activeFile && state.openFiles[activeFile]) {
-          const openFiles = { ...state.openFiles }
-          openFiles[activeFile] = { ...openFiles[activeFile], isDirty }
-          set({ isDirty, openFiles })
-        } else {
-          set({ isDirty })
-        }
+        if (!activeFile) return null
+
+        const before = documentRegistry.snapshot(activeFile)
+        const after = documentRegistry.update(activeFile, text, source)
+        if (!after || after === before) return after
+
+        const isDirty = documentRegistry.getModel(activeFile)?.isDirty ?? false
+        const openFiles = withDirtyState(state.openFiles, activeFile, isDirty)
+        set({
+          revision: after.revision,
+          isDirty,
+          openFiles,
+          refreshVersion: source === 'editor' ? state.refreshVersion : state.refreshVersion + 1
+        })
+        return after
       },
 
-      openFileInTab: (filePath, content) => {
+      markDocumentSaved: (filePath, revision) => {
+        if (!documentRegistry.markSaved(filePath, revision)) return false
         const state = get()
+        const openFiles = withDirtyState(state.openFiles, filePath, false)
+        if (state.activeFilePath === filePath) {
+          set({ isDirty: false, openFiles })
+        } else if (openFiles !== state.openFiles) {
+          set({ openFiles })
+        }
+        return true
+      },
+
+      openFileInTab: (requestedPath, content) => {
+        const state = get()
+        const wasOpen = documentRegistry.has(requestedPath)
+        documentRegistry.open(requestedPath, content)
+        const filePath = documentRegistry.getFilePath(requestedPath) ?? requestedPath
+        const model = documentRegistry.getModel(filePath)
+        const snapshot = wasOpen
+          ? documentRegistry.replaceFromDisk(filePath, content)
+          : model?.snapshot()
+        if (!snapshot) return
+
         const openFiles = { ...state.openFiles }
         if (state.activeFilePath && openFiles[state.activeFilePath]) {
           openFiles[state.activeFilePath] = {
             ...openFiles[state.activeFilePath],
-            content: state.content,
             cursorLine: state.cursorLine,
             cursorColumn: state.cursorColumn
           }
         }
-        if (openFiles[filePath]) {
-          openFiles[filePath] = { ...openFiles[filePath], content, isDirty: false }
-        } else {
-          openFiles[filePath] = { content, isDirty: false, cursorLine: 1, cursorColumn: 1 }
+
+        const fileData = openFiles[filePath] ?? {
+          isDirty: model.isDirty,
+          cursorLine: 1,
+          cursorColumn: 1
         }
+        openFiles[filePath] = { ...fileData, isDirty: model.isDirty }
         set({
           openFiles,
           activeFilePath: filePath,
           filePath,
-          content: openFiles[filePath].content,
-          isDirty: openFiles[filePath].isDirty,
-          cursorLine: openFiles[filePath].cursorLine,
-          cursorColumn: openFiles[filePath].cursorColumn
+          revision: snapshot.revision,
+          refreshVersion: state.refreshVersion + 1,
+          isDirty: model.isDirty,
+          cursorLine: fileData.cursorLine,
+          cursorColumn: fileData.cursorColumn
         })
       },
+
       closeTab: (filePath) => {
         const state = get()
         const openFiles = { ...state.openFiles }
         delete openFiles[filePath]
-        const remaining = Object.keys(openFiles)
+        documentRegistry.close(filePath)
 
-        if (state.activeFilePath === filePath) {
-          if (remaining.length > 0) {
-            const next = remaining[remaining.length - 1]
-            set({
-              openFiles,
-              activeFilePath: next,
-              filePath: next,
-              content: openFiles[next].content,
-              isDirty: openFiles[next].isDirty,
-              cursorLine: openFiles[next].cursorLine,
-              cursorColumn: openFiles[next].cursorColumn
-            })
-          } else {
-            set({
-              openFiles,
-              activeFilePath: null,
-              filePath: null,
-              content: '',
-              isDirty: false
-            })
-          }
-        } else {
+        if (state.activeFilePath !== filePath) {
           set({ openFiles })
+          return
         }
+
+        const remaining = Object.keys(openFiles)
+        const next = remaining.at(-1)
+        if (!next) {
+          set({
+            openFiles,
+            activeFilePath: null,
+            filePath: null,
+            revision: 0,
+            refreshVersion: state.refreshVersion + 1,
+            isDirty: false,
+            cursorLine: 1,
+            cursorColumn: 1
+          })
+          return
+        }
+
+        const nextModel = documentRegistry.getModel(next)
+        const nextData = openFiles[next]
+        set({
+          openFiles,
+          activeFilePath: next,
+          filePath: next,
+          revision: nextModel?.revision ?? 0,
+          refreshVersion: state.refreshVersion + 1,
+          isDirty: nextModel?.isDirty ?? false,
+          cursorLine: nextData.cursorLine,
+          cursorColumn: nextData.cursorColumn
+        })
       },
+
       setActiveTab: (filePath) => {
         const state = get()
-        if (state.activeFilePath && state.openFiles[state.activeFilePath]) {
-          const openFiles = { ...state.openFiles }
-          openFiles[state.activeFilePath] = {
-            ...openFiles[state.activeFilePath],
-            content: state.content,
-            cursorLine: state.cursorLine,
-            cursorColumn: state.cursorColumn
-          }
-          const fileData = openFiles[filePath]
-          if (fileData) {
-            set({
-              openFiles,
-              activeFilePath: filePath,
-              filePath,
-              content: fileData.content,
-              isDirty: fileData.isDirty,
-              cursorLine: fileData.cursorLine,
-              cursorColumn: fileData.cursorColumn
-            })
-          }
-        } else {
-          const fileData = state.openFiles[filePath]
-          if (fileData) {
-            set({
-              activeFilePath: filePath,
-              filePath,
-              content: fileData.content,
-              isDirty: fileData.isDirty,
-              cursorLine: fileData.cursorLine,
-              cursorColumn: fileData.cursorColumn
-            })
+        const target = state.openFiles[filePath]
+        const model = documentRegistry.getModel(filePath)
+        if (!target || !model) return
+
+        let openFiles = state.openFiles
+        if (state.activeFilePath && openFiles[state.activeFilePath]) {
+          openFiles = {
+            ...openFiles,
+            [state.activeFilePath]: {
+              ...openFiles[state.activeFilePath],
+              cursorLine: state.cursorLine,
+              cursorColumn: state.cursorColumn
+            }
           }
         }
+
+        set({
+          openFiles,
+          activeFilePath: filePath,
+          filePath,
+          revision: model.revision,
+          refreshVersion: state.refreshVersion + 1,
+          isDirty: model.isDirty,
+          cursorLine: target.cursorLine,
+          cursorColumn: target.cursorColumn
+        })
       },
+
       setCursorPosition: (cursorLine, cursorColumn) => set({ cursorLine, cursorColumn }),
       requestJumpToLine: (line, column, skipFocus) =>
         set({ pendingJump: { line, column, skipFocus } }),
       clearPendingJump: () => set({ pendingJump: null }),
       requestInsertAtCursor: (text) => set({ pendingInsertText: text }),
       clearPendingInsert: () => set({ pendingInsertText: null }),
-      setEditorInstance: (editor) => set({ editorInstance: editor }),
+      setEditorInstance: (editorInstance) => set({ editorInstance }),
+
       reloadFileContent: (filePath, newContent) => {
+        const model = documentRegistry.getModel(filePath)
+        if (!model) return
+        const currentSnapshot = model.snapshot()
+        const snapshot =
+          currentSnapshot.text === newContent && !model.isDirty
+            ? currentSnapshot
+            : documentRegistry.replaceFromDisk(filePath, newContent)
+        if (!snapshot) return
+
         const state = get()
-        const fileData = state.openFiles[filePath]
-        if (!fileData) return
-        const openFiles = { ...state.openFiles }
-        openFiles[filePath] = { ...fileData, content: newContent, isDirty: false }
+        const openFiles = withDirtyState(state.openFiles, filePath, false)
         if (state.activeFilePath === filePath) {
-          set({ openFiles, content: newContent, isDirty: false })
-        } else {
+          set({
+            openFiles,
+            revision: snapshot.revision,
+            refreshVersion: state.refreshVersion + 1,
+            isDirty: false
+          })
+        } else if (openFiles !== state.openFiles) {
           set({ openFiles })
         }
+      },
+
+      resetEditor: () => {
+        documentRegistry.clear()
+        set({ ...emptyEditorState, editorInstance: null })
       }
     })),
     {
       name: 'textex-editor-session',
       partialize: (state) => ({
-        // Persist session restore metadata: which files were open and where the cursor was.
-        // We persist the paths + cursor positions (not file content, which must be re-read
-        // from disk on restore to avoid stale data).
         _sessionOpenPaths: Object.keys(state.openFiles),
         _sessionActiveFile: state.activeFilePath,
-        // Persist cursor positions per file for session restore
         _sessionCursors: Object.fromEntries(
           Object.entries(state.openFiles).map(([path, data]) => [
             path,

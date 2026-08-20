@@ -59,6 +59,7 @@ Object.defineProperty(window, 'api', {
     // Multi-file / directory operations
     readFile: vi.fn(),
     openDirectory: vi.fn(),
+    activateProject: vi.fn(async (projectPath: string) => projectPath),
     readDirectory: vi.fn(),
     watchDirectory: vi.fn(),
     unwatchDirectory: vi.fn(),
@@ -142,6 +143,12 @@ Object.defineProperty(window, 'api', {
     scanLabels: vi.fn(),
     loadPackageData: vi.fn(),
     openExternal: vi.fn(),
+    getPerformanceMemory: vi.fn().mockResolvedValue({
+      sampledAtEpochMs: 0,
+      totalWorkingSetKiB: 0,
+      totalPrivateKiB: 0,
+      processes: []
+    }),
 
     // LSP
     lspStart: vi.fn(),

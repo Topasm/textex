@@ -11,11 +11,12 @@ export async function openProject(
   options: OpenProjectOptions = {}
 ): Promise<void> {
   const { autoOpenFirstTex = true } = options
-  useProjectStore.getState().setProjectRoot(dirPath)
+  const projectPath = await window.api.activateProject(dirPath)
+  useProjectStore.getState().setProjectRoot(projectPath)
 
   let tree: DirectoryEntry[] = []
   try {
-    tree = await window.api.readDirectory(dirPath)
+    tree = await window.api.readDirectory(projectPath)
     useProjectStore.getState().setDirectoryTree(tree)
   } catch {
     // ignore
@@ -31,27 +32,24 @@ export async function openProject(
   if (autoOpenFirstTex && texFile) {
     try {
       const result = await window.api.readFile(texFile.path)
-      const s = useEditorStore.getState()
-      s.openFileInTab(result.filePath, result.content)
-      s.setFilePath(result.filePath)
-      s.setDirty(false)
+      useEditorStore.getState().openFileInTab(result.filePath, result.content)
     } catch {
       // ignore
     }
   }
 
   try {
-    await window.api.watchDirectory(dirPath)
+    await window.api.watchDirectory(projectPath)
   } catch {
     // ignore
   }
 
   try {
-    const isRepo = await window.api.gitIsRepo(dirPath)
+    const isRepo = await window.api.gitIsRepo(projectPath)
     const s = useProjectStore.getState()
     s.setIsGitRepo(isRepo)
     if (isRepo) {
-      const status = await window.api.gitStatus(dirPath)
+      const status = await window.api.gitStatus(projectPath)
       s.setGitStatus(status)
       s.setGitBranch(status.branch)
     }
@@ -60,21 +58,21 @@ export async function openProject(
   }
 
   try {
-    const entries = await window.api.findBibInProject(dirPath)
+    const entries = await window.api.findBibInProject(projectPath)
     useProjectStore.getState().setBibEntries(entries)
   } catch {
     // ignore
   }
 
   try {
-    const labels = await window.api.scanLabels(dirPath)
+    const labels = await window.api.scanLabels(projectPath)
     useProjectStore.getState().setLabels(labels)
   } catch {
     // ignore
   }
 
   try {
-    await window.api.addRecentProject(dirPath)
+    await window.api.addRecentProject(projectPath)
   } catch {
     // ignore
   }

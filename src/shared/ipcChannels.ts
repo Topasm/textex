@@ -38,6 +38,8 @@ import type {
   ProjectBookmark
 } from './types'
 import type { Template } from './templates'
+import type { PerformanceMemorySample } from './performance'
+import type { CompileRequest, CompileResponse } from './compileProtocol'
 
 // ---- Helpers ----
 
@@ -49,10 +51,6 @@ interface OpenFileResult {
   content: string
   filePath: string
   warnLargeFile?: boolean
-}
-
-interface CompileResult {
-  pdfPath: string
 }
 
 interface GitStatusResult {
@@ -91,7 +89,7 @@ export interface IpcChannelMap {
   'fs:read-file-binary': [[filePath: string], { data: Uint8Array; mimeType: string }]
 
   // Compilation
-  'latex:compile': [[filePath: string], CompileResult]
+  'latex:compile': [[request: CompileRequest], CompileResponse]
   'latex:cancel': [[], boolean]
 
   // SyncTeX
@@ -203,6 +201,9 @@ export interface IpcChannelMap {
 
   // Shell
   'shell:open-external': [[url: string], SuccessResult]
+
+  // Performance diagnostics
+  'performance:memory': [[], PerformanceMemorySample]
 
   // History
   'history:save': [[filePath: string, content: string], void]

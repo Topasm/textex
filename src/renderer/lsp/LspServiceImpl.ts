@@ -74,6 +74,11 @@ function uriToFilePath(uri: string): string {
   }
 }
 
+function documentVersionKey(filePath: string): string {
+  const normalized = filePath.replace(/\\/g, '/')
+  return /^[a-zA-Z]:\//.test(normalized) ? normalized.toLocaleLowerCase('en-US') : normalized
+}
+
 function mapSymbols(symbols: LspDocumentSymbol[]): DocumentSymbolNode[] {
   return symbols.map((sym) => ({
     name: sym.name,
@@ -249,6 +254,11 @@ export class LspClient {
     }>
 
     const filePath = uriToFilePath(uri)
+    const diagnosticVersion = params.version
+    if (typeof diagnosticVersion === 'number') {
+      const currentVersion = this.documentVersions.get(documentVersionKey(filePath))
+      if (currentVersion === undefined || diagnosticVersion !== currentVersion) return
+    }
     const models = monaco.editor.getModels()
     const model = models.find((m) => {
       const mUri = m.uri.toString()
@@ -531,8 +541,9 @@ export class LspClient {
 
   notifyDidOpen(filePath: string, content: string): void {
     if (!this._initialized) return
-    const version = (this.documentVersions.get(filePath) || 0) + 1
-    this.documentVersions.set(filePath, version)
+    const versionKey = documentVersionKey(filePath)
+    const version = (this.documentVersions.get(versionKey) || 0) + 1
+    this.documentVersions.set(versionKey, version)
     const lang = filePath.endsWith('.bib') ? 'bibtex' : 'latex'
     this.sendNotification('textDocument/didOpen', {
       textDocument: { uri: filePathToUri(filePath), languageId: lang, version, text: content }
@@ -541,8 +552,9 @@ export class LspClient {
 
   notifyDidChange(filePath: string, content: string): void {
     if (!this._initialized) return
-    const version = (this.documentVersions.get(filePath) || 0) + 1
-    this.documentVersions.set(filePath, version)
+    const versionKey = documentVersionKey(filePath)
+    const version = (this.documentVersions.get(versionKey) || 0) + 1
+    this.documentVersions.set(versionKey, version)
     this.sendNotification('textDocument/didChange', {
       textDocument: { uri: filePathToUri(filePath), version },
       contentChanges: [{ text: content }]
@@ -561,6 +573,7 @@ export class LspClient {
     this.sendNotification('textDocument/didClose', {
       textDocument: { uri: filePathToUri(filePath) }
     })
+    this.documentVersions.delete(documentVersionKey(filePath))
   }
 
   async requestDocumentSymbols(filePath: string): Promise<DocumentSymbolNode[]> {

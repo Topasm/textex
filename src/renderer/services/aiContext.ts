@@ -12,6 +12,7 @@ import { hashTextContent } from '../../shared/hash'
 import { useEditorStore } from '../store/useEditorStore'
 import { useUiStore } from '../store/useUiStore'
 import { useAiContextStore } from '../store/useAiContextStore'
+import { documentRegistry } from '../models/documentRegistry'
 
 const OUTLINE_LIMIT = 8
 const CONTEXT_CHARS = 600
@@ -169,8 +170,9 @@ export async function buildAiLightContext(selection: monacoEditor.ISelection): P
   lightContext: AiLightContext
   summaryContext: AiContextEntry | null
 }> {
-  const { filePath: currentFilePath, content } = useEditorStore.getState()
+  const currentFilePath = useEditorStore.getState().filePath
   const filePath = currentFilePath || 'untitled.tex'
+  const content = currentFilePath ? (documentRegistry.snapshot(currentFilePath)?.text ?? '') : ''
   const { sectionPath, outline } = await resolveOutlineContext(filePath, content, selection)
   const { beforeSelection, afterSelection } = buildNeighborContext(content, selection)
 
@@ -218,11 +220,15 @@ export async function buildAiCustomProcessRequest(
 }
 
 export async function updateCurrentDocumentAiContext(): Promise<AiContextEntry> {
-  const { filePath, content } = useEditorStore.getState()
+  const filePath = useEditorStore.getState().filePath
   if (!filePath) throw new Error('No active file to summarize')
-  if (!content.trim()) throw new Error('Document is empty')
+  const snapshot = documentRegistry.snapshot(filePath)
+  if (!snapshot?.text.trim()) throw new Error('Document is empty')
 
-  const entry = await window.api.aiUpdateContext(filePath, content)
+  const entry = await window.api.aiUpdateContext(filePath, snapshot.text)
+  if (!documentRegistry.getModel(filePath)?.isCurrent(snapshot)) {
+    throw new Error('Document changed while its AI context was being generated')
+  }
   useAiContextStore.getState().upsertEntry(entry)
   return entry
 }

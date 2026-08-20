@@ -7,17 +7,21 @@ import { clearSyncTexCache } from './synctex'
 import {
   getTectonicPath as getSharedTectonicPath,
   compileLatex as sharedCompileLatex,
-  cancelCompilation
+  cancelCompilation as cancelTectonicProcess
 } from '../shared/compiler'
 import type { CompileResult } from '../shared/compiler'
 import { checkCompileCache, updateCompileCache } from './services/compileCache'
-import { enqueueCompile } from './services/compileQueue'
+import { cancelCurrentCompile, enqueueCompile } from './services/compileQueue'
 import type { CompilePriority } from './services/compileQueue'
+import type { CompileIdentity } from '../shared/compileProtocol'
 import type { Diagnostic } from '../shared/types'
 import { ensureTectonicCacheReady } from './services/tectonicCache'
 
-export { cancelCompilation }
 export type { CompileResult }
+
+export function cancelCompilation(): boolean {
+  return cancelCurrentCompile() || cancelTectonicProcess()
+}
 
 const isDev = !app.isPackaged
 
@@ -148,6 +152,7 @@ interface CompileRunOptions {
   priority?: CompilePriority
   silent?: boolean
   skipCompileCache?: boolean
+  identity?: CompileIdentity
 }
 
 async function doCompile(
@@ -155,6 +160,11 @@ async function doCompile(
   win: BrowserWindow | null,
   options: CompileRunOptions = {}
 ): Promise<CompileResult> {
+  const identity = options.identity ?? {
+    requestId: 0,
+    documentId: filePath,
+    documentRevision: 0
+  }
   if (!options.skipCompileCache) {
     const cachedPdfPath = await checkCompileCache(filePath)
     if (cachedPdfPath) {
@@ -170,7 +180,7 @@ async function doCompile(
   clearSyncTexCache()
 
   if (win && !options.silent && !win.isDestroyed()) {
-    win.webContents.send('latex:compile-progress', { stage: 'compiling', filePath })
+    win.webContents.send('latex:compile-progress', { stage: 'compiling', filePath, ...identity })
   }
 
   const result = await sharedCompileLatex(filePath, {
@@ -180,7 +190,7 @@ async function doCompile(
     },
     onLog: (text: string) => {
       if (win && !options.silent && !win.isDestroyed()) {
-        win.webContents.send('latex:log', text)
+        win.webContents.send('latex:log', { ...identity, text })
       }
     },
     onDiagnostics: (output: string, file: string) => {
@@ -191,7 +201,7 @@ async function doCompile(
       parseLogInWorker(output, file).then((diagnostics) => {
         try {
           if (!win.isDestroyed()) {
-            win.webContents.send('latex:diagnostics', diagnostics)
+            win.webContents.send('latex:diagnostics', { ...identity, diagnostics })
           }
         } catch {
           // Don't let diagnostic sending failures affect anything
@@ -210,7 +220,7 @@ async function doCompile(
   }
 
   if (win && !options.silent && !win.isDestroyed()) {
-    win.webContents.send('latex:compile-progress', { stage: 'done', filePath })
+    win.webContents.send('latex:compile-progress', { stage: 'done', filePath, ...identity })
   }
 
   return result
@@ -219,13 +229,15 @@ async function doCompile(
 export async function compileLatex(
   filePath: string,
   win: BrowserWindow,
-  priority?: CompilePriority
+  priority?: CompilePriority,
+  identity?: CompileIdentity
 ): Promise<CompileResult> {
   return enqueueCompile(
     filePath,
-    (fp) => doCompile(fp, win, { priority }),
+    (fp) => doCompile(fp, win, { priority, identity }),
     priority,
-    () => cancelCompilation()
+    () => cancelTectonicProcess(),
+    identity
   )
 }
 
@@ -233,6 +245,7 @@ export async function compileWarmupDocument(filePath: string): Promise<CompileRe
   return enqueueCompile(
     filePath,
     (fp) => doCompile(fp, null, { priority: 'background', silent: true, skipCompileCache: true }),
-    'background'
+    'background',
+    () => cancelTectonicProcess()
   )
 }

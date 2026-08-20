@@ -4,27 +4,16 @@ import { useCompileStore } from '../../renderer/store/useCompileStore'
 import { usePdfStore } from '../../renderer/store/usePdfStore'
 import { useUiStore } from '../../renderer/store/useUiStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
+import { documentRegistry } from '../../renderer/models/documentRegistry'
 import type { Theme } from '../../renderer/store/useSettingsStore'
 import type { UserSettings, Diagnostic, DocumentSymbolNode } from '../../shared/types'
-
-const initialEditorState = {
-  filePath: null,
-  content: '',
-  isDirty: false,
-  openFiles: {},
-  activeFilePath: null,
-  cursorLine: 1,
-  cursorColumn: 1,
-  pendingJump: null,
-  pendingInsertText: null,
-  _sessionOpenPaths: [] as string[],
-  _sessionActiveFile: null
-}
 
 const initialCompileState = {
   compileStatus: 'idle' as const,
   pdfPath: null,
   pdfRevision: 0,
+  pdfDocumentId: null,
+  pdfDocumentRevision: null,
   logs: '',
   isLogPanelOpen: false,
   diagnostics: [] as Diagnostic[],
@@ -64,7 +53,7 @@ const initialSettings = {
 }
 
 beforeEach(() => {
-  useEditorStore.setState(initialEditorState)
+  useEditorStore.getState().resetEditor()
   useCompileStore.setState(initialCompileState)
   usePdfStore.setState(initialPdfState)
   useUiStore.setState(initialUiState)
@@ -79,7 +68,8 @@ describe('useAppStore', () => {
       const pdf = usePdfStore.getState()
 
       expect(editor.filePath).toBeNull()
-      expect(editor.content).toBe('')
+      expect(editor.revision).toBe(0)
+      expect(editor.refreshVersion).toBe(0)
       expect(editor.isDirty).toBe(false)
       expect(compile.compileStatus).toBe('idle')
       expect(compile.pdfPath).toBeNull()
@@ -96,43 +86,36 @@ describe('useAppStore', () => {
     })
   })
 
-  describe('setContent', () => {
-    it('updates content and sets isDirty to true', () => {
-      useEditorStore.getState().setContent('\\documentclass{article}')
+  describe('updateActiveDocument', () => {
+    it('updates the document model and publishes metadata only', () => {
+      useEditorStore.getState().openFileInTab('/path/main.tex', '')
+      useEditorStore.getState().updateActiveDocument('\\documentclass{article}')
       const state = useEditorStore.getState()
-      expect(state.content).toBe('\\documentclass{article}')
+      expect(documentRegistry.snapshot('/path/main.tex')?.text).toBe('\\documentclass{article}')
       expect(state.isDirty).toBe(true)
+      expect(state.revision).toBe(1)
+      expect(state.openFiles['/path/main.tex']).not.toHaveProperty('content')
+      expect(state).not.toHaveProperty('content')
     })
 
-    it('sets isDirty even when content is empty string', () => {
-      useEditorStore.getState().setContent('')
-      expect(useEditorStore.getState().isDirty).toBe(true)
-    })
-  })
+    it('does not clone tab metadata for every keystroke', () => {
+      useEditorStore.getState().openFileInTab('/path/main.tex', '')
+      useEditorStore.getState().updateActiveDocument('a')
+      const dirtyTabs = useEditorStore.getState().openFiles
 
-  describe('setFilePath', () => {
-    it('updates filePath', () => {
-      useEditorStore.getState().setFilePath('/home/user/doc.tex')
-      expect(useEditorStore.getState().filePath).toBe('/home/user/doc.tex')
-    })
+      useEditorStore.getState().updateActiveDocument('ab')
 
-    it('can set filePath to null', () => {
-      useEditorStore.getState().setFilePath('/some/file.tex')
-      useEditorStore.getState().setFilePath(null)
-      expect(useEditorStore.getState().filePath).toBeNull()
-    })
-  })
-
-  describe('setDirty', () => {
-    it('sets isDirty to true', () => {
-      useEditorStore.getState().setDirty(true)
-      expect(useEditorStore.getState().isDirty).toBe(true)
+      expect(useEditorStore.getState().openFiles).toBe(dirtyTabs)
+      expect(documentRegistry.snapshot('/path/main.tex')?.text).toBe('ab')
     })
 
-    it('sets isDirty to false', () => {
-      useEditorStore.getState().setDirty(true)
-      useEditorStore.getState().setDirty(false)
-      expect(useEditorStore.getState().isDirty).toBe(false)
+    it('does not refresh the controlled Monaco value for normal input', () => {
+      useEditorStore.getState().openFileInTab('/path/main.tex', '')
+      const refreshVersion = useEditorStore.getState().refreshVersion
+      useEditorStore.getState().updateActiveDocument('a')
+      useEditorStore.getState().updateActiveDocument('ab')
+
+      expect(useEditorStore.getState().refreshVersion).toBe(refreshVersion)
     })
   })
 
@@ -176,6 +159,18 @@ describe('useAppStore', () => {
       useCompileStore.getState().setPdfPath('/path/a.pdf')
       useCompileStore.getState().setPdfPath('/path/b.pdf')
       expect(useCompileStore.getState().pdfRevision).toBe(2)
+    })
+
+    it('tracks the document revision that produced the PDF', () => {
+      useCompileStore.getState().setPdfPath('/path/output.pdf', {
+        documentId: '/path/main.tex',
+        revision: 12
+      })
+
+      expect(useCompileStore.getState()).toMatchObject({
+        pdfDocumentId: '/path/main.tex',
+        pdfDocumentRevision: 12
+      })
     })
   })
 
@@ -462,24 +457,23 @@ describe('useAppStore', () => {
       const state = useEditorStore.getState()
       expect(state.activeFilePath).toBe('/path/a.tex')
       expect(state.filePath).toBe('/path/a.tex')
-      expect(state.content).toBe('content A')
+      expect(documentRegistry.snapshot('/path/a.tex')?.text).toBe('content A')
       expect(state.isDirty).toBe(false)
       expect(state.openFiles['/path/a.tex']).toBeDefined()
-      expect(state.openFiles['/path/a.tex'].content).toBe('content A')
+      expect(state.openFiles['/path/a.tex']).not.toHaveProperty('content')
     })
 
     it('refreshes content when reopening an already-open file', () => {
       // Open file with original content
       useEditorStore.getState().openFileInTab('/path/a.tex', 'original content')
       // Edit it
-      useEditorStore.getState().setContent('edited content')
-      expect(useEditorStore.getState().openFiles['/path/a.tex'].content).toBe('edited content')
+      useEditorStore.getState().updateActiveDocument('edited content')
+      expect(documentRegistry.snapshot('/path/a.tex')?.text).toBe('edited content')
 
       // Reopen with fresh content from disk
       useEditorStore.getState().openFileInTab('/path/a.tex', 'fresh from disk')
       const state = useEditorStore.getState()
-      expect(state.content).toBe('fresh from disk')
-      expect(state.openFiles['/path/a.tex'].content).toBe('fresh from disk')
+      expect(documentRegistry.snapshot('/path/a.tex')?.text).toBe('fresh from disk')
       expect(state.isDirty).toBe(false)
     })
 
@@ -489,13 +483,13 @@ describe('useAppStore', () => {
       // Simulate cursor being saved in openFiles via setActiveTab flow
       useEditorStore.setState({
         openFiles: {
-          '/path/a.tex': { content: 'content', isDirty: false, cursorLine: 10, cursorColumn: 5 }
+          '/path/a.tex': { isDirty: false, cursorLine: 10, cursorColumn: 5 }
         }
       })
 
       useEditorStore.getState().openFileInTab('/path/a.tex', 'refreshed')
       const state = useEditorStore.getState()
-      expect(state.content).toBe('refreshed')
+      expect(documentRegistry.snapshot('/path/a.tex')?.text).toBe('refreshed')
       expect(state.cursorLine).toBe(10)
       expect(state.cursorColumn).toBe(5)
     })
@@ -508,9 +502,8 @@ describe('useAppStore', () => {
       useEditorStore.getState().openFileInTab('/path/b.tex', 'content B')
       const state = useEditorStore.getState()
       expect(state.activeFilePath).toBe('/path/b.tex')
-      expect(state.content).toBe('content B')
-      expect(state.openFiles['/path/a.tex'].content).toBe('content A')
-      expect(state.openFiles['/path/b.tex'].content).toBe('content B')
+      expect(documentRegistry.snapshot('/path/a.tex')?.text).toBe('content A')
+      expect(documentRegistry.snapshot('/path/b.tex')?.text).toBe('content B')
     })
   })
 
@@ -518,7 +511,7 @@ describe('useAppStore', () => {
     it('persists current content when switching tabs', () => {
       // Open file A and edit it
       useEditorStore.getState().openFileInTab('/path/a.tex', 'original A')
-      useEditorStore.getState().setContent('edited A')
+      useEditorStore.getState().updateActiveDocument('edited A')
 
       // Open file B
       useEditorStore.getState().openFileInTab('/path/b.tex', 'content B')
@@ -527,8 +520,7 @@ describe('useAppStore', () => {
       useEditorStore.getState().setActiveTab('/path/a.tex')
       const state = useEditorStore.getState()
       expect(state.activeFilePath).toBe('/path/a.tex')
-      expect(state.content).toBe('edited A')
-      expect(state.openFiles['/path/a.tex'].content).toBe('edited A')
+      expect(documentRegistry.snapshot('/path/a.tex')?.text).toBe('edited A')
     })
 
     it('saves content of current tab before switching away', () => {
@@ -537,11 +529,11 @@ describe('useAppStore', () => {
       useEditorStore.getState().openFileInTab('/path/b.tex', 'content B')
 
       // Edit B
-      useEditorStore.getState().setContent('edited B')
+      useEditorStore.getState().updateActiveDocument('edited B')
 
       // Switch to A — B's edited content should be saved in openFiles
       useEditorStore.getState().setActiveTab('/path/a.tex')
-      expect(useEditorStore.getState().openFiles['/path/b.tex'].content).toBe('edited B')
+      expect(documentRegistry.snapshot('/path/b.tex')?.text).toBe('edited B')
     })
 
     it('preserves cursor position across tab switches', () => {
@@ -563,17 +555,16 @@ describe('useAppStore', () => {
     })
   })
 
-  describe('setContent with multi-file', () => {
-    it('updates only the active file in openFiles', () => {
+  describe('document registry with multiple files', () => {
+    it('updates only the active document model', () => {
       useEditorStore.getState().openFileInTab('/path/a.tex', 'content A')
       useEditorStore.getState().openFileInTab('/path/b.tex', 'content B')
 
       // Edit B (the active file)
-      useEditorStore.getState().setContent('modified B')
+      useEditorStore.getState().updateActiveDocument('modified B')
 
-      const state = useEditorStore.getState()
-      expect(state.openFiles['/path/b.tex'].content).toBe('modified B')
-      expect(state.openFiles['/path/a.tex'].content).toBe('content A')
+      expect(documentRegistry.snapshot('/path/b.tex')?.text).toBe('modified B')
+      expect(documentRegistry.snapshot('/path/a.tex')?.text).toBe('content A')
     })
   })
 

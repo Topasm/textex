@@ -72,6 +72,7 @@ export function useSpelling({ enabled, editorRef, monacoRef }: UseSpellingParams
     }
 
     const text = model.getValue()
+    const modelVersion = model.getVersionId()
     const lines = text.split('\n')
     const prevLines = prevLinesRef.current
     const prevMarkers = prevMarkersRef.current
@@ -118,6 +119,7 @@ export function useSpelling({ enabled, editorRef, monacoRef }: UseSpellingParams
       // Deduplicate words before sending to the spell checker
       const uniqueWordTexts = [...new Set(wordsToCheck.map((w) => w.word))]
       const misspelled = await window.api.spellCheck(uniqueWordTexts)
+      if (editor.getModel() !== model || model.getVersionId() !== modelVersion) return
       const misspelledSet = new Set(misspelled.map((w) => w.toLowerCase()))
 
       // Build markers for changed lines

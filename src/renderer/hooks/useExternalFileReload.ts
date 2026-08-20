@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { useEditorStore } from '../store/useEditorStore'
 import { useUiStore } from '../store/useUiStore'
 import { useSettingsStore } from '../store/useSettingsStore'
+import { documentRegistry } from '../models/documentRegistry'
 
 const RELOAD_DEBOUNCE_MS = 300
 
@@ -68,21 +69,36 @@ export function useExternalFileReload(
 
           // Re-check after debounce — file may have been closed
           const currentState = useEditorStore.getState()
-          const fileData = currentState.openFiles[absolutePath]
-          if (!fileData) return
+          if (!currentState.openFiles[absolutePath]) return
+
+          // Capture before starting I/O. A user edit while readFile is in
+          // flight makes this snapshot stale and prevents disk data from
+          // replacing the newer local revision.
+          const observedSnapshot = documentRegistry.snapshot(absolutePath)
+          if (!observedSnapshot) return
 
           try {
             const { content: diskContent } = await window.api.readFile(absolutePath)
 
             // Skip if content is identical (e.g. TextEx itself saved the file)
-            if (diskContent === fileData.content) return
+            if (diskContent === observedSnapshot.text) return
 
-            if (fileData.isDirty) {
+            const currentModel = documentRegistry.getModel(absolutePath)
+            if (!currentModel) return
+
+            if (currentModel.isDirty) {
               // File has unsaved local changes — show conflict banner
               useUiStore.getState().addExternalChangeConflict(absolutePath)
             } else {
               // File is clean — auto-reload
-              currentState.reloadFileContent(absolutePath, diskContent)
+              const result = documentRegistry.reloadIfCurrent(
+                absolutePath,
+                diskContent,
+                observedSnapshot
+              )
+              if (result?.status === 'applied') {
+                currentState.reloadFileContent(absolutePath, result.snapshot.text)
+              }
             }
           } catch {
             // File may have been deleted or temporarily inaccessible; ignore

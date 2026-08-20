@@ -42,4 +42,43 @@ describe('compileQueue background preemption', () => {
     expect(normalStarted).toHaveBeenCalledTimes(1)
     expect(backgroundStarted).toHaveBeenCalledTimes(1)
   })
+
+  it('preempts an older active revision and supersedes intermediate queued work', async () => {
+    let rejectFirst: ((error: Error) => void) | null = null
+    const cancelFirst = vi.fn(() => rejectFirst?.(new Error('Compilation was cancelled')))
+    const firstIdentity = { requestId: 1, documentId: '/tmp/main.tex', documentRevision: 1 }
+    const secondIdentity = { requestId: 2, documentId: '/tmp/main.tex', documentRevision: 2 }
+    const latestIdentity = { requestId: 3, documentId: '/tmp/main.tex', documentRevision: 3 }
+
+    const first = enqueueCompile(
+      '/tmp/main.tex',
+      () =>
+        new Promise((_, reject) => {
+          rejectFirst = reject
+        }),
+      'normal',
+      cancelFirst,
+      firstIdentity
+    )
+    const second = enqueueCompile(
+      '/tmp/main.tex',
+      async () => ({ pdfPath: '/tmp/intermediate.pdf' }),
+      'normal',
+      undefined,
+      secondIdentity
+    )
+    const secondResult = expect(second).rejects.toThrow('superseded by a newer document revision')
+    const latest = enqueueCompile(
+      '/tmp/main.tex',
+      async () => ({ pdfPath: '/tmp/latest.pdf' }),
+      'normal',
+      undefined,
+      latestIdentity
+    )
+
+    await expect(first).rejects.toThrow('Compilation was cancelled')
+    await secondResult
+    await expect(latest).resolves.toEqual({ pdfPath: '/tmp/latest.pdf' })
+    expect(cancelFirst).toHaveBeenCalledTimes(1)
+  })
 })

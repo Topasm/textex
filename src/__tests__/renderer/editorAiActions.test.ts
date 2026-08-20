@@ -44,20 +44,10 @@ describe('editorAiActions', () => {
     window.api.aiProcess = vi.fn().mockResolvedValue('processed')
     window.api.aiProcessCustom = vi.fn().mockResolvedValue('custom processed')
     useAiContextStore.setState({ entries: {} })
-    useEditorStore.setState({
-      filePath: '/tmp/paper.tex',
-      content: '\\section{Intro}\ntext around selection',
-      isDirty: false,
-      openFiles: {},
-      activeFilePath: '/tmp/paper.tex',
-      cursorLine: 1,
-      cursorColumn: 1,
-      pendingJump: null,
-      pendingInsertText: null,
-      editorInstance: null,
-      _sessionOpenPaths: [],
-      _sessionActiveFile: null
-    })
+    useEditorStore.getState().resetEditor()
+    useEditorStore
+      .getState()
+      .openFileInTab('/tmp/paper.tex', '\\section{Intro}\ntext around selection')
     useUiStore.setState({
       documentSymbols: [
         {

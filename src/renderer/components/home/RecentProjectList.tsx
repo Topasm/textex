@@ -111,7 +111,6 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
   const handleOpenRecent = useCallback(
     async (project: RecentProject) => {
       try {
-        await window.api.readDirectory(project.path)
         await openProject(project.path)
       } catch (err) {
         logError('RecentProject:open', err)

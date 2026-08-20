@@ -203,4 +203,51 @@ describe('LspClient', () => {
       sentMethods.indexOf('textDocument/didOpen')
     )
   })
+
+  it('drops diagnostics produced for an older LSP document version', () => {
+    const client = new LspClient()
+    const setModelMarkers = vi.fn()
+    const model = {
+      uri: {
+        path: '/workspace/project/main.tex',
+        toString: () => 'file:///workspace/project/main.tex'
+      }
+    }
+    const monaco = {
+      MarkerSeverity: { Hint: 1, Info: 2, Warning: 4, Error: 8 },
+      editor: {
+        getModels: () => [model],
+        setModelMarkers
+      }
+    }
+
+    ;(client as unknown as { options: unknown }).options = { monaco }
+    ;(client as unknown as { documentVersions: Map<string, number> }).documentVersions.set(
+      '/workspace/project/main.tex',
+      2
+    )
+
+    const applyDiagnostics = (
+      client as unknown as { applyDiagnostics(params: Record<string, unknown>): void }
+    ).applyDiagnostics.bind(client)
+    const params = {
+      uri: 'file:///workspace/project/main.tex',
+      diagnostics: [
+        {
+          range: {
+            start: { line: 0, character: 0 },
+            end: { line: 0, character: 1 }
+          },
+          severity: 1,
+          message: 'stale'
+        }
+      ]
+    }
+
+    applyDiagnostics({ ...params, version: 1 })
+    expect(setModelMarkers).not.toHaveBeenCalled()
+
+    applyDiagnostics({ ...params, version: 2 })
+    expect(setModelMarkers).toHaveBeenCalledOnce()
+  })
 })

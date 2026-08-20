@@ -13,6 +13,7 @@ const mockEditor = {
   onMouseUp: vi.fn(() => ({ dispose: vi.fn() })),
   onDidScrollChange: vi.fn(() => ({ dispose: vi.fn() })),
   onDidBlurEditorText: vi.fn(() => ({ dispose: vi.fn() })),
+  onDidChangeModelContent: vi.fn(() => ({ dispose: vi.fn() })),
   getSelection: vi.fn(() => null),
   getModel: vi.fn(() => null),
   addAction: vi.fn(),
@@ -70,7 +71,7 @@ vi.mock('../../renderer/hooks/editor/useCompletion', () => ({
   useCompletion: () => () => []
 }))
 vi.mock('../../renderer/hooks/editor/useEditorDiagnostics', () => ({
-  useEditorDiagnostics: () => {}
+  useEditorDiagnostics: () => vi.fn()
 }))
 vi.mock('../../renderer/hooks/editor/usePendingActions', () => ({
   usePendingActions: () => {}

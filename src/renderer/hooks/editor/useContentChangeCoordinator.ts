@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 
 export interface ContentTask {
   key: string
@@ -8,8 +8,8 @@ export interface ContentTask {
 }
 
 /**
- * Coordinates multiple content-change-driven tasks through a single useEffect,
- * replacing N independent debounce timers with a unified scheduler.
+ * Coordinates content-change-driven tasks without publishing document text to
+ * React. The returned callback is invoked directly from the editor change path.
  *
  * Benefits over independent debounced hooks:
  * - Single React dependency check for content instead of N separate useEffects
@@ -17,30 +17,25 @@ export interface ContentTask {
  * - Lower-priority tasks deferred via requestIdleCallback to avoid jank
  * - Reduces timer overhead and GC pressure
  */
-export function useContentChangeCoordinator(content: string, tasks: ContentTask[]): void {
+export function useContentChangeCoordinator(tasks: ContentTask[]): () => void {
   const tasksRef = useRef(tasks)
   tasksRef.current = tasks
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([])
   const idleHandlesRef = useRef<number[]>([])
-  const mountedRef = useRef(false)
 
-  useEffect(() => {
-    // Skip the very first render — let individual hooks handle their own initialization
-    if (!mountedRef.current) {
-      mountedRef.current = true
-      return
-    }
-
-    // Cancel all pending timers from previous content change
-    for (const t of timersRef.current) clearTimeout(t)
+  const cancelPending = useCallback((): void => {
+    for (const timer of timersRef.current) clearTimeout(timer)
     timersRef.current = []
-    for (const h of idleHandlesRef.current) {
-      if (typeof cancelIdleCallback !== 'undefined') cancelIdleCallback(h)
-      else clearTimeout(h)
+    for (const handle of idleHandlesRef.current) {
+      if (typeof cancelIdleCallback !== 'undefined') cancelIdleCallback(handle)
+      else clearTimeout(handle)
     }
     idleHandlesRef.current = []
+  }, [])
 
-    // Schedule each task at its configured delay
+  const schedule = useCallback((): void => {
+    cancelPending()
+
     for (const task of tasksRef.current) {
       const timer = setTimeout(() => {
         if (task.idle && typeof requestIdleCallback !== 'undefined') {
@@ -57,26 +52,12 @@ export function useContentChangeCoordinator(content: string, tasks: ContentTask[
       }, task.delayMs)
       timersRef.current.push(timer)
     }
-
-    return () => {
-      for (const t of timersRef.current) clearTimeout(t)
-      for (const h of idleHandlesRef.current) {
-        if (typeof cancelIdleCallback !== 'undefined') cancelIdleCallback(h)
-        else clearTimeout(h)
-      }
-    }
-  }, [content])
+  }, [cancelPending])
 
   // Full cleanup on unmount
   useEffect(() => {
-    return () => {
-      for (const t of timersRef.current) clearTimeout(t)
-      timersRef.current = []
-      for (const h of idleHandlesRef.current) {
-        if (typeof cancelIdleCallback !== 'undefined') cancelIdleCallback(h)
-        else clearTimeout(h)
-      }
-      idleHandlesRef.current = []
-    }
-  }, [])
+    return cancelPending
+  }, [cancelPending])
+
+  return schedule
 }

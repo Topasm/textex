@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useEditorStore } from '../store/useEditorStore'
+import { documentRegistry } from '../models/documentRegistry'
 import { useProjectStore } from '../store/useProjectStore'
 import { useSettingsStore } from '../store/useSettingsStore'
 import { usePdfStore } from '../store/usePdfStore'
@@ -444,7 +445,8 @@ export function OmniSearch({
       setIsDropdownOpen(false)
       return
     }
-    const content = useEditorStore.getState().content
+    const filePath = useEditorStore.getState().filePath
+    const content = filePath ? (documentRegistry.snapshot(filePath)?.text ?? '') : ''
     const lines = content.split('\n')
     const q = searchTerm.toLowerCase()
     const matches: TexSearchResult[] = []
@@ -488,18 +490,7 @@ export function OmniSearch({
     if (!keys.length) return
 
     const citeCmd = `\\cite{${keys.join(',')}}`
-    const state = useEditorStore.getState()
-    const lines = state.content.split('\n')
-    const lineIdx = state.cursorLine - 1
-    const colIdx = state.cursorColumn - 1
-
-    if (lineIdx >= 0 && lineIdx < lines.length) {
-      const line = lines[lineIdx]
-      lines[lineIdx] = line.slice(0, colIdx) + citeCmd + line.slice(colIdx)
-      state.setContent(lines.join('\n'))
-    } else {
-      state.setContent(state.content + '\n' + citeCmd)
-    }
+    useEditorStore.getState().requestInsertAtCursor(citeCmd)
 
     setSearchTerm('')
     setSelectedKeys(new Set())

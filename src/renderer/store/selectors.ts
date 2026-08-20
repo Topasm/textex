@@ -18,7 +18,6 @@ import type { UserSettings } from '../../shared/types'
 
 // ---- Editor ----
 export const useFilePath = () => useEditorStore((s) => s.filePath)
-export const useContent = () => useEditorStore((s) => s.content)
 export const useIsDirty = () => useEditorStore((s) => s.isDirty)
 export const useOpenFiles = () => useEditorStore((s) => s.openFiles)
 export const useActiveFilePath = () => useEditorStore((s) => s.activeFilePath)

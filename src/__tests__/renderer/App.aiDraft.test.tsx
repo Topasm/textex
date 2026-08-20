@@ -151,7 +151,7 @@ describe('App AI Draft flow', () => {
     useEditorStore.setState((state) => ({
       ...state,
       requestInsertAtCursor: vi.fn(),
-      setContent: vi.fn()
+      updateActiveDocument: vi.fn()
     }))
   })
 
@@ -162,6 +162,6 @@ describe('App AI Draft flow', () => {
     fireEvent.click(await screen.findByText('Insert Draft'))
 
     expect(useEditorStore.getState().requestInsertAtCursor).toHaveBeenCalledWith('generated latex')
-    expect(useEditorStore.getState().setContent).not.toHaveBeenCalled()
+    expect(useEditorStore.getState().updateActiveDocument).not.toHaveBeenCalled()
   })
 })

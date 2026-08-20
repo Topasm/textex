@@ -1,5 +1,5 @@
-import { MonacoInstance } from './types'
-import { languages as monacoLanguages } from 'monaco-editor'
+import type { MonacoInstance } from './types'
+import type { languages as monacoLanguages } from 'monaco-editor'
 
 export function lspCompletionKindToMonaco(
   monaco: MonacoInstance,

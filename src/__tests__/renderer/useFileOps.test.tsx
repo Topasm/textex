@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 import { useFileOps } from '../../renderer/hooks/useFileOps'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
+import { documentRegistry } from '../../renderer/models/documentRegistry'
 
 const { openProjectMock } = vi.hoisted(() => ({
   openProjectMock: vi.fn()
@@ -14,20 +15,7 @@ vi.mock('../../renderer/utils/openProject', () => ({
 describe('useFileOps', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useEditorStore.setState({
-      filePath: null,
-      content: '',
-      isDirty: false,
-      openFiles: {},
-      activeFilePath: null,
-      cursorLine: 1,
-      cursorColumn: 1,
-      pendingJump: null,
-      pendingInsertText: null,
-      editorInstance: null,
-      _sessionOpenPaths: [],
-      _sessionActiveFile: null
-    })
+    useEditorStore.getState().resetEditor()
   })
 
   it('opens the chosen file without auto-opening the first project tex file', async () => {
@@ -47,6 +35,8 @@ describe('useFileOps', () => {
       autoOpenFirstTex: false
     })
     expect(useEditorStore.getState().filePath).toBe('/workspace/project/picked.tex')
-    expect(useEditorStore.getState().content).toBe('\\section{Picked}')
+    expect(documentRegistry.snapshot('/workspace/project/picked.tex')?.text).toBe(
+      '\\section{Picked}'
+    )
   })
 })

@@ -13,6 +13,7 @@ import {
 } from '../lsp/lspClient'
 import { loader } from '@monaco-editor/react'
 import { extractBandSymbols, mergeBandSymbols } from './editor/useDocumentSymbols'
+import { documentRegistry } from '../models/documentRegistry'
 
 /**
  * Manages the LSP client lifecycle:
@@ -38,15 +39,21 @@ export function useLspLifecycle(
     }
 
     let cancelled = false
-    loader.init().then((monacoInstance) => {
-      if (cancelled) return
-      startLspClient(
-        projectRoot,
-        monacoInstance,
-        () => useEditorStore.getState().filePath,
-        () => useEditorStore.getState().content
-      ).catch(() => {})
-    })
+    import('../data/monacoSetup')
+      .then(() => loader.init())
+      .then((monacoInstance) => {
+        if (cancelled) return
+        startLspClient(
+          projectRoot,
+          monacoInstance,
+          () => useEditorStore.getState().filePath,
+          () => {
+            const activeFile = useEditorStore.getState().filePath
+            return activeFile ? (documentRegistry.snapshot(activeFile)?.text ?? '') : ''
+          }
+        ).catch(() => {})
+      })
+      .catch(() => {})
 
     return () => {
       cancelled = true
@@ -65,17 +72,25 @@ export function useLspLifecycle(
     }
   }, [])
 
-  // Notify LSP of document changes (debounced via store subscription)
+  // Notify LSP of document changes without publishing text through React state.
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined
     const unsub = useEditorStore.subscribe(
-      (state) => state.content,
-      (newContent) => {
+      (state) => state.revision,
+      () => {
         clearTimeout(timer)
+        const editorState = useEditorStore.getState()
+        const filePath = editorState.filePath
+        const snapshot = filePath ? documentRegistry.snapshot(filePath) : null
+        if (!filePath || !snapshot) return
         timer = setTimeout(() => {
-          const editorState = useEditorStore.getState()
-          if (editorState.filePath && useSettingsStore.getState().settings.lspEnabled) {
-            lspNotifyDidChange(editorState.filePath, newContent)
+          const model = documentRegistry.getModel(filePath)
+          if (
+            model?.isCurrent(snapshot) &&
+            useEditorStore.getState().filePath === filePath &&
+            useSettingsStore.getState().settings.lspEnabled
+          ) {
+            lspNotifyDidChange(filePath, snapshot.text)
           }
         }, 300)
       }
@@ -106,15 +121,20 @@ export function useLspLifecycle(
     if (!filePath || !lspRunning) return
 
     const activeFile = filePath
-    lspNotifyDidOpen(activeFile, useEditorStore.getState().content)
+    const snapshot = documentRegistry.snapshot(activeFile)
+    if (!snapshot) return
+    lspNotifyDidOpen(activeFile, snapshot.text)
 
     const timer = setTimeout(() => {
       if (useEditorStore.getState().filePath !== activeFile) return
       Promise.all([
         lspRequestDocumentSymbols(activeFile),
-        window.api.getDocumentOutline(activeFile, useEditorStore.getState().content).catch(() => [])
+        window.api.getDocumentOutline(activeFile, snapshot.text).catch(() => [])
       ]).then(([symbols, fallbackOutline]) => {
-        if (useEditorStore.getState().filePath === activeFile) {
+        if (
+          useEditorStore.getState().filePath === activeFile &&
+          documentRegistry.getModel(activeFile)?.isCurrent(snapshot)
+        ) {
           useUiStore
             .getState()
             .setDocumentSymbols(mergeBandSymbols(symbols, extractBandSymbols(fallbackOutline)))

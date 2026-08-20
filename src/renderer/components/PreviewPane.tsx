@@ -12,6 +12,7 @@ import { usePdfSearch } from '../hooks/preview/usePdfSearch'
 import { useCitationTooltip } from '../hooks/preview/useCitationTooltip'
 import { useContainerSize } from '../hooks/preview/useContainerSize'
 import CitationTooltip from './CitationTooltip'
+import { runtimePerformance } from '../services/runtimePerformance'
 import {
   ESTIMATED_PAGE_HEIGHT,
   SCROLL_DEBOUNCE_MS,
@@ -176,6 +177,7 @@ function PreviewPane() {
 
   // Track scroll position and update visible pages with debouncing
   const handleScroll = useCallback(() => {
+    runtimePerformance.recordPdfScrollEvent()
     if (pdfViewMode === 'single') return
 
     if (containerRef.current) {
@@ -394,6 +396,7 @@ function PreviewPane() {
   const handlePageRenderSuccess = useCallback(
     (pageNumber: number) => {
       return (page: PDFPageProxy) => {
+        runtimePerformance.recordPdfPageRendered(pdfRevision)
         const container = containerRef.current
         if (!container) return
         const pageEl = container.querySelector(
@@ -417,7 +420,7 @@ function PreviewPane() {
         pageHeightsRef.current.set(pageNumber, actualPageHeight * scale)
       }
     },
-    [containerWidth, zoomLevel]
+    [containerWidth, pdfRevision, zoomLevel]
   )
 
   // Always render the container so the ResizeObserver can attach and measure width.

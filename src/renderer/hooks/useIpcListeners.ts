@@ -3,7 +3,8 @@ import { useCompileStore } from '../store/useCompileStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { toDisposable } from '../utils/disposable'
 import { useDisposable } from './useDisposable'
-import type { Diagnostic } from '../../shared/types'
+import type { CompileDiagnosticsEvent, CompileLogEvent } from '../../shared/compileProtocol'
+import { isCurrentCompileIdentity } from '../services/compileCoordinator'
 
 /**
  * Registers IPC event listeners for:
@@ -41,16 +42,20 @@ export function useIpcListeners(
 
   // Compile log listener
   useDisposable((store) => {
-    window.api.onCompileLog((log: string) => {
-      useCompileStore.getState().appendLog(log)
+    window.api.onCompileLog((event: CompileLogEvent) => {
+      if (isCurrentCompileIdentity(event)) {
+        useCompileStore.getState().appendLog(event.text)
+      }
     })
     store.add(toDisposable(() => window.api.removeCompileLogListener()))
   }, [])
 
   // Diagnostics listener
   useDisposable((store) => {
-    window.api.onDiagnostics((diagnostics: Diagnostic[]) => {
-      useCompileStore.getState().setDiagnostics(diagnostics)
+    window.api.onDiagnostics((event: CompileDiagnosticsEvent) => {
+      if (isCurrentCompileIdentity(event)) {
+        useCompileStore.getState().setDiagnostics(event.diagnostics)
+      }
     })
     store.add(toDisposable(() => window.api.removeDiagnosticsListener()))
   }, [])

@@ -13,20 +13,7 @@ const tree: DirectoryEntry[] = [
 describe('openProject', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useEditorStore.setState({
-      filePath: null,
-      content: '',
-      isDirty: false,
-      openFiles: {},
-      activeFilePath: null,
-      cursorLine: 1,
-      cursorColumn: 1,
-      pendingJump: null,
-      pendingInsertText: null,
-      editorInstance: null,
-      _sessionOpenPaths: [],
-      _sessionActiveFile: null
-    })
+    useEditorStore.getState().resetEditor()
     useProjectStore.setState({
       projectRoot: null,
       directoryTree: null,
@@ -45,6 +32,7 @@ describe('openProject', () => {
     })
 
     vi.mocked(window.api.readDirectory).mockResolvedValue(tree)
+    vi.mocked(window.api.activateProject).mockImplementation(async (path) => path)
     vi.mocked(window.api.readFile).mockResolvedValue({
       filePath: `${projectRoot}/main.tex`,
       content: '\\section{Intro}'
@@ -59,6 +47,7 @@ describe('openProject', () => {
   it('does not auto-open the first tex file when disabled', async () => {
     await openProject(projectRoot, { autoOpenFirstTex: false })
 
+    expect(window.api.activateProject).toHaveBeenCalledWith(projectRoot)
     expect(window.api.readDirectory).toHaveBeenCalledWith(projectRoot)
     expect(window.api.readFile).not.toHaveBeenCalled()
     expect(useEditorStore.getState().filePath).toBeNull()

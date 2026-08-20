@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { useEditorStore } from '../../store/useEditorStore'
 import { useProjectStore } from '../../store/useProjectStore'
 import { logError } from '../../utils/errorMessage'
+import { documentRegistry } from '../../models/documentRegistry'
 
 function arraysEqual(a: string[], b: string[]): boolean {
   if (a.length !== b.length) return false
@@ -17,7 +18,10 @@ function arraysEqual(a: string[], b: string[]): boolean {
  */
 export function usePackageDetection(): { detectPackages: () => void } {
   const detectPackages = useCallback(() => {
-    const currentContent = useEditorStore.getState().content
+    const filePath = useEditorStore.getState().filePath
+    const snapshot = filePath ? documentRegistry.snapshot(filePath) : null
+    if (!filePath || !snapshot) return
+    const currentContent = snapshot.text
     const pkgRegex = /\\usepackage(?:\[[^\]]*\])?\{([^}]+)\}/g
     const packages = new Set<string>()
     let pkgMatch: RegExpExecArray | null
@@ -35,7 +39,9 @@ export function usePackageDetection(): { detectPackages: () => void } {
         window.api
           .loadPackageData(detected)
           .then((data) => {
-            useProjectStore.getState().setPackageData(data)
+            if (documentRegistry.getModel(filePath)?.isCurrent(snapshot)) {
+              useProjectStore.getState().setPackageData(data)
+            }
           })
           .catch((err) => logError('loadPackageData', err))
       } else {

@@ -50,19 +50,8 @@ describe('TerminalPane', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useProjectStore.setState({ projectRoot: '/projects/paper' })
-    useEditorStore.setState({
-      filePath: '/projects/paper/main.tex',
-      content: '\\section{Intro}',
-      isDirty: false,
-      openFiles: {},
-      activeFilePath: '/projects/paper/main.tex',
-      cursorLine: 1,
-      cursorColumn: 1,
-      pendingJump: null,
-      pendingInsertText: null,
-      _sessionOpenPaths: [],
-      _sessionActiveFile: null
-    })
+    useEditorStore.getState().resetEditor()
+    useEditorStore.getState().openFileInTab('/projects/paper/main.tex', '\\section{Intro}')
     useUiStore.setState({ isTerminalPaneOpen: true })
     window.api.ptyCreate = vi.fn().mockResolvedValue({ id: 'pty-1' })
     window.api.ptyWrite = vi.fn().mockResolvedValue({ success: true })

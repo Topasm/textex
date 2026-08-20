@@ -41,11 +41,11 @@ export default defineConfig({
       rollupOptions: {
         input: resolve(__dirname, 'src/renderer/index.html'),
         output: {
+          onlyExplicitManualChunks: true,
           manualChunks: {
-            'monaco-editor': ['monaco-editor', '@monaco-editor/react'],
-            'pdfjs': ['pdfjs-dist', 'react-pdf'],
-            'katex': ['katex'],
-            'mathlive': ['mathlive'],
+            'monaco-editor': ['@monaco-editor/react'],
+            katex: ['katex'],
+            mathlive: ['mathlive'],
             'vendor-react': ['react', 'react-dom', 'zustand'],
             'vendor-i18n': ['i18next', 'react-i18next'],
             'vendor-ui': ['lucide-react']

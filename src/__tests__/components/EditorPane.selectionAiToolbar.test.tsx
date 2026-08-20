@@ -53,6 +53,7 @@ const mockEditor = {
     editorListeners.blur.push(cb)
     return { dispose: vi.fn() }
   }),
+  onDidChangeModelContent: vi.fn(() => ({ dispose: vi.fn() })),
   getSelection: vi.fn(() => currentSelection),
   getScrolledVisiblePosition: vi.fn(() => ({ top: 48, left: 200, height: 20 })),
   getDomNode: vi.fn(() => {
@@ -128,7 +129,7 @@ vi.mock('../../renderer/hooks/editor/useCompletion', () => ({
   useCompletion: () => () => []
 }))
 vi.mock('../../renderer/hooks/editor/useEditorDiagnostics', () => ({
-  useEditorDiagnostics: () => {}
+  useEditorDiagnostics: () => vi.fn()
 }))
 vi.mock('../../renderer/hooks/editor/usePendingActions', () => ({
   usePendingActions: () => {}
@@ -196,20 +197,10 @@ describe('EditorPane selection AI toolbar', () => {
         aiProvider: 'openai'
       }
     }))
-    useEditorStore.setState({
-      filePath: '/tmp/paper.tex',
-      content: '\\section{Intro}\nselected text in context',
-      isDirty: false,
-      openFiles: {},
-      activeFilePath: '/tmp/paper.tex',
-      cursorLine: 1,
-      cursorColumn: 1,
-      pendingJump: null,
-      pendingInsertText: null,
-      editorInstance: null,
-      _sessionOpenPaths: [],
-      _sessionActiveFile: null
-    })
+    useEditorStore.getState().resetEditor()
+    useEditorStore
+      .getState()
+      .openFileInTab('/tmp/paper.tex', '\\section{Intro}\nselected text in context')
     useUiStore.setState({
       documentSymbols: [
         {

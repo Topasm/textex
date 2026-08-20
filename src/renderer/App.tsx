@@ -2,8 +2,6 @@ import { useCallback, useEffect, useState, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FolderTree, BookOpen, ListTree, StickyNote, Clock, GitBranch } from 'lucide-react'
 import Toolbar from './components/Toolbar'
-import EditorPane from './components/EditorPane'
-import PreviewPane from './components/PreviewPane'
 import LogPanel from './components/LogPanel'
 import StatusBar from './components/StatusBar'
 import FileTree from './components/FileTree'
@@ -40,6 +38,15 @@ import { errorMessage, logError } from './utils/errorMessage'
 import { isFeatureEnabled } from './utils/featureFlags'
 import { stopLspClient } from './lsp/lspClient'
 import type { AppCommandId } from '../shared/types'
+import { runtimePerformance } from './services/runtimePerformance'
+import { documentRegistry } from './models/documentRegistry'
+import {
+  beginCompileTicket,
+  canPublishCompileResponse,
+  canPublishCompileTicket,
+  isLatestCompileTicket,
+  toCompileRequest
+} from './services/compileCoordinator'
 
 // Lazy-load heavy modals and panels that are rarely shown
 const SettingsModal = lazy(() =>
@@ -55,12 +62,21 @@ const TemplateGallery = lazy(() => import('./components/TemplateGallery'))
 const TerminalPane = lazy(() =>
   import('./components/TerminalPane').then((m) => ({ default: m.TerminalPane }))
 )
+const EditorPane = lazy(async () => {
+  await import('./data/monacoSetup')
+  return import('./components/EditorPane')
+})
+const PreviewPane = lazy(() => import('./components/PreviewPane'))
 
 function App() {
   const { t } = useTranslation()
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   useAutoCompile()
   const { handleOpen, handleSave, handleSaveAs } = useFileOps()
+
+  useEffect(() => {
+    runtimePerformance.recordShellInteractive()
+  }, [])
 
   // Only subscribe to state needed for rendering
   const splitRatio = usePdfStore((s) => s.splitRatio)
@@ -78,6 +94,7 @@ function App() {
   const showStatusBar = useSettingsStore((s) => s.settings.showStatusBar)
   const sidebarPosition = settings.sidebarPosition ?? 'left'
   const isTerminalPaneOpen = useUiStore((s) => s.isTerminalPaneOpen)
+  const isTemplateGalleryOpen = useUiStore((s) => s.isTemplateGalleryOpen)
   const toggleTerminalPane = useUiStore((s) => s.toggleTerminalPane)
 
   const [isDraftModalOpen, setIsDraftModalOpen] = useState(false)
@@ -98,29 +115,48 @@ function App() {
     const editorState = useEditorStore.getState()
     if (!editorState.filePath) return
     if (!editorState.filePath.toLowerCase().endsWith('.tex')) return
+    const snapshot = documentRegistry.snapshot(editorState.filePath)
+    if (!snapshot) return
     try {
-      await window.api.saveFile(editorState.content, editorState.filePath)
+      await window.api.saveFile(snapshot.text, editorState.filePath)
+      useEditorStore.getState().markDocumentSaved(editorState.filePath, snapshot.revision)
     } catch (err) {
       logError('App:preSave', err)
     }
+    if (!documentRegistry.getModel(editorState.filePath)?.isCurrent(snapshot)) return
+    const ticket = beginCompileTicket(editorState.filePath, snapshot)
     useCompileStore.getState().setCompileStatus('compiling')
     useCompileStore.getState().clearLogs()
     try {
-      const result = await window.api.compile(editorState.filePath)
-      useCompileStore.getState().setPdfPath(result.pdfPath)
+      const result = await window.api.compile(toCompileRequest(ticket, 'high'))
+      if (!canPublishCompileResponse(ticket, result)) {
+        if (isLatestCompileTicket(ticket)) useCompileStore.getState().setCompileStatus('idle')
+        return
+      }
+      useCompileStore.getState().setPdfPath(result.pdfPath, {
+        documentId: snapshot.documentId,
+        revision: snapshot.revision
+      })
       useCompileStore.getState().setCompileStatus('success')
       const root = useProjectStore.getState().projectRoot
       if (root) {
         window.api
           .scanLabels(root)
           .then((labels) => {
-            useProjectStore.getState().setLabels(labels)
+            if (canPublishCompileTicket(ticket)) {
+              useProjectStore.getState().setLabels(labels)
+            }
           })
           .catch((err) => {
             logError('App:scanLabels', err)
           })
       }
     } catch (err: unknown) {
+      if (!isLatestCompileTicket(ticket)) return
+      if (!documentRegistry.getModel(ticket.filePath)?.isCurrent(ticket.snapshot)) {
+        useCompileStore.getState().setCompileStatus('idle')
+        return
+      }
       useCompileStore.getState().appendLog(errorMessage(err))
       useCompileStore.getState().setCompileStatus('error')
     }
@@ -142,23 +178,13 @@ function App() {
     }
     stopLspClient()
     // Reset all stores on project close
-    useEditorStore.setState({
-      filePath: null,
-      content: '',
-      isDirty: false,
-      openFiles: {},
-      activeFilePath: null,
-      cursorLine: 1,
-      cursorColumn: 1,
-      pendingJump: null,
-      pendingInsertText: null,
-      _sessionOpenPaths: [],
-      _sessionActiveFile: null
-    })
+    useEditorStore.getState().resetEditor()
     useCompileStore.setState({
       compileStatus: 'idle',
       pdfPath: null,
       pdfRevision: 0,
+      pdfDocumentId: null,
+      pdfDocumentRevision: null,
       logs: '',
       isLogPanelOpen: false,
       diagnostics: []
@@ -322,7 +348,7 @@ function App() {
     terminalRatio
   })
 
-  const showHomeScreen = sessionRestored && !projectRoot
+  const showHomeScreen = !projectRoot
   const sidebarHandleStyle = autoHideSidebar
     ? sidebarPosition === 'right'
       ? { right: `${sidebarWidth}px`, left: 'auto' }
@@ -423,27 +449,31 @@ function App() {
           <SettingsModal onClose={() => setIsSettingsOpen(false)} />
         </Suspense>
       )}
-      <Suspense fallback={null}>
-        <AiAssistantModal
-          isOpen={isAiAssistantOpen}
-          onClose={() => setIsAiAssistantOpen(false)}
-          onAiDraft={() => handleAiDraft()}
-        />
-      </Suspense>
-      <Suspense fallback={null}>
-        <DraftModal
-          isOpen={isDraftModalOpen}
-          onClose={() => {
-            setIsDraftModalOpen(false)
-            setDraftPrefill(undefined)
-          }}
-          onInsert={handleDraftInsert}
-          initialPrompt={draftPrefill}
-        />
-      </Suspense>
+      {isAiAssistantOpen && (
+        <Suspense fallback={null}>
+          <AiAssistantModal
+            isOpen
+            onClose={() => setIsAiAssistantOpen(false)}
+            onAiDraft={() => handleAiDraft()}
+          />
+        </Suspense>
+      )}
+      {isDraftModalOpen && (
+        <Suspense fallback={null}>
+          <DraftModal
+            isOpen
+            onClose={() => {
+              setIsDraftModalOpen(false)
+              setDraftPrefill(undefined)
+            }}
+            onInsert={handleDraftInsert}
+            initialPrompt={draftPrefill}
+          />
+        </Suspense>
+      )}
       <UpdateNotification />
       <ExternalChangeBanner />
-      {showHomeScreen ? (
+      {!sessionRestored ? null : showHomeScreen ? (
         <HomeScreen
           onOpenFolder={handleOpenFolder}
           onNewBlankProject={handleNewBlankProject}
@@ -461,7 +491,9 @@ function App() {
                 }}
               >
                 <TabBar />
-                <EditorPane />
+                <Suspense fallback={null}>
+                  <EditorPane />
+                </Suspense>
               </div>
               <div
                 className="split-divider"
@@ -475,7 +507,9 @@ function App() {
                 }}
               >
                 <PreviewErrorBoundary>
-                  <PreviewPane />
+                  <Suspense fallback={null}>
+                    <PreviewPane />
+                  </Suspense>
                 </PreviewErrorBoundary>
               </div>
               {isTerminalPaneOpen && (
@@ -499,9 +533,11 @@ function App() {
       )}
       <LogPanel />
       {showStatusBar && <StatusBar />}
-      <Suspense fallback={null}>
-        <TemplateGallery />
-      </Suspense>
+      {isTemplateGalleryOpen && (
+        <Suspense fallback={null}>
+          <TemplateGallery />
+        </Suspense>
+      )}
     </div>
   )
 }

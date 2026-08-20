@@ -1,103 +1,74 @@
 import { useCallback } from 'react'
+import type { EditorAdapter } from '../../editor/EditorAdapter'
 import { useProjectStore } from '../../store/useProjectStore'
-import { IMAGE_EXTENSIONS } from '../../utils/imageExtensions'
 import { generateFigureSnippet } from '../../utils/figureSnippet'
-import type { editor as monacoEditor } from 'monaco-editor'
-
-type Monaco = typeof import('monaco-editor')
+import { IMAGE_EXTENSIONS } from '../../utils/imageExtensions'
 
 export function useSmartImageDrop() {
-  const projectRoot = useProjectStore((s) => s.projectRoot)
+  const projectRoot = useProjectStore((state) => state.projectRoot)
 
   const handleDrop = useCallback(
-    async (
-      e: React.DragEvent,
-      editor: monacoEditor.IStandaloneCodeEditor | null,
-      monaco: Monaco | null
-    ) => {
-      // Only handle if files are dropped
-      if (!e.dataTransfer.files || e.dataTransfer.files.length === 0) {
-        return
-      }
+    async (event: React.DragEvent, editorAdapter: EditorAdapter | null) => {
+      if (!event.dataTransfer.files || event.dataTransfer.files.length === 0) return
 
-      const file = e.dataTransfer.files[0]
-      const ext = '.' + file.name.split('.').pop()?.toLowerCase()
+      const file = event.dataTransfer.files[0]
+      const extension = '.' + file.name.split('.').pop()?.toLowerCase()
+      if (!IMAGE_EXTENSIONS.has(extension)) return
 
-      if (!IMAGE_EXTENSIONS.has(ext)) {
-        return
-      }
+      event.preventDefault()
+      event.stopPropagation()
 
-      e.preventDefault()
-      e.stopPropagation()
-
-      if (!projectRoot || !editor || !monaco) {
+      if (!projectRoot || !editorAdapter) {
         console.warn('SmartImageDrop: Missing projectRoot or editor instance')
         return
       }
 
       try {
-        // 1. Ensure 'images' directory exists
-        // We can't simply join paths in renderer without 'path' module, but we know projectRoot is absolute
-        // Rely on backend to handle separator or just append /images for now (assuming linux/mac or handle win in backend)
-        // Actually backend `path.join` is safer. Let's use string concatenation with forward slash which works in most JS envs for display,
-        // but for backend operations we should send pure paths.
+        const separator = projectRoot.includes('\\') ? '\\' : '/'
+        const imagesDirectory = `${projectRoot}${separator}images`
+        await window.api.createDirectory(imagesDirectory)
 
-        // Better approach: Let's assume standard forward slash for internal logic or just use string concat carefully.
-        // Since `projectRoot` comes from backend, it uses OS specific separators.
-        const sep = projectRoot.includes('\\') ? '\\' : '/'
-        const imagesDir = `${projectRoot}${sep}images`
-
-        await window.api.createDirectory(imagesDir)
-
-        // 2. Copy File
-        const destPath = `${imagesDir}${sep}${file.name}`
-        // The file object from DragEvent has a 'path' property in Electron!
-        // But standard File object doesn't. Electron adds it.
+        const destinationPath = `${imagesDirectory}${separator}${file.name}`
         interface ElectronFile extends File {
           path: string
         }
         const sourcePath = (file as ElectronFile).path
 
         if (sourcePath) {
-          await window.api.copyFile(sourcePath, destPath)
+          await window.api.copyFile(sourcePath, destinationPath)
         } else {
           console.error('SmartImageDrop: Could not get source path from dropped file')
           return
         }
 
-        // 3. Generate LaTeX Snippet
-        const relPath = `images/${file.name}`
-        const snippet = generateFigureSnippet(relPath, file.name)
+        const snippet = generateFigureSnippet(`images/${file.name}`, file.name)
+        const targetPosition = editorAdapter.getPositionAtClientPoint(event.clientX, event.clientY)
 
-        // 4. Insert into Editor
-        const target = editor.getTargetAtClientPoint(e.clientX, e.clientY)
-        if (target?.position) {
-          const pos = target.position
-          editor.executeEdits('image-drop', [
+        if (targetPosition) {
+          editorAdapter.applyEdits('image-drop', [
             {
-              range: new monaco.Range(pos.lineNumber, pos.column, pos.lineNumber, pos.column),
+              range: { start: targetPosition, end: targetPosition },
               text: snippet,
               forceMoveMarkers: true
             }
           ])
-          editor.setPosition(pos)
-          editor.focus()
+          editorAdapter.setPosition(targetPosition)
+          editorAdapter.focus()
         } else {
-          // Fallback to current cursor if drop target not found (rare)
-          const pos = editor.getPosition()
-          if (pos) {
-            editor.executeEdits('image-drop', [
+          const position = editorAdapter.getPosition()
+          if (position) {
+            editorAdapter.applyEdits('image-drop', [
               {
-                range: new monaco.Range(pos.lineNumber, pos.column, pos.lineNumber, pos.column),
+                range: { start: position, end: position },
                 text: snippet,
                 forceMoveMarkers: true
               }
             ])
           }
         }
-      } catch (err) {
-        console.error('SmartImageDrop: Failed to process image drop', err)
-        alert('Failed to import image: ' + (err instanceof Error ? err.message : String(err)))
+      } catch (error) {
+        console.error('SmartImageDrop: Failed to process image drop', error)
+        alert('Failed to import image: ' + (error instanceof Error ? error.message : String(error)))
       }
     },
     [projectRoot]

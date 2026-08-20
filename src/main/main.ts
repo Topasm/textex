@@ -75,6 +75,7 @@ function getTitleBarOverlay(theme: string): { color: string; symbolColor: string
 
 function createWindow(theme: string): void {
   const backgroundColor = getBackgroundColor(theme)
+  const measurePerformance = process.env.TEXTEX_PERFORMANCE === '1'
 
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -110,9 +111,14 @@ function createWindow(theme: string): void {
   })
 
   if (process.env.ELECTRON_RENDERER_URL) {
-    mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
+    const rendererUrl = new URL(process.env.ELECTRON_RENDERER_URL)
+    if (measurePerformance) rendererUrl.searchParams.set('performance', '1')
+    mainWindow.loadURL(rendererUrl.toString())
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'))
+    mainWindow.loadFile(
+      path.join(__dirname, '../renderer/index.html'),
+      measurePerformance ? { query: { performance: '1' } } : undefined
+    )
   }
 
   const win = mainWindow

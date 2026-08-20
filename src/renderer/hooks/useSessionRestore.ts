@@ -21,9 +21,18 @@ export function useSessionRestore(): boolean {
     const restoreSession = async (): Promise<void> => {
       const projectState = useProjectStore.getState()
       const editorState = useEditorStore.getState()
-      const savedRoot = projectState.projectRoot
+      let savedRoot = projectState.projectRoot
       const { _sessionOpenPaths, _sessionActiveFile } = editorState
       if (!savedRoot || _sessionOpenPaths.length === 0) {
+        setSessionRestored(true)
+        return
+      }
+
+      try {
+        savedRoot = await window.api.activateProject(savedRoot)
+        useProjectStore.getState().setProjectRoot(savedRoot)
+      } catch {
+        useProjectStore.getState().setProjectRoot(null)
         setSessionRestored(true)
         return
       }

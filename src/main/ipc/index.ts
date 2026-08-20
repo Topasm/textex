@@ -14,6 +14,7 @@ import { registerMiscHandlers } from './misc'
 import { registerTemplateHandlers } from './templates'
 import { registerProjectDataHandlers } from './projectData'
 import { registerPtyHandlers, disposeAllPtyHandlers } from './pty'
+import { registerPerformanceHandlers } from './performance'
 
 let currentWindow: BrowserWindow | null = null
 let handlersRegistered = false
@@ -45,6 +46,7 @@ export function registerIpcHandlers(win: BrowserWindow): void {
   registerTemplateHandlers(getWindow)
   registerProjectDataHandlers()
   registerPtyHandlers(getWindow)
+  registerPerformanceHandlers()
 }
 
 /**

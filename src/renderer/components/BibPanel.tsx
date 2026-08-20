@@ -29,16 +29,7 @@ function BibPanel() {
   } = useCitationGroupOps()
 
   const handleInsert = useCallback((citeText: string) => {
-    const state = useEditorStore.getState()
-    const { content, cursorLine, cursorColumn } = state
-    const lines = content.split('\n')
-    const lineIdx = cursorLine - 1
-    if (lineIdx >= 0 && lineIdx < lines.length) {
-      const line = lines[lineIdx]
-      const col = cursorColumn - 1
-      lines[lineIdx] = line.slice(0, col) + citeText + line.slice(col)
-      state.setContent(lines.join('\n'))
-    }
+    useEditorStore.getState().requestInsertAtCursor(citeText)
   }, [])
 
   const filtered = useMemo(
