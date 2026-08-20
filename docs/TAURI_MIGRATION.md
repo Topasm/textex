@@ -33,6 +33,7 @@ revision-aware Tectonic compile, system Git vertical slice다. 새 기능은 Tau
 | compile scheduling | 지원 | priority queue, revision identity, latest-wins coalescing과 preemption을 적용한다. |
 | Git | 지원 | project root로 제한된 system Git service가 init/status/stage/unstage/commit/diff/log/file log를 제공한다. |
 | LaTeX package metadata | 지원 | bundled JSON resource를 Rust가 검증·cache하고 transitive dependency까지 반환한다. |
+| fallback document outline | 지원 | filesystem 접근 없는 shared parser를 Tauri renderer에서 직접 실행한다. |
 | PDF preview | 조건부 지원 | 기존 PDF.js UI를 유지하며 현재는 10 MiB 이하 PDF를 binary command로 전달한다. |
 | 나머지 desktop API | 미지원 | 호출 시 `has not been migrated` 오류를 반환한다. |
 

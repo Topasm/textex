@@ -317,6 +317,25 @@ describe('Tauri DesktopApi adapter', () => {
     })
   })
 
+  it('parses the fallback document outline locally without a native round trip', async () => {
+    const api = createTauriApi()
+    await expect(
+      api.getDocumentOutline(
+        '/project/main.tex',
+        '\\begin{abstract}\nSummary\n\\end{abstract}\n\\section{Intro}\nText\n\\subsection{Method}'
+      )
+    ).resolves.toMatchObject([
+      { title: 'Abstract', semanticKind: 'frontmatter', startLine: 1 },
+      {
+        title: 'Intro',
+        semanticKind: 'section',
+        startLine: 4,
+        children: [{ title: 'Method', startLine: 6 }]
+      }
+    ])
+    expect(invokeMock).not.toHaveBeenCalled()
+  })
+
   it('keeps mandatory listeners and LSP cleanup safe while their backends are pending', async () => {
     const api = createTauriApi()
     const disposeData = api.onPtyData('pty-1', () => {})

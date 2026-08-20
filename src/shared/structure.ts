@@ -1,6 +1,7 @@
 import fs from 'fs/promises'
 import path from 'path'
 import { SectionLevel, SectionNode, DocumentMetadata, DocumentStructure, PaperInfo } from './types'
+export { parseContentOutline } from './contentOutline'
 
 // --- Helpers ---
 
@@ -428,27 +429,6 @@ function extractMetadata(virtualLines: VirtualLine[], mainFile: string): Documen
   }
 
   return metadata
-}
-
-/**
- * Parse outline from in-memory content string (no disk I/O for the main file).
- * Used by the editor UI for live outline updates.
- */
-export function parseContentOutline(content: string, filePath: string): SectionNode[] {
-  const lines = content.split('\n')
-  const virtualLines: VirtualLine[] = lines.map((text, i) => ({
-    text,
-    file: filePath,
-    lineNumber: i + 1
-  }))
-  const headings = findHeadings(virtualLines)
-  const sectionOutline = buildOutlineTree(headings, virtualLines, virtualLines.length)
-  const firstHeadingIndex = headings[0]?.index ?? virtualLines.length
-  const frontMatterNodes = buildFrontMatterNodes(
-    findFrontMatter(virtualLines, firstHeadingIndex),
-    virtualLines
-  )
-  return mergeTopLevelOutline(sectionOutline, frontMatterNodes)
 }
 
 // --- Public API ---

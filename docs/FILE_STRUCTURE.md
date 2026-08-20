@@ -318,6 +318,7 @@
 |       +-- tableParser.ts         # LaTeX table parsing for visual editor
 |       +-- magicComments.ts       # %! TeX root magic comment parser
 |       +-- structure.ts           # Document structure analysis
+|       +-- contentOutline.ts      # Browser-safe live document outline parser
 |       +-- templates.ts           # Template management
 |       +-- tauriCommands.ts       # Transitional Rust command name constants
 |

@@ -3,6 +3,7 @@ import type { DesktopApi, OpenFileResult, SaveAsResult, SaveResult } from '../ty
 import type { DirectoryEntry } from '../../shared/types'
 import { TAURI_COMMANDS } from '../../shared/tauriCommands'
 import type { CompileLogEvent, CompileRequest, CompileResponse } from '../../shared/compileProtocol'
+import { parseContentOutline } from '../../shared/contentOutline'
 
 type MigratedDesktopApi = Pick<
   DesktopApi,
@@ -29,6 +30,7 @@ type MigratedDesktopApi = Pick<
   | 'gitLog'
   | 'gitFileLog'
   | 'loadPackageData'
+  | 'getDocumentOutline'
   | 'watchDirectory'
   | 'unwatchDirectory'
   | 'onDirectoryChanged'
@@ -131,6 +133,9 @@ const gitFileLog: DesktopApi['gitFileLog'] = (workDir, filePath) =>
 const loadPackageData: DesktopApi['loadPackageData'] = (packageNames) =>
   invoke(TAURI_COMMANDS.loadPackageData, { packageNames })
 
+const getDocumentOutline: DesktopApi['getDocumentOutline'] = async (filePath, content) =>
+  parseContentOutline(content, filePath)
+
 const watchDirectory: DesktopApi['watchDirectory'] = (dirPath) => {
   const onEvent = new Channel<{ type: string; filename: string }>()
   onEvent.onmessage = (event) => directoryChangeCallback?.(event)
@@ -208,6 +213,7 @@ const migratedApi: MigratedDesktopApi = {
   gitLog,
   gitFileLog,
   loadPackageData,
+  getDocumentOutline,
   watchDirectory,
   unwatchDirectory,
   onDirectoryChanged,
