@@ -1477,14 +1477,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ================================================================================
-Package: simple-git
-Version: 3.36.0
-License: MIT
-Source: https://github.com/steveukx/git-js.git
---------------------------------------------------------------------------------
-No license file was found in the installed package contents.
-
-================================================================================
 Package: vscode-jsonrpc
 Version: 8.2.1
 License: MIT

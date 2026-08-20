@@ -22,7 +22,6 @@ TextEx is built on or integrates with these open-source projects:
 | [electron-builder](https://www.electron.build/) | Cross-platform packaging and distribution | MIT |
 | [electron-updater](https://www.electron.build/auto-update) | Seamless in-app auto-updates | MIT |
 | [lucide-react](https://lucide.dev/) | Icon library used in the UI | ISC |
-| [simple-git](https://github.com/steveukx/git-js) | Git CLI wrapper for Node.js | MIT |
 | [nspell](https://github.com/wooorm/nspell) | Hunspell-compatible spell checker | MIT |
 | [dictionary-en](https://github.com/wooorm/dictionaries/tree/main/dictionaries/en) | Bundled English Hunspell dictionary data | MIT AND BSD |
 | [Pandoc](https://pandoc.org/) | Optional external document converter for export | GPL-2.0 |
