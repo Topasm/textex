@@ -29,6 +29,9 @@ tokio = {
   features = ["fs", "io-util", "macros", "process", "rt", "sync", "time"]
 }
 
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
 [dev-dependencies]
 tempfile = "3"
 

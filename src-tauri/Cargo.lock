@@ -3478,6 +3478,7 @@ name = "textex-tauri"
 version = "1.0.8"
 dependencies = [
  "dunce",
+ "libc",
  "notify",
  "serde",
  "serde_json",

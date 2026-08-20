@@ -157,6 +157,7 @@ async fn run_tectonic(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .kill_on_drop(true);
+    isolate_process_group(&mut command);
 
     let child = command
         .spawn()
@@ -251,7 +252,7 @@ async fn terminate_child(child: &mut Child, display_tectonic_path: &str) -> AppR
         }
     }
 
-    if let Err(source) = child.kill().await {
+    if let Err(source) = terminate_running_child(child).await {
         // The process may have exited between try_wait and kill. Only suppress
         // the error if a subsequent non-blocking wait confirms that outcome.
         if child.try_wait().ok().flatten().is_none() {
@@ -268,6 +269,59 @@ async fn terminate_child(child: &mut Child, display_tectonic_path: &str) -> AppR
         .await
         .map_err(|source| AppError::compiler_io("reap", display_tectonic_path, source))?;
     Ok(())
+}
+
+#[cfg(unix)]
+fn isolate_process_group(command: &mut Command) {
+    // Tectonic can start helper processes which inherit its stdout/stderr
+    // pipes. Giving the compiler its own process group lets cancellation kill
+    // the complete tree instead of leaving a descendant holding those pipes
+    // open after the direct child has been reaped.
+    command.process_group(0);
+}
+
+#[cfg(not(unix))]
+fn isolate_process_group(_command: &mut Command) {}
+
+#[cfg(unix)]
+async fn terminate_running_child(child: &mut Child) -> io::Result<()> {
+    let process_group_id = child.id().ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::NotFound,
+            "compiler process has no process-group ID",
+        )
+    })?;
+    let process_group_id = libc::pid_t::try_from(process_group_id).map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            "compiler process-group ID exceeds the platform PID range",
+        )
+    })?;
+
+    // A negative PID addresses a Unix process group. The direct child is the
+    // group leader because `isolate_process_group` configured PGID 0 before
+    // spawn, so this signal also terminates helpers that inherited its pipes.
+    // SAFETY: `kill` only reads the integer process-group ID. The ID came
+    // directly from the live child handle and is negated intentionally to
+    // target the isolated compiler process group.
+    let result = unsafe { libc::kill(-process_group_id, libc::SIGKILL) };
+    if result == 0 {
+        return Ok(());
+    }
+
+    let source = io::Error::last_os_error();
+    if source.raw_os_error() == Some(libc::ESRCH) {
+        // The process tree may have exited between try_wait and kill. Let the
+        // caller's follow-up wait reap the direct child.
+        Ok(())
+    } else {
+        Err(source)
+    }
+}
+
+#[cfg(not(unix))]
+async fn terminate_running_child(child: &mut Child) -> io::Result<()> {
+    child.kill().await
 }
 
 async fn forward_output<R>(
@@ -645,12 +699,12 @@ mod tests {
     #[cfg(unix)]
     use std::{process::Stdio, time::Instant};
 
-    #[cfg(unix)]
-    use super::monitor_child;
     use super::{
         development_candidates, extract_magic_root, packaged_candidates, resolve_magic_root,
         sidecar_source_filename, validate_compile_request, validate_project_tex_file,
     };
+    #[cfg(unix)]
+    use super::{isolate_process_group, monitor_child};
     #[cfg(unix)]
     use crate::models::CompileIdentity;
     use crate::models::{CompilePriority, CompileRequest};
@@ -831,11 +885,15 @@ mod tests {
         let mut command = Command::new("/bin/sh");
         command
             .arg("-c")
-            .arg("sleep 5")
+            // Keep a real descendant alive with inherited stdout/stderr. A
+            // final foreground command could be replaced via the shell's
+            // `exec` optimization and would not exercise process-tree cleanup.
+            .arg("sleep 5 & wait")
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .kill_on_drop(true);
+        isolate_process_group(&mut command);
         command.spawn().expect("spawn sleeping child")
     }
 
