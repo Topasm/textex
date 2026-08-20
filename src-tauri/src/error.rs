@@ -64,6 +64,9 @@ pub enum AppError {
         limit_mb: usize,
     },
 
+    #[error("LaTeX package metadata operation failed: {0}")]
+    PackageData(String),
+
     #[error("Settings operation failed: {0}")]
     Settings(String),
 

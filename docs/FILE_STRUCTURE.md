@@ -340,6 +340,7 @@
 |       |   +-- mod.rs
 |       |   +-- filesystem.rs      # Thin Tauri filesystem commands
 |       |   +-- git.rs             # Thin project-scoped Git commands
+|       |   +-- package_data.rs    # Bundled LaTeX metadata command
 |       |   +-- settings.rs        # Settings and recent-project commands
 |       |   +-- watcher.rs         # Directory watcher lifecycle commands
 |       |   +-- compiler.rs        # Tectonic compile/cancel commands
@@ -347,6 +348,7 @@
 |           +-- mod.rs
 |           +-- filesystem.rs      # Path validation and async file operations
 |           +-- git.rs             # Validated system Git process service
+|           +-- package_data.rs    # Cached package JSON parser/resource loader
 |           +-- settings.rs        # Typed atomic settings persistence
 |           +-- watcher.rs         # Debounced native directory watcher
 |           +-- compiler.rs        # Tectonic sidecar resolution and execution

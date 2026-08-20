@@ -26,6 +26,7 @@ export const TAURI_COMMANDS = {
   gitDiff: 'git_diff',
   gitLog: 'git_log',
   gitFileLog: 'git_file_log',
+  loadPackageData: 'load_package_data',
   watchDirectory: 'watch_directory',
   unwatchDirectory: 'unwatch_directory',
   loadSettings: 'load_settings',

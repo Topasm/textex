@@ -4,6 +4,7 @@ mod models;
 mod services;
 mod state;
 
+use services::package_data::PackageDataState;
 use services::settings::SettingsState;
 use services::watcher::DirectoryWatcherState;
 use state::AppState;
@@ -15,6 +16,7 @@ pub fn run() {
         .manage(AppState::default())
         .manage(DirectoryWatcherState::default())
         .manage(SettingsState::default())
+        .manage(PackageDataState::default())
         .invoke_handler(tauri::generate_handler![
             commands::filesystem::open_file,
             commands::filesystem::open_directory,
@@ -37,6 +39,7 @@ pub fn run() {
             commands::git::git_diff,
             commands::git::git_log,
             commands::git::git_file_log,
+            commands::package_data::load_package_data,
             commands::watcher::watch_directory,
             commands::watcher::unwatch_directory,
             commands::settings::load_settings,

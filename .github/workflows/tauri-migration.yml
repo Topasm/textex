@@ -217,6 +217,8 @@ jobs:
           verify_dir=$(mktemp -d)
           dpkg-deb --extract "$deb" "$verify_dir"
           test -x "$verify_dir/usr/bin/tectonic"
+          package_metadata=$(find "$verify_dir" -path '*/data/packages/amsmath.json' -type f -print -quit)
+          test -s "$package_metadata"
           "$verify_dir/usr/bin/tectonic" --version
           sha256sum "$deb" "$appimage"
 
@@ -239,7 +241,9 @@ jobs:
           app=$(find "$mount_dir" -maxdepth 2 -name '*.app' -type d -print -quit)
           tectonic="$app/Contents/MacOS/tectonic"
           executable="$app/Contents/MacOS/textex-tauri"
+          package_metadata="$app/Contents/Resources/data/packages/amsmath.json"
           test -n "$app" && test -x "$tectonic" && test -x "$executable"
+          test -s "$package_metadata"
           "$tectonic" --version | grep -F 'Tectonic 0.17.0'
           lipo -archs "$tectonic" | tee /tmp/tectonic-architectures.txt
           grep -q x86_64 /tmp/tectonic-architectures.txt
@@ -258,6 +262,16 @@ jobs:
           if (-not $installer) { throw 'No NSIS installer was produced' }
           $installer | Format-List Name,Length,FullName
           Get-FileHash -Algorithm SHA256 $installer.FullName
+          $extractDir = Join-Path $env:RUNNER_TEMP 'textex-nsis'
+          New-Item -ItemType Directory -Force -Path $extractDir | Out-Null
+          & 'C:\Program Files\7-Zip\7z.exe' x $installer.FullName "-o$extractDir" -y | Out-Host
+          if ($LASTEXITCODE -ne 0) { throw "Could not inspect NSIS installer: $LASTEXITCODE" }
+          $packageMetadata = Get-ChildItem $extractDir -Recurse -File -Filter 'amsmath.json' |
+            Where-Object { $_.FullName -match '[\\/]data[\\/]packages[\\/]amsmath\.json$' } |
+            Select-Object -First 1
+          if (-not $packageMetadata -or $packageMetadata.Length -eq 0) {
+            throw 'Bundled LaTeX package metadata is missing from the NSIS installer'
+          }
 
       - name: Report renderer and package sizes
         shell: bash

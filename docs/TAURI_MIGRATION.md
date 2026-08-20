@@ -32,6 +32,7 @@ revision-aware Tectonic compile, system Git vertical slice다. 새 기능은 Tau
 | Tectonic compile | 지원 | bundled 0.17 sidecar, magic root, timeout, cancel과 log Channel을 지원한다. |
 | compile scheduling | 지원 | priority queue, revision identity, latest-wins coalescing과 preemption을 적용한다. |
 | Git | 지원 | project root로 제한된 system Git service가 init/status/stage/unstage/commit/diff/log/file log를 제공한다. |
+| LaTeX package metadata | 지원 | bundled JSON resource를 Rust가 검증·cache하고 transitive dependency까지 반환한다. |
 | PDF preview | 조건부 지원 | 기존 PDF.js UI를 유지하며 현재는 10 MiB 이하 PDF를 binary command로 전달한다. |
 | 나머지 desktop API | 미지원 | 호출 시 `has not been migrated` 오류를 반환한다. |
 
@@ -99,6 +100,7 @@ Electron preload, Tauri adapter, 공유 타입과 테스트를 함께 갱신한�
 - `git_diff`
 - `git_log`
 - `git_file_log`
+- `load_package_data`
 - `watch_directory`
 - `unwatch_directory`
 - `load_settings`
@@ -210,8 +212,9 @@ native `tectonic --version`을 검사한다. 성공한 파일만 target-suffixed
 install한다. 생성된 payload/provenance는 gitignored이며 검토된
 `src-tauri/binaries/manifest.json`만 source control에 둔다.
 
-Tauri bundle은 sidecar와 함께 `resources/licenses/**`를 `licenses/`에,
-`resources/tectonic-cache/**`를 `tectonic-cache/`에 포함한다. 따라서 dependency 또는
+Tauri bundle은 sidecar와 함께 `resources/data/packages/**`를 `data/packages/`에,
+`resources/licenses/**`를 `licenses/`에, `resources/tectonic-cache/**`를
+`tectonic-cache/`에 포함한다. 따라서 dependency 또는
 Tectonic 고지가 바뀌면 `npm run licenses:generate` 결과도 package 전에 검토한다. 이
 명령은 npm 고지와 함께 locked Cargo runtime/build dependency 그래프를
 `RUST-THIRD-PARTY-NOTICES.txt`로 생성한다. 플랫폼 crate까지 내려받는 Cargo cache는

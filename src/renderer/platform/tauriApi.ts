@@ -28,6 +28,7 @@ type MigratedDesktopApi = Pick<
   | 'gitDiff'
   | 'gitLog'
   | 'gitFileLog'
+  | 'loadPackageData'
   | 'watchDirectory'
   | 'unwatchDirectory'
   | 'onDirectoryChanged'
@@ -127,6 +128,9 @@ const gitLog: DesktopApi['gitLog'] = (workDir) => invoke(TAURI_COMMANDS.gitLog, 
 const gitFileLog: DesktopApi['gitFileLog'] = (workDir, filePath) =>
   invoke(TAURI_COMMANDS.gitFileLog, { workDir, filePath })
 
+const loadPackageData: DesktopApi['loadPackageData'] = (packageNames) =>
+  invoke(TAURI_COMMANDS.loadPackageData, { packageNames })
+
 const watchDirectory: DesktopApi['watchDirectory'] = (dirPath) => {
   const onEvent = new Channel<{ type: string; filename: string }>()
   onEvent.onmessage = (event) => directoryChangeCallback?.(event)
@@ -203,6 +207,7 @@ const migratedApi: MigratedDesktopApi = {
   gitDiff,
   gitLog,
   gitFileLog,
+  loadPackageData,
   watchDirectory,
   unwatchDirectory,
   onDirectoryChanged,

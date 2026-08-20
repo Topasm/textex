@@ -1,4 +1,33 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
+pub type PackageDataMap = HashMap<String, PackageData>;
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PackageData {
+    pub macros: Vec<PackageMacro>,
+    pub envs: Vec<PackageEnvironment>,
+    pub deps: Vec<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PackageMacro {
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub snippet: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PackageEnvironment {
+    pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub arg_snippet: Option<String>,
+}
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct GitFileStatus {

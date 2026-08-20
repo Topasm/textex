@@ -300,6 +300,23 @@ describe('Tauri DesktopApi adapter', () => {
     ])
   })
 
+  it('loads LaTeX package metadata from bundled Rust resources', async () => {
+    const packageData = {
+      amsmath: {
+        macros: [{ name: 'dfrac', snippet: '{$1}{$2}' }],
+        envs: [{ name: 'align', argSnippet: '' }],
+        deps: ['amstext']
+      }
+    }
+    invokeMock.mockResolvedValueOnce(packageData)
+
+    const api = createTauriApi()
+    await expect(api.loadPackageData(['amsmath'])).resolves.toEqual(packageData)
+    expect(invokeMock).toHaveBeenCalledWith('load_package_data', {
+      packageNames: ['amsmath']
+    })
+  })
+
   it('keeps mandatory listeners and LSP cleanup safe while their backends are pending', async () => {
     const api = createTauriApi()
     const disposeData = api.onPtyData('pty-1', () => {})

@@ -36,6 +36,7 @@
     "targets": "all",
     "externalBin": ["binaries/tectonic"],
     "resources": {
+      "../resources/data/packages/**/*": "data/packages/",
       "../resources/licenses/**/*": "licenses/",
       "../resources/tectonic-cache/**/*": "tectonic-cache/"
     },

@@ -21,6 +21,7 @@ fn main() {
         "git_diff",
         "git_log",
         "git_file_log",
+        "load_package_data",
         "watch_directory",
         "unwatch_directory",
         "load_settings",
