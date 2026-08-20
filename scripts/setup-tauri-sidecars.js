@@ -393,7 +393,7 @@ async function prepareBinary(target, spec, temporaryDirectory) {
   ])
 
   await runCommand('lipo', ['-create', x64Path, arm64Path, '-output', universalPath])
-  await runCommand('lipo', ['-verify_arch', 'x86_64', 'arm64', universalPath])
+  await runCommand('lipo', [universalPath, '-verify_arch', 'x86_64', 'arm64'])
   const universal = await fs.readFile(universalPath)
   validateBinaryBytes(universal, 'mach-universal')
   return universal
