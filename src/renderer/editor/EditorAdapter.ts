@@ -62,9 +62,18 @@ export interface EditorSnapshot {
 }
 
 export interface EditorDocumentChange {
-  snapshot: EditorSnapshot
+  documentId: string | null
+  /** Monotonic for the lifetime of this mounted adapter. */
+  revision: number
   changes: readonly EditorTextChange[]
   isFlush: boolean
+}
+
+/** A document-scoped buffer handle. The implementation may outlive the active editor tab. */
+export interface EditorDocumentBuffer {
+  readonly documentId: string
+  getText(): string
+  replaceText(text: string): void
 }
 
 export interface EditorDisposable {
@@ -94,7 +103,8 @@ export interface EditorAdapter {
 
   getText(range?: EditorRange): string
   getEngineRevision(): number
-  getSnapshot(): EditorSnapshot
+  materializeSnapshot(): EditorSnapshot
+  getDocumentBuffer(): EditorDocumentBuffer | null
   getLineCount(): number
   getLineMaxColumn(line: number): number
 

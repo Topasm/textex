@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DocumentRegistry, normalizeDocumentId } from '../../renderer/models/documentRegistry'
 
 describe('DocumentRegistry', () => {
@@ -29,6 +29,28 @@ describe('DocumentRegistry', () => {
         snapshot: expect.objectContaining({ revision: 2, text: 'newer edit' })
       }
     ])
+  })
+
+  it('binds Monaco as the canonical buffer and records deltas without reading full text', () => {
+    registry.open('/paper/main.tex', 'bootstrap')
+    let editorText = 'bootstrap'
+    const getText = vi.fn(() => editorText)
+    registry.bindBuffer('/paper/main.tex', {
+      documentId: '/paper/main.tex',
+      getText,
+      replaceText: (text) => {
+        editorText = text
+      }
+    })
+    getText.mockClear()
+
+    editorText = 'bootstrap!'
+    const revision = registry.recordEditorChange('/paper/main.tex')
+
+    expect(revision?.revision).toBe(1)
+    expect(getText).not.toHaveBeenCalled()
+    expect(registry.snapshot('/paper/main.tex')?.text).toBe('bootstrap!')
+    expect(getText).toHaveBeenCalledTimes(1)
   })
 
   it('can explicitly accept an external disk version and close the document', () => {

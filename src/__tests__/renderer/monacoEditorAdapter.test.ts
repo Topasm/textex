@@ -13,6 +13,9 @@ function createHarness() {
   }
   const model = {
     getValue: vi.fn(() => text),
+    setValue: vi.fn((value: string) => {
+      text = value
+    }),
     getValueInRange: vi.fn(() => 'one'),
     getLineCount: vi.fn(() => 2),
     getLineMaxColumn: vi.fn((line: number) => (line === 1 ? 4 : 4))
@@ -87,16 +90,17 @@ describe('MonacoEditorAdapter', () => {
     expect(harness.model.getValue).not.toHaveBeenCalled()
   })
 
-  it('publishes immutable engine snapshots with monotonic revisions', () => {
+  it('publishes immutable deltas without materializing text', () => {
     const harness = createHarness()
     const listener = vi.fn()
     harness.adapter.onDidChangeDocument(listener)
 
-    expect(harness.adapter.getSnapshot()).toEqual({
+    expect(harness.adapter.materializeSnapshot()).toEqual({
       documentId: '/project/main.tex',
       engineRevision: 0,
       text: 'one\ntwo'
     })
+    harness.model.getValue.mockClear()
 
     harness.setText('one!\ntwo')
     harness.emitContentChange({
@@ -112,11 +116,8 @@ describe('MonacoEditorAdapter', () => {
     })
 
     expect(listener).toHaveBeenCalledWith({
-      snapshot: {
-        documentId: '/project/main.tex',
-        engineRevision: 1,
-        text: 'one!\ntwo'
-      },
+      documentId: '/project/main.tex',
+      revision: 1,
       changes: [
         {
           range: {
@@ -130,10 +131,22 @@ describe('MonacoEditorAdapter', () => {
       ],
       isFlush: false
     })
+    expect(harness.model.getValue).not.toHaveBeenCalled()
 
     harness.adapter.setDocumentId('/project/chapter.tex')
     expect(harness.adapter.getEngineRevision()).toBe(2)
-    expect(Object.isFrozen(harness.adapter.getSnapshot())).toBe(true)
+    expect(Object.isFrozen(harness.adapter.materializeSnapshot())).toBe(true)
+  })
+
+  it('exposes a document-scoped canonical buffer handle', () => {
+    const { adapter, model } = createHarness()
+    const buffer = adapter.getDocumentBuffer()
+
+    expect(buffer?.documentId).toBe('/project/main.tex')
+    expect(buffer?.getText()).toBe('one\ntwo')
+    buffer?.replaceText('replacement')
+    expect(model.setValue).toHaveBeenCalledWith('replacement')
+    expect(buffer?.getText()).toBe('replacement')
   })
 
   it('maps editor-neutral positions, selections, and edits to Monaco', () => {

@@ -15,11 +15,11 @@ CodeMirror 6는 즉시 도입할 dependency가 아니라 Phase 8의 측정 대�
 editor engine 교체를 같은 단계에서 진행하지 않는다. 이 원칙으로 회귀가 발생했을 때
 desktop runtime과 editor 중 어느 경계가 원인인지 분리할 수 있다.
 
-## Current Problem
+## Motivation
 
-현재 `useEditorStore`는 활성 문서의 전체 문자열을 `content`에 보관하고 같은 문자열을
-`openFiles`에도 복제한다. Monaco model, React state와 비동기 분석 작업이 이 값을 함께
-관찰하므로 다음 문제가 생길 수 있다.
+이 작업 전에는 `useEditorStore`가 활성 문서의 전체 문자열을 `content`에 보관하고 같은
+문자열을 `openFiles`에도 복제했다. Monaco model, React state와 비동기 분석 작업이 이 값을
+함께 관찰해 다음 문제가 있었다.
 
 - 입력마다 큰 문자열과 `openFiles` 객체가 Zustand를 통과한다.
 - 저장이나 분석을 요청한 시점과 결과가 도착한 시점의 문서를 구분할 revision이 없다.
@@ -52,7 +52,8 @@ DocumentModel.snapshot(revision N)
 
 편집 가능한 text의 canonical owner는 editor model이다. Zustand에는 전체 문서 문자열이나
 Monaco instance를 장기 상태로 저장하지 않는다. UI가 text를 필요로 하거나 backend 작업을
-시작할 때는 `DocumentModel`에서 명시적으로 snapshot을 얻는다.
+시작할 때는 `DocumentModel`에서 명시적으로 snapshot을 얻는다. 일반 입력은 Monaco change
+delta만 revision metadata에 반영하며 full string을 materialize하지 않는다.
 
 Phase 1의 snapshot은 JavaScript immutable string이어도 된다. 첫 단계의 목적은 rope를
 새로 구현하는 것이 아니라 **어느 revision의 text인지 안정적으로 식별**하는 것이다.
@@ -60,10 +61,10 @@ Phase 1의 snapshot은 JavaScript immutable string이어도 된다. 첫 단계�
 
 ## Runtime-neutral Contracts
 
-아래 contract는 Phase 1이 끝났을 때의 목표 surface다. 현재 첫 vertical slice는 하나의
-mounted active document를 감싸며 text/edit/selection/diagnostic/decoration/scroll과
-adapter-local change snapshot을 제공한다. 다중 문서 `open/activate/close`, tracked range와
-canonical revision 연결은 registry 단계에서 추가한다.
+현재 adapter는 mounted editor의 text/edit/selection/diagnostic/decoration/scroll을 감싸고,
+path-backed Monaco model을 `DocumentRegistry`에 canonical buffer로 연결한다. change event에는
+full snapshot 대신 `documentId`, adapter revision과 incremental edit delta만 포함한다. 탭을
+전환해도 `keepCurrentModel`로 문서별 Monaco model을 유지한다.
 
 실제 contract에는 Monaco type을 노출하지 않는다. 최소 surface는 다음 책임을 포함한다.
 
@@ -131,13 +132,14 @@ Phase 1은 다음 순서의 작은 변경으로 진행한다.
 1. **완료:** runtime-neutral editor type과 adapter conformance test를 추가한다.
 2. **완료:** 기존 Monaco model/view를 감싸는 active-document `MonacoEditorAdapter`를
    추가하고 pending action, diagnostic, drop, table edit 경로를 연결한다.
-3. **진행 중:** revision/snapshot/save-state `DocumentModel` 코어는 추가됐다. 다음 변경에서
-   문서별 registry와 adapter change 연결을 추가한다.
-4. tab open/activate/close, edit, selection, diagnostics와 decoration을 adapter를 통해 연결한다.
-5. spell, outline, package detection, TexLab didChange와 save/compile 입력을 revision snapshot으로
-   전환한다.
-6. `useEditorStore`에서 full `content`, `openFiles[*].content`와 raw Monaco editor instance를
-   제거하고 UI metadata에 fine-grained selector를 사용한다.
+3. **완료:** revision/snapshot/save-state `DocumentModel`, 문서별 registry와 adapter delta
+   연결을 추가한다.
+4. **완료:** Monaco `ITextModel`을 canonical buffer로 만들고 React `value/onChange` full-string
+   경로를 제거한다.
+5. **완료:** `useEditorStore`에서 full `content`, `openFiles[*].content`, raw Monaco editor
+   instance와 controlled refresh state를 제거한다. PDF scroll sync도 adapter API를 사용한다.
+6. **진행 중:** spell, outline, package detection, TexLab didChange와 save/compile 입력을 revision
+   snapshot/delta contract로 전환한다.
 
 완료 조건은 기존 Monaco 기능과 keyboard/IME/undo behavior가 유지되고, async stale-result와
 save-race test가 통과하며, 지속 입력 시 React/Zustand에 전체 문서 문자열을 publish하지 않는

@@ -69,7 +69,6 @@ describe('useAppStore', () => {
 
       expect(editor.filePath).toBeNull()
       expect(editor.revision).toBe(0)
-      expect(editor.refreshVersion).toBe(0)
       expect(editor.isDirty).toBe(false)
       expect(compile.compileStatus).toBe('idle')
       expect(compile.pdfPath).toBeNull()
@@ -109,13 +108,12 @@ describe('useAppStore', () => {
       expect(documentRegistry.snapshot('/path/main.tex')?.text).toBe('ab')
     })
 
-    it('does not refresh the controlled Monaco value for normal input', () => {
+    it('records incremental editor changes as metadata without a content field', () => {
       useEditorStore.getState().openFileInTab('/path/main.tex', '')
-      const refreshVersion = useEditorStore.getState().refreshVersion
-      useEditorStore.getState().updateActiveDocument('a')
-      useEditorStore.getState().updateActiveDocument('ab')
+      useEditorStore.getState().recordEditorChange('/path/main.tex')
 
-      expect(useEditorStore.getState().refreshVersion).toBe(refreshVersion)
+      expect(useEditorStore.getState().revision).toBe(1)
+      expect(useEditorStore.getState()).not.toHaveProperty('content')
     })
   })
 

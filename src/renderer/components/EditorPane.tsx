@@ -34,6 +34,7 @@ import { configureMonacoLanguages, getMonacoTheme } from '../data/monacoConfig'
 import { generateFigureSnippet } from '../utils/figureSnippet'
 import type { EditorAdapter } from '../editor/EditorAdapter'
 import { MonacoEditorAdapter } from '../editor/MonacoEditorAdapter'
+import { setActiveEditorAdapter } from '../editor/activeEditorAdapter'
 import { runtimePerformance } from '../services/runtimePerformance'
 import { documentRegistry } from '../models/documentRegistry'
 
@@ -50,12 +51,7 @@ type MonacoInstance = typeof import('monaco-editor')
 
 function EditorPane() {
   const filePath = useEditorStore((s) => s.filePath)
-  // Programmatic replacements (format/reload) need one controlled Monaco refresh.
-  // Normal editor input never changes this value and does not re-render this component.
-  useEditorStore((s) => s.refreshVersion)
-  const updateActiveDocument = useEditorStore((s) => s.updateActiveDocument)
   const setCursorPosition = useEditorStore((s) => s.setCursorPosition)
-  const setEditorInstance = useEditorStore((s) => s.setEditorInstance)
   const projectRoot = useProjectStore((s) => s.projectRoot)
   const settings = useSettingsStore((s) => s.settings)
   const cachedAiContext = useAiContextStore((s) => (filePath ? s.entries[filePath] : null))
@@ -74,6 +70,7 @@ function EditorPane() {
   const selectionMouseUpDisposableRef = useRef<{ dispose(): void } | null>(null)
   const selectionScrollDisposableRef = useRef<{ dispose(): void } | null>(null)
   const selectionBlurDisposableRef = useRef<{ dispose(): void } | null>(null)
+  const documentChangeDisposableRef = useRef<{ dispose(): void } | null>(null)
   const completionDisposablesRef = useRef<{ dispose(): void }[]>([])
   const aiEnabledKeyRef = useRef<{ set(value: boolean): void } | null>(null)
   const mouseSelectionStartedRef = useRef(false)
@@ -85,7 +82,10 @@ function EditorPane() {
     monacoRef
   })
   const registerCompletionProviders = useCompletion(runSpellCheck)
-  const content = filePath ? (documentRegistry.snapshot(filePath)?.text ?? '') : ''
+  const initialContent = useMemo(
+    () => (filePath ? (documentRegistry.snapshot(filePath)?.text ?? '') : ''),
+    [filePath]
+  )
   const { refreshOutline } = useDocumentSymbols()
   const refreshEditorDiagnostics = useEditorDiagnostics(editorAdapterRef)
   usePendingActions(editorAdapterRef)
@@ -112,7 +112,6 @@ function EditorPane() {
   const [isNarrow, setIsNarrow] = useState(false)
   const editorContainerRef = useRef<HTMLDivElement | null>(null)
   const prevMathRangeRef = useRef<string | null>(null)
-  const aiContextStatus = getAiContextStatus(filePath, content)
   // Force word-wrap when the editor pane is too narrow (e.g. terminal pane open),
   // even if the user setting is off, so long LaTeX lines don't get clipped.
   const NARROW_WIDTH_PX = 600
@@ -129,6 +128,15 @@ function EditorPane() {
     handleSelectHistoryItem,
     closeHistory
   } = useHistoryPanel()
+  const materializedUiContent =
+    (historyMode || selectionAiToolbarSelection) && filePath
+      ? (documentRegistry.snapshot(filePath)?.text ?? '')
+      : ''
+  const aiContextStatus = selectionAiToolbarSelection
+    ? getAiContextStatus(filePath, materializedUiContent)
+    : 'missing'
+  const scheduleContentTasksRef = useRef(scheduleContentTasks)
+  scheduleContentTasksRef.current = scheduleContentTasks
 
   // Table editor hook
   const { tableModal, setTableModal, registerTableEditor, disposeTableEditor } = useTableEditor()
@@ -204,11 +212,19 @@ function EditorPane() {
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor
     editorAdapterRef.current?.dispose()
-    editorAdapterRef.current = new MonacoEditorAdapter(editor, monaco, filePath)
+    const editorAdapter = new MonacoEditorAdapter(editor, monaco, filePath)
+    editorAdapterRef.current = editorAdapter
+    setActiveEditorAdapter(editorAdapter)
+    const buffer = editorAdapter.getDocumentBuffer()
+    if (filePath && buffer) documentRegistry.bindBuffer(filePath, buffer)
+    documentChangeDisposableRef.current?.dispose()
+    documentChangeDisposableRef.current = editorAdapter.onDidChangeDocument((event) => {
+      if (!event.documentId) return
+      useEditorStore.getState().recordEditorChange(event.documentId)
+      runtimePerformance.recordDocumentChange()
+      scheduleContentTasksRef.current()
+    })
     runtimePerformance.recordEditorInteractive()
-    // Transitional boundary: PDF scroll sync still consumes raw Monaco from
-    // the store. New document operations use editorAdapterRef instead.
-    setEditorInstance(editor)
     aiEnabledKeyRef.current = editor.createContextKey('textex.aiEnabled', aiEnabled)
     monacoRef.current = monaco
     refreshEditorDiagnostics()
@@ -291,7 +307,11 @@ function EditorPane() {
   }
 
   useEffect(() => {
-    editorAdapterRef.current?.setDocumentId(filePath)
+    const editorAdapter = editorAdapterRef.current
+    if (!editorAdapter) return
+    editorAdapter.setDocumentId(filePath)
+    const buffer = editorAdapter.getDocumentBuffer()
+    if (filePath && buffer) documentRegistry.bindBuffer(filePath, buffer)
   }, [filePath])
 
   // Keep the aiEnabled context key in sync with settings
@@ -344,29 +364,19 @@ function EditorPane() {
       selectionMouseUpDisposableRef.current?.dispose()
       selectionScrollDisposableRef.current?.dispose()
       selectionBlurDisposableRef.current?.dispose()
+      documentChangeDisposableRef.current?.dispose()
       for (const d of completionDisposables.current) d.dispose()
       disposeTableEditor()
       stopLspClient()
+      setActiveEditorAdapter(null)
       editorAdapterRef.current?.dispose()
       editorAdapterRef.current = null
-      setEditorInstance(null)
       if (window.vimMode) {
         window.vimMode.dispose()
         window.vimMode = null
       }
     }
-  }, [disposeTableEditor, setEditorInstance])
-
-  const handleChange = useCallback(
-    (value: string | undefined): void => {
-      if (value !== undefined) {
-        updateActiveDocument(value)
-        runtimePerformance.recordDocumentChange()
-        scheduleContentTasks()
-      }
-    },
-    [scheduleContentTasks, updateActiveDocument]
-  )
+  }, [disposeTableEditor])
 
   return (
     <>
@@ -439,7 +449,7 @@ function EditorPane() {
               language="latex"
               theme={getMonacoTheme(resolveTheme(theme))}
               original={snapshotContent}
-              modified={content}
+              modified={materializedUiContent}
               options={{
                 fontSize,
                 readOnly: true,
@@ -452,8 +462,9 @@ function EditorPane() {
               height="100%"
               defaultLanguage="latex"
               theme={getMonacoTheme(resolveTheme(theme))}
-              value={content}
-              onChange={handleChange}
+              path={filePath ?? undefined}
+              defaultValue={initialContent}
+              keepCurrentModel
               beforeMount={handleEditorWillMount}
               onMount={handleEditorDidMount}
               options={{

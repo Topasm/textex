@@ -1,9 +1,13 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useSyncExternalStore } from 'react'
 import { useEditorStore } from '../../store/useEditorStore'
 import { usePdfStore } from '../../store/usePdfStore'
 import { useCompileStore } from '../../store/useCompileStore'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import type { SyncTeXLineMapEntry } from '../../../shared/types'
+import {
+  getActiveEditorAdapter,
+  subscribeActiveEditorAdapter
+} from '../../editor/activeEditorAdapter'
 
 interface PageViewportInfo {
   viewport: { convertToViewportPoint(x: number, y: number): [number, number]; viewBox: number[] }
@@ -77,7 +81,11 @@ export function useScrollSync({
   // Build line map after each compilation
   const pdfRevision = useCompileStore((s) => s.pdfRevision)
   const filePath = useEditorStore((s) => s.filePath)
-  const editorInstance = useEditorStore((s) => s.editorInstance)
+  const editorAdapter = useSyncExternalStore(
+    subscribeActiveEditorAdapter,
+    getActiveEditorAdapter,
+    getActiveEditorAdapter
+  )
   const scrollSyncEnabled = useSettingsStore((s) => s.settings.scrollSyncEnabled)
 
   useEffect(() => {
@@ -103,12 +111,11 @@ export function useScrollSync({
   useEffect(() => {
     if (!scrollSyncEnabled) return
 
-    const editor = editorInstance
-    if (!editor) return
+    if (!editorAdapter) return
 
     let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
-    const disposable = editor.onDidScrollChange(() => {
+    const disposable = editorAdapter.onDidScroll(() => {
       if (scrollSourceRef.current === 'pdf') return
 
       if (debounceTimer) clearTimeout(debounceTimer)
@@ -119,9 +126,9 @@ export function useScrollSync({
         const container = containerRef.current
         if (!container) return
 
-        const ranges = editor.getVisibleRanges()
-        if (!ranges || ranges.length === 0) return
-        const topLine = ranges[0].startLineNumber
+        const visibleRange = editorAdapter.getVisibleLineRange()
+        if (!visibleRange) return
+        const topLine = visibleRange.startLine
 
         const idx = findLineIndex(map, topLine)
         if (idx === -1) return
@@ -156,7 +163,7 @@ export function useScrollSync({
       disposable.dispose()
       if (debounceTimer) clearTimeout(debounceTimer)
     }
-  }, [pdfRevision, containerRef, pageViewportsRef, editorInstance, scrollSyncEnabled])
+  }, [pdfRevision, containerRef, pageViewportsRef, editorAdapter, scrollSyncEnabled])
 
   // PDF → Editor scroll sync
   useEffect(() => {
@@ -175,8 +182,8 @@ export function useScrollSync({
         const map = lineMapRef.current
         if (map.length === 0) return
 
-        const editor = useEditorStore.getState().editorInstance
-        if (!editor) return
+        const activeEditorAdapter = getActiveEditorAdapter()
+        if (!activeEditorAdapter) return
 
         // Find the most visible page
         const containerRect = container.getBoundingClientRect()
@@ -233,8 +240,7 @@ export function useScrollSync({
           scrollSourceRef.current = null
         }, LOCK_MS)
 
-        const topForLine = editor.getTopForLineNumber(entry.line)
-        editor.setScrollTop(topForLine)
+        activeEditorAdapter.scrollToLine(entry.line)
       }, DEBOUNCE_MS)
     }
 

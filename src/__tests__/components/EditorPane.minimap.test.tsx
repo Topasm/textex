@@ -1,9 +1,11 @@
 import { render } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import EditorPane from '../../renderer/components/EditorPane'
+import { useEditorStore } from '../../renderer/store/useEditorStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 
 let capturedOptions: Record<string, unknown> | null = null
+let capturedEditorProps: Record<string, unknown> | null = null
 
 const mockEditor = {
   createContextKey: vi.fn().mockReturnValue({ set: vi.fn() }),
@@ -41,6 +43,7 @@ vi.mock('@monaco-editor/react', async () => {
     onMount?: (editor: object, monaco: object) => void
   }) => {
     const { beforeMount, onMount, options } = props
+    capturedEditorProps = props
     capturedOptions = options ?? null
 
     React.useEffect(() => {
@@ -128,7 +131,9 @@ vi.mock('../../renderer/components/MathPreviewWidget', () => ({
 describe('EditorPane minimap', () => {
   beforeEach(() => {
     capturedOptions = null
+    capturedEditorProps = null
     vi.clearAllMocks()
+    useEditorStore.getState().resetEditor()
     useSettingsStore.setState((state) => ({
       settings: {
         ...state.settings,
@@ -143,5 +148,19 @@ describe('EditorPane minimap', () => {
     expect(capturedOptions).toMatchObject({
       minimap: { enabled: false }
     })
+  })
+
+  it('uses a path-backed uncontrolled Monaco model as the canonical buffer', () => {
+    useEditorStore.getState().openFileInTab('/tmp/paper.tex', 'initial content')
+
+    render(<EditorPane />)
+
+    expect(capturedEditorProps).toMatchObject({
+      path: '/tmp/paper.tex',
+      defaultValue: 'initial content',
+      keepCurrentModel: true
+    })
+    expect(capturedEditorProps).not.toHaveProperty('value')
+    expect(capturedEditorProps).not.toHaveProperty('onChange')
   })
 })

@@ -10,6 +10,7 @@ import type {
   EditorDecoration,
   EditorDiagnostic,
   EditorDisposable,
+  EditorDocumentBuffer,
   EditorDocumentChange,
   EditorPosition,
   EditorRange,
@@ -73,9 +74,6 @@ export class MonacoEditorAdapter implements EditorAdapter {
     this.documentId = documentId
     this.contentDisposable = editor.onDidChangeModelContent((event) => {
       this.engineRevision += 1
-      // Avoid materializing another full-document string on the hot path when
-      // nobody consumes adapter events. Monaco's React wrapper already reads
-      // the value for its onChange callback.
       if (this.listeners.size === 0) return
 
       const changes: readonly EditorTextChange[] = Object.freeze(
@@ -89,7 +87,8 @@ export class MonacoEditorAdapter implements EditorAdapter {
         )
       )
       const adapterEvent: EditorDocumentChange = Object.freeze({
-        snapshot: this.getSnapshot(),
+        documentId: this.documentId,
+        revision: this.engineRevision,
         changes,
         isFlush: event.isFlush
       })
@@ -118,11 +117,22 @@ export class MonacoEditorAdapter implements EditorAdapter {
     return this.engineRevision
   }
 
-  getSnapshot(): EditorSnapshot {
+  materializeSnapshot(): EditorSnapshot {
     return Object.freeze({
       documentId: this.documentId,
       engineRevision: this.engineRevision,
       text: this.getText()
+    })
+  }
+
+  getDocumentBuffer(): EditorDocumentBuffer | null {
+    const model = this.editor.getModel()
+    const documentId = this.documentId
+    if (!model || !documentId) return null
+    return Object.freeze({
+      documentId,
+      getText: () => model.getValue(),
+      replaceText: (text: string) => model.setValue(text)
     })
   }
 

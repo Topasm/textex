@@ -1,7 +1,10 @@
 import { create } from 'zustand'
 import { subscribeWithSelector, persist } from 'zustand/middleware'
-import type { editor as monacoEditor } from 'monaco-editor'
-import type { DocumentChangeSource, DocumentSnapshot } from '../models/documentModel'
+import type {
+  DocumentChangeSource,
+  DocumentRevisionSnapshot,
+  DocumentSnapshot
+} from '../models/documentModel'
 import { documentRegistry } from '../models/documentRegistry'
 
 interface OpenFileData {
@@ -15,8 +18,6 @@ interface EditorState {
   activeFilePath: string | null
   isDirty: boolean
   revision: number
-  /** Increments only when code outside Monaco replaces the active buffer. */
-  refreshVersion: number
   openFiles: Record<string, OpenFileData>
 
   cursorLine: number
@@ -24,13 +25,11 @@ interface EditorState {
   pendingJump: { line: number; column: number; skipFocus?: boolean } | null
   pendingInsertText: string | null
 
-  // Transitional: PDF scroll sync still consumes the raw Monaco editor.
-  editorInstance: monacoEditor.IStandaloneCodeEditor | null
-
   _sessionOpenPaths: string[]
   _sessionActiveFile: string | null
 
   updateActiveDocument: (text: string, source?: DocumentChangeSource) => DocumentSnapshot | null
+  recordEditorChange: (filePath: string) => DocumentRevisionSnapshot | null
   markDocumentSaved: (filePath: string, revision?: number) => boolean
   openFileInTab: (filePath: string, content: string) => void
   closeTab: (filePath: string) => void
@@ -40,7 +39,6 @@ interface EditorState {
   clearPendingJump: () => void
   requestInsertAtCursor: (text: string) => void
   clearPendingInsert: () => void
-  setEditorInstance: (editor: monacoEditor.IStandaloneCodeEditor | null) => void
   reloadFileContent: (filePath: string, newContent: string) => void
   resetEditor: () => void
 }
@@ -62,7 +60,6 @@ const emptyEditorState = {
   activeFilePath: null,
   isDirty: false,
   revision: 0,
-  refreshVersion: 0,
   openFiles: {},
   cursorLine: 1,
   cursorColumn: 1,
@@ -76,25 +73,40 @@ export const useEditorStore = create<EditorState>()(
   persist(
     subscribeWithSelector((set, get) => ({
       ...emptyEditorState,
-      editorInstance: null,
 
-      updateActiveDocument: (text, source = 'editor') => {
+      updateActiveDocument: (text, source = 'programmatic') => {
         const state = get()
         const activeFile = state.activeFilePath
         if (!activeFile) return null
 
-        const before = documentRegistry.snapshot(activeFile)
+        const beforeRevision = documentRegistry.getModel(activeFile)?.revision
         const after = documentRegistry.update(activeFile, text, source)
-        if (!after || after === before) return after
+        if (!after || after.revision === beforeRevision) return after
 
         const isDirty = documentRegistry.getModel(activeFile)?.isDirty ?? false
         const openFiles = withDirtyState(state.openFiles, activeFile, isDirty)
         set({
           revision: after.revision,
           isDirty,
-          openFiles,
-          refreshVersion: source === 'editor' ? state.refreshVersion : state.refreshVersion + 1
+          openFiles
         })
+        return after
+      },
+
+      recordEditorChange: (filePath) => {
+        const model = documentRegistry.getModel(filePath)
+        const beforeRevision = model?.revision
+        const after = documentRegistry.recordEditorChange(filePath)
+        if (!after || after.revision === beforeRevision) return after
+
+        const state = get()
+        const isDirty = model?.isDirty ?? false
+        const openFiles = withDirtyState(state.openFiles, filePath, isDirty)
+        if (state.activeFilePath === filePath) {
+          set({ revision: after.revision, isDirty, openFiles })
+        } else if (openFiles !== state.openFiles) {
+          set({ openFiles })
+        }
         return after
       },
 
@@ -141,7 +153,6 @@ export const useEditorStore = create<EditorState>()(
           activeFilePath: filePath,
           filePath,
           revision: snapshot.revision,
-          refreshVersion: state.refreshVersion + 1,
           isDirty: model.isDirty,
           cursorLine: fileData.cursorLine,
           cursorColumn: fileData.cursorColumn
@@ -167,7 +178,6 @@ export const useEditorStore = create<EditorState>()(
             activeFilePath: null,
             filePath: null,
             revision: 0,
-            refreshVersion: state.refreshVersion + 1,
             isDirty: false,
             cursorLine: 1,
             cursorColumn: 1
@@ -182,7 +192,6 @@ export const useEditorStore = create<EditorState>()(
           activeFilePath: next,
           filePath: next,
           revision: nextModel?.revision ?? 0,
-          refreshVersion: state.refreshVersion + 1,
           isDirty: nextModel?.isDirty ?? false,
           cursorLine: nextData.cursorLine,
           cursorColumn: nextData.cursorColumn
@@ -212,7 +221,6 @@ export const useEditorStore = create<EditorState>()(
           activeFilePath: filePath,
           filePath,
           revision: model.revision,
-          refreshVersion: state.refreshVersion + 1,
           isDirty: model.isDirty,
           cursorLine: target.cursorLine,
           cursorColumn: target.cursorColumn
@@ -225,8 +233,6 @@ export const useEditorStore = create<EditorState>()(
       clearPendingJump: () => set({ pendingJump: null }),
       requestInsertAtCursor: (text) => set({ pendingInsertText: text }),
       clearPendingInsert: () => set({ pendingInsertText: null }),
-      setEditorInstance: (editorInstance) => set({ editorInstance }),
-
       reloadFileContent: (filePath, newContent) => {
         const model = documentRegistry.getModel(filePath)
         if (!model) return
@@ -243,7 +249,6 @@ export const useEditorStore = create<EditorState>()(
           set({
             openFiles,
             revision: snapshot.revision,
-            refreshVersion: state.refreshVersion + 1,
             isDirty: false
           })
         } else if (openFiles !== state.openFiles) {
@@ -253,7 +258,7 @@ export const useEditorStore = create<EditorState>()(
 
       resetEditor: () => {
         documentRegistry.clear()
-        set({ ...emptyEditorState, editorInstance: null })
+        set({ ...emptyEditorState })
       }
     })),
     {

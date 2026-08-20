@@ -1,18 +1,19 @@
 /**
- * Canonical, editor-engine-independent state for one open document.
+ * Revision/save metadata for one open document.
  *
- * The editor adapter supplies text changes, while React/Zustand should only
- * mirror lightweight metadata derived from this model. Long-running work must
- * capture a snapshot and validate it before publishing a result.
+ * Text is owned by the bound editor buffer. A full string is materialized only
+ * when a caller explicitly asks for a DocumentSnapshot (save, compile, full
+ * analysis, and similar cold paths).
  */
 
 export type DocumentChangeSource = 'editor' | 'format' | 'external' | 'programmatic'
 
-export interface DocumentSnapshot {
+export interface DocumentRevisionSnapshot {
   readonly documentId: string
-  /** Monotonic content revision for this model instance. */
   readonly revision: number
-  /** Immutable string reference; taking a snapshot does not copy its bytes. */
+}
+
+export interface DocumentSnapshot extends DocumentRevisionSnapshot {
   readonly text: string
 }
 
@@ -20,33 +21,25 @@ export type DocumentModelEvent =
   | {
       readonly kind: 'content'
       readonly source: DocumentChangeSource
-      readonly before: DocumentSnapshot
-      readonly after: DocumentSnapshot
+      readonly before: DocumentRevisionSnapshot
+      readonly after: DocumentRevisionSnapshot
     }
   | {
       readonly kind: 'save-point'
-      readonly snapshot: DocumentSnapshot
+      readonly snapshot: DocumentRevisionSnapshot
       readonly previousSavedRevision: number
       readonly savedRevision: number
     }
   | {
       readonly kind: 'reload'
-      readonly before: DocumentSnapshot
-      readonly after: DocumentSnapshot
+      readonly before: DocumentRevisionSnapshot
+      readonly after: DocumentRevisionSnapshot
     }
 
 export type DocumentModelListener = (event: DocumentModelEvent) => void
 
-export type DiskReloadResult =
-  | { readonly status: 'applied'; readonly snapshot: DocumentSnapshot }
-  | { readonly status: 'unchanged'; readonly snapshot: DocumentSnapshot }
-  | { readonly status: 'dirty'; readonly snapshot: DocumentSnapshot }
-  | { readonly status: 'stale'; readonly snapshot: DocumentSnapshot }
-
 function nextRevision(current: number): number {
-  if (current >= Number.MAX_SAFE_INTEGER) {
-    throw new Error('Document revision space exhausted')
-  }
+  if (current >= Number.MAX_SAFE_INTEGER) throw new Error('Document revision space exhausted')
   return current + 1
 }
 
@@ -57,17 +50,18 @@ function freezeEvent<T extends DocumentModelEvent>(event: T): T {
 export class DocumentModel {
   readonly #documentId: string
   readonly #listeners = new Set<DocumentModelListener>()
-  readonly #ownedSnapshots = new WeakSet<DocumentSnapshot>()
+  readonly #ownedRevisions = new WeakSet<DocumentRevisionSnapshot>()
 
-  #text: string
+  #materializeText: () => string
   #revision = 0
   #savedRevision = 0
-  #cachedSnapshot: DocumentSnapshot | null = null
+  #cachedRevisionSnapshot: DocumentRevisionSnapshot | null = null
+  #cachedMaterializedSnapshot: DocumentSnapshot | null = null
 
-  constructor(documentId: string, text: string) {
+  constructor(documentId: string, materializeText: () => string) {
     if (!documentId) throw new Error('Document id must not be empty')
     this.#documentId = documentId
-    this.#text = text
+    this.#materializeText = materializeText
   }
 
   get documentId(): string {
@@ -86,41 +80,54 @@ export class DocumentModel {
     return this.#revision !== this.#savedRevision
   }
 
-  /**
-   * Returns an immutable O(1) snapshot. JavaScript strings are immutable, so
-   * the text is shared until a later edit supplies a different string.
-   */
-  snapshot(): DocumentSnapshot {
-    if (!this.#cachedSnapshot) {
-      const snapshot: DocumentSnapshot = Object.freeze({
-        documentId: this.#documentId,
-        revision: this.#revision,
-        text: this.#text
-      })
-      this.#ownedSnapshots.add(snapshot)
-      this.#cachedSnapshot = snapshot
+  /** Returns an O(1), text-free checkpoint for stale-result validation. */
+  revisionSnapshot(): DocumentRevisionSnapshot {
+    if (!this.#cachedRevisionSnapshot) {
+      const snapshot = Object.freeze({ documentId: this.#documentId, revision: this.#revision })
+      this.#ownedRevisions.add(snapshot)
+      this.#cachedRevisionSnapshot = snapshot
     }
-    return this.#cachedSnapshot
+    return this.#cachedRevisionSnapshot
   }
 
-  /** Applies editor/programmatic text without copying it into UI state. */
-  updateText(text: string, source: DocumentChangeSource = 'editor'): DocumentSnapshot {
-    if (text === this.#text) return this.snapshot()
+  /** Materializes the current editor buffer for a cold-path consumer. */
+  snapshot(): DocumentSnapshot {
+    if (!this.#cachedMaterializedSnapshot) {
+      const revision = this.revisionSnapshot()
+      const snapshot = Object.freeze({ ...revision, text: this.#materializeText() })
+      this.#ownedRevisions.add(snapshot)
+      this.#cachedMaterializedSnapshot = snapshot
+    }
+    return this.#cachedMaterializedSnapshot
+  }
 
-    const before = this.snapshot()
-    this.#text = text
+  /** Rebinds materialization after the bootstrap buffer moves to Monaco. */
+  bindMaterializer(materializeText: () => string): void {
+    this.#materializeText = materializeText
+    this.#cachedMaterializedSnapshot = null
+  }
+
+  /** Records an already-applied incremental or programmatic buffer change. */
+  recordChange(source: DocumentChangeSource = 'editor'): DocumentRevisionSnapshot {
+    const before = this.revisionSnapshot()
     this.#revision = nextRevision(this.#revision)
-    this.#invalidateSnapshot()
-    const after = this.snapshot()
+    this.#invalidateSnapshots()
+    const after = this.revisionSnapshot()
     this.#emit(freezeEvent({ kind: 'content', source, before, after }))
     return after
   }
 
-  /**
-   * Marks a revision clean only if it is still current. A user can keep typing
-   * while I/O is in flight; completion of that older save must not clear the
-   * dirty state of newer edits.
-   */
+  /** Records a disk replacement and establishes the new revision as clean. */
+  recordReload(): DocumentRevisionSnapshot {
+    const before = this.revisionSnapshot()
+    this.#revision = nextRevision(this.#revision)
+    this.#savedRevision = this.#revision
+    this.#invalidateSnapshots()
+    const after = this.revisionSnapshot()
+    this.#emit(freezeEvent({ kind: 'reload', before, after }))
+    return after
+  }
+
   markSaved(revision: number = this.#revision): boolean {
     if (revision !== this.#revision) return false
     if (revision === this.#savedRevision) return true
@@ -130,7 +137,7 @@ export class DocumentModel {
     this.#emit(
       freezeEvent({
         kind: 'save-point',
-        snapshot: this.snapshot(),
+        snapshot: this.revisionSnapshot(),
         previousSavedRevision,
         savedRevision: revision
       })
@@ -138,55 +145,13 @@ export class DocumentModel {
     return true
   }
 
-  /**
-   * Applies a watcher read only when the document is still the clean revision
-   * observed before that asynchronous read began.
-   */
-  reloadFromDisk(text: string, observedSnapshot: DocumentSnapshot): DiskReloadResult {
-    const current = this.snapshot()
-    if (!this.isCurrent(observedSnapshot)) return { status: 'stale', snapshot: current }
-    if (this.isDirty) return { status: 'dirty', snapshot: current }
-
-    if (text === current.text) {
-      this.markSaved(current.revision)
-      return { status: 'unchanged', snapshot: this.snapshot() }
-    }
-
-    const before = current
-    this.#text = text
-    this.#revision = nextRevision(this.#revision)
-    this.#savedRevision = this.#revision
-    this.#invalidateSnapshot()
-    const after = this.snapshot()
-    this.#emit(freezeEvent({ kind: 'reload', before, after }))
-    return { status: 'applied', snapshot: after }
-  }
-
-  /** Replaces the buffer with an explicitly accepted disk version and marks it clean. */
-  replaceFromDisk(text: string): DocumentSnapshot {
-    const before = this.snapshot()
-    if (text === before.text) {
-      this.#savedRevision = this.#revision
-      return before
-    }
-
-    this.#text = text
-    this.#revision = nextRevision(this.#revision)
-    this.#savedRevision = this.#revision
-    this.#invalidateSnapshot()
-    const after = this.snapshot()
-    this.#emit(freezeEvent({ kind: 'reload', before, after }))
-    return after
-  }
-
   /** True only for the current revision of this exact model incarnation. */
-  isCurrent(snapshot: DocumentSnapshot): boolean {
-    return this.#owns(snapshot) && snapshot.revision === this.#revision
+  isCurrent(snapshot: DocumentRevisionSnapshot): boolean {
+    return this.#ownedRevisions.has(snapshot) && snapshot.revision === this.#revision
   }
 
-  /** Publishes an asynchronous result only if its input snapshot is current. */
   commitIfCurrent<T>(
-    snapshot: DocumentSnapshot,
+    snapshot: DocumentRevisionSnapshot,
     commit: (current: DocumentSnapshot) => T
   ): T | null {
     if (!this.isCurrent(snapshot)) return null
@@ -198,12 +163,9 @@ export class DocumentModel {
     return () => this.#listeners.delete(listener)
   }
 
-  #owns(snapshot: DocumentSnapshot): boolean {
-    return this.#ownedSnapshots.has(snapshot)
-  }
-
-  #invalidateSnapshot(): void {
-    this.#cachedSnapshot = null
+  #invalidateSnapshots(): void {
+    this.#cachedRevisionSnapshot = null
+    this.#cachedMaterializedSnapshot = null
   }
 
   #emit(event: DocumentModelEvent): void {

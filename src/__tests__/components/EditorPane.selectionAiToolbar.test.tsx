@@ -186,6 +186,7 @@ vi.mock('../../renderer/components/MathPreviewWidget', () => ({
 describe('EditorPane selection AI toolbar', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockEditor.getModel = vi.fn(() => null)
     currentSelection = null
     for (const listeners of Object.values(editorListeners)) {
       listeners.length = 0
@@ -298,7 +299,12 @@ describe('EditorPane selection AI toolbar', () => {
   it('submits a custom command from the toolbar input', async () => {
     const user = userEvent.setup()
     window.api.aiProcessCustom = vi.fn().mockResolvedValue('rewritten text')
+    let modelText = '\\section{Intro}\nselected text in context'
     mockEditor.getModel = vi.fn(() => ({
+      getValue: vi.fn(() => modelText),
+      setValue: vi.fn((text: string) => {
+        modelText = text
+      }),
       getValueInRange: vi.fn(() => 'selected text')
     }))
 
