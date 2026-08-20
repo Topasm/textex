@@ -103,6 +103,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Rebuild legacy Electron native modules
+        run: npm run postinstall:electron
+
       - name: Download Tectonic binary
         shell: bash
         run: |

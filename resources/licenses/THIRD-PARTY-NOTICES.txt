@@ -4,11 +4,31 @@ This file covers third-party packages and resources bundled with TextEx.
 It is generated from package metadata and bundled notice files.
 
 Additional bundled notice files:
+- TECTONIC-NOTICE.txt
+- TECTONIC-MIT.txt
 - TEXLAB-NOTICE.txt
 - TEXLAB-GPL-3.0.txt
 - ELECTRON-LICENSES.chromium.html
+- RUST-THIRD-PARTY-NOTICES.txt
 
 Pandoc is not bundled by TextEx. If a user installs Pandoc separately, that copy is governed by its own license terms.
+
+================================================================================
+Bundled Notice: Tectonic
+--------------------------------------------------------------------------------
+Tectonic — A modernized, self-contained TeX/LaTeX engine
+
+TextEx bundles Tectonic 0.17.0 as a separate compiler executable.
+
+License: MIT
+Source: https://github.com/tectonic-typesetting/tectonic
+Release: https://github.com/tectonic-typesetting/tectonic/releases/tag/tectonic%400.17.0
+
+The upstream license notes that elements of the system from which Tectonic is
+derived use a wide variety of open-source licenses. The release and its source
+tree remain the authoritative source for those component notices.
+
+The complete upstream Tectonic license is distributed in TECTONIC-MIT.txt.
 
 ================================================================================
 Bundled Notice: TexLab
@@ -95,6 +115,14 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+================================================================================
+Package: @tauri-apps/api
+Version: 2.11.1
+License: Apache-2.0 OR MIT
+Source: https://github.com/tauri-apps/tauri#readme
+--------------------------------------------------------------------------------
+No license file was found in the installed package contents.
 
 ================================================================================
 Package: @xterm/addon-fit
@@ -868,23 +896,23 @@ Source: git+https://github.com/arnog/mathlive.git
 File: LICENSE.txt
 
 Copyright (c) 2017 - present Arno Gourdol. All rights reserved.
- 
+
 Permission is hereby granted, free of charge, to any person obtaining a
-copy of this software and associated documentation files (the "Software"), 
-to deal in the Software without restriction, including without limitation 
-the rights to use, copy, modify, merge, publish, distribute, sublicense, 
-and/or sell copies of the Software, and to permit persons to whom the 
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
 Software is furnished to do so, subject to the following conditions:
- 
+
 The above copyright notice and this permission notice shall be included in
 all copies or substantial portions of the Software.
- 
+
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
-FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER 
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 
 ================================================================================
@@ -1539,6 +1567,7 @@ SOFTWARE.
 ================================================================================
 Reference
 --------------------------------------------------------------------------------
+Tectonic MIT full license text is bundled separately in TECTONIC-MIT.txt.
 TexLab GPL-3.0 full license text is bundled separately in TEXLAB-GPL-3.0.txt.
 Electron Chromium and other embedded runtime notices are bundled separately in ELECTRON-LICENSES.chromium.html.
-
+Tauri/Rust dependency notices are bundled in RUST-THIRD-PARTY-NOTICES.txt.

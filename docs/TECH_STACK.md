@@ -65,6 +65,9 @@
 - Identical editing experience to VS Code.
 - Built-in language service infrastructure; now used with TexLab LSP integration.
 - Rich API for decorations, markers, and diagnostics.
+- Monaco remains the TextEx 2.0 migration engine. CodeMirror 6 is considered only after the
+  runtime-neutral adapter and the reproducible A/B gate in
+  [EDITOR_ARCHITECTURE.md](EDITOR_ARCHITECTURE.md) are complete.
 
 ### Zustand over Redux / Context
 - < 1 kB, zero boilerplate.

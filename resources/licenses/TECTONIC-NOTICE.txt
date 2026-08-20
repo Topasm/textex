@@ -1,0 +1,13 @@
+Tectonic — A modernized, self-contained TeX/LaTeX engine
+
+TextEx bundles Tectonic 0.17.0 as a separate compiler executable.
+
+License: MIT
+Source: https://github.com/tectonic-typesetting/tectonic
+Release: https://github.com/tectonic-typesetting/tectonic/releases/tag/tectonic%400.17.0
+
+The upstream license notes that elements of the system from which Tectonic is
+derived use a wide variety of open-source licenses. The release and its source
+tree remain the authoritative source for those component notices.
+
+The complete upstream Tectonic license is distributed in TECTONIC-MIT.txt.

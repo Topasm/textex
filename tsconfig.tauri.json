@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.web.json",
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": true,
+    "rootDir": "./src"
+  },
+  "include": [
+    "src/renderer/platform/**/*.ts",
+    "src/renderer/types/api.d.ts",
+    "src/shared/types.ts",
+    "src/shared/templates.ts",
+    "src/shared/tauriCommands.ts"
+  ]
+}

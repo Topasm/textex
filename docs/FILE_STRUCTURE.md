@@ -8,6 +8,7 @@
 |   +-- CLI.md                     # CLI usage reference
 |   +-- COMPILER_SERVICE.md        # Tectonic integration details
 |   +-- DEVELOPMENT.md             # Setup, build, and dev commands
+|   +-- EDITOR_ARCHITECTURE.md     # TextEx 2.0 editor ownership, revisions, and A/B gate
 |   +-- FILE_STRUCTURE.md          # This file
 |   +-- HANDOFF.md                 # Maintainer access and project handoff guide
 |   +-- IPC_SPEC.md                # IPC channels, payloads, type definitions
@@ -16,6 +17,7 @@
 |   +-- PACKAGING.md               # Build & distribution config
 |   +-- RELEASE_CHECKLIST.md       # Blocking release safety and recovery steps
 |   +-- SETTINGS.md                # Settings schema & formatting
+|   +-- TAURI_MIGRATION.md         # Default Tauri migration status and legacy guardrails
 |   +-- TECH_STACK.md              # Technology choices & rationale
 |   +-- TODO.md                    # Implementation status & remaining tasks
 |   +-- UI_SPEC.md                 # Component layout & behavior
@@ -42,6 +44,11 @@
 |   |   +-- TEXLAB-NOTICE.txt     # Attribution & aggregate notice
 |   +-- dictionaries/             # Spell check dictionaries
 |   +-- data/packages/            # LaTeX package metadata (macros, envs)
+|
++-- scripts/
+|   +-- measure-renderer-bundle.js # Dependency-free renderer size baseline
+|   +-- setup-tauri-sidecars.js    # Verified Tectonic download/staging/preflight
+|   +-- tauri-linux-container.sh   # Podman wrapper for WebKitGTK 4.1 Linux builds
 |
 +-- src/
 |   +-- main/                      # Electron Main process
@@ -172,6 +179,14 @@
 |   |   |       +-- renameProvider.ts       # Symbol rename
 |   |   |       +-- semanticTokensProvider.ts # Semantic highlighting
 |   |   |       +-- symbolProvider.ts       # Document symbols
+|   |   +-- editor/                # Runtime-neutral editor engine boundary
+|   |   |   +-- EditorAdapter.ts   # Engine-neutral positions, edits, diagnostics, snapshots
+|   |   |   +-- MonacoEditorAdapter.ts # Mounted active-document Monaco implementation
+|   |   +-- models/
+|   |   |   +-- documentModel.ts   # Revision, immutable snapshot, save/stale-result guards
+|   |   +-- platform/              # Runtime-neutral desktop API selection
+|   |   |   +-- desktopApi.ts      # Select Electron preload or Tauri adapter
+|   |   |   +-- tauriApi.ts        # Transitional Tauri invoke adapter
 |   |   +-- store/                 # Zustand state management (6 split stores)
 |   |   |   +-- useProjectStore.ts # File paths, project root, open files, tabs, dirty flags
 |   |   |   +-- useEditorStore.ts  # Cursor, content, decorations, pending actions
@@ -199,7 +214,7 @@
 |   |   |   |   +-- useContentChangeCoordinator.ts # Content change orchestration
 |   |   |   |   +-- useDocumentSymbols.ts    # LSP symbols request
 |   |   |   |   +-- useEditorCommands.ts     # Editor command palette
-|   |   |   |   +-- useEditorDiagnostics.ts  # Monaco marker integration
+|   |   |   |   +-- useEditorDiagnostics.ts  # Engine-neutral diagnostic integration
 |   |   |   |   +-- useHistoryPanel.ts       # History panel integration
 |   |   |   |   +-- useMathPreview.ts        # Live math preview trigger
 |   |   |   |   +-- usePackageDetection.ts   # LaTeX package extraction
@@ -227,6 +242,7 @@
 |   |   |   +-- environments.ts    # LaTeX environments list
 |   |   |   +-- templates.ts       # Document templates
 |   |   |   +-- monacoConfig.ts    # Monaco editor configuration
+|   |   |   +-- monacoSetup.ts     # Lazy editor-only Monaco setup and worker
 |   |   +-- i18n/                  # Internationalization
 |   |   |   +-- index.ts           # i18next setup
 |   |   |   +-- locales/
@@ -247,7 +263,7 @@
 |   |   |   +-- imageExtensions.ts # Supported image file extensions
 |   |   |   +-- openProject.ts     # Project opening logic
 |   |   +-- types/
-|   |   |   +-- api.d.ts           # Type declarations for window.api (ElectronAPI)
+|   |   |   +-- api.d.ts           # Runtime-neutral window.api (DesktopApi) declarations
 |   |   |   +-- mathlive.d.ts      # MathLive type declarations
 |   |   |   +-- vite-env.d.ts      # Vite environment types
 |   |   +-- styles/
@@ -269,7 +285,7 @@
 |   +-- mcp/                       # MCP server
 |   |   +-- server.ts              # stdio MCP server, tool definitions
 |   |
-|   +-- __tests__/                 # Unit tests (Vitest) — 133 tests, 9 files
+|   +-- __tests__/                 # Unit and integration tests (Vitest)
 |   |   +-- setup.ts               # Test setup (mocks, globals)
 |   |   +-- shared/
 |   |   |   +-- magicComments.test.ts      # Magic comment parsing tests
@@ -284,7 +300,12 @@
 |   |   +-- i18n/
 |   |   |   +-- translations.test.ts      # Translation completeness tests
 |   |   +-- main/
-|   |       +-- CompilerSafeGuard.test.ts  # Compiler safety tests
+|   |   |   +-- CompilerSafeGuard.test.ts  # Compiler safety tests
+|   |   +-- renderer/
+|   |       +-- documentModel.test.ts # Revision, save-race, stale-result tests
+|   |       +-- editorAdapterHooks.test.tsx # Adapter-connected hook tests
+|   |       +-- monacoEditorAdapter.test.ts # Monaco adapter conformance tests
+|   |       +-- tauriApi.test.ts   # Tauri DesktopApi adapter mapping tests
 |   |
 |   +-- shared/                    # Shared logic, no Electron deps
 |       +-- types.ts               # Shared type definitions
@@ -298,18 +319,46 @@
 |       +-- magicComments.ts       # %! TeX root magic comment parser
 |       +-- structure.ts           # Document structure analysis
 |       +-- templates.ts           # Template management
+|       +-- tauriCommands.ts       # Transitional Rust command name constants
+|
++-- src-tauri/                     # Default Tauri 2 Rust backend
+|   +-- Cargo.toml                 # Rust dependencies and size-optimized profiles
+|   +-- build.rs                   # App command manifest for ACL generation
+|   +-- tauri.conf.json            # Vite, window, CSP, capability, bundle config
+|   +-- binaries/
+|   |   +-- README.md              # Generated sidecar policy and setup commands
+|   |   +-- manifest.json          # Tectonic 0.17.0 asset URLs, sizes, and SHA-256
+|   +-- capabilities/
+|   |   +-- main-window.json       # Four filesystem command permissions only
+|   +-- src/
+|       +-- main.rs                # Desktop binary entry point
+|       +-- lib.rs                 # Plugin/state/command registration
+|       +-- error.rs               # Serializable command errors
+|       +-- models.rs              # Command response DTOs
+|       +-- state.rs               # Canonical open-project root state
+|       +-- commands/
+|       |   +-- mod.rs
+|       |   +-- filesystem.rs      # Thin Tauri filesystem commands
+|       +-- services/
+|           +-- mod.rs
+|           +-- filesystem.rs      # Path validation and async file operations
 |
 +-- out/                           # Build output (gitignored)
 |   +-- main/index.js              # Compiled main process
 |   +-- preload/index.js           # Compiled preload script
 |   +-- renderer/                  # Compiled React app + assets
+|   +-- tauri-renderer/            # Standalone renderer assets used by Tauri
 |
++-- vite.config.ts                 # Standalone Vite config for Tauri renderer
++-- tools/
+|   +-- tauri-linux.Containerfile  # Reproducible Linux Tauri build dependencies
 +-- electron.vite.config.ts        # electron-vite config (main, preload, renderer)
 +-- electron-builder.yml           # Packaging config (extraResources, targets)
 +-- package.json
 +-- tsconfig.json                  # References tsconfig.node.json + tsconfig.web.json
 +-- tsconfig.node.json             # Main + preload (Node target, ESNext)
 +-- tsconfig.web.json              # Renderer (DOM + JSX, ESNext)
++-- tsconfig.tauri.json            # Transitional Tauri adapter type-check target
 +-- tsconfig.cli.json              # CLI build config
 +-- tsconfig.mcp.json              # MCP build config
 +-- CLAUDE.md                      # Claude Code guidance
@@ -342,8 +391,19 @@
 - **`src/preload/`** -- Runs in a special context with access to both `ipcRenderer`
   and a limited DOM environment. Must not import React or renderer code.
 
-- **`src/renderer/`** -- Standard Vite + React app. Cannot access Node.js APIs
-  directly; must go through `window.api` (defined by the preload script).
+- **`src/renderer/`** -- Shared Vite + React app. Cannot access Node.js or native
+  APIs directly; it must go through the runtime-neutral `window.api` contract.
+  Electron provides it through preload and Tauri installs an invoke adapter before
+  React mounts.
+
+- **`src/renderer/platform/`** -- Runtime selection and the transitional Tauri
+  implementation of `DesktopApi`. Unsupported Tauri methods fail explicitly; do
+  not add direct Tauri imports throughout renderer components.
+
+- **`src-tauri/`** -- Default Rust backend kept alongside legacy Electron during
+  migration. Commands stay thin and delegate to `services/`. The current capability
+  exposes only project folder selection, directory listing, file reading, and file
+  saving. See `TAURI_MIGRATION.md` before extending it.
 
 - **`store/`** -- Six split Zustand stores (project, editor, compile, PDF, settings, UI)
   with a `selectors.ts` for cross-store derived state. Prefer fine-grained selectors
@@ -369,8 +429,13 @@
   `@tailwindcss/postcss` package with breaking config changes. Plain CSS with
   VS Code dark theme colors is used instead. All styling is in `index.css`.
 
-- **No `vite.config.ts`** -- Replaced by `electron.vite.config.ts` which handles
-  all three build targets (main, preload, renderer) in one config.
+- **Two renderer build paths** -- `vite.config.ts` builds the default Tauri renderer
+  into `out/tauri-renderer/`. `electron.vite.config.ts` continues to build the legacy
+  Electron main/preload/renderer targets into `out/` without colliding with the Tauri
+  output.
 
 - **`tsconfig.web.json`** added -- Separate TypeScript config for the renderer
   (with DOM lib and JSX support), referenced from the root `tsconfig.json`.
+
+- **`tsconfig.tauri.json`** added -- Narrow type-check target for the Tauri
+  `DesktopApi` adapter while Electron and Tauri coexist.

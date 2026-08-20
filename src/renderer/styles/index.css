@@ -531,6 +531,20 @@ body,
   padding-left: 88px;
 }
 
+/* M0 keeps Tauri's native frame until custom window controls are migrated. */
+[data-desktop-runtime='tauri'] .toolbar {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+
+[data-desktop-runtime='tauri'][data-platform='win32'] .toolbar {
+  padding-right: 10px;
+}
+
+[data-desktop-runtime='tauri'][data-platform='darwin'] .toolbar {
+  padding-left: 10px;
+}
+
 /* All interactive elements inside the toolbar must opt out of the drag region */
 .toolbar button,
 .toolbar input,

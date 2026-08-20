@@ -4,10 +4,29 @@ Use this checklist for dependency updates, packaging changes, version bumps,
 manual publication, and tagged releases. These are blocking checks: do not
 publish first and repair the release afterward.
 
+## Runtime Matrix During Migration
+
+The unqualified local commands now select Tauri, while the current GitHub
+public-release workflow still packages Electron. Keep the two artifact families
+separate until Tauri reaches feature, updater, signing, and packaging parity.
+
+| Purpose | Tauri default | Legacy Electron |
+| --- | --- | --- |
+| Develop | `npm run dev` | `npm run dev:electron` |
+| Build | `npm run build` | `npm run build:electron` |
+| Preview | `npm run preview` | `npm run preview:electron` |
+| Package | `npm run package:*` | `npm run package:electron:*` |
+
+Tauri packages are migration artifacts and must not be attached to the current
+Electron GitHub Release or mixed with `latest*.yml` and Electron blockmaps. The
+Electron-specific checks below remain blocking for the public release workflow.
+
 ## Release Triggers
 
 The `Build & Package` workflow runs for pushes to `main`, version tags matching
-`v*`, and manual dispatches.
+`v*`, and manual dispatches. During migration it invokes `electron-vite` and
+`electron-builder` directly, so changing the unqualified npm scripts to Tauri
+does not change the artifact published by this workflow.
 
 - A normal `main` push validates all platforms but skips the `release` job.
 - A `v*` tag publishes a GitHub Release after all build jobs pass.
@@ -15,6 +34,11 @@ The `Build & Package` workflow runs for pushes to `main`, version tags matching
   publish. Leave both disabled for validation-only runs.
 - `strategy.fail-fast` must remain `false` so one platform failure does not hide
   results from the other platforms.
+
+The separate `Tauri Migration CI` workflow runs for `tauri-migration` and
+`main` pushes, pull requests targeting `main`, and manual dispatches. It has no
+tag trigger, publish input, or release job. Its 14-day artifacts are validation
+outputs only and must not be attached to the Electron release.
 
 ## 1. Start From a Reproducible Tree
 
@@ -24,7 +48,13 @@ Confirm the intended branch and inspect all changes before staging anything:
 git status --short --branch
 git diff --check
 npm ci
+npm run postinstall:electron
 ```
+
+`postinstall:electron` is only required for legacy Electron development and
+release validation. Tauri is the default runtime and does not require Electron
+native-module rebuilding after every install. The legacy `Build & Package`
+matrix must run it immediately after `npm ci` on Linux, macOS, and Windows.
 
 Do not replace `npm ci` with `npm install` during verification. `npm install`
 may rewrite the lockfile and conceal whether the committed dependency graph is
@@ -51,6 +81,7 @@ and MCP server have separate entry points. Update all of these together:
 - `src/cli/index.ts`
 - `src/mcp/server.ts`
 - `src/renderer/components/SettingsModal.tsx`
+- `src-tauri/Cargo.toml` (the default Tauri crate; `tauri.conf.json` reads `package.json`)
 
 Check the result before committing:
 
@@ -58,7 +89,7 @@ Check the result before committing:
 textex_release_version=$(node -p "require('./package.json').version")
 rg -n "${textex_release_version}" \
   package.json package-lock.json src/cli/index.ts src/mcp/server.ts \
-  src/renderer/components/SettingsModal.tsx
+  src/renderer/components/SettingsModal.tsx src-tauri/Cargo.toml
 ```
 
 The release tag must be exactly `v${textex_release_version}`. The workflow
@@ -70,24 +101,49 @@ Run the full checks and every independently compiled entry point:
 
 ```bash
 npm run pre-commit
+npm run setup:tauri
+npm run check:tauri-sidecars
 npm run build
+npm run build:electron
 npm run build:cli
 npm run build:mcp
 node out/cli/cli/index.js --version
 ```
+
+`npm run build` validates the default Tauri executable without bundling an
+installer. `npm run build:electron` separately validates the legacy runtime
+used by the current public release workflow.
+
+Keep sidecar download and release preflight as visible separate steps. The setup
+script verifies the fixed Tectonic 0.17.0 release size and SHA-256 before atomic
+staging. `check:tauri-sidecars`, `build`, and Tauri `package:*` are network-free
+and must fail if the target payload or provenance is absent. For a cross-target
+Tauri package, stage and check the exact target explicitly:
+
+```bash
+npm run setup:tauri -- --target x86_64-pc-windows-msvc
+npm run setup:tauri -- --target x86_64-pc-windows-msvc --check
+```
+
+Prepare `universal-apple-darwin` only on macOS, where the setup script can use
+`lipo` and verify both x86_64 and arm64 slices. Never copy the legacy
+`resources/bin/` payload into `src-tauri/binaries/` without running the verified
+setup path.
 
 `npm run check` is useful while iterating, but it intentionally omits tests and
 is not the release gate. Package the current host platform when packaging,
 native dependencies, sidecars, or updater metadata changed:
 
 ```bash
-npm run package:linux
-npm run package:mac:universal
-npm run package:win
+npm run package:electron:linux
+npm run package:electron:mac:universal
+npm run package:electron:win
 ```
 
 Only run the command supported by the current host. GitHub Actions is the
-required cross-platform verification source.
+required cross-platform verification source. Run the corresponding unqualified
+`package:*` command when validating a Tauri migration artifact, but do not treat
+that result as an Electron release check or publish both artifact types together.
 
 ## 4. Protect macOS Universal Builds
 

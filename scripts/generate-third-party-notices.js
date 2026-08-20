@@ -2,10 +2,13 @@
 
 const fs = require('fs')
 const path = require('path')
+const crypto = require('crypto')
+const { execFileSync } = require('child_process')
 
 const rootDir = path.resolve(__dirname, '..')
 const resourcesLicensesDir = path.join(rootDir, 'resources', 'licenses')
 const outputPath = path.join(resourcesLicensesDir, 'THIRD-PARTY-NOTICES.txt')
+const rustOutputPath = path.join(resourcesLicensesDir, 'RUST-THIRD-PARTY-NOTICES.txt')
 const electronChromiumLicensesPath = path.join(
   resourcesLicensesDir,
   'ELECTRON-LICENSES.chromium.html'
@@ -19,7 +22,9 @@ const bundledPackageNames = [
   'electron'
 ]
 
-const packageNames = [...new Set(bundledPackageNames)].sort((left, right) => left.localeCompare(right))
+const packageNames = [...new Set(bundledPackageNames)].sort((left, right) =>
+  left.localeCompare(right)
+)
 
 const sections = []
 
@@ -29,14 +34,24 @@ sections.push('This file covers third-party packages and resources bundled with 
 sections.push('It is generated from package metadata and bundled notice files.')
 sections.push('')
 sections.push('Additional bundled notice files:')
+sections.push('- TECTONIC-NOTICE.txt')
+sections.push('- TECTONIC-MIT.txt')
 sections.push('- TEXLAB-NOTICE.txt')
 sections.push('- TEXLAB-GPL-3.0.txt')
 sections.push('- ELECTRON-LICENSES.chromium.html')
+sections.push('- RUST-THIRD-PARTY-NOTICES.txt')
 sections.push('')
 sections.push(
   'Pandoc is not bundled by TextEx. If a user installs Pandoc separately, that copy is governed by its own license terms.'
 )
 sections.push('')
+
+appendFileSection(
+  sections,
+  'Bundled Notice',
+  'Tectonic',
+  path.join(resourcesLicensesDir, 'TECTONIC-NOTICE.txt')
+)
 
 appendFileSection(
   sections,
@@ -81,14 +96,17 @@ for (const packageName of packageNames) {
 sections.push(divider('='))
 sections.push('Reference')
 sections.push(divider('-'))
+sections.push('Tectonic MIT full license text is bundled separately in TECTONIC-MIT.txt.')
 sections.push('TexLab GPL-3.0 full license text is bundled separately in TEXLAB-GPL-3.0.txt.')
 sections.push(
   'Electron Chromium and other embedded runtime notices are bundled separately in ELECTRON-LICENSES.chromium.html.'
 )
+sections.push('Tauri/Rust dependency notices are bundled in RUST-THIRD-PARTY-NOTICES.txt.')
 sections.push('')
 
 fs.mkdirSync(resourcesLicensesDir, { recursive: true })
-fs.writeFileSync(outputPath, `${sections.join('\n')}\n`, 'utf8')
+fs.writeFileSync(outputPath, `${sections.join('\n').trimEnd()}\n`, 'utf8')
+generateRustNotices(rustOutputPath)
 
 const chromiumNoticesSource = path.join(
   rootDir,
@@ -110,7 +128,10 @@ function readJson(filePath) {
 }
 
 function readText(filePath) {
-  return fs.readFileSync(filePath, 'utf8')
+  return fs
+    .readFileSync(filePath, 'utf8')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[ \t]+$/gm, '')
 }
 
 function formatSource(manifest) {
@@ -161,10 +182,97 @@ function appendFileSection(sectionsList, type, name, filePath) {
 function findLicenseFiles(packageDir) {
   return fs
     .readdirSync(packageDir, { withFileTypes: true })
-    .filter(
-      (entry) =>
-        entry.isFile() && /^(licen[sc]e|copying|notice)(\..+)?$/i.test(entry.name)
-    )
+    .filter((entry) => entry.isFile() && /^(licen[sc]e|copying|notice)(\..+)?$/i.test(entry.name))
     .map((entry) => path.join(packageDir, entry.name))
     .sort((left, right) => left.localeCompare(right))
+}
+
+function generateRustNotices(destination) {
+  const manifestPath = path.join(rootDir, 'src-tauri', 'Cargo.toml')
+  if (!fs.existsSync(manifestPath)) {
+    return
+  }
+
+  const metadata = JSON.parse(
+    execFileSync(
+      'cargo',
+      ['metadata', '--format-version', '1', '--locked', '--manifest-path', manifestPath],
+      {
+        cwd: rootDir,
+        encoding: 'utf8',
+        maxBuffer: 64 * 1024 * 1024
+      }
+    )
+  )
+  const packageById = new Map(metadata.packages.map((pkg) => [pkg.id, pkg]))
+  const nodeById = new Map((metadata.resolve?.nodes || []).map((node) => [node.id, node]))
+  const workspaceIds = new Set(metadata.workspace_members || [])
+  const queue = [...workspaceIds]
+  const includedIds = new Set()
+
+  while (queue.length > 0) {
+    const packageId = queue.shift()
+    if (!packageId || includedIds.has(packageId)) continue
+    includedIds.add(packageId)
+    const node = nodeById.get(packageId)
+    for (const dependency of node?.deps || []) {
+      const isRuntimeOrBuildDependency = (dependency.dep_kinds || []).some(
+        (kind) => kind.kind === null || kind.kind === 'build'
+      )
+      if (isRuntimeOrBuildDependency) queue.push(dependency.pkg)
+    }
+  }
+
+  const packages = [...includedIds]
+    .filter((packageId) => !workspaceIds.has(packageId))
+    .map((packageId) => packageById.get(packageId))
+    .filter(Boolean)
+    .sort((left, right) =>
+      `${left.name}@${left.version}`.localeCompare(`${right.name}@${right.version}`)
+    )
+
+  const rustSections = [
+    'TextEx Tauri/Rust Third-Party Notices',
+    '',
+    'Generated from the locked Cargo dependency graph used by src-tauri.',
+    'Development-only dependencies are excluded; runtime and build dependencies are included.',
+    '',
+    divider('='),
+    'Packages',
+    divider('-')
+  ]
+  const licenseGroups = new Map()
+
+  for (const pkg of packages) {
+    const source = pkg.repository || pkg.homepage || pkg.source || 'unknown'
+    rustSections.push(`${pkg.name} ${pkg.version} | ${pkg.license || 'UNKNOWN'} | ${source}`)
+
+    const packageDir = path.dirname(pkg.manifest_path)
+    for (const licenseFile of findLicenseFiles(packageDir)) {
+      const contents = readText(licenseFile).trimEnd()
+      const digest = crypto.createHash('sha256').update(contents).digest('hex')
+      const existing = licenseGroups.get(digest)
+      const owner = `${pkg.name} ${pkg.version} (${path.basename(licenseFile)})`
+      if (existing) {
+        existing.owners.push(owner)
+      } else {
+        licenseGroups.set(digest, { contents, owners: [owner] })
+      }
+    }
+  }
+
+  for (const group of [...licenseGroups.values()].sort((left, right) =>
+    left.owners[0].localeCompare(right.owners[0])
+  )) {
+    rustSections.push('')
+    rustSections.push(divider('='))
+    rustSections.push('License text used by:')
+    for (const owner of group.owners.sort((left, right) => left.localeCompare(right))) {
+      rustSections.push(`- ${owner}`)
+    }
+    rustSections.push(divider('-'))
+    rustSections.push(group.contents)
+  }
+
+  fs.writeFileSync(destination, `${rustSections.join('\n').trimEnd()}\n`, 'utf8')
 }

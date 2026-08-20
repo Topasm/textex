@@ -112,6 +112,7 @@ Run the full acceptance build:
 ```bash
 npm run pre-commit
 npm run build
+npm run build:electron
 npm run build:cli
 npm run build:mcp
 node out/cli/cli/index.js --version

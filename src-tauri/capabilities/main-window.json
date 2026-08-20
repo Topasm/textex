@@ -1,0 +1,30 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-window",
+  "description": "Minimal capability for the local TextEx application window",
+  "windows": ["main"],
+  "permissions": [
+    "allow-open-directory",
+    "allow-open-file",
+    "allow-read-directory",
+    "allow-read-file",
+    "allow-save-file",
+    "allow-save-file-as",
+    "allow-save-file-batch",
+    "allow-create-file",
+    "allow-create-directory",
+    "allow-copy-file",
+    "allow-read-file-base64",
+    "allow-read-file-binary",
+    "allow-watch-directory",
+    "allow-unwatch-directory",
+    "allow-load-settings",
+    "allow-save-settings",
+    "allow-activate-project",
+    "allow-add-recent-project",
+    "allow-remove-recent-project",
+    "allow-update-recent-project",
+    "allow-compile-latex",
+    "allow-cancel-compile"
+  ]
+}

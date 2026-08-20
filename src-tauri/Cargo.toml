@@ -1,0 +1,46 @@
+[package]
+name = "textex-tauri"
+version = "1.0.8"
+description = "Tauri desktop backend for TextEx"
+authors = ["Topasm <dhkdwk0215@naver.com>"]
+license = "MIT"
+repository = "https://github.com/Topasm/textex"
+publish = false
+edition = "2021"
+
+[lib]
+name = "textex_tauri_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+dunce = "1.0.5"
+notify = "8.2.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+thiserror = "2"
+time = { version = "0.3", features = ["formatting", "parsing"] }
+tokio = {
+  version = "1",
+  features = ["fs", "io-util", "macros", "process", "rt", "sync", "time"]
+}
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.dev]
+incremental = true
+
+# Favor a small distributable while keeping filesystem work asynchronous.
+# LTO and a single codegen unit increase release build time but reduce the
+# shipped native binary size, which is the useful tradeoff for desktop builds.
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

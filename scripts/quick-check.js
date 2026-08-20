@@ -29,15 +29,27 @@ const results = { passed: [], failed: [] };
 log('Running quick checks (no tests)...', 'cyan');
 console.log();
 
-// TypeScript
+// TypeScript (Electron/CLI baseline and the Tauri renderer adapter)
 process.stdout.write('TypeScript... ');
-const typeCheck = run('npx tsc --noEmit');
+const typeCheck = run('npm run typecheck');
 if (typeCheck.success) {
   log('pass', 'green');
   results.passed.push('TypeScript');
 } else {
   log('fail', 'red');
   results.failed.push('TypeScript');
+}
+
+// Rust formatting does not compile or link Tauri, so this remains portable to
+// hosts that cannot install WebKitGTK 4.1 development packages.
+process.stdout.write('Rust format... ');
+const rustFormat = run('npm run format:rust:check');
+if (rustFormat.success) {
+  log('pass', 'green');
+  results.passed.push('Rust format');
+} else {
+  log('fail', 'red');
+  results.failed.push('Rust format');
 }
 
 // ESLint
@@ -71,5 +83,6 @@ if (results.failed.length === 0) {
   log(`${results.failed.length} check(s) failed: ${results.failed.join(', ')}`, 'red');
   if (results.failed.includes('ESLint')) log('  Fix: npm run lint:fix', 'yellow');
   if (results.failed.includes('Prettier')) log('  Fix: npm run format', 'yellow');
+  if (results.failed.includes('Rust format')) log('  Fix: npm run format:rust', 'yellow');
   process.exit(1);
 }

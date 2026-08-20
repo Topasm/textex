@@ -1,4 +1,8 @@
-# TextEx — Packaging & Distribution
+# TextEx — Legacy Electron Packaging & Distribution
+
+This document describes the Electron artifacts used by the current public
+release workflow during the Tauri migration. Unqualified `package:*` commands
+now build Tauri artifacts; use `package:electron:*` for the configuration below.
 
 ## Build Tool
 
@@ -150,13 +154,13 @@ In `package.json`:
 ```json
 {
   "scripts": {
-    "dev": "electron-vite dev",
-    "build": "electron-vite build",
-    "package:win": "electron-vite build && electron-builder --win",
-    "package:mac": "electron-vite build && electron-builder --mac --arm64",
-    "package:mac:x64": "electron-vite build && electron-builder --mac --x64",
-    "package:mac:universal": "electron-vite build && electron-builder --mac --universal",
-    "package:linux": "electron-vite build && electron-builder --linux"
+    "dev:electron": "electron-vite dev",
+    "build:electron": "electron-vite build",
+    "package:electron:win": "electron-vite build && electron-builder --win",
+    "package:electron:mac": "electron-vite build && electron-builder --mac --arm64",
+    "package:electron:mac:x64": "electron-vite build && electron-builder --mac --x64",
+    "package:electron:mac:universal": "electron-vite build && electron-builder --mac --universal",
+    "package:electron:linux": "electron-vite build && electron-builder --linux"
   }
 }
 ```
@@ -220,7 +224,7 @@ For distribution outside the Mac App Store:
    - `com.apple.security.cs.allow-dyld-environment-variables` -- for Electron compatibility
 4. Use `electron-builder`'s `afterSign` hook to call `xcrun notarytool submit`.
 
-**Note:** macOS builds (`npm run package:mac`) must be run on a macOS machine.
+**Note:** legacy macOS builds (`npm run package:electron:mac`) must be run on a macOS machine.
 Cross-compilation from Linux is not supported by electron-builder for DMG targets.
 
 ---

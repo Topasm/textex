@@ -56,9 +56,9 @@ const results = {
 async function main() {
   log('Running pre-commit checks...', 'cyan');
 
-  // 1. TypeScript type checking
+  // 1. TypeScript type checking, including the Tauri renderer adapter
   header('TypeScript Type Check');
-  const typeCheck = run('npx tsc --noEmit');
+  const typeCheck = run('npm run typecheck');
   if (typeCheck.success) {
     success('No type errors');
     results.passed.push('TypeScript');
@@ -89,7 +89,19 @@ async function main() {
     results.failed.push('Prettier');
   }
 
-  // 4. Tests
+  // 4. Rust formatting. This intentionally does not compile/link Tauri so the
+  // commit gate remains usable on hosts without WebKitGTK 4.1 development files.
+  header('Rust Format Check');
+  const rustFormat = run('npm run format:rust:check');
+  if (rustFormat.success) {
+    success('All Rust files properly formatted');
+    results.passed.push('Rust format');
+  } else {
+    error('Rust formatting issues found (run: npm run format:rust)');
+    results.failed.push('Rust format');
+  }
+
+  // 5. Tests
   header('Tests');
   const test = run('npm run test');
   if (test.success) {
@@ -133,6 +145,9 @@ async function main() {
     }
     if (results.failed.includes('Prettier')) {
       log('  npm run format', 'cyan');
+    }
+    if (results.failed.includes('Rust format')) {
+      log('  npm run format:rust', 'cyan');
     }
     console.log();
 

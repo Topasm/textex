@@ -1,0 +1,283 @@
+name: Tauri Migration CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - tauri-migration
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    name: Tauri Lint & Typecheck
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --include=optional
+
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.97.1 --profile minimal --component rustfmt
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Tauri Rust format check
+        run: npm run format:rust:check
+
+  test:
+    runs-on: ubuntu-latest
+    name: Tauri Test
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --include=optional
+
+      - name: Run tests
+        run: npm run test
+
+  rust-test:
+    runs-on: ubuntu-22.04
+    name: Tauri Rust Test & Licenses
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            xdg-utils
+
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.97.1 --profile minimal
+
+      - name: Install locked dependencies
+        run: npm ci --include=optional
+
+      - name: Verify npm native bindings
+        run: |
+          npx vite --version
+          npx tauri --version
+
+      - name: Prepare verified Linux Tectonic sidecar
+        run: |
+          node scripts/setup-tauri-sidecars.js --target x86_64-unknown-linux-gnu
+          node scripts/setup-tauri-sidecars.js --target x86_64-unknown-linux-gnu --check
+
+      - name: Audit npm dependencies
+        run: npm audit --audit-level=high
+
+      - name: Run Rust tests
+        run: cargo test --locked --manifest-path src-tauri/Cargo.toml
+
+      - name: Verify generated license notices
+        shell: bash
+        run: |
+          npm run licenses:generate
+          git diff --exit-code -- resources/licenses
+          test -z "$(git status --porcelain --untracked-files=all -- resources/licenses)"
+
+  build:
+    needs: [lint, test, rust-test]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            platform: linux
+            target: x86_64-unknown-linux-gnu
+            rust_targets: x86_64-unknown-linux-gnu
+            package_command: npm run package:linux
+            artifact_paths: |
+              src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage
+              src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb
+          - os: macos-15
+            platform: mac-universal
+            target: universal-apple-darwin
+            rust_targets: aarch64-apple-darwin x86_64-apple-darwin
+            package_command: npm run package:mac:universal
+            artifact_paths: |
+              src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+          - os: windows-latest
+            platform: win
+            target: x86_64-pc-windows-msvc
+            rust_targets: x86_64-pc-windows-msvc
+            package_command: npm run package:win
+            artifact_paths: |
+              src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
+
+    runs-on: ${{ matrix.os }}
+    name: Tauri Build (${{ matrix.platform }})
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install Linux build dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            xdg-utils
+
+      - name: Install pinned Rust toolchain and targets
+        shell: bash
+        run: |
+          rustup toolchain install 1.97.1 --profile minimal
+          rustup target add --toolchain 1.97.1 ${{ matrix.rust_targets }}
+
+      - name: Install locked dependencies
+        run: npm ci --include=optional
+
+      - name: Report pinned toolchain and native bindings
+        shell: bash
+        run: |
+          node --version
+          npm --version
+          rustc -Vv
+          cargo --version
+          npx vite --version
+          npx tauri --version
+
+      - name: Prepare and verify Tectonic sidecars
+        shell: bash
+        run: |
+          if [[ "${{ matrix.target }}" == "universal-apple-darwin" ]]; then
+            targets=(x86_64-apple-darwin aarch64-apple-darwin universal-apple-darwin)
+          else
+            targets=("${{ matrix.target }}")
+          fi
+
+          for target in "${targets[@]}"; do
+            node scripts/setup-tauri-sidecars.js --target "$target"
+            node scripts/setup-tauri-sidecars.js --target "$target" --check
+          done
+
+          find src-tauri/binaries -maxdepth 1 -type f -print
+
+      - name: Build Tauri package
+        run: ${{ matrix.package_command }}
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ matrix.platform == 'mac-universal' && '-' || '' }}
+          RUST_BACKTRACE: 1
+
+      - name: Verify Linux bundles
+        if: matrix.platform == 'linux'
+        shell: bash
+        run: |
+          deb=$(find src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb -name '*.deb' -type f -print -quit)
+          appimage=$(find src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage -name '*.AppImage' -type f -print -quit)
+          test -n "$deb" && test -n "$appimage"
+          dpkg-deb --info "$deb"
+          verify_dir=$(mktemp -d)
+          dpkg-deb --extract "$deb" "$verify_dir"
+          test -x "$verify_dir/usr/bin/tectonic"
+          "$verify_dir/usr/bin/tectonic" --version
+          sha256sum "$deb" "$appimage"
+
+      - name: Verify macOS universal bundle
+        if: matrix.platform == 'mac-universal'
+        shell: bash
+        run: |
+          dmg=$(find src-tauri/target/universal-apple-darwin/release/bundle/dmg -name '*.dmg' -type f -print -quit)
+          app=$(find src-tauri/target/universal-apple-darwin/release/bundle/macos -name '*.app' -type d -print -quit)
+          tectonic=$(find "$app" -type f -name 'tectonic' -print -quit)
+          test -n "$dmg" && test -n "$app" && test -n "$tectonic"
+          hdiutil verify "$dmg"
+          lipo -archs "$tectonic" | tee /tmp/tectonic-architectures.txt
+          grep -q x86_64 /tmp/tectonic-architectures.txt
+          grep -q arm64 /tmp/tectonic-architectures.txt
+          codesign --verify --deep --strict "$app"
+          shasum -a 256 "$dmg"
+
+      - name: Verify Windows bundle
+        if: matrix.platform == 'win'
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem 'src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe' | Select-Object -First 1
+          if (-not $installer) { throw 'No NSIS installer was produced' }
+          $installer | Format-List Name,Length,FullName
+          Get-FileHash -Algorithm SHA256 $installer.FullName
+
+      - name: Report renderer and package sizes
+        shell: bash
+        run: |
+          npm run measure:renderer
+          node <<'NODE'
+          const fs = require('node:fs')
+          const path = require('node:path')
+
+          const root = path.join('src-tauri', 'target')
+          const artifacts = []
+          const visit = (directory) => {
+            for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+              const filePath = path.join(directory, entry.name)
+              if (entry.isDirectory()) visit(filePath)
+              else if (filePath.includes(`${path.sep}bundle${path.sep}`)) artifacts.push(filePath)
+            }
+          }
+
+          visit(root)
+          if (artifacts.length === 0) throw new Error('No Tauri bundle artifacts were produced')
+          for (const filePath of artifacts.sort()) {
+            console.log(`${fs.statSync(filePath).size}\t${filePath}`)
+          }
+          NODE
+
+      - name: Report partial bundle paths
+        if: always()
+        shell: bash
+        run: find src-tauri/target -path '*/release/bundle/*' -type f -print 2>/dev/null || true
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: TextEx-Tauri-${{ matrix.platform }}
+          path: ${{ matrix.artifact_paths }}
+          if-no-files-found: error
+          retention-days: 14
