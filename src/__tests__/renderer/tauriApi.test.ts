@@ -92,6 +92,8 @@ describe('Tauri DesktopApi adapter', () => {
       .mockResolvedValueOnce({ success: true })
       .mockResolvedValueOnce({ success: true })
       .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce({ success: true })
       .mockResolvedValueOnce({ data: 'data:image/png;base64,iVBORw==', mimeType: 'image/png' })
       .mockResolvedValueOnce({ data: [37, 80, 68, 70], mimeType: 'application/pdf' })
 
@@ -110,6 +112,10 @@ describe('Tauri DesktopApi adapter', () => {
         success: true
       }
     )
+    await expect(api.renamePath('/project/draft.tex', '/project/paper.tex')).resolves.toEqual({
+      success: true
+    })
+    await expect(api.deletePath('/project/old.tex')).resolves.toEqual({ success: true })
     await expect(api.readFileBase64('/project/source.png')).resolves.toEqual({
       data: 'data:image/png;base64,iVBORw==',
       mimeType: 'image/png'
@@ -125,6 +131,8 @@ describe('Tauri DesktopApi adapter', () => {
       ['create_file', { filePath: '/project/chapter.tex' }],
       ['create_directory', { dirPath: '/project/figures' }],
       ['copy_file', { source: '/project/source.png', dest: '/project/figures/copy.png' }],
+      ['rename_path', { source: '/project/draft.tex', destination: '/project/paper.tex' }],
+      ['delete_path', { path: '/project/old.tex' }],
       ['read_file_base64', { filePath: '/project/source.png' }],
       ['read_file_binary', { filePath: '/project/main.pdf' }]
     ])

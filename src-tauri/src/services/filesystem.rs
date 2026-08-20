@@ -291,6 +291,90 @@ pub async fn copy_file(
     Ok(SuccessResult::ok())
 }
 
+pub async fn rename_path(
+    state: &AppState,
+    source: &str,
+    destination: &str,
+) -> AppResult<SuccessResult> {
+    let source =
+        resolve_existing_entry(state, require_absolute_str(source)?, "rename source").await?;
+    reject_project_root(state, &source)?;
+
+    let requested_destination = require_absolute_str(destination)?;
+    let file_name = requested_destination.file_name().ok_or_else(|| {
+        AppError::InvalidPath(format!(
+            "rename destination has no file name: {}",
+            requested_destination.to_string_lossy()
+        ))
+    })?;
+    let destination_parent = requested_destination.parent().ok_or_else(|| {
+        AppError::InvalidPath(format!(
+            "rename destination has no parent: {}",
+            requested_destination.to_string_lossy()
+        ))
+    })?;
+    let destination_parent = canonicalize(
+        destination_parent.to_path_buf(),
+        "resolve rename destination parent",
+    )
+    .await?;
+    ensure_inside_project(state, &destination_parent)?;
+    ensure_directory(&destination_parent).await?;
+    let destination = destination_parent.join(file_name);
+
+    if paths_equal(&source, &destination) {
+        return rename_case_only_if_needed(source, destination).await;
+    }
+
+    if fs::symlink_metadata(&destination).await.is_ok() {
+        return Err(AppError::io(
+            "rename path",
+            destination.to_string_lossy().into_owned(),
+            io::Error::new(io::ErrorKind::AlreadyExists, "destination already exists"),
+        ));
+    }
+
+    let source_metadata = fs::metadata(&source)
+        .await
+        .map_err(|error| AppError::io("inspect rename source", source.to_string_lossy(), error))?;
+    if source_metadata.is_dir() && path_is_within(&source, &destination) {
+        return Err(AppError::InvalidPath(format!(
+            "cannot move a directory inside itself: {}",
+            destination.to_string_lossy()
+        )));
+    }
+
+    fs::rename(&source, &destination).await.map_err(|error| {
+        AppError::io("rename path", source.to_string_lossy().into_owned(), error)
+    })?;
+    Ok(SuccessResult::ok())
+}
+
+pub async fn delete_path(state: &AppState, path: &str) -> AppResult<SuccessResult> {
+    let path = resolve_existing_entry(state, require_absolute_str(path)?, "delete path").await?;
+    reject_project_root(state, &path)?;
+    let metadata = fs::metadata(&path)
+        .await
+        .map_err(|error| AppError::io("inspect delete target", path.to_string_lossy(), error))?;
+
+    if metadata.is_file() {
+        fs::remove_file(&path)
+            .await
+            .map_err(|error| AppError::io("delete file", path.to_string_lossy(), error))?;
+    } else if metadata.is_dir() {
+        fs::remove_dir_all(&path)
+            .await
+            .map_err(|error| AppError::io("delete directory", path.to_string_lossy(), error))?;
+    } else {
+        return Err(AppError::InvalidPath(format!(
+            "unsupported filesystem entry: {}",
+            path.to_string_lossy()
+        )));
+    }
+
+    Ok(SuccessResult::ok())
+}
+
 pub async fn read_file_base64(state: &AppState, file_path: &str) -> AppResult<Base64FileResult> {
     let canonical =
         resolve_existing_file(state, require_absolute_str(file_path)?, "read base64 file").await?;
@@ -474,6 +558,101 @@ async fn resolve_existing_file(
         return Err(AppError::NotAFile(display_path));
     }
     Ok(canonical)
+}
+
+async fn resolve_existing_entry(
+    state: &AppState,
+    requested: PathBuf,
+    operation: &'static str,
+) -> AppResult<PathBuf> {
+    let display_path = requested.to_string_lossy().into_owned();
+    let metadata = fs::symlink_metadata(&requested)
+        .await
+        .map_err(|source| AppError::io(operation, display_path.clone(), source))?;
+    if metadata.file_type().is_symlink() {
+        return Err(AppError::InvalidPath(format!(
+            "symbolic links cannot be renamed or deleted: {display_path}"
+        )));
+    }
+
+    let canonical = canonicalize(requested, operation).await?;
+    ensure_inside_project(state, &canonical)?;
+    Ok(canonical)
+}
+
+fn reject_project_root(state: &AppState, path: &Path) -> AppResult<()> {
+    let root = state.project_root()?;
+    if paths_equal(&root, path) {
+        return Err(AppError::InvalidPath(
+            "the open project root cannot be renamed or deleted".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+async fn rename_case_only_if_needed(
+    source: PathBuf,
+    destination: PathBuf,
+) -> AppResult<SuccessResult> {
+    if source == destination {
+        return Ok(SuccessResult::ok());
+    }
+
+    #[cfg(not(windows))]
+    {
+        return Ok(SuccessResult::ok());
+    }
+
+    #[cfg(windows)]
+    {
+        let parent = source.parent().ok_or_else(|| {
+            AppError::InvalidPath(format!(
+                "rename source has no parent: {}",
+                source.to_string_lossy()
+            ))
+        })?;
+        let mut temporary = None;
+        for _ in 0..TEMP_FILE_ATTEMPTS {
+            let sequence = TEMP_FILE_SEQUENCE.fetch_add(1, AtomicOrdering::Relaxed);
+            let candidate = parent.join(format!(
+                ".textex-case-rename-{}-{sequence}",
+                std::process::id()
+            ));
+            match fs::symlink_metadata(&candidate).await {
+                Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                    temporary = Some(candidate);
+                    break;
+                }
+                Ok(_) => continue,
+                Err(error) => {
+                    return Err(AppError::io(
+                        "prepare case-only rename",
+                        candidate.to_string_lossy(),
+                        error,
+                    ));
+                }
+            }
+        }
+        let temporary = temporary.ok_or_else(|| {
+            AppError::io(
+                "prepare case-only rename",
+                source.to_string_lossy(),
+                io::Error::new(io::ErrorKind::AlreadyExists, "no temporary path available"),
+            )
+        })?;
+        fs::rename(&source, &temporary).await.map_err(|error| {
+            AppError::io("rename path", source.to_string_lossy().into_owned(), error)
+        })?;
+        if let Err(error) = fs::rename(&temporary, &destination).await {
+            let _ = fs::rename(&temporary, &source).await;
+            return Err(AppError::io(
+                "rename path",
+                destination.to_string_lossy().into_owned(),
+                error,
+            ));
+        }
+        Ok(SuccessResult::ok())
+    }
 }
 
 async fn resolve_directory_target(state: &AppState, requested: PathBuf) -> AppResult<PathBuf> {
@@ -978,9 +1157,10 @@ mod tests {
     #[cfg(not(windows))]
     use super::path_is_within;
     use super::{
-        create_directory, create_file, decode_text_file, encode_base64, ensure_binary_size,
-        mime_type_for_path, open_selected_file, read_file_base64, read_file_binary,
-        save_as_selected, save_file_batch, BINARY_TRANSFER_LIMIT_BYTES,
+        create_directory, create_file, decode_text_file, delete_path, encode_base64,
+        ensure_binary_size, mime_type_for_path, open_selected_file, read_file_base64,
+        read_file_binary, rename_path, save_as_selected, save_file_batch,
+        BINARY_TRANSFER_LIMIT_BYTES,
     };
     use crate::{models::SaveFileInput, state::AppState};
     use std::{
@@ -1215,6 +1395,89 @@ mod tests {
         assert_eq!(
             fs::read_to_string(&destination).expect("read destination"),
             "source"
+        );
+    }
+
+    #[test]
+    fn rename_and_delete_handle_files_and_directories_inside_the_project() {
+        let project = TestDirectory::new("rename-delete");
+        let state = AppState::default();
+        state
+            .set_project_root(project.path().to_path_buf())
+            .expect("set project root");
+
+        let source_file = project.child("draft.tex");
+        let renamed_file = project.child("paper.tex");
+        fs::write(&source_file, "draft").expect("write source file");
+        block_on(rename_path(
+            &state,
+            &path_string(&source_file),
+            &path_string(&renamed_file),
+        ))
+        .expect("rename file");
+        assert!(!source_file.exists());
+        assert_eq!(
+            fs::read_to_string(&renamed_file).expect("read file"),
+            "draft"
+        );
+
+        let source_directory = project.child("chapters");
+        let renamed_directory = project.child("sections");
+        fs::create_dir(&source_directory).expect("create source directory");
+        fs::write(source_directory.join("one.tex"), "one").expect("write nested file");
+        block_on(rename_path(
+            &state,
+            &path_string(&source_directory),
+            &path_string(&renamed_directory),
+        ))
+        .expect("rename directory");
+        assert!(renamed_directory.join("one.tex").is_file());
+
+        block_on(delete_path(&state, &path_string(&renamed_file))).expect("delete file");
+        block_on(delete_path(&state, &path_string(&renamed_directory)))
+            .expect("delete directory recursively");
+        assert!(!renamed_file.exists());
+        assert!(!renamed_directory.exists());
+    }
+
+    #[test]
+    fn rename_and_delete_reject_root_outside_and_existing_destinations() {
+        let project = TestDirectory::new("rename-delete-boundary");
+        let outside = TestDirectory::new("rename-delete-outside");
+        let state = AppState::default();
+        state
+            .set_project_root(project.path().to_path_buf())
+            .expect("set project root");
+        let source = project.child("source.tex");
+        let destination = project.child("destination.tex");
+        fs::write(&source, "source").expect("write source");
+        fs::write(&destination, "destination").expect("write destination");
+
+        assert!(block_on(rename_path(
+            &state,
+            &path_string(&source),
+            &path_string(&destination),
+        ))
+        .is_err());
+        assert!(block_on(rename_path(
+            &state,
+            &path_string(&source),
+            &path_string(&outside.child("outside.tex")),
+        ))
+        .is_err());
+        assert!(block_on(delete_path(&state, &path_string(project.path()))).is_err());
+        assert!(block_on(delete_path(
+            &state,
+            &path_string(&outside.child("missing.tex")),
+        ))
+        .is_err());
+        assert_eq!(
+            fs::read_to_string(&source).expect("source remains"),
+            "source"
+        );
+        assert_eq!(
+            fs::read_to_string(&destination).expect("destination remains"),
+            "destination"
         );
     }
 

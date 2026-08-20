@@ -23,7 +23,7 @@ revision-aware Tectonic compile, system Git vertical slice다. 새 기능은 Tau
 | 디렉터리 읽기 | 지원 | project root 내부만 허용하며 숨김 항목은 제외한다. |
 | 파일 읽기 | 지원 | UTF-8/BOM, UTF-16 LE BOM, legacy byte fallback을 처리한다. |
 | 파일 저장 | 지원 | 기존 파일과, 존재하는 project 폴더 안의 새 경로에 저장한다. |
-| Save As/파일·폴더 생성/복사 | 지원 | Rust command가 project root와 symlink 경계를 검증한다. |
+| Save As/파일·폴더 생성/복사/이름 변경/삭제 | 지원 | Rust command가 project root와 symlink 경계를 검증하며 root 삭제와 기존 대상 덮어쓰기를 거부한다. |
 | 열린 파일 일괄 저장 | 지원 | 하나의 `save_file_batch` command가 검증 후 atomic replacement를 수행한다. |
 | binary/base64 읽기 | 지원 | project root 내부 파일만 허용한다. PDF tile transport로 쓰지는 않는다. |
 | directory watcher | 지원 | Rust가 watcher를 소유하고 100ms batch/dedupe 후 Tauri Channel로 전달한다. |
@@ -90,6 +90,8 @@ Electron preload, Tauri adapter, 공유 타입과 테스트를 함께 갱신한�
 - `create_file`
 - `create_directory`
 - `copy_file`
+- `rename_path`
+- `delete_path`
 - `read_file_base64`
 - `read_file_binary`
 - `git_is_repo`

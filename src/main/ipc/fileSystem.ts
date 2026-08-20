@@ -418,6 +418,64 @@ export function registerFileSystemHandlers(getWindow: () => BrowserWindow | null
     return { success: true }
   })
 
+  // ----- fs:rename-path ----------------------------------------------------
+
+  ipcMain.handle('fs:rename-path', async (_event, source: string, destination: string) => {
+    const validSource = validateFilePath(source)
+    const validDestination = validateFilePath(destination)
+    const sourceStat = await fs.lstat(validSource)
+    if (sourceStat.isSymbolicLink()) throw new Error('Symbolic links cannot be renamed')
+    const caseOnlyRename =
+      process.platform === 'win32' &&
+      validSource !== validDestination &&
+      path.resolve(validSource).toLowerCase() === path.resolve(validDestination).toLowerCase()
+    if (caseOnlyRename) {
+      const temporary = path.join(
+        path.dirname(validSource),
+        `.textex-case-rename-${process.pid}-${Date.now()}`
+      )
+      await retryTransient(() => fs.rename(validSource, temporary))
+      try {
+        await retryTransient(() => fs.rename(temporary, validDestination))
+      } catch (error) {
+        await fs.rename(temporary, validSource).catch(() => undefined)
+        throw error
+      }
+      directoryCache.invalidateForChange(validSource)
+      directoryCache.invalidateForChange(validDestination)
+      return { success: true }
+    }
+    try {
+      await fs.lstat(validDestination)
+      if (validSource === validDestination) return { success: true }
+      throw new Error('Rename destination already exists')
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+    }
+    await retryTransient(() => fs.rename(validSource, validDestination))
+    fileCache.invalidate(validSource)
+    fileCache.invalidate(validDestination)
+    directoryCache.invalidateForChange(validSource)
+    directoryCache.invalidateForChange(validDestination)
+    return { success: true }
+  })
+
+  // ----- fs:delete-path ----------------------------------------------------
+
+  ipcMain.handle('fs:delete-path', async (_event, targetPath: string) => {
+    const validPath = validateFilePath(targetPath)
+    if (path.parse(validPath).root === path.resolve(validPath)) {
+      throw new Error('Filesystem roots cannot be deleted')
+    }
+    const stat = await fs.lstat(validPath)
+    if (stat.isSymbolicLink()) throw new Error('Symbolic links cannot be deleted')
+    if (stat.isDirectory()) await fs.rm(validPath, { recursive: true, force: false })
+    else await fs.unlink(validPath)
+    fileCache.invalidate(validPath)
+    directoryCache.invalidateForChange(validPath)
+    return { success: true }
+  })
+
   // ----- fs:read-file-base64 ------------------------------------------------
 
   const MIME_MAP: Record<string, string> = {

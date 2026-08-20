@@ -78,6 +78,8 @@ export interface DesktopApi {
   createFile(filePath: string): Promise<{ success: boolean }>
   createDirectory(dirPath: string): Promise<{ success: boolean }>
   copyFile(source: string, dest: string): Promise<{ success: boolean }>
+  renamePath(source: string, destination: string): Promise<{ success: boolean }>
+  deletePath(path: string): Promise<{ success: boolean }>
   readFileBase64(filePath: string): Promise<{ data: string; mimeType: string }>
   readFileBinary(filePath: string): Promise<{ data: Uint8Array; mimeType: string }>
   readDirectory(dirPath: string): Promise<DirectoryEntry[]>

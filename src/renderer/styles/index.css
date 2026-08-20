@@ -1741,6 +1741,10 @@ body,
   color: var(--text-primary);
 }
 
+.file-tree-delete-btn:hover {
+  color: var(--error);
+}
+
 .file-tree-item.draggable-image {
   cursor: grab;
 }

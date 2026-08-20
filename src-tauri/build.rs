@@ -10,6 +10,8 @@ fn main() {
         "create_file",
         "create_directory",
         "copy_file",
+        "rename_path",
+        "delete_path",
         "read_file_base64",
         "read_file_binary",
         "git_is_repo",

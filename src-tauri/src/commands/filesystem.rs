@@ -95,6 +95,20 @@ pub async fn copy_file(
 }
 
 #[tauri::command]
+pub async fn rename_path(
+    state: State<'_, AppState>,
+    source: String,
+    destination: String,
+) -> AppResult<SuccessResult> {
+    filesystem::rename_path(state.inner(), &source, &destination).await
+}
+
+#[tauri::command]
+pub async fn delete_path(state: State<'_, AppState>, path: String) -> AppResult<SuccessResult> {
+    filesystem::delete_path(state.inner(), &path).await
+}
+
+#[tauri::command]
 pub async fn read_file_base64(
     state: State<'_, AppState>,
     file_path: String,

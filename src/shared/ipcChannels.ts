@@ -85,6 +85,8 @@ export interface IpcChannelMap {
   'fs:create-file': [[filePath: string], SuccessResult]
   'fs:create-directory': [[dirPath: string], SuccessResult]
   'fs:copy-file': [[source: string, dest: string], SuccessResult]
+  'fs:rename-path': [[source: string, destination: string], SuccessResult]
+  'fs:delete-path': [[path: string], SuccessResult]
   'fs:read-file-base64': [[filePath: string], { data: string; mimeType: string }]
   'fs:read-file-binary': [[filePath: string], { data: Uint8Array; mimeType: string }]
 

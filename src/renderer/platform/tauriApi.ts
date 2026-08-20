@@ -18,6 +18,8 @@ type MigratedDesktopApi = Pick<
   | 'createFile'
   | 'createDirectory'
   | 'copyFile'
+  | 'renamePath'
+  | 'deletePath'
   | 'readFileBase64'
   | 'readFileBinary'
   | 'gitIsRepo'
@@ -92,6 +94,12 @@ const createDirectory: DesktopApi['createDirectory'] = (dirPath) =>
 
 const copyFile: DesktopApi['copyFile'] = (source, dest) =>
   invoke<SaveResult>(TAURI_COMMANDS.copyFile, { source, dest })
+
+const renamePath: DesktopApi['renamePath'] = (source, destination) =>
+  invoke<SaveResult>(TAURI_COMMANDS.renamePath, { source, destination })
+
+const deletePath: DesktopApi['deletePath'] = (path) =>
+  invoke<SaveResult>(TAURI_COMMANDS.deletePath, { path })
 
 const readFileBase64: DesktopApi['readFileBase64'] = (filePath) =>
   invoke<{ data: string; mimeType: string }>(TAURI_COMMANDS.readFileBase64, { filePath })
@@ -201,6 +209,8 @@ const migratedApi: MigratedDesktopApi = {
   createFile,
   createDirectory,
   copyFile,
+  renamePath,
+  deletePath,
   readFileBase64,
   readFileBinary,
   gitIsRepo,

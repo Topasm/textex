@@ -275,6 +275,12 @@
     "noFolder": "열린 폴더 없음",
     "newFile": "새 파일",
     "newFolder": "새 폴더",
+    "rename": "이름 바꾸기",
+    "delete": "삭제",
+    "confirmDelete": "{{name}}을(를) 삭제할까요? 이 작업은 되돌릴 수 없습니다.",
+    "invalidName": "이름에는 경로 구분자를 사용할 수 없습니다.",
+    "saveBeforeRename": "수정된 파일을 저장하거나 닫은 뒤 이름을 바꾸세요.",
+    "saveBeforeDelete": "수정된 파일을 저장하거나 닫은 뒤 삭제하세요.",
     "expandFolder": "폴더 펼치기",
     "collapseFolder": "폴더 접기"
   },

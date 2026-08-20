@@ -28,6 +28,8 @@ pub fn run() {
             commands::filesystem::create_file,
             commands::filesystem::create_directory,
             commands::filesystem::copy_file,
+            commands::filesystem::rename_path,
+            commands::filesystem::delete_path,
             commands::filesystem::read_file_base64,
             commands::filesystem::read_file_binary,
             commands::git::git_is_repo,

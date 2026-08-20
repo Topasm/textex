@@ -15,6 +15,8 @@ export const TAURI_COMMANDS = {
   createFile: 'create_file',
   createDirectory: 'create_directory',
   copyFile: 'copy_file',
+  renamePath: 'rename_path',
+  deletePath: 'delete_path',
   readFileBase64: 'read_file_base64',
   readFileBinary: 'read_file_binary',
   gitIsRepo: 'git_is_repo',

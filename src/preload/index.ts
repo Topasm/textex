@@ -169,6 +169,9 @@ contextBridge.exposeInMainWorld('api', {
   readDirectory: (dirPath: string) => invoke('fs:read-directory', dirPath),
   createFile: (filePath: string) => invoke('fs:create-file', filePath),
   copyFile: (source: string, dest: string) => invoke('fs:copy-file', source, dest),
+  renamePath: (source: string, destination: string) =>
+    invoke('fs:rename-path', source, destination),
+  deletePath: (path: string) => invoke('fs:delete-path', path),
   createDirectory: (dirPath: string) => invoke('fs:create-directory', dirPath),
   readFileBase64: (filePath: string) => invoke('fs:read-file-base64', filePath),
   readFileBinary: (filePath: string) => invoke('fs:read-file-binary', filePath),

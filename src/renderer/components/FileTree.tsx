@@ -102,6 +102,7 @@ interface FileTreeNodeProps {
   entry: DirectoryEntry
   depth: number
   gitFiles?: GitFileStatus[]
+  onChanged?: () => void | Promise<void>
 }
 
 import { getGitFileDecoration } from '../utils/gitStatus'
@@ -109,13 +110,14 @@ import { getGitFileDecoration } from '../utils/gitStatus'
 interface InlineInputProps {
   depth: number
   icon: ReactNode
+  initialValue?: string
   onSubmit: (name: string) => void
   onCancel: () => void
 }
 
-function InlineInput({ depth, icon, onSubmit, onCancel }: InlineInputProps) {
+function InlineInput({ depth, icon, initialValue = '', onSubmit, onCancel }: InlineInputProps) {
   const inputRef = useRef<HTMLInputElement>(null)
-  const [value, setValue] = useState('')
+  const [value, setValue] = useState(initialValue)
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -151,11 +153,34 @@ function InlineInput({ depth, icon, onSubmit, onCancel }: InlineInputProps) {
   )
 }
 
-function FileTreeNode({ entry, depth, gitFiles }: FileTreeNodeProps) {
+function pathIdentity(filePath: string): string {
+  const normalized = filePath.replace(/\\/g, '/')
+  return /^[a-zA-Z]:\//.test(normalized) || normalized.startsWith('//')
+    ? normalized.toLocaleLowerCase('en-US')
+    : normalized
+}
+
+function isPathInside(candidate: string, parent: string): boolean {
+  const candidateId = pathIdentity(candidate)
+  const parentId = pathIdentity(parent).replace(/\/$/, '')
+  return candidateId === parentId || candidateId.startsWith(`${parentId}/`)
+}
+
+function siblingPath(filePath: string, name: string): string {
+  const separatorIndex = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'))
+  return `${filePath.slice(0, separatorIndex + 1)}${name}`
+}
+
+function remapChildPath(filePath: string, source: string, destination: string): string {
+  return `${destination}${filePath.slice(source.length)}`
+}
+
+function FileTreeNode({ entry, depth, gitFiles, onChanged }: FileTreeNodeProps) {
   const { t } = useTranslation()
   const [expanded, setExpanded] = useState(depth < 1)
   const [children, setChildren] = useState<DirectoryEntry[] | null>(null)
   const [creatingType, setCreatingType] = useState<'file' | 'folder' | null>(null)
+  const [renaming, setRenaming] = useState(false)
   const [hoverPreview, setHoverPreview] = useState<DOMRect | null>(null)
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const itemRef = useRef<HTMLDivElement>(null)
@@ -294,8 +319,86 @@ function FileTreeNode({ entry, depth, gitFiles }: FileTreeNodeProps) {
     [entry.path, creatingType, loadChildren]
   )
 
+  const handleRename = useCallback(
+    async (name: string) => {
+      setRenaming(false)
+      if (name === entry.name) return
+      if (name === '.' || name === '..' || name.includes('/') || name.includes('\\')) {
+        window.alert(t('fileTree.invalidName'))
+        return
+      }
+
+      const editor = useEditorStore.getState()
+      const affected = Object.entries(editor.openFiles).filter(([filePath]) =>
+        isPathInside(filePath, entry.path)
+      )
+      if (affected.some(([, file]) => file.isDirty)) {
+        window.alert(t('fileTree.saveBeforeRename'))
+        return
+      }
+
+      const destination = siblingPath(entry.path, name)
+      try {
+        await window.api.renamePath(entry.path, destination)
+        const activePath = editor.activeFilePath
+        const reopen = affected
+          .map(([filePath]) => ({
+            oldPath: filePath,
+            newPath: remapChildPath(filePath, entry.path, destination),
+            wasActive: filePath === activePath
+          }))
+          .sort((left, right) => Number(left.wasActive) - Number(right.wasActive))
+        for (const file of reopen) editor.closeTab(file.oldPath)
+        for (const file of reopen) {
+          const result = await window.api.readFile(file.newPath)
+          useEditorStore.getState().openFileInTab(result.filePath, result.content)
+        }
+        await onChanged?.()
+      } catch (error) {
+        logError('FileTree:rename', error)
+      }
+    },
+    [entry, onChanged, t]
+  )
+
+  const handleDelete = useCallback(
+    async (event: React.MouseEvent) => {
+      event.stopPropagation()
+      const editor = useEditorStore.getState()
+      const affected = Object.entries(editor.openFiles).filter(([filePath]) =>
+        isPathInside(filePath, entry.path)
+      )
+      if (affected.some(([, file]) => file.isDirty)) {
+        window.alert(t('fileTree.saveBeforeDelete'))
+        return
+      }
+      if (!window.confirm(t('fileTree.confirmDelete', { name: entry.name }))) return
+
+      try {
+        await window.api.deletePath(entry.path)
+        for (const [filePath] of affected) useEditorStore.getState().closeTab(filePath)
+        await onChanged?.()
+      } catch (error) {
+        logError('FileTree:delete', error)
+      }
+    },
+    [entry, onChanged, t]
+  )
+
   const isSelected = entry.path === activeFilePath
   const gitDeco = entry.type === 'file' ? getGitFileDecoration(entry.path, gitFiles) : null
+
+  if (renaming) {
+    return (
+      <InlineInput
+        depth={depth}
+        icon={getFileIcon(entry.name, entry.type, expanded)}
+        initialValue={entry.name}
+        onSubmit={handleRename}
+        onCancel={() => setRenaming(false)}
+      />
+    )
+  }
 
   return (
     <>
@@ -327,26 +430,47 @@ function FileTreeNode({ entry, depth, gitFiles }: FileTreeNodeProps) {
         )}
         {getFileIcon(entry.name, entry.type, expanded)}
         <span className="file-tree-name">{entry.name}</span>
-        {entry.type === 'directory' && (
-          <span className="file-tree-actions">
-            <button
-              className="file-tree-action-btn"
-              onClick={handleCreateFile}
-              title={t('fileTree.newFile')}
-              aria-label={t('fileTree.newFile')}
-            >
-              +
-            </button>
-            <button
-              className="file-tree-action-btn"
-              onClick={handleCreateFolder}
-              title={t('fileTree.newFolder')}
-              aria-label={t('fileTree.newFolder')}
-            >
-              +&#x2395;
-            </button>
-          </span>
-        )}
+        <span className="file-tree-actions">
+          {entry.type === 'directory' && (
+            <>
+              <button
+                className="file-tree-action-btn"
+                onClick={handleCreateFile}
+                title={t('fileTree.newFile')}
+                aria-label={t('fileTree.newFile')}
+              >
+                +
+              </button>
+              <button
+                className="file-tree-action-btn"
+                onClick={handleCreateFolder}
+                title={t('fileTree.newFolder')}
+                aria-label={t('fileTree.newFolder')}
+              >
+                +&#x2395;
+              </button>
+            </>
+          )}
+          <button
+            className="file-tree-action-btn"
+            onClick={(event) => {
+              event.stopPropagation()
+              setRenaming(true)
+            }}
+            title={t('fileTree.rename')}
+            aria-label={t('fileTree.rename')}
+          >
+            &#x270E;
+          </button>
+          <button
+            className="file-tree-action-btn file-tree-delete-btn"
+            onClick={handleDelete}
+            title={t('fileTree.delete')}
+            aria-label={t('fileTree.delete')}
+          >
+            &times;
+          </button>
+        </span>
         {gitDeco && <span className={`file-tree-git ${gitDeco.className}`}>{gitDeco.label}</span>}
       </div>
       {hoverPreview && (
@@ -371,7 +495,13 @@ function FileTreeNode({ entry, depth, gitFiles }: FileTreeNodeProps) {
           )}
           {children &&
             children.map((child) => (
-              <FileTreeNode key={child.path} entry={child} depth={depth + 1} gitFiles={gitFiles} />
+              <FileTreeNode
+                key={child.path}
+                entry={child}
+                depth={depth + 1}
+                gitFiles={gitFiles}
+                onChanged={loadChildren}
+              />
             ))}
         </div>
       )}
@@ -384,7 +514,14 @@ function FileTree() {
   const directoryTree = useProjectStore((s) => s.directoryTree)
   const gitStatus = useProjectStore((s) => s.gitStatus)
   const projectRoot = useProjectStore((s) => s.projectRoot)
+  const setDirectoryTree = useProjectStore((s) => s.setDirectoryTree)
   const [creatingType, setCreatingType] = useState<'file' | 'folder' | null>(null)
+
+  const refreshRoot = useCallback(async () => {
+    if (!projectRoot) return
+    const entries = await window.api.readDirectory(projectRoot)
+    setDirectoryTree(entries)
+  }, [projectRoot, setDirectoryTree])
 
   const handleRootCreate = useCallback(
     async (name: string) => {
@@ -398,13 +535,13 @@ function FileTree() {
           const result = await window.api.readFile(fullPath)
           useEditorStore.getState().openFileInTab(result.filePath, result.content)
         }
-        // Tree refreshes via directory watcher
+        await refreshRoot()
       } catch (err) {
         logError('FileTree:rootCreate', err)
       }
       setCreatingType(null)
     },
-    [projectRoot, creatingType]
+    [projectRoot, creatingType, refreshRoot]
   )
 
   if (!directoryTree || directoryTree.length === 0) {
@@ -447,7 +584,13 @@ function FileTree() {
         />
       )}
       {directoryTree.map((entry) => (
-        <FileTreeNode key={entry.path} entry={entry} depth={0} gitFiles={gitStatus?.files} />
+        <FileTreeNode
+          key={entry.path}
+          entry={entry}
+          depth={0}
+          gitFiles={gitStatus?.files}
+          onChanged={refreshRoot}
+        />
       ))}
     </div>
   )
