@@ -50,7 +50,7 @@ mac:
   icon: build/icon.icns
   artifactName: '${productName}-${version}-macos-${arch}.${ext}'
   # Native prebuilds and sidecars are already split into x64/arm64 paths.
-  x64ArchFiles: '{Contents/Resources/app.asar.unpacked/node_modules/**/*darwin*/**/*.node,Contents/Resources/bin/**}'
+  x64ArchFiles: '{Contents/Resources/app.asar.unpacked/node_modules/**/*darwin*/**,Contents/Resources/bin/**}'
   target:
     - dmg
     - zip

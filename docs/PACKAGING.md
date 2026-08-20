@@ -49,7 +49,7 @@ win:
 mac:
   icon: build/icon.icns
   artifactName: '${productName}-${version}-macos-${arch}.${ext}'
-  x64ArchFiles: '{Contents/Resources/app.asar.unpacked/node_modules/**/*darwin*/**/*.node,Contents/Resources/bin/**}'
+  x64ArchFiles: '{Contents/Resources/app.asar.unpacked/node_modules/**/*darwin*/**,Contents/Resources/bin/**}'
   target:
     - dmg
     - zip                  # Required by electron-updater on macOS
