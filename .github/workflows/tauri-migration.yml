@@ -225,13 +225,28 @@ jobs:
         shell: bash
         run: |
           dmg=$(find src-tauri/target/universal-apple-darwin/release/bundle/dmg -name '*.dmg' -type f -print -quit)
-          app=$(find src-tauri/target/universal-apple-darwin/release/bundle/macos -name '*.app' -type d -print -quit)
-          tectonic=$(find "$app" -type f -name 'tectonic' -print -quit)
-          test -n "$dmg" && test -n "$app" && test -n "$tectonic"
+          test -n "$dmg"
           hdiutil verify "$dmg"
+
+          mount_dir=$(mktemp -d)
+          cleanup() {
+            hdiutil detach "$mount_dir" >/dev/null 2>&1 || true
+            rmdir "$mount_dir" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          hdiutil attach "$dmg" -readonly -nobrowse -mountpoint "$mount_dir"
+
+          app=$(find "$mount_dir" -maxdepth 2 -name '*.app' -type d -print -quit)
+          tectonic="$app/Contents/MacOS/tectonic"
+          executable="$app/Contents/MacOS/textex-tauri"
+          test -n "$app" && test -x "$tectonic" && test -x "$executable"
+          "$tectonic" --version | grep -F 'Tectonic 0.17.0'
           lipo -archs "$tectonic" | tee /tmp/tectonic-architectures.txt
           grep -q x86_64 /tmp/tectonic-architectures.txt
           grep -q arm64 /tmp/tectonic-architectures.txt
+          lipo -archs "$executable" | tee /tmp/textex-architectures.txt
+          grep -q x86_64 /tmp/textex-architectures.txt
+          grep -q arm64 /tmp/textex-architectures.txt
           codesign --verify --deep --strict "$app"
           shasum -a 256 "$dmg"
 
