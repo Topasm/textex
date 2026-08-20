@@ -49,6 +49,8 @@ win:
 mac:
   icon: build/icon.icns
   artifactName: '${productName}-${version}-macos-${arch}.${ext}'
+  # These optional PDF.js canvas bindings are already architecture-specific.
+  x64ArchFiles: '**/node_modules/@napi-rs/canvas-darwin-*/**/*.node'
   target:
     - dmg
     - zip

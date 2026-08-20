@@ -49,6 +49,7 @@ win:
 mac:
   icon: build/icon.icns
   artifactName: '${productName}-${version}-macos-${arch}.${ext}'
+  x64ArchFiles: '**/node_modules/@napi-rs/canvas-darwin-*/**/*.node'
   target:
     - dmg
     - zip                  # Required by electron-updater on macOS
