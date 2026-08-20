@@ -13,6 +13,7 @@
 |   +-- LICENSES.md                # Third-party license summary
 |   +-- MCP.md                     # MCP server tools & config
 |   +-- PACKAGING.md               # Build & distribution config
+|   +-- RELEASE_CHECKLIST.md       # Blocking release safety and recovery steps
 |   +-- SETTINGS.md                # Settings schema & formatting
 |   +-- TECH_STACK.md              # Technology choices & rationale
 |   +-- TODO.md                    # Implementation status & remaining tasks

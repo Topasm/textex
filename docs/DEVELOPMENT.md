@@ -3,9 +3,11 @@
 ## Setup
 
 ```bash
-# Install dependencies
-npm install
+# Install the exact dependency graph from package-lock.json
+npm ci
 ```
+
+Use `npm install` only when intentionally changing dependencies or the lockfile.
 
 ## Running
 
@@ -44,8 +46,12 @@ npm run build            # Compile main/preload/renderer to out/
 npm run typecheck        # Run tsc --noEmit (all targets)
 
 # Testing
-npm run test             # Run Vitest (133 tests, 9 files)
+npm run test             # Run the complete Vitest suite
 npm run test:watch       # Run Vitest in watch mode
+
+# Verification gates
+npm run check            # Fast type/lint/format checks; skips tests
+npm run pre-commit       # Full type/lint/format/test commit gate
 
 # Linting & Formatting
 npm run lint             # Run ESLint on src/
@@ -76,24 +82,20 @@ Electron/Chromium notices file.
 
 ## Check Suite
 
-Run these commands before committing to catch issues early:
+Use the quick suite while iterating:
 
 ```bash
-# 1. Type check
-npm run typecheck
-
-# 2. Lint
-npm run lint
-
-# 3. Format check (non-destructive)
-npm run format:check
-
-# 4. Tests
-npm run test
+npm run check
 ```
 
-Or as a single one-liner:
+Before every commit, run the full gate, which includes tests:
 
 ```bash
-npm run typecheck && npm run lint && npm run format:check && npm run test
+npm run pre-commit
 ```
+
+Changes to versions, dependencies, native modules, sidecars, packaging, updater
+metadata, or GitHub Actions must also follow the blocking steps in
+[RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md). In particular, validate a release
+commit on `main` across Linux, Windows, and macOS universal before creating its
+version tag.

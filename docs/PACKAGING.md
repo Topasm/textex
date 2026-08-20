@@ -106,6 +106,7 @@ resources/
 | Platform | File | Variant |
 |---|---|---|
 | Linux | `resources/bin/linux/tectonic` | `x86_64-unknown-linux-musl` (statically linked) |
+| macOS Intel | `resources/bin/mac/tectonic` | `x86_64-apple-darwin` (Mach-O x86_64) |
 | macOS Apple Silicon | `resources/bin/mac/arm64/tectonic` | `aarch64-apple-darwin` (Mach-O arm64) |
 | Windows | `resources/bin/win/tectonic.exe` | `x86_64-pc-windows-msvc` (PE32+ x86-64) |
 
@@ -165,6 +166,11 @@ installer names together with `latest.yml`, `latest-mac.yml`,
 `latest-linux.yml`, and generated blockmaps. These metadata files and exact
 artifact names are required for GitHub Releases updates through
 `electron-updater`.
+
+Do not narrow `mac.x64ArchFiles` to `**/*.node`. Native packages such as
+`node-pty` also contain an extensionless `darwin-*/spawn-helper` Mach-O binary.
+The current pattern deliberately covers every file in Darwin-specific prebuild
+directories plus architecture-specific sidecars.
 
 **Note:** The package scripts run `electron-vite build` first to ensure compiled
 output in `out/` is up to date before packaging.
@@ -244,6 +250,9 @@ platform-specific Electron overheads.
 ---
 
 ## CI/CD Considerations
+
+Follow the blocking [Release Safety Checklist](RELEASE_CHECKLIST.md) before
+creating a version tag or enabling publication in a manual workflow run.
 
 For automated builds (e.g., GitHub Actions):
 
