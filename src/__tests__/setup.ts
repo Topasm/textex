@@ -58,6 +58,7 @@ Object.defineProperty(window, 'api', {
 
     // Multi-file / directory operations
     readFile: vi.fn(),
+    readFileBinary: vi.fn(),
     openDirectory: vi.fn(),
     activateProject: vi.fn(async (projectPath: string) => projectPath),
     readDirectory: vi.fn(),

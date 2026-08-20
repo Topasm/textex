@@ -36,7 +36,7 @@ revision-aware Tectonic compile, system Git vertical slice다. 새 기능은 Tau
 | LaTeX package metadata | 지원 | bundled JSON resource를 Rust가 검증·cache하고 transitive dependency까지 반환한다. |
 | fallback document outline | 지원 | filesystem 접근 없는 shared parser를 Tauri renderer에서 직접 실행한다. |
 | updater | 지원 | Rust가 GitHub `latest.json`을 확인하고 signed artifact를 Channel progress와 함께 설치한다. release build에는 signing key 설정이 필요하다. |
-| PDF preview | 지원 | Rust raw IPC body를 `Uint8Array`로 연결하며, 10페이지 초과 문서는 visible+overscan page만 DOM에 두고 scroll frame마다 virtual window를 갱신한다. |
+| PDF preview | 지원 | Rust raw IPC body를 `Uint8Array`로 연결하고 visible+overscan만 DOM에 둔다. 새 generation은 숨겨진 현재 page가 렌더된 뒤 기존 keyed layer와 atomic swap한다. |
 | 나머지 desktop API | 미지원 | 호출 시 `has not been migrated` 오류를 반환한다. |
 
 파일 읽기는 5 MiB를 넘으면 renderer에 경고 정보를 전달하고, editor 정지를 막기
@@ -355,7 +355,7 @@ host에서도 기본 gate를 실행할 수 있다. Rust 동작 변경에는 위 
 현재 기본 Tauri runtime은 전체 TextEx workflow를 지원하지 않는다. 다음 기능은 legacy
 Electron에서만 동작한다.
 
-- generation-aware preview swap과 custom protocol/PDFium A/B
+- project-scoped custom protocol과 PDFium A/B
 - TexLab lifecycle와 LSP JSON-RPC
 - history와 project metadata
 - BibTeX/label scan, spellcheck, templates, Pandoc export와 SyncTeX
@@ -376,8 +376,8 @@ Tectonic은 필수 sidecar로 등록되어 package 전 검증되지만 TexLab은
 
 다음 순서로 작은 vertical slice를 추가한다.
 
-1. 새 PDF generation의 현재 page가 준비된 뒤 atomic swap한다. raw IPC보다 큰 문서에는
-   project-scoped custom protocol을 A/B 측정한다.
+1. raw IPC보다 큰 PDF에는 project-scoped custom protocol을 A/B 측정하고 PDF.js 대비
+   PDFium의 latency/memory/package-size tradeoff를 기록한다.
 2. SyncTeX, Pandoc, bibliography, history, AI/Zotero 등 나머지 service를 이관한다.
 3. TexLab은 project-wide definition/rename/semantic diagnostics의 실사용 필요성을 측정할
    때까지 HOLD한다.

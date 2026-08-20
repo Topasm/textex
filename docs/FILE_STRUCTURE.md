@@ -113,6 +113,7 @@
 |   |   |   +-- DraftModal.tsx     # AI draft modal (supports initialPrompt prefill)
 |   |   |   +-- EditorPane.tsx     # Monaco Editor wrapper (LaTeX, vs-dark theme)
 |   |   |   +-- PreviewPane.tsx    # Virtualized react-pdf viewer (DesktopApi bytes -> PDF.js)
+|   |   |   +-- previewGeneration.ts # Staged PDF generation and atomic-swap state
 |   |   |   +-- previewUtils.ts    # Preview layout and virtual-window helpers
 |   |   |   +-- PreviewErrorBoundary.tsx  # Error boundary for PDF preview
 |   |   |   +-- Toolbar.tsx        # File actions + compile button + keyboard hints

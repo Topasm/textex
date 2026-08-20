@@ -1,4 +1,4 @@
-import { useMemo, useRef, useCallback, useState, useEffect } from 'react'
+import { useMemo, useRef, useCallback, useState, useEffect, useReducer } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import type { PDFPageProxy } from 'pdfjs-dist'
 import { useCompileStore } from '../store/useCompileStore'
@@ -13,6 +13,11 @@ import { useCitationTooltip } from '../hooks/preview/useCitationTooltip'
 import { useContainerSize } from '../hooks/preview/useContainerSize'
 import CitationTooltip from './CitationTooltip'
 import { runtimePerformance } from '../services/runtimePerformance'
+import {
+  initialPdfGenerationState,
+  reducePdfGeneration,
+  type PdfGeneration
+} from './previewGeneration'
 import {
   SCROLL_PERSIST_DEBOUNCE_MS,
   SWIPE_THRESHOLD,
@@ -55,9 +60,18 @@ function PreviewPane() {
   const projectRoot = useProjectStore((s) => s.projectRoot)
   const containerRef = useRef<HTMLDivElement>(null)
   const scrollPositionRef = useRef(0)
-  const [numPages, setNumPages] = useState(0)
   const [pdfError, setPdfError] = useState<string | null>(null)
   const pageViewportsRef = useRef<Map<number, PageViewportInfo>>(new Map())
+  const [generationState, dispatchGeneration] = useReducer(
+    reducePdfGeneration,
+    initialPdfGenerationState
+  )
+  const generationStateRef = useRef(generationState)
+  generationStateRef.current = generationState
+  const displayedGeneration = generationState.displayed
+  const pendingGeneration = generationState.pending
+  const displayedRevision = displayedGeneration?.revision ?? 0
+  const numPages = displayedGeneration?.numPages ?? 0
 
   // Virtual scrolling: track which pages are visible
   const [visibleRange, setVisibleRange] = useState<{ start: number; end: number }>({
@@ -76,10 +90,10 @@ function PreviewPane() {
   const { containerWidth, ctrlHeld } = useContainerSize(containerRef)
   const { transientScale } = usePreviewZoom(containerRef)
   const { highlights, handleContainerClick } = useSynctex(containerRef, pageViewportsRef)
-  useScrollSync({ containerRef, pageViewportsRef, containerWidth })
+  useScrollSync({ containerRef, pageViewportsRef, containerWidth, pdfRevision: displayedRevision })
   // usePdfSearch handles DOM highlighting and communicates with OmniSearch via store
   usePdfSearch(containerRef, numPages)
-  const { tooltipData } = useCitationTooltip(containerRef, pdfRevision)
+  const { tooltipData } = useCitationTooltip(containerRef, displayedRevision)
 
   /** Calculate estimated height for a page. */
   const getPageHeight = useCallback(
@@ -364,106 +378,228 @@ function PreviewPane() {
     }
   }, [])
 
-  // Load PDF as binary data via IPC. This works reliably in both dev mode
-  // (where http://localhost can't access file:// URLs) and production.
-  const [pdfData, setPdfData] = useState<Uint8Array | null>(null)
-  const pdfFile = useMemo(() => (pdfData ? { data: pdfData } : null), [pdfData])
+  // Stage PDF bytes by revision. A newer generation remains hidden until its
+  // current page has rendered, so the displayed document never flashes blank.
   useEffect(() => {
     if (!pdfPath) {
-      setPdfData(null)
+      dispatchGeneration({ type: 'clear' })
+      setPdfError(null)
       return
     }
+    dispatchGeneration({ type: 'request', revision: pdfRevision, path: pdfPath })
     let cancelled = false
     window.api
       .readFileBinary(pdfPath)
       .then((result: { data: Uint8Array }) => {
         if (cancelled) return
-        setPdfData(result.data)
+        dispatchGeneration({
+          type: 'loaded',
+          generation: {
+            revision: pdfRevision,
+            path: pdfPath,
+            file: { data: result.data },
+            numPages: null
+          }
+        })
       })
-      .catch(() => {
-        if (!cancelled) setPdfData(null)
+      .catch((error: unknown) => {
+        if (cancelled) return
+        dispatchGeneration({ type: 'failed', revision: pdfRevision })
+        const message = error instanceof Error ? error.message : String(error)
+        if (!generationStateRef.current.displayed) setPdfError(message)
+        useCompileStore.getState().appendLog(`PDF byte load error: ${message}\n`)
       })
     return () => {
       cancelled = true
     }
   }, [pdfPath, pdfRevision])
 
-  const onDocumentLoadSuccess = useCallback(
-    ({ numPages }: { numPages: number }) => {
-      setNumPages(numPages)
-      setPdfError(null)
+  const initializeDisplayedGeneration = useCallback(
+    (loadedNumPages: number, restoreScroll: boolean) => {
+      const targetPage = clampPage(usePdfStore.getState().currentPage, loadedNumPages)
       pageViewportsRef.current.clear()
       setPageAspectRatios(new Map())
-      setVisibleRange({ start: 1, end: Math.min(numPages, 5) })
-      // Restore scroll position after new PDF renders
+      setVisibleRange(computeVisibleRange(targetPage, targetPage, loadedNumPages))
+      usePdfStore.getState().setCurrentPage(targetPage)
+
+      if (!restoreScroll) return
       requestAnimationFrame(() => {
-        if (containerRef.current) {
-          // Prefer within-session ref for recompile position, then per-project persisted
-          const sessionScroll = scrollPositionRef.current
-          if (sessionScroll > 0) {
-            containerRef.current.scrollTop = sessionScroll
-          } else if (projectRoot) {
-            const saved = usePdfStore.getState().getScrollPosition(projectRoot)
-            if (saved > 0) {
-              containerRef.current.scrollTop = saved
-            }
-          }
+        if (!containerRef.current) return
+        const sessionScroll = scrollPositionRef.current
+        if (sessionScroll > 0) {
+          containerRef.current.scrollTop = sessionScroll
+        } else if (projectRoot) {
+          const saved = usePdfStore.getState().getScrollPosition(projectRoot)
+          if (saved > 0) containerRef.current.scrollTop = saved
         }
       })
     },
     [projectRoot]
   )
 
-  const onDocumentLoadError = useCallback((error: Error) => {
+  const handleDocumentLoadSuccess = useCallback(
+    (generationRevision: number, loadedNumPages: number) => {
+      const currentGeneration = generationStateRef.current.displayed
+      const isInitialDisplayedLoad =
+        currentGeneration?.revision === generationRevision && currentGeneration.numPages === null
+      dispatchGeneration({
+        type: 'documentLoaded',
+        revision: generationRevision,
+        numPages: loadedNumPages
+      })
+      if (isInitialDisplayedLoad) {
+        setPdfError(null)
+        initializeDisplayedGeneration(loadedNumPages, true)
+      }
+    },
+    [initializeDisplayedGeneration]
+  )
+
+  const handleDocumentLoadError = useCallback((generationRevision: number, error: Error) => {
+    dispatchGeneration({ type: 'failed', revision: generationRevision })
     const msg = error.message || 'Unknown PDF loading error'
     console.error('PDF load error:', msg, error)
-    setPdfError(msg)
+    if (generationStateRef.current.displayed?.revision === generationRevision) setPdfError(msg)
     useCompileStore.getState().appendLog(`PDF viewer error: ${msg}\n`)
     useCompileStore.getState().setLogPanelOpen(true)
   }, [])
 
-  // Capture viewport info when each page renders
+  const capturePageViewport = useCallback(
+    (generationRevision: number, pageNumber: number, page: PDFPageProxy): boolean => {
+      const container = containerRef.current
+      if (!container) return false
+      const generationEl = container.querySelector(`[data-pdf-generation="${generationRevision}"]`)
+      const pageEl = generationEl?.querySelector(
+        `[data-page-number="${pageNumber}"]`
+      ) as HTMLDivElement | null
+      if (!pageEl) return false
+
+      const baseViewport = page.getViewport({ scale: 1 })
+      const actualPageWidth = baseViewport.width
+      const actualPageHeight = baseViewport.height
+      const pw = containerWidth ? (containerWidth - 32) * (zoomLevel / 100) : actualPageWidth
+      const scale = pw / actualPageWidth
+      const viewport = page.getViewport({ scale })
+      pageViewportsRef.current.set(pageNumber, {
+        viewport,
+        element: pageEl,
+        pageWidth: actualPageWidth,
+        pageHeight: actualPageHeight
+      })
+      const aspectRatio = actualPageHeight / actualPageWidth
+      setPageAspectRatios((previous) => {
+        const previousAspectRatio = previous.get(pageNumber)
+        if (
+          previousAspectRatio !== undefined &&
+          Math.abs(previousAspectRatio - aspectRatio) <= 0.0001
+        ) {
+          return previous
+        }
+        const next = new Map(previous)
+        next.set(pageNumber, aspectRatio)
+        return next
+      })
+      return true
+    },
+    [containerWidth, zoomLevel]
+  )
+
   const handlePageRenderSuccess = useCallback(
-    (pageNumber: number) => {
+    (generationRevision: number, pageNumber: number) => {
       return (page: PDFPageProxy) => {
-        runtimePerformance.recordPdfPageRendered(pdfRevision)
-        const container = containerRef.current
-        if (!container) return
-        const pageEl = container.querySelector(
-          `[data-page-number="${pageNumber}"]`
-        ) as HTMLDivElement | null
-        if (!pageEl) return
-        // Get actual page dimensions from PDF.js (handles A4, Letter, etc.)
-        const baseViewport = page.getViewport({ scale: 1 })
-        const actualPageWidth = baseViewport.width
-        const actualPageHeight = baseViewport.height
-        const pw = containerWidth ? (containerWidth - 32) * (zoomLevel / 100) : actualPageWidth
-        const scale = pw / actualPageWidth
-        const viewport = page.getViewport({ scale })
-        pageViewportsRef.current.set(pageNumber, {
-          viewport,
-          element: pageEl,
-          pageWidth: actualPageWidth,
-          pageHeight: actualPageHeight
-        })
-        // Cache intrinsic geometry for virtual layout calculations. Recompute
-        // offsets only when this page reveals a new aspect ratio.
-        const aspectRatio = actualPageHeight / actualPageWidth
-        setPageAspectRatios((previous) => {
-          const previousAspectRatio = previous.get(pageNumber)
-          if (
-            previousAspectRatio !== undefined &&
-            Math.abs(previousAspectRatio - aspectRatio) <= 0.0001
-          ) {
-            return previous
-          }
-          const next = new Map(previous)
-          next.set(pageNumber, aspectRatio)
-          return next
-        })
+        if (generationStateRef.current.displayed?.revision !== generationRevision) return
+        runtimePerformance.recordPdfPageRendered(generationRevision)
+        capturePageViewport(generationRevision, pageNumber, page)
       }
     },
-    [containerWidth, pdfRevision, zoomLevel]
+    [capturePageViewport]
+  )
+
+  const handlePendingPageRenderSuccess = useCallback(
+    (generationRevision: number, pageNumber: number) => {
+      return (page: PDFPageProxy) => {
+        const pending = generationStateRef.current.pending
+        if (pending?.revision !== generationRevision || pending.numPages === null) return
+        const targetPage = clampPage(usePdfStore.getState().currentPage, pending.numPages)
+        if (pageNumber !== targetPage) return
+
+        initializeDisplayedGeneration(pending.numPages, false)
+        capturePageViewport(generationRevision, pageNumber, page)
+        runtimePerformance.recordPdfPageRendered(generationRevision)
+        setPdfError(null)
+        dispatchGeneration({ type: 'ready', revision: generationRevision })
+      }
+    },
+    [capturePageViewport, initializeDisplayedGeneration]
+  )
+
+  const renderGenerationPages = (
+    generation: PdfGeneration,
+    isDisplayed: boolean
+  ): React.ReactNode => {
+    const generationNumPages = generation.numPages ?? 0
+    if (generationNumPages === 0) return null
+
+    const targetPage = clampPage(currentPage, generationNumPages)
+    const renderPage = (pageNumber: number, keyPrefix: string): React.ReactNode => (
+      <Page
+        key={`${keyPrefix}_${pageNumber}`}
+        pageNumber={pageNumber}
+        width={pageWidth}
+        renderTextLayer={isDisplayed}
+        renderAnnotationLayer={isDisplayed}
+        onRenderSuccess={
+          isDisplayed
+            ? handlePageRenderSuccess(generation.revision, pageNumber)
+            : handlePendingPageRenderSuccess(generation.revision, pageNumber)
+        }
+      />
+    )
+
+    if (pdfViewMode === 'single') {
+      return (
+        <div
+          className={`preview-single-page-container${isDisplayed && slideDirection ? ` preview-slide-${slideDirection}` : ''}`}
+          onAnimationEnd={isDisplayed ? () => setSlideDirection(null) : undefined}
+        >
+          {renderPage(targetPage, 'single_page')}
+        </div>
+      )
+    }
+
+    if (generationNumPages <= VIRTUALIZATION_THRESHOLD) {
+      const pageNumbers = isDisplayed
+        ? Array.from({ length: generationNumPages }, (_, index) => index + 1)
+        : [targetPage]
+      return pageNumbers.map((pageNumber) => renderPage(pageNumber, 'page'))
+    }
+
+    const generationLayout = isDisplayed
+      ? { totalHeight, pageOffsets }
+      : buildCumulativeLayout(generationNumPages, getPageHeight)
+    const pageNumbers = isDisplayed ? virtualPageNumbers : [targetPage]
+    return (
+      <div style={{ height: generationLayout.totalHeight, position: 'relative' }}>
+        {pageNumbers.map((pageNumber) => (
+          <div
+            key={`page_${pageNumber}`}
+            data-virtual-page-number={pageNumber}
+            style={{
+              position: 'absolute',
+              top: generationLayout.pageOffsets.get(pageNumber) ?? 0,
+              left: 0,
+              right: 0
+            }}
+          >
+            {renderPage(pageNumber, 'page')}
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  const generationLayers = [displayedGeneration, pendingGeneration].filter(
+    (generation): generation is PdfGeneration => generation !== null
   )
 
   // Always render the container so the ResizeObserver can attach and measure width.
@@ -476,11 +612,11 @@ function PreviewPane() {
       onClick={handleContainerClick}
       style={{ position: 'relative' }}
     >
-      {compileStatus === 'error' && !pdfData ? (
+      {compileStatus === 'error' && !displayedGeneration ? (
         <div className="preview-center preview-error">
           <p>Compilation failed. Check the log panel.</p>
         </div>
-      ) : !pdfData ? (
+      ) : !displayedGeneration ? (
         <div className="preview-center preview-empty">
           <div>
             <p>No PDF to display</p>
@@ -505,69 +641,48 @@ function PreviewPane() {
                 : undefined
             }
           >
-            <Document
-              file={pdfFile}
-              onLoadSuccess={onDocumentLoadSuccess}
-              onLoadError={onDocumentLoadError}
-              loading={
-                <div className="preview-center">
-                  <div>
-                    <div className="preview-spinner" />
-                    <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Loading PDF...</p>
-                  </div>
-                </div>
-              }
-            >
-              {/* Virtual scrolling: use a container with total height and only render visible pages */}
-              {pdfViewMode === 'single' ? (
+            {generationLayers.map((generation) => {
+              const isDisplayed = generation.revision === displayedRevision
+              return (
                 <div
-                  className={`preview-single-page-container${slideDirection ? ` preview-slide-${slideDirection}` : ''}`}
-                  onAnimationEnd={() => setSlideDirection(null)}
-                >
-                  <Page
-                    key={`single_page_${currentPage}`}
-                    pageNumber={currentPage}
-                    width={pageWidth}
-                    onRenderSuccess={handlePageRenderSuccess(currentPage)}
-                  />
-                </div>
-              ) : numPages <= VIRTUALIZATION_THRESHOLD ? (
-                // For small documents, render all pages (no virtualization overhead)
-                Array.from({ length: numPages }, (_, i) => (
-                  <Page
-                    key={`page_${i + 1}`}
-                    pageNumber={i + 1}
-                    width={pageWidth}
-                    onRenderSuccess={handlePageRenderSuccess(i + 1)}
-                  />
-                ))
-              ) : (
-                <div style={{ height: totalHeight, position: 'relative' }}>
-                  {virtualPageNumbers.map((pageNum) => {
-                    const offset = pageOffsets.get(pageNum) ?? 0
-
-                    return (
-                      <div
-                        key={`page_${pageNum}`}
-                        data-virtual-page-number={pageNum}
-                        style={{
+                  key={generation.revision}
+                  data-pdf-generation={generation.revision}
+                  aria-hidden={!isDisplayed}
+                  style={
+                    isDisplayed
+                      ? undefined
+                      : {
                           position: 'absolute',
-                          top: offset,
-                          left: 0,
-                          right: 0
-                        }}
-                      >
-                        <Page
-                          pageNumber={pageNum}
-                          width={pageWidth}
-                          onRenderSuccess={handlePageRenderSuccess(pageNum)}
-                        />
-                      </div>
-                    )
-                  })}
+                          inset: 0,
+                          visibility: 'hidden',
+                          pointerEvents: 'none'
+                        }
+                  }
+                >
+                  <Document
+                    file={generation.file}
+                    onLoadSuccess={({ numPages: loadedNumPages }) =>
+                      handleDocumentLoadSuccess(generation.revision, loadedNumPages)
+                    }
+                    onLoadError={(error) => handleDocumentLoadError(generation.revision, error)}
+                    loading={
+                      isDisplayed ? (
+                        <div className="preview-center">
+                          <div>
+                            <div className="preview-spinner" />
+                            <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
+                              Loading PDF...
+                            </p>
+                          </div>
+                        </div>
+                      ) : null
+                    }
+                  >
+                    {renderGenerationPages(generation, isDisplayed)}
+                  </Document>
                 </div>
-              )}
-            </Document>
+              )
+            })}
           </div>
           {pdfError && (
             <div

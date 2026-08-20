@@ -1,7 +1,6 @@
 import { useEffect, useRef, useSyncExternalStore } from 'react'
 import { useEditorStore } from '../../store/useEditorStore'
 import { usePdfStore } from '../../store/usePdfStore'
-import { useCompileStore } from '../../store/useCompileStore'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import type { SyncTeXLineMapEntry } from '../../../shared/types'
 import {
@@ -20,6 +19,7 @@ interface UseScrollSyncOptions {
   containerRef: React.RefObject<HTMLDivElement | null>
   pageViewportsRef: React.RefObject<Map<number, PageViewportInfo>>
   containerWidth: number | null
+  pdfRevision: number
 }
 
 /** Debounce delay for scroll sync (ms). */
@@ -72,14 +72,14 @@ function findEntryByPageY(
 export function useScrollSync({
   containerRef,
   pageViewportsRef,
-  containerWidth
+  containerWidth,
+  pdfRevision
 }: UseScrollSyncOptions): void {
   const lineMapRef = useRef<SyncTeXLineMapEntry[]>([])
   const scrollSourceRef = useRef<'editor' | 'pdf' | null>(null)
   const lockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Build line map after each compilation
-  const pdfRevision = useCompileStore((s) => s.pdfRevision)
   const filePath = useEditorStore((s) => s.filePath)
   const editorAdapter = useSyncExternalStore(
     subscribeActiveEditorAdapter,
