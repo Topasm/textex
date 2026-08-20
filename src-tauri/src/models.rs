@@ -1,5 +1,29 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub struct GitFileStatus {
+    pub path: String,
+    pub index: String,
+    pub working_dir: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub struct GitStatusResult {
+    pub branch: String,
+    pub files: Vec<GitFileStatus>,
+    pub staged: Vec<String>,
+    pub modified: Vec<String>,
+    pub not_added: Vec<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub struct GitLogEntry {
+    pub hash: String,
+    pub date: String,
+    pub message: String,
+    pub author: String,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct UserSettings {

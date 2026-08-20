@@ -139,7 +139,7 @@ pub async fn read_file(state: &AppState, file_path: &str) -> AppResult<OpenFileR
 }
 
 async fn read_text_file_at(canonical: &Path) -> AppResult<OpenFileResult> {
-    let display_path = path_to_string(&canonical)?;
+    let display_path = path_to_string(canonical)?;
     let metadata = fs::metadata(&canonical)
         .await
         .map_err(|source| AppError::io("inspect file", display_path.clone(), source))?;

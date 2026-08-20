@@ -43,6 +43,27 @@ pub enum AppError {
     #[error("Directory watcher failed: {0}")]
     Watcher(String),
 
+    #[error("Failed to {operation} Git repository at {path}: {source}")]
+    GitIo {
+        operation: &'static str,
+        path: String,
+        #[source]
+        source: io::Error,
+    },
+
+    #[error("Git {operation} failed ({status}): {message}")]
+    GitFailed {
+        operation: &'static str,
+        status: String,
+        message: String,
+    },
+
+    #[error("Git {operation} produced more than {limit_mb} MiB of output")]
+    GitOutputTooLarge {
+        operation: &'static str,
+        limit_mb: usize,
+    },
+
     #[error("Settings operation failed: {0}")]
     Settings(String),
 
@@ -100,6 +121,14 @@ impl AppError {
         source: io::Error,
     ) -> Self {
         Self::CompilerIo {
+            operation,
+            path: path.into(),
+            source,
+        }
+    }
+
+    pub fn git_io(operation: &'static str, path: impl Into<String>, source: io::Error) -> Self {
+        Self::GitIo {
             operation,
             path: path.into(),
             source,

@@ -4,7 +4,9 @@
 
 | Layer | Package | Version | Role |
 |---|---|---|---|
-| Runtime | **Electron** | 41.10.6 | Desktop shell (Chromium + Node.js) |
+| Runtime | **Tauri** | 2.11.5 | Default desktop shell (Rust + system WebView) |
+| Legacy Runtime | **Electron** | 41.10.6 | Temporary feature-parity and public-release fallback |
+| Native Core | **Rust / Tokio** | 1.97.1 / 1.53.1 | Filesystem, settings, watcher, Git, and Tectonic services |
 | Tooling | **electron-vite** | 5.0.0 | Build / HMR for main, preload, renderer |
 | Bundler | **Vite** | 7.3.6 | Fast dev builds + production bundling |
 | Language | **TypeScript** | 6.0.3 | Type safety across all processes |
@@ -17,12 +19,13 @@
 | LaTeX | **Tectonic** | 0.17.0 | Compilation (sidecar binary) |
 | LSP | **TexLab** | 5.25.1 | LaTeX language server (GPL-3.0, separate process) |
 | LSP Transport | **vscode-jsonrpc** | 8.2.1 | JSON-RPC message types for LSP IPC bridge |
-| Packaging | **electron-builder** | 26.15.3 | Installers (NSIS / DMG / AppImage) |
+| Packaging | **Tauri CLI** | 2.11.4 | Default installers (NSIS / DMG / DEB / AppImage) |
+| Legacy Packaging | **electron-builder** | 26.15.3 | Current public-release fallback |
 | CLI | **commander** | 14.0.3 | CLI argument parsing |
 | File Watch | **chokidar** | 5.0.0 | File watching for CLI `--watch` mode |
 | MCP | **@modelcontextprotocol/sdk** | 1.30.0 | MCP server framework (stdio transport) |
 | Spell Check | **nspell** | 2.1.5 | Dictionary-based spell checking |
-| Git | **simple-git** | 3.36.0 | Git CLI wrapper |
+| Git | **system Git** | -- | Rust-managed CLI with project-root/pathspec validation |
 | Math | **katex** | 0.16.47 | Math formula rendering for hover preview |
 | Validation | **zod** | 4.4.3 | Runtime schema validation |
 | Auto-update | **electron-updater** | 6.8.9 | GitHub-based auto-update |

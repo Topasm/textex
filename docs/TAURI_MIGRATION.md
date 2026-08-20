@@ -11,9 +11,9 @@ TextEx의 기본 local development, build, preview와 package 명령은 Tauri 2 
 
 ## Current Status
 
-현재 구현 범위는 renderer 부팅 기반, 프로젝트 파일시스템과 native 설정/세션 복원
-vertical slice, revision-aware Tectonic compile vertical slice다. 새 기능은 Tauri/Rust
-경로에만 추가하며 Electron은 기능 동등성을 확인하기 위한 임시 fallback으로만 유지한다.
+현재 구현 범위는 renderer 부팅 기반, 프로젝트 파일시스템과 native 설정/세션 복원,
+revision-aware Tectonic compile, system Git vertical slice다. 새 기능은 Tauri/Rust 경로에만
+추가하며 Electron은 기능 동등성을 확인하기 위한 임시 fallback으로만 유지한다.
 
 | 영역 | 상태 | 비고 |
 | --- | --- | --- |
@@ -31,6 +31,7 @@ vertical slice, revision-aware Tectonic compile vertical slice다. 새 기능은
 | 세션 프로젝트 복원 | 지원 | renderer 저장 경로를 직접 신뢰하지 않고 Rust에 저장된 최근 프로젝트만 재활성화한다. |
 | Tectonic compile | 지원 | bundled 0.17 sidecar, magic root, timeout, cancel과 log Channel을 지원한다. |
 | compile scheduling | 지원 | priority queue, revision identity, latest-wins coalescing과 preemption을 적용한다. |
+| Git | 지원 | project root로 제한된 system Git service가 init/status/stage/unstage/commit/diff/log/file log를 제공한다. |
 | PDF preview | 조건부 지원 | 기존 PDF.js UI를 유지하며 현재는 10 MiB 이하 PDF를 binary command로 전달한다. |
 | 나머지 desktop API | 미지원 | 호출 시 `has not been migrated` 오류를 반환한다. |
 
@@ -89,6 +90,15 @@ Electron preload, Tauri adapter, 공유 타입과 테스트를 함께 갱신한�
 - `copy_file`
 - `read_file_base64`
 - `read_file_binary`
+- `git_is_repo`
+- `git_init`
+- `git_status`
+- `git_stage`
+- `git_unstage`
+- `git_commit`
+- `git_diff`
+- `git_log`
+- `git_file_log`
 - `watch_directory`
 - `unwatch_directory`
 - `load_settings`
@@ -305,7 +315,7 @@ Electron에서만 동작한다.
 - 파일·폴더 이름 변경과 삭제
 - structured compile diagnostics, 10 MiB 초과 PDF transport와 generation-aware preview swap
 - TexLab lifecycle와 LSP JSON-RPC
-- Git, history와 project metadata
+- history와 project metadata
 - BibTeX/label scan, spellcheck, templates, Pandoc export와 SyncTeX
 - AI provider, Claude/Codex CLI integration과 Zotero
 - PTY terminal
@@ -325,14 +335,13 @@ Tectonic은 필수 sidecar로 등록되어 package 전 검증되지만 TexLab은
 다음 순서로 작은 vertical slice를 추가한다.
 
 1. 파일·폴더 이름 변경/삭제를 이관한다.
-2. system Git command와 project index를 좁은 Rust service로 이관한다.
-3. compile log parser와 revision-tagged structured diagnostics를 연결한다.
-4. PDF를 큰 JSON 배열로 복사하지 않는다. app cache의 좁은 asset protocol scope나
+2. compile log parser와 revision-tagged structured diagnostics를 연결한다.
+3. PDF를 큰 JSON 배열로 복사하지 않는다. app cache의 좁은 asset protocol scope나
    `tauri::ipc::Response`를 비교 측정한 뒤 선택한다.
-5. TexLab stdout/stdin을 `Channel` 기반 manager로 이관한다.
-6. SyncTeX, Pandoc, bibliography, history, AI/Zotero 등 나머지 service를 이관한다.
-7. PTY는 마지막에 cross-platform 구현과 Windows console QA를 함께 진행한다.
-8. updater, menu, packaging, signing과 세 플랫폼 CI를 완료한 뒤 임시 Electron 경로를
+4. TexLab stdout/stdin을 `Channel` 기반 manager로 이관한다.
+5. SyncTeX, Pandoc, bibliography, history, AI/Zotero 등 나머지 service를 이관한다.
+6. PTY는 마지막에 cross-platform 구현과 Windows console QA를 함께 진행한다.
+7. updater, menu, signing을 완료하고 세 플랫폼 package를 다시 검증한 뒤 임시 Electron 경로를
    제거한다.
 
 sidecar 파일은 `-$TARGET_TRIPLE` 이름을 사용하며 Windows는 triple 뒤에 `.exe`를

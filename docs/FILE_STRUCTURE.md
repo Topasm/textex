@@ -329,19 +329,27 @@
 |   |   +-- README.md              # Generated sidecar policy and setup commands
 |   |   +-- manifest.json          # Tectonic 0.17.0 asset URLs, sizes, and SHA-256
 |   +-- capabilities/
-|   |   +-- main-window.json       # Four filesystem command permissions only
+|   |   +-- main-window.json       # Narrow allow-list for registered Rust commands
 |   +-- src/
 |       +-- main.rs                # Desktop binary entry point
 |       +-- lib.rs                 # Plugin/state/command registration
 |       +-- error.rs               # Serializable command errors
-|       +-- models.rs              # Command response DTOs
-|       +-- state.rs               # Canonical open-project root state
+|       +-- models.rs              # Typed command request/response DTOs
+|       +-- state.rs               # Project root and revision-aware compiler state
 |       +-- commands/
 |       |   +-- mod.rs
 |       |   +-- filesystem.rs      # Thin Tauri filesystem commands
+|       |   +-- git.rs             # Thin project-scoped Git commands
+|       |   +-- settings.rs        # Settings and recent-project commands
+|       |   +-- watcher.rs         # Directory watcher lifecycle commands
+|       |   +-- compiler.rs        # Tectonic compile/cancel commands
 |       +-- services/
 |           +-- mod.rs
 |           +-- filesystem.rs      # Path validation and async file operations
+|           +-- git.rs             # Validated system Git process service
+|           +-- settings.rs        # Typed atomic settings persistence
+|           +-- watcher.rs         # Debounced native directory watcher
+|           +-- compiler.rs        # Tectonic sidecar resolution and execution
 |
 +-- out/                           # Build output (gitignored)
 |   +-- main/index.js              # Compiled main process

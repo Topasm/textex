@@ -249,6 +249,57 @@ describe('Tauri DesktopApi adapter', () => {
     expect(invokeMock).toHaveBeenNthCalledWith(2, 'unwatch_directory')
   })
 
+  it('maps Git operations to project-scoped Rust commands', async () => {
+    const status = {
+      branch: 'main',
+      files: [{ path: 'main.tex', index: ' ', working_dir: 'M' }],
+      staged: [],
+      modified: ['main.tex'],
+      not_added: []
+    }
+    const log = [
+      {
+        hash: 'abc123',
+        date: '2026-08-20T00:00:00Z',
+        author: 'Ada',
+        message: 'Update paper'
+      }
+    ]
+    invokeMock
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce(status)
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce('diff --git a/main.tex b/main.tex')
+      .mockResolvedValueOnce(log)
+      .mockResolvedValueOnce(log)
+
+    const api = createTauriApi()
+    await expect(api.gitIsRepo('/project')).resolves.toBe(true)
+    await expect(api.gitInit('/project')).resolves.toEqual({ success: true })
+    await expect(api.gitStatus('/project')).resolves.toEqual(status)
+    await expect(api.gitStage('/project', 'main.tex')).resolves.toEqual({ success: true })
+    await expect(api.gitUnstage('/project', 'main.tex')).resolves.toEqual({ success: true })
+    await expect(api.gitCommit('/project', 'Update paper')).resolves.toEqual({ success: true })
+    await expect(api.gitDiff('/project')).resolves.toContain('diff --git')
+    await expect(api.gitLog('/project')).resolves.toEqual(log)
+    await expect(api.gitFileLog('/project', '/project/main.tex')).resolves.toEqual(log)
+
+    expect(invokeMock.mock.calls).toEqual([
+      ['git_is_repo', { workDir: '/project' }],
+      ['git_init', { workDir: '/project' }],
+      ['git_status', { workDir: '/project' }],
+      ['git_stage', { workDir: '/project', filePath: 'main.tex' }],
+      ['git_unstage', { workDir: '/project', filePath: 'main.tex' }],
+      ['git_commit', { workDir: '/project', message: 'Update paper' }],
+      ['git_diff', { workDir: '/project' }],
+      ['git_log', { workDir: '/project' }],
+      ['git_file_log', { workDir: '/project', filePath: '/project/main.tex' }]
+    ])
+  })
+
   it('keeps mandatory listeners and LSP cleanup safe while their backends are pending', async () => {
     const api = createTauriApi()
     const disposeData = api.onPtyData('pty-1', () => {})
@@ -266,8 +317,8 @@ describe('Tauri DesktopApi adapter', () => {
   it('fails non-migrated commands with an actionable error', async () => {
     const api = createTauriApi()
 
-    await expect(api.gitStatus('/project')).rejects.toThrow(
-      'Desktop API method "gitStatus" has not been migrated'
+    await expect(api.ptyCreate({ cwd: '/project' })).rejects.toThrow(
+      'Desktop API method "ptyCreate" has not been migrated'
     )
   })
 

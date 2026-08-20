@@ -19,6 +19,15 @@ type MigratedDesktopApi = Pick<
   | 'copyFile'
   | 'readFileBase64'
   | 'readFileBinary'
+  | 'gitIsRepo'
+  | 'gitInit'
+  | 'gitStatus'
+  | 'gitStage'
+  | 'gitUnstage'
+  | 'gitCommit'
+  | 'gitDiff'
+  | 'gitLog'
+  | 'gitFileLog'
   | 'watchDirectory'
   | 'unwatchDirectory'
   | 'onDirectoryChanged'
@@ -94,6 +103,30 @@ const readFileBinary: DesktopApi['readFileBinary'] = async (filePath) => {
   }
 }
 
+const gitIsRepo: DesktopApi['gitIsRepo'] = (workDir) =>
+  invoke<boolean>(TAURI_COMMANDS.gitIsRepo, { workDir })
+
+const gitInit: DesktopApi['gitInit'] = (workDir) => invoke(TAURI_COMMANDS.gitInit, { workDir })
+
+const gitStatus: DesktopApi['gitStatus'] = (workDir) =>
+  invoke(TAURI_COMMANDS.gitStatus, { workDir })
+
+const gitStage: DesktopApi['gitStage'] = (workDir, filePath) =>
+  invoke(TAURI_COMMANDS.gitStage, { workDir, filePath })
+
+const gitUnstage: DesktopApi['gitUnstage'] = (workDir, filePath) =>
+  invoke(TAURI_COMMANDS.gitUnstage, { workDir, filePath })
+
+const gitCommit: DesktopApi['gitCommit'] = (workDir, message) =>
+  invoke(TAURI_COMMANDS.gitCommit, { workDir, message })
+
+const gitDiff: DesktopApi['gitDiff'] = (workDir) => invoke(TAURI_COMMANDS.gitDiff, { workDir })
+
+const gitLog: DesktopApi['gitLog'] = (workDir) => invoke(TAURI_COMMANDS.gitLog, { workDir })
+
+const gitFileLog: DesktopApi['gitFileLog'] = (workDir, filePath) =>
+  invoke(TAURI_COMMANDS.gitFileLog, { workDir, filePath })
+
 const watchDirectory: DesktopApi['watchDirectory'] = (dirPath) => {
   const onEvent = new Channel<{ type: string; filename: string }>()
   onEvent.onmessage = (event) => directoryChangeCallback?.(event)
@@ -161,6 +194,15 @@ const migratedApi: MigratedDesktopApi = {
   copyFile,
   readFileBase64,
   readFileBinary,
+  gitIsRepo,
+  gitInit,
+  gitStatus,
+  gitStage,
+  gitUnstage,
+  gitCommit,
+  gitDiff,
+  gitLog,
+  gitFileLog,
   watchDirectory,
   unwatchDirectory,
   onDirectoryChanged,
