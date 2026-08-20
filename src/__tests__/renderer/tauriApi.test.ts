@@ -4,12 +4,17 @@ import { installDesktopApi } from '../../renderer/platform/desktopApi'
 
 const invokeMock = vi.hoisted(() => vi.fn())
 const isTauriMock = vi.hoisted(() => vi.fn())
+const channelInstances = vi.hoisted(() => [] as Array<{ onmessage: (message: unknown) => void }>)
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: invokeMock,
   isTauri: isTauriMock,
   Channel: class {
     onmessage: (message: unknown) => void = () => {}
+
+    constructor() {
+      channelInstances.push(this)
+    }
   }
 }))
 
@@ -19,9 +24,11 @@ describe('Tauri DesktopApi adapter', () => {
   beforeEach(() => {
     invokeMock.mockReset()
     isTauriMock.mockReset()
+    channelInstances.length = 0
     const api = createTauriApi()
     api.removeCompileLogListener()
     api.removeDirectoryChangedListener()
+    api.removeUpdateListeners()
   })
 
   afterEach(() => {
@@ -342,6 +349,66 @@ describe('Tauri DesktopApi adapter', () => {
       }
     ])
     expect(invokeMock).not.toHaveBeenCalled()
+  })
+
+  it('maps the Rust-owned updater and bridges Channel progress to existing events', async () => {
+    invokeMock
+      .mockResolvedValueOnce({
+        currentVersion: '1.0.8',
+        version: '1.0.9',
+        date: '2026-08-20T12:00:00Z',
+        body: 'Faster editing'
+      })
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce({ success: true })
+    const available = vi.fn()
+    const progress = vi.fn()
+    const downloaded = vi.fn()
+    const api = createTauriApi()
+    api.onUpdateEvent('available', available)
+    api.onUpdateEvent('download-progress', progress)
+    api.onUpdateEvent('downloaded', downloaded)
+
+    await expect(api.updateCheck()).resolves.toEqual({ success: true })
+    expect(available).toHaveBeenCalledWith('1.0.9')
+
+    await expect(api.updateDownload()).resolves.toEqual({ success: true })
+    const updateChannel = channelInstances.at(-1)
+    updateChannel?.onmessage({ event: 'started', contentLength: 1000 })
+    updateChannel?.onmessage({
+      event: 'progress',
+      chunkLength: 250,
+      downloaded: 250,
+      contentLength: 1000
+    })
+    updateChannel?.onmessage({ event: 'finished' })
+    expect(progress.mock.calls).toEqual([[0], [25]])
+    expect(downloaded).toHaveBeenCalledOnce()
+
+    await expect(api.updateInstall()).resolves.toEqual({ success: true })
+    expect(invokeMock.mock.calls).toEqual([
+      ['check_app_update'],
+      ['download_and_install_update', { onEvent: updateChannel }],
+      ['restart_app']
+    ])
+  })
+
+  it('returns updater errors without throwing and reports download failures', async () => {
+    invokeMock.mockRejectedValueOnce('missing signing key').mockRejectedValueOnce('network failed')
+    const error = vi.fn()
+    const api = createTauriApi()
+    api.onUpdateEvent('error', error)
+
+    await expect(api.updateCheck()).resolves.toEqual({
+      success: false,
+      error: 'missing signing key'
+    })
+    expect(error).not.toHaveBeenCalled()
+    await expect(api.updateDownload()).resolves.toEqual({
+      success: false,
+      error: 'network failed'
+    })
+    expect(error).toHaveBeenCalledWith('network failed')
   })
 
   it('keeps mandatory listeners and LSP cleanup safe while their backends are pending', async () => {

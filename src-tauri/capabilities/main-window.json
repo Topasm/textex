@@ -14,6 +14,8 @@
     "allow-create-file",
     "allow-create-directory",
     "allow-copy-file",
+    "allow-rename-path",
+    "allow-delete-path",
     "allow-read-file-base64",
     "allow-read-file-binary",
     "allow-git-is-repo",
@@ -35,6 +37,9 @@
     "allow-remove-recent-project",
     "allow-update-recent-project",
     "allow-compile-latex",
-    "allow-cancel-compile"
+    "allow-cancel-compile",
+    "allow-check-app-update",
+    "allow-download-and-install-update",
+    "allow-restart-app"
   ]
 }

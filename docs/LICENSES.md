@@ -21,6 +21,7 @@ TextEx is built on or integrates with these open-source projects:
 | [electron-vite](https://electron-vite.org/) | Build tooling for Electron + Vite | MIT |
 | [electron-builder](https://www.electron.build/) | Cross-platform packaging and distribution | MIT |
 | [electron-updater](https://www.electron.build/auto-update) | Seamless in-app auto-updates | MIT |
+| [Tauri updater](https://github.com/tauri-apps/plugins-workspace) | Signed updates for the Tauri runtime | Apache-2.0 OR MIT |
 | [lucide-react](https://lucide.dev/) | Icon library used in the UI | ISC |
 | [nspell](https://github.com/wooorm/nspell) | Hunspell-compatible spell checker | MIT |
 | [dictionary-en](https://github.com/wooorm/dictionaries/tree/main/dictionaries/en) | Bundled English Hunspell dictionary data | MIT AND BSD |
@@ -29,5 +30,4 @@ TextEx is built on or integrates with these open-source projects:
 | [chokidar](https://github.com/paulmillr/chokidar) | File watching for CLI `--watch` mode | MIT |
 | [MCP SDK](https://github.com/modelcontextprotocol/sdk) | Model Context Protocol server framework | MIT |
 | [TexLab](https://github.com/latex-lsp/texlab) | LaTeX language server (diagnostics, completions, hover, rename) | GPL-3.0 |
-| [vscode-jsonrpc](https://github.com/microsoft/vscode-languageserver-node) | JSON-RPC transport for LSP communication | MIT |
 | [KaTeX](https://katex.org/) | Math typesetting for previews | MIT |

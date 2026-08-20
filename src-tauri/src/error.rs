@@ -70,6 +70,9 @@ pub enum AppError {
     #[error("Settings operation failed: {0}")]
     Settings(String),
 
+    #[error("Application updater failed: {0}")]
+    Updater(String),
+
     #[error("Project is not present in the trusted recent-project list: {0}")]
     RecentProjectUnauthorized(String),
 

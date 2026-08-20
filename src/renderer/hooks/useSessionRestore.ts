@@ -124,9 +124,12 @@ export function useSessionRestore(): boolean {
         })
         .catch(() => {})
     }
-    if (useSettingsStore.getState().settings.autoUpdateEnabled !== false) {
-      window.api.updateCheck()
-    }
+    const updateTimer = window.setTimeout(() => {
+      if (useSettingsStore.getState().settings.autoUpdateEnabled !== false) {
+        void window.api.updateCheck()
+      }
+    }, 3000)
+    return () => window.clearTimeout(updateTimer)
   }, [])
 
   return sessionRestored

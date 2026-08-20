@@ -46,6 +46,11 @@ type MigratedDesktopApi = Pick<
   | 'addRecentProject'
   | 'removeRecentProject'
   | 'updateRecentProject'
+  | 'updateCheck'
+  | 'updateDownload'
+  | 'updateInstall'
+  | 'onUpdateEvent'
+  | 'removeUpdateListeners'
 >
 
 type TauriCompileEvent =
@@ -59,8 +64,34 @@ type TauriCompileEvent =
       filePath: string
     }
 
+interface TauriUpdateMetadata {
+  currentVersion: string
+  version: string
+  date?: string
+  body?: string
+}
+
+type TauriUpdateDownloadEvent =
+  | { event: 'started'; contentLength: number | null }
+  | {
+      event: 'progress'
+      chunkLength: number
+      downloaded: number
+      contentLength: number | null
+    }
+  | { event: 'finished' }
+
 let compileLogCallback: ((event: CompileLogEvent) => void) | null = null
 let directoryChangeCallback: ((change: { type: string; filename: string }) => void) | null = null
+const updateCallbacks = new Map<string, (...args: unknown[]) => void>()
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
+function emitUpdateEvent(event: string, ...args: unknown[]): void {
+  updateCallbacks.get(event)?.(...args)
+}
 
 const openFile: DesktopApi['openFile'] = () =>
   invoke<OpenFileResult | null>(TAURI_COMMANDS.openFile)
@@ -197,6 +228,61 @@ const removeRecentProject: DesktopApi['removeRecentProject'] = (projectPath) =>
 const updateRecentProject: DesktopApi['updateRecentProject'] = (projectPath, updates) =>
   invoke(TAURI_COMMANDS.updateRecentProject, { projectPath, updates })
 
+const updateCheck: DesktopApi['updateCheck'] = async () => {
+  try {
+    const update = await invoke<TauriUpdateMetadata | null>(TAURI_COMMANDS.checkAppUpdate)
+    if (update) emitUpdateEvent('available', update.version)
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: errorMessage(error) }
+  }
+}
+
+const updateDownload: DesktopApi['updateDownload'] = async () => {
+  const onEvent = new Channel<TauriUpdateDownloadEvent>()
+  onEvent.onmessage = (event) => {
+    if (event.event === 'started') {
+      emitUpdateEvent('download-progress', 0)
+      return
+    }
+    if (event.event === 'progress') {
+      const total = event.contentLength
+      if (typeof total === 'number' && total > 0) {
+        const percent = Math.max(0, Math.min(100, (event.downloaded / total) * 100))
+        emitUpdateEvent('download-progress', percent)
+      }
+      return
+    }
+    emitUpdateEvent('downloaded')
+  }
+
+  try {
+    return await invoke<{ success: boolean }>(TAURI_COMMANDS.downloadAndInstallUpdate, { onEvent })
+  } catch (error) {
+    const message = errorMessage(error)
+    emitUpdateEvent('error', message)
+    return { success: false, error: message }
+  }
+}
+
+const updateInstall: DesktopApi['updateInstall'] = async () => {
+  try {
+    return await invoke<{ success: boolean }>(TAURI_COMMANDS.restartApp)
+  } catch (error) {
+    const message = errorMessage(error)
+    emitUpdateEvent('error', message)
+    return { success: false, error: message }
+  }
+}
+
+const onUpdateEvent: DesktopApi['onUpdateEvent'] = (event, callback) => {
+  updateCallbacks.set(event, callback)
+}
+
+const removeUpdateListeners: DesktopApi['removeUpdateListeners'] = () => {
+  updateCallbacks.clear()
+}
+
 const migratedApi: MigratedDesktopApi = {
   openFile,
   openDirectory,
@@ -236,7 +322,12 @@ const migratedApi: MigratedDesktopApi = {
   saveSettings,
   addRecentProject,
   removeRecentProject,
-  updateRecentProject
+  updateRecentProject,
+  updateCheck,
+  updateDownload,
+  updateInstall,
+  onUpdateEvent,
+  removeUpdateListeners
 }
 
 function unsupported(method: string): (...args: unknown[]) => Promise<never> {
@@ -263,11 +354,7 @@ const listenerFallbacks: Partial<DesktopApi> = {
   lspStop: async () => ({ success: false }),
   onPtyData: () => () => {},
   onPtyExit: () => () => {},
-  setTheme: async () => {},
-  updateCheck: async () => ({
-    success: false,
-    error: 'The updater has not been migrated to Tauri yet'
-  })
+  setTheme: async () => {}
 }
 
 /**

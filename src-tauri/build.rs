@@ -34,6 +34,9 @@ fn main() {
         "update_recent_project",
         "compile_latex",
         "cancel_compile",
+        "check_app_update",
+        "download_and_install_update",
+        "restart_app",
     ];
 
     tauri_build::try_build(

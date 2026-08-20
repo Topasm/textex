@@ -37,5 +37,8 @@ export const TAURI_COMMANDS = {
   removeRecentProject: 'remove_recent_project',
   updateRecentProject: 'update_recent_project',
   compile: 'compile_latex',
-  cancelCompile: 'cancel_compile'
+  cancelCompile: 'cancel_compile',
+  checkAppUpdate: 'check_app_update',
+  downloadAndInstallUpdate: 'download_and_install_update',
+  restartApp: 'restart_app'
 } as const

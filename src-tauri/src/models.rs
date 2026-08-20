@@ -370,6 +370,35 @@ pub struct DirectoryChangeEvent {
     pub filename: String,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateMetadata {
+    pub current_version: String,
+    pub version: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub date: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub body: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(
+    tag = "event",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum UpdateDownloadEvent {
+    Started {
+        content_length: Option<u64>,
+    },
+    Progress {
+        chunk_length: u64,
+        downloaded: u64,
+        content_length: Option<u64>,
+    },
+    Finished,
+}
+
 impl SuccessResult {
     pub const fn ok() -> Self {
         Self { success: true }

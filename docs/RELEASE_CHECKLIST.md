@@ -214,6 +214,19 @@ Keep GitHub Actions on supported runtime versions. The current workflow uses
 `softprops/action-gh-release@v3`. Verify upstream release notes before changing
 an action major version; Dependabot checks these weekly.
 
+Tauri updater artifacts remain validation-only until the public runtime switch.
+Build them with `package:updater:*`, which merges
+`src-tauri/tauri.updater.conf.json` and requires all three signing variables:
+
+- `TEXTEX_UPDATER_PUBLIC_KEY` (embedded into the Rust release binary)
+- `TAURI_SIGNING_PRIVATE_KEY`
+- `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
+
+Never add the private key or password to repository files or logs. A Tauri
+updater release must include the platform artifact and adjacent `.sig`, plus a
+complete `latest.json`. Linux must provide the AppImage updater artifact; a DEB
+alone is not updateable through the Tauri updater.
+
 ## 7. Validate `main` Before Tagging
 
 Push the reviewed release commit to `main`, then wait for its exact workflow:

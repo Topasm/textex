@@ -6,17 +6,23 @@ mod state;
 
 use services::package_data::PackageDataState;
 use services::settings::SettingsState;
+use services::updater::AppUpdaterState;
 use services::watcher::DirectoryWatcherState;
 use state::AppState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let updater_plugin = tauri_plugin_updater::Builder::new()
+        .pubkey(services::updater::updater_public_key())
+        .build();
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(updater_plugin)
         .manage(AppState::default())
         .manage(DirectoryWatcherState::default())
         .manage(SettingsState::default())
         .manage(PackageDataState::default())
+        .manage(AppUpdaterState::default())
         .invoke_handler(tauri::generate_handler![
             commands::filesystem::open_file,
             commands::filesystem::open_directory,
@@ -52,6 +58,9 @@ pub fn run() {
             commands::settings::update_recent_project,
             commands::compiler::compile_latex,
             commands::compiler::cancel_compile,
+            commands::updater::check_app_update,
+            commands::updater::download_and_install_update,
+            commands::updater::restart_app,
         ])
         .run(tauri::generate_context!())
         .expect("failed to run TextEx Tauri application");

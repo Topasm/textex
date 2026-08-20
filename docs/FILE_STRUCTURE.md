@@ -326,6 +326,7 @@
 |   +-- Cargo.toml                 # Rust dependencies and size-optimized profiles
 |   +-- build.rs                   # App command manifest for ACL generation
 |   +-- tauri.conf.json            # Vite, window, CSP, capability, bundle config
+|   +-- tauri.updater.conf.json    # Signed updater artifact build overlay
 |   +-- binaries/
 |   |   +-- README.md              # Generated sidecar policy and setup commands
 |   |   +-- manifest.json          # Tectonic 0.17.0 asset URLs, sizes, and SHA-256
@@ -345,6 +346,7 @@
 |       |   +-- settings.rs        # Settings and recent-project commands
 |       |   +-- watcher.rs         # Directory watcher lifecycle commands
 |       |   +-- compiler.rs        # Tectonic compile/cancel commands
+|       |   +-- updater.rs         # Check/download/install/restart commands
 |       +-- services/
 |           +-- mod.rs
 |           +-- filesystem.rs      # Path validation and async file operations
@@ -353,6 +355,7 @@
 |           +-- settings.rs        # Typed atomic settings persistence
 |           +-- watcher.rs         # Debounced native directory watcher
 |           +-- compiler.rs        # Tectonic sidecar resolution and execution
+|           +-- updater.rs         # Signed release check and streamed installation
 |
 +-- out/                           # Build output (gitignored)
 |   +-- main/index.js              # Compiled main process
@@ -412,9 +415,9 @@
   not add direct Tauri imports throughout renderer components.
 
 - **`src-tauri/`** -- Default Rust backend kept alongside legacy Electron during
-  migration. Commands stay thin and delegate to `services/`. The current capability
-  exposes only project folder selection, directory listing, file reading, and file
-  saving. See `TAURI_MIGRATION.md` before extending it.
+  migration. Commands stay thin and delegate to `services/`; the capability file is
+  the narrow allow-list for filesystem, Git, compile, settings, watcher, package-data,
+  and updater commands. See `TAURI_MIGRATION.md` before extending it.
 
 - **`store/`** -- Six split Zustand stores (project, editor, compile, PDF, settings, UI)
   with a `selectors.ts` for cross-store derived state. Prefer fine-grained selectors

@@ -6,7 +6,7 @@
 |---|---|---|---|
 | Runtime | **Tauri** | 2.11.5 | Default desktop shell (Rust + system WebView) |
 | Legacy Runtime | **Electron** | 41.10.6 | Temporary feature-parity and public-release fallback |
-| Native Core | **Rust / Tokio** | 1.97.1 / 1.53.1 | Filesystem, settings, watcher, Git, and Tectonic services |
+| Native Core | **Rust / Tokio** | 1.97.1 / 1.53.1 | Filesystem, settings, watcher, Git, Tectonic, and updater services |
 | Tooling | **electron-vite** | 5.0.0 | Build / HMR for main, preload, renderer |
 | Bundler | **Vite** | 7.3.6 | Fast dev builds + production bundling |
 | Language | **TypeScript** | 6.0.3 | Type safety across all processes |
@@ -18,7 +18,6 @@
 | Styling | **Plain CSS** | -- | VS Code dark theme, flexbox layout |
 | LaTeX | **Tectonic** | 0.17.0 | Compilation (sidecar binary) |
 | LSP | **TexLab** | 5.25.1 | LaTeX language server (GPL-3.0, separate process) |
-| LSP Transport | **vscode-jsonrpc** | 8.2.1 | JSON-RPC message types for LSP IPC bridge |
 | Packaging | **Tauri CLI** | 2.11.4 | Default installers (NSIS / DMG / DEB / AppImage) |
 | Legacy Packaging | **electron-builder** | 26.15.3 | Current public-release fallback |
 | CLI | **commander** | 14.0.3 | CLI argument parsing |
@@ -28,7 +27,8 @@
 | Git | **system Git** | -- | Rust-managed CLI with project-root/pathspec validation |
 | Math | **katex** | 0.16.47 | Math formula rendering for hover preview |
 | Validation | **zod** | 4.4.3 | Runtime schema validation |
-| Auto-update | **electron-updater** | 6.8.9 | GitHub-based auto-update |
+| Auto-update | **tauri-plugin-updater** | 2.10.1 | Rust-owned signed update check/install path |
+| Legacy Auto-update | **electron-updater** | 6.8.9 | Current public Electron release updater |
 
 ## Dev Dependencies (Installed)
 
