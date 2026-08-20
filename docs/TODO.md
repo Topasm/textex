@@ -20,7 +20,7 @@ The MVP is complete when:
 Electron + React + TypeScript project with electron-vite, plain CSS theming, full folder structure.
 
 ### Phase 1: Tectonic Binary Setup (5/5)
-Bundled Tectonic 0.16.9 (musl) for Linux/macOS/Windows. Verified standalone compilation.
+Bundled Tectonic 0.17.0 (musl on Linux) for Linux/macOS/Windows. Verified standalone compilation.
 
 ### Phase 2: Main Process — Compiler Service (3/3)
 `compiler.ts` (Tectonic spawn, cancel, binary resolution), `ipc.ts` (fs/latex IPC handlers with path validation), `main.ts` (BrowserWindow with context isolation).
@@ -54,10 +54,10 @@ electron-builder config (NSIS/DMG/AppImage), Tectonic binaries for all platforms
 - **Multi-file projects** — FileTree sidebar with lazy loading, TabBar with multi-tab
 - **Snippet/template gallery** — ~50 LaTeX snippets, 5 document templates
 - **Auto-update** — electron-updater with notification banner
-- **CI/CD** — GitHub Actions matrix (Linux, macOS x64/arm64, Windows), tag-triggered
+- **CI/CD** — GitHub Actions matrix (Linux, macOS universal, Windows), tag-triggered
 - **App icons** — icon.png/ico/icns
 - **ESLint + Prettier** — v9 flat config, typescript-eslint, format scripts
-- **Unit tests** — Vitest + @testing-library/react, 133 tests across 9 files
+- **Unit tests** — Vitest + @testing-library/react
 - **Font size setting** — Ctrl+Shift+=/- shortcuts, persisted, 8–32px range
 - **BibTeX support** — .bib parser, BibPanel sidebar, \cite{} completion
 - **Git integration** — git.ts backend, GitPanel (stage/unstage/commit), branch in status bar

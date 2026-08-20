@@ -330,8 +330,8 @@ function mergeTopLevelOutline(
   frontMatterNodes: OutlineBuildNode[]
 ): SectionNode[] {
   return [...frontMatterNodes, ...outline].sort((a, b) => {
-    const aIndex = 'sourceIndex' in a ? a.sourceIndex : a.startLine
-    const bIndex = 'sourceIndex' in b ? b.sourceIndex : b.startLine
+    const aIndex = (a as Partial<OutlineBuildNode>).sourceIndex ?? a.startLine
+    const bIndex = (b as Partial<OutlineBuildNode>).sourceIndex ?? b.startLine
     return aIndex - bIndex
   })
 }

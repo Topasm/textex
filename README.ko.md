@@ -44,8 +44,7 @@
 | 플랫폼 | 파일 |
 |----------|------|
 | Windows x64 | `.exe` 설치 파일 |
-| macOS Intel | `.dmg` |
-| macOS Apple Silicon | `.dmg` |
+| macOS Intel + Apple Silicon | universal `.dmg` |
 | Linux x64 | `.AppImage` |
 
 ### 2. OS별 설정
@@ -60,8 +59,8 @@ xattr -cr /Applications/TextEx.app
 **Linux:**
 AppImage를 실행 가능하게 만드세요:
 ```bash
-chmod +x TextEx-1.0.7.AppImage
-./TextEx-1.0.7.AppImage
+chmod +x TextEx-*-linux-x86_64.AppImage
+./TextEx-*-linux-x86_64.AppImage
 ```
 
 ---

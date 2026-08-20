@@ -41,21 +41,24 @@ files:
 
 win:
   icon: build/icon.ico
+  artifactName: '${productName}-${version}-windows-${arch}.${ext}'
   target:
     - target: nsis
       arch: [x64]
 
 mac:
   icon: build/icon.icns
+  artifactName: '${productName}-${version}-macos-${arch}.${ext}'
   target:
-    - target: dmg
-      arch: [arm64]        # Apple Silicon native by default
+    - dmg
+    - zip                  # Required by electron-updater on macOS
   hardenedRuntime: true
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
 
 linux:
   icon: build/icon.png
+  artifactName: '${productName}-${version}-linux-${arch}.${ext}'
   target:
     - target: AppImage
       arch: [x64]
@@ -156,6 +159,12 @@ In `package.json`:
 }
 ```
 
+Tagged CI releases build a universal macOS application and publish the original
+installer names together with `latest.yml`, `latest-mac.yml`,
+`latest-linux.yml`, and generated blockmaps. These metadata files and exact
+artifact names are required for GitHub Releases updates through
+`electron-updater`.
+
 **Note:** The package scripts run `electron-vite build` first to ensure compiled
 output in `out/` is up to date before packaging.
 
@@ -169,7 +178,7 @@ current Electron and electron-builder versions from `package-lock.json`.
 **Output:**
 ```
 dist/
-├── TextEx-1.0.7.AppImage   (executable)
+├── TextEx-1.0.8-linux-x86_64.AppImage   (executable)
 ├── latest-linux.yml         (auto-update manifest)
 ├── builder-debug.yml
 └── linux-unpacked/          (uncompressed app directory)
@@ -177,7 +186,7 @@ dist/
     └── resources/
         ├── app.asar         (bundled app code, 81 MB)
         └── bin/
-            └── tectonic     (Tectonic 0.16.9, musl)
+            └── tectonic     (Tectonic 0.17.0, musl)
 ```
 
 **Binary path resolution verified:** In the packaged app, the Tectonic binary is
@@ -215,7 +224,7 @@ Cross-compilation from Linux is not supported by electron-builder for DMG target
 
 | Output | Size |
 |---|---|
-| `dist/TextEx-1.0.7.AppImage` | varies by release |
+| `dist/TextEx-1.0.8-linux-x86_64.AppImage` | varies by release |
 | `dist/linux-unpacked/` (uncompressed) | varies by release |
 
 ### Component Breakdown (approximate)
@@ -248,7 +257,7 @@ Example workflow step:
   run: |
     mkdir -p resources/bin/linux
     curl -L -o /tmp/tectonic-linux.tar.gz \
-      https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.16.9/tectonic-0.16.9-x86_64-unknown-linux-musl.tar.gz
+      https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.17.0/tectonic-0.17.0-x86_64-unknown-linux-musl.tar.gz
     tar -xzf /tmp/tectonic-linux.tar.gz -C resources/bin/linux
     chmod +x resources/bin/linux/tectonic
 ```

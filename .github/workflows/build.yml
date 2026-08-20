@@ -32,7 +32,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
@@ -55,7 +55,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
@@ -71,25 +71,19 @@ jobs:
         include:
           - os: ubuntu-latest
             platform: linux
-            tectonic_asset: tectonic-0.16.9-x86_64-unknown-linux-musl.tar.gz
+            tectonic_asset: tectonic-0.17.0-x86_64-unknown-linux-musl.tar.gz
             tectonic_dir: linux
             binary_name: tectonic
             build_args: --linux
           - os: macos-latest
-            platform: mac-x64
-            tectonic_asset: tectonic-0.16.9-x86_64-apple-darwin.tar.gz
+            platform: mac-universal
+            tectonic_asset: tectonic-0.17.0-x86_64-apple-darwin.tar.gz
             tectonic_dir: mac
             binary_name: tectonic
-            build_args: --mac --x64
-          - os: macos-latest
-            platform: mac-arm64
-            tectonic_asset: tectonic-0.16.9-aarch64-apple-darwin.tar.gz
-            tectonic_dir: mac/arm64
-            binary_name: tectonic
-            build_args: --mac --arm64
+            build_args: --mac --universal
           - os: windows-latest
             platform: win
-            tectonic_asset: tectonic-0.16.9-x86_64-pc-windows-msvc.zip
+            tectonic_asset: tectonic-0.17.0-x86_64-pc-windows-msvc.zip
             tectonic_dir: win
             binary_name: tectonic.exe
             build_args: --win
@@ -102,7 +96,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
@@ -111,20 +105,31 @@ jobs:
       - name: Download Tectonic binary
         shell: bash
         run: |
-          mkdir -p "resources/bin/${{ matrix.tectonic_dir }}"
-          RELEASE_URL="https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.16.9/${{ matrix.tectonic_asset }}"
+          RELEASE_BASE="https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.17.0"
 
-          if [[ "${{ matrix.tectonic_asset }}" == *.zip ]]; then
-            curl -L -o tectonic.zip "$RELEASE_URL"
-            unzip tectonic.zip -d "resources/bin/${{ matrix.tectonic_dir }}"
-            rm tectonic.zip
+          if [[ "${{ matrix.platform }}" == "mac-universal" ]]; then
+            mkdir -p resources/bin/mac resources/bin/mac/arm64
+            curl --fail --location --retry 3 -o tectonic-x64.tar.gz "$RELEASE_BASE/tectonic-0.17.0-x86_64-apple-darwin.tar.gz"
+            curl --fail --location --retry 3 -o tectonic-arm64.tar.gz "$RELEASE_BASE/tectonic-0.17.0-aarch64-apple-darwin.tar.gz"
+            tar xzf tectonic-x64.tar.gz -C resources/bin/mac
+            tar xzf tectonic-arm64.tar.gz -C resources/bin/mac/arm64
+            rm tectonic-x64.tar.gz tectonic-arm64.tar.gz
+            chmod +x resources/bin/mac/tectonic resources/bin/mac/arm64/tectonic
           else
-            curl -L -o tectonic.tar.gz "$RELEASE_URL"
-            tar xzf tectonic.tar.gz -C "resources/bin/${{ matrix.tectonic_dir }}"
-            rm tectonic.tar.gz
+            mkdir -p "resources/bin/${{ matrix.tectonic_dir }}"
+            RELEASE_URL="$RELEASE_BASE/${{ matrix.tectonic_asset }}"
+            if [[ "${{ matrix.tectonic_asset }}" == *.zip ]]; then
+              curl --fail --location --retry 3 -o tectonic.zip "$RELEASE_URL"
+              unzip tectonic.zip -d "resources/bin/${{ matrix.tectonic_dir }}"
+              rm tectonic.zip
+            else
+              curl --fail --location --retry 3 -o tectonic.tar.gz "$RELEASE_URL"
+              tar xzf tectonic.tar.gz -C "resources/bin/${{ matrix.tectonic_dir }}"
+              rm tectonic.tar.gz
+            fi
+            chmod +x "resources/bin/${{ matrix.tectonic_dir }}/${{ matrix.binary_name }}" || true
           fi
 
-          chmod +x "resources/bin/${{ matrix.tectonic_dir }}/${{ matrix.binary_name }}" || true
           ls -lh "resources/bin/${{ matrix.tectonic_dir }}/"
 
       - name: Build and package
@@ -155,9 +160,12 @@ jobs:
           name: TextEx-${{ matrix.platform }}
           path: |
             dist/*.AppImage
+            dist/*.blockmap
             dist/*.deb
             dist/*.dmg
             dist/*.exe
+            dist/*.zip
+            dist/latest*.yml
           if-no-files-found: warn
 
   release:
@@ -177,24 +185,29 @@ jobs:
 
       - name: Extract version
         id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if [[ "$GITHUB_REF" == refs/tags/v* && "$GITHUB_REF_NAME" != "v$VERSION" ]]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $VERSION" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Prepare release artifacts
         shell: bash
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
           mkdir -p release-artifacts
 
-          # Linux
-          find artifacts/TextEx-linux -name "*.AppImage" -exec cp {} "release-artifacts/TextEx-${VERSION}-linux.AppImage" \; 2>/dev/null || true
-          find artifacts/TextEx-linux -name "*.deb" -exec cp {} "release-artifacts/TextEx-${VERSION}-linux.deb" \; 2>/dev/null || true
+          find artifacts -type f \( \
+            -name "*.AppImage" -o -name "*.blockmap" -o -name "*.deb" -o \
+            -name "*.dmg" -o -name "*.exe" -o -name "*.zip" -o \
+            -name "latest*.yml" \
+          \) -exec cp {} release-artifacts/ \;
 
-          # macOS
-          find artifacts/TextEx-mac-x64 -name "*.dmg" -exec cp {} "release-artifacts/TextEx-${VERSION}-macos-x64.dmg" \; 2>/dev/null || true
-          find artifacts/TextEx-mac-arm64 -name "*.dmg" -exec cp {} "release-artifacts/TextEx-${VERSION}-macos-arm64.dmg" \; 2>/dev/null || true
-
-          # Windows
-          find artifacts/TextEx-win -name "*.exe" -exec cp {} "release-artifacts/TextEx-${VERSION}-windows.exe" \; 2>/dev/null || true
+          test -f release-artifacts/latest.yml
+          test -f release-artifacts/latest-mac.yml
+          test -f release-artifacts/latest-linux.yml
 
           # Generate checksums
           cd release-artifacts
@@ -207,6 +220,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           draft: false
+          tag_name: v${{ steps.version.outputs.version }}
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') || github.event_name == 'workflow_dispatch' && inputs.prerelease == true }}
           generate_release_notes: true
           files: release-artifacts/*
@@ -215,11 +229,10 @@ jobs:
 
             | Platform | File | Notes |
             |----------|------|-------|
-            | Windows | `TextEx-${{ steps.version.outputs.version }}-windows.exe` | NSIS installer |
-            | macOS (Intel) | `TextEx-${{ steps.version.outputs.version }}-macos-x64.dmg` | Drag to Applications |
-            | macOS (Apple Silicon) | `TextEx-${{ steps.version.outputs.version }}-macos-arm64.dmg` | Drag to Applications |
-            | Linux (.deb) | `TextEx-${{ steps.version.outputs.version }}-linux.deb` | `sudo dpkg -i TextEx-*.deb` |
-            | Linux (.AppImage) | `TextEx-${{ steps.version.outputs.version }}-linux.AppImage` | `chmod +x` and run |
+            | Windows | `TextEx-${{ steps.version.outputs.version }}-windows-x64.exe` | NSIS installer |
+            | macOS (Intel + Apple Silicon) | `TextEx-${{ steps.version.outputs.version }}-macos-universal.dmg` | Drag to Applications |
+            | Linux (.deb) | `TextEx-${{ steps.version.outputs.version }}-linux-amd64.deb` | `sudo dpkg -i TextEx-*.deb` |
+            | Linux (.AppImage) | `TextEx-${{ steps.version.outputs.version }}-linux-x86_64.AppImage` | `chmod +x` and run |
 
             ## Security Notes
 

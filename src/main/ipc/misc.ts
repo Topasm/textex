@@ -4,6 +4,7 @@ import { scanLabels } from '../labelscanner'
 import { loadPackageData } from '../packageloader'
 import { exportDocument, getPandocFormats } from '../pandoc'
 import { parseContentOutline } from '../../shared/structure'
+import { checkForAppUpdates, downloadAppUpdate, installAppUpdate } from '../updater'
 
 function validateFilePath(filePath: unknown): string {
   if (typeof filePath !== 'string' || filePath.length === 0) {
@@ -17,35 +18,9 @@ function validateFilePath(filePath: unknown): string {
 
 export function registerMiscHandlers(getWindow: () => BrowserWindow | null): void {
   // ---- Auto Update ----
-  ipcMain.handle('update:check', async () => {
-    try {
-      const { autoUpdater } = await import('electron-updater')
-      await autoUpdater.checkForUpdates()
-      return { success: true }
-    } catch (err) {
-      return { success: false, error: err instanceof Error ? err.message : String(err) }
-    }
-  })
-
-  ipcMain.handle('update:download', async () => {
-    try {
-      const { autoUpdater } = await import('electron-updater')
-      await autoUpdater.downloadUpdate()
-      return { success: true }
-    } catch (err) {
-      return { success: false, error: err instanceof Error ? err.message : String(err) }
-    }
-  })
-
-  ipcMain.handle('update:install', async () => {
-    try {
-      const { autoUpdater } = await import('electron-updater')
-      autoUpdater.quitAndInstall()
-      return { success: true }
-    } catch (err) {
-      return { success: false, error: err instanceof Error ? err.message : String(err) }
-    }
-  })
+  ipcMain.handle('update:check', () => checkForAppUpdates(getWindow))
+  ipcMain.handle('update:download', () => downloadAppUpdate(getWindow))
+  ipcMain.handle('update:install', () => installAppUpdate(getWindow))
 
   // ---- Labels ----
   ipcMain.handle('latex:scan-labels', async (_event, projectRoot: string) => {

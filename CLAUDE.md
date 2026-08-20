@@ -12,7 +12,7 @@ TextEx — a self-contained desktop LaTeX editor built on Electron. Split-pane i
 - `npm run build` — Compile main/preload/renderer to `out/`
 - `npm run typecheck` — Run TypeScript type checking (`tsc --noEmit`)
 - `npm run package:linux` / `package:mac` / `package:win` — Build + create platform installer via electron-builder
-- `npm run test` — Run Vitest unit tests (133 tests, 9 files)
+- `npm run test` — Run the Vitest unit test suite
 - `npm run test:watch` — Run tests in watch mode
 - `npm run lint` — Run ESLint on `src/`
 - `npm run lint:fix` — Auto-fix ESLint issues

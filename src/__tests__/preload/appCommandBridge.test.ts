@@ -29,11 +29,9 @@ describe('preload app command bridge', () => {
 
     const callback = vi.fn()
     const onAppCommand = exposedApi?.onAppCommand as
-      | ((cb: (command: string) => void) => void)
-      | undefined
+      ((cb: (command: string) => void) => void) | undefined
     const removeAppCommandListener = exposedApi?.removeAppCommandListener as
-      | (() => void)
-      | undefined
+      (() => void) | undefined
 
     expect(onAppCommand).toBeTypeOf('function')
     expect(removeAppCommandListener).toBeTypeOf('function')

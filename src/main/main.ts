@@ -73,40 +73,6 @@ function getTitleBarOverlay(theme: string): { color: string; symbolColor: string
   }
 }
 
-function initAutoUpdater(): void {
-  // Set up auto-update events, forwarding them to the renderer
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { autoUpdater } = require('electron-updater')
-
-    autoUpdater.on('checking-for-update', () => {
-      sendToRenderer('update:checking')
-    })
-
-    autoUpdater.on('update-available', (info: { version: string }) => {
-      sendToRenderer('update:available', info)
-    })
-
-    autoUpdater.on('update-not-available', () => {
-      sendToRenderer('update:not-available')
-    })
-
-    autoUpdater.on('download-progress', (progress: { percent: number }) => {
-      sendToRenderer('update:download-progress', progress)
-    })
-
-    autoUpdater.on('update-downloaded', (info: { version: string }) => {
-      sendToRenderer('update:downloaded', info)
-    })
-
-    autoUpdater.on('error', (err: Error) => {
-      sendToRenderer('update:error', err.message)
-    })
-  } catch {
-    // electron-updater is not installed — auto-update disabled
-  }
-}
-
 function createWindow(theme: string): void {
   const backgroundColor = getBackgroundColor(theme)
 
@@ -149,11 +115,8 @@ function createWindow(theme: string): void {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'))
   }
 
-  // Defer auto-updater initialization to after the window is visible,
-  // so that the synchronous require('electron-updater') does not block startup.
   const win = mainWindow
   win.once('ready-to-show', () => {
-    setTimeout(() => initAutoUpdater(), 3000)
     setTimeout(() => {
       preloadCommonPackageData().catch(() => {})
     }, 1500)

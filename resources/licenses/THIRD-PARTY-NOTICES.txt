@@ -38,7 +38,7 @@ Users may substitute their own TexLab binary via the "texlabPath" setting.
 
 ================================================================================
 Package: @modelcontextprotocol/sdk
-Version: 1.29.0
+Version: 1.30.0
 License: MIT
 Source: https://modelcontextprotocol.io
 --------------------------------------------------------------------------------
@@ -97,8 +97,122 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ================================================================================
+Package: @xterm/addon-fit
+Version: 0.11.0
+License: MIT
+Source: https://github.com/xtermjs/xterm.js/tree/master/addons/addon-fit
+--------------------------------------------------------------------------------
+File: LICENSE
+
+Copyright (c) 2019, The xterm.js authors (https://github.com/xtermjs/xterm.js)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+================================================================================
+Package: @xterm/addon-web-links
+Version: 0.12.0
+License: MIT
+Source: https://github.com/xtermjs/xterm.js/tree/master/addons/addon-web-links
+--------------------------------------------------------------------------------
+File: LICENSE
+
+Copyright (c) 2017, The xterm.js authors (https://github.com/xtermjs/xterm.js)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+================================================================================
+Package: @xterm/addon-webgl
+Version: 0.19.0
+License: MIT
+Source: https://github.com/xtermjs/xterm.js/tree/master/addons/addon-webgl
+--------------------------------------------------------------------------------
+File: LICENSE
+
+Copyright (c) 2018, The xterm.js authors (https://github.com/xtermjs/xterm.js)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+================================================================================
+Package: @xterm/xterm
+Version: 6.0.0
+License: MIT
+Source: https://github.com/xtermjs/xterm.js
+--------------------------------------------------------------------------------
+File: LICENSE
+
+Copyright (c) 2017-2019, The xterm.js authors (https://github.com/xtermjs/xterm.js)
+Copyright (c) 2014-2016, SourceLair Private Company (https://www.sourcelair.com)
+Copyright (c) 2012-2013, Christopher Jeffrey (https://github.com/chjj/)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+================================================================================
 Package: adm-zip
-Version: 0.5.17
+Version: 0.6.0
 License: MIT
 Source: https://github.com/cthackers/adm-zip
 --------------------------------------------------------------------------------
@@ -189,7 +303,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ================================================================================
 Package: date-fns
-Version: 4.1.0
+Version: 4.4.0
 License: MIT
 Source: https://github.com/date-fns/date-fns
 --------------------------------------------------------------------------------
@@ -575,7 +689,7 @@ Wordlist Command: mk-list --accents=strip en_US 60
 
 ================================================================================
 Package: electron
-Version: 41.4.0
+Version: 41.10.6
 License: MIT
 Source: https://github.com/electron/electron
 --------------------------------------------------------------------------------
@@ -605,7 +719,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ================================================================================
 Package: electron-updater
-Version: 6.8.3
+Version: 6.8.9
 License: MIT
 Source: https://github.com/electron-userland/electron-builder
 --------------------------------------------------------------------------------
@@ -635,7 +749,7 @@ SOFTWARE.
 
 ================================================================================
 Package: i18next
-Version: 26.0.8
+Version: 26.3.6
 License: MIT
 Source: https://www.i18next.com
 --------------------------------------------------------------------------------
@@ -665,7 +779,7 @@ SOFTWARE.
 
 ================================================================================
 Package: katex
-Version: 0.16.45
+Version: 0.16.47
 License: MIT
 Source: https://katex.org
 --------------------------------------------------------------------------------
@@ -695,7 +809,7 @@ SOFTWARE.
 
 ================================================================================
 Package: lucide-react
-Version: 1.14.0
+Version: 1.33.0
 License: ISC
 Source: https://lucide.dev
 --------------------------------------------------------------------------------
@@ -747,7 +861,7 @@ SOFTWARE.
 
 ================================================================================
 Package: mathlive
-Version: 0.109.2
+Version: 0.110.0
 License: MIT
 Source: git+https://github.com/arnog/mathlive.git
 --------------------------------------------------------------------------------
@@ -775,7 +889,7 @@ DEALINGS IN THE SOFTWARE.
 
 ================================================================================
 Package: monaco-editor
-Version: 0.55.1
+Version: 0.56.0
 License: MIT
 Source: https://github.com/microsoft/monaco-editor
 --------------------------------------------------------------------------------
@@ -857,6 +971,84 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 
 ================================================================================
+Package: node-pty
+Version: 1.1.0
+License: MIT
+Source: https://github.com/microsoft/node-pty
+--------------------------------------------------------------------------------
+File: LICENSE
+
+Copyright (c) 2012-2015, Christopher Jeffrey (https://github.com/chjj/)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+
+
+The MIT License (MIT)
+
+Copyright (c) 2016, Daniel Imms (http://www.growingwiththeweb.com)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+
+MIT License
+
+Copyright (c) 2018 - present Microsoft Corporation
+
+All rights reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+================================================================================
 Package: nspell
 Version: 2.1.5
 License: MIT
@@ -889,7 +1081,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ================================================================================
 Package: pdfjs-dist
-Version: 5.6.205
+Version: 6.2.108
 License: Apache-2.0
 Source: https://mozilla.github.io/pdf.js/
 --------------------------------------------------------------------------------
@@ -1105,7 +1297,7 @@ SOFTWARE.
 
 ================================================================================
 Package: react
-Version: 19.2.5
+Version: 19.2.8
 License: MIT
 Source: https://react.dev/
 --------------------------------------------------------------------------------
@@ -1135,7 +1327,7 @@ SOFTWARE.
 
 ================================================================================
 Package: react-data-grid
-Version: 7.0.0-beta.59
+Version: 7.0.0-beta.61
 License: MIT
 Source: https://github.com/Comcast/react-data-grid#readme
 --------------------------------------------------------------------------------
@@ -1168,7 +1360,7 @@ THE SOFTWARE.
 
 ================================================================================
 Package: react-dom
-Version: 19.2.5
+Version: 19.2.8
 License: MIT
 Source: https://react.dev/
 --------------------------------------------------------------------------------
@@ -1198,7 +1390,7 @@ SOFTWARE.
 
 ================================================================================
 Package: react-i18next
-Version: 17.0.6
+Version: 17.0.11
 License: MIT
 Source: https://github.com/i18next/react-i18next
 --------------------------------------------------------------------------------
@@ -1286,7 +1478,7 @@ THE SOFTWARE IS PROVIDED *AS IS*, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 ================================================================================
 Package: zod
-Version: 4.4.1
+Version: 4.4.3
 License: MIT
 Source: https://zod.dev
 --------------------------------------------------------------------------------
@@ -1316,7 +1508,7 @@ SOFTWARE.
 
 ================================================================================
 Package: zustand
-Version: 5.0.12
+Version: 5.0.15
 License: MIT
 Source: https://github.com/pmndrs/zustand
 --------------------------------------------------------------------------------

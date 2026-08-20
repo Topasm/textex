@@ -26,7 +26,7 @@ npm run package:mac        # Apple Silicon by default
 npm run package:win
 ```
 
-Requires Node.js 20+ and a Tectonic binary in `resources/bin/{linux,mac,win}/`.
+Requires Node.js 22.13+ and a Tectonic binary in `resources/bin/{linux,mac,win}/`.
 The macOS Apple Silicon binaries live in `resources/bin/mac/arm64/`; see
 [PACKAGING.md](PACKAGING.md) for downloading or replacing platform binaries.
 

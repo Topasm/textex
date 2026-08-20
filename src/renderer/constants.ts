@@ -72,10 +72,11 @@ export const AI_MODEL_OPTIONS: Record<string, { value: string; label: string }[]
     { value: 'haiku', label: 'Claude Haiku' }
   ],
   'codex-cli': [
-    { value: 'gpt-5.3-codex', label: 'GPT-5.3 Codex' },
-    { value: 'gpt-5.2-codex', label: 'GPT-5.2 Codex' },
-    { value: 'gpt-5-codex', label: 'GPT-5 Codex' },
-    { value: 'codex-mini-latest', label: 'Codex Mini' }
+    { value: 'gpt-5.6-sol', label: 'GPT-5.6 Sol' },
+    { value: 'gpt-5.6-terra', label: 'GPT-5.6 Terra' },
+    { value: 'gpt-5.6-luna', label: 'GPT-5.6 Luna' },
+    { value: 'gpt-5.5', label: 'GPT-5.5' },
+    { value: 'gpt-5.2', label: 'GPT-5.2' }
   ]
 }
 

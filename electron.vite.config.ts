@@ -27,6 +27,14 @@ export default defineConfig({
   },
   renderer: {
     root: resolve(__dirname, 'src/renderer'),
+    resolve: {
+      alias: {
+        // monaco-vim still uses the pre-0.56 deep path, before Monaco added exports.
+        'monaco-editor/esm/vs/editor/editor.api': 'monaco-editor/editor/editor.api',
+        'monaco-editor/esm/vs/editor/common/commands/shiftCommand':
+          'monaco-editor/editor/common/commands/shiftCommand'
+      }
+    },
     build: {
       outDir: resolve(__dirname, 'out/renderer'),
       chunkSizeWarningLimit: 1500,

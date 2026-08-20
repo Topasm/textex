@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildClaudeTerminalCommand,
+  buildCodexExecArgs,
   buildCodexTerminalCommand,
   getClaudeTerminalLaunchSpecs,
   getCodexTerminalLaunchSpecs
@@ -72,5 +73,29 @@ describe('Claude terminal launcher', () => {
       command: 'cmd.exe',
       args: ['/c', 'start', 'Textex Codex', 'cmd.exe', '/k', 'cd /d "C:\\paper" && codex resume']
     })
+  })
+
+  it('builds a supported, read-only Codex exec invocation', () => {
+    expect(buildCodexExecArgs('gpt-5.6-terra', '/tmp/last-message.txt')).toEqual([
+      'exec',
+      '--model',
+      'gpt-5.6-terra',
+      '--skip-git-repo-check',
+      '--ephemeral',
+      '--sandbox',
+      'read-only',
+      '--color',
+      'never',
+      '--output-last-message',
+      '/tmp/last-message.txt',
+      '-'
+    ])
+  })
+
+  it('uses the configured Codex default when no model is selected', () => {
+    const args = buildCodexExecArgs('  ', '/tmp/last-message.txt')
+
+    expect(args).not.toContain('--model')
+    expect(args).not.toContain('--ask-for-approval')
   })
 })

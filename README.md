@@ -44,8 +44,7 @@ Grab the latest release from the [Releases page](https://github.com/Topasm/texte
 | Platform | File |
 |----------|------|
 | Windows x64 | `.exe` installer |
-| macOS Intel | `.dmg` |
-| macOS Apple Silicon | `.dmg` |
+| macOS Intel + Apple Silicon | universal `.dmg` |
 | Linux x64 | `.AppImage` |
 
 ### 2. OS-Specific Setup
@@ -60,8 +59,8 @@ Or right-click the app > **Open** > **Open** in Gatekeeper.
 **Linux:**
 Make the AppImage executable:
 ```bash
-chmod +x TextEx-1.0.7.AppImage
-./TextEx-1.0.7.AppImage
+chmod +x TextEx-*-linux-x86_64.AppImage
+./TextEx-*-linux-x86_64.AppImage
 ```
 
 ---

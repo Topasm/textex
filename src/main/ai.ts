@@ -219,33 +219,36 @@ export async function checkClaudeCliAvailable(): Promise<boolean> {
   }
 }
 
+export function buildCodexExecArgs(model: string, outputPath: string): string[] {
+  const modelArg = model.trim()
+  const args = [
+    'exec',
+    '--skip-git-repo-check',
+    '--ephemeral',
+    '--sandbox',
+    'read-only',
+    '--color',
+    'never',
+    '--output-last-message',
+    outputPath,
+    '-'
+  ]
+
+  if (modelArg) {
+    args.splice(1, 0, '--model', modelArg)
+  }
+
+  return args
+}
+
 async function callCodexCli(input: string, model: string, systemPrompt: string): Promise<string> {
   const combinedPrompt = `${systemPrompt}\n\n${input}`
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'textex-codex-'))
   const outputPath = path.join(tempDir, 'last-message.txt')
-  const modelArg = model.trim()
 
   try {
     const stdout = await new Promise<string>((resolve, reject) => {
-      const args = [
-        'exec',
-        '--skip-git-repo-check',
-        '--sandbox',
-        'read-only',
-        '--ask-for-approval',
-        'never',
-        '--color',
-        'never',
-        '--output-last-message',
-        outputPath,
-        '-'
-      ]
-
-      if (modelArg) {
-        args.splice(1, 0, '--model', modelArg)
-      }
-
-      const child = spawn('codex', args, {
+      const child = spawn('codex', buildCodexExecArgs(model, outputPath), {
         env: getCliEnv(),
         stdio: ['pipe', 'pipe', 'pipe']
       })
