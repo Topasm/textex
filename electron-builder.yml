@@ -49,8 +49,8 @@ win:
 mac:
   icon: build/icon.icns
   artifactName: '${productName}-${version}-macos-${arch}.${ext}'
-  # These optional PDF.js canvas bindings are already architecture-specific.
-  x64ArchFiles: '**/node_modules/@napi-rs/canvas-darwin-*/**/*.node'
+  # Native prebuilds and sidecars are already split into x64/arm64 paths.
+  x64ArchFiles: '{Contents/Resources/app.asar.unpacked/node_modules/**/*darwin*/**/*.node,Contents/Resources/bin/**}'
   target:
     - dmg
     - zip
