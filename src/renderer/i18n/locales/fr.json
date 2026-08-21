@@ -334,6 +334,9 @@
     "ln": "Lig"
   },
   "omniSearch": {
+    "searchProjectFiles": "Rechercher dans les fichiers du projet...",
+    "files": "Fichiers",
+    "enterToOpenFile": "Entrée pour ouvrir",
     "searchCitations": "Rechercher des citations...",
     "searchZotero": "Rechercher dans Zotero...",
     "searchPdf": "Rechercher dans le PDF...",

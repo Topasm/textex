@@ -23,12 +23,13 @@ binary format, then atomically installs it using Tauri's target-suffixed sidecar
 name. Native targets also run `tectonic --version`. `--check` is network-free and
 requires matching generated provenance.
 
-For a universal macOS package, run the following on macOS with Xcode command-line
-tools installed:
+The supported Tauri macOS release target is Apple Silicon. Prepare it on an
+arm64 macOS host with Xcode command-line tools installed:
 
 ```bash
-npm run setup:tauri -- --target universal-apple-darwin
+npm run setup:tauri -- --target aarch64-apple-darwin
+npm run setup:tauri -- --target aarch64-apple-darwin --check
 ```
 
-This downloads the reviewed x86_64 and arm64 assets and combines them with
-`lipo`. The command deliberately fails on non-macOS hosts.
+Intel and universal targets may remain available to the setup utility for
+historical migration validation, but they are not TextEx Tauri release targets.

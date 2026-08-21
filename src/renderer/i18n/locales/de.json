@@ -334,6 +334,9 @@
     "ln": "Zl"
   },
   "omniSearch": {
+    "searchProjectFiles": "Projektdateien durchsuchen...",
+    "files": "Dateien",
+    "enterToOpenFile": "Enter zum Öffnen",
     "searchCitations": "Zitate suchen...",
     "searchZotero": "In Zotero suchen...",
     "searchPdf": "Im PDF suchen...",

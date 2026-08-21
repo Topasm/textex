@@ -1,8 +1,8 @@
 import type { BookOpen } from 'lucide-react'
 import type { ZoteroSearchResult } from '../../types/api'
-import type { BibEntry, RecentProject } from '../../../shared/types'
+import type { BibEntry, ProjectIndexEntry, RecentProject } from '../../../shared/types'
 
-export type SearchMode = 'cite' | 'zotero' | 'pdf' | 'tex'
+export type SearchMode = 'file' | 'cite' | 'zotero' | 'pdf' | 'tex'
 
 export interface ModeConfig {
   icon: typeof BookOpen
@@ -15,6 +15,8 @@ export interface TexSearchResult {
   line: number
   text: string
 }
+
+export type ProjectFileSearchResult = ProjectIndexEntry
 
 export interface HomeSlashCommand {
   command: string

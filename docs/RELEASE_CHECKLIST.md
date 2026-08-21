@@ -125,10 +125,11 @@ npm run setup:tauri -- --target x86_64-pc-windows-msvc
 npm run setup:tauri -- --target x86_64-pc-windows-msvc --check
 ```
 
-Prepare `universal-apple-darwin` only on macOS, where the setup script can use
-`lipo` and verify both x86_64 and arm64 slices. Never copy the legacy
-`resources/bin/` payload into `src-tauri/binaries/` without running the verified
-setup path.
+The supported Tauri macOS release target is `aarch64-apple-darwin`. Prepare and
+verify that exact target on Apple Silicon macOS. Intel and universal macOS
+packaging remain legacy Electron concerns during migration. Never copy the
+legacy `resources/bin/` payload into `src-tauri/binaries/` without running the
+verified setup path.
 
 `npm run check` is useful while iterating, but it intentionally omits tests and
 is not the release gate. Package the current host platform when packaging,

@@ -340,6 +340,9 @@
     "ln": "Ln"
   },
   "omniSearch": {
+    "searchProjectFiles": "Search project files...",
+    "files": "Files",
+    "enterToOpenFile": "Enter to open",
     "searchCitations": "Search citations...",
     "searchZotero": "Search Zotero...",
     "searchPdf": "Search in PDF...",

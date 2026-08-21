@@ -13,6 +13,7 @@ describe('FileTree incremental refresh', () => {
       projectRoot,
       directoryTree: [{ name: 'chapters', path: chaptersPath, type: 'directory' }],
       directoryRefreshVersions: {},
+      projectIndex: null,
       gitStatus: null
     })
   })

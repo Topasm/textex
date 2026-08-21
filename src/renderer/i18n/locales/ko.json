@@ -340,6 +340,9 @@
     "ln": "줄"
   },
   "omniSearch": {
+    "searchProjectFiles": "프로젝트 파일 검색...",
+    "files": "파일",
+    "enterToOpenFile": "Enter로 파일 열기",
     "searchCitations": "인용 검색...",
     "searchZotero": "Zotero 검색...",
     "searchPdf": "PDF에서 검색...",

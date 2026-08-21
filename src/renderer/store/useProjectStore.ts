@@ -6,11 +6,13 @@ import type {
   BibEntry,
   CitationGroup,
   LabelInfo,
-  PackageData
+  PackageData,
+  ProjectIndexDelta,
+  ProjectIndexSnapshot
 } from '../../shared/types'
 import type { AuxCitationMap } from '../../shared/auxparser'
 import type { GitStatusResult } from '../types/api'
-import { projectPathKey } from '../services/projectIndex'
+import { applyProjectIndexDelta, projectPathKey } from '../services/projectIndex'
 
 export type SidebarView = 'files' | 'git' | 'bib' | 'outline' | 'todo' | 'timeline'
 
@@ -18,6 +20,7 @@ interface ProjectState {
   projectRoot: string | null
   directoryTree: DirectoryEntry[] | null
   directoryRefreshVersions: Record<string, number>
+  projectIndex: ProjectIndexSnapshot | null
   isSidebarOpen: boolean
   sidebarView: SidebarView
   sidebarWidth: number
@@ -45,6 +48,8 @@ interface ProjectState {
   setProjectRoot: (root: string | null) => void
   setDirectoryTree: (tree: DirectoryEntry[] | null) => void
   invalidateDirectory: (directoryPath: string) => void
+  setProjectIndex: (snapshot: ProjectIndexSnapshot | null) => void
+  applyProjectIndexDelta: (delta: ProjectIndexDelta) => boolean
   toggleSidebar: () => void
   setSidebarView: (view: SidebarView) => void
   setSidebarWidth: (width: number) => void
@@ -65,6 +70,7 @@ export const useProjectStore = create<ProjectState>()(
       projectRoot: null,
       directoryTree: null,
       directoryRefreshVersions: {},
+      projectIndex: null,
       isSidebarOpen: false,
       sidebarView: 'files',
       sidebarWidth: SIDEBAR_DEFAULT_WIDTH,
@@ -79,7 +85,8 @@ export const useProjectStore = create<ProjectState>()(
       gitBranch: '',
       gitStatus: null,
 
-      setProjectRoot: (projectRoot) => set({ projectRoot, directoryRefreshVersions: {} }),
+      setProjectRoot: (projectRoot) =>
+        set({ projectRoot, directoryRefreshVersions: {}, projectIndex: null }),
       setDirectoryTree: (directoryTree) => set({ directoryTree }),
       invalidateDirectory: (directoryPath) =>
         set((state) => {
@@ -91,6 +98,18 @@ export const useProjectStore = create<ProjectState>()(
             }
           }
         }),
+      setProjectIndex: (projectIndex) => set({ projectIndex }),
+      applyProjectIndexDelta: (delta) => {
+        let applied = false
+        set((state) => {
+          if (!state.projectIndex) return state
+          const next = applyProjectIndexDelta(state.projectIndex, delta)
+          if (!next) return state
+          applied = true
+          return { projectIndex: next }
+        })
+        return applied
+      },
       toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
       setSidebarView: (sidebarView) => set({ sidebarView }),
       setSidebarWidth: (sidebarWidth) =>

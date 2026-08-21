@@ -17,6 +17,8 @@ At the v1.0.8 handoff baseline:
   [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) before creating one.
 - Tectonic 0.17.0 is bundled. macOS universal packaging needs both x64 and
   arm64 binaries.
+- The migration Tauri build supports macOS Apple Silicon only; the public
+  Electron release remains universal until the runtime switch.
 - macOS CI output is ad-hoc signed and not Apple-notarized.
 - The build currently needs no custom Actions secret; GitHub provides the
   workflow `GITHUB_TOKEN`. Do not assume that remains true if signing,

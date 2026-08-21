@@ -27,7 +27,7 @@ revision-aware Tectonic compile, system Git vertical slice다. 새 기능은 Tau
 | 열린 파일 일괄 저장 | 지원 | 하나의 `save_file_batch` command가 검증 후 atomic replacement를 수행한다. |
 | binary/base64 읽기 | 지원 | project root 내부 파일만 허용한다. base64는 10 MiB, raw IPC response는 256 MiB safety cap을 적용한다. |
 | directory watcher | 지원 | Rust가 100ms batch/dedupe 후 Channel로 전달하고 renderer ProjectIndex가 구조 변경을 부모 디렉터리 단위로 병합해 lazy tree만 갱신한다. |
-| project metadata index | 기반 지원 | `get_project_index` 최초 호출 시 hidden/noisy/symlink tree를 제외한 flat path metadata를 lazy build하고, 활성 index는 watcher delta로 갱신한다. |
+| project metadata index | 지원 | `get_project_index` 최초 호출 시 hidden/noisy/symlink tree를 제외한 flat path metadata를 lazy build하고, 활성 index는 generation-aware watcher delta로 갱신한다. OmniSearch의 `/f`가 파일 내용을 materialize하지 않고 이 index를 검색하며 FileTree는 expanded flat row 중 viewport+overscan만 DOM에 둔다. |
 | 설정/최근 프로젝트 | 지원 | app config의 typed JSON을 Rust가 원자 저장하며 최근 프로젝트 목록을 경로 권한으로도 사용한다. |
 | 세션 프로젝트 복원 | 지원 | renderer 저장 경로를 직접 신뢰하지 않고 Rust에 저장된 최근 프로젝트만 재활성화한다. |
 | Tectonic compile | 지원 | bundled 0.17 sidecar, magic root, timeout, cancel과 log Channel을 지원한다. |
@@ -213,7 +213,8 @@ npm run check:tauri-sidecars
 ```bash
 npm run setup:tauri -- --target x86_64-pc-windows-msvc
 npm run setup:tauri -- --target x86_64-pc-windows-msvc --check
-npm run setup:tauri -- --target universal-apple-darwin
+npm run setup:tauri -- --target aarch64-apple-darwin
+npm run setup:tauri -- --target aarch64-apple-darwin --check
 ```
 
 setup script는 npm package를 사용하지 않는다. GitHub Tectonic 0.17.0 release의 고정 URL,
@@ -230,8 +231,9 @@ Tectonic 고지가 바뀌면 `npm run licenses:generate` 결과도 package 전�
 `RUST-THIRD-PARTY-NOTICES.txt`로 생성한다. 플랫폼 crate까지 내려받는 Cargo cache는
 Podman build volume에 격리하기 위해 container 안에서 실행할 수 있다.
 
-macOS universal target은 x64와 arm64 공식 자산을 각각 검증한 뒤 `lipo`로 결합하고 두
-slice를 다시 검사한다. `lipo`를 사용할 수 없는 non-macOS host에서는 의도적으로 실패한다.
+Tauri macOS release target은 Apple Silicon `aarch64-apple-darwin`만 지원한다. Intel과
+universal package는 migration release matrix에서 제외하며, 현재 public Electron release가
+universal artifact를 유지하는 동안에만 legacy 경로에서 별도로 검증한다.
 개발용 `dev`/`preview`는 setup을 자동 실행하지만, release 성격의 `build`와 `package:*`는
 네트워크 다운로드 없이 `--check`만 실행한다. CI는 setup과 check를 별도 단계로 남겨
 다운로드 provenance와 packaging 실패를 구분해야 한다.
@@ -265,10 +267,9 @@ slice를 다시 검사한다. `lipo`를 사용할 수 없는 non-macOS host에�
 `DesktopApi`를 설치할 수 없다.
 
 `package`는 `tauri.conf.json`에서 현재 host가 지원하는 기본 bundle target을 모두
-만든다. 재현 가능한 artifact 검증에는 `package:linux`, `package:mac`,
-`package:mac:x64`, `package:mac:universal`, `package:win`처럼 target을 좁힌 명령을
-사용한다. Tauri가 기능 동등성을 확보하기 전까지 이 artifact와 Electron updater
-artifact를 같은 release에 섞지 않는다.
+만든다. 재현 가능한 artifact 검증에는 `package:linux`, Apple Silicon 전용
+`package:mac`, `package:win`처럼 target을 좁힌 명령을 사용한다. Tauri가 기능 동등성을
+확보하기 전까지 이 artifact와 Electron updater artifact를 같은 release에 섞지 않는다.
 
 별도 `.github/workflows/tauri-migration.yml`은 `tauri-migration`/`main` push, `main` 대상
 pull request와 manual dispatch에서 Tauri만 검증한다. Node/Rust/npm audit, Rust 테스트,
@@ -297,7 +298,7 @@ TAURI_SIGNING_PRIVATE_KEY_PASSWORD
 
 public key는 release build에 embed되며 공유할 수 있다. private key와 password는 repository,
 config file, chat history에 넣지 않고 CI secret 또는 maintainer의 secure storage에만 둔다.
-`package:updater:linux`, `package:updater:win`, `package:updater:mac:universal`은
+`package:updater:linux`, `package:updater:win`, `package:updater:mac`은
 `src-tauri/tauri.updater.conf.json`의 `createUpdaterArtifacts: true`를 적용한다. 기존
 `package:*`와 migration CI는 key가 준비되기 전에도 unsigned validation package를 계속
 만들 수 있다.
@@ -358,7 +359,6 @@ host에서도 기본 gate를 실행할 수 있다. Rust 동작 변경에는 위 
 Electron에서만 동작한다.
 
 - project-scoped custom protocol과 PDFium A/B
-- ProjectIndex 기반 search와 flat FileTree virtualization
 - TexLab lifecycle와 LSP JSON-RPC
 - history와 project metadata
 - BibTeX/label scan, spellcheck, templates, Pandoc export와 SyncTeX
@@ -379,21 +379,19 @@ Tectonic은 필수 sidecar로 등록되어 package 전 검증되지만 TexLab은
 
 다음 순서로 작은 vertical slice를 추가한다.
 
-1. 현재 Rust path metadata snapshot/delta를 search에 연결하고 FileTree를 flat
-   virtualization으로 전환한다.
-2. raw IPC보다 큰 PDF에는 project-scoped custom protocol을 A/B 측정하고 PDF.js 대비
+1. raw IPC보다 큰 PDF에는 project-scoped custom protocol을 A/B 측정하고 PDF.js 대비
    PDFium의 latency/memory/package-size tradeoff를 기록한다.
-3. SyncTeX, Pandoc, bibliography, history, AI/Zotero 등 나머지 service를 이관한다.
-4. TexLab은 project-wide definition/rename/semantic diagnostics의 실사용 필요성을 측정할
+2. SyncTeX, Pandoc, bibliography, history, AI/Zotero 등 나머지 service를 이관한다.
+3. TexLab은 project-wide definition/rename/semantic diagnostics의 실사용 필요성을 측정할
    때까지 HOLD한다.
-5. PTY는 마지막에 cross-platform 구현과 Windows console QA를 함께 진행한다.
-6. menu와 release signing을 완료하고 세 플랫폼 updater package를 다시 검증한 뒤 임시 Electron 경로를
+4. PTY는 마지막에 cross-platform 구현과 Windows console QA를 함께 진행한다.
+5. menu와 release signing을 완료하고 세 플랫폼 updater package를 다시 검증한 뒤 임시 Electron 경로를
    제거한다.
 
 sidecar 파일은 `-$TARGET_TRIPLE` 이름을 사용하며 Windows는 triple 뒤에 `.exe`를
-붙인다. macOS universal Tectonic은 setup script가 두 architecture를 `lipo`한다. TexLab을
-추가할 때도 x64/arm64 검증이 필요하다. renderer에서 sidecar spawn 권한이나 `args: true`를
-열지 말고 Rust manager가 child process와 cancel handle을 소유해야 한다.
+붙인다. macOS Tectonic은 Apple Silicon용 arm64 payload만 release 대상으로 검증한다.
+TexLab을 다시 추가할 때도 arm64만 bundle한다. renderer에서 sidecar spawn 권한이나
+`args: true`를 열지 말고 Rust manager가 child process와 cancel handle을 소유해야 한다.
 
 ## Size and Performance
 
@@ -439,7 +437,7 @@ manual chunk 분리는 실제 lazy import와 함께 사용할 때만 초기 실�
   setup download와 release preflight를 같은 암묵적 단계로 합치지 않는다.
 - 재현 가능한 Rust dependency graph를 위해 `src-tauri/Cargo.lock`을 포함하고 dependency
   변경 때마다 diff를 검토한다.
-- release 전환은 Linux, Windows, macOS universal에서 Tectonic, updater,
+- release 전환은 Linux, Windows, macOS Apple Silicon에서 Tectonic, updater,
   signing/notarization과 설치/업그레이드까지 검증한 별도 변경으로 진행한다.
 - 전환 release도 [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md)의 version 동기화,
   `main` workflow 선검증, tag 불변성과 artifact 검증 규칙을 따른다.

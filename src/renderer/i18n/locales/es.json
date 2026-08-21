@@ -334,6 +334,9 @@
     "ln": "Lín"
   },
   "omniSearch": {
+    "searchProjectFiles": "Buscar archivos del proyecto...",
+    "files": "Archivos",
+    "enterToOpenFile": "Enter para abrir",
     "searchCitations": "Buscar citas...",
     "searchZotero": "Buscar en Zotero...",
     "searchPdf": "Buscar en PDF...",

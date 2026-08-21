@@ -334,6 +334,9 @@
     "ln": "行"
   },
   "omniSearch": {
+    "searchProjectFiles": "搜索项目文件...",
+    "files": "文件",
+    "enterToOpenFile": "按 Enter 打开",
     "searchCitations": "搜索引用...",
     "searchZotero": "搜索 Zotero...",
     "searchPdf": "在 PDF 中搜索...",

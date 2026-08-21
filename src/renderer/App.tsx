@@ -193,6 +193,7 @@ function App() {
       projectRoot: null,
       directoryTree: null,
       directoryRefreshVersions: {},
+      projectIndex: null,
       isGitRepo: false,
       gitBranch: '',
       gitStatus: null,

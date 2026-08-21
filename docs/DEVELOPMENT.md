@@ -105,7 +105,7 @@ Tectonic은 Tauri의 필수 `externalBin`으로 등록됐지만 TexLab과 나머
 compile/PDF workflow 또는 public release 준비 완료를 의미하지 않는다. 기능 동등성이
 확보될 때까지 GitHub public release workflow는 legacy Electron artifact를 계속 만든다.
 별도 `Tauri Migration CI` workflow가 `tauri-migration` branch와 pull request에서
-Linux, Windows, macOS universal Tauri package를 검증하되 Release는 만들지 않는다.
+Linux, Windows, macOS Apple Silicon Tauri package를 검증하되 Release는 만들지 않는다.
 
 ## All Commands
 
@@ -157,8 +157,6 @@ npm run package:linux    # Create Tauri AppImage + DEB
 npm run package:linux:deb # Create only the Tauri DEB
 npm run package:linux:deb:container # Clean-install and create the DEB in Podman
 npm run package:mac      # Create Tauri Apple Silicon DMG
-npm run package:mac:x64  # Create Tauri Intel DMG
-npm run package:mac:universal # Create Tauri universal DMG
 npm run package:win      # Create Tauri NSIS installer
 npm run package:electron:linux # Create legacy Electron AppImage + DEB
 npm run package:electron:mac # Create legacy Electron Apple Silicon DMG + ZIP
