@@ -10,12 +10,14 @@ import type {
 } from '../../shared/types'
 import type { AuxCitationMap } from '../../shared/auxparser'
 import type { GitStatusResult } from '../types/api'
+import { projectPathKey } from '../services/projectIndex'
 
 export type SidebarView = 'files' | 'git' | 'bib' | 'outline' | 'todo' | 'timeline'
 
 interface ProjectState {
   projectRoot: string | null
   directoryTree: DirectoryEntry[] | null
+  directoryRefreshVersions: Record<string, number>
   isSidebarOpen: boolean
   sidebarView: SidebarView
   sidebarWidth: number
@@ -42,6 +44,7 @@ interface ProjectState {
   // Actions
   setProjectRoot: (root: string | null) => void
   setDirectoryTree: (tree: DirectoryEntry[] | null) => void
+  invalidateDirectory: (directoryPath: string) => void
   toggleSidebar: () => void
   setSidebarView: (view: SidebarView) => void
   setSidebarWidth: (width: number) => void
@@ -61,6 +64,7 @@ export const useProjectStore = create<ProjectState>()(
     subscribeWithSelector((set) => ({
       projectRoot: null,
       directoryTree: null,
+      directoryRefreshVersions: {},
       isSidebarOpen: false,
       sidebarView: 'files',
       sidebarWidth: SIDEBAR_DEFAULT_WIDTH,
@@ -75,8 +79,18 @@ export const useProjectStore = create<ProjectState>()(
       gitBranch: '',
       gitStatus: null,
 
-      setProjectRoot: (projectRoot) => set({ projectRoot }),
+      setProjectRoot: (projectRoot) => set({ projectRoot, directoryRefreshVersions: {} }),
       setDirectoryTree: (directoryTree) => set({ directoryTree }),
+      invalidateDirectory: (directoryPath) =>
+        set((state) => {
+          const key = projectPathKey(directoryPath)
+          return {
+            directoryRefreshVersions: {
+              ...state.directoryRefreshVersions,
+              [key]: (state.directoryRefreshVersions[key] ?? 0) + 1
+            }
+          }
+        }),
       toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
       setSidebarView: (sidebarView) => set({ sidebarView }),
       setSidebarWidth: (sidebarWidth) =>

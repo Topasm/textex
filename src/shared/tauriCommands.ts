@@ -29,6 +29,7 @@ export const TAURI_COMMANDS = {
   gitLog: 'git_log',
   gitFileLog: 'git_file_log',
   loadPackageData: 'load_package_data',
+  getProjectIndex: 'get_project_index',
   watchDirectory: 'watch_directory',
   unwatchDirectory: 'unwatch_directory',
   loadSettings: 'load_settings',

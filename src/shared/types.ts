@@ -59,6 +59,35 @@ export interface DirectoryEntry {
   children?: DirectoryEntry[]
 }
 
+export interface DirectoryChangeEvent {
+  type: 'change' | 'rename'
+  /** Project-root-relative path emitted by the native directory watcher. */
+  filename: string
+  indexDelta?: ProjectIndexDelta
+}
+
+export interface ProjectIndexEntry {
+  path: string
+  relativePath: string
+  parentRelativePath: string
+  name: string
+  type: 'file' | 'directory'
+  size?: number
+  modifiedMs?: number
+}
+
+export interface ProjectIndexSnapshot {
+  root: string
+  generation: number
+  entries: ProjectIndexEntry[]
+}
+
+export interface ProjectIndexDelta {
+  generation: number
+  upserted: ProjectIndexEntry[]
+  removedPaths: string[]
+}
+
 export interface BibEntry {
   key: string
   type: string

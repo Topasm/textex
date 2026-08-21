@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
 import type { IpcChannel, IpcRequest, IpcResponse } from '../shared/ipcChannels'
-import type { AppCommandId } from '../shared/types'
+import type { AppCommandId, DirectoryChangeEvent } from '../shared/types'
 import type {
   CompileDiagnosticsEvent,
   CompileLogEvent,
@@ -144,8 +144,7 @@ function createIpcListener<TArgs extends unknown[]>(channel: string) {
 
 const compileLogListener = createIpcListener<[CompileLogEvent]>('latex:log')
 const diagnosticsListener = createIpcListener<[CompileDiagnosticsEvent]>('latex:diagnostics')
-const directoryChangedListener =
-  createIpcListener<[{ type: string; filename: string }]>('fs:directory-changed')
+const directoryChangedListener = createIpcListener<[DirectoryChangeEvent]>('fs:directory-changed')
 const lspMessageListener = createIpcListener<[object]>('lsp:message')
 const lspStatusListener = createIpcListener<[string, string?]>('lsp:status-change')
 const appCommandListener = createIpcListener<[AppCommandId]>('app:command')
@@ -177,7 +176,7 @@ contextBridge.exposeInMainWorld('api', {
   readFileBinary: (filePath: string) => invoke('fs:read-file-binary', filePath),
   watchDirectory: (dirPath: string) => invoke('fs:watch-directory', dirPath),
   unwatchDirectory: () => invoke('fs:unwatch-directory'),
-  onDirectoryChanged: (cb: (change: { type: string; filename: string }) => void) => {
+  onDirectoryChanged: (cb: (change: DirectoryChangeEvent) => void) => {
     directoryChangedListener.on(cb)
   },
   removeDirectoryChangedListener: () => {

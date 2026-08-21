@@ -20,6 +20,7 @@ import type {
   SyncTeXInverseResult,
   SyncTeXLineMapEntry,
   DirectoryEntry,
+  DirectoryChangeEvent,
   BibEntry,
   GitFileStatus,
   GitLogEntry,
@@ -257,7 +258,7 @@ export type IpcResponse<C extends IpcChannel> = IpcChannelMap[C][1]
 export interface IpcPushChannelMap {
   'latex:log': [log: string]
   'latex:diagnostics': [diagnostics: Diagnostic[]]
-  'fs:directory-changed': [change: { type: string; filename: string }]
+  'fs:directory-changed': [change: DirectoryChangeEvent]
   'fs:watch-error': [message: string]
   'lsp:message': [message: object]
   'lsp:status-change': [status: string, error?: string]

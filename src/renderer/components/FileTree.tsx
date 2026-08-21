@@ -7,6 +7,7 @@ import { logError } from '../utils/errorMessage'
 import { isImageFile } from '../utils/imageExtensions'
 import { generateFigureSnippet } from '../utils/figureSnippet'
 import { ImagePreviewTooltip } from './ImagePreviewTooltip'
+import { projectPathKey } from '../services/projectIndex'
 
 function iconWrapper(kind: string, path: ReactNode): ReactNode {
   return (
@@ -183,20 +184,40 @@ function FileTreeNode({ entry, depth, gitFiles, onChanged }: FileTreeNodeProps) 
   const [renaming, setRenaming] = useState(false)
   const [hoverPreview, setHoverPreview] = useState<DOMRect | null>(null)
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const loadRequestIdRef = useRef(0)
+  const loadedRefreshVersionRef = useRef(-1)
   const itemRef = useRef<HTMLDivElement>(null)
   const activeFilePath = useEditorStore((s) => s.activeFilePath)
   const projectRoot = useProjectStore((s) => s.projectRoot)
+  const refreshVersion = useProjectStore(
+    (s) => s.directoryRefreshVersions[projectPathKey(entry.path)] ?? 0
+  )
 
   const isImage = entry.type === 'file' && isImageFile(entry.name)
 
   const loadChildren = useCallback(async () => {
+    const requestId = ++loadRequestIdRef.current
+    const requestedRefreshVersion = refreshVersion
     try {
       const entries = await window.api.readDirectory(entry.path)
-      setChildren(entries)
+      if (requestId === loadRequestIdRef.current) {
+        loadedRefreshVersionRef.current = requestedRefreshVersion
+        setChildren(entries)
+      }
     } catch (err) {
-      logError('FileTree:loadChildren', err)
+      if (requestId === loadRequestIdRef.current) logError('FileTree:loadChildren', err)
     }
-  }, [entry.path])
+  }, [entry.path, refreshVersion])
+
+  useEffect(() => {
+    if (
+      !expanded ||
+      loadedRefreshVersionRef.current < 0 ||
+      refreshVersion <= loadedRefreshVersionRef.current
+    )
+      return
+    void loadChildren()
+  }, [expanded, loadChildren, refreshVersion])
 
   const toggleDirectory = useCallback(async () => {
     if (entry.type !== 'directory') return

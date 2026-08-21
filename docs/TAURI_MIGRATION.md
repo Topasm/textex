@@ -26,7 +26,8 @@ revision-aware Tectonic compile, system Git vertical slice다. 새 기능은 Tau
 | Save As/파일·폴더 생성/복사/이름 변경/삭제 | 지원 | Rust command가 project root와 symlink 경계를 검증하며 root 삭제와 기존 대상 덮어쓰기를 거부한다. |
 | 열린 파일 일괄 저장 | 지원 | 하나의 `save_file_batch` command가 검증 후 atomic replacement를 수행한다. |
 | binary/base64 읽기 | 지원 | project root 내부 파일만 허용한다. base64는 10 MiB, raw IPC response는 256 MiB safety cap을 적용한다. |
-| directory watcher | 지원 | Rust가 watcher를 소유하고 100ms batch/dedupe 후 Tauri Channel로 전달한다. |
+| directory watcher | 지원 | Rust가 100ms batch/dedupe 후 Channel로 전달하고 renderer ProjectIndex가 구조 변경을 부모 디렉터리 단위로 병합해 lazy tree만 갱신한다. |
+| project metadata index | 기반 지원 | `get_project_index` 최초 호출 시 hidden/noisy/symlink tree를 제외한 flat path metadata를 lazy build하고, 활성 index는 watcher delta로 갱신한다. |
 | 설정/최근 프로젝트 | 지원 | app config의 typed JSON을 Rust가 원자 저장하며 최근 프로젝트 목록을 경로 권한으로도 사용한다. |
 | 세션 프로젝트 복원 | 지원 | renderer 저장 경로를 직접 신뢰하지 않고 Rust에 저장된 최근 프로젝트만 재활성화한다. |
 | Tectonic compile | 지원 | bundled 0.17 sidecar, magic root, timeout, cancel과 log Channel을 지원한다. |
@@ -108,6 +109,7 @@ Electron preload, Tauri adapter, 공유 타입과 테스트를 함께 갱신한�
 - `load_package_data`
 - `watch_directory`
 - `unwatch_directory`
+- `get_project_index`
 - `load_settings`
 - `save_settings`
 - `activate_project`
@@ -356,6 +358,7 @@ host에서도 기본 gate를 실행할 수 있다. Rust 동작 변경에는 위 
 Electron에서만 동작한다.
 
 - project-scoped custom protocol과 PDFium A/B
+- ProjectIndex 기반 search와 flat FileTree virtualization
 - TexLab lifecycle와 LSP JSON-RPC
 - history와 project metadata
 - BibTeX/label scan, spellcheck, templates, Pandoc export와 SyncTeX
@@ -376,13 +379,15 @@ Tectonic은 필수 sidecar로 등록되어 package 전 검증되지만 TexLab은
 
 다음 순서로 작은 vertical slice를 추가한다.
 
-1. raw IPC보다 큰 PDF에는 project-scoped custom protocol을 A/B 측정하고 PDF.js 대비
+1. 현재 Rust path metadata snapshot/delta를 search에 연결하고 FileTree를 flat
+   virtualization으로 전환한다.
+2. raw IPC보다 큰 PDF에는 project-scoped custom protocol을 A/B 측정하고 PDF.js 대비
    PDFium의 latency/memory/package-size tradeoff를 기록한다.
-2. SyncTeX, Pandoc, bibliography, history, AI/Zotero 등 나머지 service를 이관한다.
-3. TexLab은 project-wide definition/rename/semantic diagnostics의 실사용 필요성을 측정할
+3. SyncTeX, Pandoc, bibliography, history, AI/Zotero 등 나머지 service를 이관한다.
+4. TexLab은 project-wide definition/rename/semantic diagnostics의 실사용 필요성을 측정할
    때까지 HOLD한다.
-4. PTY는 마지막에 cross-platform 구현과 Windows console QA를 함께 진행한다.
-5. menu와 release signing을 완료하고 세 플랫폼 updater package를 다시 검증한 뒤 임시 Electron 경로를
+5. PTY는 마지막에 cross-platform 구현과 Windows console QA를 함께 진행한다.
+6. menu와 release signing을 완료하고 세 플랫폼 updater package를 다시 검증한 뒤 임시 Electron 경로를
    제거한다.
 
 sidecar 파일은 `-$TARGET_TRIPLE` 이름을 사용하며 Windows는 triple 뒤에 `.exe`를

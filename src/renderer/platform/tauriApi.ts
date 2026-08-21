@@ -1,6 +1,6 @@
 import { Channel, invoke } from '@tauri-apps/api/core'
 import type { DesktopApi, OpenFileResult, SaveAsResult, SaveResult } from '../types/api'
-import type { DirectoryEntry } from '../../shared/types'
+import type { DirectoryChangeEvent, DirectoryEntry, ProjectIndexSnapshot } from '../../shared/types'
 import { TAURI_COMMANDS } from '../../shared/tauriCommands'
 import type {
   CompileDiagnosticsEvent,
@@ -42,6 +42,7 @@ type MigratedDesktopApi = Pick<
   | 'unwatchDirectory'
   | 'onDirectoryChanged'
   | 'removeDirectoryChangedListener'
+  | 'getProjectIndex'
   | 'compile'
   | 'cancelCompile'
   | 'onCompileLog'
@@ -91,7 +92,7 @@ type TauriUpdateDownloadEvent =
 
 let compileLogCallback: ((event: CompileLogEvent) => void) | null = null
 let diagnosticsCallback: ((event: CompileDiagnosticsEvent) => void) | null = null
-let directoryChangeCallback: ((change: { type: string; filename: string }) => void) | null = null
+let directoryChangeCallback: ((change: DirectoryChangeEvent) => void) | null = null
 const updateCallbacks = new Map<string, (...args: unknown[]) => void>()
 
 function errorMessage(error: unknown): string {
@@ -208,7 +209,7 @@ const getDocumentOutline: DesktopApi['getDocumentOutline'] = async (filePath, co
   parseContentOutline(content, filePath)
 
 const watchDirectory: DesktopApi['watchDirectory'] = (dirPath) => {
-  const onEvent = new Channel<{ type: string; filename: string }>()
+  const onEvent = new Channel<DirectoryChangeEvent>()
   onEvent.onmessage = (event) => directoryChangeCallback?.(event)
   return invoke<{ success: boolean }>(TAURI_COMMANDS.watchDirectory, { dirPath, onEvent })
 }
@@ -223,6 +224,9 @@ const onDirectoryChanged: DesktopApi['onDirectoryChanged'] = (callback) => {
 const removeDirectoryChangedListener: DesktopApi['removeDirectoryChangedListener'] = () => {
   directoryChangeCallback = null
 }
+
+const getProjectIndex = (): Promise<ProjectIndexSnapshot> =>
+  invoke<ProjectIndexSnapshot>(TAURI_COMMANDS.getProjectIndex)
 
 const compile: DesktopApi['compile'] = (request: CompileRequest) => {
   const onEvent = new Channel<TauriCompileEvent>()
@@ -357,6 +361,7 @@ const migratedApi: MigratedDesktopApi = {
   unwatchDirectory,
   onDirectoryChanged,
   removeDirectoryChangedListener,
+  getProjectIndex,
   compile,
   cancelCompile,
   onCompileLog,

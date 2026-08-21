@@ -3,6 +3,7 @@ import { useEditorStore } from '../store/useEditorStore'
 import { useUiStore } from '../store/useUiStore'
 import { useSettingsStore } from '../store/useSettingsStore'
 import { documentRegistry } from '../models/documentRegistry'
+import type { DirectoryChangeEvent } from '../../shared/types'
 
 const RELOAD_DEBOUNCE_MS = 300
 
@@ -15,7 +16,7 @@ const RELOAD_DEBOUNCE_MS = 300
  */
 export function useExternalFileReload(
   projectRoot: string | null
-): (change: { type: string; filename: string }) => void {
+): (change: DirectoryChangeEvent) => void {
   const debounceMapRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
   // Clean up all pending timers on unmount
@@ -44,7 +45,7 @@ export function useExternalFileReload(
   }, [])
 
   const handleFileChange = useCallback(
-    (change: { type: string; filename: string }) => {
+    (change: DirectoryChangeEvent) => {
       if (!projectRoot) return
 
       const watchEnabled = useSettingsStore.getState().settings.watchOpenFiles

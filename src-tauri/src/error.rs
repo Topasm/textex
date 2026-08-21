@@ -67,6 +67,9 @@ pub enum AppError {
     #[error("LaTeX package metadata operation failed: {0}")]
     PackageData(String),
 
+    #[error("Project index operation failed: {0}")]
+    ProjectIndex(String),
+
     #[error("Settings operation failed: {0}")]
     Settings(String),
 

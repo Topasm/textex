@@ -28,6 +28,7 @@
     "allow-git-log",
     "allow-git-file-log",
     "allow-load-package-data",
+    "allow-get-project-index",
     "allow-watch-directory",
     "allow-unwatch-directory",
     "allow-load-settings",

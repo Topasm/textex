@@ -5,6 +5,8 @@ import { toDisposable } from '../utils/disposable'
 import { useDisposable } from './useDisposable'
 import type { CompileDiagnosticsEvent, CompileLogEvent } from '../../shared/compileProtocol'
 import { isCurrentCompileIdentity } from '../services/compileCoordinator'
+import { ProjectIndexRefreshCoordinator } from '../services/projectIndex'
+import type { DirectoryChangeEvent } from '../../shared/types'
 
 /**
  * Registers IPC event listeners for:
@@ -15,7 +17,7 @@ import { isCurrentCompileIdentity } from '../services/compileCoordinator'
  */
 export function useIpcListeners(
   projectRoot: string | null,
-  onFileChange?: (change: { type: string; filename: string }) => void
+  onFileChange?: (change: DirectoryChangeEvent) => void
 ): void {
   // Update event listeners
   useDisposable((store) => {
@@ -64,15 +66,18 @@ export function useIpcListeners(
   useDisposable(
     (store) => {
       if (!projectRoot) return
-      window.api.onDirectoryChanged(async (change) => {
-        try {
-          const tree = await window.api.readDirectory(projectRoot)
-          useProjectStore.getState().setDirectoryTree(tree)
-        } catch {
-          // ignore
-        }
+      const projectIndex = new ProjectIndexRefreshCoordinator({
+        projectRoot,
+        readDirectory: (directoryPath) => window.api.readDirectory(directoryPath),
+        publishRoot: (tree) => useProjectStore.getState().setDirectoryTree(tree),
+        invalidateDirectory: (directoryPath) =>
+          useProjectStore.getState().invalidateDirectory(directoryPath)
+      })
+      window.api.onDirectoryChanged((change) => {
+        projectIndex.enqueue(change)
         onFileChange?.(change)
       })
+      store.add(projectIndex)
       store.add(toDisposable(() => window.api.removeDirectoryChangedListener()))
     },
     [projectRoot, onFileChange]

@@ -11,8 +11,8 @@ use tokio::{sync::mpsc, time::sleep};
 
 use crate::{
     error::{AppError, AppResult},
-    models::DirectoryChangeEvent,
-    services::filesystem,
+    models::{DirectoryChangeEvent, DirectoryChangeType},
+    services::{filesystem, project_index::ProjectIndexState},
     state::AppState,
 };
 
@@ -60,13 +60,19 @@ impl Drop for ActiveDirectoryWatcher {
 pub async fn watch_directory(
     project_state: &AppState,
     watcher_state: &DirectoryWatcherState,
+    index_state: &ProjectIndexState,
     dir_path: &str,
     on_event: Channel<DirectoryChangeEvent>,
 ) -> AppResult<()> {
     let root = filesystem::resolve_project_directory(project_state, dir_path).await?;
     let worker_root = root.clone();
     let (sender, receiver) = mpsc::unbounded_channel();
-    let worker = tauri::async_runtime::spawn(forward_events(receiver, worker_root, on_event));
+    let worker = tauri::async_runtime::spawn(forward_events(
+        receiver,
+        worker_root,
+        index_state.clone(),
+        on_event,
+    ));
     let mut watcher = notify::recommended_watcher(move |event: notify::Result<Event>| {
         let _ = sender.send(event);
     })
@@ -86,6 +92,7 @@ pub async fn watch_directory(
 async fn forward_events(
     mut receiver: mpsc::UnboundedReceiver<notify::Result<Event>>,
     root: PathBuf,
+    index_state: ProjectIndexState,
     on_event: Channel<DirectoryChangeEvent>,
 ) {
     while let Some(first) = receiver.recv().await {
@@ -106,7 +113,8 @@ async fn forward_events(
             }
         }
 
-        for event in pending.into_values() {
+        for mut event in pending.into_values() {
+            event.index_delta = index_state.apply_change(&root, &event).await.ok().flatten();
             // A closed renderer channel must not keep or crash the watcher.
             let _ = on_event.send(event);
         }
@@ -138,19 +146,22 @@ fn collect_event(
         pending.insert(
             filename.clone(),
             DirectoryChangeEvent {
-                event_type: event_type.to_owned(),
+                event_type,
                 filename,
+                index_delta: None,
             },
         );
     }
 }
 
-fn renderer_event_type(kind: &EventKind) -> Option<&'static str> {
+fn renderer_event_type(kind: &EventKind) -> Option<DirectoryChangeType> {
     match kind {
         EventKind::Create(_) | EventKind::Remove(_) | EventKind::Modify(ModifyKind::Name(_)) => {
-            Some("rename")
+            Some(DirectoryChangeType::Rename)
         }
-        EventKind::Modify(_) | EventKind::Any | EventKind::Other => Some("change"),
+        EventKind::Modify(_) | EventKind::Any | EventKind::Other => {
+            Some(DirectoryChangeType::Change)
+        }
         EventKind::Access(_) => None,
     }
 }
@@ -175,21 +186,23 @@ mod tests {
         EventKind,
     };
 
+    use crate::models::DirectoryChangeType;
+
     use super::{renderer_event_type, should_ignore};
 
     #[test]
     fn maps_native_events_to_the_existing_renderer_contract() {
         assert_eq!(
             renderer_event_type(&EventKind::Create(CreateKind::File)),
-            Some("rename")
+            Some(DirectoryChangeType::Rename)
         );
         assert_eq!(
             renderer_event_type(&EventKind::Remove(RemoveKind::File)),
-            Some("rename")
+            Some(DirectoryChangeType::Rename)
         );
         assert_eq!(
             renderer_event_type(&EventKind::Modify(ModifyKind::Data(DataChange::Content))),
-            Some("change")
+            Some(DirectoryChangeType::Change)
         );
         assert_eq!(
             renderer_event_type(&EventKind::Access(AccessKind::Read)),

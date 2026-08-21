@@ -192,6 +192,7 @@ function App() {
     useProjectStore.setState({
       projectRoot: null,
       directoryTree: null,
+      directoryRefreshVersions: {},
       isGitRepo: false,
       gitBranch: '',
       gitStatus: null,

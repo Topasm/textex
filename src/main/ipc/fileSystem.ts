@@ -10,6 +10,7 @@ import {
   getCacheStats
 } from '../services/fileCache'
 import { DisposableStore, toDisposable } from '../../shared/lifecycle'
+import type { DirectoryChangeEvent } from '../../shared/types'
 import {
   validateFilePath,
   readTextFileWithEncoding,
@@ -21,11 +22,6 @@ import {
 // Debounced batch change notification
 // ---------------------------------------------------------------------------
 
-interface FileChangeEvent {
-  type: string
-  filename: string
-}
-
 /**
  * Creates a batched notifier that collects file-change events over a short
  * time window and delivers them in a single IPC message. This prevents the
@@ -36,10 +32,10 @@ function createBatchedNotifier(
   sendToWindow: (channel: string, ...args: unknown[]) => void,
   batchWindowMs = 100
 ) {
-  let pending: FileChangeEvent[] = []
+  let pending: DirectoryChangeEvent[] = []
   let timer: ReturnType<typeof setTimeout> | null = null
 
-  function schedule(event: FileChangeEvent): void {
+  function schedule(event: DirectoryChangeEvent): void {
     pending.push(event)
     if (timer === null) {
       timer = setTimeout(flush, batchWindowMs)
@@ -54,7 +50,7 @@ function createBatchedNotifier(
     pending = []
 
     // Deduplicate: keep last event per filename
-    const seen = new Map<string, FileChangeEvent>()
+    const seen = new Map<string, DirectoryChangeEvent>()
     for (const ev of batch) {
       seen.set(ev.filename, ev)
     }

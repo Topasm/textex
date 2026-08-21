@@ -11,6 +11,8 @@ import {
   SyncTeXInverseResult,
   SyncTeXLineMapEntry,
   DirectoryEntry,
+  DirectoryChangeEvent,
+  ProjectIndexSnapshot,
   BibEntry,
   GitFileStatus,
   GitLogEntry,
@@ -85,8 +87,10 @@ export interface DesktopApi {
   readDirectory(dirPath: string): Promise<DirectoryEntry[]>
   watchDirectory(dirPath: string): Promise<{ success: boolean }>
   unwatchDirectory(): Promise<{ success: boolean }>
-  onDirectoryChanged(cb: (change: { type: string; filename: string }) => void): void
+  onDirectoryChanged(cb: (change: DirectoryChangeEvent) => void): void
   removeDirectoryChangedListener(): void
+  /** Tauri migration capability; lazily builds the native flat project metadata index. */
+  getProjectIndex?(): Promise<ProjectIndexSnapshot>
 
   // Compilation
   compile(request: CompileRequest): Promise<CompileResponse>

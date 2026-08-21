@@ -24,6 +24,7 @@ fn main() {
         "git_log",
         "git_file_log",
         "load_package_data",
+        "get_project_index",
         "watch_directory",
         "unwatch_directory",
         "load_settings",

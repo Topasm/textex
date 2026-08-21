@@ -383,8 +383,48 @@ pub struct SuccessResult {
 #[derive(Clone, Debug, Serialize)]
 pub struct DirectoryChangeEvent {
     #[serde(rename = "type")]
-    pub event_type: String,
+    pub event_type: DirectoryChangeType,
     pub filename: String,
+    #[serde(rename = "indexDelta", skip_serializing_if = "Option::is_none")]
+    pub index_delta: Option<ProjectIndexDelta>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum DirectoryChangeType {
+    Change,
+    Rename,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectIndexEntry {
+    pub path: String,
+    pub relative_path: String,
+    pub parent_relative_path: String,
+    pub name: String,
+    #[serde(rename = "type")]
+    pub entry_type: DirectoryEntryType,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub size: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub modified_ms: Option<u64>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectIndexSnapshot {
+    pub root: String,
+    pub generation: u64,
+    pub entries: Vec<ProjectIndexEntry>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectIndexDelta {
+    pub generation: u64,
+    pub upserted: Vec<ProjectIndexEntry>,
+    pub removed_paths: Vec<String>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -422,7 +462,7 @@ impl SuccessResult {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum DirectoryEntryType {
     File,
@@ -441,7 +481,8 @@ pub struct DirectoryEntry {
 mod tests {
     use super::{
         CompileDiagnostic, CompileDiagnosticSeverity, CompileEvent, CompileIdentity,
-        CompilePriority, CompileRequest, CompileResponse,
+        CompilePriority, CompileRequest, CompileResponse, DirectoryChangeEvent,
+        DirectoryChangeType, DirectoryEntryType, ProjectIndexDelta, ProjectIndexEntry,
     };
 
     #[test]
@@ -526,6 +567,61 @@ mod tests {
                     "severity": "error",
                     "message": "Undefined control sequence"
                 }]
+            })
+        );
+    }
+
+    #[test]
+    fn directory_change_matches_the_shared_contract() {
+        let event = DirectoryChangeEvent {
+            event_type: DirectoryChangeType::Rename,
+            filename: "chapters/intro.tex".to_owned(),
+            index_delta: None,
+        };
+
+        assert_eq!(
+            serde_json::to_value(event).expect("serialize directory change"),
+            serde_json::json!({
+                "type": "rename",
+                "filename": "chapters/intro.tex"
+            })
+        );
+
+        let indexed_event = DirectoryChangeEvent {
+            event_type: DirectoryChangeType::Change,
+            filename: "main.tex".to_owned(),
+            index_delta: Some(ProjectIndexDelta {
+                generation: 2,
+                upserted: vec![ProjectIndexEntry {
+                    path: "/project/main.tex".to_owned(),
+                    relative_path: "main.tex".to_owned(),
+                    parent_relative_path: String::new(),
+                    name: "main.tex".to_owned(),
+                    entry_type: DirectoryEntryType::File,
+                    size: Some(12),
+                    modified_ms: Some(123),
+                }],
+                removed_paths: Vec::new(),
+            }),
+        };
+        assert_eq!(
+            serde_json::to_value(indexed_event).expect("serialize indexed directory change"),
+            serde_json::json!({
+                "type": "change",
+                "filename": "main.tex",
+                "indexDelta": {
+                    "generation": 2,
+                    "upserted": [{
+                        "path": "/project/main.tex",
+                        "relativePath": "main.tex",
+                        "parentRelativePath": "",
+                        "name": "main.tex",
+                        "type": "file",
+                        "size": 12,
+                        "modifiedMs": 123
+                    }],
+                    "removedPaths": []
+                }
             })
         );
     }

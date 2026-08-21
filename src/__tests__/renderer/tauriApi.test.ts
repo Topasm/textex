@@ -306,6 +306,29 @@ describe('Tauri DesktopApi adapter', () => {
     expect(invokeMock).toHaveBeenNthCalledWith(2, 'unwatch_directory')
   })
 
+  it('lazily requests the native flat project index', async () => {
+    const snapshot = {
+      root: '/project',
+      generation: 1,
+      entries: [
+        {
+          path: '/project/main.tex',
+          relativePath: 'main.tex',
+          parentRelativePath: '',
+          name: 'main.tex',
+          type: 'file',
+          size: 12,
+          modifiedMs: 123
+        }
+      ]
+    }
+    invokeMock.mockResolvedValueOnce(snapshot)
+
+    const api = createTauriApi()
+    await expect(api.getProjectIndex?.()).resolves.toEqual(snapshot)
+    expect(invokeMock).toHaveBeenCalledWith('get_project_index')
+  })
+
   it('maps Git operations to project-scoped Rust commands', async () => {
     const status = {
       branch: 'main',
