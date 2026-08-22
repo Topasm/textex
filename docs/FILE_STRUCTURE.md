@@ -347,7 +347,10 @@
 |       |   +-- settings.rs        # Settings and recent-project commands
 |       |   +-- watcher.rs         # Directory watcher lifecycle commands
 |       |   +-- compiler.rs        # Tectonic compile/cancel commands
+|       |   +-- references.rs      # Project bibliography and label commands
+|       |   +-- synctex.rs         # Forward/inverse/line-map commands
 |       |   +-- updater.rs         # Check/download/install/restart commands
+|       |   +-- zotero.rs          # Better BibTeX loopback commands
 |       +-- services/
 |           +-- mod.rs
 |           +-- filesystem.rs      # Path validation and async file operations
@@ -356,7 +359,10 @@
 |           +-- settings.rs        # Typed atomic settings persistence
 |           +-- watcher.rs         # Debounced native directory watcher
 |           +-- compiler.rs        # Tectonic sidecar resolution and execution
+|           +-- references.rs      # Generation-cached BibTeX and label index
+|           +-- synctex.rs         # Cached plain/gzip SyncTeX parser and navigation
 |           +-- updater.rs         # Signed release check and streamed installation
+|           +-- zotero.rs          # Bounded Better BibTeX HTTP/JSON-RPC client
 |
 +-- out/                           # Build output (gitignored)
 |   +-- main/index.js              # Compiled main process

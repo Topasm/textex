@@ -38,6 +38,9 @@ revision-aware Tectonic compile, system Git vertical slice다. 새 기능은 Tau
 | fallback document outline | 지원 | filesystem 접근 없는 shared parser를 Tauri renderer에서 직접 실행한다. |
 | updater | 지원 | Rust가 GitHub `latest.json`을 확인하고 signed artifact를 Channel progress와 함께 설치한다. release build에는 signing key 설정이 필요하다. |
 | PDF preview | 지원 | Rust raw IPC body를 `Uint8Array`로 연결하고 visible+overscan만 DOM에 둔다. 새 generation은 숨겨진 현재 page가 렌더된 뒤 기존 keyed layer와 atomic swap한다. |
+| SyncTeX | 지원 | Rust가 plain/gzip SyncTeX를 parse·mtime cache하고 magic root 및 project boundary를 유지하며 forward/inverse/line-map command를 제공한다. |
+| BibTeX/label index | 지원 | ProjectIndex generation별로 `.bib`/`.tex`를 한 번만 scan·cache하며 단일 BibTeX 파일 parse도 project boundary와 10 MiB 제한을 적용한다. |
+| Zotero/Better BibTeX | 지원 | loopback 전용 Rust HTTP client가 probe, search, CAYW와 선택 citekey BibTeX export를 제공하며 redirect를 거부하고 요청 크기와 timeout을 제한한다. |
 | 나머지 desktop API | 미지원 | 호출 시 `has not been migrated` 오류를 반환한다. |
 
 파일 읽기는 5 MiB를 넘으면 renderer에 경고 정보를 전달하고, editor 정지를 막기
@@ -287,6 +290,9 @@ restart_app
 ```
 
 endpoint는 `https://github.com/Topasm/textex/releases/latest/download/latest.json`이다.
+`src-tauri/tauri.conf.json`은 `plugins.updater`를 빈 object라도 항상 유지해야 한다.
+plugin이 등록된 상태에서 이 항목이 없으면 Tauri가 `null`을 updater configuration으로
+역직렬화하지 못해 window 생성 전에 application startup이 중단된다.
 일반 개발 build는 signing key 없이 compile할 수 있지만 updater check는 명시적인
 configuration error를 반환한다. signed release build에는 다음 환경변수가 필요하다.
 
@@ -361,8 +367,8 @@ Electron에서만 동작한다.
 - project-scoped custom protocol과 PDFium A/B
 - TexLab lifecycle와 LSP JSON-RPC
 - history와 project metadata
-- BibTeX/label scan, spellcheck, templates, Pandoc export와 SyncTeX
-- AI provider, Claude/Codex CLI integration과 Zotero
+- spellcheck, templates와 Pandoc export
+- AI provider와 Claude/Codex CLI integration
 - PTY terminal
 - menu/window integration, 세 플랫폼 signed release CI와 notarization
 
@@ -381,7 +387,7 @@ Tectonic은 필수 sidecar로 등록되어 package 전 검증되지만 TexLab은
 
 1. raw IPC보다 큰 PDF에는 project-scoped custom protocol을 A/B 측정하고 PDF.js 대비
    PDFium의 latency/memory/package-size tradeoff를 기록한다.
-2. SyncTeX, Pandoc, bibliography, history, AI/Zotero 등 나머지 service를 이관한다.
+2. Pandoc, bibliography, history, AI/Zotero 등 나머지 service를 이관한다.
 3. TexLab은 project-wide definition/rename/semantic diagnostics의 실사용 필요성을 측정할
    때까지 HOLD한다.
 4. PTY는 마지막에 cross-platform 구현과 Windows console QA를 함께 진행한다.

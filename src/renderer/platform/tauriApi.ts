@@ -1,6 +1,13 @@
 import { Channel, invoke } from '@tauri-apps/api/core'
 import type { DesktopApi, OpenFileResult, SaveAsResult, SaveResult } from '../types/api'
-import type { DirectoryChangeEvent, DirectoryEntry, ProjectIndexSnapshot } from '../../shared/types'
+import type {
+  DirectoryChangeEvent,
+  DirectoryEntry,
+  ProjectIndexSnapshot,
+  SyncTeXForwardResult,
+  SyncTeXInverseResult,
+  SyncTeXLineMapEntry
+} from '../../shared/types'
 import { TAURI_COMMANDS } from '../../shared/tauriCommands'
 import type {
   CompileDiagnosticsEvent,
@@ -43,12 +50,22 @@ type MigratedDesktopApi = Pick<
   | 'onDirectoryChanged'
   | 'removeDirectoryChangedListener'
   | 'getProjectIndex'
+  | 'parseBibFile'
+  | 'findBibInProject'
+  | 'scanLabels'
+  | 'zoteroProbe'
+  | 'zoteroSearch'
+  | 'zoteroCiteCAYW'
+  | 'zoteroExportBibtex'
   | 'compile'
   | 'cancelCompile'
   | 'onCompileLog'
   | 'removeCompileLogListener'
   | 'onDiagnostics'
   | 'removeDiagnosticsListener'
+  | 'synctexForward'
+  | 'synctexInverse'
+  | 'synctexBuildLineMap'
   | 'loadSettings'
   | 'saveSettings'
   | 'addRecentProject'
@@ -228,6 +245,27 @@ const removeDirectoryChangedListener: DesktopApi['removeDirectoryChangedListener
 const getProjectIndex = (): Promise<ProjectIndexSnapshot> =>
   invoke<ProjectIndexSnapshot>(TAURI_COMMANDS.getProjectIndex)
 
+const parseBibFile: DesktopApi['parseBibFile'] = (filePath) =>
+  invoke(TAURI_COMMANDS.parseBibFile, { filePath })
+
+const findBibInProject: DesktopApi['findBibInProject'] = (projectRoot) =>
+  invoke(TAURI_COMMANDS.findBibInProject, { projectRoot })
+
+const scanLabels: DesktopApi['scanLabels'] = (projectRoot) =>
+  invoke(TAURI_COMMANDS.scanLabels, { projectRoot })
+
+const zoteroProbe: DesktopApi['zoteroProbe'] = (port) =>
+  invoke<boolean>(TAURI_COMMANDS.zoteroProbe, { port })
+
+const zoteroSearch: DesktopApi['zoteroSearch'] = (term, port) =>
+  invoke(TAURI_COMMANDS.zoteroSearch, { term, port })
+
+const zoteroCiteCAYW: DesktopApi['zoteroCiteCAYW'] = (port) =>
+  invoke(TAURI_COMMANDS.zoteroCiteCayw, { port })
+
+const zoteroExportBibtex: DesktopApi['zoteroExportBibtex'] = (citekeys, port) =>
+  invoke(TAURI_COMMANDS.zoteroExportBibtex, { citekeys, port })
+
 const compile: DesktopApi['compile'] = (request: CompileRequest) => {
   const onEvent = new Channel<TauriCompileEvent>()
   onEvent.onmessage = (event) => {
@@ -244,6 +282,20 @@ const compile: DesktopApi['compile'] = (request: CompileRequest) => {
 
 const cancelCompile: DesktopApi['cancelCompile'] = () =>
   invoke<boolean>(TAURI_COMMANDS.cancelCompile)
+
+const synctexForward: DesktopApi['synctexForward'] = (texFile, line) =>
+  invoke<SyncTeXForwardResult | null>(TAURI_COMMANDS.synctexForward, { texFile, line })
+
+const synctexInverse: DesktopApi['synctexInverse'] = (texFile, page, x, y) =>
+  invoke<SyncTeXInverseResult | null>(TAURI_COMMANDS.synctexInverse, {
+    texFile,
+    page,
+    x,
+    y
+  })
+
+const synctexBuildLineMap: DesktopApi['synctexBuildLineMap'] = (texFile) =>
+  invoke<SyncTeXLineMapEntry[]>(TAURI_COMMANDS.synctexBuildLineMap, { texFile })
 
 const onCompileLog: DesktopApi['onCompileLog'] = (callback) => {
   compileLogCallback = callback
@@ -362,12 +414,22 @@ const migratedApi: MigratedDesktopApi = {
   onDirectoryChanged,
   removeDirectoryChangedListener,
   getProjectIndex,
+  parseBibFile,
+  findBibInProject,
+  scanLabels,
+  zoteroProbe,
+  zoteroSearch,
+  zoteroCiteCAYW,
+  zoteroExportBibtex,
   compile,
   cancelCompile,
   onCompileLog,
   removeCompileLogListener,
   onDiagnostics,
   removeDiagnosticsListener,
+  synctexForward,
+  synctexInverse,
+  synctexBuildLineMap,
   loadSettings,
   saveSettings,
   addRecentProject,

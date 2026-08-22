@@ -644,7 +644,10 @@ async fn prepare_cache_directory(app: &AppHandle) -> AppResult<PathBuf> {
     Ok(cache_dir)
 }
 
-async fn validate_project_tex_file(state: &AppState, file_path: &str) -> AppResult<PathBuf> {
+pub(crate) async fn validate_project_tex_file(
+    state: &AppState,
+    file_path: &str,
+) -> AppResult<PathBuf> {
     if file_path.is_empty() || file_path.contains('\0') {
         return Err(AppError::InvalidPath(file_path.to_owned()));
     }
@@ -690,7 +693,10 @@ async fn validate_project_tex_file(state: &AppState, file_path: &str) -> AppResu
     Ok(canonical)
 }
 
-async fn resolve_magic_root(state: &AppState, selected_tex_path: &Path) -> AppResult<PathBuf> {
+pub(crate) async fn resolve_magic_root(
+    state: &AppState,
+    selected_tex_path: &Path,
+) -> AppResult<PathBuf> {
     let display_selected_path = path_to_string(selected_tex_path)?;
     let file = fs::File::open(selected_tex_path).await.map_err(|source| {
         AppError::io("read compile input", display_selected_path.clone(), source)

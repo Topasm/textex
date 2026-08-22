@@ -6,7 +6,9 @@ mod state;
 
 use services::package_data::PackageDataState;
 use services::project_index::ProjectIndexState;
+use services::references::ReferenceIndexState;
 use services::settings::SettingsState;
+use services::synctex::SyncTexState;
 use services::updater::AppUpdaterState;
 use services::watcher::DirectoryWatcherState;
 use state::AppState;
@@ -24,6 +26,8 @@ pub fn run() {
         .manage(SettingsState::default())
         .manage(PackageDataState::default())
         .manage(ProjectIndexState::default())
+        .manage(ReferenceIndexState::default())
+        .manage(SyncTexState::default())
         .manage(AppUpdaterState::default())
         .invoke_handler(tauri::generate_handler![
             commands::filesystem::open_file,
@@ -51,6 +55,13 @@ pub fn run() {
             commands::git::git_file_log,
             commands::package_data::load_package_data,
             commands::project_index::get_project_index,
+            commands::references::parse_bib_file,
+            commands::references::find_bib_in_project,
+            commands::references::scan_labels,
+            commands::zotero::zotero_probe,
+            commands::zotero::zotero_search,
+            commands::zotero::zotero_cite_cayw,
+            commands::zotero::zotero_export_bibtex,
             commands::watcher::watch_directory,
             commands::watcher::unwatch_directory,
             commands::settings::load_settings,
@@ -61,6 +72,9 @@ pub fn run() {
             commands::settings::update_recent_project,
             commands::compiler::compile_latex,
             commands::compiler::cancel_compile,
+            commands::synctex::synctex_forward,
+            commands::synctex::synctex_inverse,
+            commands::synctex::synctex_build_line_map,
             commands::updater::check_app_update,
             commands::updater::download_and_install_update,
             commands::updater::restart_app,

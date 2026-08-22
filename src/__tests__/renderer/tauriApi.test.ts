@@ -416,6 +416,93 @@ describe('Tauri DesktopApi adapter', () => {
     expect(invokeMock).not.toHaveBeenCalled()
   })
 
+  it('maps SyncTeX navigation to the trusted Rust commands', async () => {
+    invokeMock
+      .mockResolvedValueOnce({ page: 2, x: 12.5, y: 48 })
+      .mockResolvedValueOnce({ file: '/project/chapter.tex', line: 7, column: 0 })
+      .mockResolvedValueOnce([{ line: 7, page: 2, y: 48 }])
+
+    const api = createTauriApi()
+    await expect(api.synctexForward('/project/chapter.tex', 7)).resolves.toEqual({
+      page: 2,
+      x: 12.5,
+      y: 48
+    })
+    await expect(api.synctexInverse('/project/main.tex', 2, 12.5, 48)).resolves.toEqual({
+      file: '/project/chapter.tex',
+      line: 7,
+      column: 0
+    })
+    await expect(api.synctexBuildLineMap('/project/chapter.tex')).resolves.toEqual([
+      { line: 7, page: 2, y: 48 }
+    ])
+
+    expect(invokeMock.mock.calls).toEqual([
+      ['synctex_forward', { texFile: '/project/chapter.tex', line: 7 }],
+      ['synctex_inverse', { texFile: '/project/main.tex', page: 2, x: 12.5, y: 48 }],
+      ['synctex_build_line_map', { texFile: '/project/chapter.tex' }]
+    ])
+  })
+
+  it('loads bibliography entries and labels through the Rust reference index', async () => {
+    const bibEntry = {
+      key: 'smith2026',
+      type: 'article',
+      title: 'A Paper',
+      author: 'A. Smith',
+      year: '2026',
+      file: '/project/references.bib',
+      line: 1
+    }
+    const label = {
+      label: 'sec:intro',
+      file: '/project/main.tex',
+      line: 4,
+      context: '\\section{Intro}\\label{sec:intro}'
+    }
+    invokeMock
+      .mockResolvedValueOnce([bibEntry])
+      .mockResolvedValueOnce([bibEntry])
+      .mockResolvedValueOnce([label])
+
+    const api = createTauriApi()
+    await expect(api.parseBibFile('/project/references.bib')).resolves.toEqual([bibEntry])
+    await expect(api.findBibInProject('/project')).resolves.toEqual([bibEntry])
+    await expect(api.scanLabels('/project')).resolves.toEqual([label])
+    expect(invokeMock.mock.calls).toEqual([
+      ['parse_bib_file', { filePath: '/project/references.bib' }],
+      ['find_bib_in_project', { projectRoot: '/project' }],
+      ['scan_labels', { projectRoot: '/project' }]
+    ])
+  })
+
+  it('maps Zotero operations to the loopback-only Rust client', async () => {
+    const result = {
+      citekey: 'smith2026',
+      title: 'A Paper',
+      author: 'Smith, Ada',
+      year: '2026',
+      type: 'article'
+    }
+    invokeMock
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce([result])
+      .mockResolvedValueOnce('\\cite{smith2026}')
+      .mockResolvedValueOnce('@article{smith2026}')
+
+    const api = createTauriApi()
+    await expect(api.zoteroProbe(23119)).resolves.toBe(true)
+    await expect(api.zoteroSearch('paper', 23119)).resolves.toEqual([result])
+    await expect(api.zoteroCiteCAYW(23119)).resolves.toBe('\\cite{smith2026}')
+    await expect(api.zoteroExportBibtex(['smith2026'], 23119)).resolves.toBe('@article{smith2026}')
+    expect(invokeMock.mock.calls).toEqual([
+      ['zotero_probe', { port: 23119 }],
+      ['zotero_search', { term: 'paper', port: 23119 }],
+      ['zotero_cite_cayw', { port: 23119 }],
+      ['zotero_export_bibtex', { citekeys: ['smith2026'], port: 23119 }]
+    ])
+  })
+
   it('maps the Rust-owned updater and bridges Channel progress to existing events', async () => {
     invokeMock
       .mockResolvedValueOnce({

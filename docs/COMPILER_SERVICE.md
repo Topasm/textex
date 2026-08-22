@@ -227,7 +227,9 @@ Implementation: `src/shared/magicComments.ts` (pure Node.js, no Electron deps).
 
 - **SyncTeX support** -- Tectonic compiles with `--synctex` flag. Forward sync
   (`synctexForward`) jumps from editor line to PDF position. Inverse sync
-  (`Ctrl+Click` on PDF) jumps to source line. Implemented in `src/main/synctex.ts`.
+  (`Ctrl+Click` on PDF) jumps to source line. Electron uses
+  `src/main/synctex.ts`; Tauri uses the project-scoped Rust parser in
+  `src-tauri/src/services/synctex.rs`.
 - **TexLab LSP integration** -- Real-time diagnostics, completions, hover docs,
   go-to-definition, document symbols, formatting, and rename — without requiring
   a full compile cycle. Managed by `TexLabManager` in `src/main/texlab.ts`.

@@ -31,6 +31,9 @@
       "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; worker-src 'self' blob:;"
     }
   },
+  "plugins": {
+    "updater": {}
+  },
   "bundle": {
     "active": true,
     "targets": "all",

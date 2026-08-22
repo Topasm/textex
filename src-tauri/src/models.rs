@@ -3,6 +3,73 @@ use std::collections::HashMap;
 
 pub type PackageDataMap = HashMap<String, PackageData>;
 
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncTexForwardResult {
+    pub page: u32,
+    pub x: f64,
+    pub y: f64,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncTexInverseResult {
+    pub file: String,
+    pub line: u32,
+    pub column: u32,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncTexLineMapEntry {
+    pub line: u32,
+    pub page: u32,
+    pub y: f64,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BibEntry {
+    pub key: String,
+    #[serde(rename = "type")]
+    pub entry_type: String,
+    pub title: String,
+    pub author: String,
+    pub year: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub journal: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub line: Option<u32>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LabelInfo {
+    pub label: String,
+    pub file: String,
+    pub line: u32,
+    pub context: String,
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct ReferenceIndex {
+    pub bib_entries: Vec<BibEntry>,
+    pub labels: Vec<LabelInfo>,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZoteroSearchResult {
+    pub citekey: String,
+    pub title: String,
+    pub author: String,
+    pub year: String,
+    #[serde(rename = "type")]
+    pub item_type: String,
+}
+
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PackageData {

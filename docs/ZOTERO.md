@@ -92,6 +92,8 @@ Results shown in dropdown -> User selects -> \cite{key1,key2} inserted at cursor
 | File | Role |
 |------|------|
 | `src/main/zotero.ts` | BBT HTTP client (probe, search, CAYW, export) |
+| `src-tauri/src/services/zotero.rs` | Tauri loopback-only BBT HTTP client with bounded requests |
+| `src-tauri/src/commands/zotero.rs` | Tauri probe, search, CAYW, and export commands |
 | `src/main/ipc.ts` | `zotero:*` IPC handler registration |
 | `src/preload/index.ts` | `window.api.zotero*` bridge methods |
 | `src/renderer/types/api.d.ts` | `ZoteroSearchResult` type + API declarations |

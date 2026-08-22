@@ -70,6 +70,15 @@ pub enum AppError {
     #[error("Project index operation failed: {0}")]
     ProjectIndex(String),
 
+    #[error("SyncTeX operation failed: {0}")]
+    SyncTex(String),
+
+    #[error("Reference index operation failed: {0}")]
+    ReferenceIndex(String),
+
+    #[error("Zotero operation failed: {0}")]
+    Zotero(String),
+
     #[error("Settings operation failed: {0}")]
     Settings(String),
 
