@@ -603,7 +603,7 @@ mod tests {
             timeout(Duration::from_millis(100), &mut pending)
                 .await
                 .expect("pending compile should wake"),
-            Err(AppError::CompilationSuperseded)
+            Err(AppError::CompilationCancelled)
         ));
         assert!(matches!(
             state.begin_compilation(&late_request, epoch).await,

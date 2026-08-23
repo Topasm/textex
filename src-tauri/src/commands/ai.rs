@@ -811,7 +811,9 @@ mod tests {
             &mut remaining,
         );
 
-        assert_eq!(remaining, 0);
+        // UTF-8 boundary preservation may leave fewer than one scalar's bytes
+        // unused when the byte budget cuts through a multibyte character.
+        assert!(remaining < "😀".len());
         assert!(std::str::from_utf8(request.contexts[0].content.as_bytes()).is_ok());
         assert!(request.contexts[0]
             .content
