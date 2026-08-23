@@ -11,8 +11,8 @@ pub async fn spell_init(
     app: AppHandle,
     state: State<'_, SpellcheckState>,
     language: String,
-) -> SpellInitResult {
-    spellcheck::initialize(&app, state.inner(), &language).await
+) -> AppResult<SpellInitResult> {
+    Ok(spellcheck::initialize(&app, state.inner(), &language).await)
 }
 
 #[tauri::command]
@@ -44,6 +44,6 @@ pub async fn spell_set_language(
     app: AppHandle,
     state: State<'_, SpellcheckState>,
     language: String,
-) -> SpellInitResult {
-    spellcheck::initialize(&app, state.inner(), &language).await
+) -> AppResult<SpellInitResult> {
+    Ok(spellcheck::initialize(&app, state.inner(), &language).await)
 }
