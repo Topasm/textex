@@ -1680,7 +1680,7 @@ fn read_file_no_follow_bounded(root: &Path, path: &Path, max_bytes: u64) -> io::
             "research source changed to a non-file or oversized file before it was opened",
         ));
     }
-    validate_opened_source_file(root, path, &opened_metadata)?;
+    validate_opened_source_file(root, path, &file)?;
     let mut bytes = Vec::new();
     Read::take(&mut file, max_bytes + 1).read_to_end(&mut bytes)?;
     if bytes.len() as u64 > max_bytes {
@@ -1689,22 +1689,11 @@ fn read_file_no_follow_bounded(root: &Path, path: &Path, max_bytes: u64) -> io::
             "validated file exceeded its read limit",
         ));
     }
-    let completed_metadata = file.metadata()?;
-    if !same_file_identity(&opened_metadata, &completed_metadata) {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            "research source file identity changed while it was read",
-        ));
-    }
-    validate_opened_source_file(root, path, &completed_metadata)?;
+    validate_opened_source_file(root, path, &file)?;
     Ok(bytes)
 }
 
-fn validate_opened_source_file(
-    root: &Path,
-    path: &Path,
-    opened_metadata: &fs::Metadata,
-) -> io::Result<()> {
+fn validate_opened_source_file(root: &Path, path: &Path, opened_file: &fs::File) -> io::Result<()> {
     let canonical = dunce::canonicalize(path)?;
     if !path_is_within(root, &canonical) || !filesystem::paths_equal(path, &canonical) {
         return Err(io::Error::new(
@@ -1715,7 +1704,7 @@ fn validate_opened_source_file(
     let current_metadata = fs::symlink_metadata(path)?;
     if current_metadata.file_type().is_symlink()
         || !current_metadata.is_file()
-        || !same_file_identity(opened_metadata, &current_metadata)
+        || !same_open_file_identity(opened_file, path)?
     {
         return Err(io::Error::new(
             io::ErrorKind::PermissionDenied,
@@ -1744,25 +1733,50 @@ fn configure_source_open_no_follow(options: &mut fs::OpenOptions) {
 fn configure_source_open_no_follow(_options: &mut fs::OpenOptions) {}
 
 #[cfg(unix)]
-fn same_file_identity(left: &fs::Metadata, right: &fs::Metadata) -> bool {
+fn same_open_file_identity(opened_file: &fs::File, path: &Path) -> io::Result<bool> {
     use std::os::unix::fs::MetadataExt;
 
-    left.dev() == right.dev() && left.ino() == right.ino()
+    let opened = opened_file.metadata()?;
+    let current = fs::symlink_metadata(path)?;
+    Ok(opened.dev() == current.dev() && opened.ino() == current.ino())
 }
 
 #[cfg(windows)]
-fn same_file_identity(left: &fs::Metadata, right: &fs::Metadata) -> bool {
-    use std::os::windows::fs::MetadataExt;
+fn same_open_file_identity(opened_file: &fs::File, path: &Path) -> io::Result<bool> {
+    use std::os::windows::io::AsRawHandle;
+    use windows_sys::Win32::{
+        Foundation::HANDLE,
+        Storage::FileSystem::{GetFileInformationByHandle, BY_HANDLE_FILE_INFORMATION},
+    };
 
-    left.volume_serial_number() == right.volume_serial_number()
-        && left.file_index() == right.file_index()
+    fn identity(file: &fs::File) -> io::Result<(u32, u64)> {
+        let mut info = BY_HANDLE_FILE_INFORMATION::default();
+        // SAFETY: `file` owns a valid handle for the duration of the call and
+        // `info` points to writable storage of the exact structure expected by
+        // GetFileInformationByHandle.
+        let succeeded =
+            unsafe { GetFileInformationByHandle(file.as_raw_handle() as HANDLE, &mut info) };
+        if succeeded == 0 {
+            return Err(io::Error::last_os_error());
+        }
+        let file_index = (u64::from(info.nFileIndexHigh) << 32) | u64::from(info.nFileIndexLow);
+        Ok((info.dwVolumeSerialNumber, file_index))
+    }
+
+    let mut options = fs::OpenOptions::new();
+    options.read(true);
+    configure_source_open_no_follow(&mut options);
+    let current_file = options.open(path)?;
+    Ok(identity(opened_file)? == identity(&current_file)?)
 }
 
 #[cfg(not(any(unix, windows)))]
-fn same_file_identity(left: &fs::Metadata, right: &fs::Metadata) -> bool {
-    left.len() == right.len()
-        && left.modified().ok() == right.modified().ok()
-        && left.created().ok() == right.created().ok()
+fn same_open_file_identity(opened_file: &fs::File, path: &Path) -> io::Result<bool> {
+    let opened = opened_file.metadata()?;
+    let current = fs::symlink_metadata(path)?;
+    Ok(opened.len() == current.len()
+        && opened.modified().ok() == current.modified().ok()
+        && opened.created().ok() == current.created().ok())
 }
 
 fn validate_resource_id(resource_id: &str) -> AppResult<()> {
@@ -2793,11 +2807,11 @@ mod tests {
         let path = source.path().join("main.rs");
         let replaced = source.path().join("replaced.rs");
         fs::write(&path, "fn original() {}\n").expect("original source");
-        let opened_metadata = fs::metadata(&path).expect("original metadata");
+        let opened_file = fs::File::open(&path).expect("open original source");
         fs::rename(&path, &replaced).expect("move original source");
         fs::write(&path, "fn replacement() {}\n").expect("replacement source");
 
-        assert!(validate_opened_source_file(source.path(), &path, &opened_metadata).is_err());
+        assert!(validate_opened_source_file(source.path(), &path, &opened_file).is_err());
     }
 
     #[cfg(unix)]

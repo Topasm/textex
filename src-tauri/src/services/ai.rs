@@ -1,12 +1,14 @@
 use std::{
     collections::HashMap,
     ffi::OsString,
-    io,
     path::{Path, PathBuf},
     process::Stdio,
     sync::atomic::{AtomicU64, Ordering},
     time::Duration,
 };
+
+#[cfg(unix)]
+use std::io;
 
 use futures_util::StreamExt;
 use reqwest::{Client, Response};
