@@ -644,7 +644,8 @@ fn legacy_citation_paths(
         .map_err(|error| AppError::RuntimePath(error.to_string()))?;
     let config_root = config_dir
         .parent()
-        .ok_or_else(|| AppError::RuntimePath(display(&config_dir)))?;
+        .ok_or_else(|| AppError::RuntimePath(display(&config_dir)))?
+        .to_path_buf();
     let mut user_data_dirs = vec![config_dir];
     user_data_dirs.extend(
         ["TextEx", "textex", "com.textex.app"]

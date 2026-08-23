@@ -119,7 +119,7 @@ async fn run_pandoc(pandoc: &Path, input: &Path, output: &Path, format: &str) ->
             pandoc.to_string_lossy()
         ))
     })?;
-    let mut stderr = child
+    let stderr = child
         .stderr
         .take()
         .ok_or_else(|| export_error("could not capture Pandoc diagnostics"))?;
