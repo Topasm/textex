@@ -4,15 +4,18 @@ import { describe, expect, it } from 'vitest'
 
 interface TauriConfig {
   plugins?: {
-    updater?: Record<string, unknown>
+    updater?: {
+      pubkey?: unknown
+    }
   }
 }
 
 describe('Tauri configuration', () => {
-  it('provides an object configuration for the updater plugin', () => {
+  it('provides the updater pubkey field required before builder overrides are applied', () => {
     const configPath = resolve(process.cwd(), 'src-tauri/tauri.conf.json')
     const config = JSON.parse(readFileSync(configPath, 'utf8')) as TauriConfig
 
-    expect(config.plugins?.updater).toEqual({})
+    expect(config.plugins?.updater).toEqual({ pubkey: '' })
+    expect(typeof config.plugins?.updater?.pubkey).toBe('string')
   })
 })

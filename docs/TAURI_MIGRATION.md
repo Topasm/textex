@@ -36,7 +36,7 @@ revision-aware Tectonic compile, system Git vertical slice다. 새 기능은 Tau
 | Git | 지원 | project root로 제한된 system Git service가 init/status/stage/unstage/commit/diff/log/file log를 제공한다. |
 | LaTeX package metadata | 지원 | bundled JSON resource를 Rust가 검증·cache하고 transitive dependency까지 반환한다. |
 | fallback document outline | 지원 | filesystem 접근 없는 shared parser를 Tauri renderer에서 직접 실행한다. |
-| updater | 지원 | Rust가 GitHub `latest.json`을 확인하고 signed artifact를 Channel progress와 함께 설치한다. release build에는 signing key 설정이 필요하다. |
+| updater | 지원 | Rust가 GitHub `latest.json`을 확인하고 signed artifact를 Channel progress와 함께 설치한다. Tauri config의 빈 `pubkey` placeholder는 plugin 역직렬화를 통과시키고 release build의 `TEXTEX_UPDATER_PUBLIC_KEY`가 builder에서 이를 덮어쓴다. |
 | PDF preview | 지원 | Rust raw IPC body를 `Uint8Array`로 연결하고 visible+overscan만 DOM에 둔다. 새 generation은 숨겨진 현재 page가 렌더된 뒤 기존 keyed layer와 atomic swap한다. |
 | SyncTeX | 지원 | Rust가 plain/gzip SyncTeX를 parse·mtime cache하고 magic root 및 project boundary를 유지하며 forward/inverse/line-map command를 제공한다. |
 | BibTeX/label index | 지원 | ProjectIndex generation별로 `.bib`/`.tex`를 한 번만 scan·cache하며 단일 BibTeX 파일 parse도 project boundary와 10 MiB 제한을 적용한다. |

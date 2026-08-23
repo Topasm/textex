@@ -32,7 +32,9 @@
     }
   },
   "plugins": {
-    "updater": {}
+    "updater": {
+      "pubkey": ""
+    }
   },
   "bundle": {
     "active": true,
