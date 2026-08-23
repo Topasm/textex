@@ -10,6 +10,7 @@ use services::project_data::ProjectDataState;
 use services::project_index::ProjectIndexState;
 use services::references::ReferenceIndexState;
 use services::settings::SettingsState;
+use services::spellcheck::SpellcheckState;
 use services::synctex::SyncTexState;
 use services::updater::AppUpdaterState;
 use services::watcher::DirectoryWatcherState;
@@ -32,6 +33,7 @@ pub fn run() {
         .manage(ProjectIndexState::default())
         .manage(ProjectDataState::default())
         .manage(ReferenceIndexState::default())
+        .manage(SpellcheckState::default())
         .manage(SyncTexState::default())
         .manage(AppUpdaterState::default())
         .manage(ZoteroSyncState::default())
@@ -83,6 +85,11 @@ pub fn run() {
             commands::references::parse_bib_file,
             commands::references::find_bib_in_project,
             commands::references::scan_labels,
+            commands::spellcheck::spell_init,
+            commands::spellcheck::spell_check,
+            commands::spellcheck::spell_suggest,
+            commands::spellcheck::spell_add_word,
+            commands::spellcheck::spell_set_language,
             commands::zotero::zotero_probe,
             commands::zotero::zotero_search,
             commands::zotero::zotero_cite_cayw,

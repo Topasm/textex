@@ -459,6 +459,31 @@ describe('Tauri DesktopApi adapter', () => {
     })
   })
 
+  it('maps spellcheck operations to the worker-backed Rust dictionary', async () => {
+    invokeMock
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce(['mispellled'])
+      .mockResolvedValueOnce(['misspelled'])
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce({ success: true })
+
+    const api = createTauriApi()
+
+    await expect(api.spellInit('en-US')).resolves.toEqual({ success: true })
+    await expect(api.spellCheck(['editor', 'mispellled'])).resolves.toEqual(['mispellled'])
+    await expect(api.spellSuggest('mispellled')).resolves.toEqual(['misspelled'])
+    await expect(api.spellAddWord('textexword')).resolves.toEqual({ success: true })
+    await expect(api.spellSetLanguage('en-US')).resolves.toEqual({ success: true })
+
+    expect(invokeMock.mock.calls).toEqual([
+      ['spell_init', { language: 'en-US' }],
+      ['spell_check', { words: ['editor', 'mispellled'] }],
+      ['spell_suggest', { word: 'mispellled' }],
+      ['spell_add_word', { word: 'textexword' }],
+      ['spell_set_language', { language: 'en-US' }]
+    ])
+  })
+
   it('parses the fallback document outline locally without a native round trip', async () => {
     const api = createTauriApi()
     await expect(

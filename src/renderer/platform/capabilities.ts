@@ -39,7 +39,7 @@ const TAURI_CAPABILITIES: DesktopCapabilities = Object.freeze({
   performanceMemory: false,
   projectMetadata: true,
   pty: false,
-  spellcheck: false,
+  spellcheck: true,
   templates: false
 })
 

@@ -43,6 +43,7 @@ revision-aware Tectonic compile, system Git vertical slice다. 새 기능은 Tau
 | Zotero/Better BibTeX | 지원 | loopback 전용 Rust HTTP client가 probe, search, CAYW, 선택 citekey export와 collection→project `.bib` atomic sync를 제공하며 redirect, 크기와 timeout을 제한한다. |
 | local history | 지원 | Rust가 project-scoped gzip snapshot을 원자 저장하고 50개로 prune하며 snapshot 경로와 50 MiB decompression limit을 검증한다. |
 | `.textex` project metadata | 지원 | 활성 project root와 정확히 일치하는 경로만 허용하고 project/compile/snippet/bookmark JSON과 compile log를 크기 제한 및 atomic replacement로 관리한다. 기존 v1 JSON 형식과 malformed-file fallback을 유지한다. |
+| spellcheck | 지원 | bundled Hunspell 사전을 순수 Rust service가 lazy load하고 check/suggest/add/language 전환을 blocking worker에서 처리한다. 언어·단어 입력과 사전 크기를 제한한다. |
 | 나머지 desktop API | 미지원 | 호출 시 `has not been migrated` 오류를 반환한다. |
 
 파일 읽기는 5 MiB를 넘으면 renderer에 경고 정보를 전달하고, editor 정지를 막기
@@ -112,6 +113,11 @@ Electron preload, Tauri adapter, 공유 타입과 테스트를 함께 갱신한�
 - `git_log`
 - `git_file_log`
 - `load_package_data`
+- `spell_init`
+- `spell_check`
+- `spell_suggest`
+- `spell_add_word`
+- `spell_set_language`
 - `watch_directory`
 - `unwatch_directory`
 - `get_project_index`
@@ -260,6 +266,7 @@ install한다. 생성된 payload/provenance는 gitignored이며 검토된
 `src-tauri/binaries/manifest.json`만 source control에 둔다.
 
 Tauri bundle은 sidecar와 함께 `resources/data/packages/**`를 `data/packages/`에,
+`resources/dictionaries/**`를 `dictionaries/`에,
 `resources/licenses/**`를 `licenses/`에, `resources/tectonic-cache/**`를
 `tectonic-cache/`에 포함한다. 따라서 dependency 또는
 Tectonic 고지가 바뀌면 `npm run licenses:generate` 결과도 package 전에 검토한다. 이
@@ -399,7 +406,7 @@ Electron에서만 동작한다.
 
 - project-scoped custom protocol과 PDFium A/B
 - TexLab lifecycle와 LSP JSON-RPC
-- spellcheck, templates와 Pandoc export
+- templates와 Pandoc export
 - AI provider와 Claude/Codex CLI integration
 - PTY terminal
 - menu/window integration, 세 플랫폼 signed release CI와 notarization
@@ -424,7 +431,7 @@ Tectonic은 필수 sidecar로 등록되어 package 전 검증되지만 TexLab은
 
 1. raw IPC보다 큰 PDF에는 project-scoped custom protocol을 A/B 측정하고 PDF.js 대비
    PDFium의 latency/memory/package-size tradeoff를 기록한다.
-2. Pandoc export, spellcheck, templates와 AI service를 이관한다.
+2. Pandoc export, templates와 AI service를 이관한다.
 3. TexLab은 project-wide definition/rename/semantic diagnostics의 실사용 필요성을 측정할
    때까지 HOLD한다.
 4. PTY는 마지막에 cross-platform 구현과 Windows console QA를 함께 진행한다.

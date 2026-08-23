@@ -42,6 +42,7 @@
     "externalBin": ["binaries/tectonic"],
     "resources": {
       "../resources/data/packages/**/*": "data/packages/",
+      "../resources/dictionaries/**/*": "dictionaries/",
       "../resources/licenses/**/*": "licenses/",
       "../resources/tectonic-cache/**/*": "tectonic-cache/"
     },

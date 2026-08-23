@@ -547,6 +547,13 @@ pub struct SuccessResult {
     pub success: bool,
 }
 
+#[derive(Debug, Serialize)]
+pub struct SpellInitResult {
+    pub success: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+}
+
 #[derive(Clone, Debug, Serialize)]
 pub struct DirectoryChangeEvent {
     #[serde(rename = "type")]
@@ -626,6 +633,22 @@ pub enum UpdateDownloadEvent {
 impl SuccessResult {
     pub const fn ok() -> Self {
         Self { success: true }
+    }
+}
+
+impl SpellInitResult {
+    pub const fn ok() -> Self {
+        Self {
+            success: true,
+            error: None,
+        }
+    }
+
+    pub fn failed(error: impl Into<String>) -> Self {
+        Self {
+            success: false,
+            error: Some(error.into()),
+        }
     }
 }
 

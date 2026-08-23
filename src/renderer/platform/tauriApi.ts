@@ -72,6 +72,11 @@ type MigratedDesktopApi = Pick<
   | 'parseBibFile'
   | 'findBibInProject'
   | 'scanLabels'
+  | 'spellInit'
+  | 'spellCheck'
+  | 'spellSuggest'
+  | 'spellAddWord'
+  | 'spellSetLanguage'
   | 'zoteroProbe'
   | 'zoteroSearch'
   | 'zoteroCiteCAYW'
@@ -331,6 +336,20 @@ const findBibInProject: DesktopApi['findBibInProject'] = (projectRoot) =>
 const scanLabels: DesktopApi['scanLabels'] = (projectRoot) =>
   invoke(TAURI_COMMANDS.scanLabels, { projectRoot })
 
+const spellInit: DesktopApi['spellInit'] = (language) =>
+  invoke(TAURI_COMMANDS.spellInit, { language })
+
+const spellCheck: DesktopApi['spellCheck'] = (words) => invoke(TAURI_COMMANDS.spellCheck, { words })
+
+const spellSuggest: DesktopApi['spellSuggest'] = (word) =>
+  invoke(TAURI_COMMANDS.spellSuggest, { word })
+
+const spellAddWord: DesktopApi['spellAddWord'] = (word) =>
+  invoke(TAURI_COMMANDS.spellAddWord, { word })
+
+const spellSetLanguage: DesktopApi['spellSetLanguage'] = (language) =>
+  invoke(TAURI_COMMANDS.spellSetLanguage, { language })
+
 const zoteroProbe: DesktopApi['zoteroProbe'] = (port) =>
   invoke<boolean>(TAURI_COMMANDS.zoteroProbe, { port })
 
@@ -516,6 +535,11 @@ const migratedApi: MigratedDesktopApi = {
   parseBibFile,
   findBibInProject,
   scanLabels,
+  spellInit,
+  spellCheck,
+  spellSuggest,
+  spellAddWord,
+  spellSetLanguage,
   zoteroProbe,
   zoteroSearch,
   zoteroCiteCAYW,

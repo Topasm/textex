@@ -23,7 +23,7 @@ describe('desktop runtime capabilities', () => {
     })
   })
 
-  it('disables pending backend domains in Tauri even when settings enable them', () => {
+  it('exposes migrated domains and disables pending domains in Tauri', () => {
     configureDesktopCapabilities('tauri')
     const settings = {
       ...useSettingsStore.getState().settings,
@@ -40,11 +40,11 @@ describe('desktop runtime capabilities', () => {
       lsp: false,
       projectMetadata: true,
       pty: false,
-      spellcheck: false,
+      spellcheck: true,
       templates: false
     })
     expect(isFeatureEnabled(settings, 'ai')).toBe(false)
     expect(isFeatureEnabled(settings, 'lsp')).toBe(false)
-    expect(isFeatureEnabled(settings, 'spellcheck')).toBe(false)
+    expect(isFeatureEnabled(settings, 'spellcheck')).toBe(true)
   })
 })

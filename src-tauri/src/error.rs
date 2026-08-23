@@ -82,6 +82,9 @@ pub enum AppError {
     #[error("Project metadata operation failed: {0}")]
     ProjectData(String),
 
+    #[error("Spellcheck operation failed: {0}")]
+    Spellcheck(String),
+
     #[error("Zotero operation failed: {0}")]
     Zotero(String),
 
