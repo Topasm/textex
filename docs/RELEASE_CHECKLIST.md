@@ -113,6 +113,12 @@ workflow to pass. Required jobs are:
 - Tauri Build (mac-x64)
 
 Do not tag while any required job is queued, cancelled, or failing.
+The tag workflow fails closed unless the Actions API reports a successful
+`main` push run of `Build & Package` for the exact tagged commit SHA.
+
+Workflow actions are pinned to immutable 40-character commit SHAs. When an
+action is upgraded, resolve the reviewed upstream version tag to its commit,
+update the adjacent version comment, and run `npm run test:scripts`.
 
 ## 6. Publish
 

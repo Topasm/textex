@@ -1,12 +1,18 @@
 use serde_json::{json, Value};
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 
 use crate::{
     error::AppResult,
     models::{RecentProjectUpdates, UserSettings},
     services::{
         ai::{self, AiState},
+        filesystem,
+        lsp::LspState,
+        project_index::ProjectIndexState,
+        project_session,
+        pty::PtyState,
         settings::{self, SettingsState},
+        watcher::DirectoryWatcherState,
     },
     state::AppState,
 };
@@ -52,19 +58,31 @@ pub async fn save_settings(
 }
 
 #[tauri::command]
-pub async fn activate_project(
-    app: AppHandle,
-    settings_state: State<'_, SettingsState>,
-    project_state: State<'_, AppState>,
-    project_path: String,
-) -> AppResult<String> {
-    settings::activate_project(
+pub async fn activate_project(app: AppHandle, project_path: String) -> AppResult<String> {
+    let settings_state = app.state::<SettingsState>();
+    let project_state = app.state::<AppState>();
+    let watcher_state = app.state::<DirectoryWatcherState>();
+    let index_state = app.state::<ProjectIndexState>();
+    let pty_state = app.state::<PtyState>();
+    let lsp_state = app.state::<LspState>();
+    let canonical = settings::authorize_project_activation(
         settings_state.inner(),
         project_state.inner(),
         &settings::settings_path(&app)?,
         &project_path,
     )
-    .await
+    .await?;
+    let display_path = filesystem::path_to_string(&canonical)?;
+    project_session::activate(
+        project_state.inner(),
+        watcher_state.inner(),
+        index_state.inner(),
+        pty_state.inner(),
+        lsp_state.inner(),
+        canonical,
+    )
+    .await?;
+    Ok(display_path)
 }
 
 #[tauri::command]

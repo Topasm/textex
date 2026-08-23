@@ -239,7 +239,7 @@ describe('LspClient', () => {
     )
   })
 
-  it('drops diagnostics produced for an older LSP document version', () => {
+  it('only applies diagnostics for an exact tracked LSP document version', () => {
     const client = new LspClient()
     const setModelMarkers = vi.fn()
     const model = {
@@ -282,7 +282,44 @@ describe('LspClient', () => {
     applyDiagnostics({ ...params, version: 1 })
     expect(setModelMarkers).not.toHaveBeenCalled()
 
+    applyDiagnostics(params)
+    expect(setModelMarkers).not.toHaveBeenCalled()
+
     applyDiagnostics({ ...params, version: 2 })
     expect(setModelMarkers).toHaveBeenCalledOnce()
+  })
+
+  it('clears markers and fences diagnostics during a debounced local change', () => {
+    const client = new LspClient()
+    const setModelMarkers = vi.fn()
+    const model = {
+      uri: {
+        path: '/workspace/project/main.tex',
+        toString: () => 'file:///workspace/project/main.tex'
+      }
+    }
+    const monaco = {
+      MarkerSeverity: { Hint: 1, Info: 2, Warning: 4, Error: 8 },
+      editor: { getModels: () => [model], setModelMarkers }
+    }
+    ;(client as unknown as { options: unknown }).options = { monaco }
+    ;(client as unknown as { _initialized: boolean })._initialized = true
+    ;(client as unknown as { documentVersions: Map<string, number> }).documentVersions.set(
+      '/workspace/project/main.tex',
+      2
+    )
+
+    client.markDocumentChanged('/workspace/project/main.tex')
+    expect(setModelMarkers).toHaveBeenCalledWith(model, 'texlab', [])
+    setModelMarkers.mockClear()
+
+    ;(
+      client as unknown as { applyDiagnostics(params: Record<string, unknown>): void }
+    ).applyDiagnostics({
+      uri: 'file:///workspace/project/main.tex',
+      version: 2,
+      diagnostics: []
+    })
+    expect(setModelMarkers).not.toHaveBeenCalled()
   })
 })

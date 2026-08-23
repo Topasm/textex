@@ -37,6 +37,8 @@ const RENDERER_COMMANDS: &[&str] = &[
     "pdf.fitHeight",
     "app.settings",
     "app.checkUpdates",
+    "window.close",
+    "app.quit",
 ];
 
 #[derive(Clone, Copy)]
@@ -388,7 +390,13 @@ pub fn handle_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
         }
         "window.toggleMaximize" => {
             if let Some(window) = app.get_webview_window("main") {
-                let _ = window.toggle_maximize();
+                if let Ok(maximized) = window.is_maximized() {
+                    if maximized {
+                        let _ = window.unmaximize();
+                    } else {
+                        let _ = window.maximize();
+                    }
+                }
             }
         }
         "window.toggleFullscreen" => {
@@ -398,12 +406,6 @@ pub fn handle_event<R: Runtime>(app: &AppHandle<R>, event: MenuEvent) {
                 }
             }
         }
-        "window.close" => {
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.close();
-            }
-        }
-        "app.quit" => app.exit(0),
         _ => {}
     }
 }
@@ -424,7 +426,8 @@ mod tests {
         let unique: HashSet<_> = RENDERER_COMMANDS.iter().copied().collect();
         assert_eq!(unique.len(), RENDERER_COMMANDS.len());
         assert!(RENDERER_COMMANDS.iter().all(|id| id.contains('.')));
-        assert!(!RENDERER_COMMANDS.iter().any(|id| id.starts_with("window.")));
+        assert!(RENDERER_COMMANDS.contains(&"window.close"));
+        assert!(RENDERER_COMMANDS.contains(&"app.quit"));
     }
 
     #[test]

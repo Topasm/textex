@@ -1,8 +1,13 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { deactivateProject, openProject } from '../../renderer/utils/openProject'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
+import {
+  clearResearchProfileDraft,
+  hasUnsavedResearchProfileDraft,
+  setResearchProfileDraftDirty
+} from '../../renderer/services/researchProfileDraft'
 import type { DirectoryEntry, ResearchConfig } from '../../shared/types'
 
 const projectRoot = '/workspace/project'
@@ -31,6 +36,7 @@ function deferred<T>(): {
 
 describe('openProject', () => {
   beforeEach(() => {
+    clearResearchProfileDraft()
     vi.clearAllMocks()
     useEditorStore.getState().resetEditor()
     useProjectStore.setState({
@@ -72,6 +78,69 @@ describe('openProject', () => {
     useSettingsStore.setState((state) => ({
       settings: { ...state.settings, zoteroPort: 23_119 }
     }))
+  })
+
+  afterEach(() => {
+    clearResearchProfileDraft()
+    vi.restoreAllMocks()
+  })
+
+  it('cancels a project switch with dirty tabs before native activation', async () => {
+    const oldRoot = '/workspace/current'
+    const dirtyFile = `${oldRoot}/draft.tex`
+    useProjectStore.getState().setProjectRoot(oldRoot)
+    useEditorStore.getState().openFileInTab(dirtyFile, 'saved')
+    useEditorStore.getState().updateActiveDocument('unsaved', 'editor')
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+
+    await expect(openProject('/workspace/replacement')).resolves.toBeNull()
+
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining('1 open document has'))
+    expect(window.api.activateProject).not.toHaveBeenCalled()
+    expect(window.api.deactivateProject).not.toHaveBeenCalled()
+    expect(useProjectStore.getState().projectRoot).toBe(oldRoot)
+    expect(useEditorStore.getState().openFiles[dirtyFile]?.isDirty).toBe(true)
+  })
+
+  it('cancels project close with dirty tabs before native deactivation', async () => {
+    const dirtyFile = `${projectRoot}/draft.tex`
+    useProjectStore.getState().setProjectRoot(projectRoot)
+    useEditorStore.getState().openFileInTab(dirtyFile, 'saved')
+    useEditorStore.getState().updateActiveDocument('unsaved', 'editor')
+    vi.spyOn(window, 'confirm').mockReturnValue(false)
+
+    await expect(deactivateProject()).resolves.toBe(false)
+
+    expect(window.api.deactivateProject).not.toHaveBeenCalled()
+    expect(useProjectStore.getState().projectRoot).toBe(projectRoot)
+    expect(useEditorStore.getState().openFiles[dirtyFile]?.isDirty).toBe(true)
+  })
+
+  it('cancels a project switch with an unsaved research profile', async () => {
+    useProjectStore.getState().setProjectRoot('/workspace/current')
+    setResearchProfileDraftDirty(true)
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+
+    await expect(openProject('/workspace/replacement')).resolves.toBeNull()
+
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining('research profile'))
+    expect(window.api.activateProject).not.toHaveBeenCalled()
+    expect(useProjectStore.getState().projectRoot).toBe('/workspace/current')
+    expect(hasUnsavedResearchProfileDraft()).toBe(true)
+  })
+
+  it('clears dirty tabs only after an accepted close is deactivated natively', async () => {
+    const dirtyFile = `${projectRoot}/draft.tex`
+    useProjectStore.getState().setProjectRoot(projectRoot)
+    useEditorStore.getState().openFileInTab(dirtyFile, 'saved')
+    useEditorStore.getState().updateActiveDocument('unsaved', 'editor')
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+
+    await expect(deactivateProject()).resolves.toBe(true)
+
+    expect(window.api.deactivateProject).toHaveBeenCalledOnce()
+    expect(useProjectStore.getState().projectRoot).toBeNull()
+    expect(useEditorStore.getState().openFiles).toEqual({})
   })
 
   it('does not auto-open the first tex file when disabled', async () => {

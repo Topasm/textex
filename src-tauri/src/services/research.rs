@@ -1,7 +1,10 @@
 use std::{
     collections::HashSet,
     path::{Path, PathBuf},
-    sync::{atomic::Ordering, OnceLock},
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        OnceLock,
+    },
     time::Duration,
 };
 
@@ -30,6 +33,18 @@ const MAX_AUTHOR_BYTES: usize = 2 * 1024;
 #[derive(Default)]
 pub struct ResearchState {
     write_lock: Mutex<()>,
+}
+
+pub(crate) struct ProjectCommit<T> {
+    pub(crate) result: T,
+    pub(crate) project_root: PathBuf,
+    pub(crate) project_epoch: u64,
+}
+
+struct ProjectActivation<'a> {
+    root: &'a Path,
+    epoch: u64,
+    epoch_counter: &'a AtomicU64,
 }
 
 impl ResearchState {
@@ -122,7 +137,7 @@ pub async fn search_online(query: &str) -> AppResult<Vec<OnlineReference>> {
 pub async fn add_online(
     state: &AppState,
     mut reference: OnlineReference,
-) -> AppResult<ReferenceAddResult> {
+) -> AppResult<ProjectCommit<ReferenceAddResult>> {
     validate_online_reference(&reference)?;
     normalize_reference(&mut reference);
     let (root, epoch, epoch_counter) = state.project_root_epoch()?;
@@ -131,20 +146,31 @@ pub async fn add_online(
     let citekey = create_citekey(&reference);
     let bibtex = render_bibtex(&reference, &citekey);
     ensure_project_epoch(epoch, &epoch_counter)?;
-    merge_bibtex(
+    let result = merge_bibtex(
         state,
-        &root,
+        ProjectActivation {
+            root: &root,
+            epoch,
+            epoch_counter: &epoch_counter,
+        },
         file_path,
         &bibtex,
         &citekey,
         reference.doi.as_deref().or(reference.arxiv_id.as_deref()),
     )
-    .await
+    .await?;
+    Ok(ProjectCommit {
+        result,
+        project_root: root,
+        project_epoch: epoch,
+    })
 }
 
 pub async fn merge_exported_bibtex(
     state: &AppState,
     root: &Path,
+    project_epoch: u64,
+    epoch_counter: &std::sync::Arc<std::sync::atomic::AtomicU64>,
     bibtex: &str,
     requested_key: &str,
 ) -> AppResult<ReferenceAddResult> {
@@ -158,7 +184,11 @@ pub async fn merge_exported_bibtex(
             "exported bibliography has an invalid citation key".to_owned(),
         ));
     }
-    if state.project_root()? != root {
+    if epoch_counter.load(Ordering::Acquire) != project_epoch
+        || !state
+            .project_root()
+            .is_ok_and(|active_root| filesystem::paths_equal(&active_root, root))
+    {
         return Err(AppError::ReferenceIndex(
             "project changed while adding reference".to_owned(),
         ));
@@ -166,7 +196,11 @@ pub async fn merge_exported_bibtex(
     let config = load_config(state).await?;
     merge_bibtex(
         state,
-        root,
+        ProjectActivation {
+            root,
+            epoch: project_epoch,
+            epoch_counter,
+        },
         root.join(config.references_file),
         bibtex,
         requested_key,
@@ -209,6 +243,7 @@ pub async fn save_config(
 ) -> AppResult<ResearchConfig> {
     config.version = 1;
     validate_config(&config)?;
+    let _project_operation = state.lock_project_operation().await;
     let root = state.project_root()?;
     let directory = root.join(".textex");
     let directory = filesystem::validate_project_directory_target(state, directory).await?;
@@ -521,18 +556,23 @@ fn bib_escape(value: &str) -> String {
 
 async fn merge_bibtex(
     state: &AppState,
-    expected_root: &Path,
+    activation: ProjectActivation<'_>,
     file_path: PathBuf,
     bibtex: &str,
     requested_key: &str,
     identity: Option<&str>,
 ) -> AppResult<ReferenceAddResult> {
+    let _project_operation = state.lock_project_operation().await;
     if bibtex.len() > MAX_EXPORTED_ENTRY_BYTES {
         return Err(AppError::ReferenceIndex(
             "bibliography entry exceeds 2 MiB".to_owned(),
         ));
     }
-    if state.project_root()? != expected_root {
+    if activation.epoch_counter.load(Ordering::Acquire) != activation.epoch
+        || !state
+            .project_root()
+            .is_ok_and(|root| filesystem::paths_equal(&root, activation.root))
+    {
         return Err(AppError::ReferenceIndex(
             "project changed while adding reference".to_owned(),
         ));
@@ -566,11 +606,12 @@ async fn merge_bibtex(
             ))
         }
     };
+    let committed_path_text = filesystem::path_to_string(&validated)?;
     let entries = references::parse_bib_content(&existing, None);
     if let Some(identity) = identity {
         if let Some(citekey) = existing_identity_citekey(&existing, identity) {
             return Ok(ReferenceAddResult {
-                file_path: path_text,
+                file_path: committed_path_text,
                 citekey,
                 inserted: false,
                 duplicate: true,
@@ -598,7 +639,11 @@ async fn merge_bibtex(
             "managed bibliography would exceed 10 MiB".to_owned(),
         ));
     }
-    if state.project_root()? != expected_root {
+    if activation.epoch_counter.load(Ordering::Acquire) != activation.epoch
+        || !state
+            .project_root()
+            .is_ok_and(|root| filesystem::paths_equal(&root, activation.root))
+    {
         return Err(AppError::ReferenceIndex(
             "project changed while adding reference".to_owned(),
         ));
@@ -606,7 +651,7 @@ async fn merge_bibtex(
     filesystem::write_files_transactionally(vec![(validated, format!("{merged}\n").into_bytes())])
         .await?;
     Ok(ReferenceAddResult {
-        file_path: path_text,
+        file_path: committed_path_text,
         citekey,
         inserted: true,
         duplicate: false,
@@ -1022,14 +1067,45 @@ mod tests {
         let state = AppState::default();
         state.set_project_root(root.clone()).unwrap();
 
-        let inserted = add_online(&state, online_reference()).await.unwrap();
+        let inserted = add_online(&state, online_reference()).await.unwrap().result;
         assert!(inserted.inserted);
         assert!(!inserted.duplicate);
-        let duplicate = add_online(&state, online_reference()).await.unwrap();
+        let duplicate = add_online(&state, online_reference()).await.unwrap().result;
         assert!(!duplicate.inserted);
         assert!(duplicate.duplicate);
         let bibliography = std::fs::read_to_string(root.join("references.bib")).unwrap();
         assert_eq!(bibliography.matches("@article{").count(), 1);
+    }
+
+    #[tokio::test]
+    async fn stale_same_root_epoch_cannot_commit_after_an_aba_transition() {
+        let project = tempfile::tempdir().unwrap();
+        let other = tempfile::tempdir().unwrap();
+        let root = dunce::canonicalize(project.path()).unwrap();
+        let state = AppState::default();
+        state.set_project_root(root.clone()).unwrap();
+        let (_, old_epoch, epoch_counter) = state.project_root_epoch().unwrap();
+
+        state
+            .set_project_root(dunce::canonicalize(other.path()).unwrap())
+            .unwrap();
+        state.set_project_root(root.clone()).unwrap();
+        let result = merge_bibtex(
+            &state,
+            ProjectActivation {
+                root: &root,
+                epoch: old_epoch,
+                epoch_counter: &epoch_counter,
+            },
+            root.join("references.bib"),
+            "@article{old,\n  doi = {10.1000/old}\n}",
+            "old",
+            Some("10.1000/old"),
+        )
+        .await;
+
+        assert!(result.is_err());
+        assert!(!root.join("references.bib").exists());
     }
 
     #[cfg(unix)]

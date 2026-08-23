@@ -13,9 +13,11 @@ export function useGitAutoRefresh(
 ): void {
   useEffect(() => {
     if (!projectRoot || !isGitRepo || gitEnabled === false) return
+    let active = true
     const interval = setInterval(async () => {
       try {
         const status = await window.api.gitStatus(projectRoot)
+        if (!active || useProjectStore.getState().projectRoot !== projectRoot) return
         const s = useProjectStore.getState()
         s.setGitStatus(status)
         s.setGitBranch(status.branch)
@@ -23,6 +25,9 @@ export function useGitAutoRefresh(
         logError('gitAutoRefresh', err)
       }
     }, GIT_REFRESH_INTERVAL_MS)
-    return () => clearInterval(interval)
+    return () => {
+      active = false
+      clearInterval(interval)
+    }
   }, [projectRoot, isGitRepo, gitEnabled])
 }

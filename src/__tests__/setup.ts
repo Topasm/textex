@@ -118,6 +118,10 @@ Object.defineProperty(window, 'api', {
     removeUpdateListeners: vi.fn(),
     onAppCommand: vi.fn(),
     removeAppCommandListener: vi.fn(),
+    requestWindowClose: vi.fn(),
+    exitApp: vi.fn(),
+    onWindowCloseRequested: vi.fn(),
+    removeWindowCloseRequestedListener: vi.fn(),
 
     // Export
     exportDocument: vi.fn(),
@@ -129,6 +133,7 @@ Object.defineProperty(window, 'api', {
     aiHasApiKey: vi.fn().mockResolvedValue(false),
     aiProcess: vi.fn(),
     aiProcessCustom: vi.fn(),
+    aiResearchChat: vi.fn(),
     aiUpdateContext: vi.fn(),
     aiCheckCli: vi.fn(),
     aiCheckCodexCli: vi.fn(),
@@ -183,6 +188,18 @@ Object.defineProperty(window, 'api', {
       syncOnOpen: false
     }),
     researchSaveConfig: vi.fn(),
+    researchProfileLoad: vi.fn().mockResolvedValue({
+      version: 1,
+      paper: { title: '', authors: [] },
+      resources: [],
+      instructions: []
+    }),
+    researchProfileSave: vi.fn(),
+    researchResourceSnapshot: vi.fn(),
+    researchSourceIndex: vi.fn(),
+    researchSourceSearch: vi.fn().mockResolvedValue([]),
+    researchSourceClone: vi.fn(),
+    researchSourceFetch: vi.fn(),
     // Citation groups / history / templates / project data
     loadCitationGroups: vi.fn(),
     saveCitationGroups: vi.fn(),

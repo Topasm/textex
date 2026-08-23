@@ -4,6 +4,7 @@ import { APP_COMMAND_MANIFEST, RENDERER_SHORTCUT_MANIFEST } from '../../shared/a
 import { useKeyboardShortcuts } from '../../renderer/hooks/useKeyboardShortcuts'
 import { getDesktopCapabilities } from '../../renderer/platform/capabilities'
 import { commandRegistry } from '../../renderer/services/commandRegistry'
+import { useEditorStore } from '../../renderer/store/useEditorStore'
 
 afterEach(() => {
   cleanup()
@@ -40,5 +41,19 @@ describe('useKeyboardShortcuts', () => {
 
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'O', ctrlKey: true, shiftKey: true }))
     expect(runCommand).toHaveBeenCalledWith('file.openFolder')
+  })
+
+  it('does not close a dirty tab with Ctrl/Cmd+W when discard is cancelled', () => {
+    const filePath = '/project/draft.tex'
+    useEditorStore.getState().resetEditor()
+    useEditorStore.getState().openFileInTab(filePath, 'saved')
+    useEditorStore.getState().updateActiveDocument('unsaved', 'editor')
+    vi.spyOn(window, 'confirm').mockReturnValue(false)
+    renderHook(() => useKeyboardShortcuts({ runCommand: vi.fn() }))
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'w', metaKey: true }))
+
+    expect(window.confirm).toHaveBeenCalledOnce()
+    expect(useEditorStore.getState().openFiles[filePath]?.isDirty).toBe(true)
   })
 })

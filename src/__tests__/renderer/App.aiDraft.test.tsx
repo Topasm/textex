@@ -129,7 +129,8 @@ vi.mock('../../renderer/hooks/useDragResize', () => ({
 }))
 
 vi.mock('../../renderer/utils/openProject', () => ({
-  openProject: vi.fn()
+  openProject: vi.fn(),
+  deactivateProject: vi.fn().mockResolvedValue(true)
 }))
 
 vi.mock('../../renderer/lsp/lspClient', () => ({
@@ -163,5 +164,13 @@ describe('App AI Draft flow', () => {
 
     expect(useEditorStore.getState().requestInsertAtCursor).toHaveBeenCalledWith('generated latex')
     expect(useEditorStore.getState().updateActiveDocument).not.toHaveBeenCalled()
+  })
+
+  it('registers the guarded native window close lifecycle', () => {
+    const view = render(<App />)
+
+    expect(window.api.onWindowCloseRequested).toHaveBeenCalledWith(expect.any(Function))
+    view.unmount()
+    expect(window.api.removeWindowCloseRequestedListener).toHaveBeenCalledOnce()
   })
 })

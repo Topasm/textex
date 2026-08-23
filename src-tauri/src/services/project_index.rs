@@ -379,6 +379,60 @@ impl ProjectIndexState {
         Ok(Some(delta))
     }
 
+    /// Reconciles a file written by a native command immediately instead of
+    /// waiting for the platform watcher. This closes the interval where a
+    /// follow-up reference query could reuse an authoritative snapshot that
+    /// predates the write.
+    pub async fn refresh_written_file(
+        &self,
+        project_state: &AppState,
+        expected_root: &Path,
+        expected_project_epoch: u64,
+        file_path: &str,
+    ) -> AppResult<()> {
+        let (active_root, active_project_epoch, epoch_tracker) =
+            match project_state.project_root_epoch() {
+                Ok(activation) => activation,
+                Err(AppError::ProjectNotOpen) => return Ok(()),
+                Err(error) => return Err(error),
+            };
+        if active_project_epoch != expected_project_epoch
+            || !filesystem::paths_equal(&active_root, expected_root)
+        {
+            // The write already committed to an older project activation. It
+            // remains a successful write, but must not update or fail the index
+            // belonging to the project that is active now.
+            return Ok(());
+        }
+
+        let absolute = PathBuf::from(file_path);
+        if !absolute.is_absolute() {
+            return Err(AppError::InvalidPath(file_path.to_owned()));
+        }
+        let relative = project_relative_path(expected_root, &absolute)
+            .map_err(|_| AppError::OutsideProject(file_path.to_owned()))?;
+        let filename = relative_path_string(&relative)?;
+        let event = DirectoryChangeEvent {
+            event_type: DirectoryChangeType::Change,
+            filename,
+            index_delta: None,
+            index_invalidated: false,
+        };
+        if let Err(error) = self
+            .apply_change(
+                expected_root,
+                expected_project_epoch,
+                &epoch_tracker,
+                &event,
+            )
+            .await
+        {
+            self.invalidate(expected_root, expected_project_epoch)?;
+            return Err(error);
+        }
+        Ok(())
+    }
+
     pub fn invalidate(&self, root: &Path, project_epoch: u64) -> AppResult<()> {
         let mut active = self
             .inner
@@ -1353,6 +1407,41 @@ fn relative_path_string(path: &Path) -> AppResult<String> {
         .map(|components| components.join("/"))
 }
 
+fn project_relative_path(root: &Path, candidate: &Path) -> Result<PathBuf, ()> {
+    project_relative_path_with_case(root, candidate, cfg!(windows))
+}
+
+fn project_relative_path_with_case(
+    root: &Path,
+    candidate: &Path,
+    case_insensitive: bool,
+) -> Result<PathBuf, ()> {
+    let root_components = root.components().collect::<Vec<_>>();
+    let candidate_components = candidate.components().collect::<Vec<_>>();
+    if root_components.len() > candidate_components.len() {
+        return Err(());
+    }
+    let prefix_matches = root_components.iter().zip(&candidate_components).all(
+        |(root_component, candidate_component)| {
+            if case_insensitive {
+                root_component
+                    .as_os_str()
+                    .to_string_lossy()
+                    .eq_ignore_ascii_case(&candidate_component.as_os_str().to_string_lossy())
+            } else {
+                root_component == candidate_component
+            }
+        },
+    );
+    if !prefix_matches {
+        return Err(());
+    }
+    Ok(candidate_components[root_components.len()..]
+        .iter()
+        .map(|component| component.as_os_str())
+        .collect())
+}
+
 fn entry_key(relative_path: &str) -> String {
     if cfg!(windows) {
         relative_path.to_lowercase()
@@ -1363,7 +1452,10 @@ fn entry_key(relative_path: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use std::fs;
+    use std::{
+        fs,
+        path::{Path, PathBuf},
+    };
 
     use tempfile::tempdir;
 
@@ -1373,8 +1465,8 @@ mod tests {
     };
 
     use super::{
-        prepare_cache_path, ProjectIndexCache, ProjectIndexState, INDEX_CACHE_DIRECTORY,
-        INDEX_CACHE_SCHEMA_VERSION, MAX_INDEX_CACHE_BYTES,
+        prepare_cache_path, project_relative_path_with_case, ProjectIndexCache, ProjectIndexState,
+        INDEX_CACHE_DIRECTORY, INDEX_CACHE_SCHEMA_VERSION, MAX_INDEX_CACHE_BYTES,
     };
 
     fn event(event_type: DirectoryChangeType, filename: &str) -> DirectoryChangeEvent {
@@ -1384,6 +1476,105 @@ mod tests {
             index_delta: None,
             index_invalidated: false,
         }
+    }
+
+    #[test]
+    fn derives_project_relative_paths_with_windows_case_semantics() {
+        let root = Path::new("/Projects/Paper");
+        let candidate = Path::new("/projects/paper/References/library.bib");
+        assert_eq!(
+            project_relative_path_with_case(root, candidate, true).unwrap(),
+            PathBuf::from("References/library.bib")
+        );
+        assert!(project_relative_path_with_case(root, candidate, false).is_err());
+        assert!(project_relative_path_with_case(
+            root,
+            Path::new("/projects/paper-copy/library.bib"),
+            true,
+        )
+        .is_err());
+    }
+
+    #[tokio::test]
+    async fn refresh_written_file_is_scoped_to_the_committing_activation() {
+        let project_a = tempdir().expect("project A tempdir");
+        let project_b = tempdir().expect("project B tempdir");
+        fs::write(project_a.path().join("references.bib"), "old").expect("project A file");
+        fs::write(project_b.path().join("main.tex"), "project B").expect("project B file");
+        let root_a = dunce::canonicalize(project_a.path()).expect("canonical project A");
+        let root_b = dunce::canonicalize(project_b.path()).expect("canonical project B");
+        let app_state = AppState::default();
+        app_state
+            .set_project_root(root_a.clone())
+            .expect("activate project A");
+        let (_, epoch_a, _) = app_state.project_root_epoch().expect("project A epoch");
+        let index = ProjectIndexState::default();
+        index
+            .snapshot(&app_state)
+            .await
+            .expect("project A snapshot");
+
+        fs::write(project_a.path().join("references.bib"), "updated").expect("update project A");
+        index
+            .refresh_written_file(
+                &app_state,
+                &root_a,
+                epoch_a,
+                project_a.path().join("references.bib").to_str().unwrap(),
+            )
+            .await
+            .expect("refresh active project A");
+        let refreshed_a = index
+            .snapshot(&app_state)
+            .await
+            .expect("refreshed project A");
+        assert_eq!(refreshed_a.generation, 2);
+        assert_eq!(refreshed_a.entries[0].size, Some(7));
+
+        app_state
+            .set_project_root(root_b.clone())
+            .expect("activate project B");
+        let before_b = index
+            .snapshot(&app_state)
+            .await
+            .expect("project B snapshot");
+        index
+            .refresh_written_file(
+                &app_state,
+                &root_a,
+                epoch_a,
+                project_a.path().join("references.bib").to_str().unwrap(),
+            )
+            .await
+            .expect("stale project A refresh is a no-op");
+        let after_b = index
+            .snapshot(&app_state)
+            .await
+            .expect("unchanged project B");
+        assert_eq!(after_b.generation, before_b.generation);
+        assert_eq!(after_b.entries, before_b.entries);
+
+        app_state
+            .set_project_root(root_a.clone())
+            .expect("reactivate project A");
+        let reopened_a = index
+            .snapshot(&app_state)
+            .await
+            .expect("reopened project A");
+        index
+            .refresh_written_file(
+                &app_state,
+                &root_a,
+                epoch_a,
+                project_a.path().join("references.bib").to_str().unwrap(),
+            )
+            .await
+            .expect("old A epoch remains stale after A-B-A");
+        let after_stale_aba = index
+            .snapshot(&app_state)
+            .await
+            .expect("unchanged reopened A");
+        assert_eq!(after_stale_aba.generation, reopened_a.generation);
     }
 
     #[tokio::test]

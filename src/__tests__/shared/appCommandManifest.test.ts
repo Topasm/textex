@@ -30,7 +30,9 @@ const EXPECTED_APP_COMMAND_IDS = [
   'pdf.fitWidth',
   'pdf.fitHeight',
   'app.settings',
-  'app.checkUpdates'
+  'app.checkUpdates',
+  'window.close',
+  'app.quit'
 ]
 
 function bindingSignatures(binding: ShortcutBinding): string[] {

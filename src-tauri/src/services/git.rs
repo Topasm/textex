@@ -1,10 +1,20 @@
 use std::{
     ffi::{OsStr, OsString},
+    io,
     path::{Component, Path, PathBuf},
-    process::Output,
+    process::{Output, Stdio},
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    },
+    time::Duration,
 };
 
-use tokio::process::Command;
+use tokio::{
+    io::{AsyncRead, AsyncReadExt},
+    process::{Child, Command},
+    time::timeout,
+};
 
 use crate::{
     error::{AppError, AppResult},
@@ -14,6 +24,11 @@ use crate::{
 
 const MAX_GIT_OUTPUT_BYTES: usize = 10 * 1024 * 1024;
 const MAX_COMMIT_MESSAGE_BYTES: usize = 64 * 1024;
+const GIT_READ_TIMEOUT: Duration = Duration::from_secs(30);
+const GIT_MUTATION_TIMEOUT: Duration = Duration::from_secs(60);
+const GIT_COMMIT_TIMEOUT: Duration = Duration::from_secs(120);
+const GIT_REAP_TIMEOUT: Duration = Duration::from_secs(5);
+const GIT_OUTPUT_CHUNK_BYTES: usize = 8 * 1024;
 
 pub async fn is_repository(state: &AppState, work_dir: &str) -> AppResult<bool> {
     let root = trusted_repository_root(state, work_dir).await?;
@@ -268,20 +283,171 @@ where
     S: AsRef<OsStr>,
 {
     let display_root = root.to_string_lossy().into_owned();
-    let output = Command::new("git")
+    let mut command = Command::new("git");
+    command
         .args(args)
         .current_dir(root)
         .env("LC_ALL", "C")
-        .output()
-        .await
-        .map_err(|source| AppError::git_io(operation, display_root, source))?;
-    if output.stdout.len().saturating_add(output.stderr.len()) > MAX_GIT_OUTPUT_BYTES {
-        return Err(AppError::GitOutputTooLarge {
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .kill_on_drop(true);
+    isolate_git_process_group(&mut command);
+    let mut child = command
+        .spawn()
+        .map_err(|source| AppError::git_io(operation, display_root.clone(), source))?;
+    let process_id = child.id();
+    let Some(stdout) = child.stdout.take() else {
+        terminate_git_process_tree(&mut child, process_id).await;
+        return Err(AppError::git_io(
             operation,
-            limit_mb: MAX_GIT_OUTPUT_BYTES / (1024 * 1024),
-        });
+            display_root,
+            io::Error::new(io::ErrorKind::BrokenPipe, "Git stdout pipe was not created"),
+        ));
+    };
+    let Some(stderr) = child.stderr.take() else {
+        terminate_git_process_tree(&mut child, process_id).await;
+        return Err(AppError::git_io(
+            operation,
+            display_root,
+            io::Error::new(io::ErrorKind::BrokenPipe, "Git stderr pipe was not created"),
+        ));
+    };
+
+    let total_output = Arc::new(AtomicUsize::new(0));
+    let transaction = async {
+        let wait_for_child = async {
+            child
+                .wait()
+                .await
+                .map_err(|source| AppError::git_io(operation, display_root.clone(), source))
+        };
+        let (status, stdout, stderr) = tokio::try_join!(
+            wait_for_child,
+            read_git_pipe(
+                stdout,
+                Arc::clone(&total_output),
+                MAX_GIT_OUTPUT_BYTES,
+                operation,
+                &display_root,
+            ),
+            read_git_pipe(
+                stderr,
+                Arc::clone(&total_output),
+                MAX_GIT_OUTPUT_BYTES,
+                operation,
+                &display_root,
+            ),
+        )?;
+        Ok::<_, AppError>(Output {
+            status,
+            stdout,
+            stderr,
+        })
+    };
+
+    match timeout(git_timeout(operation), transaction).await {
+        Ok(Ok(output)) => Ok(output),
+        Ok(Err(error)) => {
+            terminate_git_process_tree(&mut child, process_id).await;
+            Err(error)
+        }
+        Err(_) => {
+            terminate_git_process_tree(&mut child, process_id).await;
+            Err(AppError::git_io(
+                operation,
+                display_root,
+                io::Error::new(
+                    io::ErrorKind::TimedOut,
+                    format!(
+                        "Git operation timed out after {} seconds",
+                        git_timeout(operation).as_secs()
+                    ),
+                ),
+            ))
+        }
     }
-    Ok(output)
+}
+
+async fn read_git_pipe<R>(
+    mut reader: R,
+    total_output: Arc<AtomicUsize>,
+    limit: usize,
+    operation: &'static str,
+    display_root: &str,
+) -> AppResult<Vec<u8>>
+where
+    R: AsyncRead + Unpin,
+{
+    let mut output = Vec::new();
+    let mut buffer = vec![0_u8; GIT_OUTPUT_CHUNK_BYTES];
+    loop {
+        let length = reader
+            .read(&mut buffer)
+            .await
+            .map_err(|source| AppError::git_io(operation, display_root, source))?;
+        if length == 0 {
+            return Ok(output);
+        }
+        let previous = total_output.fetch_add(length, Ordering::AcqRel);
+        if previous.saturating_add(length) > limit {
+            return Err(AppError::GitOutputTooLarge {
+                operation,
+                limit_mb: limit / (1024 * 1024),
+            });
+        }
+        output.extend_from_slice(&buffer[..length]);
+    }
+}
+
+fn git_timeout(operation: &str) -> Duration {
+    match operation {
+        "commit" => GIT_COMMIT_TIMEOUT,
+        "initialize" | "stage" | "unstage" => GIT_MUTATION_TIMEOUT,
+        _ => GIT_READ_TIMEOUT,
+    }
+}
+
+#[cfg(unix)]
+fn isolate_git_process_group(command: &mut Command) {
+    command.process_group(0);
+}
+
+#[cfg(not(unix))]
+fn isolate_git_process_group(_command: &mut Command) {}
+
+async fn terminate_git_process_tree(child: &mut Child, process_id: Option<u32>) {
+    #[cfg(unix)]
+    if let Some(process_id) = process_id {
+        if let Ok(process_group_id) = libc::pid_t::try_from(process_id) {
+            // SAFETY: this PID belongs to the child placed in its own process
+            // group before spawn; the negative value addresses that group.
+            let result = unsafe { libc::kill(-process_group_id, libc::SIGKILL) };
+            if result != 0 && io::Error::last_os_error().raw_os_error() != Some(libc::ESRCH) {
+                let _ = child.start_kill();
+            }
+        }
+    }
+
+    #[cfg(windows)]
+    if let Some(process_id) = process_id {
+        let process_id = process_id.to_string();
+        let _ = timeout(
+            GIT_REAP_TIMEOUT,
+            Command::new("taskkill.exe")
+                .args(["/PID", &process_id, "/T", "/F"])
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .status(),
+        )
+        .await;
+    }
+
+    if child.try_wait().ok().flatten().is_none() {
+        let _ = child.start_kill();
+    }
+    let _ = timeout(GIT_REAP_TIMEOUT, child.wait()).await;
 }
 
 fn parse_status(bytes: &[u8], branch: &str) -> AppResult<GitStatusResult> {
@@ -399,11 +565,16 @@ fn paths_equal(left: &Path, right: &Path) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{
-        commit, diff, file_log, init_repository, log, parse_log, parse_status,
-        reject_unsafe_relative_path, run_git_checked, stage, status,
+        commit, diff, file_log, git_timeout, init_repository, log, parse_log, parse_status,
+        read_git_pipe, reject_unsafe_relative_path, run_git_checked, stage, status,
+        GIT_COMMIT_TIMEOUT, GIT_MUTATION_TIMEOUT, GIT_READ_TIMEOUT,
     };
-    use crate::state::AppState;
-    use std::{fs, path::Path};
+    use crate::{error::AppError, state::AppState};
+    use std::{
+        fs,
+        path::Path,
+        sync::{atomic::AtomicUsize, Arc},
+    };
 
     #[test]
     fn parses_nul_delimited_status_and_rename_destinations() {
@@ -436,6 +607,35 @@ mod tests {
     fn rejects_pathspecs_that_escape_the_project() {
         assert!(reject_unsafe_relative_path(Path::new("chapters/one.tex")).is_ok());
         assert!(reject_unsafe_relative_path(Path::new("../outside.tex")).is_err());
+    }
+
+    #[test]
+    fn assigns_bounded_timeouts_by_git_operation() {
+        assert_eq!(git_timeout("read status"), GIT_READ_TIMEOUT);
+        assert_eq!(git_timeout("initialize"), GIT_MUTATION_TIMEOUT);
+        assert_eq!(git_timeout("stage"), GIT_MUTATION_TIMEOUT);
+        assert_eq!(git_timeout("unstage"), GIT_MUTATION_TIMEOUT);
+        assert_eq!(git_timeout("commit"), GIT_COMMIT_TIMEOUT);
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn bounds_the_combined_streamed_git_output() {
+        let total = Arc::new(AtomicUsize::new(0));
+        let stdout = read_git_pipe(&b"abc"[..], Arc::clone(&total), 4, "read diff", "/project")
+            .await
+            .expect("stdout within the shared limit");
+        assert_eq!(stdout, b"abc");
+
+        let error = read_git_pipe(&b"de"[..], Arc::clone(&total), 4, "read diff", "/project")
+            .await
+            .expect_err("stderr pushes combined output over the shared limit");
+        assert!(matches!(
+            error,
+            AppError::GitOutputTooLarge {
+                operation: "read diff",
+                ..
+            }
+        ));
     }
 
     #[tokio::test(flavor = "current_thread")]

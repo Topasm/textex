@@ -1,4 +1,4 @@
-use tauri::State;
+use tauri::{AppHandle, Manager, State};
 
 use crate::{
     error::AppResult,
@@ -7,6 +7,7 @@ use crate::{
         ZoteroSearchResult, ZoteroSyncResult,
     },
     services::{
+        project_index::ProjectIndexState,
         references::ReferenceIndexState,
         research::ResearchState,
         zotero::{self, ZoteroSyncState},
@@ -42,14 +43,29 @@ pub async fn zotero_collections(port: Option<u16>) -> AppResult<Vec<ZoteroCollec
 #[tauri::command]
 pub async fn zotero_add_to_project(
     project_state: State<'_, AppState>,
+    project_index: State<'_, ProjectIndexState>,
     reference_index: State<'_, ReferenceIndexState>,
     research_state: State<'_, ResearchState>,
     citekey: String,
     port: Option<u16>,
 ) -> AppResult<ReferenceAddResult> {
     let _write_guard = research_state.lock().await;
-    let result = zotero::add_to_project(project_state.inner(), citekey, port).await?;
+    let commit = zotero::add_to_project(project_state.inner(), citekey, port).await?;
+    let result = commit.result;
+    let refresh_result = if result.inserted {
+        project_index
+            .refresh_written_file(
+                project_state.inner(),
+                &commit.project_root,
+                commit.project_epoch,
+                &result.file_path,
+            )
+            .await
+    } else {
+        Ok(())
+    };
     reference_index.invalidate().await;
+    refresh_result?;
     Ok(result)
 }
 
@@ -65,16 +81,18 @@ pub async fn zotero_save_online(
 
 #[tauri::command]
 pub async fn zotero_sync_collection(
-    project_state: State<'_, AppState>,
-    reference_index: State<'_, ReferenceIndexState>,
-    research_state: State<'_, ResearchState>,
-    sync_state: State<'_, ZoteroSyncState>,
+    app: AppHandle,
     collection: String,
     target_file: Option<String>,
     port: Option<u16>,
 ) -> AppResult<ZoteroSyncResult> {
+    let project_state = app.state::<AppState>();
+    let project_index = app.state::<ProjectIndexState>();
+    let reference_index = app.state::<ReferenceIndexState>();
+    let research_state = app.state::<ResearchState>();
+    let sync_state = app.state::<ZoteroSyncState>();
     let _sync_guard = sync_state.lock().await;
-    let result = zotero::sync_collection(
+    let commit = zotero::sync_collection(
         project_state.inner(),
         research_state.inner(),
         &collection,
@@ -82,6 +100,16 @@ pub async fn zotero_sync_collection(
         port,
     )
     .await?;
+    let result = commit.result;
+    let refresh_result = project_index
+        .refresh_written_file(
+            project_state.inner(),
+            &commit.project_root,
+            commit.project_epoch,
+            &result.file_path,
+        )
+        .await;
     reference_index.invalidate().await;
+    refresh_result?;
     Ok(result)
 }

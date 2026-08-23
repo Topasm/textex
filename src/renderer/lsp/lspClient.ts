@@ -43,6 +43,10 @@ export function lspNotifyDidChange(filePath: string, content: string): void {
   lspClient.notifyDidChange(filePath, content)
 }
 
+export function lspMarkDocumentChanged(filePath: string): void {
+  lspClient.markDocumentChanged(filePath)
+}
+
 export function lspNotifyDidSave(filePath: string): void {
   lspClient.notifyDidSave(filePath)
 }

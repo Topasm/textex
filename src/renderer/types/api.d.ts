@@ -3,6 +3,7 @@ import {
   AiContextEntry,
   AiCustomProcessRequest,
   AiProcessRequest,
+  ResearchChatRequest,
   ClaudeTerminalRequest,
   ClaudeTerminalResult,
   CodexTerminalRequest,
@@ -28,6 +29,11 @@ import {
   OnlineReference,
   ReferenceAddResult,
   ResearchConfig,
+  ResearchProfile,
+  ResearchResourceSnapshot,
+  ResearchSourceIndex,
+  ResearchSourceGitResult,
+  ResearchSourceSearchResult,
   HistoryItem,
   SectionNode,
   ProjectDatabase,
@@ -123,7 +129,7 @@ export interface DesktopApi {
   // Settings
   loadSettings(): Promise<UserSettings>
   saveSettings(partial: Partial<UserSettings>): Promise<UserSettings>
-  setTheme(theme: string): Promise<void>
+  setTheme(theme: UserSettings['theme']): Promise<void>
   addRecentProject(projectPath: string): Promise<UserSettings>
   removeRecentProject(projectPath: string): Promise<UserSettings>
   updateRecentProject(projectPath: string, updates: RecentProjectUpdates): Promise<UserSettings>
@@ -164,6 +170,10 @@ export interface DesktopApi {
   removeUpdateListeners(): void
   onAppCommand(cb: (command: AppCommandId) => void): void
   removeAppCommandListener(): void
+  requestWindowClose(): Promise<void>
+  exitApp(): Promise<{ success: boolean }>
+  onWindowCloseRequested(cb: () => boolean | Promise<boolean>): void
+  removeWindowCloseRequestedListener(): void
 
   // Export
   exportDocument(
@@ -199,6 +209,17 @@ export interface DesktopApi {
   researchAddOnline(reference: OnlineReference): Promise<ReferenceAddResult>
   researchLoadConfig(): Promise<ResearchConfig>
   researchSaveConfig(config: ResearchConfig): Promise<ResearchConfig>
+  researchProfileLoad(): Promise<ResearchProfile>
+  researchProfileSave(profile: ResearchProfile): Promise<ResearchProfile>
+  researchResourceSnapshot(resourceId: string): Promise<ResearchResourceSnapshot>
+  researchSourceIndex(resourceId: string, localPath: string): Promise<ResearchSourceIndex>
+  researchSourceSearch(
+    resourceId: string,
+    query: string,
+    limit?: number
+  ): Promise<ResearchSourceSearchResult[]>
+  researchSourceClone(resourceId: string): Promise<ResearchSourceGitResult>
+  researchSourceFetch(resourceId: string): Promise<ResearchSourceGitResult>
 
   // Citation Groups
   loadCitationGroups(projectRoot: string): Promise<CitationGroup[]>
@@ -210,6 +231,7 @@ export interface DesktopApi {
   aiHasApiKey(provider: string): Promise<boolean>
   aiProcess(request: AiProcessRequest): Promise<string>
   aiProcessCustom(request: AiCustomProcessRequest): Promise<string>
+  aiResearchChat(request: ResearchChatRequest): Promise<string>
   aiUpdateContext(filePath: string, content: string): Promise<AiContextEntry>
   aiCheckCli(): Promise<boolean>
   aiCheckCodexCli(): Promise<boolean>

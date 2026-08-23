@@ -279,6 +279,148 @@ impl Default for ResearchConfig {
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResearchPerson {
+    pub id: String,
+    pub name: String,
+    pub role: Option<String>,
+    pub email: Option<String>,
+    pub homepage: Option<String>,
+    pub github: Option<String>,
+    pub orcid: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResearchPaperMetadata {
+    pub title: String,
+    pub r#abstract: Option<String>,
+    pub doi: Option<String>,
+    pub arxiv: Option<String>,
+    pub venue: Option<String>,
+    pub website: Option<String>,
+    pub authors: Vec<ResearchPerson>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ResearchResourceKind {
+    Git,
+    Website,
+    Dataset,
+    Documentation,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ResearchChatAccess {
+    None,
+    Metadata,
+    IndexedRead,
+    Snapshot,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResearchResource {
+    pub id: String,
+    pub kind: ResearchResourceKind,
+    pub label: String,
+    pub url: Option<String>,
+    pub ssh_url: Option<String>,
+    pub local_path: Option<String>,
+    pub branch: Option<String>,
+    pub chat_access: ResearchChatAccess,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResearchProfile {
+    pub version: u8,
+    pub paper: ResearchPaperMetadata,
+    pub resources: Vec<ResearchResource>,
+    pub instructions: Vec<String>,
+}
+
+impl Default for ResearchProfile {
+    fn default() -> Self {
+        Self {
+            version: 1,
+            paper: ResearchPaperMetadata {
+                title: String::new(),
+                r#abstract: None,
+                doi: None,
+                arxiv: None,
+                venue: None,
+                website: None,
+                authors: Vec::new(),
+            },
+            resources: Vec::new(),
+            instructions: Vec::new(),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResearchSourceFile {
+    pub path: String,
+    pub bytes: u64,
+    pub language: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResearchSourceIndex {
+    pub resource_id: String,
+    pub root_path: String,
+    pub branch: Option<String>,
+    pub indexed_at: u64,
+    pub files: Vec<ResearchSourceFile>,
+    pub file_count: usize,
+    pub total_bytes: u64,
+    pub truncated: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResearchSourceSearchResult {
+    pub resource_id: String,
+    pub path: String,
+    pub line: u32,
+    pub start_line: u32,
+    pub snippet: String,
+    pub score: f32,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResearchResourceSnapshot {
+    pub resource_id: String,
+    pub url: String,
+    pub fetched_at: u64,
+    pub content: String,
+    pub truncated: bool,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ResearchSourceGitAction {
+    Cloned,
+    Fetched,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResearchSourceGitResult {
+    pub success: bool,
+    pub resource_id: String,
+    pub local_path: String,
+    pub action: ResearchSourceGitAction,
+    pub output: String,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct HistoryItem {
@@ -633,6 +775,50 @@ pub struct AiCustomProcessRequest {
     pub file_path: String,
     pub light_context: AiLightContext,
     pub summary_context: Option<AiContextEntry>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ResearchChatRole {
+    User,
+    Assistant,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResearchChatMessage {
+    pub role: ResearchChatRole,
+    pub content: String,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ResearchChatContextKind {
+    Paper,
+    Document,
+    Repository,
+    Website,
+    Author,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResearchChatContext {
+    pub kind: ResearchChatContextKind,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resource_id: Option<String>,
+    pub label: String,
+    pub source: Option<String>,
+    pub content: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResearchChatRequest {
+    pub message: String,
+    pub history: Vec<ResearchChatMessage>,
+    pub contexts: Vec<ResearchChatContext>,
+    pub instructions: Vec<String>,
 }
 
 #[derive(Clone, Debug, Deserialize)]

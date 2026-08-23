@@ -1,4 +1,5 @@
 use std::{
+    cmp::Reverse,
     fs::File,
     io::{Read, Write},
     path::{Path, PathBuf},
@@ -153,7 +154,7 @@ fn write_snapshot(history_dir: &Path, content: &[u8]) -> AppResult<()> {
 
 fn list_snapshots(history_dir: &Path) -> AppResult<Vec<HistoryItem>> {
     let mut snapshots = collect_snapshots(history_dir)?;
-    snapshots.sort_unstable_by(|left, right| right.timestamp.cmp(&left.timestamp));
+    snapshots.sort_unstable_by_key(|snapshot| Reverse(snapshot.timestamp));
     Ok(snapshots
         .into_iter()
         .map(|snapshot| HistoryItem {

@@ -208,7 +208,7 @@ async fn create_project_at(
     let canonical_project = dunce::canonicalize(&project_dir).map_err(|source| {
         AppError::io("resolve template project", display(&project_dir), source)
     })?;
-    project_state.set_project_root(canonical_project.clone())?;
+    project_state.grant_project_selection(canonical_project.clone())?;
     let main_file = canonical_project.join("main.tex");
     Ok(TemplateProjectResult {
         project_path: filesystem::path_to_string(&canonical_project)?,
@@ -760,9 +760,8 @@ mod tests {
                 .unwrap(),
             b"Man"
         );
-        assert_eq!(
-            std::path::PathBuf::from(result.project_path),
-            state.project_root().unwrap()
-        );
+        let created = std::path::PathBuf::from(result.project_path);
+        assert!(state.project_root().is_err());
+        assert!(state.consume_project_selection(&created).unwrap());
     }
 }

@@ -9,6 +9,44 @@ const tauriConfig = JSON.parse(
   fs.readFileSync(path.join(root, 'src-tauri/tauri.conf.json'), 'utf8')
 )
 
+function matrixEntry(platform) {
+  const marker = `platform: ${platform}`
+  const markerIndex = workflow.indexOf(marker)
+  assert.notEqual(markerIndex, -1, `expected ${platform} in build matrix`)
+  const entryStart = workflow.lastIndexOf('\n          - os:', markerIndex)
+  const nextEntry = workflow.indexOf('\n          - os:', markerIndex)
+  return workflow.slice(entryStart, nextEntry === -1 ? workflow.length : nextEntry)
+}
+
+test('macOS matrix pins native runner architectures and verifies them at runtime', () => {
+  assert.match(matrixEntry('mac-arm64'), /- os: macos-15\n/)
+  assert.match(matrixEntry('mac-x64'), /- os: macos-15-intel\n/)
+  assert.match(
+    workflow,
+    /matrix\.platform \}\}" == "mac-arm64"[\s\S]*uname -m\)" = "arm64"[\s\S]*matrix\.platform \}\}" == "mac-x64"[\s\S]*uname -m\)" = "x86_64"/
+  )
+})
+
+test('tag preflight requires a successful main push workflow for the exact commit', () => {
+  assert.match(workflow, /permissions:\n  actions: read\n  contents: read/)
+  assert.match(
+    workflow,
+    /release-preflight:[\s\S]*Verify synchronized release version declarations[\s\S]*npm run check:release-version/
+  )
+  assert.match(
+    workflow,
+    /actions\/workflows\/build\.yml\/runs[\s\S]*-f branch=main[\s\S]*-f event=push[\s\S]*-f status=success[\s\S]*-f head_sha="\$GITHUB_SHA"[\s\S]*test "\$successful_main_runs" -ge 1/
+  )
+})
+
+test('workflow actions are pinned to immutable commit SHAs', () => {
+  const actionReferences = [...workflow.matchAll(/uses:\s+([^\s#]+)/g)].map((match) => match[1])
+  assert.ok(actionReferences.length > 0)
+  for (const reference of actionReferences) {
+    assert.match(reference, /^[^@\s]+@[0-9a-f]{40}$/)
+  }
+})
+
 test('tagged macOS builds require Developer ID signing and explicit notarization', () => {
   for (const secret of [
     'APPLE_CERTIFICATE',

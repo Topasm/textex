@@ -1,5 +1,6 @@
 import { Channel, invoke } from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 import type { DesktopApi, OpenFileResult, SaveAsResult, SaveResult } from '../types/api'
 import type {
   DirectoryChangeEvent,
@@ -27,6 +28,8 @@ const aiProcess: DesktopApi['aiProcess'] = (request) =>
   invoke(TAURI_COMMANDS.aiProcess, { request })
 const aiProcessCustom: DesktopApi['aiProcessCustom'] = (request) =>
   invoke(TAURI_COMMANDS.aiProcessCustom, { request })
+const aiResearchChat: DesktopApi['aiResearchChat'] = (request) =>
+  invoke(TAURI_COMMANDS.aiResearchChat, { request })
 const aiUpdateContext: DesktopApi['aiUpdateContext'] = (filePath, content) =>
   invoke(TAURI_COMMANDS.aiUpdateContext, { filePath, content })
 const aiSaveApiKey: DesktopApi['aiSaveApiKey'] = (provider, apiKey) =>
@@ -98,6 +101,9 @@ const appCommandIds = new Set<string>(APP_COMMAND_MANIFEST.map(({ id }) => id))
 let appCommandCallback: ((command: AppCommandId) => void) | null = null
 let appCommandListener: Promise<UnlistenFn> | null = null
 let appCommandListenerGeneration = 0
+let windowCloseRequestCallback: (() => boolean | Promise<boolean>) | null = null
+let windowCloseRequestListener: Promise<UnlistenFn> | null = null
+let windowCloseRequestListenerGeneration = 0
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
@@ -134,6 +140,45 @@ const removeAppCommandListener: DesktopApi['removeAppCommandListener'] = () => {
   appCommandListener = null
   void pending?.then((unlisten) => unlisten()).catch(() => undefined)
 }
+
+const onWindowCloseRequested: DesktopApi['onWindowCloseRequested'] = (callback) => {
+  windowCloseRequestCallback = callback
+  if (windowCloseRequestListener) return
+
+  const generation = ++windowCloseRequestListenerGeneration
+  const pending = getCurrentWindow().onCloseRequested(async (event) => {
+    if (generation !== windowCloseRequestListenerGeneration) {
+      event.preventDefault()
+      return
+    }
+    const activeCallback = windowCloseRequestCallback
+    if (!activeCallback) {
+      event.preventDefault()
+      return
+    }
+    try {
+      if (!(await activeCallback())) event.preventDefault()
+    } catch {
+      event.preventDefault()
+    }
+  })
+  windowCloseRequestListener = pending
+  void pending.catch(() => {
+    if (windowCloseRequestListener === pending) windowCloseRequestListener = null
+  })
+}
+
+const removeWindowCloseRequestedListener: DesktopApi['removeWindowCloseRequestedListener'] = () => {
+  windowCloseRequestCallback = null
+  windowCloseRequestListenerGeneration += 1
+  const pending = windowCloseRequestListener
+  windowCloseRequestListener = null
+  void pending?.then((unlisten) => unlisten()).catch(() => undefined)
+}
+
+const requestWindowClose: DesktopApi['requestWindowClose'] = () => getCurrentWindow().close()
+
+const exitApp: DesktopApi['exitApp'] = () => invoke(TAURI_COMMANDS.exitApp)
 
 const openFile: DesktopApi['openFile'] = () =>
   invoke<OpenFileResult | null>(TAURI_COMMANDS.openFile)
@@ -423,6 +468,27 @@ const researchLoadConfig: DesktopApi['researchLoadConfig'] = () =>
 const researchSaveConfig: DesktopApi['researchSaveConfig'] = (config) =>
   invoke(TAURI_COMMANDS.researchSaveConfig, { config })
 
+const researchProfileLoad: DesktopApi['researchProfileLoad'] = () =>
+  invoke(TAURI_COMMANDS.researchProfileLoad)
+
+const researchProfileSave: DesktopApi['researchProfileSave'] = (profile) =>
+  invoke(TAURI_COMMANDS.researchProfileSave, { profile })
+
+const researchResourceSnapshot: DesktopApi['researchResourceSnapshot'] = (resourceId) =>
+  invoke(TAURI_COMMANDS.researchResourceSnapshot, { resourceId })
+
+const researchSourceIndex: DesktopApi['researchSourceIndex'] = (resourceId, localPath) =>
+  invoke(TAURI_COMMANDS.researchSourceIndex, { resourceId, localPath })
+
+const researchSourceSearch: DesktopApi['researchSourceSearch'] = (resourceId, query, limit) =>
+  invoke(TAURI_COMMANDS.researchSourceSearch, { resourceId, query, limit })
+
+const researchSourceClone: DesktopApi['researchSourceClone'] = (resourceId) =>
+  invoke(TAURI_COMMANDS.researchSourceClone, { resourceId })
+
+const researchSourceFetch: DesktopApi['researchSourceFetch'] = (resourceId) =>
+  invoke(TAURI_COMMANDS.researchSourceFetch, { resourceId })
+
 const compile: DesktopApi['compile'] = (request: CompileRequest) => {
   const onEvent = new Channel<TauriCompileEvent>()
   onEvent.onmessage = (event) => {
@@ -625,7 +691,11 @@ const loadSettings: DesktopApi['loadSettings'] = () => invoke(TAURI_COMMANDS.loa
 const saveSettings: DesktopApi['saveSettings'] = (partial) =>
   invoke(TAURI_COMMANDS.saveSettings, { partial })
 
-const setTheme: DesktopApi['setTheme'] = async () => {}
+const setTheme: DesktopApi['setTheme'] = (theme) => {
+  const nativeTheme =
+    theme === 'system' ? null : theme === 'light' || theme === 'glass' ? 'light' : 'dark'
+  return getCurrentWindow().setTheme(nativeTheme)
+}
 
 const addRecentProject: DesktopApi['addRecentProject'] = (projectPath) =>
   invoke(TAURI_COMMANDS.addRecentProject, { projectPath })
@@ -695,6 +765,7 @@ const tauriDesktopApi = {
   aiGenerate,
   aiProcess,
   aiProcessCustom,
+  aiResearchChat,
   aiUpdateContext,
   aiSaveApiKey,
   aiHasApiKey,
@@ -781,6 +852,13 @@ const tauriDesktopApi = {
   researchAddOnline,
   researchLoadConfig,
   researchSaveConfig,
+  researchProfileLoad,
+  researchProfileSave,
+  researchResourceSnapshot,
+  researchSourceIndex,
+  researchSourceSearch,
+  researchSourceClone,
+  researchSourceFetch,
   compile,
   cancelCompile,
   onCompileLog,
@@ -793,6 +871,7 @@ const tauriDesktopApi = {
   exportDocument,
   getExportFormats,
   openExternal,
+  exitApp,
   getPerformanceMemory,
   ptyCreate,
   ptyWrite,
@@ -820,7 +899,10 @@ const tauriDesktopApi = {
   onUpdateEvent,
   removeUpdateListeners,
   onAppCommand,
-  removeAppCommandListener
+  removeAppCommandListener,
+  requestWindowClose,
+  onWindowCloseRequested,
+  removeWindowCloseRequestedListener
 } satisfies DesktopApi
 
 /**

@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react'
 import { useEditorStore } from '../store/useEditorStore'
+import { closeEditorTab } from '../services/documentClose'
 
 const TabBar = React.memo(function TabBar() {
   const openFiles = useEditorStore((s) => s.openFiles)
@@ -9,13 +10,13 @@ const TabBar = React.memo(function TabBar() {
 
   const handleClose = useCallback((e: React.MouseEvent, filePath: string) => {
     e.stopPropagation()
-    useEditorStore.getState().closeTab(filePath)
+    closeEditorTab(filePath)
   }, [])
 
   const handleMouseDown = useCallback((e: React.MouseEvent, filePath: string) => {
     if (e.button === 1) {
       e.preventDefault()
-      useEditorStore.getState().closeTab(filePath)
+      closeEditorTab(filePath)
     }
   }, [])
 

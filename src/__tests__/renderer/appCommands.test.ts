@@ -17,6 +17,8 @@ const context = {
   saveAs: vi.fn().mockResolvedValue(undefined),
   toggleLog: vi.fn(),
   toggleTerminal: vi.fn(),
+  closeWindow: vi.fn().mockResolvedValue(undefined),
+  quitApp: vi.fn().mockResolvedValue(undefined),
   exportDocument: vi.fn().mockResolvedValue(undefined)
 }
 
@@ -84,6 +86,14 @@ describe('executeAppCommand', () => {
 
     expect(context.openSettings).toHaveBeenCalledOnce()
     expect(context.checkForUpdates).toHaveBeenCalledOnce()
+  })
+
+  it('routes native window close and application quit through lifecycle handlers', async () => {
+    await executeAppCommand('window.close', context)
+    await executeAppCommand('app.quit', context)
+
+    expect(context.closeWindow).toHaveBeenCalledOnce()
+    expect(context.quitApp).toHaveBeenCalledOnce()
   })
 
   it('uses the shared compile and log handlers', async () => {

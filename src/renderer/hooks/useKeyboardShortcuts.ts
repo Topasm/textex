@@ -8,6 +8,7 @@ import {
 import { useEditorStore } from '../store/useEditorStore'
 import { useSettingsStore } from '../store/useSettingsStore'
 import { commandRegistry } from '../services/commandRegistry'
+import { closeEditorTab } from '../services/documentClose'
 import { getDesktopCapabilities } from '../platform/capabilities'
 
 interface KeyboardShortcutsOpts {
@@ -38,7 +39,7 @@ export function useKeyboardShortcuts(opts: KeyboardShortcutsOpts): void {
       'font.decrease': () => useSettingsStore.getState().decreaseFontSize(),
       'tab.close': () => {
         const state = useEditorStore.getState()
-        if (state.activeFilePath) state.closeTab(state.activeFilePath)
+        if (state.activeFilePath) closeEditorTab(state.activeFilePath)
       },
       'tab.prev': () => {
         const state = useEditorStore.getState()

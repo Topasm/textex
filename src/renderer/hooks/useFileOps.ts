@@ -3,7 +3,7 @@ import { useEditorStore } from '../store/useEditorStore'
 import { useCompileStore } from '../store/useCompileStore'
 import { useSettingsStore } from '../store/useSettingsStore'
 import { formatLatex } from '../utils/formatter'
-import { openProject } from '../utils/openProject'
+import { isCurrentProjectTransitionSnapshot, openProject } from '../utils/openProject'
 import { errorMessage } from '../utils/errorMessage'
 import { documentRegistry } from '../models/documentRegistry'
 
@@ -19,7 +19,8 @@ export function useFileOps(): FileOps {
     if (result) {
       // Derive parent directory and open it as the project so the workspace renders
       const parentDir = result.filePath.replace(/[/\\][^/\\]+$/, '')
-      await openProject(parentDir, { autoOpenFirstTex: false })
+      const project = await openProject(parentDir, { autoOpenFirstTex: false })
+      if (!project || !isCurrentProjectTransitionSnapshot(project)) return
 
       // Open the specific file the user selected (overrides openProject's auto-open)
       useEditorStore.getState().openFileInTab(result.filePath, result.content)

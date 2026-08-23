@@ -14,6 +14,7 @@ describe('useSettingsStore minimap migration', () => {
     localStorage.clear()
     vi.mocked(window.api.loadSettings).mockClear()
     vi.mocked(window.api.saveSettings).mockClear()
+    vi.mocked(window.api.setTheme).mockClear()
   })
 
   it('removes deprecated minimap from persisted settings via helper', () => {
@@ -86,6 +87,7 @@ describe('useSettingsStore minimap migration', () => {
 
     expect(useSettingsStore.getState().settings).toMatchObject({ theme: 'dark', fontSize: 18 })
     expect(useSettingsStore.getState().settings.aiApiKey).toBe('')
+    expect(window.api.setTheme).toHaveBeenCalledWith('dark')
     const saved = vi.mocked(window.api.saveSettings).mock.calls.at(-1)?.[0]
     expect(saved).not.toHaveProperty('recentProjects')
     expect(saved).not.toHaveProperty('aiApiKey')
@@ -104,6 +106,7 @@ describe('useSettingsStore minimap migration', () => {
     await hydrateSettingsFromNative()
 
     expect(window.api.loadSettings).not.toHaveBeenCalled()
+    expect(window.api.setTheme).toHaveBeenCalledWith('glass')
     expect(window.api.saveSettings).toHaveBeenCalledWith(
       expect.objectContaining({ theme: 'glass', fontSize: 17 })
     )

@@ -211,8 +211,14 @@ fn collect_event(
     pending: &mut HashMap<String, DirectoryChangeEvent>,
 ) -> bool {
     let Ok(event) = event else {
-        return false;
+        // A backend error can mean the OS queue lost events. Force an
+        // authoritative rescan instead of preserving a potentially stale
+        // project index.
+        return true;
     };
+    if event.need_rescan() {
+        return true;
+    }
     let Some(event_type) = renderer_event_type(&event.kind) else {
         return false;
     };
@@ -277,11 +283,11 @@ fn should_ignore(path: &Path) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
+    use std::{collections::HashMap, path::Path};
 
     use notify::{
         event::{AccessKind, CreateKind, DataChange, ModifyKind, RemoveKind},
-        EventKind,
+        Error, EventKind,
     };
 
     use crate::models::DirectoryChangeType;
@@ -289,7 +295,8 @@ mod tests {
     use crate::state::AppState;
 
     use super::{
-        ensure_project_activation, index_invalidation_event, renderer_event_type, should_ignore,
+        collect_event, ensure_project_activation, index_invalidation_event, renderer_event_type,
+        should_ignore,
     };
 
     #[test]
@@ -343,5 +350,14 @@ mod tests {
         assert!(event.filename.is_empty());
         assert!(event.index_delta.is_none());
         assert!(event.index_invalidated);
+    }
+
+    #[test]
+    fn watcher_backend_errors_request_an_authoritative_rescan() {
+        assert!(collect_event(
+            Path::new("/project"),
+            Err(Error::generic("watch queue overflow")),
+            &mut HashMap::new(),
+        ));
     }
 }

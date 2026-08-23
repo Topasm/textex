@@ -2631,11 +2631,235 @@ body,
 }
 
 .research-reference-view,
-.research-chat-panel {
+.research-chat-panel,
+.research-profile-panel {
   box-sizing: border-box;
   height: 100%;
   padding: 12px;
   overflow-y: auto;
+}
+
+.research-profile-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.research-profile-panel > .research-muted {
+  margin: 0 0 2px;
+}
+
+.research-profile-section {
+  flex: 0 0 auto;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.research-profile-section > summary {
+  padding: 10px;
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+}
+
+.research-profile-section[open] > summary {
+  border-bottom: 1px solid var(--border);
+}
+
+.research-profile-section-content {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 10px;
+}
+
+.research-profile-section-content > .research-muted {
+  margin: 0;
+}
+
+.research-profile-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.research-profile-field {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 4px;
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.research-profile-field.wide {
+  grid-column: 1 / -1;
+}
+
+.research-profile-field input,
+.research-profile-field select,
+.research-profile-field textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 7px 8px;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font: inherit;
+  font-size: 11px;
+  outline: 0;
+}
+
+.research-profile-field textarea {
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.research-profile-field input:focus,
+.research-profile-field select:focus,
+.research-profile-field textarea:focus {
+  border-color: var(--accent);
+}
+
+.research-profile-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.research-profile-card {
+  padding: 8px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.research-profile-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+  font-size: 11px;
+}
+
+.research-profile-card-heading strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.research-profile-card-heading button {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.research-profile-card-heading button:hover {
+  color: var(--error);
+  background: var(--bg-hover);
+}
+
+.research-profile-add,
+.research-profile-suggest,
+.research-profile-index,
+.research-profile-save {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 10px;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.research-profile-add {
+  align-self: flex-start;
+}
+
+.research-profile-suggest {
+  align-self: flex-start;
+}
+
+.research-profile-suggest:disabled,
+.research-profile-index:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.research-profile-index-result {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 8px;
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.research-profile-index-controls {
+  margin-top: 9px;
+}
+
+.research-profile-source-actions {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.research-profile-index-result .warning {
+  color: var(--warning);
+}
+
+.research-profile-index-error {
+  margin-top: 7px;
+  color: var(--error);
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+.research-profile-footer {
+  position: sticky;
+  bottom: -12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0 12px;
+  background: var(--sidebar-bg);
+}
+
+.research-profile-save {
+  flex: 0 0 auto;
+  color: var(--status-bar-text);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.research-profile-save:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.research-profile-save-status {
+  color: var(--text-secondary);
+  font-size: 10px;
 }
 
 .research-search {
@@ -2895,6 +3119,124 @@ body,
   grid-template-columns: 1fr 1fr;
   gap: 7px;
   margin-top: 12px;
+}
+
+.research-chat-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.research-chat-messages {
+  flex: 1;
+  min-height: 120px;
+  overflow-y: auto;
+}
+
+.research-chat-message {
+  margin: 0 0 8px;
+  padding: 9px;
+  color: var(--text-primary);
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.research-chat-message.user {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+.research-chat-message strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.research-chat-message p {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.research-chat-composer {
+  flex-shrink: 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.research-context-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 7px;
+}
+
+.research-context-chips button {
+  max-width: 100%;
+  padding: 4px 7px;
+  overflow: hidden;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.research-context-chips button.active {
+  color: var(--text-primary);
+  border-color: var(--accent);
+}
+
+.research-chat-composer textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 72px;
+  padding: 8px;
+  resize: vertical;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.research-chat-send {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  min-height: 30px;
+  margin-top: 6px;
+  color: var(--text-primary);
+  background: var(--accent);
+  border: 0;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.research-chat-send:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.research-chat-tools {
+  flex-shrink: 0;
+  margin-top: 10px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.research-chat-tools > summary {
+  cursor: pointer;
+}
+
+.research-chat-tools .research-primary-action {
+  margin-top: 8px;
 }
 
 .research-panel-toggle {

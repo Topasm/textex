@@ -4,13 +4,14 @@ use std::{
     path::Path,
     sync::{
         atomic::{AtomicU64, Ordering},
-        mpsc::{sync_channel, TrySendError},
-        Arc, Mutex, MutexGuard, Weak,
+        mpsc::{sync_channel, Receiver, RecvTimeoutError, SyncSender, TrySendError},
+        Arc, Condvar, Mutex, MutexGuard, Weak,
     },
     thread,
+    time::Duration,
 };
 
-use portable_pty::{native_pty_system, Child, ChildKiller, CommandBuilder, MasterPty, PtySize};
+use portable_pty::{native_pty_system, Child, CommandBuilder, MasterPty, PtySize};
 use tauri::ipc::Channel;
 
 use crate::{
@@ -30,6 +31,8 @@ const MAX_ENV_ENTRIES: usize = 128;
 const MAX_ENV_BYTES: usize = 64 * 1024;
 const OUTPUT_CHUNK_BYTES: usize = 8 * 1024;
 const OUTPUT_QUEUE_CHUNKS: usize = 64;
+const TERMINATION_POLL_INTERVAL: Duration = Duration::from_millis(50);
+const TERMINATION_WAIT_TIMEOUT: Duration = Duration::from_secs(3);
 
 pub struct PtyState {
     runtime: Arc<PtyRuntime>,
@@ -43,13 +46,21 @@ struct PtyRuntime {
 struct PtySession {
     master: Mutex<Box<dyn MasterPty + Send>>,
     writer: Mutex<Box<dyn Write + Send>>,
-    killer: Mutex<Box<dyn ChildKiller + Send + Sync>>,
+    terminate: SyncSender<()>,
+    termination_requested: std::sync::atomic::AtomicBool,
+    completion: Arc<PtyCompletion>,
+}
+
+struct PtyCompletion {
+    finished: Mutex<bool>,
+    changed: Condvar,
 }
 
 struct SpawnedPty {
     session: Arc<PtySession>,
     reader: Box<dyn Read + Send>,
     child: Box<dyn Child + Send + Sync>,
+    terminate: Receiver<()>,
 }
 
 impl Default for PtyState {
@@ -67,25 +78,36 @@ impl Drop for PtyRuntime {
     fn drop(&mut self) {
         if let Ok(mut sessions) = self.sessions.lock() {
             for session in sessions.drain().map(|(_, session)| session) {
-                session.kill();
+                session.request_termination();
             }
         }
     }
 }
 
 impl PtySession {
-    fn kill(&self) {
-        if let Ok(mut killer) = self.killer.lock() {
-            let _ = killer.kill();
+    fn request_termination(&self) {
+        if !self.termination_requested.swap(true, Ordering::AcqRel) {
+            let _ = self.terminate.try_send(());
+        }
+    }
+
+    fn terminate_and_wait(&self) {
+        self.request_termination();
+        if let Ok(finished) = self.completion.finished.lock() {
+            if !*finished {
+                let _wait_result = self.completion.changed.wait_timeout_while(
+                    finished,
+                    TERMINATION_WAIT_TIMEOUT,
+                    |done| !*done,
+                );
+            }
         }
     }
 }
 
 impl Drop for PtySession {
     fn drop(&mut self) {
-        if let Ok(killer) = self.killer.get_mut() {
-            let _ = killer.kill();
-        }
+        self.request_termination();
     }
 }
 
@@ -153,6 +175,8 @@ pub async fn create(
         Arc::downgrade(&state.runtime),
         id.clone(),
         spawned.child,
+        spawned.terminate,
+        Arc::clone(&spawned.session.completion),
         on_event,
     );
 
@@ -161,8 +185,9 @@ pub async fn create(
 
 async fn terminate_spawned(mut spawned: SpawnedPty) {
     let _ = tauri::async_runtime::spawn_blocking(move || {
-        spawned.session.kill();
+        let _ = spawned.child.kill();
         let _ = spawned.child.wait();
+        mark_pty_complete(&spawned.session.completion);
     })
     .await;
 }
@@ -206,7 +231,7 @@ impl PtyState {
             .lock_sessions()?
             .remove(id)
             .ok_or_else(|| pty_error("terminal session does not exist"))?;
-        session.kill();
+        session.terminate_and_wait();
         Ok(())
     }
 
@@ -216,8 +241,11 @@ impl PtyState {
             .drain()
             .map(|(_, session)| session)
             .collect::<Vec<_>>();
+        for session in &sessions {
+            session.request_termination();
+        }
         for session in sessions {
-            session.kill();
+            session.terminate_and_wait();
         }
         Ok(())
     }
@@ -261,17 +289,16 @@ fn spawn_terminal(
         command.env(key, value);
     }
 
-    let child = pair
+    let mut child = pair
         .slave
         .spawn_command(command)
         .map_err(|error| pty_error(format!("failed to start terminal shell: {error}")))?;
     drop(pair.slave);
-    let killer = child.clone_killer();
     let reader = match pair.master.try_clone_reader() {
         Ok(reader) => reader,
         Err(error) => {
-            let mut killer = killer;
-            let _ = killer.kill();
+            let _ = child.kill();
+            let _ = child.wait();
             return Err(pty_error(format!(
                 "failed to open terminal output: {error}"
             )));
@@ -280,19 +307,27 @@ fn spawn_terminal(
     let writer = match pair.master.take_writer() {
         Ok(writer) => writer,
         Err(error) => {
-            let mut killer = killer;
-            let _ = killer.kill();
+            let _ = child.kill();
+            let _ = child.wait();
             return Err(pty_error(format!("failed to open terminal input: {error}")));
         }
     };
+    let (terminate_sender, terminate_receiver) = sync_channel(1);
+    let completion = Arc::new(PtyCompletion {
+        finished: Mutex::new(false),
+        changed: Condvar::new(),
+    });
     Ok(SpawnedPty {
         session: Arc::new(PtySession {
             master: Mutex::new(pair.master),
             writer: Mutex::new(writer),
-            killer: Mutex::new(killer),
+            terminate: terminate_sender,
+            termination_requested: std::sync::atomic::AtomicBool::new(false),
+            completion,
         }),
         reader,
         child,
+        terminate: terminate_receiver,
     })
 }
 
@@ -404,10 +439,13 @@ fn start_wait_thread(
     runtime: Weak<PtyRuntime>,
     id: String,
     mut child: Box<dyn Child + Send + Sync>,
+    terminate: Receiver<()>,
+    completion: Arc<PtyCompletion>,
     on_event: Channel<PtyEvent>,
 ) {
     thread::spawn(move || {
-        let status = child.wait();
+        let status = supervise_pty_child(&mut child, &terminate);
+        mark_pty_complete(&completion);
         remove_runtime_session(&runtime, &id);
         let (exit_code, signal) = match status {
             Ok(status) => (status.exit_code(), None),
@@ -421,9 +459,37 @@ fn start_wait_thread(
     });
 }
 
+fn supervise_pty_child(
+    child: &mut Box<dyn Child + Send + Sync>,
+    terminate: &Receiver<()>,
+) -> std::io::Result<portable_pty::ExitStatus> {
+    loop {
+        if let Some(status) = child.try_wait()? {
+            return Ok(status);
+        }
+        match terminate.recv_timeout(TERMINATION_POLL_INTERVAL) {
+            Ok(()) | Err(RecvTimeoutError::Disconnected) => {
+                // Calling kill on the owning Child (rather than a cloned
+                // signaller) gives portable-pty its HUP grace period and
+                // force-kill fallback. Always wait afterwards to reap it.
+                let _ = child.kill();
+                return child.wait();
+            }
+            Err(RecvTimeoutError::Timeout) => {}
+        }
+    }
+}
+
+fn mark_pty_complete(completion: &PtyCompletion) {
+    if let Ok(mut finished) = completion.finished.lock() {
+        *finished = true;
+        completion.changed.notify_all();
+    }
+}
+
 fn dispose_runtime_session(runtime: &Weak<PtyRuntime>, id: &str) {
     if let Some(session) = remove_runtime_session(runtime, id) {
-        session.kill();
+        session.request_termination();
     }
 }
 
@@ -583,5 +649,29 @@ mod tests {
         .unwrap_err();
 
         assert!(matches!(error, AppError::Pty(message) if message.contains("exceeds")));
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn failed_registration_termination_reaps_the_shell() {
+        let directory = tempdir().unwrap();
+        let spawned = spawn_terminal(
+            directory.path(),
+            validated_size(None, None).unwrap(),
+            Some("/bin/sh"),
+            HashMap::new(),
+        )
+        .unwrap();
+        let process_id = spawned.child.process_id().unwrap();
+
+        terminate_spawned(spawned).await;
+
+        // SAFETY: signal 0 only probes the PID captured from the child.
+        let result = unsafe { libc::kill(process_id as libc::pid_t, 0) };
+        assert_eq!(result, -1);
+        assert_eq!(
+            std::io::Error::last_os_error().raw_os_error(),
+            Some(libc::ESRCH)
+        );
     }
 }

@@ -9,6 +9,7 @@ import {
   lspNotifyDidOpen,
   lspNotifyDidClose,
   lspNotifyDidChange,
+  lspMarkDocumentChanged,
   lspRequestDocumentSymbols
 } from '../lsp/lspClient'
 import { loader } from '@monaco-editor/react'
@@ -91,6 +92,7 @@ export function useLspLifecycle(
         const filePath = editorState.filePath
         const snapshot = filePath ? documentRegistry.snapshot(filePath) : null
         if (!filePath || !snapshot) return
+        lspMarkDocumentChanged(filePath)
         timer = setTimeout(() => {
           const model = documentRegistry.getModel(filePath)
           if (

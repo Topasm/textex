@@ -17,7 +17,7 @@ use crate::{
     },
     services::{
         filesystem, references,
-        research::{self, ResearchState},
+        research::{self, ProjectCommit, ResearchState},
     },
     state::AppState,
 };
@@ -214,7 +214,7 @@ pub async fn collections(port: Option<u16>) -> AppResult<Vec<ZoteroCollection>> 
             "Zotero returned too many collections".to_owned(),
         ));
     }
-    result.sort_by(|left, right| left.name.to_lowercase().cmp(&right.name.to_lowercase()));
+    result.sort_by_key(|item| item.name.to_lowercase());
     result.dedup_by(|left, right| left.key == right.key);
     Ok(result)
 }
@@ -223,7 +223,7 @@ pub async fn add_to_project(
     state: &AppState,
     citekey: String,
     port: Option<u16>,
-) -> AppResult<ReferenceAddResult> {
+) -> AppResult<ProjectCommit<ReferenceAddResult>> {
     if !valid_citekey(&citekey) {
         return Err(AppError::Zotero("invalid citation key request".to_owned()));
     }
@@ -239,7 +239,14 @@ pub async fn add_to_project(
             "project changed while adding Zotero reference".to_owned(),
         ));
     }
-    research::merge_exported_bibtex(state, &root, &bibtex, &citekey).await
+    let result =
+        research::merge_exported_bibtex(state, &root, epoch, &epoch_counter, &bibtex, &citekey)
+            .await?;
+    Ok(ProjectCommit {
+        result,
+        project_root: root,
+        project_epoch: epoch,
+    })
 }
 
 pub async fn save_online_to_library(
@@ -312,16 +319,12 @@ pub async fn sync_collection(
     collection: &str,
     target_file: Option<String>,
     port: Option<u16>,
-) -> AppResult<ZoteroSyncResult> {
+) -> AppResult<ProjectCommit<ZoteroSyncResult>> {
     let (root, epoch, epoch_counter) = state.project_root_epoch()?;
     let collection = validate_collection(collection)?;
     let file_path = match target_file {
         Some(path) => path,
-        None => state
-            .project_root()?
-            .join("zotero.bib")
-            .to_string_lossy()
-            .into_owned(),
+        None => root.join("zotero.bib").to_string_lossy().into_owned(),
     };
     if !Path::new(&file_path)
         .extension()
@@ -371,7 +374,7 @@ pub async fn sync_collection(
     let entry_count = references::parse_bib_content(&content, None).len() as u32;
 
     let bytes_written = content.len() as u64;
-    commit_collection_export(
+    let committed_file_path = commit_collection_export(
         state,
         research_state,
         &root,
@@ -381,10 +384,14 @@ pub async fn sync_collection(
         content,
     )
     .await?;
-    Ok(ZoteroSyncResult {
-        file_path,
-        bytes_written,
-        entry_count,
+    Ok(ProjectCommit {
+        result: ZoteroSyncResult {
+            file_path: committed_file_path,
+            bytes_written,
+            entry_count,
+        },
+        project_root: root,
+        project_epoch: epoch,
     })
 }
 
@@ -396,11 +403,12 @@ async fn commit_collection_export(
     epoch_counter: &std::sync::atomic::AtomicU64,
     file_path: &str,
     content: String,
-) -> AppResult<()> {
+) -> AppResult<String> {
     // Collection downloads remain deduplicated by ZoteroSyncState. Only the
     // final local commit joins the ResearchState critical section shared by
     // online and Zotero single-reference additions and research config writes.
     let _write_guard = research_state.lock().await;
+    let _project_operation = state.lock_project_operation().await;
     ensure_project_epoch(state, expected_root, expected_epoch, epoch_counter)?;
 
     let target = filesystem::validate_save_file_target(state, file_path).await?;
@@ -417,7 +425,9 @@ async fn commit_collection_export(
     }
 
     ensure_project_epoch(state, expected_root, expected_epoch, epoch_counter)?;
-    filesystem::write_files_transactionally(vec![(target, content.into_bytes())]).await
+    let committed_file_path = filesystem::path_to_string(&target)?;
+    filesystem::write_files_transactionally(vec![(target, content.into_bytes())]).await?;
+    Ok(committed_file_path)
 }
 
 fn ensure_project_epoch(

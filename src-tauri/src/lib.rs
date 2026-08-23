@@ -13,6 +13,7 @@ use services::project_index::ProjectIndexState;
 use services::pty::PtyState;
 use services::references::ReferenceIndexState;
 use services::research::ResearchState;
+use services::research_source::ResearchSourceState;
 use services::runtime::PerformanceState;
 use services::settings::SettingsState;
 use services::spellcheck::SpellcheckState;
@@ -132,6 +133,7 @@ pub fn run() {
         .manage(ProjectDataState::default())
         .manage(ReferenceIndexState::default())
         .manage(ResearchState::default())
+        .manage(ResearchSourceState::default())
         .manage(PerformanceState::default())
         .manage(SpellcheckState::default())
         .manage(TemplateState::default())
@@ -142,6 +144,7 @@ pub fn run() {
             commands::ai::ai_generate,
             commands::ai::ai_process,
             commands::ai::ai_process_custom,
+            commands::ai::ai_research_chat,
             commands::ai::ai_update_context,
             commands::ai::ai_save_api_key,
             commands::ai::ai_has_api_key,
@@ -221,6 +224,13 @@ pub fn run() {
             commands::research::research_add_online,
             commands::research::research_load_config,
             commands::research::research_save_config,
+            commands::research::research_profile_load,
+            commands::research::research_profile_save,
+            commands::research::research_resource_snapshot,
+            commands::research_source::research_source_index,
+            commands::research_source::research_source_search,
+            commands::research_source::research_source_clone,
+            commands::research_source::research_source_fetch,
             commands::pty::pty_create,
             commands::pty::pty_write,
             commands::pty::pty_resize,
@@ -246,6 +256,7 @@ pub fn run() {
             commands::export::export_document,
             commands::export::get_export_formats,
             commands::runtime::open_external,
+            commands::runtime::exit_app,
             commands::runtime::get_performance_memory,
             commands::updater::check_app_update,
             commands::updater::download_and_install_update,

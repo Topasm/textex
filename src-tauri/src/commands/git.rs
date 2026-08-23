@@ -9,11 +9,13 @@ use crate::{
 
 #[tauri::command]
 pub async fn git_is_repo(state: State<'_, AppState>, work_dir: String) -> AppResult<bool> {
+    let _project_operation = state.lock_project_operation().await;
     git::is_repository(state.inner(), &work_dir).await
 }
 
 #[tauri::command]
 pub async fn git_init(state: State<'_, AppState>, work_dir: String) -> AppResult<SuccessResult> {
+    let _project_operation = state.lock_project_operation().await;
     git::init_repository(state.inner(), &work_dir).await
 }
 
@@ -22,6 +24,7 @@ pub async fn git_status(
     state: State<'_, AppState>,
     work_dir: String,
 ) -> AppResult<GitStatusResult> {
+    let _project_operation = state.lock_project_operation().await;
     git::status(state.inner(), &work_dir).await
 }
 
@@ -31,6 +34,7 @@ pub async fn git_stage(
     work_dir: String,
     file_path: String,
 ) -> AppResult<SuccessResult> {
+    let _project_operation = state.lock_project_operation().await;
     git::stage(state.inner(), &work_dir, &file_path).await
 }
 
@@ -40,6 +44,7 @@ pub async fn git_unstage(
     work_dir: String,
     file_path: String,
 ) -> AppResult<SuccessResult> {
+    let _project_operation = state.lock_project_operation().await;
     git::unstage(state.inner(), &work_dir, &file_path).await
 }
 
@@ -49,16 +54,19 @@ pub async fn git_commit(
     work_dir: String,
     message: String,
 ) -> AppResult<SuccessResult> {
+    let _project_operation = state.lock_project_operation().await;
     git::commit(state.inner(), &work_dir, &message).await
 }
 
 #[tauri::command]
 pub async fn git_diff(state: State<'_, AppState>, work_dir: String) -> AppResult<String> {
+    let _project_operation = state.lock_project_operation().await;
     git::diff(state.inner(), &work_dir).await
 }
 
 #[tauri::command]
 pub async fn git_log(state: State<'_, AppState>, work_dir: String) -> AppResult<Vec<GitLogEntry>> {
+    let _project_operation = state.lock_project_operation().await;
     git::log(state.inner(), &work_dir).await
 }
 
@@ -68,5 +76,6 @@ pub async fn git_file_log(
     work_dir: String,
     file_path: String,
 ) -> AppResult<Vec<GitLogEntry>> {
+    let _project_operation = state.lock_project_operation().await;
     git::file_log(state.inner(), &work_dir, &file_path).await
 }

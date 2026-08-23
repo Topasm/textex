@@ -9,6 +9,13 @@ const channelInstances = vi.hoisted(() => [] as Array<{ onmessage: (message: unk
 const listenMock = vi.hoisted(() => vi.fn())
 const unlistenMock = vi.hoisted(() => vi.fn())
 const eventCallbacks = vi.hoisted(() => new Map<string, (event: { payload: unknown }) => void>())
+const setWindowThemeMock = vi.hoisted(() => vi.fn())
+const closeWindowMock = vi.hoisted(() => vi.fn())
+const onCloseRequestedMock = vi.hoisted(() => vi.fn())
+const closeWindowUnlistenMock = vi.hoisted(() => vi.fn())
+const closeRequestedHandlers = vi.hoisted(
+  () => [] as Array<(event: { preventDefault(): void }) => void | Promise<void>>
+)
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: invokeMock,
@@ -26,6 +33,14 @@ vi.mock('@tauri-apps/api/event', () => ({
   listen: listenMock
 }))
 
+vi.mock('@tauri-apps/api/window', () => ({
+  getCurrentWindow: () => ({
+    setTheme: setWindowThemeMock,
+    close: closeWindowMock,
+    onCloseRequested: onCloseRequestedMock
+  })
+}))
+
 const originalApi = window.api
 
 describe('Tauri DesktopApi adapter', () => {
@@ -33,6 +48,17 @@ describe('Tauri DesktopApi adapter', () => {
     invokeMock.mockReset()
     isTauriMock.mockReset()
     unlistenMock.mockReset()
+    setWindowThemeMock.mockReset()
+    closeWindowMock.mockReset()
+    onCloseRequestedMock.mockReset()
+    closeWindowUnlistenMock.mockReset()
+    closeRequestedHandlers.length = 0
+    onCloseRequestedMock.mockImplementation(
+      async (handler: (event: { preventDefault(): void }) => void | Promise<void>) => {
+        closeRequestedHandlers.push(handler)
+        return closeWindowUnlistenMock
+      }
+    )
     eventCallbacks.clear()
     listenMock.mockReset()
     listenMock.mockImplementation(
@@ -52,6 +78,30 @@ describe('Tauri DesktopApi adapter', () => {
   afterEach(() => {
     window.api = originalApi
     delete document.documentElement.dataset.desktopRuntime
+  })
+
+  it('maps research chat to the dedicated configured-provider command', async () => {
+    const request = {
+      message: 'Compare the implementation with the paper.',
+      history: [{ role: 'user' as const, content: 'Focus on the training loss.' }],
+      contexts: [
+        {
+          kind: 'repository' as const,
+          resourceId: 'official-code',
+          label: 'Official code',
+          source: 'src/train.py:42',
+          content: 'loss = policy_loss(batch)'
+        }
+      ],
+      instructions: ['Use concise technical language.']
+    }
+    invokeMock.mockResolvedValueOnce('The implementation uses policy_loss [Official code].')
+
+    const api = createTauriApi()
+    await expect(api.aiResearchChat(request)).resolves.toBe(
+      'The implementation uses policy_loss [Official code].'
+    )
+    expect(invokeMock).toHaveBeenCalledWith('ai_research_chat', { request })
   })
 
   it('maps filesystem methods to Tauri commands', async () => {
@@ -226,6 +276,59 @@ describe('Tauri DesktopApi adapter', () => {
       ['remove_recent_project', { projectPath: '/project' }],
       ['update_recent_project', { projectPath: '/project', updates: { pinned: true } }]
     ])
+  })
+
+  it('maps application themes to the current Tauri window theme', async () => {
+    setWindowThemeMock.mockResolvedValue(undefined)
+    const api = createTauriApi()
+
+    await api.setTheme('system')
+    await api.setTheme('dark')
+    await api.setTheme('light')
+    await api.setTheme('high-contrast')
+    await api.setTheme('glass')
+
+    expect(setWindowThemeMock.mock.calls).toEqual([
+      [null],
+      ['dark'],
+      ['light'],
+      ['dark'],
+      ['light']
+    ])
+    expect(invokeMock).not.toHaveBeenCalled()
+  })
+
+  it('fails window close requests closed until the renderer lifecycle approves them', async () => {
+    closeWindowMock.mockResolvedValue(undefined)
+    const api = createTauriApi()
+    const guard = vi.fn().mockReturnValue(false)
+    const preventDefault = vi.fn()
+
+    api.onWindowCloseRequested(guard)
+    await vi.waitFor(() => expect(closeRequestedHandlers).toHaveLength(1))
+    await closeRequestedHandlers[0]({ preventDefault })
+
+    expect(guard).toHaveBeenCalledOnce()
+    expect(preventDefault).toHaveBeenCalledOnce()
+
+    guard.mockReturnValue(true)
+    preventDefault.mockClear()
+    await closeRequestedHandlers[0]({ preventDefault })
+    expect(preventDefault).not.toHaveBeenCalled()
+
+    await api.requestWindowClose()
+    expect(closeWindowMock).toHaveBeenCalledOnce()
+
+    api.removeWindowCloseRequestedListener()
+    await vi.waitFor(() => expect(closeWindowUnlistenMock).toHaveBeenCalledOnce())
+  })
+
+  it('maps an approved application exit to the typed Rust command', async () => {
+    invokeMock.mockResolvedValueOnce({ success: true })
+    const api = createTauriApi()
+
+    await expect(api.exitApp()).resolves.toEqual({ success: true })
+    expect(invokeMock).toHaveBeenCalledWith('exit_app')
   })
 
   it('maps project metadata operations to the scoped Rust commands', async () => {
@@ -782,6 +885,30 @@ describe('Tauri DesktopApi adapter', () => {
       zoteroCollection: '/0/ABC',
       syncOnOpen: true
     }
+    const profile = {
+      version: 1 as const,
+      paper: {
+        title: 'Diffusion Policy',
+        authors: [{ id: 'cheng-chi', name: 'Cheng Chi' }]
+      },
+      resources: [
+        {
+          id: 'official-code',
+          kind: 'git' as const,
+          label: 'Official code',
+          url: 'https://github.com/example/project',
+          chatAccess: 'indexed-read' as const
+        }
+      ],
+      instructions: ['Prefer the official implementation.']
+    }
+    const snapshot = {
+      resourceId: 'project-site',
+      url: 'https://example.org/paper',
+      fetchedAt: 1_725_000_000_000,
+      content: 'Paper and code',
+      truncated: false
+    }
     invokeMock
       .mockResolvedValueOnce([collection])
       .mockResolvedValueOnce(added)
@@ -790,6 +917,9 @@ describe('Tauri DesktopApi adapter', () => {
       .mockResolvedValueOnce(added)
       .mockResolvedValueOnce(config)
       .mockResolvedValueOnce(config)
+      .mockResolvedValueOnce(profile)
+      .mockResolvedValueOnce(profile)
+      .mockResolvedValueOnce(snapshot)
 
     const api = createTauriApi()
     await expect(api.zoteroCollections(23119)).resolves.toEqual([collection])
@@ -799,6 +929,9 @@ describe('Tauri DesktopApi adapter', () => {
     await expect(api.researchAddOnline(reference)).resolves.toEqual(added)
     await expect(api.researchLoadConfig()).resolves.toEqual(config)
     await expect(api.researchSaveConfig(config)).resolves.toEqual(config)
+    await expect(api.researchProfileLoad()).resolves.toEqual(profile)
+    await expect(api.researchProfileSave(profile)).resolves.toEqual(profile)
+    await expect(api.researchResourceSnapshot('project-site')).resolves.toEqual(snapshot)
     expect(invokeMock.mock.calls).toEqual([
       ['zotero_collections', { port: 23119 }],
       ['zotero_add_to_project', { citekey: 'Smith2026Paper', port: 23119 }],
@@ -806,7 +939,10 @@ describe('Tauri DesktopApi adapter', () => {
       ['research_search_online', { query: 'paper' }],
       ['research_add_online', { reference }],
       ['research_load_config'],
-      ['research_save_config', { config }]
+      ['research_save_config', { config }],
+      ['research_profile_load'],
+      ['research_profile_save', { profile }],
+      ['research_resource_snapshot', { resourceId: 'project-site' }]
     ])
   })
 
@@ -825,6 +961,52 @@ describe('Tauri DesktopApi adapter', () => {
       ['save_history_snapshot', { filePath: '/project/main.tex', content: 'current' }],
       ['get_history_list', { filePath: '/project/main.tex' }],
       ['load_history_snapshot', { filePath: '/project/main.tex', snapshotPath: item.path }]
+    ])
+  })
+
+  it('maps bounded research source indexing and search commands', async () => {
+    const index = {
+      resourceId: 'official-code',
+      rootPath: '/project/sources/code',
+      branch: 'main',
+      indexedAt: 123,
+      files: [{ path: 'src/main.rs', bytes: 42, language: 'rust' }],
+      fileCount: 1,
+      totalBytes: 42,
+      truncated: false
+    }
+    const result = {
+      resourceId: 'official-code',
+      path: 'src/main.rs',
+      line: 5,
+      startLine: 3,
+      snippet: 'fn train() {}',
+      score: 110
+    }
+    const cloned = {
+      success: true,
+      resourceId: 'official-code',
+      localPath: '/project/sources/code',
+      action: 'cloned' as const,
+      output: 'Cloning into sources/code'
+    }
+    const fetched = { ...cloned, action: 'fetched' as const, output: 'Already up to date.' }
+    invokeMock
+      .mockResolvedValueOnce(index)
+      .mockResolvedValueOnce([result])
+      .mockResolvedValueOnce(cloned)
+      .mockResolvedValueOnce(fetched)
+
+    const api = createTauriApi()
+    await expect(api.researchSourceIndex('official-code', 'sources/code')).resolves.toEqual(index)
+    await expect(api.researchSourceSearch('official-code', 'train', 4)).resolves.toEqual([result])
+    await expect(api.researchSourceClone('official-code')).resolves.toEqual(cloned)
+    await expect(api.researchSourceFetch('official-code')).resolves.toEqual(fetched)
+    expect(invokeMock.mock.calls).toEqual([
+      ['research_source_index', { resourceId: 'official-code', localPath: 'sources/code' }],
+      ['research_source_search', { resourceId: 'official-code', query: 'train', limit: 4 }],
+      ['research_source_clone', { resourceId: 'official-code' }],
+      ['research_source_fetch', { resourceId: 'official-code' }]
     ])
   })
 
@@ -913,13 +1095,12 @@ describe('Tauri DesktopApi adapter', () => {
     eventCallbacks.get('app-command')?.({ payload: 'file.open' })
     eventCallbacks.get('app-command')?.({ payload: 'window.close' })
 
-    expect(command).toHaveBeenCalledOnce()
-    expect(command).toHaveBeenCalledWith('file.open')
+    expect(command.mock.calls).toEqual([['file.open'], ['window.close']])
 
     api.removeAppCommandListener()
     await vi.waitFor(() => expect(unlistenMock).toHaveBeenCalledOnce())
     eventCallbacks.get('app-command')?.({ payload: 'file.save' })
-    expect(command).toHaveBeenCalledOnce()
+    expect(command).toHaveBeenCalledTimes(2)
   })
 
   it('maps TexLab lifecycle, JSON-RPC, and channel events', async () => {

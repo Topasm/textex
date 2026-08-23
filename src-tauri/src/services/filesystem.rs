@@ -64,7 +64,10 @@ async fn open_selected_file(state: &AppState, selected_path: PathBuf) -> AppResu
     })?;
     let canonical_parent = canonicalize(parent.to_path_buf(), "resolve parent directory").await?;
     ensure_directory(&canonical_parent).await?;
-    state.set_project_root(canonical_parent)?;
+    // A picker grants this canonical parent for one subsequent activation. It
+    // must not switch the active native session merely because the renderer is
+    // browsing for a path.
+    state.grant_project_selection(canonical_parent)?;
     Ok(result)
 }
 
@@ -82,7 +85,7 @@ pub async fn open_directory(app: &AppHandle, state: &AppState) -> AppResult<Opti
     ensure_directory(&canonical).await?;
     let display_path = path_to_string(&canonical)?;
 
-    state.set_project_root(canonical)?;
+    state.grant_project_selection(canonical)?;
     Ok(Some(display_path))
 }
 
@@ -181,6 +184,7 @@ pub async fn save_file(
     file_path: &str,
     content: String,
 ) -> AppResult<SuccessResult> {
+    let _project_operation = state.lock_project_operation().await;
     let requested = require_absolute_str(file_path)?;
     let target = resolve_write_target(state, requested).await?;
     write_files_transactionally(vec![(target, content.into_bytes())]).await?;
@@ -194,6 +198,7 @@ pub async fn write_file_binary(
     data: Vec<u8>,
 ) -> AppResult<SaveFileAsResult> {
     ensure_binary_write_size(data.len())?;
+    let _project_operation = state.lock_project_operation().await;
     let requested = require_absolute_str(file_path)?;
     let target = resolve_write_target(state, requested).await?;
     let target = write_binary_without_overwrite(target, &data).await?;
@@ -319,7 +324,7 @@ async fn save_as_selected(
     content: String,
 ) -> AppResult<SaveFileAsResult> {
     let requested = require_absolute_path(&selected_path)?;
-    trust_dialog_parent_if_no_project(state, &requested).await?;
+    let _project_operation = state.lock_project_operation().await;
     let target = resolve_write_target(state, requested).await?;
     let file_path = path_to_string(&target)?;
     write_files_transactionally(vec![(target, content.into_bytes())]).await?;
@@ -330,6 +335,7 @@ pub async fn save_file_batch(
     state: &AppState,
     files: Vec<SaveFileInput>,
 ) -> AppResult<SuccessResult> {
+    let _project_operation = state.lock_project_operation().await;
     let mut targets = Vec::with_capacity(files.len());
     let mut unique_targets = HashSet::with_capacity(files.len());
 
@@ -354,6 +360,7 @@ pub async fn save_file_batch(
 }
 
 pub async fn create_file(state: &AppState, file_path: &str) -> AppResult<SuccessResult> {
+    let _project_operation = state.lock_project_operation().await;
     let requested = require_absolute_str(file_path)?;
     let target = resolve_write_target(state, requested).await?;
     // Match the editor's create-file contract by truncating an existing file.
@@ -362,6 +369,7 @@ pub async fn create_file(state: &AppState, file_path: &str) -> AppResult<Success
 }
 
 pub async fn create_directory(state: &AppState, dir_path: &str) -> AppResult<SuccessResult> {
+    let _project_operation = state.lock_project_operation().await;
     let requested = require_absolute_str(dir_path)?;
     let target = resolve_directory_target(state, requested).await?;
     let display_path = path_to_string(&target)?;
@@ -382,6 +390,7 @@ pub async fn copy_file(
     source: &str,
     destination: &str,
 ) -> AppResult<SuccessResult> {
+    let _project_operation = state.lock_project_operation().await;
     let source = resolve_existing_file(state, require_absolute_str(source)?, "copy source").await?;
     let destination = resolve_write_target(state, require_absolute_str(destination)?).await?;
 
@@ -399,6 +408,7 @@ pub async fn rename_path(
     source: &str,
     destination: &str,
 ) -> AppResult<SuccessResult> {
+    let _project_operation = state.lock_project_operation().await;
     let source =
         resolve_existing_entry(state, require_absolute_str(source)?, "rename source").await?;
     reject_project_root(state, &source)?;
@@ -454,6 +464,7 @@ pub async fn rename_path(
 }
 
 pub async fn delete_path(state: &AppState, path: &str) -> AppResult<SuccessResult> {
+    let _project_operation = state.lock_project_operation().await;
     let path = resolve_existing_entry(state, require_absolute_str(path)?, "delete path").await?;
     reject_project_root(state, &path)?;
     let metadata = fs::metadata(&path)
@@ -605,48 +616,6 @@ async fn resolve_write_target(state: &AppState, requested: PathBuf) -> AppResult
             source,
         )),
     }
-}
-
-async fn trust_dialog_parent_if_no_project(state: &AppState, requested: &Path) -> AppResult<()> {
-    match state.project_root() {
-        Ok(_) => return Ok(()),
-        Err(AppError::ProjectNotOpen) => {}
-        Err(error) => return Err(error),
-    }
-
-    let trusted_parent = match fs::symlink_metadata(requested).await {
-        Ok(_) => {
-            let canonical = canonicalize(requested.to_path_buf(), "resolve selected file").await?;
-            canonical
-                .parent()
-                .ok_or_else(|| {
-                    AppError::InvalidPath(format!(
-                        "selected path has no parent directory: {}",
-                        requested.to_string_lossy()
-                    ))
-                })?
-                .to_path_buf()
-        }
-        Err(source) if source.kind() == io::ErrorKind::NotFound => {
-            let parent = requested.parent().ok_or_else(|| {
-                AppError::InvalidPath(format!(
-                    "selected path has no parent directory: {}",
-                    requested.to_string_lossy()
-                ))
-            })?;
-            canonicalize(parent.to_path_buf(), "resolve selected parent directory").await?
-        }
-        Err(source) => {
-            return Err(AppError::io(
-                "inspect selected file",
-                requested.to_string_lossy().into_owned(),
-                source,
-            ));
-        }
-    };
-
-    ensure_directory(&trusted_parent).await?;
-    state.set_project_root(trusted_parent)
 }
 
 async fn resolve_existing_file(
@@ -1425,7 +1394,7 @@ mod tests {
     }
 
     #[test]
-    fn opening_a_file_trusts_its_canonical_parent() {
+    fn opening_a_file_grants_its_parent_without_switching_projects() {
         let project = TestDirectory::new("open-file");
         let file = project.child("main.tex");
         fs::write(&file, "TextEx").expect("write fixture");
@@ -1435,24 +1404,42 @@ mod tests {
 
         assert_eq!(result.content, "TextEx");
         assert_eq!(result.file_path, path_string(&file));
-        assert_eq!(state.project_root().expect("trusted root"), project.path());
+        assert!(state.project_root().is_err());
+        assert!(state
+            .consume_project_selection(project.path())
+            .expect("consume picker grant"));
+        assert!(!state
+            .consume_project_selection(project.path())
+            .expect("picker grant is one shot"));
     }
 
     #[test]
-    fn save_as_establishes_a_root_only_when_no_project_is_open() {
+    fn save_as_never_establishes_or_escapes_the_active_project_root() {
         let first = TestDirectory::new("save-as-first");
         let second = TestDirectory::new("save-as-second");
         let state = AppState::default();
         let first_file = first.child("untitled.tex");
+
+        let no_project_error = block_on(save_as_selected(
+            &state,
+            first_file.clone(),
+            "first".to_owned(),
+        ))
+        .expect_err("Save As cannot create native project authority");
+        assert!(no_project_error
+            .to_string()
+            .contains("No project directory is open"));
+        state
+            .set_project_root(first.path().to_path_buf())
+            .expect("activate first project");
 
         let result = block_on(save_as_selected(
             &state,
             first_file.clone(),
             "first".to_owned(),
         ))
-        .expect("initial Save As");
+        .expect("Save As inside the active project");
         assert_eq!(result.file_path, path_string(&first_file));
-        assert_eq!(state.project_root().expect("trusted root"), first.path());
 
         let outside = second.child("outside.tex");
         let error = block_on(save_as_selected(&state, outside, "outside".to_owned()))

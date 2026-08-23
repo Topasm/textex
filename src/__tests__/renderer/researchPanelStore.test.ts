@@ -36,4 +36,17 @@ describe('research panel project state', () => {
       researchReferenceSource: 'online'
     })
   })
+
+  it('persists the project profile tab like other research tabs', () => {
+    useProjectStore.getState().setProjectRoot('/paper')
+    useProjectStore.getState().openResearchPanel('profile')
+
+    useProjectStore.getState().setProjectRoot('/other')
+    useProjectStore.getState().setProjectRoot('/paper')
+
+    expect(useProjectStore.getState()).toMatchObject({
+      isResearchPanelOpen: true,
+      researchPanelTab: 'profile'
+    })
+  })
 })

@@ -117,6 +117,7 @@ export class LspClient {
   private options: LspClientOptions | null = null
   private disposables = new DisposableStore()
   private documentVersions = new Map<string, number>()
+  private pendingDocumentChanges = new Set<string>()
   private lifecycleGeneration = 0
 
   // Request deduplication: map from dedupe key to the in-flight request ID
@@ -265,11 +266,19 @@ export class LspClient {
     }>
 
     const filePath = uriToFilePath(uri)
+    const versionKey = documentVersionKey(filePath)
+    const currentVersion = this.documentVersions.get(versionKey)
     const diagnosticVersion = params.version
-    if (typeof diagnosticVersion === 'number') {
-      const currentVersion = this.documentVersions.get(documentVersionKey(filePath))
-      if (currentVersion === undefined || diagnosticVersion !== currentVersion) return
-    }
+    // The LSP version is optional, but applying an unversioned result cannot
+    // prove that it belongs to the current editor revision. Fail closed and
+    // only publish diagnostics for an open, tracked, exact document version.
+    if (
+      currentVersion === undefined ||
+      this.pendingDocumentChanges.has(versionKey) ||
+      typeof diagnosticVersion !== 'number' ||
+      diagnosticVersion !== currentVersion
+    )
+      return
     const models = monaco.editor.getModels()
     const model = models.find((m) => {
       const mUri = m.uri.toString()
@@ -550,6 +559,7 @@ export class LspClient {
     this.inflightRequests.clear()
     this.nextRequestId = 1
     this.documentVersions.clear()
+    this.pendingDocumentChanges.clear()
     this.options = null
     this.disposables.dispose()
     this.disposables = new DisposableStore()
@@ -568,6 +578,7 @@ export class LspClient {
     const versionKey = documentVersionKey(filePath)
     const version = (this.documentVersions.get(versionKey) || 0) + 1
     this.documentVersions.set(versionKey, version)
+    this.pendingDocumentChanges.delete(versionKey)
     const lang = filePath.endsWith('.bib') ? 'bibtex' : 'latex'
     this.sendNotification('textDocument/didOpen', {
       textDocument: { uri: filePathToUri(filePath), languageId: lang, version, text: content }
@@ -579,6 +590,7 @@ export class LspClient {
     const versionKey = documentVersionKey(filePath)
     const version = (this.documentVersions.get(versionKey) || 0) + 1
     this.documentVersions.set(versionKey, version)
+    this.pendingDocumentChanges.delete(versionKey)
     this.sendNotification('textDocument/didChange', {
       textDocument: { uri: filePathToUri(filePath), version },
       contentChanges: [{ text: content }]
@@ -598,6 +610,28 @@ export class LspClient {
       textDocument: { uri: filePathToUri(filePath) }
     })
     this.documentVersions.delete(documentVersionKey(filePath))
+    this.pendingDocumentChanges.delete(documentVersionKey(filePath))
+  }
+
+  /** Fences server results during the renderer's debounced didChange window. */
+  markDocumentChanged(filePath: string): void {
+    if (!this._initialized) return
+    const versionKey = documentVersionKey(filePath)
+    if (!this.documentVersions.has(versionKey)) return
+    this.pendingDocumentChanges.add(versionKey)
+
+    const monaco = this.options?.monaco
+    if (!monaco?.editor?.getModels || !monaco.editor.setModelMarkers) return
+    const uri = filePathToUri(filePath)
+    const model = monaco.editor
+      .getModels()
+      .find(
+        (candidate) =>
+          candidate.uri.toString() === uri ||
+          candidate.uri.toString().endsWith(filePath) ||
+          filePath.endsWith(candidate.uri.path)
+      )
+    if (model) monaco.editor.setModelMarkers(model, LSP_MARKER_OWNER, [])
   }
 
   async requestDocumentSymbols(filePath: string): Promise<DocumentSymbolNode[]> {

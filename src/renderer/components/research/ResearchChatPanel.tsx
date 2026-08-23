@@ -1,5 +1,12 @@
-import { useCallback, useState } from 'react'
-import { FileText, RotateCcw, Terminal } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { FileText, RotateCcw, Send, Terminal } from 'lucide-react'
+import type {
+  ResearchChatContext,
+  ResearchChatMessage,
+  ResearchProfile,
+  ResearchResource
+} from '../../../shared/types'
+import { documentRegistry } from '../../models/documentRegistry'
 import { useEditorStore } from '../../store/useEditorStore'
 import { useProjectStore } from '../../store/useProjectStore'
 import { dirname } from '../../utils/path'
@@ -8,70 +15,376 @@ interface ResearchChatPanelProps {
   onAiDraft: () => void
 }
 
+const DOCUMENT_CONTEXT_LIMIT = 24_000
+const HISTORY_LIMIT = 12
+
+function paperContext(profile: ResearchProfile): ResearchChatContext | null {
+  const paper = profile.paper
+  const content = [
+    paper.title && `Title: ${paper.title}`,
+    paper.abstract && `Abstract: ${paper.abstract}`,
+    paper.doi && `DOI: ${paper.doi}`,
+    paper.arxiv && `arXiv: ${paper.arxiv}`,
+    paper.venue && `Venue: ${paper.venue}`,
+    paper.website && `Website: ${paper.website}`
+  ]
+    .filter(Boolean)
+    .join('\n')
+  return content ? { kind: 'paper', label: paper.title || 'Paper metadata', content } : null
+}
+
+function authorContext(profile: ResearchProfile): ResearchChatContext | null {
+  if (profile.paper.authors.length === 0) return null
+  return {
+    kind: 'author',
+    label: 'Paper authors',
+    content: profile.paper.authors
+      .map((author) =>
+        [
+          author.name,
+          author.role && `role=${author.role}`,
+          author.homepage && `homepage=${author.homepage}`,
+          author.github && `github=${author.github}`,
+          author.orcid && `orcid=${author.orcid}`
+        ]
+          .filter(Boolean)
+          .join('; ')
+      )
+      .join('\n')
+  }
+}
+
+function resourceMetadataContext(resource: ResearchResource): ResearchChatContext {
+  const source = resource.url || resource.sshUrl || resource.localPath
+  return {
+    kind: resource.kind === 'git' ? 'repository' : 'website',
+    resourceId: resource.id,
+    label: resource.label || resource.id,
+    source,
+    content: [
+      `Resource kind: ${resource.kind}`,
+      resource.url && `URL: ${resource.url}`,
+      resource.sshUrl && `SSH remote: ${resource.sshUrl}`,
+      resource.localPath && `Local path: ${resource.localPath}`,
+      resource.branch && `Branch: ${resource.branch}`
+    ]
+      .filter(Boolean)
+      .join('\n')
+  }
+}
+
 export function ResearchChatPanel({ onAiDraft }: ResearchChatPanelProps) {
   const projectRoot = useProjectStore((state) => state.projectRoot)
   const filePath = useEditorStore((state) => state.filePath)
   const workDir = projectRoot || (filePath ? dirname(filePath) : '')
+  const [profile, setProfile] = useState<ResearchProfile | null>(null)
+  const [selectedContexts, setSelectedContexts] = useState<Set<string>>(new Set())
+  const [messages, setMessages] = useState<ResearchChatMessage[]>([])
+  const [prompt, setPrompt] = useState('')
   const [status, setStatus] = useState('')
   const [busy, setBusy] = useState(false)
+  const loadGeneration = useRef(0)
+  const requestGeneration = useRef(0)
+  const requestInFlight = useRef(false)
+
+  const isCurrentRequest = useCallback((generation: number, root: string) => {
+    return (
+      requestGeneration.current === generation && useProjectStore.getState().projectRoot === root
+    )
+  }, [])
+
+  useEffect(() => {
+    const generation = ++loadGeneration.current
+    requestGeneration.current += 1
+    requestInFlight.current = false
+    setProfile(null)
+    setSelectedContexts(new Set())
+    setMessages([])
+    setPrompt('')
+    setStatus('')
+    setBusy(false)
+    if (!projectRoot) return
+    void window.api
+      .researchProfileLoad()
+      .then((loaded) => {
+        if (loadGeneration.current !== generation) return
+        setProfile(loaded)
+        setSelectedContexts(
+          new Set([
+            'paper',
+            'authors',
+            ...(filePath ? ['document'] : []),
+            ...loaded.resources
+              .filter((resource) => resource.chatAccess !== 'none')
+              .map((resource) => `resource:${resource.id}`)
+          ])
+        )
+      })
+      .catch((error: unknown) => {
+        if (loadGeneration.current === generation)
+          setStatus(error instanceof Error ? error.message : String(error))
+      })
+  }, [filePath, projectRoot])
+
+  const contextChips = useMemo(
+    () => [
+      ...(profile && paperContext(profile) ? [{ id: 'paper', label: 'Paper' }] : []),
+      ...(profile?.paper.authors.length ? [{ id: 'authors', label: 'Authors' }] : []),
+      ...(filePath ? [{ id: 'document', label: 'Current document' }] : []),
+      ...(profile?.resources
+        .filter((resource) => resource.chatAccess !== 'none')
+        .map((resource) => ({ id: `resource:${resource.id}`, label: resource.label })) ?? [])
+    ],
+    [filePath, profile]
+  )
+
+  const toggleContext = (id: string) => {
+    setSelectedContexts((current) => {
+      const next = new Set(current)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const buildContexts = useCallback(
+    async (
+      question: string,
+      generation: number,
+      root: string
+    ): Promise<ResearchChatContext[] | null> => {
+      if (!profile || !isCurrentRequest(generation, root)) return null
+      const contexts: ResearchChatContext[] = []
+      if (selectedContexts.has('paper')) {
+        const context = paperContext(profile)
+        if (context) contexts.push(context)
+      }
+      if (selectedContexts.has('authors')) {
+        const context = authorContext(profile)
+        if (context) contexts.push(context)
+      }
+      if (selectedContexts.has('document') && filePath) {
+        const content = documentRegistry.snapshot(filePath)?.text ?? ''
+        if (content.trim()) {
+          contexts.push({
+            kind: 'document',
+            label: filePath.split(/[\\/]/u).at(-1) || 'Current document',
+            source: filePath,
+            content: content.slice(0, DOCUMENT_CONTEXT_LIMIT)
+          })
+        }
+      }
+
+      for (const resource of profile.resources) {
+        if (!isCurrentRequest(generation, root)) return null
+        if (!selectedContexts.has(`resource:${resource.id}`) || resource.chatAccess === 'none')
+          continue
+        const metadata = resourceMetadataContext(resource)
+        if (resource.chatAccess === 'snapshot' && resource.kind !== 'git') {
+          try {
+            const snapshot = await window.api.researchResourceSnapshot(resource.id)
+            if (!isCurrentRequest(generation, root)) return null
+            contexts.push({
+              ...metadata,
+              content: `${metadata.content}\n\nSnapshot fetched from ${snapshot.url} at ${new Date(snapshot.fetchedAt).toISOString()}${snapshot.truncated ? ' (truncated)' : ''}:\n${snapshot.content}`
+            })
+            continue
+          } catch (error) {
+            if (!isCurrentRequest(generation, root)) return null
+            setStatus(
+              `${resource.label}: ${error instanceof Error ? error.message : String(error)}`
+            )
+          }
+        }
+        if (
+          resource.kind === 'git' &&
+          resource.chatAccess === 'indexed-read' &&
+          resource.localPath
+        ) {
+          try {
+            await window.api.researchSourceIndex(resource.id, resource.localPath)
+            if (!isCurrentRequest(generation, root)) return null
+            const matches = await window.api.researchSourceSearch(resource.id, question, 6)
+            if (!isCurrentRequest(generation, root)) return null
+            if (matches.length > 0) {
+              contexts.push({
+                ...metadata,
+                content: `${metadata.content}\n\n${matches
+                  .map(
+                    (match) =>
+                      `File: ${match.path}:${match.line} (snippet starts at line ${match.startLine})\n${match.snippet}`
+                  )
+                  .join('\n\n')}`
+              })
+              continue
+            }
+          } catch (error) {
+            if (!isCurrentRequest(generation, root)) return null
+            setStatus(
+              `${resource.label}: ${error instanceof Error ? error.message : String(error)}`
+            )
+          }
+        }
+        contexts.push(metadata)
+      }
+      return isCurrentRequest(generation, root) ? contexts : null
+    },
+    [filePath, isCurrentRequest, profile, selectedContexts]
+  )
+
+  const send = useCallback(async () => {
+    const question = prompt.trim()
+    if (!question || !projectRoot || !profile || requestInFlight.current) return
+    const root = projectRoot
+    const generation = ++requestGeneration.current
+    requestInFlight.current = true
+    setBusy(true)
+    setStatus('Gathering selected research context…')
+    try {
+      const contexts = await buildContexts(question, generation, root)
+      if (!contexts || !isCurrentRequest(generation, root)) return
+      const history = messages.slice(-HISTORY_LIMIT)
+      setMessages((current) => [...current, { role: 'user', content: question }])
+      setPrompt('')
+      setStatus('Thinking…')
+      const answer = await window.api.aiResearchChat({
+        message: question,
+        history,
+        contexts,
+        instructions: profile.instructions
+      })
+      if (!isCurrentRequest(generation, root)) return
+      setMessages((current) => [...current, { role: 'assistant', content: answer }])
+      setStatus('')
+    } catch (error) {
+      if (isCurrentRequest(generation, root)) {
+        setStatus(error instanceof Error ? error.message : String(error))
+      }
+    } finally {
+      if (isCurrentRequest(generation, root)) {
+        requestInFlight.current = false
+        setBusy(false)
+      }
+    }
+  }, [buildContexts, isCurrentRequest, messages, profile, projectRoot, prompt])
 
   const launch = useCallback(
     async (provider: 'claude' | 'codex', resume: boolean) => {
-      if (!workDir || busy) return
+      if (!workDir || !projectRoot || requestInFlight.current) return
+      const root = projectRoot
+      const generation = ++requestGeneration.current
+      requestInFlight.current = true
       setBusy(true)
       setStatus(`Checking ${provider === 'claude' ? 'Claude Code' : 'Codex CLI'}…`)
       try {
         const available =
           provider === 'claude' ? await window.api.aiCheckCli() : await window.api.aiCheckCodexCli()
+        if (!isCurrentRequest(generation, root)) return
         if (!available)
           throw new Error(`${provider === 'claude' ? 'Claude Code' : 'Codex CLI'} was not found.`)
         const result =
           provider === 'claude'
             ? await window.api.aiOpenClaudeTerminal({ workDir, resume })
             : await window.api.aiOpenCodexTerminal({ workDir, resume })
-        setStatus(result.command)
+        if (isCurrentRequest(generation, root)) setStatus(result.command)
       } catch (error) {
-        setStatus(error instanceof Error ? error.message : String(error))
+        if (isCurrentRequest(generation, root)) {
+          setStatus(error instanceof Error ? error.message : String(error))
+        }
       } finally {
-        setBusy(false)
+        if (isCurrentRequest(generation, root)) {
+          requestInFlight.current = false
+          setBusy(false)
+        }
       }
     },
-    [busy, workDir]
+    [isCurrentRequest, projectRoot, workDir]
   )
+
+  if (!projectRoot)
+    return <div className="research-empty">Open a project to use Research Chat.</div>
 
   return (
     <div className="research-chat-panel">
-      <div className="research-section-heading">AI workspace</div>
-      <p className="research-muted">
-        Generate a draft or continue an AI coding session in this project. Conversational research
-        chat will build on this panel in a later release.
-      </p>
-      <button className="research-primary-action" onClick={onAiDraft}>
-        <FileText size={16} />
-        <span>
-          <strong>AI Draft</strong>
-          <small>Generate and insert LaTeX.</small>
-        </span>
-      </button>
-      <div className="research-action-grid">
-        <button disabled={!workDir || busy} onClick={() => launch('claude', false)}>
-          <Terminal size={15} /> Claude Code
-        </button>
-        <button disabled={!workDir || busy} onClick={() => launch('claude', true)}>
-          <RotateCcw size={15} /> Resume Claude
-        </button>
-        <button disabled={!workDir || busy} onClick={() => launch('codex', false)}>
-          <Terminal size={15} /> Codex CLI
-        </button>
-        <button disabled={!workDir || busy} onClick={() => launch('codex', true)}>
-          <RotateCcw size={15} /> Resume Codex
-        </button>
+      <div className="research-section-heading">Research Chat</div>
+      <div className="research-chat-messages" aria-live="polite">
+        {messages.length === 0 ? (
+          <p className="research-empty">Ask about the paper, current document, or indexed code.</p>
+        ) : (
+          messages.map((message, index) => (
+            <div
+              className={`research-chat-message ${message.role}`}
+              key={`${message.role}-${index}`}
+            >
+              <strong>{message.role === 'user' ? 'You' : 'Research Chat'}</strong>
+              <p>{message.content}</p>
+            </div>
+          ))
+        )}
       </div>
-      {status && (
-        <pre className="research-status" aria-live="polite">
-          {status}
-        </pre>
-      )}
+
+      <div className="research-chat-composer">
+        <div className="research-subheading">Context</div>
+        <div className="research-context-chips">
+          {contextChips.map((chip) => (
+            <button
+              type="button"
+              className={selectedContexts.has(chip.id) ? 'active' : ''}
+              aria-pressed={selectedContexts.has(chip.id)}
+              onClick={() => toggleContext(chip.id)}
+              key={chip.id}
+            >
+              {chip.label}
+            </button>
+          ))}
+        </div>
+        <textarea
+          aria-label="Research question"
+          value={prompt}
+          placeholder="Ask about this paper or its source code…"
+          onChange={(event) => setPrompt(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+              event.preventDefault()
+              void send()
+            }
+          }}
+        />
+        <button
+          className="research-chat-send"
+          type="button"
+          disabled={!prompt.trim() || !profile || busy}
+          onClick={() => void send()}
+        >
+          <Send size={14} /> {busy ? 'Working…' : 'Send'}
+        </button>
+        {status && (
+          <div className="research-status" role="status">
+            {status}
+          </div>
+        )}
+      </div>
+
+      <details className="research-chat-tools">
+        <summary>Draft and CLI tools</summary>
+        <button className="research-primary-action" onClick={onAiDraft}>
+          <FileText size={16} /> AI Draft
+        </button>
+        <div className="research-action-grid">
+          <button disabled={!workDir || busy} onClick={() => launch('claude', false)}>
+            <Terminal size={15} /> Claude Code
+          </button>
+          <button disabled={!workDir || busy} onClick={() => launch('claude', true)}>
+            <RotateCcw size={15} /> Resume Claude
+          </button>
+          <button disabled={!workDir || busy} onClick={() => launch('codex', false)}>
+            <Terminal size={15} /> Codex CLI
+          </button>
+          <button disabled={!workDir || busy} onClick={() => launch('codex', true)}>
+            <RotateCcw size={15} /> Resume Codex
+          </button>
+        </div>
+      </details>
     </div>
   )
 }

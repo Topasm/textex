@@ -343,15 +343,12 @@ export function OmniSearch({
       switch (result.kind) {
         case 'project': {
           const project = result.data as RecentProject
-          window.api
-            .readDirectory(project.path)
-            .then(() => openProject(project.path))
-            .catch(() => {
-              window.api
-                .removeRecentProject(project.path)
-                .then((s) => setRecentProjects(s.recentProjects ?? []))
-                .catch((err) => logError('OmniSearch:removeRecent', err))
-            })
+          openProject(project.path).catch(() => {
+            window.api
+              .removeRecentProject(project.path)
+              .then((s) => setRecentProjects(s.recentProjects ?? []))
+              .catch((err) => logError('OmniSearch:removeRecent', err))
+          })
           break
         }
         case 'template':

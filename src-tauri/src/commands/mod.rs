@@ -11,6 +11,7 @@ pub mod project_index;
 pub mod pty;
 pub mod references;
 pub mod research;
+pub mod research_source;
 pub mod runtime;
 pub mod settings;
 pub mod spellcheck;

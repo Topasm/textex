@@ -14,8 +14,8 @@ use crate::{
     state::AppState,
 };
 
-/// Opens a native file picker and makes the selected file's canonical parent
-/// the trusted root for subsequent filesystem commands.
+/// Opens a native file picker and grants the selected file's canonical parent
+/// for one subsequent project activation.
 #[tauri::command]
 pub async fn open_file(
     app: AppHandle,
@@ -24,8 +24,8 @@ pub async fn open_file(
     filesystem::open_file(&app, state.inner()).await
 }
 
-/// Opens a native folder picker and makes the selected directory the only
-/// project root accessible to subsequent filesystem commands.
+/// Opens a native folder picker and grants the selected canonical directory
+/// for one subsequent project activation.
 #[tauri::command]
 pub async fn open_directory(
     app: AppHandle,

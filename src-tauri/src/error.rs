@@ -76,6 +76,9 @@ pub enum AppError {
     #[error("Reference index operation failed: {0}")]
     ReferenceIndex(String),
 
+    #[error("Research source operation failed: {0}")]
+    ResearchSource(String),
+
     #[error("History operation failed: {0}")]
     History(String),
 

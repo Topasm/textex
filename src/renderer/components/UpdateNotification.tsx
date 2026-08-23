@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { useUiStore } from '../store/useUiStore'
+import { restartAfterUpdate } from '../services/applicationLifecycle'
 
 const DISMISSED_UPDATE_KEY = 'textex-dismissed-update-version'
 
@@ -31,6 +32,17 @@ function UpdateNotification() {
     useUiStore.getState().setUpdateStatus('idle')
   }
 
+  const handleRestart = async (): Promise<void> => {
+    try {
+      if (!(await restartAfterUpdate())) {
+        // Cancellation keeps the ready update available for a later restart.
+        return
+      }
+    } catch {
+      useUiStore.getState().setUpdateStatus('error')
+    }
+  }
+
   return (
     <div className="update-banner">
       <span className="update-banner-message">
@@ -53,9 +65,7 @@ function UpdateNotification() {
       )}
 
       {status === 'ready' && (
-        <button onClick={() => window.api.updateInstall()}>
-          {t('updateNotification.restart')}
-        </button>
+        <button onClick={() => void handleRestart()}>{t('updateNotification.restart')}</button>
       )}
 
       <button

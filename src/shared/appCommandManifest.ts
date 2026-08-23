@@ -69,7 +69,9 @@ export const APP_COMMAND_MANIFEST = [
   { id: 'pdf.fitWidth', shortcut: { key: '0', mod: true } },
   { id: 'pdf.fitHeight', shortcut: { key: '9', mod: true } },
   { id: 'app.settings', shortcut: { key: ',', mod: true } },
-  { id: 'app.checkUpdates' }
+  { id: 'app.checkUpdates' },
+  { id: 'window.close' },
+  { id: 'app.quit' }
 ] as const satisfies readonly AppCommandDefinition[]
 
 export type AppCommandId = (typeof APP_COMMAND_MANIFEST)[number]['id']

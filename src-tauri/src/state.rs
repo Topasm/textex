@@ -1,13 +1,16 @@
 use std::{
     collections::HashMap,
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::{
         atomic::{AtomicU64, Ordering},
         Arc, Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard,
     },
 };
 
-use tokio::sync::{oneshot, Notify};
+use tokio::sync::{
+    oneshot, Notify, RwLock as AsyncRwLock, RwLockReadGuard as AsyncRwLockReadGuard,
+    RwLockWriteGuard as AsyncRwLockWriteGuard,
+};
 
 use crate::{
     error::{AppError, AppResult},
@@ -17,6 +20,8 @@ use crate::{
 pub struct AppState {
     project_root: RwLock<Option<PathBuf>>,
     project_epoch: Arc<AtomicU64>,
+    project_transition: AsyncRwLock<()>,
+    selected_project_roots: Mutex<Vec<PathBuf>>,
     compiler: Mutex<CompilerRuntime>,
     compiler_changed: Notify,
     next_compilation_id: AtomicU64,
@@ -61,6 +66,8 @@ impl Default for AppState {
         Self {
             project_root: RwLock::new(None),
             project_epoch: Arc::new(AtomicU64::new(0)),
+            project_transition: AsyncRwLock::new(()),
+            selected_project_roots: Mutex::new(Vec::new()),
             compiler: Mutex::new(CompilerRuntime::default()),
             compiler_changed: Notify::new(),
             next_compilation_id: AtomicU64::new(0),
@@ -102,9 +109,53 @@ impl AppState {
         Ok((root, epoch, Arc::clone(&self.project_epoch)))
     }
 
+    pub(crate) async fn lock_project_transition(&self) -> AsyncRwLockWriteGuard<'_, ()> {
+        self.project_transition.write().await
+    }
+
+    pub(crate) async fn lock_project_operation(&self) -> AsyncRwLockReadGuard<'_, ()> {
+        self.project_transition.read().await
+    }
+
+    pub(crate) fn grant_project_selection(&self, root: PathBuf) -> AppResult<()> {
+        const MAX_SELECTION_GRANTS: usize = 16;
+
+        let mut grants = self
+            .selected_project_roots
+            .lock()
+            .map_err(|_| AppError::StatePoisoned)?;
+        grants.retain(|granted| !project_paths_equal(granted, &root));
+        grants.push(root);
+        if grants.len() > MAX_SELECTION_GRANTS {
+            let overflow = grants.len() - MAX_SELECTION_GRANTS;
+            grants.drain(..overflow);
+        }
+        Ok(())
+    }
+
+    pub(crate) fn consume_project_selection(&self, root: &Path) -> AppResult<bool> {
+        let mut grants = self
+            .selected_project_roots
+            .lock()
+            .map_err(|_| AppError::StatePoisoned)?;
+        let Some(index) = grants
+            .iter()
+            .position(|granted| project_paths_equal(granted, root))
+        else {
+            return Ok(false);
+        };
+        grants.swap_remove(index);
+        Ok(true)
+    }
+
+    pub(crate) fn current_project_epoch(&self) -> u64 {
+        self.project_epoch.load(Ordering::Acquire)
+    }
+
     pub(crate) async fn begin_compilation(
         &self,
         request: &CompileRequest,
+        expected_project_epoch: u64,
     ) -> AppResult<CompilationLease<'_>> {
         let id = self.next_compilation_id.fetch_add(1, Ordering::Relaxed) + 1;
         let pending = PendingCompilation {
@@ -115,6 +166,9 @@ impl AppState {
         };
         let cancel_active = {
             let mut compiler = self.lock_compiler()?;
+            if self.current_project_epoch() != expected_project_epoch {
+                return Err(AppError::CompilationCancelled);
+            }
             if compiler
                 .latest_request_by_document
                 .get(&pending.document_id)
@@ -168,6 +222,9 @@ impl AppState {
 
             let lease = {
                 let mut compiler = self.lock_compiler()?;
+                if self.current_project_epoch() != expected_project_epoch {
+                    return Err(AppError::CompilationCancelled);
+                }
                 let Some(queued_index) = compiler.pending.iter().position(|queued| queued.id == id)
                 else {
                     return Err(AppError::CompilationSuperseded);
@@ -218,6 +275,24 @@ impl AppState {
         Ok(cancel.send(()).is_ok())
     }
 
+    pub(crate) fn cancel_project_compilations(&self) -> AppResult<bool> {
+        let cancel = {
+            let mut compiler = self.lock_compiler()?;
+            compiler.pending.clear();
+            compiler.latest_request_by_document.clear();
+            compiler
+                .active
+                .as_mut()
+                .and_then(|compilation| compilation.cancel.take())
+        };
+        self.compiler_changed.notify_waiters();
+
+        // The active compile task owns its child process and reaps it after the
+        // cancellation signal. Pending waiters observe their removed entries
+        // and terminate without starting work for the closed project.
+        Ok(cancel.is_some_and(|cancel| cancel.send(()).is_ok()))
+    }
+
     fn read_root(&self) -> AppResult<RwLockReadGuard<'_, Option<PathBuf>>> {
         self.project_root
             .read()
@@ -252,6 +327,15 @@ impl AppState {
             compiler.pending.retain(|pending| pending.id != id);
         }
         self.compiler_changed.notify_waiters();
+    }
+}
+
+fn project_paths_equal(left: &Path, right: &Path) -> bool {
+    if cfg!(windows) {
+        left.to_string_lossy()
+            .eq_ignore_ascii_case(&right.to_string_lossy())
+    } else {
+        left == right
     }
 }
 
@@ -308,7 +392,10 @@ impl Drop for PendingRegistration<'_> {
 
 #[cfg(test)]
 mod tests {
-    use std::{path::PathBuf, sync::atomic::Ordering};
+    use std::{
+        path::PathBuf,
+        sync::{atomic::Ordering, Arc},
+    };
 
     use super::AppState;
     use crate::{
@@ -349,15 +436,51 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn project_transition_waits_for_project_operations() {
+        let state = Arc::new(AppState::default());
+        let operation = state.lock_project_operation().await;
+        let transition_state = Arc::clone(&state);
+        let mut transition = tokio::spawn(async move {
+            let _transition = transition_state.lock_project_transition().await;
+        });
+
+        assert!(timeout(Duration::from_millis(20), &mut transition)
+            .await
+            .is_err());
+        drop(operation);
+        timeout(Duration::from_millis(100), transition)
+            .await
+            .expect("transition should continue after the operation")
+            .expect("transition task should succeed");
+    }
+
+    #[test]
+    fn project_selection_grants_are_consumed_once() {
+        let state = AppState::default();
+        let root = PathBuf::from("/selected-project");
+        state
+            .grant_project_selection(root.clone())
+            .expect("grant selected project");
+
+        assert!(state
+            .consume_project_selection(&root)
+            .expect("consume selected project"));
+        assert!(!state
+            .consume_project_selection(&root)
+            .expect("selection grant must not be reusable"));
+    }
+
+    #[tokio::test]
     async fn newer_revision_preempts_the_active_compile() {
         let state = AppState::default();
         let first_request = request(1, "document-a", CompilePriority::Normal);
         let second_request = request(2, "document-a", CompilePriority::Normal);
+        let epoch = state.current_project_epoch();
         let mut first = state
-            .begin_compilation(&first_request)
+            .begin_compilation(&first_request, epoch)
             .await
             .expect("first lease");
-        let second = state.begin_compilation(&second_request);
+        let second = state.begin_compilation(&second_request, epoch);
         tokio::pin!(second);
 
         assert!(timeout(Duration::from_millis(20), &mut second)
@@ -376,8 +499,9 @@ mod tests {
     async fn cancellation_is_delivered_only_once() {
         let state = AppState::default();
         let compile_request = request(1, "document-a", CompilePriority::Normal);
+        let epoch = state.current_project_epoch();
         let mut lease = state
-            .begin_compilation(&compile_request)
+            .begin_compilation(&compile_request, epoch)
             .await
             .expect("lease");
         assert!(state.cancel_compilation().expect("first cancellation"));
@@ -391,12 +515,13 @@ mod tests {
         let active_request = request(1, "document-a", CompilePriority::High);
         let background_request = request(2, "document-b", CompilePriority::Background);
         let normal_request = request(3, "document-c", CompilePriority::Normal);
+        let epoch = state.current_project_epoch();
         let active = state
-            .begin_compilation(&active_request)
+            .begin_compilation(&active_request, epoch)
             .await
             .expect("active lease");
-        let background = state.begin_compilation(&background_request);
-        let normal = state.begin_compilation(&normal_request);
+        let background = state.begin_compilation(&background_request, epoch);
+        let normal = state.begin_compilation(&normal_request, epoch);
         tokio::pin!(background, normal);
 
         assert!(timeout(Duration::from_millis(20), &mut background)
@@ -424,12 +549,13 @@ mod tests {
         let active_request = request(1, "document-a", CompilePriority::High);
         let old_request = request(2, "document-b", CompilePriority::Normal);
         let new_request = request(3, "document-b", CompilePriority::Normal);
+        let epoch = state.current_project_epoch();
         let active = state
-            .begin_compilation(&active_request)
+            .begin_compilation(&active_request, epoch)
             .await
             .expect("active lease");
-        let old = state.begin_compilation(&old_request);
-        let new = state.begin_compilation(&new_request);
+        let old = state.begin_compilation(&old_request, epoch);
+        let new = state.begin_compilation(&new_request, epoch);
         tokio::pin!(old, new);
 
         assert!(timeout(Duration::from_millis(20), &mut old).await.is_err());
@@ -446,5 +572,51 @@ mod tests {
             .await
             .expect("new request should start")
             .expect("new lease");
+    }
+
+    #[tokio::test]
+    async fn project_close_cancels_active_and_pending_compiles_for_the_old_epoch() {
+        let state = AppState::default();
+        state
+            .set_project_root(PathBuf::from("/project-a"))
+            .expect("activate first project");
+        let epoch = state.current_project_epoch();
+        let active_request = request(1, "document-a", CompilePriority::High);
+        let pending_request = request(1, "document-b", CompilePriority::Normal);
+        let late_request = request(1, "document-c", CompilePriority::Normal);
+        let mut active = state
+            .begin_compilation(&active_request, epoch)
+            .await
+            .expect("active lease");
+        let pending = state.begin_compilation(&pending_request, epoch);
+        tokio::pin!(pending);
+        assert!(timeout(Duration::from_millis(20), &mut pending)
+            .await
+            .is_err());
+
+        state.clear_project_root().expect("clear first project");
+        assert!(state
+            .cancel_project_compilations()
+            .expect("cancel first project compiles"));
+        assert!(active.cancel_receiver().try_recv().is_ok());
+        assert!(matches!(
+            timeout(Duration::from_millis(100), &mut pending)
+                .await
+                .expect("pending compile should wake"),
+            Err(AppError::CompilationSuperseded)
+        ));
+        assert!(matches!(
+            state.begin_compilation(&late_request, epoch).await,
+            Err(AppError::CompilationCancelled)
+        ));
+
+        drop(active);
+        state
+            .set_project_root(PathBuf::from("/project-b"))
+            .expect("activate second project");
+        state
+            .begin_compilation(&active_request, state.current_project_epoch())
+            .await
+            .expect("request ids reset with the project session");
     }
 }

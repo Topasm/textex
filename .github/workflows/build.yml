@@ -12,6 +12,7 @@ on:
       - main
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
@@ -23,9 +24,9 @@ jobs:
     runs-on: ubuntu-latest
     name: Lint & Typecheck
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -52,9 +53,9 @@ jobs:
     runs-on: ubuntu-latest
     name: Test
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -69,9 +70,9 @@ jobs:
     runs-on: ubuntu-22.04
     name: Tauri Rust Test & Licenses
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -124,14 +125,18 @@ jobs:
     runs-on: ubuntu-latest
     name: Release Tag Preflight
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         if: startsWith(github.ref, 'refs/tags/v')
         with:
           node-version-file: .nvmrc
+
+      - name: Verify synchronized release version declarations
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: npm run check:release-version
 
       - name: Verify tag version and main ancestry before exposing signing secrets
         if: startsWith(github.ref, 'refs/tags/v')
@@ -140,6 +145,25 @@ jobs:
           test "$GITHUB_REF_NAME" = "v$(node -p \"require('./package.json').version\")"
           git fetch --no-tags origin main:refs/remotes/origin/main
           git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main
+
+      - name: Verify the tagged commit already passed the main workflow
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          successful_main_runs=$(
+            gh api --method GET \
+              -H "Accept: application/vnd.github+json" \
+              "/repos/${GITHUB_REPOSITORY}/actions/workflows/build.yml/runs" \
+              -f branch=main \
+              -f event=push \
+              -f status=success \
+              -f head_sha="$GITHUB_SHA" \
+              -f per_page=1 \
+              --jq '.total_count'
+          )
+          test "$successful_main_runs" -ge 1
 
   build:
     needs: [lint, test, rust-test, release-preflight]
@@ -168,7 +192,7 @@ jobs:
               src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
               src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz
               src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.sig
-          - os: macos-15
+          - os: macos-15-intel
             platform: mac-x64
             target: x86_64-apple-darwin
             rust_targets: x86_64-apple-darwin
@@ -192,9 +216,9 @@ jobs:
     name: Tauri Build (${{ matrix.platform }})
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -231,6 +255,8 @@ jobs:
           npx tauri --version
           if [[ "${{ matrix.platform }}" == "mac-arm64" ]]; then
             test "$(uname -m)" = "arm64"
+          elif [[ "${{ matrix.platform }}" == "mac-x64" ]]; then
+            test "$(uname -m)" = "x86_64"
           fi
 
       - name: Prepare and verify Tectonic sidecars and cache seed
@@ -584,7 +610,7 @@ jobs:
         run: find src-tauri/target -path '*/release/bundle/*' -type f -print 2>/dev/null || true
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: TextEx-Tauri-${{ matrix.platform }}
           path: ${{ matrix.artifact_paths }}
@@ -598,11 +624,11 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version-file: .nvmrc
 
@@ -617,7 +643,7 @@ jobs:
           git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main
 
       - name: Download signed packages
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: TextEx-Tauri-*
           path: artifacts
@@ -659,7 +685,7 @@ jobs:
           node -e "const p=require('./release-artifacts/latest.json').platforms; for (const k of ['linux-x86_64','linux-x86_64-appimage','linux-x86_64-deb','darwin-aarch64','darwin-x86_64','windows-x86_64']) if (!p[k]) throw new Error('missing '+k)"
 
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@c12583777ecdfd3be55c69cf75464299dc01057e # v3
         with:
           draft: false
           generate_release_notes: true

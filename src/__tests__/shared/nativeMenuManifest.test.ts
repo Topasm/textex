@@ -32,6 +32,10 @@ describe('native application menu', () => {
     ]) {
       expect(menuSource).toContain(`"${id}"`)
     }
+    expect(menuSource).not.toContain('toggle_maximize()')
+    expect(menuSource).toContain('window.is_maximized()')
+    expect(menuSource).toContain('window.maximize()')
+    expect(menuSource).toContain('window.unmaximize()')
   })
 
   it('keeps native capability-gated menu groups aligned with the renderer', () => {
@@ -51,7 +55,12 @@ describe('native application menu', () => {
 
   it('allows the renderer to subscribe to native app-command events', () => {
     expect(mainWindowCapability.permissions).toEqual(
-      expect.arrayContaining(['core:event:allow-listen', 'core:event:allow-unlisten'])
+      expect.arrayContaining([
+        'core:event:allow-listen',
+        'core:event:allow-unlisten',
+        'core:window:allow-close',
+        'core:window:allow-destroy'
+      ])
     )
   })
 })

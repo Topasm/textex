@@ -1,4 +1,4 @@
-use tauri::State;
+use tauri::{AppHandle, State};
 
 use crate::{
     error::AppResult,
@@ -9,6 +9,12 @@ use crate::{
 #[tauri::command]
 pub async fn open_external(url: String) -> AppResult<SuccessResult> {
     runtime::open_external(url.trim()).await
+}
+
+#[tauri::command]
+pub fn exit_app(app: AppHandle) -> AppResult<SuccessResult> {
+    app.exit(0);
+    Ok(SuccessResult::ok())
 }
 
 #[tauri::command]

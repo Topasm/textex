@@ -1,5 +1,6 @@
 use std::{
     ffi::OsString,
+    io,
     path::{Path, PathBuf},
     process::Stdio,
     sync::{
@@ -39,6 +40,7 @@ pub struct LspState {
 }
 
 struct LspInner {
+    transition: Mutex<()>,
     runtime: Mutex<LspRuntime>,
     next_generation: AtomicU64,
 }
@@ -66,6 +68,7 @@ impl Default for LspState {
     fn default() -> Self {
         Self {
             inner: Arc::new(LspInner {
+                transition: Mutex::new(()),
                 runtime: Mutex::new(LspRuntime {
                     status: LspStatus::Stopped,
                     session: None,
@@ -86,8 +89,10 @@ pub async fn start(
 ) -> AppResult<bool> {
     let (_, project_epoch, epoch_tracker) = project_state.project_root_epoch()?;
     let workspace = filesystem::resolve_project_directory(project_state, workspace_root).await?;
+    let candidates = binary_candidates(app)?;
+    let _transition = state.inner.transition.lock().await;
     ensure_project_epoch(project_epoch, &epoch_tracker)?;
-    state.stop().await?;
+    state.stop_locked().await?;
     state
         .set_status_for_project(
             LspStatus::Starting,
@@ -98,7 +103,6 @@ pub async fn start(
         )
         .await?;
 
-    let candidates = binary_candidates(app)?;
     let mut errors = Vec::new();
     for candidate in candidates {
         ensure_project_epoch(project_epoch, &epoch_tracker)?;
@@ -107,7 +111,7 @@ pub async fn start(
                 let (Some(stdin), Some(stdout), Some(stderr)) =
                     (child.stdin.take(), child.stdout.take(), child.stderr.take())
                 else {
-                    let _ = child.start_kill();
+                    terminate_child(&mut child).await;
                     errors.push(format!("{}: piped stdio was unavailable", candidate.source));
                     continue;
                 };
@@ -174,6 +178,11 @@ fn ensure_project_epoch(project_epoch: u64, epoch_tracker: &AtomicU64) -> AppRes
 
 impl LspState {
     pub async fn stop(&self) -> AppResult<()> {
+        let _transition = self.inner.transition.lock().await;
+        self.stop_locked().await
+    }
+
+    async fn stop_locked(&self) -> AppResult<()> {
         let (session, channel) = {
             let mut runtime = self.inner.runtime.lock().await;
             runtime.status = LspStatus::Stopped;
@@ -344,6 +353,7 @@ fn spawn_candidate(candidate: &BinaryCandidate, workspace: &Path) -> std::io::Re
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .kill_on_drop(true);
+    isolate_process_group(&mut command);
     command.spawn()
 }
 
@@ -501,8 +511,48 @@ async fn fail_session(inner: &LspInner, generation: u64, error: String) {
 }
 
 async fn terminate_child(child: &mut Child) {
-    let _ = child.start_kill();
-    let _ = timeout(STOP_TIMEOUT, child.wait()).await;
+    if child.try_wait().ok().flatten().is_some() {
+        return;
+    }
+    let _ = terminate_running_child(child).await;
+    if timeout(STOP_TIMEOUT, child.wait()).await.is_err() {
+        let _ = child.start_kill();
+        let _ = child.wait().await;
+    }
+}
+
+#[cfg(unix)]
+fn isolate_process_group(command: &mut Command) {
+    command.process_group(0);
+}
+
+#[cfg(not(unix))]
+fn isolate_process_group(_command: &mut Command) {}
+
+#[cfg(unix)]
+async fn terminate_running_child(child: &mut Child) -> io::Result<()> {
+    let process_group_id = child
+        .id()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "TexLab process has no PID"))?;
+    let process_group_id = libc::pid_t::try_from(process_group_id)
+        .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "TexLab PID is out of range"))?;
+    // SAFETY: the PID comes from the live child and is negated intentionally to
+    // address the isolated process group created before spawn.
+    let result = unsafe { libc::kill(-process_group_id, libc::SIGKILL) };
+    if result == 0 {
+        return Ok(());
+    }
+    let error = io::Error::last_os_error();
+    if error.raw_os_error() == Some(libc::ESRCH) {
+        Ok(())
+    } else {
+        Err(error)
+    }
+}
+
+#[cfg(not(unix))]
+async fn terminate_running_child(child: &mut Child) -> io::Result<()> {
+    child.kill().await
 }
 
 fn lsp_error(message: impl Into<String>) -> AppError {

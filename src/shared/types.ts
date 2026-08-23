@@ -272,6 +272,35 @@ export interface AiCustomProcessRequest {
   summaryContext: AiContextEntry | null
 }
 
+export interface ResearchChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+interface ResearchChatContextBase {
+  label: string
+  source?: string
+  content: string
+}
+
+export type ResearchChatContext =
+  | (ResearchChatContextBase & {
+      kind: 'repository' | 'website'
+      /** Binds native Chat-access validation to the saved project profile. */
+      resourceId: string
+    })
+  | (ResearchChatContextBase & {
+      kind: 'paper' | 'document' | 'author'
+      resourceId?: never
+    })
+
+export interface ResearchChatRequest {
+  message: string
+  history: ResearchChatMessage[]
+  contexts: ResearchChatContext[]
+  instructions: string[]
+}
+
 export interface ClaudeTerminalRequest {
   workDir: string
   resume?: boolean
@@ -345,6 +374,92 @@ export interface ResearchConfig {
   zoteroFile: string
   zoteroCollection: string | null
   syncOnOpen: boolean
+}
+
+/** A person associated with the paper-level research profile. */
+export interface ResearchPerson {
+  id: string
+  name: string
+  role?: string
+  email?: string
+  homepage?: string
+  github?: string
+  orcid?: string
+}
+
+export interface ResearchPaperMetadata {
+  title: string
+  abstract?: string
+  doi?: string
+  arxiv?: string
+  venue?: string
+  website?: string
+  authors: ResearchPerson[]
+}
+
+export type ResearchResourceKind = 'git' | 'website' | 'dataset' | 'documentation'
+export type ResearchChatAccess = 'none' | 'metadata' | 'indexed-read' | 'snapshot'
+
+/** A non-secret external or local resource attached to a research project. */
+export interface ResearchResource {
+  id: string
+  kind: ResearchResourceKind
+  label: string
+  url?: string
+  sshUrl?: string
+  localPath?: string
+  branch?: string
+  chatAccess: ResearchChatAccess
+}
+
+/** Per-project research metadata stored in .textex/research-profile.json. */
+export interface ResearchProfile {
+  version: 1
+  paper: ResearchPaperMetadata
+  resources: ResearchResource[]
+  instructions: string[]
+}
+
+export interface ResearchSourceFile {
+  path: string
+  bytes: number
+  language: string
+}
+
+export interface ResearchSourceIndex {
+  resourceId: string
+  rootPath: string
+  branch: string | null
+  indexedAt: number
+  files: ResearchSourceFile[]
+  fileCount: number
+  totalBytes: number
+  truncated: boolean
+}
+
+export interface ResearchSourceSearchResult {
+  resourceId: string
+  path: string
+  line: number
+  startLine: number
+  snippet: string
+  score: number
+}
+
+export interface ResearchSourceGitResult {
+  success: boolean
+  resourceId: string
+  localPath: string
+  action: 'cloned' | 'fetched'
+  output: string
+}
+
+export interface ResearchResourceSnapshot {
+  resourceId: string
+  url: string
+  fetchedAt: number
+  content: string
+  truncated: boolean
 }
 
 export interface HistoryItem {

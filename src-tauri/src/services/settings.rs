@@ -189,12 +189,19 @@ pub async fn update_recent_project(
 
     if let Some(next_path) = updates.path {
         let canonical = filesystem::canonical_project_directory(&next_path).await?;
-        let active_root = project_state.project_root()?;
+        let is_active = project_state
+            .project_root()
+            .is_ok_and(|active_root| filesystem::paths_equal(&canonical, &active_root));
         let already_trusted = settings
             .recent_projects
             .iter()
             .any(|project| same_stored_path(&project.path, &canonical));
-        if !already_trusted && !filesystem::paths_equal(&canonical, &active_root) {
+        let selected_by_user = if already_trusted || is_active {
+            false
+        } else {
+            project_state.consume_project_selection(&canonical)?
+        };
+        if !already_trusted && !is_active && !selected_by_user {
             return Err(AppError::RecentProjectUnauthorized(next_path));
         }
 
@@ -262,22 +269,21 @@ pub async fn update_recent_project(
     Ok(settings)
 }
 
-pub async fn activate_project(
+pub async fn authorize_project_activation(
     settings_state: &SettingsState,
     project_state: &AppState,
     path: &Path,
     project_path: &str,
-) -> AppResult<String> {
+) -> AppResult<PathBuf> {
     let canonical = filesystem::canonical_project_directory(project_path).await?;
     if project_state
         .project_root()
         .is_ok_and(|root| filesystem::paths_equal(&root, &canonical))
     {
-        // Treat reopening the same directory as a new project session. This
-        // advances the epoch so watcher/index work from the prior renderer
-        // transition cannot attach itself after the reopen.
-        project_state.set_project_root(canonical.clone())?;
-        return filesystem::path_to_string(&canonical);
+        return Ok(canonical);
+    }
+    if project_state.consume_project_selection(&canonical)? {
+        return Ok(canonical);
     }
 
     let _guard = settings_state.operation_lock.lock().await;
@@ -289,8 +295,7 @@ pub async fn activate_project(
     {
         return Err(AppError::RecentProjectUnauthorized(project_path.to_owned()));
     }
-    project_state.set_project_root(canonical.clone())?;
-    filesystem::path_to_string(&canonical)
+    Ok(canonical)
 }
 
 async fn load_settings_or_default(path: &Path) -> AppResult<UserSettings> {
@@ -380,8 +385,8 @@ mod tests {
     use tempfile::tempdir;
 
     use super::{
-        activate_project, add_recent_project, load_settings, load_settings_with_legacy_import,
-        save_settings, SettingsState,
+        add_recent_project, authorize_project_activation, load_settings,
+        load_settings_with_legacy_import, save_settings, SettingsState,
     };
     use crate::state::AppState;
 
@@ -514,7 +519,7 @@ mod tests {
             .expect("add recent project");
 
             let restored_app_state = AppState::default();
-            let restored = activate_project(
+            let restored = authorize_project_activation(
                 &settings_state,
                 &restored_app_state,
                 &settings_path,
@@ -522,12 +527,9 @@ mod tests {
             )
             .await
             .expect("restore trusted project");
-            assert_eq!(
-                restored_app_state.project_root().expect("restored root"),
-                dunce::canonicalize(restored).expect("canonical restored root")
-            );
+            assert_eq!(restored, dunce::canonicalize(&project).unwrap());
 
-            assert!(activate_project(
+            assert!(authorize_project_activation(
                 &settings_state,
                 &AppState::default(),
                 &settings_path,

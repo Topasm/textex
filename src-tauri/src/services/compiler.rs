@@ -3,6 +3,7 @@ use std::{
     io,
     path::{Path, PathBuf},
     process::{ExitStatus, Stdio},
+    sync::atomic::{AtomicU64, Ordering},
     time::Duration,
 };
 
@@ -55,6 +56,7 @@ pub async fn compile_latex(
     on_event: Channel<CompileEvent>,
 ) -> AppResult<CompileResponse> {
     validate_compile_request(&request)?;
+    let (_, project_epoch, project_epoch_tracker) = state.project_root_epoch()?;
     let identity = request.identity();
     let selected_tex_path = validate_project_tex_file(state, &request.file_path).await?;
     let tex_path = resolve_magic_root(state, &selected_tex_path).await?;
@@ -62,7 +64,10 @@ pub async fn compile_latex(
     let tectonic_path = resolve_tectonic_executable(app)?;
     let prepared_cache = tectonic_cache::prepare(app).await?;
     let cache_dir = prepared_cache.path;
-    let mut lease = state.begin_compilation(&request).await?;
+    let mut lease = state.begin_compilation(&request, project_epoch).await?;
+    if project_epoch_tracker.load(Ordering::Acquire) != project_epoch {
+        return Err(AppError::CompilationCancelled);
+    }
 
     let _ = on_event.send(CompileEvent::Log {
         identity: identity.clone(),
@@ -90,6 +95,12 @@ pub async fn compile_latex(
         COMPILE_TIMEOUT,
     )
     .await;
+
+    // Serialize the final epoch check with project close/open transitions so
+    // a completed child cannot publish Done or return a PDF for a project
+    // that became stale between process exit and command completion.
+    let _project_operation = state.lock_project_operation().await;
+    let result = finalize_compile_for_project(result, project_epoch, &project_epoch_tracker);
 
     match &result {
         Ok(_) => send_progress(
@@ -123,6 +134,18 @@ pub async fn compile_latex(
         pdf_path,
         compiled_file_path: display_tex_path,
     })
+}
+
+fn finalize_compile_for_project<T>(
+    result: AppResult<T>,
+    expected_epoch: u64,
+    epoch_tracker: &AtomicU64,
+) -> AppResult<T> {
+    if epoch_tracker.load(Ordering::Acquire) == expected_epoch {
+        result
+    } else {
+        Err(AppError::CompilationCancelled)
+    }
 }
 
 fn validate_compile_request(request: &CompileRequest) -> AppResult<()> {
@@ -940,15 +963,18 @@ fn format_exit_status(status: ExitStatus) -> String {
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
+    use std::{
+        path::Path,
+        sync::atomic::{AtomicU64, Ordering},
+    };
 
     #[cfg(unix)]
     use std::{process::Stdio, time::Instant};
 
     use super::{
-        development_candidates, extract_magic_root, packaged_candidates,
-        parse_tectonic_diagnostics, resolve_magic_root, sidecar_source_filename,
-        validate_compile_request, validate_project_tex_file,
+        development_candidates, extract_magic_root, finalize_compile_for_project,
+        packaged_candidates, parse_tectonic_diagnostics, resolve_magic_root,
+        sidecar_source_filename, validate_compile_request, validate_project_tex_file,
     };
     #[cfg(unix)]
     use super::{isolate_process_group, monitor_child};
@@ -1037,6 +1063,22 @@ mod tests {
         assert!(matches!(
             validate_compile_request(&request),
             Err(AppError::InvalidPath(_))
+        ));
+    }
+
+    #[test]
+    fn completed_compile_is_cancelled_after_project_epoch_changes() {
+        let epoch_tracker = AtomicU64::new(17);
+        assert_eq!(
+            finalize_compile_for_project(Ok("/project/main.pdf".to_owned()), 17, &epoch_tracker)
+                .expect("active project result"),
+            "/project/main.pdf"
+        );
+
+        epoch_tracker.store(18, Ordering::Release);
+        assert!(matches!(
+            finalize_compile_for_project(Ok("/project/main.pdf".to_owned()), 17, &epoch_tracker),
+            Err(AppError::CompilationCancelled)
         ));
     }
 

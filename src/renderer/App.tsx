@@ -37,9 +37,9 @@ import { useSettingsStore } from './store/useSettingsStore'
 import { deactivateProject, openProject } from './utils/openProject'
 import { errorMessage, logError } from './utils/errorMessage'
 import { isFeatureEnabled } from './utils/featureFlags'
-import { stopLspClient } from './lsp/lspClient'
 import type { AppCommandId } from '../shared/types'
 import { runtimePerformance } from './services/runtimePerformance'
+import { prepareForApplicationExit, quitApplication } from './services/applicationLifecycle'
 import { documentRegistry } from './models/documentRegistry'
 import { getDesktopCapabilities } from './platform/capabilities'
 import {
@@ -184,46 +184,6 @@ function App() {
     } catch (err) {
       logError('App:deactivateProject', err)
     }
-    stopLspClient()
-    // Reset all stores on project close
-    useEditorStore.getState().resetEditor()
-    useCompileStore.setState({
-      compileStatus: 'idle',
-      pdfPath: null,
-      pdfRevision: 0,
-      pdfDocumentId: null,
-      pdfDocumentRevision: null,
-      logs: '',
-      isLogPanelOpen: false,
-      diagnostics: []
-    })
-    useProjectStore.setState({
-      projectRoot: null,
-      directoryTree: null,
-      directoryRefreshVersions: {},
-      projectIndex: null,
-      isGitRepo: false,
-      gitBranch: '',
-      gitStatus: null,
-      bibEntries: [],
-      citationGroups: [],
-      auxCitationMap: null,
-      labels: [],
-      packageData: {},
-      detectedPackages: []
-    })
-    usePdfStore.setState({
-      pdfSearchVisible: false,
-      pdfSearchQuery: '',
-      synctexHighlight: null
-    })
-    useUiStore.setState({
-      lspStatus: 'stopped',
-      lspError: null,
-      documentSymbols: [],
-      isTerminalPaneOpen: false,
-      externalChangeConflicts: []
-    })
   }, [])
 
   const handleExport = useCallback(
@@ -288,6 +248,14 @@ function App() {
     }
   }, [])
 
+  const handleRequestWindowClose = useCallback(async (): Promise<void> => {
+    await window.api.requestWindowClose()
+  }, [])
+
+  const handleQuitApplication = useCallback(async (): Promise<void> => {
+    await quitApplication()
+  }, [])
+
   const runAppCommand = useCallback(
     (command: AppCommandId): void => {
       void executeAppCommand(command, {
@@ -302,6 +270,8 @@ function App() {
         saveAs: handleSaveAs,
         toggleLog: toggleLogPanel,
         toggleTerminal: handleToggleTerminalPane,
+        closeWindow: handleRequestWindowClose,
+        quitApp: handleQuitApplication,
         exportDocument: handleExport
       })
     },
@@ -313,6 +283,8 @@ function App() {
       handleOpen,
       handleOpenFolder,
       handleOpenTemplateGallery,
+      handleQuitApplication,
+      handleRequestWindowClose,
       handleSave,
       handleSaveAs,
       handleToggleTerminalPane
@@ -345,6 +317,13 @@ function App() {
       window.api.removeAppCommandListener()
     }
   }, [runAppCommand])
+
+  useEffect(() => {
+    window.api.onWindowCloseRequested(prepareForApplicationExit)
+    return () => {
+      window.api.removeWindowCloseRequestedListener()
+    }
+  }, [])
   const {
     mainContentRef,
     sidebarRef,

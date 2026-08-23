@@ -17,6 +17,8 @@ export interface AppCommandContext {
   saveAs: () => Promise<void>
   toggleLog: () => void
   toggleTerminal: () => void
+  closeWindow: () => Promise<void>
+  quitApp: () => Promise<void>
   exportDocument: (format: 'html' | 'docx' | 'odt' | 'epub') => Promise<void>
 }
 
@@ -100,6 +102,12 @@ export async function executeAppCommand(
       await context.checkForUpdates()
       return
     }
+    case 'window.close':
+      await context.closeWindow()
+      return
+    case 'app.quit':
+      await context.quitApp()
+      return
     default:
       if (isExportCommand(command)) {
         if (capabilities.documentExport) {

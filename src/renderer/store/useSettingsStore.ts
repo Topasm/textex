@@ -85,7 +85,9 @@ export const useSettingsStore = create<SettingsState>()(
         if (key === 'theme') {
           applyTheme(value as string)
           // Update native title bar overlay to match the new theme
-          void Promise.resolve(window.api?.setTheme?.(value as string)).catch(() => {})
+          void Promise.resolve(window.api?.setTheme?.(value as UserSettings['theme'])).catch(
+            () => {}
+          )
         }
         syncToMain()
       },
@@ -151,7 +153,13 @@ export async function hydrateSettingsFromNative(): Promise<void> {
       applyTheme(settings.theme)
     }
 
-    await window.api.saveSettings(settingsForNative(useSettingsStore.getState().settings))
+    const settings = useSettingsStore.getState().settings
+    try {
+      await window.api.setTheme(settings.theme)
+    } catch {
+      // Native chrome theme support must not block settings hydration.
+    }
+    await window.api.saveSettings(settingsForNative(settings))
   } catch {
     // A malformed legacy profile must never prevent the editor from starting.
   }

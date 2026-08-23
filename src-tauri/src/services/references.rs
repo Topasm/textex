@@ -1,6 +1,9 @@
 use std::{
     path::{Path, PathBuf},
-    sync::OnceLock,
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        OnceLock,
+    },
 };
 
 use regex::Regex;
@@ -17,7 +20,9 @@ const MAX_REFERENCE_FILE_BYTES: u64 = 10 * 1024 * 1024;
 #[derive(Clone)]
 struct CachedReferenceIndex {
     root: String,
+    project_epoch: u64,
     generation: u64,
+    invalidation_revision: u64,
     index: ReferenceIndex,
 }
 
@@ -25,29 +30,79 @@ struct CachedReferenceIndex {
 pub struct ReferenceIndexState {
     cache: Mutex<Option<CachedReferenceIndex>>,
     build_lock: Mutex<()>,
+    invalidation_revision: AtomicU64,
 }
 
 impl ReferenceIndexState {
     pub async fn invalidate(&self) {
+        // Advance the fence before waiting for the cache lock. A build that
+        // started from an older project-index snapshot can therefore never
+        // install (or return) its result after this invalidation begins.
+        self.invalidation_revision.fetch_add(1, Ordering::AcqRel);
         *self.cache.lock().await = None;
+    }
+
+    pub(crate) fn request_revision(&self) -> u64 {
+        self.invalidation_revision.load(Ordering::Acquire)
+    }
+
+    async fn install_if_current(
+        &self,
+        cached: CachedReferenceIndex,
+        project_epoch_tracker: &AtomicU64,
+    ) -> AppResult<()> {
+        let mut cache = self.cache.lock().await;
+        ensure_request_current(
+            self,
+            cached.project_epoch,
+            project_epoch_tracker,
+            cached.invalidation_revision,
+        )?;
+        *cache = Some(cached);
+        Ok(())
     }
 }
 
 pub async fn project_index(
     state: &ReferenceIndexState,
     snapshot: ProjectIndexSnapshot,
+    project_epoch: u64,
+    project_epoch_tracker: &AtomicU64,
+    invalidation_revision: u64,
 ) -> AppResult<ReferenceIndex> {
-    if let Some(cached) = state.cache.lock().await.as_ref() {
-        if cached.root == snapshot.root && cached.generation == snapshot.generation {
-            return Ok(cached.index.clone());
-        }
+    ensure_request_current(
+        state,
+        project_epoch,
+        project_epoch_tracker,
+        invalidation_revision,
+    )?;
+    if let Some(index) = cached_index(state, &snapshot, project_epoch, invalidation_revision).await
+    {
+        ensure_request_current(
+            state,
+            project_epoch,
+            project_epoch_tracker,
+            invalidation_revision,
+        )?;
+        return Ok(index);
     }
 
     let _build_guard = state.build_lock.lock().await;
-    if let Some(cached) = state.cache.lock().await.as_ref() {
-        if cached.root == snapshot.root && cached.generation == snapshot.generation {
-            return Ok(cached.index.clone());
-        }
+    ensure_request_current(
+        state,
+        project_epoch,
+        project_epoch_tracker,
+        invalidation_revision,
+    )?;
+    if let Some(index) = cached_index(state, &snapshot, project_epoch, invalidation_revision).await
+    {
+        ensure_request_current(
+            state,
+            project_epoch,
+            project_epoch_tracker,
+            invalidation_revision,
+        )?;
+        return Ok(index);
     }
 
     let root = snapshot.root.clone();
@@ -66,12 +121,77 @@ pub async fn project_index(
     let index = tauri::async_runtime::spawn_blocking(move || scan_files(files))
         .await
         .map_err(|error| AppError::ReferenceIndex(error.to_string()))?;
-    *state.cache.lock().await = Some(CachedReferenceIndex {
-        root,
-        generation: snapshot.generation,
-        index: index.clone(),
-    });
+    ensure_request_current(
+        state,
+        project_epoch,
+        project_epoch_tracker,
+        invalidation_revision,
+    )?;
+    state
+        .install_if_current(
+            CachedReferenceIndex {
+                root,
+                project_epoch,
+                generation: snapshot.generation,
+                invalidation_revision,
+                index: index.clone(),
+            },
+            project_epoch_tracker,
+        )
+        .await?;
+    ensure_request_current(
+        state,
+        project_epoch,
+        project_epoch_tracker,
+        invalidation_revision,
+    )?;
     Ok(index)
+}
+
+async fn cached_index(
+    state: &ReferenceIndexState,
+    snapshot: &ProjectIndexSnapshot,
+    project_epoch: u64,
+    invalidation_revision: u64,
+) -> Option<ReferenceIndex> {
+    state
+        .cache
+        .lock()
+        .await
+        .as_ref()
+        .filter(|cached| {
+            cached.project_epoch == project_epoch
+                && cached.generation == snapshot.generation
+                && cached.invalidation_revision == invalidation_revision
+                && roots_equal(&cached.root, &snapshot.root)
+        })
+        .map(|cached| cached.index.clone())
+}
+
+fn ensure_request_current(
+    state: &ReferenceIndexState,
+    project_epoch: u64,
+    project_epoch_tracker: &AtomicU64,
+    invalidation_revision: u64,
+) -> AppResult<()> {
+    if project_epoch_tracker.load(Ordering::Acquire) != project_epoch
+        || state.invalidation_revision.load(Ordering::Acquire) != invalidation_revision
+    {
+        return Err(AppError::ReferenceIndex(
+            "Reference index request was superseded by a project change".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(not(windows))]
+fn roots_equal(left: &str, right: &str) -> bool {
+    left == right
+}
+
+#[cfg(windows)]
+fn roots_equal(left: &str, right: &str) -> bool {
+    left.eq_ignore_ascii_case(right)
 }
 
 pub async fn parse_bib_file(state: &AppState, file_path: &str) -> AppResult<Vec<BibEntry>> {
@@ -267,5 +387,85 @@ mod tests {
         assert_eq!(labels.len(), 2);
         assert_eq!(labels[1].label, "sec:start");
         assert_eq!(labels[1].line, 1);
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn activation_epoch_prevents_same_root_generation_cache_reuse() {
+        let state = ReferenceIndexState::default();
+        let epoch_tracker = AtomicU64::new(1);
+        let revision = state.request_revision();
+        state
+            .install_if_current(
+                CachedReferenceIndex {
+                    root: "/project".to_owned(),
+                    project_epoch: 1,
+                    generation: 1,
+                    invalidation_revision: revision,
+                    index: ReferenceIndex {
+                        bib_entries: Vec::new(),
+                        labels: vec![LabelInfo {
+                            label: "old-project".to_owned(),
+                            file: "/project/main.tex".to_owned(),
+                            line: 1,
+                            context: "old".to_owned(),
+                        }],
+                    },
+                },
+                &epoch_tracker,
+            )
+            .await
+            .expect("install first activation cache");
+
+        epoch_tracker.store(2, Ordering::Release);
+        let rebuilt = project_index(
+            &state,
+            ProjectIndexSnapshot {
+                root: "/project".to_owned(),
+                generation: 1,
+                entries: Vec::new(),
+            },
+            2,
+            &epoch_tracker,
+            revision,
+        )
+        .await
+        .expect("rebuild the repeated path for its new activation");
+
+        assert!(rebuilt.labels.is_empty());
+        assert_eq!(
+            state
+                .cache
+                .lock()
+                .await
+                .as_ref()
+                .expect("new activation cache")
+                .project_epoch,
+            2
+        );
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn invalidation_during_build_rejects_the_stale_install() {
+        let state = ReferenceIndexState::default();
+        let epoch_tracker = AtomicU64::new(7);
+        let build_revision = state.request_revision();
+        let pending_build = CachedReferenceIndex {
+            root: "/project".to_owned(),
+            project_epoch: 7,
+            generation: 3,
+            invalidation_revision: build_revision,
+            index: ReferenceIndex::default(),
+        };
+
+        // Model a scan that captured its token, then completed only after a
+        // bibliography write invalidated the reference cache.
+        state.invalidate().await;
+        let error = state
+            .install_if_current(pending_build, &epoch_tracker)
+            .await
+            .expect_err("a pre-invalidation build must not install");
+
+        assert!(matches!(error, AppError::ReferenceIndex(_)));
+        assert!(state.cache.lock().await.is_none());
     }
 }
