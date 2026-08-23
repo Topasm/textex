@@ -37,6 +37,7 @@ export const TAURI_COMMANDS = {
   zoteroSearch: 'zotero_search',
   zoteroCiteCayw: 'zotero_cite_cayw',
   zoteroExportBibtex: 'zotero_export_bibtex',
+  zoteroSyncCollection: 'zotero_sync_collection',
   watchDirectory: 'watch_directory',
   unwatchDirectory: 'unwatch_directory',
   loadSettings: 'load_settings',

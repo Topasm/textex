@@ -105,6 +105,7 @@ const defaultSettings: UserSettings = {
   lspEnabled: true,
   zoteroEnabled: false,
   zoteroPort: 23119,
+  zoteroCollection: '',
   gitEnabled: true,
   autoUpdateEnabled: true,
   aiEnabled: false,

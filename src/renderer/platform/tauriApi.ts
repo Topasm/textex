@@ -57,6 +57,7 @@ type MigratedDesktopApi = Pick<
   | 'zoteroSearch'
   | 'zoteroCiteCAYW'
   | 'zoteroExportBibtex'
+  | 'zoteroSyncCollection'
   | 'compile'
   | 'cancelCompile'
   | 'onCompileLog'
@@ -266,6 +267,9 @@ const zoteroCiteCAYW: DesktopApi['zoteroCiteCAYW'] = (port) =>
 const zoteroExportBibtex: DesktopApi['zoteroExportBibtex'] = (citekeys, port) =>
   invoke(TAURI_COMMANDS.zoteroExportBibtex, { citekeys, port })
 
+const zoteroSyncCollection: DesktopApi['zoteroSyncCollection'] = (collection, targetFile, port) =>
+  invoke(TAURI_COMMANDS.zoteroSyncCollection, { collection, targetFile, port })
+
 const compile: DesktopApi['compile'] = (request: CompileRequest) => {
   const onEvent = new Channel<TauriCompileEvent>()
   onEvent.onmessage = (event) => {
@@ -421,6 +425,7 @@ const migratedApi: MigratedDesktopApi = {
   zoteroSearch,
   zoteroCiteCAYW,
   zoteroExportBibtex,
+  zoteroSyncCollection,
   compile,
   cancelCompile,
   onCompileLog,

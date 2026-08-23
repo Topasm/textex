@@ -211,6 +211,7 @@ export interface UserSettings {
   lspEnabled: boolean
   zoteroEnabled: boolean
   zoteroPort: number
+  zoteroCollection: string
   aiEnabled?: boolean
   aiProvider: 'openai' | 'anthropic' | 'gemini' | 'claude-cli' | 'codex-cli' | ''
   aiApiKey?: string
@@ -310,6 +311,12 @@ export interface ZoteroSearchResult {
   author: string
   year: string
   type: string
+}
+
+export interface ZoteroSyncResult {
+  filePath: string
+  bytesWritten: number
+  entryCount: number
 }
 
 export interface HistoryItem {

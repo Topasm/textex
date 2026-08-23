@@ -25,6 +25,7 @@ TextEx uses a "Zero-Friction" configuration system where settings are applied in
 | `lspEnabled` | `boolean` | `true` | Enable TexLab language server. |
 | `zoteroEnabled` | `boolean` | `false` | Enable Zotero/Better BibTeX integration. |
 | `zoteroPort` | `number` | `23119` | Better BibTeX JSON-RPC port. |
+| `zoteroCollection` | `string` | `""` | Better BibTeX pull-export collection path used for project bibliography sync. |
 | `pdfInvertMode` | `boolean` | `false` | Invert PDF colors for dark environments. |
 | `autoHideSidebar` | `boolean` | `false` | Sidebar slides away and reappears on hover. |
 | `name` | `string` | `''` | User's full name (for templates/metadata). |

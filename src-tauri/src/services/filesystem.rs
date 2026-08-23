@@ -187,6 +187,14 @@ pub async fn save_file(
     Ok(SuccessResult::ok())
 }
 
+pub(crate) async fn validate_save_file_target(
+    state: &AppState,
+    file_path: &str,
+) -> AppResult<PathBuf> {
+    let requested = require_absolute_str(file_path)?;
+    resolve_write_target(state, requested).await
+}
+
 pub async fn save_file_as(
     app: &AppHandle,
     state: &AppState,

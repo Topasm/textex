@@ -32,6 +32,7 @@ fn main() {
         "zotero_search",
         "zotero_cite_cayw",
         "zotero_export_bibtex",
+        "zotero_sync_collection",
         "watch_directory",
         "unwatch_directory",
         "load_settings",

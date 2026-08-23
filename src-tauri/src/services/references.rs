@@ -27,6 +27,12 @@ pub struct ReferenceIndexState {
     build_lock: Mutex<()>,
 }
 
+impl ReferenceIndexState {
+    pub async fn invalidate(&self) {
+        *self.cache.lock().await = None;
+    }
+}
+
 pub async fn project_index(
     state: &ReferenceIndexState,
     snapshot: ProjectIndexSnapshot,
@@ -114,7 +120,7 @@ fn scan_files(files: Vec<(String, Option<u64>)>) -> ReferenceIndex {
     index
 }
 
-fn parse_bib_content(content: &str, file: Option<&str>) -> Vec<BibEntry> {
+pub(crate) fn parse_bib_content(content: &str, file: Option<&str>) -> Vec<BibEntry> {
     bib_entry_regex()
         .captures_iter(content)
         .filter_map(|captures| {

@@ -11,6 +11,7 @@ use services::settings::SettingsState;
 use services::synctex::SyncTexState;
 use services::updater::AppUpdaterState;
 use services::watcher::DirectoryWatcherState;
+use services::zotero::ZoteroSyncState;
 use state::AppState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -29,6 +30,7 @@ pub fn run() {
         .manage(ReferenceIndexState::default())
         .manage(SyncTexState::default())
         .manage(AppUpdaterState::default())
+        .manage(ZoteroSyncState::default())
         .invoke_handler(tauri::generate_handler![
             commands::filesystem::open_file,
             commands::filesystem::open_directory,
@@ -62,6 +64,7 @@ pub fn run() {
             commands::zotero::zotero_search,
             commands::zotero::zotero_cite_cayw,
             commands::zotero::zotero_export_bibtex,
+            commands::zotero::zotero_sync_collection,
             commands::watcher::watch_directory,
             commands::watcher::unwatch_directory,
             commands::settings::load_settings,

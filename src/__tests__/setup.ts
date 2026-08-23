@@ -166,6 +166,7 @@ Object.defineProperty(window, 'api', {
     zoteroSearch: vi.fn(),
     zoteroCiteCAYW: vi.fn(),
     zoteroExportBibtex: vi.fn(),
+    zoteroSyncCollection: vi.fn(),
 
     // Citation groups / history / templates / project data
     loadCitationGroups: vi.fn(),

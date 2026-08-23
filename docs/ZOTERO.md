@@ -61,6 +61,13 @@ Ports: Zotero = `23119`, Juris-M = `24119`, or user-defined.
 | `zotero:cite-cayw` | Renderer -> Main | `(port?: number)` | `string` (LaTeX cite command) |
 | `zotero:export-bibtex` | Renderer -> Main | `(citekeys: string[], port?: number)` | `string` (BibTeX source) |
 
+Tauri additionally exposes `zotero_sync_collection`. It uses Better BibTeX's
+pull-export collection path (for example `/0/8CV58ZVD`), caps the response at
+50 MiB, and transactionally replaces `references.bib` or another project-local
+`.bib` target only after the complete UTF-8 export has arrived. Sync requests
+are serialized, their target is validated before download, and a successful
+write invalidates the generation-cached reference index immediately.
+
 ### Data Flow
 
 ```

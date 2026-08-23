@@ -22,6 +22,7 @@ import {
   PackageData,
   CitationGroup,
   ZoteroSearchResult,
+  ZoteroSyncResult,
   HistoryItem,
   SectionNode,
   ProjectDatabase,
@@ -177,6 +178,11 @@ export interface DesktopApi {
   zoteroSearch(term: string, port?: number): Promise<ZoteroSearchResult[]>
   zoteroCiteCAYW(port?: number): Promise<string>
   zoteroExportBibtex(citekeys: string[], port?: number): Promise<string>
+  zoteroSyncCollection(
+    collection: string,
+    targetFile?: string,
+    port?: number
+  ): Promise<ZoteroSyncResult>
 
   // Citation Groups
   loadCitationGroups(projectRoot: string): Promise<CitationGroup[]>

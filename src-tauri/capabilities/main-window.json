@@ -36,6 +36,7 @@
     "allow-zotero-search",
     "allow-zotero-cite-cayw",
     "allow-zotero-export-bibtex",
+    "allow-zotero-sync-collection",
     "allow-watch-directory",
     "allow-unwatch-directory",
     "allow-load-settings",

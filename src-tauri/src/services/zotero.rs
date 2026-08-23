@@ -1,16 +1,31 @@
-use std::{sync::OnceLock, time::Duration};
+use std::{path::Path, sync::OnceLock, time::Duration};
 
 use reqwest::{redirect::Policy, Client};
 use serde::{Deserialize, Serialize};
+use tokio::sync::Mutex;
 
 use crate::{
     error::{AppError, AppResult},
-    models::ZoteroSearchResult,
+    models::{ZoteroSearchResult, ZoteroSyncResult},
+    services::{filesystem, references},
+    state::AppState,
 };
 
 const DEFAULT_PORT: u16 = 23_119;
 const MAX_SEARCH_LENGTH: usize = 1_024;
 const MAX_CITEKEYS: usize = 10_000;
+const MAX_COLLECTION_EXPORT_BYTES: usize = 50 * 1024 * 1024;
+
+#[derive(Default)]
+pub struct ZoteroSyncState {
+    lock: Mutex<()>,
+}
+
+impl ZoteroSyncState {
+    pub async fn lock(&self) -> tokio::sync::MutexGuard<'_, ()> {
+        self.lock.lock().await
+    }
+}
 
 #[derive(Debug, Deserialize)]
 struct JsonRpcResponse<T> {
@@ -121,6 +136,74 @@ pub async fn export_bibtex(citekeys: Vec<String>, port: Option<u16>) -> AppResul
     rpc_result(response)
 }
 
+pub async fn sync_collection(
+    state: &AppState,
+    collection: &str,
+    target_file: Option<String>,
+    port: Option<u16>,
+) -> AppResult<ZoteroSyncResult> {
+    let collection = validate_collection(collection)?;
+    let file_path = match target_file {
+        Some(path) => path,
+        None => state
+            .project_root()?
+            .join("references.bib")
+            .to_string_lossy()
+            .into_owned(),
+    };
+    if !Path::new(&file_path)
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("bib"))
+    {
+        return Err(AppError::InvalidPath(file_path));
+    }
+    let validated_target = filesystem::validate_save_file_target(state, &file_path).await?;
+    let file_path = validated_target
+        .into_os_string()
+        .into_string()
+        .map_err(|path| AppError::NonUtf8Path(path.to_string_lossy().into_owned()))?;
+    let url = collection_endpoint(port, collection)?;
+
+    let mut response = client()
+        .get(url)
+        .timeout(Duration::from_secs(120))
+        .send()
+        .await
+        .map_err(zotero_request_error)?
+        .error_for_status()
+        .map_err(zotero_request_error)?;
+    if response
+        .content_length()
+        .is_some_and(|size| size > MAX_COLLECTION_EXPORT_BYTES as u64)
+    {
+        return Err(AppError::Zotero(
+            "collection export exceeds 50 MiB".to_owned(),
+        ));
+    }
+
+    let mut bytes = Vec::new();
+    while let Some(chunk) = response.chunk().await.map_err(zotero_request_error)? {
+        if bytes.len().saturating_add(chunk.len()) > MAX_COLLECTION_EXPORT_BYTES {
+            return Err(AppError::Zotero(
+                "collection export exceeds 50 MiB".to_owned(),
+            ));
+        }
+        bytes.extend_from_slice(&chunk);
+    }
+    let content = String::from_utf8(bytes)
+        .map_err(|_| AppError::Zotero("collection export is not valid UTF-8".to_owned()))?;
+    let entry_count = references::parse_bib_content(&content, None).len() as u32;
+
+    let bytes_written = content.len() as u64;
+    filesystem::save_file(state, &file_path, content).await?;
+    Ok(ZoteroSyncResult {
+        file_path,
+        bytes_written,
+        entry_count,
+    })
+}
+
 async fn json_rpc<P, T>(
     port: Option<u16>,
     request: JsonRpcRequest<P>,
@@ -164,6 +247,13 @@ fn endpoint(port: Option<u16>, path: &str) -> AppResult<String> {
         ));
     }
     Ok(format!("http://127.0.0.1:{port}/better-bibtex/{path}"))
+}
+
+fn collection_endpoint(port: Option<u16>, collection: &str) -> AppResult<reqwest::Url> {
+    let mut url = reqwest::Url::parse(&endpoint(port, "collection")?)
+        .map_err(|error| AppError::Zotero(error.to_string()))?;
+    url.set_query(Some(&format!("{collection}.bibtex")));
+    Ok(url)
 }
 
 fn client() -> &'static Client {
@@ -220,6 +310,22 @@ fn valid_citekey(key: &str) -> bool {
     !key.is_empty() && key.len() <= 512 && !key.chars().any(char::is_control)
 }
 
+fn validate_collection(collection: &str) -> AppResult<&str> {
+    let collection = collection.trim();
+    if collection.is_empty()
+        || collection.len() > 2_048
+        || !collection.starts_with('/')
+        || collection
+            .chars()
+            .any(|character| character.is_control() || matches!(character, '?' | '#' | '&'))
+    {
+        return Err(AppError::Zotero(
+            "collection must be an absolute Better BibTeX collection path".to_owned(),
+        ));
+    }
+    Ok(collection)
+}
+
 fn default_item_type() -> String {
     "misc".to_owned()
 }
@@ -253,5 +359,22 @@ mod tests {
             "http://127.0.0.1:24119/better-bibtex/json-rpc"
         );
         assert!(endpoint(Some(0), "json-rpc").is_err());
+    }
+
+    #[test]
+    fn validates_collection_pull_export_paths() {
+        assert_eq!(validate_collection("/0/8CV58ZVD").unwrap(), "/0/8CV58ZVD");
+        assert_eq!(
+            validate_collection("//Research/Papers").unwrap(),
+            "//Research/Papers"
+        );
+        assert!(validate_collection("Research").is_err());
+        assert!(validate_collection("/Research?format=json").is_err());
+        assert_eq!(
+            collection_endpoint(Some(23_119), "/0/8CV58ZVD")
+                .unwrap()
+                .as_str(),
+            "http://127.0.0.1:23119/better-bibtex/collection?/0/8CV58ZVD.bibtex"
+        );
     }
 }

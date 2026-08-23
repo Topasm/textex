@@ -70,6 +70,14 @@ pub struct ZoteroSearchResult {
     pub item_type: String,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZoteroSyncResult {
+    pub file_path: String,
+    pub bytes_written: u64,
+    pub entry_count: u32,
+}
+
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PackageData {
@@ -134,6 +142,7 @@ pub struct UserSettings {
     pub lsp_enabled: bool,
     pub zotero_enabled: bool,
     pub zotero_port: u16,
+    pub zotero_collection: String,
     pub ai_enabled: bool,
     pub ai_provider: AiProvider,
     pub ai_model: String,
@@ -188,6 +197,7 @@ impl Default for UserSettings {
             lsp_enabled: true,
             zotero_enabled: false,
             zotero_port: 23119,
+            zotero_collection: String::new(),
             ai_enabled: false,
             ai_provider: AiProvider::None,
             ai_model: String::new(),

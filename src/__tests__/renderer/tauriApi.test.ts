@@ -489,17 +489,28 @@ describe('Tauri DesktopApi adapter', () => {
       .mockResolvedValueOnce([result])
       .mockResolvedValueOnce('\\cite{smith2026}')
       .mockResolvedValueOnce('@article{smith2026}')
+      .mockResolvedValueOnce({
+        filePath: '/project/references.bib',
+        bytesWritten: 19,
+        entryCount: 1
+      })
 
     const api = createTauriApi()
     await expect(api.zoteroProbe(23119)).resolves.toBe(true)
     await expect(api.zoteroSearch('paper', 23119)).resolves.toEqual([result])
     await expect(api.zoteroCiteCAYW(23119)).resolves.toBe('\\cite{smith2026}')
     await expect(api.zoteroExportBibtex(['smith2026'], 23119)).resolves.toBe('@article{smith2026}')
+    await expect(api.zoteroSyncCollection('/0/8CV58ZVD', undefined, 23119)).resolves.toEqual({
+      filePath: '/project/references.bib',
+      bytesWritten: 19,
+      entryCount: 1
+    })
     expect(invokeMock.mock.calls).toEqual([
       ['zotero_probe', { port: 23119 }],
       ['zotero_search', { term: 'paper', port: 23119 }],
       ['zotero_cite_cayw', { port: 23119 }],
-      ['zotero_export_bibtex', { citekeys: ['smith2026'], port: 23119 }]
+      ['zotero_export_bibtex', { citekeys: ['smith2026'], port: 23119 }],
+      ['zotero_sync_collection', { collection: '/0/8CV58ZVD', targetFile: undefined, port: 23119 }]
     ])
   })
 
