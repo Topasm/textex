@@ -17,6 +17,7 @@ use crate::{
 
 const MAX_SNAPSHOTS: usize = 50;
 const MAX_HISTORY_CONTENT_BYTES: usize = 50 * 1024 * 1024;
+const TIMESTAMP_ALLOCATION_ATTEMPTS: u64 = 1_000;
 
 #[derive(Default)]
 pub struct HistoryState {
@@ -42,9 +43,7 @@ pub async fn save_snapshot(
         .map_err(|source| {
             AppError::io("create history directory", display(&history_dir), source)
         })?;
-    tauri::async_runtime::spawn_blocking(move || write_snapshot(&history_dir, content.as_bytes()))
-        .await
-        .map_err(|error| AppError::History(error.to_string()))?
+    run_blocking(move || write_snapshot(&history_dir, content.as_bytes())).await
 }
 
 pub async fn list(
@@ -67,9 +66,7 @@ pub async fn list(
         }
     }
     let history_dir = filesystem::validate_project_directory_target(state, history_dir).await?;
-    tauri::async_runtime::spawn_blocking(move || list_snapshots(&history_dir))
-        .await
-        .map_err(|error| AppError::History(error.to_string()))?
+    run_blocking(move || list_snapshots(&history_dir)).await
 }
 
 pub async fn load(
@@ -82,21 +79,29 @@ pub async fn load(
     let file = filesystem::validate_existing_project_file(state, file_path).await?;
     let expected_dir = history_dir(&file)?;
     let requested = PathBuf::from(snapshot_path);
-    if !requested.is_absolute() || !valid_snapshot_name(&requested) {
+    if !requested.is_absolute() || snapshot_timestamp(&requested).is_none() {
         return Err(AppError::InvalidPath(snapshot_path.to_owned()));
     }
     let canonical_dir = filesystem::validate_project_directory_target(state, expected_dir).await?;
-    let canonical_snapshot =
-        tauri::async_runtime::spawn_blocking(move || dunce::canonicalize(requested))
-            .await
-            .map_err(|error| AppError::History(error.to_string()))?
-            .map_err(|source| AppError::io("resolve history snapshot", snapshot_path, source))?;
+    let snapshot_display = snapshot_path.to_owned();
+    let canonical_snapshot = run_blocking(move || {
+        dunce::canonicalize(requested)
+            .map_err(|source| AppError::io("resolve history snapshot", snapshot_display, source))
+    })
+    .await?;
     if canonical_snapshot.parent() != Some(canonical_dir.as_path()) {
         return Err(AppError::OutsideProject(display(&canonical_snapshot)));
     }
-    tauri::async_runtime::spawn_blocking(move || read_snapshot(&canonical_snapshot))
+    run_blocking(move || read_snapshot(&canonical_snapshot)).await
+}
+
+async fn run_blocking<T>(task: impl FnOnce() -> AppResult<T> + Send + 'static) -> AppResult<T>
+where
+    T: Send + 'static,
+{
+    tauri::async_runtime::spawn_blocking(task)
         .await
-        .map_err(|error| AppError::History(error.to_string()))?
+        .map_err(|error| AppError::Worker(error.to_string()))?
 }
 
 async fn validated_history_dir(state: &AppState, file: &Path) -> AppResult<PathBuf> {
@@ -115,7 +120,7 @@ fn history_dir(file: &Path) -> AppResult<PathBuf> {
 
 fn write_snapshot(history_dir: &Path, content: &[u8]) -> AppResult<()> {
     let base_timestamp = now_millis()?;
-    let (timestamp, final_path) = (0..1000_u64)
+    let (timestamp, final_path) = (0..TIMESTAMP_ALLOCATION_ATTEMPTS)
         .map(|offset| base_timestamp.saturating_add(offset))
         .map(|timestamp| (timestamp, history_dir.join(format!("{timestamp}.gz"))))
         .find(|(_, path)| !path.exists())
@@ -147,7 +152,26 @@ fn write_snapshot(history_dir: &Path, content: &[u8]) -> AppResult<()> {
 }
 
 fn list_snapshots(history_dir: &Path) -> AppResult<Vec<HistoryItem>> {
-    let mut items = Vec::new();
+    let mut snapshots = collect_snapshots(history_dir)?;
+    snapshots.sort_unstable_by(|left, right| right.timestamp.cmp(&left.timestamp));
+    Ok(snapshots
+        .into_iter()
+        .map(|snapshot| HistoryItem {
+            timestamp: snapshot.timestamp,
+            size: snapshot.size,
+            path: display(&snapshot.path),
+        })
+        .collect())
+}
+
+struct Snapshot {
+    timestamp: u64,
+    size: u64,
+    path: PathBuf,
+}
+
+fn collect_snapshots(history_dir: &Path) -> AppResult<Vec<Snapshot>> {
+    let mut snapshots = Vec::new();
     for entry in std::fs::read_dir(history_dir)
         .map_err(|source| AppError::io("list history", display(history_dir), source))?
     {
@@ -157,19 +181,22 @@ fn list_snapshots(history_dir: &Path) -> AppResult<Vec<HistoryItem>> {
         let Some(timestamp) = snapshot_timestamp(&path) else {
             continue;
         };
+        let file_type = entry.file_type().map_err(|source| {
+            AppError::io("inspect history snapshot type", display(&path), source)
+        })?;
+        if !file_type.is_file() {
+            continue;
+        }
         let metadata = entry
             .metadata()
             .map_err(|source| AppError::io("inspect history snapshot", display(&path), source))?;
-        if metadata.is_file() {
-            items.push(HistoryItem {
-                timestamp,
-                size: metadata.len(),
-                path: display(&path),
-            });
-        }
+        snapshots.push(Snapshot {
+            timestamp,
+            size: metadata.len(),
+            path,
+        });
     }
-    items.sort_unstable_by(|left, right| right.timestamp.cmp(&left.timestamp));
-    Ok(items)
+    Ok(snapshots)
 }
 
 fn read_snapshot(path: &Path) -> AppResult<String> {
@@ -190,24 +217,15 @@ fn read_snapshot(path: &Path) -> AppResult<String> {
 }
 
 fn prune_snapshots(history_dir: &Path) -> AppResult<()> {
-    let mut snapshots = std::fs::read_dir(history_dir)
-        .map_err(|source| AppError::io("list history for pruning", display(history_dir), source))?
-        .filter_map(Result::ok)
-        .filter_map(|entry| {
-            snapshot_timestamp(&entry.path()).map(|timestamp| (timestamp, entry.path()))
-        })
-        .collect::<Vec<_>>();
-    snapshots.sort_unstable_by_key(|(timestamp, _)| *timestamp);
+    let mut snapshots = collect_snapshots(history_dir)?;
+    snapshots.sort_unstable_by_key(|snapshot| snapshot.timestamp);
     let prune_count = snapshots.len().saturating_sub(MAX_SNAPSHOTS);
-    for (_, path) in snapshots.into_iter().take(prune_count) {
-        std::fs::remove_file(&path)
-            .map_err(|source| AppError::io("prune history snapshot", display(&path), source))?;
+    for snapshot in snapshots.into_iter().take(prune_count) {
+        std::fs::remove_file(&snapshot.path).map_err(|source| {
+            AppError::io("prune history snapshot", display(&snapshot.path), source)
+        })?;
     }
     Ok(())
-}
-
-fn valid_snapshot_name(path: &Path) -> bool {
-    snapshot_timestamp(path).is_some()
 }
 
 fn snapshot_timestamp(path: &Path) -> Option<u64> {
@@ -219,10 +237,12 @@ fn snapshot_timestamp(path: &Path) -> Option<u64> {
 }
 
 fn now_millis() -> AppResult<u64> {
-    SystemTime::now()
+    let millis = SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_millis() as u64)
-        .map_err(|error| AppError::History(error.to_string()))
+        .map_err(|error| AppError::History(error.to_string()))?
+        .as_millis();
+    u64::try_from(millis)
+        .map_err(|_| AppError::History("system timestamp exceeds u64 milliseconds".to_owned()))
 }
 
 fn display(path: &Path) -> String {
@@ -272,8 +292,29 @@ mod tests {
     #[test]
     fn accepts_only_numeric_gzip_snapshot_names() {
         assert_eq!(snapshot_timestamp(Path::new("123.gz")), Some(123));
-        assert_eq!(snapshot_timestamp(Path::new("../123.gz")), Some(123));
         assert_eq!(snapshot_timestamp(Path::new("123.txt")), None);
         assert_eq!(snapshot_timestamp(Path::new("a123.gz")), None);
+        assert_eq!(snapshot_timestamp(Path::new(".gz")), None);
+    }
+
+    #[test]
+    fn pruning_keeps_the_newest_snapshot_files() {
+        let history = tempfile::tempdir().unwrap();
+        for timestamp in 0..(MAX_SNAPSHOTS + 2) {
+            std::fs::write(history.path().join(format!("{timestamp}.gz")), []).unwrap();
+        }
+        std::fs::write(history.path().join("notes.txt"), []).unwrap();
+        std::fs::create_dir(history.path().join("999.gz")).unwrap();
+
+        prune_snapshots(history.path()).unwrap();
+
+        let snapshots = collect_snapshots(history.path()).unwrap();
+        assert_eq!(snapshots.len(), MAX_SNAPSHOTS);
+        assert!(!history.path().join("0.gz").exists());
+        assert!(!history.path().join("1.gz").exists());
+        assert!(history.path().join("2.gz").exists());
+        assert!(history.path().join("51.gz").exists());
+        assert!(history.path().join("notes.txt").exists());
+        assert!(history.path().join("999.gz").is_dir());
     }
 }
