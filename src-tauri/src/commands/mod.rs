@@ -1,4 +1,5 @@
 pub mod compiler;
+pub mod export;
 pub mod filesystem;
 pub mod git;
 pub mod history;
@@ -9,6 +10,7 @@ pub mod references;
 pub mod settings;
 pub mod spellcheck;
 pub mod synctex;
+pub mod templates;
 pub mod updater;
 pub mod watcher;
 pub mod zotero;

@@ -36,12 +36,12 @@ describe('desktop runtime capabilities', () => {
     expect(getDesktopCapabilities()).toMatchObject({
       runtime: 'tauri',
       ai: false,
-      documentExport: false,
+      documentExport: true,
       lsp: false,
       projectMetadata: true,
       pty: false,
       spellcheck: true,
-      templates: false
+      templates: true
     })
     expect(isFeatureEnabled(settings, 'ai')).toBe(false)
     expect(isFeatureEnabled(settings, 'lsp')).toBe(false)

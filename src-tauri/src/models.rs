@@ -1,6 +1,38 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Template {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub content: String,
+    pub built_in: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub files: Option<HashMap<String, String>>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TemplateProjectResult {
+    pub project_path: String,
+    pub file_path: String,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+pub struct ExportFormat {
+    pub name: &'static str,
+    pub ext: &'static str,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportResult {
+    pub success: bool,
+    pub output_path: String,
+}
+
 pub type PackageDataMap = HashMap<String, PackageData>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]

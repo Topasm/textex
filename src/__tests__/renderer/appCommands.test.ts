@@ -93,7 +93,7 @@ describe('executeAppCommand', () => {
     expect(context.toggleLog).toHaveBeenCalledOnce()
   })
 
-  it('ignores commands whose backend domain is unavailable in Tauri', async () => {
+  it('routes migrated domains and ignores unavailable domains in Tauri', async () => {
     configureDesktopCapabilities('tauri')
 
     await executeAppCommand('file.newTemplate', context)
@@ -101,8 +101,8 @@ describe('executeAppCommand', () => {
     await executeAppCommand('ai.draft', context)
     await executeAppCommand('view.toggleTerminal', context)
 
-    expect(context.openTemplateGallery).not.toHaveBeenCalled()
-    expect(context.exportDocument).not.toHaveBeenCalled()
+    expect(context.openTemplateGallery).toHaveBeenCalledOnce()
+    expect(context.exportDocument).toHaveBeenCalledWith('docx')
     expect(context.runAiDraft).not.toHaveBeenCalled()
     expect(context.toggleTerminal).not.toHaveBeenCalled()
   })

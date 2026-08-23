@@ -12,6 +12,7 @@ use services::references::ReferenceIndexState;
 use services::settings::SettingsState;
 use services::spellcheck::SpellcheckState;
 use services::synctex::SyncTexState;
+use services::templates::TemplateState;
 use services::updater::AppUpdaterState;
 use services::watcher::DirectoryWatcherState;
 use services::zotero::ZoteroSyncState;
@@ -34,6 +35,7 @@ pub fn run() {
         .manage(ProjectDataState::default())
         .manage(ReferenceIndexState::default())
         .manage(SpellcheckState::default())
+        .manage(TemplateState::default())
         .manage(SyncTexState::default())
         .manage(AppUpdaterState::default())
         .manage(ZoteroSyncState::default())
@@ -52,6 +54,7 @@ pub fn run() {
             commands::filesystem::delete_path,
             commands::filesystem::read_file_base64,
             commands::filesystem::read_file_binary,
+            commands::templates::create_template_project,
             commands::git::git_is_repo,
             commands::git::git_init,
             commands::git::git_status,
@@ -90,6 +93,10 @@ pub fn run() {
             commands::spellcheck::spell_suggest,
             commands::spellcheck::spell_add_word,
             commands::spellcheck::spell_set_language,
+            commands::templates::list_custom_templates,
+            commands::templates::add_custom_template,
+            commands::templates::remove_custom_template,
+            commands::templates::import_template_zip,
             commands::zotero::zotero_probe,
             commands::zotero::zotero_search,
             commands::zotero::zotero_cite_cayw,
@@ -108,6 +115,8 @@ pub fn run() {
             commands::synctex::synctex_forward,
             commands::synctex::synctex_inverse,
             commands::synctex::synctex_build_line_map,
+            commands::export::export_document,
+            commands::export::get_export_formats,
             commands::updater::check_app_update,
             commands::updater::download_and_install_update,
             commands::updater::restart_app,

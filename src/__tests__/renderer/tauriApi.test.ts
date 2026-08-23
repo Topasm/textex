@@ -484,6 +484,79 @@ describe('Tauri DesktopApi adapter', () => {
     ])
   })
 
+  it('combines built-in templates with Rust custom templates and creates projects', async () => {
+    const customTemplate = {
+      id: 'custom-1',
+      name: 'Lab report',
+      description: 'Custom',
+      content: 'content',
+      builtIn: false
+    }
+    invokeMock
+      .mockResolvedValueOnce({
+        projectPath: '/projects/article',
+        filePath: '/projects/article/main.tex'
+      })
+      .mockResolvedValueOnce([customTemplate])
+      .mockResolvedValueOnce(customTemplate)
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce(customTemplate)
+
+    const api = createTauriApi()
+    await expect(
+      api.createTemplateProject('Article', 'content', { 'figures/data.txt': 'data' })
+    ).resolves.toEqual({
+      projectPath: '/projects/article',
+      filePath: '/projects/article/main.tex'
+    })
+    const templates = await api.listTemplates()
+    expect(templates.some((template) => template.id === 'article' && template.builtIn)).toBe(true)
+    expect(templates.at(-1)).toEqual(customTemplate)
+    await expect(api.addTemplate('Lab report', 'Custom', 'content')).resolves.toEqual(
+      customTemplate
+    )
+    await expect(api.removeTemplate('custom-1')).resolves.toEqual({ success: true })
+    await expect(api.importTemplateZip()).resolves.toEqual(customTemplate)
+
+    expect(invokeMock.mock.calls).toEqual([
+      [
+        'create_template_project',
+        {
+          templateName: 'Article',
+          content: 'content',
+          files: { 'figures/data.txt': 'data' }
+        }
+      ],
+      ['list_custom_templates'],
+      ['add_custom_template', { name: 'Lab report', description: 'Custom', content: 'content' }],
+      ['remove_custom_template', { id: 'custom-1' }],
+      ['import_template_zip']
+    ])
+  })
+
+  it('maps optional Pandoc export through the scoped Rust service', async () => {
+    invokeMock
+      .mockResolvedValueOnce([
+        { name: 'HTML', ext: 'html' },
+        { name: 'DOCX', ext: 'docx' }
+      ])
+      .mockResolvedValueOnce({ success: true, outputPath: '/project/paper.docx' })
+
+    const api = createTauriApi()
+    await expect(api.getExportFormats()).resolves.toEqual([
+      { name: 'HTML', ext: 'html' },
+      { name: 'DOCX', ext: 'docx' }
+    ])
+    await expect(api.exportDocument('/project/paper.tex', 'docx')).resolves.toEqual({
+      success: true,
+      outputPath: '/project/paper.docx'
+    })
+    expect(invokeMock.mock.calls).toEqual([
+      ['get_export_formats'],
+      ['export_document', { inputPath: '/project/paper.tex', format: 'docx' }]
+    ])
+  })
+
   it('parses the fallback document outline locally without a native round trip', async () => {
     const api = createTauriApi()
     await expect(

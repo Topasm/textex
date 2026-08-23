@@ -33,14 +33,14 @@ const TAURI_CAPABILITIES: DesktopCapabilities = Object.freeze({
   runtime: 'tauri',
   ai: false,
   citationGroups: false,
-  documentExport: false,
+  documentExport: true,
   lsp: false,
   openExternal: false,
   performanceMemory: false,
   projectMetadata: true,
   pty: false,
   spellcheck: true,
-  templates: false
+  templates: true
 })
 
 // Electron remains the test/legacy default. Production bootstrap always sets

@@ -85,6 +85,12 @@ pub enum AppError {
     #[error("Spellcheck operation failed: {0}")]
     Spellcheck(String),
 
+    #[error("Template operation failed: {0}")]
+    Template(String),
+
+    #[error("Document export failed: {0}")]
+    Export(String),
+
     #[error("Zotero operation failed: {0}")]
     Zotero(String),
 

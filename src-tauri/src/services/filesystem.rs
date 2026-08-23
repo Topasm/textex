@@ -851,6 +851,31 @@ pub(crate) async fn write_files_transactionally(files: Vec<(PathBuf, Vec<u8>)>) 
     commit_staged_writes(&mut staged_writes).await
 }
 
+pub(crate) async fn reserve_external_output(target: &Path, label: &str) -> AppResult<PathBuf> {
+    let (path, file) = reserve_sibling_file(target, label).await?;
+    drop(file);
+    Ok(path)
+}
+
+pub(crate) async fn commit_external_output(staged: PathBuf, target: PathBuf) -> AppResult<()> {
+    let metadata = fs::symlink_metadata(&staged).await.map_err(|source| {
+        AppError::io(
+            "inspect staged output",
+            staged.to_string_lossy().into_owned(),
+            source,
+        )
+    })?;
+    if metadata.file_type().is_symlink() || !metadata.is_file() {
+        return Err(AppError::NotAFile(staged.to_string_lossy().into_owned()));
+    }
+    let mut writes = [StagedWrite {
+        target,
+        staged,
+        backup: None,
+    }];
+    commit_staged_writes(&mut writes).await
+}
+
 async fn copy_file_transactionally(source: &Path, target: &Path) -> AppResult<()> {
     let staged = stage_copy(source, target, "copy").await?;
     let mut staged_writes = vec![StagedWrite {

@@ -16,6 +16,8 @@ import type {
   CompileResponse
 } from '../../shared/compileProtocol'
 import { parseContentOutline } from '../../shared/contentOutline'
+import { builtInTemplates } from '../../shared/templates'
+import type { Template } from '../../shared/templates'
 
 type MigratedDesktopApi = Pick<
   DesktopApi,
@@ -34,6 +36,7 @@ type MigratedDesktopApi = Pick<
   | 'deletePath'
   | 'readFileBase64'
   | 'readFileBinary'
+  | 'createTemplateProject'
   | 'gitIsRepo'
   | 'gitInit'
   | 'gitStatus'
@@ -77,6 +80,10 @@ type MigratedDesktopApi = Pick<
   | 'spellSuggest'
   | 'spellAddWord'
   | 'spellSetLanguage'
+  | 'listTemplates'
+  | 'addTemplate'
+  | 'removeTemplate'
+  | 'importTemplateZip'
   | 'zoteroProbe'
   | 'zoteroSearch'
   | 'zoteroCiteCAYW'
@@ -91,6 +98,8 @@ type MigratedDesktopApi = Pick<
   | 'synctexForward'
   | 'synctexInverse'
   | 'synctexBuildLineMap'
+  | 'exportDocument'
+  | 'getExportFormats'
   | 'loadSettings'
   | 'saveSettings'
   | 'addRecentProject'
@@ -219,6 +228,9 @@ const readFileBinary: DesktopApi['readFileBinary'] = async (filePath) => {
     data: bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)
   }
 }
+
+const createTemplateProject: DesktopApi['createTemplateProject'] = (templateName, content, files) =>
+  invoke(TAURI_COMMANDS.createTemplateProject, { templateName, content, files })
 
 const gitIsRepo: DesktopApi['gitIsRepo'] = (workDir) =>
   invoke<boolean>(TAURI_COMMANDS.gitIsRepo, { workDir })
@@ -350,6 +362,20 @@ const spellAddWord: DesktopApi['spellAddWord'] = (word) =>
 const spellSetLanguage: DesktopApi['spellSetLanguage'] = (language) =>
   invoke(TAURI_COMMANDS.spellSetLanguage, { language })
 
+const listTemplates: DesktopApi['listTemplates'] = async () => [
+  ...builtInTemplates,
+  ...(await invoke<Template[]>(TAURI_COMMANDS.listCustomTemplates))
+]
+
+const addTemplate: DesktopApi['addTemplate'] = (name, description, content) =>
+  invoke(TAURI_COMMANDS.addCustomTemplate, { name, description, content })
+
+const removeTemplate: DesktopApi['removeTemplate'] = (id) =>
+  invoke(TAURI_COMMANDS.removeCustomTemplate, { id })
+
+const importTemplateZip: DesktopApi['importTemplateZip'] = () =>
+  invoke(TAURI_COMMANDS.importTemplateZip)
+
 const zoteroProbe: DesktopApi['zoteroProbe'] = (port) =>
   invoke<boolean>(TAURI_COMMANDS.zoteroProbe, { port })
 
@@ -395,6 +421,12 @@ const synctexInverse: DesktopApi['synctexInverse'] = (texFile, page, x, y) =>
 
 const synctexBuildLineMap: DesktopApi['synctexBuildLineMap'] = (texFile) =>
   invoke<SyncTeXLineMapEntry[]>(TAURI_COMMANDS.synctexBuildLineMap, { texFile })
+
+const exportDocument: DesktopApi['exportDocument'] = (inputPath, format) =>
+  invoke(TAURI_COMMANDS.exportDocument, { inputPath, format })
+
+const getExportFormats: DesktopApi['getExportFormats'] = () =>
+  invoke(TAURI_COMMANDS.getExportFormats)
 
 const onCompileLog: DesktopApi['onCompileLog'] = (callback) => {
   compileLogCallback = callback
@@ -497,6 +529,7 @@ const migratedApi: MigratedDesktopApi = {
   deletePath,
   readFileBase64,
   readFileBinary,
+  createTemplateProject,
   gitIsRepo,
   gitInit,
   gitStatus,
@@ -540,6 +573,10 @@ const migratedApi: MigratedDesktopApi = {
   spellSuggest,
   spellAddWord,
   spellSetLanguage,
+  listTemplates,
+  addTemplate,
+  removeTemplate,
+  importTemplateZip,
   zoteroProbe,
   zoteroSearch,
   zoteroCiteCAYW,
@@ -554,6 +591,8 @@ const migratedApi: MigratedDesktopApi = {
   synctexForward,
   synctexInverse,
   synctexBuildLineMap,
+  exportDocument,
+  getExportFormats,
   loadSettings,
   saveSettings,
   addRecentProject,
