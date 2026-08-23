@@ -9,6 +9,48 @@ import {
   type ProjectTransitionSnapshot
 } from '../utils/openProject'
 import { checkForAppUpdate } from '../services/updateLifecycle'
+import { useNotificationStore } from '../store/useNotificationStore'
+import i18n from '../i18n'
+import { errorMessage, logError } from '../utils/errorMessage'
+
+const SESSION_RESTORE_NOTIFICATION_ID = 'session-restore-failed'
+
+function publishSessionRestoreFailure(savedRoot: string, error: unknown): void {
+  const reason = errorMessage(error)
+  useNotificationStore.getState().pushNotification({
+    id: SESSION_RESTORE_NOTIFICATION_ID,
+    tone: 'error',
+    message: i18n.t('notifications.sessionRestoreFailed', {
+      path: savedRoot,
+      reason
+    }),
+    action: {
+      label: i18n.t('notifications.chooseReplacement'),
+      dismissOnRun: false,
+      run: async () => {
+        const replacementPath = await window.api.openDirectory()
+        if (!replacementPath) return
+
+        try {
+          const snapshot = await openProject(replacementPath)
+          if (snapshot) {
+            useNotificationStore.getState().dismissNotification(SESSION_RESTORE_NOTIFICATION_ID)
+          }
+        } catch (replacementError) {
+          logError('SessionRestore:replacement', replacementError)
+          useNotificationStore.getState().updateNotification(SESSION_RESTORE_NOTIFICATION_ID, {
+            tone: 'error',
+            message: i18n.t('notifications.replacementOpenFailed', {
+              path: replacementPath,
+              reason: errorMessage(replacementError)
+            })
+          })
+          throw replacementError
+        }
+      }
+    }
+  })
+}
 
 /**
  * Restores the previous editing session on mount:
@@ -37,11 +79,13 @@ export function useSessionRestore(): boolean {
       let snapshot: ProjectTransitionSnapshot | null
       try {
         snapshot = await openProject(savedRoot, { autoOpenFirstTex: false })
-      } catch {
+      } catch (error) {
         if (!active) return
+        logError('SessionRestore:project', error)
         if (useProjectStore.getState().projectRoot === savedRoot) {
           useProjectStore.getState().setProjectRoot(null)
         }
+        publishSessionRestoreFailure(savedRoot, error)
         setSessionRestored(true)
         return
       }
@@ -50,6 +94,7 @@ export function useSessionRestore(): boolean {
         setSessionRestored(true)
         return
       }
+      useNotificationStore.getState().dismissNotification(SESSION_RESTORE_NOTIFICATION_ID)
 
       // Re-open each file from disk
       for (const fp of _sessionOpenPaths) {

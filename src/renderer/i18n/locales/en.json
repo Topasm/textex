@@ -31,7 +31,8 @@
     "pageOf": "of",
     "goToPage": "Go to page",
     "zoomPreset": "Zoom level",
-    "untitled": "Untitled"
+    "untitled": "Untitled",
+    "unsaved": "{{name}}, unsaved changes"
   },
   "statusBar": {
     "ready": "Ready",
@@ -72,6 +73,20 @@
     "newBlankProject": "New Blank Project",
     "newFromTemplate": "New from Template"
   },
+  "loading": {
+    "workspace": "Restoring your workspace…",
+    "settings": "Loading settings…",
+    "aiDraft": "Loading AI draft…",
+    "editor": "Loading editor…",
+    "preparingEditor": "Preparing the editor…",
+    "preview": "Loading preview…",
+    "terminal": "Loading terminal…",
+    "templates": "Loading templates…",
+    "documentHistory": "Loading document history…",
+    "mathPreview": "Loading math preview…",
+    "localHistory": "Loading local history…",
+    "tableEditor": "Loading table editor…"
+  },
   "updateNotification": {
     "regionLabel": "Application update",
     "checking": "Checking for updates...",
@@ -90,6 +105,18 @@
     "releaseDate": "Released {{date}}",
     "viewRelease": "View release",
     "dismiss": "Dismiss"
+  },
+  "notifications": {
+    "regionLabel": "Background activity",
+    "progress": "Task progress",
+    "dismiss": "Dismiss",
+    "exporting": "Exporting {{format}} document...",
+    "exportComplete": "{{format}} export saved to {{path}}.",
+    "exportFailed": "Could not export the {{format}} document.",
+    "retry": "Try again",
+    "sessionRestoreFailed": "Could not restore {{path}}: {{reason}}",
+    "chooseReplacement": "Choose replacement",
+    "replacementOpenFailed": "Could not open replacement {{path}}: {{reason}}"
   },
   "settings": {
     "title": "Settings",
@@ -113,6 +140,9 @@
       "application": "Application",
       "autoUpdates": "Automatically check for updates",
       "autoUpdatesDesc": "Check for new TextEx versions after launch",
+      "checkUpdatesNow": "Check for updates now",
+      "checkUpdatesNowDesc": "Look for a new TextEx version now. Download and installation still require confirmation.",
+      "checkNow": "Check now",
       "language": "Language",
       "languageDesc": "Choose the display language for the application"
     },
@@ -121,6 +151,7 @@
       "themeDesc": "Choose how TexTex looks to you.",
       "light": "Light",
       "dark": "Dark",
+      "highContrast": "High contrast",
       "system": "System",
       "glass": "Glass",
       "pdfNightMode": "PDF Night Mode",
@@ -419,11 +450,66 @@
     "invalidPath": "Enter an absolute folder path.",
     "pathNotFound": "The selected folder does not exist or cannot be opened.",
     "pathSaveFailed": "Failed to update the project path.",
-    "save": "Save"
+    "save": "Save",
+    "openFailed": "Could not open {{path}}: {{reason}}",
+    "replacementPath": "Replacement folder",
+    "retry": "Retry"
   },
   "externalChange": {
     "message": "\"{{file}}\" has been modified externally.",
     "reload": "Reload",
     "keep": "Keep Changes"
+  },
+  "commandPalette": {
+    "title": "Command Palette",
+    "searchLabel": "Search commands",
+    "placeholder": "Type a command or keyword…",
+    "close": "Close command palette",
+    "noResults": "No matching commands",
+    "resultsLabel": "Commands",
+    "hint": "Enter to run · Esc to close",
+    "requires": {
+      "document": "Open a document first",
+      "pdf": "Compile a PDF first"
+    },
+    "groups": {
+      "file": "File",
+      "edit": "Edit",
+      "view": "View",
+      "compile": "Compile",
+      "pdf": "PDF",
+      "ai": "AI",
+      "app": "Application",
+      "window": "Window"
+    },
+    "commands": {
+      "file_open": "Open File",
+      "file_openFolder": "Open Folder",
+      "file_save": "Save File",
+      "file_saveAs": "Save File As",
+      "file_newTemplate": "New from Template",
+      "file_export_html": "Export as HTML",
+      "file_export_docx": "Export as DOCX",
+      "file_export_odt": "Export as ODT",
+      "file_export_epub": "Export as EPUB",
+      "compile_run": "Compile Document",
+      "ai_draft": "Create AI Draft",
+      "edit_find": "Find in Document",
+      "view_toggleSidebar": "Toggle Sidebar",
+      "view_toggleResearchPanel": "Toggle Research Panel",
+      "view_toggleLog": "Toggle Log Panel",
+      "view_toggleTerminal": "Toggle Terminal",
+      "view_search_citations": "Search Citations",
+      "view_search_pdf": "Search PDF",
+      "pdf_zoomIn": "Zoom PDF In",
+      "pdf_zoomOut": "Zoom PDF Out",
+      "pdf_zoomReset": "Reset PDF Zoom",
+      "pdf_fitWidth": "Fit PDF to Width",
+      "pdf_fitHeight": "Fit PDF to Height",
+      "app_settings": "Open Settings",
+      "app_checkUpdates": "Check for Updates",
+      "window_close": "Close Window",
+      "app_quit": "Quit TextEx"
+    }
   }
 }

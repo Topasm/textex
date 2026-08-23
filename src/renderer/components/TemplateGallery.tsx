@@ -113,7 +113,11 @@ function TemplateGallery() {
   const custom = templates.filter((t) => !t.builtIn)
 
   return (
-    <div className="modal-backdrop" onClick={handleBackdropClick}>
+    <div
+      className="modal-backdrop"
+      data-app-overlay-owner="templateGallery"
+      onClick={handleBackdropClick}
+    >
       <div className="modal">
         <button className="modal-close" onClick={() => setOpen(false)}>
           {'\u00D7'}

@@ -4,6 +4,7 @@ import { useSettingsStore } from '../../store/useSettingsStore'
 import { User } from 'lucide-react'
 import { Toggle } from './Toggle'
 import { SUPPORTED_LANGUAGES } from '../../i18n'
+import { checkForAppUpdate } from '../../services/updateLifecycle'
 
 export const GeneralTab = () => {
   const { t } = useTranslation()
@@ -75,6 +76,21 @@ export const GeneralTab = () => {
               checked={settings.autoUpdateEnabled !== false}
               onChange={(checked) => updateSetting('autoUpdateEnabled', checked)}
             />
+          </div>
+          <div className="settings-row">
+            <div>
+              <div className="settings-row-label">{t('settings.general.checkUpdatesNow')}</div>
+              <div className="settings-row-description">
+                {t('settings.general.checkUpdatesNowDesc')}
+              </div>
+            </div>
+            <button
+              type="button"
+              className="primary-button settings-nowrap"
+              onClick={() => void checkForAppUpdate({ interactive: true })}
+            >
+              {t('settings.general.checkNow')}
+            </button>
           </div>
           <div className="settings-row">
             <div>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, lazy, Suspense } from 'react'
+import { useCallback, useEffect, useMemo, useState, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FolderTree, ListTree, StickyNote, Clock, GitBranch, PanelRightOpen } from 'lucide-react'
 import Toolbar from './components/Toolbar'
@@ -15,6 +15,9 @@ import { TimelinePanel } from './components/TimelinePanel'
 import UpdateNotification from './components/UpdateNotification'
 import PreviewErrorBoundary from './components/PreviewErrorBoundary'
 import HomeScreen from './components/HomeScreen'
+import { LoadingFallback } from './components/LoadingFallback'
+import NotificationCenter from './components/NotificationCenter'
+import { CommandPalette } from './components/CommandPalette'
 import { useAutoCompile } from './hooks/useAutoCompile'
 import { useFileOps } from './hooks/useFileOps'
 import { useSessionRestore } from './hooks/useSessionRestore'
@@ -41,6 +44,14 @@ import type { AppCommandId } from '../shared/types'
 import { runtimePerformance } from './services/runtimePerformance'
 import { prepareForApplicationExit, quitApplication } from './services/applicationLifecycle'
 import { checkForAppUpdate } from './services/updateLifecycle'
+import { exportDocumentWithFeedback } from './services/documentExportLifecycle'
+import {
+  canOpenExclusiveAppOverlay,
+  containsRenderedBlockingOverlay,
+  hasRenderedFeatureModal,
+  shouldSuppressBackgroundSurfaces,
+  type AppOverlaySnapshot
+} from './services/appOverlayPolicy'
 import { documentRegistry } from './models/documentRegistry'
 import { getDesktopCapabilities } from './platform/capabilities'
 import {
@@ -72,6 +83,8 @@ function App() {
   const { t } = useTranslation()
   const capabilities = getDesktopCapabilities()
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
+  const [isFeatureModalOpen, setIsFeatureModalOpen] = useState(false)
   useAutoCompile()
   const { handleOpen, handleSave, handleSaveAs } = useFileOps()
 
@@ -82,6 +95,7 @@ function App() {
   // Only subscribe to state needed for rendering
   const splitRatio = usePdfStore((s) => s.splitRatio)
   const terminalRatio = usePdfStore((s) => s.terminalRatio)
+  const pdfPath = useCompileStore((s) => s.pdfPath)
   const isSidebarOpen = useProjectStore((s) => s.isSidebarOpen)
   const sidebarView = useProjectStore((s) => s.sidebarView)
   const sidebarWidth = useProjectStore((s) => s.sidebarWidth)
@@ -102,13 +116,36 @@ function App() {
   const [isDraftModalOpen, setIsDraftModalOpen] = useState(false)
   const [draftPrefill, setDraftPrefill] = useState<string | undefined>(undefined)
 
+  const overlaySnapshot = useMemo<AppOverlaySnapshot>(
+    () => ({
+      commandPalette: isCommandPaletteOpen,
+      settings: isSettingsOpen,
+      aiDraft: isDraftModalOpen,
+      templateGallery: isTemplateGalleryOpen,
+      featureModal: isFeatureModalOpen
+    }),
+    [
+      isCommandPaletteOpen,
+      isDraftModalOpen,
+      isFeatureModalOpen,
+      isSettingsOpen,
+      isTemplateGalleryOpen
+    ]
+  )
+  const commandPaletteVisible =
+    isCommandPaletteOpen && canOpenExclusiveAppOverlay('commandPalette', overlaySnapshot)
+  const suppressBackgroundSurfaces = shouldSuppressBackgroundSurfaces(overlaySnapshot)
+
   const handleAiDraft = useCallback(
     (prefill?: string) => {
       if (!capabilities.ai) return
+      if (!canOpenExclusiveAppOverlay('aiDraft', overlaySnapshot)) return
+      if (hasRenderedFeatureModal(document)) return
+      setIsCommandPaletteOpen(false)
       setDraftPrefill(typeof prefill === 'string' ? prefill : undefined)
       setIsDraftModalOpen(true)
     },
-    [capabilities.ai]
+    [capabilities.ai, overlaySnapshot]
   )
 
   const handleToggleTerminalPane = useCallback(() => {
@@ -192,22 +229,25 @@ function App() {
       if (!capabilities.documentExport) return
       const fp = useEditorStore.getState().filePath
       if (!fp) return
-      useUiStore.getState().setExportStatus('exporting')
-      try {
-        const result = await window.api.exportDocument(fp, format)
-        useUiStore.getState().setExportStatus(result?.success ? 'success' : 'error')
-      } catch (err: unknown) {
-        useCompileStore.getState().appendLog(`Export failed: ${errorMessage(err)}`)
-        useUiStore.getState().setExportStatus('error')
-      }
+      const formatLabel = format.toLocaleUpperCase()
+      await exportDocumentWithFeedback(fp, format, {
+        exporting: t('notifications.exporting', { format: formatLabel }),
+        complete: (outputPath) =>
+          t('notifications.exportComplete', { format: formatLabel, path: outputPath }),
+        failed: t('notifications.exportFailed', { format: formatLabel }),
+        retry: t('notifications.retry')
+      })
     },
-    [capabilities.documentExport]
+    [capabilities.documentExport, t]
   )
 
   const handleOpenTemplateGallery = useCallback(() => {
     if (!capabilities.templates) return
+    if (!canOpenExclusiveAppOverlay('templateGallery', overlaySnapshot)) return
+    if (hasRenderedFeatureModal(document)) return
+    setIsCommandPaletteOpen(false)
     useUiStore.getState().setTemplateGalleryOpen(true)
-  }, [capabilities.templates])
+  }, [capabilities.templates, overlaySnapshot])
 
   const handleNewBlankProject = useCallback(async () => {
     if (!capabilities.templates) return
@@ -254,6 +294,19 @@ function App() {
     await quitApplication()
   }, [])
 
+  const handleOpenSettings = useCallback((): void => {
+    if (!canOpenExclusiveAppOverlay('settings', overlaySnapshot)) return
+    if (hasRenderedFeatureModal(document)) return
+    setIsCommandPaletteOpen(false)
+    setIsSettingsOpen(true)
+  }, [overlaySnapshot])
+
+  const openCommandPalette = useCallback((): void => {
+    if (!canOpenExclusiveAppOverlay('commandPalette', overlaySnapshot)) return
+    if (hasRenderedFeatureModal(document)) return
+    setIsCommandPaletteOpen(true)
+  }, [overlaySnapshot])
+
   const runAppCommand = useCallback(
     (command: AppCommandId): void => {
       void executeAppCommand(command, {
@@ -261,7 +314,7 @@ function App() {
         compile: handleCompile,
         openFile: handleOpen,
         openFolder: handleOpenFolder,
-        openSettings: () => setIsSettingsOpen(true),
+        openSettings: handleOpenSettings,
         openTemplateGallery: handleOpenTemplateGallery,
         runAiDraft: () => handleAiDraft(),
         save: handleSave,
@@ -280,6 +333,7 @@ function App() {
       handleExport,
       handleOpen,
       handleOpenFolder,
+      handleOpenSettings,
       handleOpenTemplateGallery,
       handleQuitApplication,
       handleRequestWindowClose,
@@ -307,7 +361,47 @@ function App() {
   useGitAutoRefresh(projectRoot, isGitRepo, gitEnabled)
   useBibAutoLoad(projectRoot)
   useLspLifecycle(projectRoot, lspEnabled, filePath)
-  useKeyboardShortcuts({ runCommand: runAppCommand })
+  useKeyboardShortcuts({ runCommand: runAppCommand, openCommandPalette })
+
+  useEffect(() => {
+    const updateFeatureModalState = (): void => {
+      setIsFeatureModalOpen(hasRenderedFeatureModal(document))
+    }
+    updateFeatureModalState()
+    const observer = new MutationObserver((records) => {
+      const overlayChanged = records.some((record) => {
+        if (record.type === 'attributes') return true
+        return [...record.addedNodes, ...record.removedNodes].some(
+          (node) => node instanceof Element && containsRenderedBlockingOverlay(node)
+        )
+      })
+      if (overlayChanged) updateFeatureModalState()
+    })
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['aria-modal', 'data-app-overlay-owner']
+    })
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (!isFeatureModalOpen) return
+    setIsCommandPaletteOpen(false)
+    setIsSettingsOpen(false)
+    setIsDraftModalOpen(false)
+    setDraftPrefill(undefined)
+    if (useUiStore.getState().isTemplateGalleryOpen) {
+      useUiStore.getState().setTemplateGalleryOpen(false)
+    }
+  }, [isFeatureModalOpen])
+
+  useEffect(() => {
+    if (isCommandPaletteOpen && !commandPaletteVisible) {
+      setIsCommandPaletteOpen(false)
+    }
+  }, [commandPaletteVisible, isCommandPaletteOpen])
 
   useEffect(() => {
     window.api.onAppCommand(runAppCommand)
@@ -423,15 +517,27 @@ function App() {
         }}
         onToggleTerminalPane={handleToggleTerminalPane}
         isTerminalPaneOpen={terminalPaneOpen}
-        onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenSettings={handleOpenSettings}
       />
       {isSettingsOpen && (
-        <Suspense fallback={null}>
+        <Suspense
+          fallback={
+            <LoadingFallback
+              variant="modal"
+              label={t('loading.settings')}
+              overlayOwner="settings"
+            />
+          }
+        >
           <SettingsModal onClose={() => setIsSettingsOpen(false)} />
         </Suspense>
       )}
       {capabilities.ai && isDraftModalOpen && (
-        <Suspense fallback={null}>
+        <Suspense
+          fallback={
+            <LoadingFallback variant="modal" label={t('loading.aiDraft')} overlayOwner="aiDraft" />
+          }
+        >
           <DraftModal
             isOpen
             onClose={() => {
@@ -443,9 +549,19 @@ function App() {
           />
         </Suspense>
       )}
-      <UpdateNotification />
-      <ExternalChangeBanner />
-      {!sessionRestored ? null : showHomeScreen ? (
+      {!suppressBackgroundSurfaces && <UpdateNotification />}
+      {!suppressBackgroundSurfaces && <ExternalChangeBanner />}
+      <NotificationCenter suppressed={suppressBackgroundSurfaces} />
+      <CommandPalette
+        isOpen={commandPaletteVisible}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onRunCommand={runAppCommand}
+        capabilities={capabilities}
+        context={{ document: Boolean(filePath), pdf: Boolean(pdfPath) }}
+      />
+      {!sessionRestored ? (
+        <LoadingFallback variant="workspace" label={t('loading.workspace')} />
+      ) : showHomeScreen ? (
         <HomeScreen
           onOpenFolder={handleOpenFolder}
           onNewBlankProject={handleNewBlankProject}
@@ -463,7 +579,7 @@ function App() {
                 }}
               >
                 <TabBar />
-                <Suspense fallback={null}>
+                <Suspense fallback={<LoadingFallback variant="pane" label={t('loading.editor')} />}>
                   <EditorPane />
                 </Suspense>
               </div>
@@ -479,7 +595,9 @@ function App() {
                 }}
               >
                 <PreviewErrorBoundary>
-                  <Suspense fallback={null}>
+                  <Suspense
+                    fallback={<LoadingFallback variant="pane" label={t('loading.preview')} />}
+                  >
                     <PreviewPane />
                   </Suspense>
                 </PreviewErrorBoundary>
@@ -492,7 +610,9 @@ function App() {
                     onDoubleClick={handleTerminalDividerDoubleClick}
                   />
                   <div className="terminal-pane" style={{ width: `${terminalRatio * 100}%` }}>
-                    <Suspense fallback={null}>
+                    <Suspense
+                      fallback={<LoadingFallback variant="pane" label={t('loading.terminal')} />}
+                    >
                       <TerminalPane />
                     </Suspense>
                   </div>
@@ -517,7 +637,15 @@ function App() {
       <BibliographyRegistrationDialog />
       {showStatusBar && <StatusBar />}
       {capabilities.templates && isTemplateGalleryOpen && (
-        <Suspense fallback={null}>
+        <Suspense
+          fallback={
+            <LoadingFallback
+              variant="modal"
+              label={t('loading.templates')}
+              overlayOwner="templateGallery"
+            />
+          }
+        >
           <TemplateGallery />
         </Suspense>
       )}

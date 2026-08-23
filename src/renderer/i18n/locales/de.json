@@ -31,7 +31,8 @@
     "pageOf": "von",
     "goToPage": "Gehe zu Seite",
     "zoomPreset": "Zoomstufe",
-    "untitled": "Unbenannt"
+    "untitled": "Unbenannt",
+    "unsaved": "{{name}}, nicht gespeicherte Änderungen"
   },
   "statusBar": {
     "ready": "Bereit",
@@ -72,6 +73,20 @@
     "newBlankProject": "Neues leeres Projekt",
     "newFromTemplate": "Neu aus Vorlage"
   },
+  "loading": {
+    "workspace": "Arbeitsbereich wird wiederhergestellt…",
+    "settings": "Einstellungen werden geladen…",
+    "aiDraft": "KI-Entwurf wird geladen…",
+    "editor": "Editor wird geladen…",
+    "preparingEditor": "Editor wird vorbereitet…",
+    "preview": "Vorschau wird geladen…",
+    "terminal": "Terminal wird geladen…",
+    "templates": "Vorlagen werden geladen…",
+    "documentHistory": "Dokumentverlauf wird geladen…",
+    "mathPreview": "Mathematikvorschau wird geladen…",
+    "localHistory": "Lokaler Verlauf wird geladen…",
+    "tableEditor": "Tabelleneditor wird geladen…"
+  },
   "updateNotification": {
     "regionLabel": "Anwendungsupdate",
     "checking": "Updates werden gesucht...",
@@ -90,6 +105,18 @@
     "releaseDate": "Veröffentlicht am {{date}}",
     "viewRelease": "Version anzeigen",
     "dismiss": "Verwerfen"
+  },
+  "notifications": {
+    "regionLabel": "Hintergrundaktivität",
+    "progress": "Aufgabenfortschritt",
+    "dismiss": "Verwerfen",
+    "exporting": "{{format}}-Dokument wird exportiert...",
+    "exportComplete": "{{format}}-Export wurde unter {{path}} gespeichert.",
+    "exportFailed": "Das {{format}}-Dokument konnte nicht exportiert werden.",
+    "retry": "Erneut versuchen",
+    "sessionRestoreFailed": "{{path}} konnte nicht wiederhergestellt werden: {{reason}}",
+    "chooseReplacement": "Ersatzordner wählen",
+    "replacementOpenFailed": "Der Ersatzordner {{path}} konnte nicht geöffnet werden: {{reason}}"
   },
   "settings": {
     "title": "Einstellungen",
@@ -113,6 +140,9 @@
       "application": "Anwendung",
       "autoUpdates": "Automatisch nach Updates suchen",
       "autoUpdatesDesc": "Nach dem Start von TextEx automatisch nach neuen Versionen suchen",
+      "checkUpdatesNow": "Jetzt nach Updates suchen",
+      "checkUpdatesNowDesc": "Jetzt nach einer neuen TextEx-Version suchen. Download und Installation müssen weiterhin bestätigt werden.",
+      "checkNow": "Jetzt suchen",
       "language": "Sprache",
       "languageDesc": "Wählen Sie die Anzeigesprache der Anwendung"
     },
@@ -121,6 +151,7 @@
       "themeDesc": "Wählen Sie das Erscheinungsbild von TexTex.",
       "light": "Hell",
       "dark": "Dunkel",
+      "highContrast": "Hoher Kontrast",
       "system": "System",
       "glass": "Glas",
       "pdfNightMode": "PDF-Nachtmodus",
@@ -413,11 +444,66 @@
     "invalidPath": "Geben Sie einen absoluten Ordnerpfad ein.",
     "pathNotFound": "Der ausgewählte Ordner existiert nicht oder kann nicht geöffnet werden.",
     "pathSaveFailed": "Der Projektpfad konnte nicht aktualisiert werden.",
-    "save": "Speichern"
+    "save": "Speichern",
+    "openFailed": "{{path}} konnte nicht geöffnet werden: {{reason}}",
+    "replacementPath": "Ersatz-Projektordner",
+    "retry": "Erneut versuchen"
   },
   "externalChange": {
     "message": "\"{{file}}\" wurde extern geändert.",
     "reload": "Neu laden",
     "keep": "Änderungen behalten"
+  },
+  "commandPalette": {
+    "title": "Befehlspalette",
+    "searchLabel": "Befehle durchsuchen",
+    "placeholder": "Befehl oder Stichwort eingeben…",
+    "close": "Befehlspalette schließen",
+    "noResults": "Keine passenden Befehle",
+    "resultsLabel": "Befehle",
+    "hint": "Enter zum Ausführen · Esc zum Schließen",
+    "requires": {
+      "document": "Zuerst ein Dokument öffnen",
+      "pdf": "Zuerst ein PDF kompilieren"
+    },
+    "groups": {
+      "file": "Datei",
+      "edit": "Bearbeiten",
+      "view": "Ansicht",
+      "compile": "Kompilieren",
+      "pdf": "PDF",
+      "ai": "KI",
+      "app": "Anwendung",
+      "window": "Fenster"
+    },
+    "commands": {
+      "file_open": "Datei öffnen",
+      "file_openFolder": "Ordner öffnen",
+      "file_save": "Datei speichern",
+      "file_saveAs": "Datei speichern unter",
+      "file_newTemplate": "Neu aus Vorlage",
+      "file_export_html": "Als HTML exportieren",
+      "file_export_docx": "Als DOCX exportieren",
+      "file_export_odt": "Als ODT exportieren",
+      "file_export_epub": "Als EPUB exportieren",
+      "compile_run": "Dokument kompilieren",
+      "ai_draft": "KI-Entwurf erstellen",
+      "edit_find": "Im Dokument suchen",
+      "view_toggleSidebar": "Seitenleiste umschalten",
+      "view_toggleResearchPanel": "Rechercheleiste umschalten",
+      "view_toggleLog": "Protokollleiste umschalten",
+      "view_toggleTerminal": "Terminal umschalten",
+      "view_search_citations": "Zitate suchen",
+      "view_search_pdf": "PDF durchsuchen",
+      "pdf_zoomIn": "PDF vergrößern",
+      "pdf_zoomOut": "PDF verkleinern",
+      "pdf_zoomReset": "PDF-Zoom zurücksetzen",
+      "pdf_fitWidth": "PDF an Breite anpassen",
+      "pdf_fitHeight": "PDF an Höhe anpassen",
+      "app_settings": "Einstellungen öffnen",
+      "app_checkUpdates": "Nach Updates suchen",
+      "window_close": "Fenster schließen",
+      "app_quit": "TextEx beenden"
+    }
   }
 }

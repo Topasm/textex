@@ -31,7 +31,8 @@
     "pageOf": "de",
     "goToPage": "Ir a la página",
     "zoomPreset": "Nivel de zoom",
-    "untitled": "Sin título"
+    "untitled": "Sin título",
+    "unsaved": "{{name}}, cambios sin guardar"
   },
   "statusBar": {
     "ready": "Listo",
@@ -72,6 +73,20 @@
     "newBlankProject": "Nuevo proyecto en blanco",
     "newFromTemplate": "Nuevo desde plantilla"
   },
+  "loading": {
+    "workspace": "Restaurando tu espacio de trabajo…",
+    "settings": "Cargando ajustes…",
+    "aiDraft": "Cargando borrador de IA…",
+    "editor": "Cargando editor…",
+    "preparingEditor": "Preparando el editor…",
+    "preview": "Cargando vista previa…",
+    "terminal": "Cargando terminal…",
+    "templates": "Cargando plantillas…",
+    "documentHistory": "Cargando historial del documento…",
+    "mathPreview": "Cargando vista previa matemática…",
+    "localHistory": "Cargando historial local…",
+    "tableEditor": "Cargando editor de tablas…"
+  },
   "updateNotification": {
     "regionLabel": "Actualización de la aplicación",
     "checking": "Buscando actualizaciones...",
@@ -90,6 +105,18 @@
     "releaseDate": "Publicada el {{date}}",
     "viewRelease": "Ver versión",
     "dismiss": "Descartar"
+  },
+  "notifications": {
+    "regionLabel": "Actividad en segundo plano",
+    "progress": "Progreso de la tarea",
+    "dismiss": "Descartar",
+    "exporting": "Exportando documento {{format}}...",
+    "exportComplete": "La exportación {{format}} se guardó en {{path}}.",
+    "exportFailed": "No se pudo exportar el documento {{format}}.",
+    "retry": "Intentar de nuevo",
+    "sessionRestoreFailed": "No se pudo restaurar {{path}}: {{reason}}",
+    "chooseReplacement": "Elegir reemplazo",
+    "replacementOpenFailed": "No se pudo abrir el reemplazo {{path}}: {{reason}}"
   },
   "settings": {
     "title": "Configuración",
@@ -113,6 +140,9 @@
       "application": "Aplicación",
       "autoUpdates": "Buscar actualizaciones automáticamente",
       "autoUpdatesDesc": "Buscar nuevas versiones de TextEx después de iniciar",
+      "checkUpdatesNow": "Buscar actualizaciones ahora",
+      "checkUpdatesNowDesc": "Busca ahora una nueva versión de TextEx. La descarga y la instalación aún requieren confirmación.",
+      "checkNow": "Buscar ahora",
       "language": "Idioma",
       "languageDesc": "Elige el idioma de visualización de la aplicación"
     },
@@ -121,6 +151,7 @@
       "themeDesc": "Elige cómo se ve TexTex para ti.",
       "light": "Claro",
       "dark": "Oscuro",
+      "highContrast": "Alto contraste",
       "system": "Sistema",
       "glass": "Cristal",
       "pdfNightMode": "Modo nocturno de PDF",
@@ -413,11 +444,66 @@
     "invalidPath": "Introduce una ruta absoluta de carpeta.",
     "pathNotFound": "La carpeta seleccionada no existe o no se puede abrir.",
     "pathSaveFailed": "No se pudo actualizar la ruta del proyecto.",
-    "save": "Guardar"
+    "save": "Guardar",
+    "openFailed": "No se pudo abrir {{path}}: {{reason}}",
+    "replacementPath": "Carpeta de proyecto de reemplazo",
+    "retry": "Reintentar"
   },
   "externalChange": {
     "message": "\"{{file}}\" ha sido modificado externamente.",
     "reload": "Recargar",
     "keep": "Mantener cambios"
+  },
+  "commandPalette": {
+    "title": "Paleta de comandos",
+    "searchLabel": "Buscar comandos",
+    "placeholder": "Escribe un comando o palabra clave…",
+    "close": "Cerrar la paleta de comandos",
+    "noResults": "No hay comandos coincidentes",
+    "resultsLabel": "Comandos",
+    "hint": "Enter para ejecutar · Esc para cerrar",
+    "requires": {
+      "document": "Abre primero un documento",
+      "pdf": "Compila primero un PDF"
+    },
+    "groups": {
+      "file": "Archivo",
+      "edit": "Editar",
+      "view": "Ver",
+      "compile": "Compilar",
+      "pdf": "PDF",
+      "ai": "IA",
+      "app": "Aplicación",
+      "window": "Ventana"
+    },
+    "commands": {
+      "file_open": "Abrir archivo",
+      "file_openFolder": "Abrir carpeta",
+      "file_save": "Guardar archivo",
+      "file_saveAs": "Guardar archivo como",
+      "file_newTemplate": "Nuevo desde plantilla",
+      "file_export_html": "Exportar como HTML",
+      "file_export_docx": "Exportar como DOCX",
+      "file_export_odt": "Exportar como ODT",
+      "file_export_epub": "Exportar como EPUB",
+      "compile_run": "Compilar documento",
+      "ai_draft": "Crear borrador con IA",
+      "edit_find": "Buscar en el documento",
+      "view_toggleSidebar": "Alternar barra lateral",
+      "view_toggleResearchPanel": "Alternar panel de investigación",
+      "view_toggleLog": "Alternar panel de registro",
+      "view_toggleTerminal": "Alternar terminal",
+      "view_search_citations": "Buscar citas",
+      "view_search_pdf": "Buscar en PDF",
+      "pdf_zoomIn": "Ampliar PDF",
+      "pdf_zoomOut": "Reducir PDF",
+      "pdf_zoomReset": "Restablecer zoom del PDF",
+      "pdf_fitWidth": "Ajustar PDF al ancho",
+      "pdf_fitHeight": "Ajustar PDF a la altura",
+      "app_settings": "Abrir ajustes",
+      "app_checkUpdates": "Buscar actualizaciones",
+      "window_close": "Cerrar ventana",
+      "app_quit": "Salir de TextEx"
+    }
   }
 }

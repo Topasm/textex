@@ -6,6 +6,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import { installDesktopApi } from './platform/desktopApi'
 import { installRuntimePerformance } from './services/runtimePerformance'
 import { installRendererSessionBridge } from './services/rendererSession'
+import { showStartupError } from './services/startupSurface'
 import { hydrateSettingsFromNative } from './store/useSettingsStore'
 import './styles/index.css'
 
@@ -24,7 +25,12 @@ async function bootstrap(): Promise<void> {
   await hydrateSettingsFromNative()
   installRuntimePerformance()
 
-  ReactDOM.createRoot(document.getElementById('root')!).render(
+  const root = document.getElementById('root')
+  if (!root) throw new Error('Renderer root is unavailable')
+
+  // The static startup shell remains visible through native API and settings
+  // hydration. React replaces those static children during its first commit.
+  ReactDOM.createRoot(root).render(
     <React.StrictMode>
       <ErrorBoundary>
         <App />
@@ -37,6 +43,5 @@ void bootstrap().catch((error: unknown) => {
   const root = document.getElementById('root')
   if (!root) return
 
-  const message = error instanceof Error ? error.message : String(error)
-  root.textContent = `TextEx failed to start: ${message}`
+  showStartupError(root, error)
 })

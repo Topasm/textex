@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import type { UserSettings } from '../../../shared/types'
-import { Moon, Sun, Monitor, Sparkles, Check } from 'lucide-react'
+import { Moon, Sun, Monitor, Sparkles, Check, Contrast } from 'lucide-react'
 import { Toggle } from './Toggle'
 
 export const AppearanceTab = () => {
@@ -19,6 +19,11 @@ export const AppearanceTab = () => {
           {[
             { id: 'light', label: t('settings.appearance.light'), icon: Sun },
             { id: 'dark', label: t('settings.appearance.dark'), icon: Moon },
+            {
+              id: 'high-contrast',
+              label: t('settings.appearance.highContrast'),
+              icon: Contrast
+            },
             { id: 'glass', label: t('settings.appearance.glass'), icon: Sparkles },
             { id: 'system', label: t('settings.appearance.system'), icon: Monitor }
           ].map((mode) => (
@@ -27,7 +32,7 @@ export const AppearanceTab = () => {
               onClick={() => {
                 const newTheme = mode.id as UserSettings['theme']
                 updateSetting('theme', newTheme)
-                if (newTheme === 'dark') {
+                if (newTheme === 'dark' || newTheme === 'high-contrast') {
                   updateSetting('pdfInvertMode', true)
                 } else if (newTheme === 'light' || newTheme === 'glass') {
                   updateSetting('pdfInvertMode', false)
@@ -37,6 +42,7 @@ export const AppearanceTab = () => {
                 }
               }}
               className={`settings-theme-card${settings.theme === mode.id ? ' selected' : ''}`}
+              aria-pressed={settings.theme === mode.id}
             >
               <div className="settings-theme-card-icon">
                 <mode.icon size={20} />

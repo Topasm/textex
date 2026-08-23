@@ -13,6 +13,7 @@ import { getDesktopCapabilities } from '../platform/capabilities'
 
 interface KeyboardShortcutsOpts {
   runCommand: (command: AppCommandId) => void
+  openCommandPalette: () => void
 }
 
 /**
@@ -20,7 +21,7 @@ interface KeyboardShortcutsOpts {
  * Replaces the monolithic if/else chain that was in App.tsx.
  */
 export function useKeyboardShortcuts(opts: KeyboardShortcutsOpts): void {
-  const { runCommand } = opts
+  const { runCommand, openCommandPalette } = opts
 
   useEffect(() => {
     const capabilities = getDesktopCapabilities()
@@ -35,6 +36,7 @@ export function useKeyboardShortcuts(opts: KeyboardShortcutsOpts): void {
     }
 
     const rendererHandlers: Record<RendererShortcutId, () => void> = {
+      'commandPalette.open': openCommandPalette,
       'font.increase': () => useSettingsStore.getState().increaseFontSize(),
       'font.decrease': () => useSettingsStore.getState().decreaseFontSize(),
       'tab.close': () => {
@@ -69,5 +71,5 @@ export function useKeyboardShortcuts(opts: KeyboardShortcutsOpts): void {
       window.removeEventListener('keydown', handler)
       commandRegistry.clear()
     }
-  }, [runCommand])
+  }, [openCommandPalette, runCommand])
 }

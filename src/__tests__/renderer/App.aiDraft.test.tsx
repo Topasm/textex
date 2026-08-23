@@ -1,12 +1,27 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../renderer/App'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
+import { useUiStore } from '../../renderer/store/useUiStore'
+
+const shortcutHarness = vi.hoisted(() => ({ openCommandPalette: null as (() => void) | null }))
 
 vi.mock('../../renderer/components/Toolbar', () => ({
-  default: ({ onAiDraft }: { onAiDraft: () => void }) => (
-    <button onClick={() => onAiDraft()}>Open AI Draft</button>
+  default: ({
+    onAiDraft,
+    onOpenSettings,
+    onNewFromTemplate
+  }: {
+    onAiDraft: () => void
+    onOpenSettings: () => void
+    onNewFromTemplate: () => void
+  }) => (
+    <div>
+      <button onClick={() => onAiDraft()}>Open AI Draft</button>
+      <button onClick={onOpenSettings}>Open Settings</button>
+      <button onClick={onNewFromTemplate}>Open Templates</button>
+    </div>
   )
 }))
 
@@ -67,16 +82,26 @@ vi.mock('../../renderer/components/HomeScreen', () => ({
 }))
 
 vi.mock('../../renderer/components/SettingsModal', () => ({
-  SettingsModal: () => null
+  SettingsModal: ({ onClose }: { onClose: () => void }) => (
+    <div role="dialog" aria-label="Mock Settings" data-app-overlay-owner="settings">
+      <button onClick={onClose}>Close Settings</button>
+    </div>
+  )
 }))
 
 vi.mock('../../renderer/components/DraftModal', () => ({
   DraftModal: ({ isOpen, onInsert }: { isOpen: boolean; onInsert: (latex: string) => void }) =>
-    isOpen ? <button onClick={() => onInsert('generated latex')}>Insert Draft</button> : null
+    isOpen ? (
+      <div role="dialog" aria-label="Mock AI Draft" data-app-overlay-owner="aiDraft">
+        <button onClick={() => onInsert('generated latex')}>Insert Draft</button>
+      </div>
+    ) : null
 }))
 
 vi.mock('../../renderer/components/TemplateGallery', () => ({
-  default: () => null
+  default: () => (
+    <div role="dialog" aria-label="Mock Templates" data-app-overlay-owner="templateGallery" />
+  )
 }))
 
 vi.mock('../../renderer/hooks/useAutoCompile', () => ({
@@ -112,7 +137,9 @@ vi.mock('../../renderer/hooks/useLspLifecycle', () => ({
 }))
 
 vi.mock('../../renderer/hooks/useKeyboardShortcuts', () => ({
-  useKeyboardShortcuts: () => {}
+  useKeyboardShortcuts: ({ openCommandPalette }: { openCommandPalette: () => void }) => {
+    shortcutHarness.openCommandPalette = openCommandPalette
+  }
 }))
 
 vi.mock('../../renderer/hooks/useDragResize', () => ({
@@ -140,6 +167,8 @@ vi.mock('../../renderer/lsp/lspClient', () => ({
 describe('App AI Draft flow', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    shortcutHarness.openCommandPalette = null
+    useUiStore.getState().setTemplateGalleryOpen(false)
     useSettingsStore.setState((state) => ({
       settings: {
         ...state.settings,
@@ -172,5 +201,62 @@ describe('App AI Draft flow', () => {
     expect(window.api.onWindowCloseRequested).toHaveBeenCalledWith(expect.any(Function))
     view.unmount()
     expect(window.api.removeWindowCloseRequestedListener).toHaveBeenCalledOnce()
+  })
+
+  it('replaces the palette with settings and blocks the shortcut while settings owns the modal', async () => {
+    render(<App />)
+    expect(shortcutHarness.openCommandPalette).not.toBeNull()
+
+    act(() => shortcutHarness.openCommandPalette?.())
+    expect(await screen.findByRole('dialog', { name: 'Command Palette' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('option', { name: 'Open Settings' }))
+    expect(await screen.findByRole('dialog', { name: 'Mock Settings' })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Command Palette' })).not.toBeInTheDocument()
+
+    act(() => shortcutHarness.openCommandPalette?.())
+    expect(screen.queryByRole('dialog', { name: 'Command Palette' })).not.toBeInTheDocument()
+  })
+
+  it('does not open the palette over AI draft or template modal workflows', async () => {
+    const draftView = render(<App />)
+    fireEvent.click(screen.getByText('Open AI Draft'))
+    expect(await screen.findByRole('dialog', { name: 'Mock AI Draft' })).toBeInTheDocument()
+
+    act(() => shortcutHarness.openCommandPalette?.())
+    expect(screen.queryByRole('dialog', { name: 'Command Palette' })).not.toBeInTheDocument()
+    draftView.unmount()
+
+    render(<App />)
+    fireEvent.click(screen.getByText('Open Templates'))
+    expect(await screen.findByRole('dialog', { name: 'Mock Templates' })).toBeInTheDocument()
+
+    act(() => shortcutHarness.openCommandPalette?.())
+    expect(screen.queryByRole('dialog', { name: 'Command Palette' })).not.toBeInTheDocument()
+  })
+
+  it('blocks App modals over a feature dialog and closes a palette when one appears', async () => {
+    render(<App />)
+    const featureModal = document.createElement('div')
+    featureModal.className = 'table-editor-overlay'
+    document.body.appendChild(featureModal)
+
+    fireEvent.click(screen.getByText('Open Settings'))
+    expect(screen.queryByRole('dialog', { name: 'Mock Settings' })).not.toBeInTheDocument()
+
+    await act(async () => {
+      featureModal.remove()
+      await Promise.resolve()
+    })
+    act(() => shortcutHarness.openCommandPalette?.())
+    expect(await screen.findByRole('dialog', { name: 'Command Palette' })).toBeInTheDocument()
+
+    const asyncFeatureModal = document.createElement('div')
+    asyncFeatureModal.className = 'bibliography-registration-overlay modal-overlay'
+    document.body.appendChild(asyncFeatureModal)
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Command Palette' })).not.toBeInTheDocument()
+    })
+    asyncFeatureModal.remove()
   })
 })

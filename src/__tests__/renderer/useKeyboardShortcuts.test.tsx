@@ -16,6 +16,7 @@ describe('useKeyboardShortcuts', () => {
   it('registers the manifest shortcuts supported by the Tauri runtime', () => {
     const register = vi.spyOn(commandRegistry, 'register')
     const runCommand = vi.fn()
+    const openCommandPalette = vi.fn()
     const capabilities = getDesktopCapabilities()
     const expectedIds: string[] = []
 
@@ -28,7 +29,7 @@ describe('useKeyboardShortcuts', () => {
     }
     expectedIds.push(...RENDERER_SHORTCUT_MANIFEST.map((command) => command.id))
 
-    renderHook(() => useKeyboardShortcuts({ runCommand }))
+    renderHook(() => useKeyboardShortcuts({ runCommand, openCommandPalette }))
 
     const registeredIds = register.mock.calls.map(([id]) => id)
     expect(registeredIds).toEqual(expectedIds)
@@ -41,6 +42,9 @@ describe('useKeyboardShortcuts', () => {
 
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'O', ctrlKey: true, shiftKey: true }))
     expect(runCommand).toHaveBeenCalledWith('file.openFolder')
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'P', metaKey: true, shiftKey: true }))
+    expect(openCommandPalette).toHaveBeenCalledOnce()
   })
 
   it('does not close a dirty tab with Ctrl/Cmd+W when discard is cancelled', () => {
@@ -49,7 +53,7 @@ describe('useKeyboardShortcuts', () => {
     useEditorStore.getState().openFileInTab(filePath, 'saved')
     useEditorStore.getState().updateActiveDocument('unsaved', 'editor')
     vi.spyOn(window, 'confirm').mockReturnValue(false)
-    renderHook(() => useKeyboardShortcuts({ runCommand: vi.fn() }))
+    renderHook(() => useKeyboardShortcuts({ runCommand: vi.fn(), openCommandPalette: vi.fn() }))
 
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'w', metaKey: true }))
 

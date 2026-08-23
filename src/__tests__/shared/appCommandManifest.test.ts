@@ -31,8 +31,8 @@ const EXPECTED_APP_COMMAND_IDS = [
   'pdf.fitHeight',
   'app.settings',
   'app.checkUpdates',
-  'window.close',
-  'app.quit'
+  'app.quit',
+  'window.close'
 ]
 
 function bindingSignatures(binding: ShortcutBinding): string[] {
@@ -48,6 +48,18 @@ describe('app command manifest', () => {
 
     expect(commandIds).toEqual(EXPECTED_APP_COMMAND_IDS)
     expect(new Set(commandIds).size).toBe(commandIds.length)
+  })
+
+  it('provides pure display and search metadata for every palette command', () => {
+    for (const command of APP_COMMAND_MANIFEST) {
+      expect(command.label.trim(), command.id).not.toBe('')
+      expect(command.group.trim(), command.id).not.toBe('')
+      expect(command.keywords.length, command.id).toBeGreaterThan(0)
+      expect(
+        command.keywords.every((keyword) => keyword.trim().length > 0),
+        command.id
+      ).toBe(true)
+    }
   })
 
   it('has no shortcut collisions across app and renderer-local commands', () => {
@@ -73,5 +85,6 @@ describe('app command manifest', () => {
     }
 
     expect(collisions).toEqual([])
+    expect(RENDERER_SHORTCUT_MANIFEST.map(({ id }) => id)).toContain('commandPalette.open')
   })
 })

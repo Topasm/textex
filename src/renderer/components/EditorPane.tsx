@@ -1,5 +1,6 @@
 import Editor, { BeforeMount, OnMount } from '@monaco-editor/react'
 import { useEffect, useRef, useState, useCallback, useMemo, lazy, Suspense } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useEditorStore } from '../store/useEditorStore'
 import { useAiContextStore } from '../store/useAiContextStore'
 import { useProjectStore } from '../store/useProjectStore'
@@ -43,6 +44,7 @@ import { setActiveEditorAdapter } from '../editor/activeEditorAdapter'
 import { runtimePerformance } from '../services/runtimePerformance'
 import { documentRegistry } from '../models/documentRegistry'
 import { isFeatureEnabled } from '../utils/featureFlags'
+import { LoadingFallback } from './LoadingFallback'
 
 // Lazy-load heavy modals that are rarely shown
 const TableEditorModal = lazy(() =>
@@ -56,6 +58,7 @@ const MathPreviewWidget = lazy(() =>
 type MonacoInstance = typeof import('monaco-editor')
 
 function EditorPane() {
+  const { t } = useTranslation()
   const filePath = useEditorStore((s) => s.filePath)
   const setCursorPosition = useEditorStore((s) => s.setCursorPosition)
   const projectRoot = useProjectStore((s) => s.projectRoot)
@@ -485,6 +488,7 @@ function EditorPane() {
           {historyMode ? (
             <DiffEditor
               height="100%"
+              loading={<LoadingFallback variant="pane" label={t('loading.documentHistory')} />}
               language="latex"
               theme={getMonacoTheme(resolveTheme(theme))}
               original={snapshotContent}
@@ -499,6 +503,7 @@ function EditorPane() {
           ) : (
             <Editor
               height="100%"
+              loading={<LoadingFallback variant="pane" label={t('loading.preparingEditor')} />}
               defaultLanguage="latex"
               theme={getMonacoTheme(resolveTheme(theme))}
               path={filePath ?? undefined}
@@ -538,7 +543,9 @@ function EditorPane() {
             />
           )}
           {mathPreviewEnabled && mathData && showMathPreview && (
-            <Suspense fallback={null}>
+            <Suspense
+              fallback={<LoadingFallback variant="floating" label={t('loading.mathPreview')} />}
+            >
               <MathPreviewWidget
                 mathData={mathData}
                 editorRef={editorRef}
@@ -562,7 +569,9 @@ function EditorPane() {
         </div>
 
         {showHistory && (
-          <Suspense fallback={null}>
+          <Suspense
+            fallback={<LoadingFallback variant="panel" label={t('loading.localHistory')} />}
+          >
             <HistoryPanel
               historyItems={historyItems}
               onSelect={handleSelectHistoryItem}
@@ -573,7 +582,7 @@ function EditorPane() {
       </div>
 
       {tableModal.isOpen && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<LoadingFallback variant="modal" label={t('loading.tableEditor')} />}>
           <TableEditorModal
             initialLatex={tableModal.latex}
             onClose={() => setTableModal((prev) => ({ ...prev, isOpen: false }))}

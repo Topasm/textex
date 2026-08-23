@@ -98,7 +98,12 @@ export const DraftModal: React.FC<DraftModalProps> = ({
     : t('draftModal.notConfigured')
 
   return (
-    <div className="modal-overlay" onClick={onClose} onKeyDown={handleKeyDown}>
+    <div
+      className="modal-overlay"
+      data-app-overlay-owner="aiDraft"
+      onClick={onClose}
+      onKeyDown={handleKeyDown}
+    >
       <div className="modal-content draft-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>{t('draftModal.title')}</h2>

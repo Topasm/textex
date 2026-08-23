@@ -31,7 +31,8 @@
     "pageOf": "/",
     "goToPage": "跳转到页",
     "zoomPreset": "缩放级别",
-    "untitled": "未命名"
+    "untitled": "未命名",
+    "unsaved": "{{name}}，有未保存的更改"
   },
   "statusBar": {
     "ready": "就绪",
@@ -72,6 +73,20 @@
     "newBlankProject": "新建空白项目",
     "newFromTemplate": "从模板新建"
   },
+  "loading": {
+    "workspace": "正在恢复工作区…",
+    "settings": "正在加载设置…",
+    "aiDraft": "正在加载 AI 草稿…",
+    "editor": "正在加载编辑器…",
+    "preparingEditor": "正在准备编辑器…",
+    "preview": "正在加载预览…",
+    "terminal": "正在加载终端…",
+    "templates": "正在加载模板…",
+    "documentHistory": "正在加载文档历史记录…",
+    "mathPreview": "正在加载公式预览…",
+    "localHistory": "正在加载本地历史记录…",
+    "tableEditor": "正在加载表格编辑器…"
+  },
   "updateNotification": {
     "regionLabel": "应用更新",
     "checking": "正在检查更新...",
@@ -90,6 +105,18 @@
     "releaseDate": "发布于 {{date}}",
     "viewRelease": "查看版本",
     "dismiss": "忽略"
+  },
+  "notifications": {
+    "regionLabel": "后台活动",
+    "progress": "任务进度",
+    "dismiss": "忽略",
+    "exporting": "正在导出 {{format}} 文档...",
+    "exportComplete": "{{format}} 导出已保存到 {{path}}。",
+    "exportFailed": "无法导出 {{format}} 文档。",
+    "retry": "重试",
+    "sessionRestoreFailed": "无法恢复 {{path}}：{{reason}}",
+    "chooseReplacement": "选择替代文件夹",
+    "replacementOpenFailed": "无法打开替代文件夹 {{path}}：{{reason}}"
   },
   "settings": {
     "title": "设置",
@@ -113,6 +140,9 @@
       "application": "应用程序",
       "autoUpdates": "自动检查更新",
       "autoUpdatesDesc": "TextEx 启动后自动检查新版本",
+      "checkUpdatesNow": "立即检查更新",
+      "checkUpdatesNowDesc": "立即检查新的 TextEx 版本。下载和安装仍需确认。",
+      "checkNow": "立即检查",
       "language": "语言",
       "languageDesc": "选择应用程序的显示语言"
     },
@@ -121,6 +151,7 @@
       "themeDesc": "选择 TexTex 的外观。",
       "light": "浅色",
       "dark": "深色",
+      "highContrast": "高对比度",
       "system": "跟随系统",
       "glass": "玻璃",
       "pdfNightMode": "PDF 夜间模式",
@@ -413,11 +444,66 @@
     "invalidPath": "请输入绝对文件夹路径。",
     "pathNotFound": "所选文件夹不存在或无法打开。",
     "pathSaveFailed": "无法更新项目路径。",
-    "save": "保存"
+    "save": "保存",
+    "openFailed": "无法打开 {{path}}：{{reason}}",
+    "replacementPath": "替代项目文件夹",
+    "retry": "重试"
   },
   "externalChange": {
     "message": "\"{{file}}\" 已被外部修改。",
     "reload": "重新加载",
     "keep": "保留更改"
+  },
+  "commandPalette": {
+    "title": "命令面板",
+    "searchLabel": "搜索命令",
+    "placeholder": "输入命令或关键词…",
+    "close": "关闭命令面板",
+    "noResults": "没有匹配的命令",
+    "resultsLabel": "命令",
+    "hint": "Enter 执行 · Esc 关闭",
+    "requires": {
+      "document": "请先打开文档",
+      "pdf": "请先编译 PDF"
+    },
+    "groups": {
+      "file": "文件",
+      "edit": "编辑",
+      "view": "视图",
+      "compile": "编译",
+      "pdf": "PDF",
+      "ai": "AI",
+      "app": "应用程序",
+      "window": "窗口"
+    },
+    "commands": {
+      "file_open": "打开文件",
+      "file_openFolder": "打开文件夹",
+      "file_save": "保存文件",
+      "file_saveAs": "文件另存为",
+      "file_newTemplate": "从模板新建",
+      "file_export_html": "导出为 HTML",
+      "file_export_docx": "导出为 DOCX",
+      "file_export_odt": "导出为 ODT",
+      "file_export_epub": "导出为 EPUB",
+      "compile_run": "编译文档",
+      "ai_draft": "创建 AI 草稿",
+      "edit_find": "在文档中查找",
+      "view_toggleSidebar": "切换侧边栏",
+      "view_toggleResearchPanel": "切换研究面板",
+      "view_toggleLog": "切换日志面板",
+      "view_toggleTerminal": "切换终端",
+      "view_search_citations": "搜索引文",
+      "view_search_pdf": "搜索 PDF",
+      "pdf_zoomIn": "放大 PDF",
+      "pdf_zoomOut": "缩小 PDF",
+      "pdf_zoomReset": "重置 PDF 缩放",
+      "pdf_fitWidth": "PDF 适合宽度",
+      "pdf_fitHeight": "PDF 适合高度",
+      "app_settings": "打开设置",
+      "app_checkUpdates": "检查更新",
+      "window_close": "关闭窗口",
+      "app_quit": "退出 TextEx"
+    }
   }
 }

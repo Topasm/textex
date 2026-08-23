@@ -4,11 +4,19 @@ import { SettingsModal } from '../../renderer/components/SettingsModal'
 import { getDesktopCapabilities } from '../../renderer/platform/capabilities'
 import { createDefaultUserSettings } from '../../shared/defaultSettings'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
+import { useUiStore } from '../../renderer/store/useUiStore'
 
 describe('SettingsModal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useSettingsStore.setState({ settings: createDefaultUserSettings() })
+    useUiStore.setState({
+      updateStatus: 'idle',
+      updateMetadata: null,
+      updateProgress: null,
+      updateError: '',
+      updateErrorAction: null
+    })
   })
 
   it('renders settings tabs according to the Tauri capability manifest', () => {
@@ -60,9 +68,58 @@ describe('SettingsModal', () => {
     const onClose = vi.fn()
     const { container } = render(<SettingsModal onClose={onClose} />)
 
-    fireEvent.click(container.querySelector('.close-button') as HTMLButtonElement)
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
     fireEvent.click(container.querySelector('.modal-overlay') as HTMLDivElement)
 
     expect(onClose).toHaveBeenCalledTimes(2)
+  })
+
+  it('keeps interactive update feedback and actions visible inside settings', () => {
+    useUiStore.setState({ updateStatus: 'checking' })
+
+    render(<SettingsModal onClose={vi.fn()} />)
+
+    const dialog = screen.getByRole('dialog', { name: 'Settings' })
+    const updateStatus = screen.getByRole('status', { name: 'Application update' })
+    expect(dialog).toContainElement(updateStatus)
+    expect(updateStatus).toHaveTextContent('Checking for updates')
+  })
+
+  it('labels the dialog, traps focus, closes with Escape, and restores focus', () => {
+    const opener = document.createElement('button')
+    opener.textContent = 'Open settings'
+    document.body.appendChild(opener)
+    opener.focus()
+
+    const onClose = vi.fn()
+    const view = render(<SettingsModal onClose={onClose} />)
+    const dialog = screen.getByRole('dialog', { name: 'Settings' })
+    const closeButton = screen.getByRole('button', { name: 'Close' })
+
+    expect(dialog).toHaveAttribute('aria-modal', 'true')
+    expect(screen.getByRole('button', { name: 'General' })).toHaveFocus()
+
+    const focusable = Array.from(
+      dialog.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )
+    )
+    const last = focusable.at(-1)
+    expect(last).toBeDefined()
+
+    closeButton.focus()
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    expect(last).toHaveFocus()
+
+    last?.focus()
+    fireEvent.keyDown(document, { key: 'Tab' })
+    expect(closeButton).toHaveFocus()
+
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledOnce()
+
+    view.unmount()
+    expect(opener).toHaveFocus()
+    opener.remove()
   })
 })

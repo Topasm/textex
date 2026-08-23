@@ -7,10 +7,48 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; worker-src 'self' blob:;"
     />
+    <link rel="stylesheet" href="./styles/startupShell.css" />
     <title>TextEx</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div
+        id="startup-shell"
+        class="startup-shell"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+        aria-label="Starting TextEx"
+      >
+        <header class="startup-shell__toolbar" aria-hidden="true">
+          <span class="startup-shell__brand">T<span>EX</span></span>
+          <span class="startup-shell__toolbar-line startup-shell__toolbar-line--wide"></span>
+          <span class="startup-shell__toolbar-line"></span>
+        </header>
+        <div class="startup-shell__workspace" aria-hidden="true">
+          <aside class="startup-shell__sidebar">
+            <span class="startup-shell__block startup-shell__block--heading"></span>
+            <span class="startup-shell__block"></span>
+            <span class="startup-shell__block startup-shell__block--short"></span>
+            <span class="startup-shell__block"></span>
+            <span class="startup-shell__block startup-shell__block--short"></span>
+          </aside>
+          <main class="startup-shell__editor">
+            <div class="startup-shell__tab"></div>
+            <div class="startup-shell__code">
+              <span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+          </main>
+          <section class="startup-shell__preview">
+            <div class="startup-shell__page"></div>
+          </section>
+        </div>
+        <footer class="startup-shell__status">
+          <span class="startup-shell__pulse" aria-hidden="true"></span>
+          <span>Preparing your workspace…</span>
+        </footer>
+      </div>
+    </div>
     <script type="module" src="./main.tsx"></script>
   </body>
 </html>

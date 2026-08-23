@@ -31,7 +31,8 @@
     "pageOf": "/",
     "goToPage": "페이지로 이동",
     "zoomPreset": "확대/축소 수준",
-    "untitled": "제목 없음"
+    "untitled": "제목 없음",
+    "unsaved": "{{name}}, 저장되지 않은 변경 사항 있음"
   },
   "statusBar": {
     "ready": "준비",
@@ -72,6 +73,20 @@
     "newBlankProject": "새 빈 프로젝트",
     "newFromTemplate": "템플릿에서 새로 만들기"
   },
+  "loading": {
+    "workspace": "작업 공간을 복원하는 중…",
+    "settings": "설정을 불러오는 중…",
+    "aiDraft": "AI 초안을 불러오는 중…",
+    "editor": "편집기를 불러오는 중…",
+    "preparingEditor": "편집기를 준비하는 중…",
+    "preview": "미리보기를 불러오는 중…",
+    "terminal": "터미널을 불러오는 중…",
+    "templates": "템플릿을 불러오는 중…",
+    "documentHistory": "문서 기록을 불러오는 중…",
+    "mathPreview": "수식 미리보기를 불러오는 중…",
+    "localHistory": "로컬 기록을 불러오는 중…",
+    "tableEditor": "표 편집기를 불러오는 중…"
+  },
   "updateNotification": {
     "regionLabel": "애플리케이션 업데이트",
     "checking": "업데이트를 확인하는 중...",
@@ -90,6 +105,18 @@
     "releaseDate": "릴리스 날짜: {{date}}",
     "viewRelease": "릴리스 보기",
     "dismiss": "닫기"
+  },
+  "notifications": {
+    "regionLabel": "백그라운드 작업",
+    "progress": "작업 진행률",
+    "dismiss": "닫기",
+    "exporting": "{{format}} 문서를 내보내는 중...",
+    "exportComplete": "{{format}} 내보내기를 {{path}}에 저장했습니다.",
+    "exportFailed": "{{format}} 문서를 내보내지 못했습니다.",
+    "retry": "다시 시도",
+    "sessionRestoreFailed": "{{path}} 세션을 복원하지 못했습니다: {{reason}}",
+    "chooseReplacement": "대체 폴더 선택",
+    "replacementOpenFailed": "대체 폴더 {{path}}을(를) 열지 못했습니다: {{reason}}"
   },
   "settings": {
     "title": "설정",
@@ -113,6 +140,9 @@
       "application": "애플리케이션",
       "autoUpdates": "업데이트 자동 확인",
       "autoUpdatesDesc": "TextEx 시작 후 새 버전을 자동으로 확인",
+      "checkUpdatesNow": "지금 업데이트 확인",
+      "checkUpdatesNowDesc": "새 TextEx 버전을 지금 확인합니다. 다운로드와 설치에는 계속 사용자 확인이 필요합니다.",
+      "checkNow": "지금 확인",
       "language": "언어",
       "languageDesc": "애플리케이션 표시 언어 선택"
     },
@@ -121,6 +151,7 @@
       "themeDesc": "TexTex의 외관을 선택하세요.",
       "light": "라이트",
       "dark": "다크",
+      "highContrast": "고대비",
       "system": "시스템",
       "glass": "글래스",
       "pdfNightMode": "PDF 야간 모드",
@@ -419,11 +450,66 @@
     "invalidPath": "절대 경로의 폴더 경로를 입력하세요.",
     "pathNotFound": "선택한 폴더를 찾을 수 없거나 열 수 없습니다.",
     "pathSaveFailed": "프로젝트 경로를 업데이트하지 못했습니다.",
-    "save": "저장"
+    "save": "저장",
+    "openFailed": "{{path}}을(를) 열지 못했습니다: {{reason}}",
+    "replacementPath": "대체 프로젝트 폴더",
+    "retry": "재시도"
   },
   "externalChange": {
     "message": "\"{{file}}\" 파일이 외부에서 수정되었습니다.",
     "reload": "다시 불러오기",
     "keep": "현재 내용 유지"
+  },
+  "commandPalette": {
+    "title": "명령 팔레트",
+    "searchLabel": "명령 검색",
+    "placeholder": "명령 또는 키워드 입력…",
+    "close": "명령 팔레트 닫기",
+    "noResults": "일치하는 명령이 없습니다",
+    "resultsLabel": "명령",
+    "hint": "Enter로 실행 · Esc로 닫기",
+    "requires": {
+      "document": "먼저 문서를 여세요",
+      "pdf": "먼저 PDF를 컴파일하세요"
+    },
+    "groups": {
+      "file": "파일",
+      "edit": "편집",
+      "view": "보기",
+      "compile": "컴파일",
+      "pdf": "PDF",
+      "ai": "AI",
+      "app": "애플리케이션",
+      "window": "창"
+    },
+    "commands": {
+      "file_open": "파일 열기",
+      "file_openFolder": "폴더 열기",
+      "file_save": "파일 저장",
+      "file_saveAs": "다른 이름으로 파일 저장",
+      "file_newTemplate": "템플릿으로 새로 만들기",
+      "file_export_html": "HTML로 내보내기",
+      "file_export_docx": "DOCX로 내보내기",
+      "file_export_odt": "ODT로 내보내기",
+      "file_export_epub": "EPUB로 내보내기",
+      "compile_run": "문서 컴파일",
+      "ai_draft": "AI 초안 만들기",
+      "edit_find": "문서에서 찾기",
+      "view_toggleSidebar": "사이드바 전환",
+      "view_toggleResearchPanel": "연구 패널 전환",
+      "view_toggleLog": "로그 패널 전환",
+      "view_toggleTerminal": "터미널 전환",
+      "view_search_citations": "인용 검색",
+      "view_search_pdf": "PDF 검색",
+      "pdf_zoomIn": "PDF 확대",
+      "pdf_zoomOut": "PDF 축소",
+      "pdf_zoomReset": "PDF 배율 초기화",
+      "pdf_fitWidth": "PDF 너비에 맞춤",
+      "pdf_fitHeight": "PDF 높이에 맞춤",
+      "app_settings": "설정 열기",
+      "app_checkUpdates": "업데이트 확인",
+      "window_close": "창 닫기",
+      "app_quit": "TextEx 종료"
+    }
   }
 }

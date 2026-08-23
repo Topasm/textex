@@ -1,0 +1,157 @@
+.notification-center {
+  position: fixed;
+  top: 52px;
+  right: 16px;
+  z-index: var(--z-background-notification, 900);
+  display: flex;
+  width: min(380px, calc(100vw - 32px));
+  max-height: calc(100vh - 88px);
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  pointer-events: none;
+}
+
+body:has(
+    .modal-overlay,
+    .modal-backdrop,
+    .table-editor-overlay,
+    .loading-fallback--modal,
+    .command-palette-overlay
+  )
+  .notification-center {
+  display: none;
+}
+
+.app-notification {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 9px 10px;
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--bg-secondary) 96%, transparent);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--info);
+  border-radius: 7px;
+  box-shadow: 0 8px 24px var(--shadow-color);
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
+}
+
+.app-notification-progress {
+  grid-column: 2 / -1;
+  width: 100%;
+  height: 4px;
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--progress-bar-bg);
+}
+
+.app-notification-progress::-webkit-progress-bar {
+  background: var(--progress-bar-bg);
+}
+
+.app-notification-progress::-webkit-progress-value,
+.app-notification-progress::-moz-progress-bar {
+  background: var(--progress-bar-fill);
+}
+
+.app-notification-success {
+  border-left-color: var(--success);
+}
+
+.app-notification-warning {
+  border-left-color: var(--warning);
+}
+
+.app-notification-error {
+  border-left-color: var(--error);
+}
+
+.app-notification-icon {
+  display: inline-flex;
+  color: var(--info);
+}
+
+.app-notification-success .app-notification-icon {
+  color: var(--success);
+}
+
+.app-notification-warning .app-notification-icon {
+  color: var(--warning);
+}
+
+.app-notification-error .app-notification-icon {
+  color: var(--error);
+}
+
+.app-notification-message {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.app-notification button {
+  min-height: 28px;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.app-notification-action {
+  padding: 4px 9px;
+  color: white;
+  background: var(--accent);
+}
+
+.app-notification-action:hover {
+  background: var(--accent-hover);
+}
+
+.app-notification-action:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.app-notification-dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  padding: 0;
+  color: var(--text-secondary);
+  background: transparent;
+}
+
+.app-notification-dismiss:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.app-notification button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.notification-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notification-spinner {
+    animation: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .notification-center {
+    top: 44px;
+    right: 8px;
+    width: calc(100vw - 16px);
+  }
+}

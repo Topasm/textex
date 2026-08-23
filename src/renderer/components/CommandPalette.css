@@ -1,0 +1,202 @@
+.command-palette-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-exclusive-modal, 1000);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: min(14vh, 120px) 20px 20px;
+  background: var(--modal-backdrop, rgba(0, 0, 0, 0.55));
+}
+
+.command-palette {
+  width: min(680px, calc(100vw - 40px));
+  max-height: min(70vh, 620px);
+  overflow: hidden;
+  color: var(--text-primary);
+  background: var(--modal-bg, var(--bg-primary));
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.38);
+}
+
+.command-palette-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 8px 18px;
+}
+
+.command-palette-header h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.command-palette-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.command-palette-close:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.command-palette-close:focus-visible,
+.command-palette-search input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.command-palette-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 16px 10px;
+  padding: 0 12px;
+  color: var(--text-secondary);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.command-palette-search:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.command-palette-search input {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 0;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: transparent;
+  border: 0;
+  outline: 0;
+}
+
+.command-palette-search input::placeholder {
+  color: var(--text-secondary);
+}
+
+.command-palette-results {
+  position: relative;
+  min-height: 86px;
+  max-height: min(48vh, 430px);
+  overflow-y: auto;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.command-palette-list {
+  padding: 6px;
+  margin: 0;
+  list-style: none;
+}
+
+.command-palette-group {
+  padding: 9px 10px 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.command-palette-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 36px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.command-palette-option.active {
+  color: var(--text-primary);
+  background: var(--sidebar-selected, var(--bg-hover));
+}
+
+.command-palette-option.disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.command-palette-option-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-palette-option kbd {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.command-palette-option-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.command-palette-unavailable {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.command-palette-empty {
+  margin: 0;
+  padding: 30px 20px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.command-palette-hint {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 16px;
+  margin: 0;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 540px) {
+  .command-palette-overlay {
+    padding: 10px;
+  }
+
+  .command-palette {
+    width: 100%;
+    max-height: calc(100vh - 20px);
+  }
+
+  .command-palette-results {
+    max-height: calc(100vh - 176px);
+  }
+}

@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FolderOpen, Clock, MoreVertical, Pin, Tag, Trash2 } from 'lucide-react'
+import {
+  AlertTriangle,
+  FolderOpen,
+  Clock,
+  MoreVertical,
+  Pin,
+  RotateCcw,
+  Tag,
+  Trash2
+} from 'lucide-react'
 import type { RecentProject } from '../../../shared/types'
 import { openProject } from '../../utils/openProject'
 import { errorMessage, logError } from '../../utils/errorMessage'
@@ -35,6 +44,13 @@ interface RecentProjectListProps {
   setRecentProjects: (projects: RecentProject[]) => void
 }
 
+interface RecentProjectOpenFailure {
+  projectPath: string
+  reason: string
+  replacementPath: string
+  replacementError: string | null
+}
+
 export function RecentProjectList({ recentProjects, setRecentProjects }: RecentProjectListProps) {
   const { t } = useTranslation()
   const [menuOpenPath, setMenuOpenPath] = useState<string | null>(null)
@@ -44,6 +60,9 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
   const [pathInputValue, setPathInputValue] = useState('')
   const [pathError, setPathError] = useState<string | null>(null)
   const [isSavingPath, setIsSavingPath] = useState(false)
+  const [openFailure, setOpenFailure] = useState<RecentProjectOpenFailure | null>(null)
+  const [isSavingRecovery, setIsSavingRecovery] = useState(false)
+  const [isRetryingPath, setIsRetryingPath] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const tagEditorRef = useRef<HTMLDivElement>(null)
   const pathEditorRef = useRef<HTMLDivElement>(null)
@@ -62,6 +81,22 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
       return t('recentProjects.pathSaveFailed')
     },
     [t]
+  )
+
+  const getOpenErrorMessage = useCallback(
+    (err: unknown) => {
+      const message = errorMessage(err).trim()
+      if (
+        message.includes('must be absolute') ||
+        message.includes('Invalid recent project path') ||
+        message.includes('not found') ||
+        message.includes('must be a directory')
+      ) {
+        return getPathErrorMessage(err)
+      }
+      return message || t('recentProjects.pathSaveFailed')
+    },
+    [getPathErrorMessage, t]
   )
 
   // Click-outside handler
@@ -110,29 +145,38 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
 
   const handleOpenRecent = useCallback(
     async (project: RecentProject) => {
+      setIsRetryingPath(true)
       try {
-        await openProject(project.path)
+        const snapshot = await openProject(project.path)
+        if (snapshot) {
+          setOpenFailure((failure) => (failure?.projectPath === project.path ? null : failure))
+        }
       } catch (err) {
         logError('RecentProject:open', err)
-        window.api
-          .removeRecentProject(project.path)
-          .then((settings) => {
-            setRecentProjects(settings.recentProjects ?? [])
-          })
-          .catch((err) => logError('recentProject', err))
+        setMenuOpenPath(null)
+        setEditingProjectPath(null)
+        setOpenFailure((failure) => ({
+          projectPath: project.path,
+          reason: getOpenErrorMessage(err),
+          replacementPath:
+            failure?.projectPath === project.path ? failure.replacementPath : project.path,
+          replacementError: failure?.projectPath === project.path ? failure.replacementError : null
+        }))
+      } finally {
+        setIsRetryingPath(false)
       }
     },
-    [setRecentProjects]
+    [getOpenErrorMessage]
   )
 
   const handleRemoveRecent = useCallback(
-    (e: React.MouseEvent, projectPath: string) => {
-      e.stopPropagation()
+    (projectPath: string) => {
       setMenuOpenPath(null)
       window.api
         .removeRecentProject(projectPath)
         .then((settings) => {
           setRecentProjects(settings.recentProjects ?? [])
+          setOpenFailure((failure) => (failure?.projectPath === projectPath ? null : failure))
         })
         .catch((err) => logError('recentProject', err))
     },
@@ -205,6 +249,28 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
     }
   }, [t])
 
+  const handleBrowseRecovery = useCallback(
+    async (projectPath: string) => {
+      try {
+        const selectedPath = await window.api.openDirectory()
+        if (!selectedPath) return
+        setOpenFailure((failure) =>
+          failure?.projectPath === projectPath
+            ? { ...failure, replacementPath: selectedPath, replacementError: null }
+            : failure
+        )
+      } catch (err) {
+        logError('recentProject:browseRecovery', err)
+        setOpenFailure((failure) =>
+          failure?.projectPath === projectPath
+            ? { ...failure, replacementError: t('recentProjects.pathSaveFailed') }
+            : failure
+        )
+      }
+    },
+    [t]
+  )
+
   const handleSavePath = useCallback(
     async (projectPath: string) => {
       const trimmed = pathInputValue.trim()
@@ -216,6 +282,7 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
         })
         setRecentProjects(settings.recentProjects ?? [])
         setEditingProjectPath(null)
+        setOpenFailure((failure) => (failure?.projectPath === projectPath ? null : failure))
       } catch (err) {
         logError('recentProject:path', err)
         setPathError(getPathErrorMessage(err))
@@ -224,6 +291,32 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
       }
     },
     [getPathErrorMessage, pathInputValue, setRecentProjects]
+  )
+
+  const handleSaveRecovery = useCallback(
+    async (projectPath: string) => {
+      const failure = openFailure
+      if (failure?.projectPath !== projectPath) return
+
+      setIsSavingRecovery(true)
+      setOpenFailure({ ...failure, replacementError: null })
+      try {
+        const settings = await window.api.updateRecentProject(projectPath, {
+          path: failure.replacementPath.trim()
+        })
+        setRecentProjects(settings.recentProjects ?? [])
+        setOpenFailure((current) => (current?.projectPath === projectPath ? null : current))
+      } catch (err) {
+        logError('recentProject:recoveryPath', err)
+        const replacementError = getPathErrorMessage(err)
+        setOpenFailure((current) =>
+          current?.projectPath === projectPath ? { ...current, replacementError } : current
+        )
+      } finally {
+        setIsSavingRecovery(false)
+      }
+    },
+    [getPathErrorMessage, openFailure, setRecentProjects]
   )
 
   if (sortedProjects.length === 0) return null
@@ -235,147 +328,257 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
         {t('recentProjects.title')}
       </h2>
       <div className="home-recent-list">
-        {sortedProjects.map((project) => (
-          <div
-            key={project.path}
-            className={`home-recent-item${project.pinned ? ' pinned' : ''}`}
-            onClick={() => handleOpenRecent(project)}
-          >
-            {project.pinned && (
-              <span className="home-recent-item-pin-indicator">
-                <Pin size={12} />
-              </span>
-            )}
-            <FolderOpen size={20} className="home-recent-item-icon" />
-            <div className="home-recent-item-info">
-              <span className="home-recent-item-title">{project.title || project.name}</span>
-              <span className="home-recent-item-folder">{project.name}</span>
-            </div>
-            <div className="home-recent-item-meta">
-              <span className="home-recent-item-date">
-                {formatRelativeDate(project.lastOpened, t)}
-              </span>
-              {project.tag && <span className="home-recent-item-tag">{project.tag}</span>}
-            </div>
-
+        {sortedProjects.map((project, index) => {
+          const failure = openFailure?.projectPath === project.path ? openFailure : null
+          const recoveryId = `recent-project-recovery-${index}`
+          return (
             <div
-              className="home-recent-item-menu-wrapper"
-              ref={menuOpenPath === project.path ? menuRef : undefined}
+              key={project.path}
+              className={`home-recent-item${project.pinned ? ' pinned' : ''}${failure ? ' has-error' : ''}`}
             >
               <button
-                className="home-recent-item-menu-btn"
-                onClick={(e) => handleToggleMenu(e, project.path)}
-                aria-label={t('recentProjects.moreActions')}
-                title={t('recentProjects.moreActions')}
+                type="button"
+                className="home-recent-item-open"
+                aria-label={project.title || project.name}
+                aria-describedby={failure ? `${recoveryId}-message` : undefined}
+                disabled={isRetryingPath && failure !== null}
+                onClick={() => void handleOpenRecent(project)}
               >
-                <MoreVertical size={14} />
+                {project.pinned && (
+                  <span className="home-recent-item-pin-indicator">
+                    <Pin size={12} />
+                  </span>
+                )}
+                <FolderOpen size={20} className="home-recent-item-icon" />
+                <span className="home-recent-item-info">
+                  <span className="home-recent-item-title">{project.title || project.name}</span>
+                  <span className="home-recent-item-folder">{project.name}</span>
+                </span>
+                <span className="home-recent-item-meta">
+                  <span className="home-recent-item-date">
+                    {formatRelativeDate(project.lastOpened, t)}
+                  </span>
+                  {project.tag && <span className="home-recent-item-tag">{project.tag}</span>}
+                </span>
               </button>
 
-              {menuOpenPath === project.path && (
-                <div className="home-recent-item-dropdown">
-                  <button onClick={(e) => handleTogglePin(e, project)}>
-                    <Pin size={14} />
-                    {project.pinned ? t('recentProjects.unpin') : t('recentProjects.pin')}
-                  </button>
-                  <button onClick={(e) => handleEditTag(e, project)}>
-                    <Tag size={14} />
-                    {t('recentProjects.editTag')}
-                  </button>
-                  <button onClick={(e) => handleEditPath(e, project)}>
-                    <FolderOpen size={14} />
-                    {t('recentProjects.editPath')}
-                  </button>
-                  <button className="danger" onClick={(e) => handleRemoveRecent(e, project.path)}>
-                    <Trash2 size={14} />
-                    {t('recentProjects.remove')}
-                  </button>
-                </div>
-              )}
-
-              {editingTagPath === project.path && (
-                <div
-                  className="home-recent-item-tag-editor"
-                  ref={tagEditorRef}
-                  onClick={(e) => e.stopPropagation()}
+              <div
+                className="home-recent-item-menu-wrapper"
+                ref={menuOpenPath === project.path ? menuRef : undefined}
+              >
+                <button
+                  className="home-recent-item-menu-btn"
+                  onClick={(e) => handleToggleMenu(e, project.path)}
+                  aria-label={t('recentProjects.moreActions')}
+                  title={t('recentProjects.moreActions')}
                 >
-                  <input
-                    ref={tagInputRef}
-                    className="home-recent-item-tag-input"
-                    type="text"
-                    placeholder={t('recentProjects.tagPlaceholder')}
-                    value={tagInputValue}
-                    onChange={(e) => setTagInputValue(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        handleSaveTag(project.path)
-                      } else if (e.key === 'Escape') {
-                        e.preventDefault()
-                        setEditingTagPath(null)
-                      }
-                    }}
-                  />
-                  <button
-                    className="home-recent-item-tag-save"
-                    onClick={() => handleSaveTag(project.path)}
-                  >
-                    {t('recentProjects.save')}
-                  </button>
-                </div>
-              )}
+                  <MoreVertical size={14} />
+                </button>
 
-              {editingProjectPath === project.path && (
-                <div
-                  className="home-recent-item-path-editor"
-                  ref={pathEditorRef}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <input
-                    ref={pathInputRef}
-                    className="home-recent-item-path-input"
-                    type="text"
-                    placeholder={t('recentProjects.pathPlaceholder')}
-                    value={pathInputValue}
-                    onChange={(e) => {
-                      setPathInputValue(e.target.value)
-                      if (pathError) {
-                        setPathError(null)
-                      }
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        void handleSavePath(project.path)
-                      } else if (e.key === 'Escape') {
-                        e.preventDefault()
-                        setEditingProjectPath(null)
-                        setPathError(null)
-                      }
-                    }}
-                  />
-                  <div className="home-recent-item-path-actions">
-                    <button
-                      className="home-recent-item-path-browse"
-                      type="button"
-                      onClick={() => void handleBrowsePath()}
-                    >
-                      {t('recentProjects.browse')}
+                {menuOpenPath === project.path && (
+                  <div className="home-recent-item-dropdown">
+                    <button onClick={(e) => handleTogglePin(e, project)}>
+                      <Pin size={14} />
+                      {project.pinned ? t('recentProjects.unpin') : t('recentProjects.pin')}
+                    </button>
+                    <button onClick={(e) => handleEditTag(e, project)}>
+                      <Tag size={14} />
+                      {t('recentProjects.editTag')}
+                    </button>
+                    <button onClick={(e) => handleEditPath(e, project)}>
+                      <FolderOpen size={14} />
+                      {t('recentProjects.editPath')}
                     </button>
                     <button
+                      className="danger"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleRemoveRecent(project.path)
+                      }}
+                    >
+                      <Trash2 size={14} />
+                      {t('recentProjects.remove')}
+                    </button>
+                  </div>
+                )}
+
+                {editingTagPath === project.path && (
+                  <div
+                    className="home-recent-item-tag-editor"
+                    ref={tagEditorRef}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <input
+                      ref={tagInputRef}
+                      className="home-recent-item-tag-input"
+                      type="text"
+                      placeholder={t('recentProjects.tagPlaceholder')}
+                      value={tagInputValue}
+                      onChange={(e) => setTagInputValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          handleSaveTag(project.path)
+                        } else if (e.key === 'Escape') {
+                          e.preventDefault()
+                          setEditingTagPath(null)
+                        }
+                      }}
+                    />
+                    <button
                       className="home-recent-item-tag-save"
-                      type="button"
-                      disabled={isSavingPath}
-                      onClick={() => void handleSavePath(project.path)}
+                      onClick={() => handleSaveTag(project.path)}
                     >
                       {t('recentProjects.save')}
                     </button>
                   </div>
-                  {pathError && <div className="home-recent-item-path-error">{pathError}</div>}
+                )}
+
+                {editingProjectPath === project.path && (
+                  <div
+                    className="home-recent-item-path-editor"
+                    ref={pathEditorRef}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <input
+                      ref={pathInputRef}
+                      className="home-recent-item-path-input"
+                      type="text"
+                      aria-label={t('recentProjects.replacementPath')}
+                      placeholder={t('recentProjects.pathPlaceholder')}
+                      value={pathInputValue}
+                      onChange={(e) => {
+                        setPathInputValue(e.target.value)
+                        if (pathError) {
+                          setPathError(null)
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          void handleSavePath(project.path)
+                        } else if (e.key === 'Escape') {
+                          e.preventDefault()
+                          setEditingProjectPath(null)
+                          setPathError(null)
+                        }
+                      }}
+                    />
+                    <div className="home-recent-item-path-actions">
+                      <button
+                        className="home-recent-item-path-browse"
+                        type="button"
+                        onClick={() => void handleBrowsePath()}
+                      >
+                        {t('recentProjects.browse')}
+                      </button>
+                      <button
+                        className="home-recent-item-tag-save"
+                        type="button"
+                        disabled={isSavingPath}
+                        onClick={() => void handleSavePath(project.path)}
+                      >
+                        {t('recentProjects.save')}
+                      </button>
+                    </div>
+                    {pathError && (
+                      <div className="home-recent-item-path-error" role="alert">
+                        {pathError}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {failure && (
+                <div
+                  id={recoveryId}
+                  className="home-recent-item-recovery"
+                  role="group"
+                  aria-labelledby={`${recoveryId}-message`}
+                >
+                  <div
+                    id={`${recoveryId}-message`}
+                    className="home-recent-item-recovery-message"
+                    role="alert"
+                  >
+                    <AlertTriangle size={16} aria-hidden="true" />
+                    <span>
+                      {t('recentProjects.openFailed', {
+                        path: failure.projectPath,
+                        reason: failure.reason
+                      })}
+                    </span>
+                  </div>
+                  <label className="home-recent-item-recovery-label" htmlFor={`${recoveryId}-path`}>
+                    {t('recentProjects.replacementPath')}
+                  </label>
+                  <input
+                    id={`${recoveryId}-path`}
+                    className="home-recent-item-path-input"
+                    type="text"
+                    value={failure.replacementPath}
+                    aria-invalid={failure.replacementError !== null}
+                    aria-describedby={failure.replacementError ? `${recoveryId}-error` : undefined}
+                    onChange={(e) => {
+                      const replacementPath = e.target.value
+                      setOpenFailure((current) =>
+                        current?.projectPath === project.path
+                          ? { ...current, replacementPath, replacementError: null }
+                          : current
+                      )
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        void handleSaveRecovery(project.path)
+                      }
+                    }}
+                  />
+                  {failure.replacementError && (
+                    <div
+                      id={`${recoveryId}-error`}
+                      className="home-recent-item-path-error"
+                      role="alert"
+                    >
+                      {failure.replacementError}
+                    </div>
+                  )}
+                  <div className="home-recent-item-recovery-actions">
+                    <button
+                      type="button"
+                      disabled={isRetryingPath}
+                      onClick={() => void handleOpenRecent(project)}
+                    >
+                      <RotateCcw size={14} aria-hidden="true" />
+                      {t('recentProjects.retry')}
+                    </button>
+                    <button type="button" onClick={() => void handleBrowseRecovery(project.path)}>
+                      <FolderOpen size={14} aria-hidden="true" />
+                      {t('recentProjects.browse')}
+                    </button>
+                    <button
+                      type="button"
+                      className="primary"
+                      disabled={isSavingRecovery}
+                      onClick={() => void handleSaveRecovery(project.path)}
+                    >
+                      {t('recentProjects.save')}
+                    </button>
+                    <button
+                      type="button"
+                      className="danger"
+                      onClick={() => handleRemoveRecent(project.path)}
+                    >
+                      <Trash2 size={14} aria-hidden="true" />
+                      {t('recentProjects.remove')}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
