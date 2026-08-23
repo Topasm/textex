@@ -73,12 +73,22 @@
     "newFromTemplate": "Novo a partir de modelo"
   },
   "updateNotification": {
+    "regionLabel": "Atualização do aplicativo",
+    "checking": "Verificando atualizações...",
+    "upToDate": "O TextEx está atualizado.",
     "available": "A atualização {{version}} está disponível.",
-    "downloading": "Baixando atualização...",
-    "ready": "Atualização pronta. Reinicie para aplicar.",
-    "error": "Falha ao verificar atualizações.",
+    "downloading": "Baixando a atualização {{version}}...",
+    "downloadingProgress": "Baixando a atualização {{version}}... {{progress}}%",
+    "downloadProgressLabel": "Progresso do download da atualização",
+    "ready": "A atualização {{version}} está pronta. Reinicie para aplicar.",
+    "restarting": "Reiniciando para aplicar a atualização...",
+    "error": "Não foi possível concluir a atualização.",
     "download": "Baixar",
     "restart": "Reiniciar",
+    "retry": "Tentar novamente",
+    "releaseNotes": "Notas da versão",
+    "releaseDate": "Lançada em {{date}}",
+    "viewRelease": "Ver versão",
     "dismiss": "Dispensar"
   },
   "settings": {
@@ -101,8 +111,8 @@
       "affiliation": "Afiliação",
       "affiliationPlaceholder": "ex. Universidade de Tecnologia",
       "application": "Aplicação",
-      "autoUpdates": "Atualizações automáticas",
-      "autoUpdatesDesc": "Verificar atualizações automaticamente ao iniciar",
+      "autoUpdates": "Verificar atualizações automaticamente",
+      "autoUpdatesDesc": "Verificar novas versões do TextEx após a inicialização",
       "language": "Idioma",
       "languageDesc": "Escolha o idioma de exibição do aplicativo"
     },

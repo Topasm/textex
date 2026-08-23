@@ -22,8 +22,10 @@ export async function quitApplication(): Promise<boolean> {
   return result.success
 }
 
-export async function restartAfterUpdate(): Promise<boolean> {
-  if (!(await prepareForApplicationExit())) return false
+export type UpdateRestartResult = 'cancelled' | 'requested' | 'failed'
+
+export async function restartAfterUpdate(): Promise<UpdateRestartResult> {
+  if (!(await prepareForApplicationExit())) return 'cancelled'
   const result = await window.api.updateInstall()
-  return result.success
+  return result.success ? 'requested' : 'failed'
 }

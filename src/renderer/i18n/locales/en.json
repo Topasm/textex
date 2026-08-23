@@ -73,12 +73,22 @@
     "newFromTemplate": "New from Template"
   },
   "updateNotification": {
+    "regionLabel": "Application update",
+    "checking": "Checking for updates...",
+    "upToDate": "TextEx is up to date.",
     "available": "Update {{version}} is available.",
-    "downloading": "Downloading update...",
-    "ready": "Update ready. Restart to apply.",
-    "error": "Update check failed.",
+    "downloading": "Downloading update {{version}}...",
+    "downloadingProgress": "Downloading update {{version}}... {{progress}}%",
+    "downloadProgressLabel": "Update download progress",
+    "ready": "Update {{version}} is ready. Restart to apply.",
+    "restarting": "Restarting to apply the update...",
+    "error": "The update could not be completed.",
     "download": "Download",
     "restart": "Restart",
+    "retry": "Try again",
+    "releaseNotes": "Release notes",
+    "releaseDate": "Released {{date}}",
+    "viewRelease": "View release",
     "dismiss": "Dismiss"
   },
   "settings": {
@@ -101,8 +111,8 @@
       "affiliation": "Affiliation",
       "affiliationPlaceholder": "e.g. University of Technology",
       "application": "Application",
-      "autoUpdates": "Auto Updates",
-      "autoUpdatesDesc": "Automatically check for updates on launch",
+      "autoUpdates": "Automatically check for updates",
+      "autoUpdatesDesc": "Check for new TextEx versions after launch",
       "language": "Language",
       "languageDesc": "Choose the display language for the application"
     },

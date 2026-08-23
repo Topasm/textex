@@ -112,11 +112,9 @@ Object.defineProperty(window, 'api', {
     gitLog: vi.fn(),
 
     // Auto-update
-    updateCheck: vi.fn(),
-    updateDownload: vi.fn(),
-    updateInstall: vi.fn(),
-    onUpdateEvent: vi.fn(),
-    removeUpdateListeners: vi.fn(),
+    updateCheck: vi.fn().mockResolvedValue({ success: true, update: null }),
+    updateDownload: vi.fn().mockResolvedValue({ success: true }),
+    updateInstall: vi.fn().mockResolvedValue({ success: true }),
     onAppCommand: vi.fn(),
     removeAppCommandListener: vi.fn(),
     requestWindowClose: vi.fn(),

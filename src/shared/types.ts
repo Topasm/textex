@@ -184,6 +184,24 @@ export interface RendererSessionSnapshot {
   pdf?: string
 }
 
+export interface AppUpdateMetadata {
+  currentVersion: string
+  version: string
+  date?: string
+  body?: string
+}
+
+export type AppUpdateCheckResult =
+  { success: true; update: AppUpdateMetadata | null } | { success: false; error: string }
+
+export interface AppUpdateDownloadProgress {
+  downloaded: number
+  contentLength: number | null
+  percent: number | null
+}
+
+export type AppUpdateActionResult = { success: true } | { success: false; error: string }
+
 export interface UserSettings {
   theme: 'system' | 'dark' | 'light' | 'high-contrast' | 'glass'
   fontSize: number

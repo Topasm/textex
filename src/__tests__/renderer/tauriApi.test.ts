@@ -72,7 +72,6 @@ describe('Tauri DesktopApi adapter', () => {
     api.removeCompileLogListener()
     api.removeDiagnosticsListener()
     api.removeDirectoryChangedListener()
-    api.removeUpdateListeners()
   })
 
   afterEach(() => {
@@ -1013,7 +1012,7 @@ describe('Tauri DesktopApi adapter', () => {
     ])
   })
 
-  it('maps the Rust-owned updater and bridges Channel progress to existing events', async () => {
+  it('maps updater metadata and bridges Channel progress through a typed callback', async () => {
     invokeMock
       .mockResolvedValueOnce({
         currentVersion: '1.0.8',
@@ -1023,18 +1022,20 @@ describe('Tauri DesktopApi adapter', () => {
       })
       .mockResolvedValueOnce({ success: true })
       .mockResolvedValueOnce({ success: true })
-    const available = vi.fn()
     const progress = vi.fn()
-    const downloaded = vi.fn()
     const api = createTauriApi()
-    api.onUpdateEvent('available', available)
-    api.onUpdateEvent('download-progress', progress)
-    api.onUpdateEvent('downloaded', downloaded)
 
-    await expect(api.updateCheck()).resolves.toEqual({ success: true })
-    expect(available).toHaveBeenCalledWith('1.0.9')
+    await expect(api.updateCheck()).resolves.toEqual({
+      success: true,
+      update: {
+        currentVersion: '1.0.8',
+        version: '1.0.9',
+        date: '2026-08-20T12:00:00Z',
+        body: 'Faster editing'
+      }
+    })
 
-    await expect(api.updateDownload()).resolves.toEqual({ success: true })
+    const download = api.updateDownload(progress)
     const updateChannel = channelInstances.at(-1)
     updateChannel?.onmessage({ event: 'started', contentLength: 1000 })
     updateChannel?.onmessage({
@@ -1044,8 +1045,12 @@ describe('Tauri DesktopApi adapter', () => {
       contentLength: 1000
     })
     updateChannel?.onmessage({ event: 'finished' })
-    expect(progress.mock.calls).toEqual([[0], [25]])
-    expect(downloaded).toHaveBeenCalledOnce()
+    await expect(download).resolves.toEqual({ success: true })
+    expect(progress.mock.calls).toEqual([
+      [{ downloaded: 0, contentLength: 1000, percent: 0 }],
+      [{ downloaded: 250, contentLength: 1000, percent: 25 }],
+      [{ downloaded: 250, contentLength: 1000, percent: 100 }]
+    ])
 
     await expect(api.updateInstall()).resolves.toEqual({ success: true })
     expect(invokeMock.mock.calls).toEqual([
@@ -1057,20 +1062,16 @@ describe('Tauri DesktopApi adapter', () => {
 
   it('returns updater errors without throwing and reports download failures', async () => {
     invokeMock.mockRejectedValueOnce('missing signing key').mockRejectedValueOnce('network failed')
-    const error = vi.fn()
     const api = createTauriApi()
-    api.onUpdateEvent('error', error)
 
     await expect(api.updateCheck()).resolves.toEqual({
       success: false,
       error: 'missing signing key'
     })
-    expect(error).not.toHaveBeenCalled()
     await expect(api.updateDownload()).resolves.toEqual({
       success: false,
       error: 'network failed'
     })
-    expect(error).toHaveBeenCalledWith('network failed')
   })
 
   it('keeps mandatory listeners and LSP cleanup safe while their backends are pending', async () => {
@@ -1080,7 +1081,6 @@ describe('Tauri DesktopApi adapter', () => {
 
     expect(() => api.onCompileLog(() => {})).not.toThrow()
     expect(() => api.onDiagnostics(() => {})).not.toThrow()
-    expect(() => api.onUpdateEvent('available', () => {})).not.toThrow()
     expect(() => api.onAppCommand(() => {})).not.toThrow()
     api.removeAppCommandListener()
     expect(() => disposeData()).not.toThrow()

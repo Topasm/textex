@@ -8,6 +8,7 @@ import {
   openProject,
   type ProjectTransitionSnapshot
 } from '../utils/openProject'
+import { checkForAppUpdate } from '../services/updateLifecycle'
 
 /**
  * Restores the previous editing session on mount:
@@ -91,7 +92,7 @@ export function useSessionRestore(): boolean {
     }
     const updateTimer = window.setTimeout(() => {
       if (useSettingsStore.getState().settings.autoUpdateEnabled !== false) {
-        void window.api.updateCheck()
+        void checkForAppUpdate({ interactive: false })
       }
     }, 3000)
     return () => window.clearTimeout(updateTimer)

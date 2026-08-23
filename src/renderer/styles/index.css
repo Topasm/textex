@@ -2483,6 +2483,7 @@ body,
 .update-banner {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
   padding: 8px 16px;
   background-color: var(--update-banner-bg);
@@ -2493,9 +2494,13 @@ body,
 
 .update-banner-message {
   flex: 1;
+  min-width: 180px;
 }
 
 .update-banner button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   padding: 4px 12px;
   font-size: 12px;
   background-color: var(--accent);
@@ -2509,25 +2514,78 @@ body,
   background-color: var(--accent-hover);
 }
 
+.update-banner button:focus-visible,
+.update-release-details summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.update-spinner {
+  flex: 0 0 auto;
+  animation: spin 1s linear infinite;
+}
+
 .update-banner .update-dismiss {
   background: none;
   color: var(--text-secondary);
-  font-size: 16px;
   padding: 0 4px;
 }
 
 .update-progress {
   width: 200px;
   height: 4px;
-  background-color: var(--progress-bar-bg);
+  appearance: none;
+  border: 0;
   border-radius: 2px;
   overflow: hidden;
+  background-color: var(--progress-bar-bg);
 }
 
-.update-progress-bar {
-  height: 100%;
+.update-progress::-webkit-progress-bar {
+  background-color: var(--progress-bar-bg);
+}
+
+.update-progress::-webkit-progress-value {
   background-color: var(--progress-bar-fill);
   transition: width 0.3s;
+}
+
+.update-progress::-moz-progress-bar {
+  background-color: var(--progress-bar-fill);
+}
+
+.update-release-link {
+  background: transparent !important;
+  color: var(--accent) !important;
+  padding-inline: 4px !important;
+}
+
+.update-release-details {
+  flex-basis: 100%;
+  margin-left: 27px;
+  color: var(--text-secondary);
+}
+
+.update-release-details summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.update-release-date {
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.update-release-notes {
+  max-height: 140px;
+  margin-top: 6px;
+  overflow: auto;
+  white-space: pre-wrap;
+}
+
+.update-error-detail {
+  color: var(--text-secondary);
 }
 
 /* Layout with sidebar */

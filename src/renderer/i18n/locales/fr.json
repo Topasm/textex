@@ -73,12 +73,22 @@
     "newFromTemplate": "Nouveau à partir d'un modèle"
   },
   "updateNotification": {
+    "regionLabel": "Mise à jour de l’application",
+    "checking": "Recherche de mises à jour...",
+    "upToDate": "TextEx est à jour.",
     "available": "La mise à jour {{version}} est disponible.",
-    "downloading": "Téléchargement de la mise à jour...",
-    "ready": "Mise à jour prête. Redémarrez pour appliquer.",
-    "error": "Échec de la vérification des mises à jour.",
+    "downloading": "Téléchargement de la mise à jour {{version}}...",
+    "downloadingProgress": "Téléchargement de la mise à jour {{version}}... {{progress}} %",
+    "downloadProgressLabel": "Progression du téléchargement de la mise à jour",
+    "ready": "La mise à jour {{version}} est prête. Redémarrez pour l’appliquer.",
+    "restarting": "Redémarrage pour appliquer la mise à jour...",
+    "error": "La mise à jour n’a pas pu être terminée.",
     "download": "Télécharger",
     "restart": "Redémarrer",
+    "retry": "Réessayer",
+    "releaseNotes": "Notes de version",
+    "releaseDate": "Publiée le {{date}}",
+    "viewRelease": "Voir la version",
     "dismiss": "Ignorer"
   },
   "settings": {
@@ -101,8 +111,8 @@
       "affiliation": "Affiliation",
       "affiliationPlaceholder": "ex. Université de Technologie",
       "application": "Application",
-      "autoUpdates": "Mises à jour automatiques",
-      "autoUpdatesDesc": "Vérifier automatiquement les mises à jour au démarrage",
+      "autoUpdates": "Rechercher automatiquement les mises à jour",
+      "autoUpdatesDesc": "Rechercher les nouvelles versions de TextEx après le démarrage",
       "language": "Langue",
       "languageDesc": "Choisissez la langue d'affichage de l'application"
     },

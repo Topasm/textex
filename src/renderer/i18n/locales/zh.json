@@ -73,12 +73,22 @@
     "newFromTemplate": "从模板新建"
   },
   "updateNotification": {
+    "regionLabel": "应用更新",
+    "checking": "正在检查更新...",
+    "upToDate": "TextEx 已是最新版本。",
     "available": "更新 {{version}} 已可用。",
-    "downloading": "正在下载更新...",
-    "ready": "更新已就绪。重启以应用。",
-    "error": "检查更新失败。",
+    "downloading": "正在下载更新 {{version}}...",
+    "downloadingProgress": "正在下载更新 {{version}}... {{progress}}%",
+    "downloadProgressLabel": "更新下载进度",
+    "ready": "更新 {{version}} 已就绪。重启以应用。",
+    "restarting": "正在重启以应用更新...",
+    "error": "无法完成更新。",
     "download": "下载",
     "restart": "重启",
+    "retry": "重试",
+    "releaseNotes": "发行说明",
+    "releaseDate": "发布于 {{date}}",
+    "viewRelease": "查看版本",
     "dismiss": "忽略"
   },
   "settings": {
@@ -101,8 +111,8 @@
       "affiliation": "所属机构",
       "affiliationPlaceholder": "例如 科技大学",
       "application": "应用程序",
-      "autoUpdates": "自动更新",
-      "autoUpdatesDesc": "启动时自动检查更新",
+      "autoUpdates": "自动检查更新",
+      "autoUpdatesDesc": "TextEx 启动后自动检查新版本",
       "language": "语言",
       "languageDesc": "选择应用程序的显示语言"
     },

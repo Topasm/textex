@@ -40,7 +40,10 @@ import {
   CompileDatabase,
   CompileRecord,
   ProjectSnippet,
-  ProjectBookmark
+  ProjectBookmark,
+  AppUpdateActionResult,
+  AppUpdateCheckResult,
+  AppUpdateDownloadProgress
 } from '../../shared/types'
 import { Template } from '../../shared/templates'
 import type { PerformanceMemorySample, RuntimePerformanceReport } from '../../shared/performance'
@@ -165,11 +168,11 @@ export interface DesktopApi {
   gitFileLog(workDir: string, filePath: string): Promise<GitLogEntry[]>
 
   // Auto Update
-  updateCheck(): Promise<{ success: boolean; error?: string }>
-  updateDownload(): Promise<{ success: boolean; error?: string }>
-  updateInstall(): Promise<{ success: boolean; error?: string }>
-  onUpdateEvent(event: string, cb: (...args: unknown[]) => void): void
-  removeUpdateListeners(): void
+  updateCheck(): Promise<AppUpdateCheckResult>
+  updateDownload(
+    onProgress?: (progress: AppUpdateDownloadProgress) => void
+  ): Promise<AppUpdateActionResult>
+  updateInstall(): Promise<AppUpdateActionResult>
   onAppCommand(cb: (command: AppCommandId) => void): void
   removeAppCommandListener(): void
   requestWindowClose(): Promise<void>

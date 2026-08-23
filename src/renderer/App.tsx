@@ -40,6 +40,7 @@ import { isFeatureEnabled } from './utils/featureFlags'
 import type { AppCommandId } from '../shared/types'
 import { runtimePerformance } from './services/runtimePerformance'
 import { prepareForApplicationExit, quitApplication } from './services/applicationLifecycle'
+import { checkForAppUpdate } from './services/updateLifecycle'
 import { documentRegistry } from './models/documentRegistry'
 import { getDesktopCapabilities } from './platform/capabilities'
 import {
@@ -242,10 +243,7 @@ function App() {
   }, [capabilities.templates])
 
   const handleCheckForUpdates = useCallback(async (): Promise<void> => {
-    const result = await window.api.updateCheck()
-    if (!result.success) {
-      useUiStore.getState().setUpdateStatus('error')
-    }
+    await checkForAppUpdate({ interactive: true })
   }, [])
 
   const handleRequestWindowClose = useCallback(async (): Promise<void> => {

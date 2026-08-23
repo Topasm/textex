@@ -82,7 +82,7 @@ export const useGitStatus = () => useProjectStore((s) => s.gitStatus)
 
 // ---- UI ----
 export const useUpdateStatus = () => useUiStore((s) => s.updateStatus)
-export const useUpdateVersion = () => useUiStore((s) => s.updateVersion)
+export const useUpdateVersion = () => useUiStore((s) => s.updateMetadata?.version ?? '')
 export const useUpdateProgress = () => useUiStore((s) => s.updateProgress)
 export const useExportStatus = () => useUiStore((s) => s.exportStatus)
 export const useLspStatus = () => useUiStore((s) => s.lspStatus)

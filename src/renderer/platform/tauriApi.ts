@@ -5,6 +5,8 @@ import type { DesktopApi, OpenFileResult, SaveAsResult, SaveResult } from '../ty
 import type {
   DirectoryChangeEvent,
   DirectoryEntry,
+  AppUpdateDownloadProgress,
+  AppUpdateMetadata,
   ProjectIndexSnapshot,
   SyncTeXForwardResult,
   SyncTeXInverseResult,
@@ -55,13 +57,6 @@ type TauriCompileEvent =
       filePath: string
     }
 
-interface TauriUpdateMetadata {
-  currentVersion: string
-  version: string
-  date?: string
-  body?: string
-}
-
 type TauriUpdateDownloadEvent =
   | { event: 'started'; contentLength: number | null }
   | {
@@ -84,7 +79,6 @@ let compileLogCallback: ((event: CompileLogEvent) => void) | null = null
 let diagnosticsCallback: ((event: CompileDiagnosticsEvent) => void) | null = null
 let directoryChangeCallback: ((change: DirectoryChangeEvent) => void) | null = null
 let directoryWatcherGeneration = 0
-const updateCallbacks = new Map<string, (...args: unknown[]) => void>()
 const ptyDataCallbacks = new Map<string, Set<(data: string) => void>>()
 const ptyExitCallbacks = new Map<string, Set<(exitCode: number, signal: number | null) => void>>()
 const pendingPtyData = new Map<string, string>()
@@ -107,10 +101,6 @@ let windowCloseRequestListenerGeneration = 0
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
-}
-
-function emitUpdateEvent(event: string, ...args: unknown[]): void {
-  updateCallbacks.get(event)?.(...args)
 }
 
 const onAppCommand: DesktopApi['onAppCommand'] = (callback) => {
@@ -711,57 +701,71 @@ const updateRecentProject: DesktopApi['updateRecentProject'] = (projectPath, upd
 
 const updateCheck: DesktopApi['updateCheck'] = async () => {
   try {
-    const update = await invoke<TauriUpdateMetadata | null>(TAURI_COMMANDS.checkAppUpdate)
-    if (update) emitUpdateEvent('available', update.version)
-    return { success: true }
+    const update = await invoke<AppUpdateMetadata | null>(TAURI_COMMANDS.checkAppUpdate)
+    return { success: true, update }
   } catch (error) {
     return { success: false, error: errorMessage(error) }
   }
 }
 
-const updateDownload: DesktopApi['updateDownload'] = async () => {
+const updateDownload: DesktopApi['updateDownload'] = async (onProgress) => {
+  let downloaded = 0
+  let contentLength: number | null = null
+  const publishProgress = (progress: AppUpdateDownloadProgress): void => {
+    try {
+      onProgress?.(progress)
+    } catch {
+      // A renderer callback must not interrupt the native updater channel.
+    }
+  }
   const onEvent = new Channel<TauriUpdateDownloadEvent>()
   onEvent.onmessage = (event) => {
     if (event.event === 'started') {
-      emitUpdateEvent('download-progress', 0)
+      downloaded = 0
+      contentLength = event.contentLength
+      publishProgress({
+        downloaded,
+        contentLength,
+        percent: typeof contentLength === 'number' && contentLength > 0 ? 0 : null
+      })
       return
     }
     if (event.event === 'progress') {
-      const total = event.contentLength
-      if (typeof total === 'number' && total > 0) {
-        const percent = Math.max(0, Math.min(100, (event.downloaded / total) * 100))
-        emitUpdateEvent('download-progress', percent)
-      }
+      downloaded = event.downloaded
+      contentLength = event.contentLength ?? contentLength
+      const percent =
+        typeof contentLength === 'number' && contentLength > 0
+          ? Math.max(0, Math.min(100, (downloaded / contentLength) * 100))
+          : null
+      publishProgress({ downloaded, contentLength, percent })
       return
     }
-    emitUpdateEvent('downloaded')
+    publishProgress({ downloaded, contentLength, percent: contentLength ? 100 : null })
   }
 
   try {
-    return await invoke<{ success: boolean }>(TAURI_COMMANDS.downloadAndInstallUpdate, { onEvent })
+    const result = await invoke<{ success: boolean }>(TAURI_COMMANDS.downloadAndInstallUpdate, {
+      onEvent
+    })
+    return result.success
+      ? { success: true }
+      : { success: false, error: 'the updater did not complete the download' }
   } catch (error) {
     const message = errorMessage(error)
-    emitUpdateEvent('error', message)
     return { success: false, error: message }
   }
 }
 
 const updateInstall: DesktopApi['updateInstall'] = async () => {
   try {
-    return await invoke<{ success: boolean }>(TAURI_COMMANDS.restartApp)
+    const result = await invoke<{ success: boolean }>(TAURI_COMMANDS.restartApp)
+    return result.success
+      ? { success: true }
+      : { success: false, error: 'the updater did not request an application restart' }
   } catch (error) {
     const message = errorMessage(error)
-    emitUpdateEvent('error', message)
     return { success: false, error: message }
   }
-}
-
-const onUpdateEvent: DesktopApi['onUpdateEvent'] = (event, callback) => {
-  updateCallbacks.set(event, callback)
-}
-
-const removeUpdateListeners: DesktopApi['removeUpdateListeners'] = () => {
-  updateCallbacks.clear()
 }
 
 const tauriDesktopApi = {
@@ -900,8 +904,6 @@ const tauriDesktopApi = {
   updateCheck,
   updateDownload,
   updateInstall,
-  onUpdateEvent,
-  removeUpdateListeners,
   onAppCommand,
   removeAppCommandListener,
   requestWindowClose,

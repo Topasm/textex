@@ -1,4 +1,3 @@
-import { useUiStore } from '../store/useUiStore'
 import { useCompileStore } from '../store/useCompileStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { toDisposable } from '../utils/disposable'
@@ -11,7 +10,6 @@ import { logError } from '../utils/errorMessage'
 
 /**
  * Registers IPC event listeners for:
- * - Auto-update events (available, download-progress, downloaded, error)
  * - Compile log streaming
  * - Diagnostics
  * - Directory watcher refresh
@@ -20,29 +18,6 @@ export function useIpcListeners(
   projectRoot: string | null,
   onFileChange?: (change: DirectoryChangeEvent) => void
 ): void {
-  // Update event listeners
-  useDisposable((store) => {
-    window.api.onUpdateEvent('available', (version: unknown) => {
-      useUiStore.getState().setUpdateStatus('available')
-      if (typeof version === 'string') {
-        useUiStore.getState().setUpdateVersion(version)
-      }
-    })
-    window.api.onUpdateEvent('download-progress', (progress: unknown) => {
-      useUiStore.getState().setUpdateStatus('downloading')
-      if (typeof progress === 'number') {
-        useUiStore.getState().setUpdateProgress(progress)
-      }
-    })
-    window.api.onUpdateEvent('downloaded', () => {
-      useUiStore.getState().setUpdateStatus('ready')
-    })
-    window.api.onUpdateEvent('error', () => {
-      useUiStore.getState().setUpdateStatus('error')
-    })
-    store.add(toDisposable(() => window.api.removeUpdateListeners()))
-  }, [])
-
   // Compile log listener
   useDisposable((store) => {
     window.api.onCompileLog((event: CompileLogEvent) => {

@@ -1,8 +1,17 @@
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
-import type { DocumentSymbolNode } from '../../shared/types'
+import type { AppUpdateMetadata, DocumentSymbolNode } from '../../shared/types'
 
-export type UpdateStatus = 'idle' | 'available' | 'downloading' | 'ready' | 'error'
+export type UpdateStatus =
+  | 'idle'
+  | 'checking'
+  | 'up-to-date'
+  | 'available'
+  | 'downloading'
+  | 'ready'
+  | 'restarting'
+  | 'error'
+export type UpdateErrorAction = 'check' | 'download' | 'restart'
 export type ExportStatus = 'idle' | 'exporting' | 'success' | 'error'
 export type LspStatus = 'stopped' | 'starting' | 'running' | 'error'
 
@@ -16,8 +25,10 @@ interface UiState {
 
   // Auto-update
   updateStatus: UpdateStatus
-  updateVersion: string
-  updateProgress: number
+  updateMetadata: AppUpdateMetadata | null
+  updateProgress: number | null
+  updateError: string
+  updateErrorAction: UpdateErrorAction | null
 
   // Export
   exportStatus: ExportStatus
@@ -44,8 +55,9 @@ interface UiState {
   toggleTemplateGallery: () => void
   setTemplateGalleryOpen: (open: boolean) => void
   setUpdateStatus: (status: UpdateStatus) => void
-  setUpdateVersion: (version: string) => void
-  setUpdateProgress: (progress: number) => void
+  setUpdateMetadata: (metadata: AppUpdateMetadata | null) => void
+  setUpdateProgress: (progress: number | null) => void
+  setUpdateError: (error: string, action?: UpdateErrorAction | null) => void
   setExportStatus: (status: ExportStatus) => void
   setLspStatus: (status: LspStatus) => void
   setLspError: (error: string | null) => void
@@ -62,8 +74,10 @@ export const useUiStore = create<UiState>()(
     isTerminalPaneOpen: false,
     isTemplateGalleryOpen: false,
     updateStatus: 'idle',
-    updateVersion: '',
-    updateProgress: 0,
+    updateMetadata: null,
+    updateProgress: null,
+    updateError: '',
+    updateErrorAction: null,
     exportStatus: 'idle',
     lspStatus: 'stopped',
     lspError: null,
@@ -80,8 +94,10 @@ export const useUiStore = create<UiState>()(
       set((state) => ({ isTemplateGalleryOpen: !state.isTemplateGalleryOpen })),
     setTemplateGalleryOpen: (isTemplateGalleryOpen) => set({ isTemplateGalleryOpen }),
     setUpdateStatus: (updateStatus) => set({ updateStatus }),
-    setUpdateVersion: (updateVersion) => set({ updateVersion }),
+    setUpdateMetadata: (updateMetadata) => set({ updateMetadata }),
     setUpdateProgress: (updateProgress) => set({ updateProgress }),
+    setUpdateError: (updateError, updateErrorAction = null) =>
+      set({ updateError, updateErrorAction }),
     setExportStatus: (exportStatus) => set({ exportStatus }),
     setLspStatus: (lspStatus) => set({ lspStatus }),
     setLspError: (lspError) => set({ lspError }),
