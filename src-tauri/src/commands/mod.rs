@@ -7,6 +7,7 @@ pub mod package_data;
 pub mod project_data;
 pub mod project_index;
 pub mod references;
+pub mod runtime;
 pub mod settings;
 pub mod spellcheck;
 pub mod synctex;

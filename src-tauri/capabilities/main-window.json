@@ -49,6 +49,8 @@
     "allow-project-bookmarks-load",
     "allow-project-bookmarks-add",
     "allow-project-bookmarks-remove",
+    "allow-load-citation-groups",
+    "allow-save-citation-groups",
     "allow-parse-bib-file",
     "allow-find-bib-in-project",
     "allow-scan-labels",
@@ -81,6 +83,8 @@
     "allow-synctex-build-line-map",
     "allow-export-document",
     "allow-get-export-formats",
+    "allow-open-external",
+    "allow-get-performance-memory",
     "allow-check-app-update",
     "allow-download-and-install-update",
     "allow-restart-app"

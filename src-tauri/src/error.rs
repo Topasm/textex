@@ -91,6 +91,12 @@ pub enum AppError {
     #[error("Document export failed: {0}")]
     Export(String),
 
+    #[error("External URL operation failed: {0}")]
+    ExternalUrl(String),
+
+    #[error("Performance sampling failed: {0}")]
+    Performance(String),
+
     #[error("Zotero operation failed: {0}")]
     Zotero(String),
 

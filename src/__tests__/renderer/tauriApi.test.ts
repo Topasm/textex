@@ -557,6 +557,44 @@ describe('Tauri DesktopApi adapter', () => {
     ])
   })
 
+  it('maps citation groups, external URLs, and performance memory to Rust', async () => {
+    const groups = [{ id: 'methods', name: 'Methods', citekeys: ['knuth1984'] }]
+    const memory = {
+      sampledAtEpochMs: 1,
+      totalWorkingSetKiB: 2048,
+      totalPrivateKiB: 2048,
+      processes: [
+        {
+          pid: 42,
+          type: 'Tauri',
+          cpuPercent: 0,
+          workingSetKiB: 2048,
+          peakWorkingSetKiB: 2048,
+          privateKiB: 2048,
+          sharedKiB: 0
+        }
+      ]
+    }
+    invokeMock
+      .mockResolvedValueOnce(groups)
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce(memory)
+
+    const api = createTauriApi()
+    await expect(api.loadCitationGroups('/project')).resolves.toEqual(groups)
+    await expect(api.saveCitationGroups('/project', groups)).resolves.toEqual({ success: true })
+    await expect(api.openExternal('https://textex.app/docs')).resolves.toEqual({ success: true })
+    await expect(api.getPerformanceMemory()).resolves.toEqual(memory)
+
+    expect(invokeMock.mock.calls).toEqual([
+      ['load_citation_groups', { projectRoot: '/project' }],
+      ['save_citation_groups', { projectRoot: '/project', groups }],
+      ['open_external', { url: 'https://textex.app/docs' }],
+      ['get_performance_memory']
+    ])
+  })
+
   it('parses the fallback document outline locally without a native round trip', async () => {
     const api = createTauriApi()
     await expect(

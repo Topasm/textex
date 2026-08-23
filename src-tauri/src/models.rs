@@ -3,6 +3,36 @@ use std::collections::HashMap;
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct CitationGroup {
+    pub id: String,
+    pub name: String,
+    pub citekeys: Vec<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProcessMemoryMetric {
+    pub pid: u32,
+    #[serde(rename = "type")]
+    pub process_type: String,
+    pub cpu_percent: f32,
+    pub working_set_ki_b: u64,
+    pub peak_working_set_ki_b: u64,
+    pub private_ki_b: u64,
+    pub shared_ki_b: u64,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PerformanceMemorySample {
+    pub sampled_at_epoch_ms: u64,
+    pub total_working_set_ki_b: u64,
+    pub total_private_ki_b: u64,
+    pub processes: Vec<ProcessMemoryMetric>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Template {
     pub id: String,
     pub name: String,

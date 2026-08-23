@@ -36,8 +36,11 @@ describe('desktop runtime capabilities', () => {
     expect(getDesktopCapabilities()).toMatchObject({
       runtime: 'tauri',
       ai: false,
+      citationGroups: true,
       documentExport: true,
       lsp: false,
+      openExternal: true,
+      performanceMemory: true,
       projectMetadata: true,
       pty: false,
       spellcheck: true,

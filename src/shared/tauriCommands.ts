@@ -50,6 +50,8 @@ export const TAURI_COMMANDS = {
   projectBookmarksLoad: 'project_bookmarks_load',
   projectBookmarksAdd: 'project_bookmarks_add',
   projectBookmarksRemove: 'project_bookmarks_remove',
+  loadCitationGroups: 'load_citation_groups',
+  saveCitationGroups: 'save_citation_groups',
   parseBibFile: 'parse_bib_file',
   findBibInProject: 'find_bib_in_project',
   scanLabels: 'scan_labels',
@@ -81,6 +83,8 @@ export const TAURI_COMMANDS = {
   synctexBuildLineMap: 'synctex_build_line_map',
   exportDocument: 'export_document',
   getExportFormats: 'get_export_formats',
+  openExternal: 'open_external',
+  getPerformanceMemory: 'get_performance_memory',
   checkAppUpdate: 'check_app_update',
   downloadAndInstallUpdate: 'download_and_install_update',
   restartApp: 'restart_app'

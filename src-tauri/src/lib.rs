@@ -9,6 +9,7 @@ use services::package_data::PackageDataState;
 use services::project_data::ProjectDataState;
 use services::project_index::ProjectIndexState;
 use services::references::ReferenceIndexState;
+use services::runtime::PerformanceState;
 use services::settings::SettingsState;
 use services::spellcheck::SpellcheckState;
 use services::synctex::SyncTexState;
@@ -34,6 +35,7 @@ pub fn run() {
         .manage(ProjectIndexState::default())
         .manage(ProjectDataState::default())
         .manage(ReferenceIndexState::default())
+        .manage(PerformanceState::default())
         .manage(SpellcheckState::default())
         .manage(TemplateState::default())
         .manage(SyncTexState::default())
@@ -85,6 +87,8 @@ pub fn run() {
             commands::project_data::project_bookmarks_load,
             commands::project_data::project_bookmarks_add,
             commands::project_data::project_bookmarks_remove,
+            commands::project_data::load_citation_groups,
+            commands::project_data::save_citation_groups,
             commands::references::parse_bib_file,
             commands::references::find_bib_in_project,
             commands::references::scan_labels,
@@ -117,6 +121,8 @@ pub fn run() {
             commands::synctex::synctex_build_line_map,
             commands::export::export_document,
             commands::export::get_export_formats,
+            commands::runtime::open_external,
+            commands::runtime::get_performance_memory,
             commands::updater::check_app_update,
             commands::updater::download_and_install_update,
             commands::updater::restart_app,

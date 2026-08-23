@@ -72,6 +72,8 @@ type MigratedDesktopApi = Pick<
   | 'projectBookmarksLoad'
   | 'projectBookmarksAdd'
   | 'projectBookmarksRemove'
+  | 'loadCitationGroups'
+  | 'saveCitationGroups'
   | 'parseBibFile'
   | 'findBibInProject'
   | 'scanLabels'
@@ -100,6 +102,8 @@ type MigratedDesktopApi = Pick<
   | 'synctexBuildLineMap'
   | 'exportDocument'
   | 'getExportFormats'
+  | 'openExternal'
+  | 'getPerformanceMemory'
   | 'loadSettings'
   | 'saveSettings'
   | 'addRecentProject'
@@ -339,6 +343,12 @@ const projectBookmarksAdd: DesktopApi['projectBookmarksAdd'] = (projectRoot, boo
 const projectBookmarksRemove: DesktopApi['projectBookmarksRemove'] = (projectRoot, id) =>
   invoke(TAURI_COMMANDS.projectBookmarksRemove, { projectRoot, id })
 
+const loadCitationGroups: DesktopApi['loadCitationGroups'] = (projectRoot) =>
+  invoke(TAURI_COMMANDS.loadCitationGroups, { projectRoot })
+
+const saveCitationGroups: DesktopApi['saveCitationGroups'] = (projectRoot, groups) =>
+  invoke(TAURI_COMMANDS.saveCitationGroups, { projectRoot, groups })
+
 const parseBibFile: DesktopApi['parseBibFile'] = (filePath) =>
   invoke(TAURI_COMMANDS.parseBibFile, { filePath })
 
@@ -427,6 +437,12 @@ const exportDocument: DesktopApi['exportDocument'] = (inputPath, format) =>
 
 const getExportFormats: DesktopApi['getExportFormats'] = () =>
   invoke(TAURI_COMMANDS.getExportFormats)
+
+const openExternal: DesktopApi['openExternal'] = (url) =>
+  invoke(TAURI_COMMANDS.openExternal, { url })
+
+const getPerformanceMemory: DesktopApi['getPerformanceMemory'] = () =>
+  invoke(TAURI_COMMANDS.getPerformanceMemory)
 
 const onCompileLog: DesktopApi['onCompileLog'] = (callback) => {
   compileLogCallback = callback
@@ -565,6 +581,8 @@ const migratedApi: MigratedDesktopApi = {
   projectBookmarksLoad,
   projectBookmarksAdd,
   projectBookmarksRemove,
+  loadCitationGroups,
+  saveCitationGroups,
   parseBibFile,
   findBibInProject,
   scanLabels,
@@ -593,6 +611,8 @@ const migratedApi: MigratedDesktopApi = {
   synctexBuildLineMap,
   exportDocument,
   getExportFormats,
+  openExternal,
+  getPerformanceMemory,
   loadSettings,
   saveSettings,
   addRecentProject,

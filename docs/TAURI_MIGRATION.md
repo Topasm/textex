@@ -42,10 +42,13 @@ revision-aware Tectonic compile, system Git vertical slice다. 새 기능은 Tau
 | BibTeX/label index | 지원 | ProjectIndex generation별로 `.bib`/`.tex`를 한 번만 scan·cache하며 단일 BibTeX 파일 parse도 project boundary와 10 MiB 제한을 적용한다. |
 | Zotero/Better BibTeX | 지원 | loopback 전용 Rust HTTP client가 probe, search, CAYW, 선택 citekey export와 collection→project `.bib` atomic sync를 제공하며 redirect, 크기와 timeout을 제한한다. |
 | local history | 지원 | Rust가 project-scoped gzip snapshot을 원자 저장하고 50개로 prune하며 snapshot 경로와 50 MiB decompression limit을 검증한다. |
-| `.textex` project metadata | 지원 | 활성 project root와 정확히 일치하는 경로만 허용하고 project/compile/snippet/bookmark JSON과 compile log를 크기 제한 및 atomic replacement로 관리한다. 기존 v1 JSON 형식과 malformed-file fallback을 유지한다. |
+| `.textex` project metadata | 지원 | 활성 project root와 정확히 일치하는 경로만 허용하고 project/compile/snippet/bookmark/citation JSON과 compile log를 크기 제한 및 atomic replacement로 관리한다. 기존 v1 JSON 형식과 malformed-file fallback을 유지한다. |
+| citation groups | 지원 | `.textex/citations.json`을 검증·원자 저장하고 기존 Electron userData의 project-hash JSON을 발견하면 project metadata로 best-effort 이관한다. |
 | spellcheck | 지원 | bundled Hunspell 사전을 순수 Rust service가 lazy load하고 check/suggest/add/language 전환을 blocking worker에서 처리한다. 언어·단어 입력과 사전 크기를 제한한다. |
 | templates | 지원 | shared built-in 목록과 Rust custom-template 저장소를 결합한다. ZIP import는 traversal/symlink/entry-count/decompressed-size를 제한하고 새 project를 만든 뒤에만 root를 활성화한다. |
 | Pandoc export | 지원 | 활성 project의 `.tex`만 입력으로 허용하고 HTML/DOCX/ODT/EPUB allow-list, 180초 timeout, 제한된 stderr와 atomic output 교체를 적용한다. Pandoc은 GPL optional external dependency로 번들하지 않는다. |
+| external links | 지원 | Rust command가 shell을 거치지 않고 플랫폼 URL opener를 직접 실행하며 `https`, `http`, `mailto` scheme만 허용한다. |
+| performance memory | 지원 | 30초 간격 benchmark contract에 맞춰 Tauri process와 자식 process의 RSS/CPU를 KiB 단위로 sampling한다. |
 | 나머지 desktop API | 미지원 | 호출 시 `has not been migrated` 오류를 반환한다. |
 
 파일 읽기는 5 MiB를 넘으면 renderer에 경고 정보를 전달하고, editor 정지를 막기
@@ -144,6 +147,8 @@ Electron preload, Tauri adapter, 공유 타입과 테스트를 함께 갱신한�
 - `project_bookmarks_load`
 - `project_bookmarks_add`
 - `project_bookmarks_remove`
+- `load_citation_groups`
+- `save_citation_groups`
 - `load_settings`
 - `save_settings`
 - `activate_project`
@@ -154,6 +159,8 @@ Electron preload, Tauri adapter, 공유 타입과 테스트를 함께 갱신한�
 - `cancel_compile`
 - `export_document`
 - `get_export_formats`
+- `open_external`
+- `get_performance_memory`
 - `check_app_update`
 - `download_and_install_update`
 - `restart_app`
