@@ -273,7 +273,7 @@ pub async fn load_snippets(
     let _guard = project_data_state.operation_lock.lock().await;
     let root = validate_project_root(state, project_root).await?;
     let path = metadata_path(state, &root, "snippets.json").await?;
-    read_json_or_default(state, &path, Vec::new).await
+    read_json_or_default(state, &path, empty_vec).await
 }
 
 pub async fn add_snippet(
@@ -286,7 +286,7 @@ pub async fn add_snippet(
     let _guard = project_data_state.operation_lock.lock().await;
     let root = validate_project_root(state, project_root).await?;
     let path = metadata_write_path(state, &root, "snippets.json").await?;
-    let mut snippets = read_json_or_default(state, &path, Vec::new).await?;
+    let mut snippets = read_json_or_default(state, &path, empty_vec).await?;
     if snippets.len() >= MAX_ITEMS {
         return Err(AppError::ProjectData(
             "too many project snippets".to_owned(),
@@ -314,7 +314,7 @@ pub async fn remove_snippet(
     let _guard = project_data_state.operation_lock.lock().await;
     let root = validate_project_root(state, project_root).await?;
     let path = metadata_write_path(state, &root, "snippets.json").await?;
-    let mut snippets: Vec<ProjectSnippet> = read_json_or_default(state, &path, Vec::new).await?;
+    let mut snippets: Vec<ProjectSnippet> = read_json_or_default(state, &path, empty_vec).await?;
     snippets.retain(|snippet| snippet.id != id);
     write_json(state, path, &snippets).await
 }
@@ -327,7 +327,7 @@ pub async fn load_bookmarks(
     let _guard = project_data_state.operation_lock.lock().await;
     let root = validate_project_root(state, project_root).await?;
     let path = metadata_path(state, &root, "bookmarks.json").await?;
-    read_json_or_default(state, &path, Vec::new).await
+    read_json_or_default(state, &path, empty_vec).await
 }
 
 pub async fn add_bookmark(
@@ -340,7 +340,7 @@ pub async fn add_bookmark(
     let _guard = project_data_state.operation_lock.lock().await;
     let root = validate_project_root(state, project_root).await?;
     let path = metadata_write_path(state, &root, "bookmarks.json").await?;
-    let mut bookmarks = read_json_or_default(state, &path, Vec::new).await?;
+    let mut bookmarks = read_json_or_default(state, &path, empty_vec).await?;
     if bookmarks.len() >= MAX_ITEMS {
         return Err(AppError::ProjectData(
             "too many project bookmarks".to_owned(),
@@ -369,7 +369,7 @@ pub async fn remove_bookmark(
     let _guard = project_data_state.operation_lock.lock().await;
     let root = validate_project_root(state, project_root).await?;
     let path = metadata_write_path(state, &root, "bookmarks.json").await?;
-    let mut bookmarks: Vec<ProjectBookmark> = read_json_or_default(state, &path, Vec::new).await?;
+    let mut bookmarks: Vec<ProjectBookmark> = read_json_or_default(state, &path, empty_vec).await?;
     bookmarks.retain(|bookmark| bookmark.id != id);
     write_json(state, path, &bookmarks).await
 }
@@ -589,6 +589,10 @@ fn default_compile() -> AppResult<CompileDatabase> {
         last_compiled: None,
         records: Default::default(),
     })
+}
+
+fn empty_vec<T>() -> AppResult<Vec<T>> {
+    Ok(Vec::new())
 }
 
 fn validate_project(project: &ProjectDatabase) -> AppResult<()> {
