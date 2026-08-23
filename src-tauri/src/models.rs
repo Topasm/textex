@@ -86,6 +86,77 @@ pub struct HistoryItem {
     pub path: String,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectDatabase {
+    pub version: u32,
+    pub name: String,
+    pub main_file: String,
+    pub created: String,
+    pub last_opened: String,
+    pub document_class: String,
+    pub description: String,
+    pub tags: Vec<String>,
+    pub authors: Vec<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompileRecord {
+    pub file_path: String,
+    pub last_compiled: String,
+    pub duration: f64,
+    pub exit_code: i32,
+    pub pdf_path: String,
+    pub error_count: u32,
+    pub warning_count: u32,
+    pub hash: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompileDatabase {
+    pub version: u32,
+    pub total_compiles: u64,
+    pub last_compiled: Option<String>,
+    pub records: HashMap<String, CompileRecord>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+pub struct ProjectSnippet {
+    pub id: String,
+    pub prefix: String,
+    pub label: String,
+    pub body: String,
+    pub description: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize)]
+pub struct NewProjectSnippet {
+    pub prefix: String,
+    pub label: String,
+    pub body: String,
+    pub description: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+pub struct ProjectBookmark {
+    pub id: String,
+    pub file: String,
+    pub line: u32,
+    pub column: u32,
+    pub label: String,
+    pub created: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize)]
+pub struct NewProjectBookmark {
+    pub file: String,
+    pub line: u32,
+    pub column: u32,
+    pub label: String,
+}
+
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PackageData {

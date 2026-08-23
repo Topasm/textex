@@ -205,6 +205,62 @@ describe('Tauri DesktopApi adapter', () => {
     ])
   })
 
+  it('maps project metadata operations to the scoped Rust commands', async () => {
+    const compileRecord = {
+      filePath: '/project/main.tex',
+      lastCompiled: '2026-08-23T00:01:00Z',
+      duration: 1,
+      exitCode: 0,
+      pdfPath: '/project/main.pdf',
+      errorCount: 0,
+      warningCount: 0,
+      hash: 'abc'
+    }
+    const snippet = { prefix: 'fig', label: 'Figure', body: 'body', description: '' }
+    const bookmark = { file: '/project/main.tex', line: 3, column: 1, label: 'Result' }
+    invokeMock.mockResolvedValue(undefined)
+    const api = createTauriApi()
+
+    await api.projectInit('/project')
+    await api.projectExists('/project')
+    await api.projectLoad('/project')
+    await api.projectSave('/project', { mainFile: 'main.tex' })
+    await api.projectTouch('/project')
+    await api.projectCompileLoad('/project')
+    await api.projectCompileSave('/project', compileRecord)
+    await api.projectCompileClear('/project')
+    await api.projectCompileLogSave('/project', '/project/main.tex', 'ok')
+    await api.projectCompileLogLoad('/project', '/project/main.tex')
+    await api.projectSnippetsLoad('/project')
+    await api.projectSnippetsAdd('/project', snippet)
+    await api.projectSnippetsRemove('/project', 'snippet-1')
+    await api.projectBookmarksLoad('/project')
+    await api.projectBookmarksAdd('/project', bookmark)
+    await api.projectBookmarksRemove('/project', 'bm-1')
+
+    expect(invokeMock.mock.calls).toEqual([
+      ['project_init', { projectRoot: '/project' }],
+      ['project_exists', { projectRoot: '/project' }],
+      ['project_load', { projectRoot: '/project' }],
+      ['project_save', { projectRoot: '/project', partial: { mainFile: 'main.tex' } }],
+      ['project_touch', { projectRoot: '/project' }],
+      ['project_compile_load', { projectRoot: '/project' }],
+      ['project_compile_save', { projectRoot: '/project', record: compileRecord }],
+      ['project_compile_clear', { projectRoot: '/project' }],
+      [
+        'project_compile_log_save',
+        { projectRoot: '/project', filePath: '/project/main.tex', log: 'ok' }
+      ],
+      ['project_compile_log_load', { projectRoot: '/project', filePath: '/project/main.tex' }],
+      ['project_snippets_load', { projectRoot: '/project' }],
+      ['project_snippets_add', { projectRoot: '/project', snippet }],
+      ['project_snippets_remove', { projectRoot: '/project', id: 'snippet-1' }],
+      ['project_bookmarks_load', { projectRoot: '/project' }],
+      ['project_bookmarks_add', { projectRoot: '/project', bookmark }],
+      ['project_bookmarks_remove', { projectRoot: '/project', id: 'bm-1' }]
+    ])
+  })
+
   it('streams revision-tagged compile logs and diagnostics through a Tauri channel', async () => {
     const request = {
       filePath: '/project/main.tex',

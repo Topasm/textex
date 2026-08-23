@@ -53,6 +53,22 @@ type MigratedDesktopApi = Pick<
   | 'onDirectoryChanged'
   | 'removeDirectoryChangedListener'
   | 'getProjectIndex'
+  | 'projectInit'
+  | 'projectExists'
+  | 'projectLoad'
+  | 'projectSave'
+  | 'projectTouch'
+  | 'projectCompileLoad'
+  | 'projectCompileSave'
+  | 'projectCompileClear'
+  | 'projectCompileLogSave'
+  | 'projectCompileLogLoad'
+  | 'projectSnippetsLoad'
+  | 'projectSnippetsAdd'
+  | 'projectSnippetsRemove'
+  | 'projectBookmarksLoad'
+  | 'projectBookmarksAdd'
+  | 'projectBookmarksRemove'
   | 'parseBibFile'
   | 'findBibInProject'
   | 'scanLabels'
@@ -258,6 +274,54 @@ const removeDirectoryChangedListener: DesktopApi['removeDirectoryChangedListener
 const getProjectIndex = (): Promise<ProjectIndexSnapshot> =>
   invoke<ProjectIndexSnapshot>(TAURI_COMMANDS.getProjectIndex)
 
+const projectInit: DesktopApi['projectInit'] = (projectRoot) =>
+  invoke(TAURI_COMMANDS.projectInit, { projectRoot })
+
+const projectExists: DesktopApi['projectExists'] = (projectRoot) =>
+  invoke(TAURI_COMMANDS.projectExists, { projectRoot })
+
+const projectLoad: DesktopApi['projectLoad'] = (projectRoot) =>
+  invoke(TAURI_COMMANDS.projectLoad, { projectRoot })
+
+const projectSave: DesktopApi['projectSave'] = (projectRoot, partial) =>
+  invoke(TAURI_COMMANDS.projectSave, { projectRoot, partial })
+
+const projectTouch: DesktopApi['projectTouch'] = (projectRoot) =>
+  invoke(TAURI_COMMANDS.projectTouch, { projectRoot })
+
+const projectCompileLoad: DesktopApi['projectCompileLoad'] = (projectRoot) =>
+  invoke(TAURI_COMMANDS.projectCompileLoad, { projectRoot })
+
+const projectCompileSave: DesktopApi['projectCompileSave'] = (projectRoot, record) =>
+  invoke(TAURI_COMMANDS.projectCompileSave, { projectRoot, record })
+
+const projectCompileClear: DesktopApi['projectCompileClear'] = (projectRoot) =>
+  invoke(TAURI_COMMANDS.projectCompileClear, { projectRoot })
+
+const projectCompileLogSave: DesktopApi['projectCompileLogSave'] = (projectRoot, filePath, log) =>
+  invoke(TAURI_COMMANDS.projectCompileLogSave, { projectRoot, filePath, log })
+
+const projectCompileLogLoad: DesktopApi['projectCompileLogLoad'] = (projectRoot, filePath) =>
+  invoke(TAURI_COMMANDS.projectCompileLogLoad, { projectRoot, filePath })
+
+const projectSnippetsLoad: DesktopApi['projectSnippetsLoad'] = (projectRoot) =>
+  invoke(TAURI_COMMANDS.projectSnippetsLoad, { projectRoot })
+
+const projectSnippetsAdd: DesktopApi['projectSnippetsAdd'] = (projectRoot, snippet) =>
+  invoke(TAURI_COMMANDS.projectSnippetsAdd, { projectRoot, snippet })
+
+const projectSnippetsRemove: DesktopApi['projectSnippetsRemove'] = (projectRoot, id) =>
+  invoke(TAURI_COMMANDS.projectSnippetsRemove, { projectRoot, id })
+
+const projectBookmarksLoad: DesktopApi['projectBookmarksLoad'] = (projectRoot) =>
+  invoke(TAURI_COMMANDS.projectBookmarksLoad, { projectRoot })
+
+const projectBookmarksAdd: DesktopApi['projectBookmarksAdd'] = (projectRoot, bookmark) =>
+  invoke(TAURI_COMMANDS.projectBookmarksAdd, { projectRoot, bookmark })
+
+const projectBookmarksRemove: DesktopApi['projectBookmarksRemove'] = (projectRoot, id) =>
+  invoke(TAURI_COMMANDS.projectBookmarksRemove, { projectRoot, id })
+
 const parseBibFile: DesktopApi['parseBibFile'] = (filePath) =>
   invoke(TAURI_COMMANDS.parseBibFile, { filePath })
 
@@ -433,6 +497,22 @@ const migratedApi: MigratedDesktopApi = {
   onDirectoryChanged,
   removeDirectoryChangedListener,
   getProjectIndex,
+  projectInit,
+  projectExists,
+  projectLoad,
+  projectSave,
+  projectTouch,
+  projectCompileLoad,
+  projectCompileSave,
+  projectCompileClear,
+  projectCompileLogSave,
+  projectCompileLogLoad,
+  projectSnippetsLoad,
+  projectSnippetsAdd,
+  projectSnippetsRemove,
+  projectBookmarksLoad,
+  projectBookmarksAdd,
+  projectBookmarksRemove,
   parseBibFile,
   findBibInProject,
   scanLabels,

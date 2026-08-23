@@ -6,6 +6,7 @@ mod state;
 
 use services::history::HistoryState;
 use services::package_data::PackageDataState;
+use services::project_data::ProjectDataState;
 use services::project_index::ProjectIndexState;
 use services::references::ReferenceIndexState;
 use services::settings::SettingsState;
@@ -29,6 +30,7 @@ pub fn run() {
         .manage(PackageDataState::default())
         .manage(HistoryState::default())
         .manage(ProjectIndexState::default())
+        .manage(ProjectDataState::default())
         .manage(ReferenceIndexState::default())
         .manage(SyncTexState::default())
         .manage(AppUpdaterState::default())
@@ -62,6 +64,22 @@ pub fn run() {
             commands::history::load_history_snapshot,
             commands::package_data::load_package_data,
             commands::project_index::get_project_index,
+            commands::project_data::project_init,
+            commands::project_data::project_exists,
+            commands::project_data::project_load,
+            commands::project_data::project_save,
+            commands::project_data::project_touch,
+            commands::project_data::project_compile_load,
+            commands::project_data::project_compile_save,
+            commands::project_data::project_compile_clear,
+            commands::project_data::project_compile_log_save,
+            commands::project_data::project_compile_log_load,
+            commands::project_data::project_snippets_load,
+            commands::project_data::project_snippets_add,
+            commands::project_data::project_snippets_remove,
+            commands::project_data::project_bookmarks_load,
+            commands::project_data::project_bookmarks_add,
+            commands::project_data::project_bookmarks_remove,
             commands::references::parse_bib_file,
             commands::references::find_bib_in_project,
             commands::references::scan_labels,

@@ -42,6 +42,7 @@ revision-aware Tectonic compile, system Git vertical slice다. 새 기능은 Tau
 | BibTeX/label index | 지원 | ProjectIndex generation별로 `.bib`/`.tex`를 한 번만 scan·cache하며 단일 BibTeX 파일 parse도 project boundary와 10 MiB 제한을 적용한다. |
 | Zotero/Better BibTeX | 지원 | loopback 전용 Rust HTTP client가 probe, search, CAYW, 선택 citekey export와 collection→project `.bib` atomic sync를 제공하며 redirect, 크기와 timeout을 제한한다. |
 | local history | 지원 | Rust가 project-scoped gzip snapshot을 원자 저장하고 50개로 prune하며 snapshot 경로와 50 MiB decompression limit을 검증한다. |
+| `.textex` project metadata | 지원 | 활성 project root와 정확히 일치하는 경로만 허용하고 project/compile/snippet/bookmark JSON과 compile log를 크기 제한 및 atomic replacement로 관리한다. 기존 v1 JSON 형식과 malformed-file fallback을 유지한다. |
 | 나머지 desktop API | 미지원 | 호출 시 `has not been migrated` 오류를 반환한다. |
 
 파일 읽기는 5 MiB를 넘으면 renderer에 경고 정보를 전달하고, editor 정지를 막기
@@ -114,6 +115,22 @@ Electron preload, Tauri adapter, 공유 타입과 테스트를 함께 갱신한�
 - `watch_directory`
 - `unwatch_directory`
 - `get_project_index`
+- `project_init`
+- `project_exists`
+- `project_load`
+- `project_save`
+- `project_touch`
+- `project_compile_load`
+- `project_compile_save`
+- `project_compile_clear`
+- `project_compile_log_save`
+- `project_compile_log_load`
+- `project_snippets_load`
+- `project_snippets_add`
+- `project_snippets_remove`
+- `project_bookmarks_load`
+- `project_bookmarks_add`
+- `project_bookmarks_remove`
 - `load_settings`
 - `save_settings`
 - `activate_project`
@@ -382,7 +399,6 @@ Electron에서만 동작한다.
 
 - project-scoped custom protocol과 PDFium A/B
 - TexLab lifecycle와 LSP JSON-RPC
-- project metadata
 - spellcheck, templates와 Pandoc export
 - AI provider와 Claude/Codex CLI integration
 - PTY terminal
@@ -408,7 +424,7 @@ Tectonic은 필수 sidecar로 등록되어 package 전 검증되지만 TexLab은
 
 1. raw IPC보다 큰 PDF에는 project-scoped custom protocol을 A/B 측정하고 PDF.js 대비
    PDFium의 latency/memory/package-size tradeoff를 기록한다.
-2. Pandoc export, spellcheck, templates, AI와 project metadata service를 이관한다.
+2. Pandoc export, spellcheck, templates와 AI service를 이관한다.
 3. TexLab은 project-wide definition/rename/semantic diagnostics의 실사용 필요성을 측정할
    때까지 HOLD한다.
 4. PTY는 마지막에 cross-platform 구현과 Windows console QA를 함께 진행한다.

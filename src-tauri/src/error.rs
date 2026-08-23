@@ -79,6 +79,9 @@ pub enum AppError {
     #[error("History operation failed: {0}")]
     History(String),
 
+    #[error("Project metadata operation failed: {0}")]
+    ProjectData(String),
+
     #[error("Zotero operation failed: {0}")]
     Zotero(String),
 

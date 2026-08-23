@@ -38,6 +38,7 @@ describe('desktop runtime capabilities', () => {
       ai: false,
       documentExport: false,
       lsp: false,
+      projectMetadata: true,
       pty: false,
       spellcheck: false,
       templates: false
