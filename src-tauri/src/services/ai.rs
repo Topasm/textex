@@ -28,6 +28,7 @@ use crate::{
         AiAction, AiContextEntry, AiCustomProcessRequest, AiLightContext, AiProcessRequest,
         AiProvider, AiTerminalResult, ResearchChatRequest, UserSettings,
     },
+    services::research_limits,
 };
 
 const CREDENTIAL_FILE: &str = "ai-credentials.json";
@@ -47,14 +48,8 @@ const RESEARCH_CHAT_SYSTEM: &str = "You are TextEx Research Chat, an academic re
 const MAX_RESEARCH_MESSAGE_BYTES: usize = 64 * 1024;
 const MAX_RESEARCH_HISTORY_MESSAGES: usize = 40;
 const MAX_RESEARCH_HISTORY_BYTES: usize = 512 * 1024;
-const MAX_RESEARCH_CONTEXTS: usize = 24;
-const MAX_RESEARCH_CONTEXT_BYTES: usize = 256 * 1024;
-const MAX_RESEARCH_CONTEXT_TOTAL_BYTES: usize = 1024 * 1024;
-const MAX_RESEARCH_CONTEXT_LABEL_BYTES: usize = 1024;
+const MAX_RESEARCH_CONTEXT_LABEL_BYTES: usize = 16 * 1024;
 const MAX_RESEARCH_CONTEXT_SOURCE_BYTES: usize = 16 * 1024;
-const MAX_RESEARCH_INSTRUCTIONS: usize = 32;
-const MAX_RESEARCH_INSTRUCTION_BYTES: usize = 16 * 1024;
-const MAX_RESEARCH_INSTRUCTIONS_TOTAL_BYTES: usize = 128 * 1024;
 const MAX_RESEARCH_REQUEST_BYTES: usize = 1536 * 1024;
 
 pub struct AiState {
@@ -271,7 +266,7 @@ pub async fn research_chat(
     .await
 }
 
-fn validate_research_chat_request(request: &ResearchChatRequest) -> AppResult<()> {
+pub(crate) fn validate_research_chat_request(request: &ResearchChatRequest) -> AppResult<()> {
     validate_bounded_research_text(
         &request.message,
         "research chat message",
@@ -300,7 +295,7 @@ fn validate_research_chat_request(request: &ResearchChatRequest) -> AppResult<()
         ));
     }
 
-    if request.contexts.len() > MAX_RESEARCH_CONTEXTS {
+    if request.contexts.len() > research_limits::MAX_CHAT_CONTEXTS {
         return Err(AppError::Ai(
             "research chat has too many contexts".to_owned(),
         ));
@@ -330,7 +325,7 @@ fn validate_research_chat_request(request: &ResearchChatRequest) -> AppResult<()
         validate_bounded_research_text(
             &context.content,
             "research context content",
-            MAX_RESEARCH_CONTEXT_BYTES,
+            research_limits::MAX_CHAT_CONTEXT_BYTES,
             true,
         )?;
         context_bytes = context_bytes
@@ -338,13 +333,13 @@ fn validate_research_chat_request(request: &ResearchChatRequest) -> AppResult<()
             .saturating_add(context.source.as_ref().map_or(0, String::len))
             .saturating_add(context.content.len());
     }
-    if context_bytes > MAX_RESEARCH_CONTEXT_TOTAL_BYTES {
+    if context_bytes > research_limits::MAX_CHAT_CONTEXT_TOTAL_BYTES {
         return Err(AppError::Ai(
             "research chat contexts exceed the size limit".to_owned(),
         ));
     }
 
-    if request.instructions.len() > MAX_RESEARCH_INSTRUCTIONS {
+    if request.instructions.len() > research_limits::MAX_CHAT_INSTRUCTIONS {
         return Err(AppError::Ai(
             "research chat has too many project instructions".to_owned(),
         ));
@@ -354,12 +349,12 @@ fn validate_research_chat_request(request: &ResearchChatRequest) -> AppResult<()
         validate_bounded_research_text(
             instruction,
             "research project instruction",
-            MAX_RESEARCH_INSTRUCTION_BYTES,
+            research_limits::MAX_CHAT_INSTRUCTION_BYTES,
             true,
         )?;
         instruction_bytes = instruction_bytes.saturating_add(instruction.len());
     }
-    if instruction_bytes > MAX_RESEARCH_INSTRUCTIONS_TOTAL_BYTES {
+    if instruction_bytes > research_limits::MAX_CHAT_INSTRUCTIONS_TOTAL_BYTES {
         return Err(AppError::Ai(
             "research project instructions exceed the size limit".to_owned(),
         ));
@@ -1445,8 +1440,14 @@ mod tests {
         assert!(validate_research_chat_request(&empty).is_err());
 
         let mut too_many_contexts = research_chat_request();
-        too_many_contexts.contexts = vec![too_many_contexts.contexts[0].clone(); 25];
+        too_many_contexts.contexts =
+            vec![too_many_contexts.contexts[0].clone(); research_limits::MAX_CHAT_CONTEXTS + 1];
         assert!(validate_research_chat_request(&too_many_contexts).is_err());
+
+        let mut maximum_contexts = research_chat_request();
+        maximum_contexts.contexts =
+            vec![maximum_contexts.contexts[0].clone(); research_limits::MAX_CHAT_CONTEXTS];
+        assert!(validate_research_chat_request(&maximum_contexts).is_ok());
 
         let mut oversized_instruction = research_chat_request();
         oversized_instruction.instructions = vec!["x".repeat(16 * 1024 + 1)];

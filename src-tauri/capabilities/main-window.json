@@ -112,6 +112,7 @@
     "allow-load-settings",
     "allow-save-settings",
     "allow-activate-project",
+    "allow-get-active-project",
     "allow-deactivate-project",
     "allow-add-recent-project",
     "allow-remove-recent-project",

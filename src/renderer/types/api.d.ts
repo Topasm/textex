@@ -91,6 +91,8 @@ export interface DesktopApi {
   openDirectory(): Promise<string | null>
   /** Activates a dialog-authorized or native-persisted recent project root. */
   activateProject(projectPath: string): Promise<string>
+  /** Returns the native project authority after an activation attempt. */
+  getActiveProject(): Promise<string | null>
   /** Closes the trusted project session and all native project resources. */
   deactivateProject(): Promise<{ success: boolean }>
   createFile(filePath: string): Promise<{ success: boolean }>

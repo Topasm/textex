@@ -85,13 +85,9 @@ describe('ResearchChatPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Send' }))
 
     await waitFor(() => expect(window.api.aiResearchChat).toHaveBeenCalledOnce())
-    expect(window.api.researchSourceIndex).toHaveBeenCalledWith('official-code', 'sources/robot')
-    expect(window.api.researchSourceSearch).toHaveBeenCalledWith(
-      'official-code',
-      'Where is training implemented?',
-      6
-    )
-    expect(window.api.researchResourceSnapshot).toHaveBeenCalledWith('project-site')
+    expect(window.api.researchSourceIndex).not.toHaveBeenCalled()
+    expect(window.api.researchSourceSearch).not.toHaveBeenCalled()
+    expect(window.api.researchResourceSnapshot).not.toHaveBeenCalled()
     expect(window.api.aiResearchChat).toHaveBeenCalledWith(
       expect.objectContaining({
         message: 'Where is training implemented?',
@@ -103,13 +99,13 @@ describe('ResearchChatPanel', () => {
           expect.objectContaining({
             kind: 'repository',
             resourceId: 'official-code',
-            content: expect.stringContaining('train.py:42')
+            content: expect.stringContaining('Local path: sources/robot')
           }),
           expect.objectContaining({
             kind: 'website',
             resourceId: 'project-site',
             source: 'https://project.example.org',
-            content: expect.stringContaining('Official project documentation')
+            content: expect.stringContaining('URL: https://project.example.org')
           })
         ])
       })
@@ -117,66 +113,61 @@ describe('ResearchChatPanel', () => {
     expect(await screen.findByText('It is implemented in [Official code].')).toBeInTheDocument()
   })
 
+  it('keeps the conversation and prompt when the active document changes', async () => {
+    render(<ResearchChatPanel onAiDraft={vi.fn()} />)
+    const input = await screen.findByRole('textbox', { name: 'Research question' })
+    fireEvent.change(input, { target: { value: 'First question' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    expect(await screen.findByText('It is implemented in [Official code].')).toBeInTheDocument()
+
+    fireEvent.change(input, { target: { value: 'Follow-up draft' } })
+    act(() => {
+      useEditorStore
+        .getState()
+        .openFileInTab('/project/appendix.tex', '\\section{Appendix} New context')
+    })
+
+    expect(screen.getByText('First question')).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'Research question' })).toHaveValue(
+      'Follow-up draft'
+    )
+    expect(window.api.researchProfileLoad).toHaveBeenCalledOnce()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    await waitFor(() => expect(window.api.aiResearchChat).toHaveBeenCalledTimes(2))
+    expect(vi.mocked(window.api.aiResearchChat).mock.calls[1][0].contexts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'document',
+          source: '/project/appendix.tex',
+          content: expect.stringContaining('New context')
+        })
+      ])
+    )
+  })
+
+  it('preserves an explicitly disabled document context across open files', async () => {
+    render(<ResearchChatPanel onAiDraft={vi.fn()} />)
+    const documentContext = await screen.findByRole('button', { name: 'Current document' })
+    fireEvent.click(documentContext)
+    expect(documentContext).toHaveAttribute('aria-pressed', 'false')
+
+    act(() => {
+      useEditorStore.getState().openFileInTab('/project/appendix.tex', '\\section{Appendix}')
+    })
+
+    expect(screen.getByRole('button', { name: 'Current document' })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    )
+    expect(window.api.researchProfileLoad).toHaveBeenCalledOnce()
+  })
+
   it('does not load chat context without an active project', () => {
     useProjectStore.setState({ projectRoot: null })
     render(<ResearchChatPanel onAiDraft={vi.fn()} />)
     expect(screen.getByText('Open a project to use Research Chat.')).toBeInTheDocument()
     expect(window.api.researchProfileLoad).not.toHaveBeenCalled()
-  })
-
-  it('stops gathering source context after the project changes', async () => {
-    const pendingIndex = deferred<Awaited<ReturnType<typeof window.api.researchSourceIndex>>>()
-    window.api.researchSourceIndex = vi.fn().mockReturnValue(pendingIndex.promise)
-    render(<ResearchChatPanel onAiDraft={vi.fn()} />)
-    const input = await screen.findByPlaceholderText('Ask about this paper or its source code…')
-    fireEvent.change(input, { target: { value: 'Old project question' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
-    await waitFor(() => expect(window.api.researchSourceIndex).toHaveBeenCalledOnce())
-
-    act(() => useProjectStore.getState().setProjectRoot('/project-b'))
-    await act(async () => {
-      pendingIndex.resolve({
-        resourceId: 'official-code',
-        rootPath: '/project/sources/robot',
-        branch: 'main',
-        indexedAt: 1,
-        files: [],
-        fileCount: 0,
-        totalBytes: 0,
-        truncated: false
-      })
-      await pendingIndex.promise
-    })
-
-    expect(window.api.researchSourceSearch).not.toHaveBeenCalled()
-    expect(window.api.aiResearchChat).not.toHaveBeenCalled()
-    expect(screen.queryByText('Old project question')).not.toBeInTheDocument()
-  })
-
-  it('drops a website snapshot that finishes after the project changes', async () => {
-    const pendingSnapshot =
-      deferred<Awaited<ReturnType<typeof window.api.researchResourceSnapshot>>>()
-    window.api.researchResourceSnapshot = vi.fn().mockReturnValue(pendingSnapshot.promise)
-    render(<ResearchChatPanel onAiDraft={vi.fn()} />)
-    const input = await screen.findByRole('textbox', { name: 'Research question' })
-    fireEvent.change(input, { target: { value: 'Old project website question' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
-    await waitFor(() => expect(window.api.researchResourceSnapshot).toHaveBeenCalledOnce())
-
-    act(() => useProjectStore.getState().setProjectRoot('/project-b'))
-    await act(async () => {
-      pendingSnapshot.resolve({
-        resourceId: 'project-site',
-        url: 'https://project.example.org/redirected',
-        fetchedAt: 1,
-        content: 'Old project snapshot',
-        truncated: false
-      })
-      await pendingSnapshot.promise
-    })
-
-    expect(window.api.aiResearchChat).not.toHaveBeenCalled()
-    expect(screen.queryByText('Old project website question')).not.toBeInTheDocument()
   })
 
   it('does not append a late AI response to the next project', async () => {

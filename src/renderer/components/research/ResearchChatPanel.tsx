@@ -86,6 +86,7 @@ export function ResearchChatPanel({ onAiDraft }: ResearchChatPanelProps) {
   const loadGeneration = useRef(0)
   const requestGeneration = useRef(0)
   const requestInFlight = useRef(false)
+  const previousFilePath = useRef(filePath)
 
   const isCurrentRequest = useCallback((generation: number, root: string) => {
     return (
@@ -95,6 +96,7 @@ export function ResearchChatPanel({ onAiDraft }: ResearchChatPanelProps) {
 
   useEffect(() => {
     const generation = ++loadGeneration.current
+    const root = projectRoot
     requestGeneration.current += 1
     requestInFlight.current = false
     setProfile(null)
@@ -107,13 +109,18 @@ export function ResearchChatPanel({ onAiDraft }: ResearchChatPanelProps) {
     void window.api
       .researchProfileLoad()
       .then((loaded) => {
-        if (loadGeneration.current !== generation) return
+        if (
+          loadGeneration.current !== generation ||
+          useProjectStore.getState().projectRoot !== root
+        )
+          return
         setProfile(loaded)
+        const currentFilePath = useEditorStore.getState().filePath
         setSelectedContexts(
           new Set([
             'paper',
             'authors',
-            ...(filePath ? ['document'] : []),
+            ...(currentFilePath ? ['document'] : []),
             ...loaded.resources
               .filter((resource) => resource.chatAccess !== 'none')
               .map((resource) => `resource:${resource.id}`)
@@ -121,10 +128,26 @@ export function ResearchChatPanel({ onAiDraft }: ResearchChatPanelProps) {
         )
       })
       .catch((error: unknown) => {
-        if (loadGeneration.current === generation)
+        if (
+          loadGeneration.current === generation &&
+          useProjectStore.getState().projectRoot === root
+        )
           setStatus(error instanceof Error ? error.message : String(error))
       })
-  }, [filePath, projectRoot])
+  }, [projectRoot])
+
+  useEffect(() => {
+    const hadDocument = Boolean(previousFilePath.current)
+    previousFilePath.current = filePath
+    setSelectedContexts((current) => {
+      const hasDocument = current.has('document')
+      if ((!filePath && !hasDocument) || (filePath && (hadDocument || hasDocument))) return current
+      const next = new Set(current)
+      if (filePath) next.add('document')
+      else next.delete('document')
+      return next
+    })
+  }, [filePath])
 
   const contextChips = useMemo(
     () => [
@@ -148,11 +171,7 @@ export function ResearchChatPanel({ onAiDraft }: ResearchChatPanelProps) {
   }
 
   const buildContexts = useCallback(
-    async (
-      question: string,
-      generation: number,
-      root: string
-    ): Promise<ResearchChatContext[] | null> => {
+    async (generation: number, root: string): Promise<ResearchChatContext[] | null> => {
       if (!profile || !isCurrentRequest(generation, root)) return null
       const contexts: ResearchChatContext[] = []
       if (selectedContexts.has('paper')) {
@@ -179,53 +198,9 @@ export function ResearchChatPanel({ onAiDraft }: ResearchChatPanelProps) {
         if (!isCurrentRequest(generation, root)) return null
         if (!selectedContexts.has(`resource:${resource.id}`) || resource.chatAccess === 'none')
           continue
-        const metadata = resourceMetadataContext(resource)
-        if (resource.chatAccess === 'snapshot' && resource.kind !== 'git') {
-          try {
-            const snapshot = await window.api.researchResourceSnapshot(resource.id)
-            if (!isCurrentRequest(generation, root)) return null
-            contexts.push({
-              ...metadata,
-              content: `${metadata.content}\n\nSnapshot fetched from ${snapshot.url} at ${new Date(snapshot.fetchedAt).toISOString()}${snapshot.truncated ? ' (truncated)' : ''}:\n${snapshot.content}`
-            })
-            continue
-          } catch (error) {
-            if (!isCurrentRequest(generation, root)) return null
-            setStatus(
-              `${resource.label}: ${error instanceof Error ? error.message : String(error)}`
-            )
-          }
-        }
-        if (
-          resource.kind === 'git' &&
-          resource.chatAccess === 'indexed-read' &&
-          resource.localPath
-        ) {
-          try {
-            await window.api.researchSourceIndex(resource.id, resource.localPath)
-            if (!isCurrentRequest(generation, root)) return null
-            const matches = await window.api.researchSourceSearch(resource.id, question, 6)
-            if (!isCurrentRequest(generation, root)) return null
-            if (matches.length > 0) {
-              contexts.push({
-                ...metadata,
-                content: `${metadata.content}\n\n${matches
-                  .map(
-                    (match) =>
-                      `File: ${match.path}:${match.line} (snippet starts at line ${match.startLine})\n${match.snippet}`
-                  )
-                  .join('\n\n')}`
-              })
-              continue
-            }
-          } catch (error) {
-            if (!isCurrentRequest(generation, root)) return null
-            setStatus(
-              `${resource.label}: ${error instanceof Error ? error.message : String(error)}`
-            )
-          }
-        }
-        contexts.push(metadata)
+        // Native chat assembly resolves the saved resource by id and applies its access policy.
+        // Renderer context deliberately carries metadata only, never fetched or indexed content.
+        contexts.push(resourceMetadataContext(resource))
       }
       return isCurrentRequest(generation, root) ? contexts : null
     },
@@ -241,7 +216,7 @@ export function ResearchChatPanel({ onAiDraft }: ResearchChatPanelProps) {
     setBusy(true)
     setStatus('Gathering selected research context…')
     try {
-      const contexts = await buildContexts(question, generation, root)
+      const contexts = await buildContexts(generation, root)
       if (!contexts || !isCurrentRequest(generation, root)) return
       const history = messages.slice(-HISTORY_LIMIT)
       setMessages((current) => [...current, { role: 'user', content: question }])

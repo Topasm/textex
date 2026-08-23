@@ -14,6 +14,7 @@ import {
   hasUnsavedResearchProfileDraft
 } from '../services/researchProfileDraft'
 import type { DirectoryEntry } from '../../shared/types'
+import { projectPathKey } from '../services/projectIndex'
 
 interface OpenProjectOptions {
   autoOpenFirstTex?: boolean
@@ -120,6 +121,29 @@ async function runNativeProjectTransition<T>(operation: () => Promise<T>): Promi
   }
 }
 
+async function reconcileFailedNativeActivation(generation: number): Promise<void> {
+  if (generation !== projectTransitionGeneration) return
+  const renderedRoot = useProjectStore.getState().projectRoot
+  let nativeRoot: string | null = null
+  try {
+    nativeRoot = await window.api.getActiveProject()
+  } catch {
+    // When native authority cannot be established, fail closed instead of
+    // leaving a renderer that appears able to access the previous project.
+  }
+  // The authority lookup runs after the native transition queue is released.
+  // A newer open/close can therefore win while this command is in flight.
+  if (generation !== projectTransitionGeneration) return
+  if (renderedRoot && nativeRoot && projectPathKey(renderedRoot) === projectPathKey(nativeRoot)) {
+    return
+  }
+
+  invalidateResearchProjectOpenSync()
+  window.api.removeDirectoryChangedListener()
+  clearProjectScopedRendererState()
+  useProjectStore.getState().setProjectRoot(nativeRoot)
+}
+
 /**
  * Invalidates renderer work from an earlier project and closes the native
  * project session in the same transition queue used by `openProject`.
@@ -150,33 +174,40 @@ export async function openProject(
   const { autoOpenFirstTex = true } = options
   const generation = ++projectTransitionGeneration
   invalidateResearchProjectOpenSync()
-  const projectPath = await runNativeProjectTransition(async () => {
-    if (generation !== projectTransitionGeneration) return null
-    const activatedPath = await window.api.activateProject(dirPath)
-    if (generation !== projectTransitionGeneration) return null
+  let projectPath: string | null
+  try {
+    projectPath = await runNativeProjectTransition(async () => {
+      if (generation !== projectTransitionGeneration) return null
+      const activatedPath = await window.api.activateProject(dirPath)
+      if (generation !== projectTransitionGeneration) return null
 
-    // Activating the project advances the native project epoch. Remove the
-    // previous watcher before publishing the new renderer root.
-    try {
-      await window.api.unwatchDirectory()
-    } catch {
-      // A failed cleanup must not prevent the epoch-guarded replacement
-      // watcher from being installed below.
-    }
+      // Activating the project advances the native project epoch. Remove the
+      // previous watcher before publishing the new renderer root.
+      try {
+        await window.api.unwatchDirectory()
+      } catch {
+        // A failed cleanup must not prevent the epoch-guarded replacement
+        // watcher from being installed below.
+      }
 
-    // Detach the old root's renderer callback before creating the new native
-    // channel. React installs the new callback after the new root is
-    // published; the initial index scan therefore always starts after the
-    // watcher commit point and reconciles any events in this short interval.
-    window.api.removeDirectoryChangedListener()
-    try {
-      await window.api.watchDirectory(activatedPath)
-    } catch {
-      // The project remains usable when native watching is unavailable. The
-      // authoritative index read still supplies the initial project state.
-    }
-    return generation === projectTransitionGeneration ? activatedPath : null
-  })
+      // Detach the old root's renderer callback before creating the new native
+      // channel. React installs the new callback after the new root is
+      // published; the initial index scan therefore always starts after the
+      // watcher commit point and reconciles any events in this short interval.
+      window.api.removeDirectoryChangedListener()
+      try {
+        await window.api.watchDirectory(activatedPath)
+      } catch {
+        // The project remains usable when native watching is unavailable. The
+        // authoritative index read still supplies the initial project state.
+      }
+      return generation === projectTransitionGeneration ? activatedPath : null
+    })
+  } catch (error) {
+    if (generation === projectTransitionGeneration)
+      await reconcileFailedNativeActivation(generation)
+    throw error
+  }
   if (!projectPath || generation !== projectTransitionGeneration) return null
   clearProjectScopedRendererState()
   useProjectStore.getState().setProjectRoot(projectPath)

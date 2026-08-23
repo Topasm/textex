@@ -2,11 +2,12 @@ use std::{
     collections::{HashMap, VecDeque},
     ffi::{OsStr, OsString},
     fs,
+    future::pending,
     io::{self, Read},
     path::{Path, PathBuf},
     process::{Output, Stdio},
     sync::{
-        atomic::{AtomicUsize, Ordering},
+        atomic::{AtomicU64, AtomicUsize, Ordering},
         Arc, RwLock,
     },
     time::{Duration, SystemTime, UNIX_EPOCH},
@@ -17,7 +18,7 @@ use tokio::{
     io::{AsyncRead, AsyncReadExt},
     process::{Child, Command},
     sync::Mutex,
-    time::timeout,
+    time::{sleep, timeout},
 };
 
 use crate::{
@@ -42,6 +43,7 @@ const MAX_SEARCH_RESULTS: usize = 50;
 const DEFAULT_SEARCH_RESULTS: usize = 20;
 const MAX_SNIPPET_CHARS: usize = 1_200;
 const MAX_GIT_OUTPUT_BYTES: usize = 1024 * 1024;
+const MAX_GIT_CONFIG_BYTES: u64 = 256 * 1024;
 const GIT_CLONE_TIMEOUT: Duration = Duration::from_secs(180);
 const GIT_FETCH_TIMEOUT: Duration = Duration::from_secs(120);
 const GIT_REAP_TIMEOUT: Duration = Duration::from_secs(5);
@@ -52,10 +54,19 @@ const GIT_ISOLATION_CONFIG: &[&str] = &[
     "credential.helper=",
     "credential.interactive=false",
     "core.askPass=",
+    "core.pager=cat",
     "core.sshCommand=ssh",
     "core.fsmonitor=false",
     "gc.auto=0",
+    "http.cookieFile=",
+    "http.extraHeader=",
+    "http.proxy=",
+    "http.saveCookies=false",
+    "http.sslCert=",
+    "http.sslKey=",
+    "http.sslVerify=true",
     "maintenance.auto=false",
+    "pager.fetch=false",
 ];
 
 static NEXT_GIT_ISOLATION_ID: AtomicUsize = AtomicUsize::new(0);
@@ -76,12 +87,37 @@ const EXCLUDED_DIRECTORIES: &[&str] = &[
     ".venv",
     "venv",
     "vendor",
+    ".aws",
+    ".azure",
+    ".docker",
+    ".gcloud",
+    "gcloud",
+    ".gnupg",
+    ".kube",
+    ".pulumi",
+    ".ssh",
+    ".terraform",
+    ".vault",
+    ".secrets",
+    "secrets",
+    ".credentials",
+    "credentials",
+    "private-keys",
+    "private_keys",
+    "service-accounts",
+    "service_accounts",
 ];
 
 struct GitCommandIsolation {
     root: PathBuf,
     hooks: PathBuf,
     global_config: PathBuf,
+}
+
+enum GitRunCompletion {
+    Completed(AppResult<Output>),
+    TimedOut,
+    ProjectChanged,
 }
 
 impl GitCommandIsolation {
@@ -311,6 +347,38 @@ impl ResearchSourceState {
         Ok(results)
     }
 
+    /// Searches a valid cached index and rebuilds it from the profile's saved
+    /// local path only when the cache is absent or belongs to stale project
+    /// state. Renderer-provided paths are never used by this Chat-facing flow.
+    pub async fn search_or_index(
+        &self,
+        project_state: &AppState,
+        resource_id: &str,
+        query: &str,
+        limit: Option<usize>,
+    ) -> AppResult<Vec<ResearchSourceSearchResult>> {
+        match self.search(project_state, resource_id, query, limit).await {
+            Ok(results) => return Ok(results),
+            Err(AppError::ResearchSource(message))
+                if message.contains("has not been indexed")
+                    || message.contains("different project activation or profile") => {}
+            Err(error) => return Err(error),
+        }
+
+        let local_path = {
+            let _project_guard = project_state.lock_project_operation().await;
+            let profile = research_profile::load_unlocked(project_state).await?;
+            let resource = configured_git_resource(&profile, resource_id)?;
+            resource.local_path.clone().ok_or_else(|| {
+                AppError::ResearchSource(format!(
+                    "source resource '{resource_id}' has no configured local path"
+                ))
+            })?
+        };
+        self.index(project_state, resource_id, &local_path).await?;
+        self.search(project_state, resource_id, query, limit).await
+    }
+
     pub async fn clone_repository(
         &self,
         project_state: &AppState,
@@ -318,10 +386,11 @@ impl ResearchSourceState {
     ) -> AppResult<ResearchSourceGitResult> {
         validate_resource_id(resource_id)?;
         let _git_guard = self.git_lock.lock().await;
-        let _project_guard = project_state.lock_project_operation().await;
+        let project_guard = project_state.lock_project_operation().await;
+        let (project_root, project_epoch, epoch_tracker) = project_state.project_root_epoch()?;
         let profile = research_profile::load_unlocked(project_state).await?;
-        let resource = configured_git_resource(&profile, resource_id)?;
-        let remote = configured_remote(resource)?;
+        let resource = configured_git_resource(&profile, resource_id)?.clone();
+        let remote = configured_remote(&resource)?.to_owned();
         let local_path = resource.local_path.as_deref().ok_or_else(|| {
             AppError::ResearchSource(format!(
                 "git resource '{resource_id}' does not define a local path"
@@ -384,18 +453,45 @@ impl ResearchSourceState {
         }
         args.extend([
             OsString::from("--"),
-            OsString::from(remote),
+            OsString::from(remote.as_str()),
             destination_name.to_os_string(),
         ]);
-        let output = run_research_git(parent, args, "clone research source").await?;
-        let canonical_destination = dunce::canonicalize(&destination).map_err(|source| {
-            AppError::io(
-                "resolve cloned research source",
-                destination.to_string_lossy().into_owned(),
-                source,
-            )
-        })?;
-        ensure_existing_git_directory(project_state, &canonical_destination).await?;
+        let parent = parent.to_path_buf();
+        drop(project_guard);
+
+        let output = match run_research_git_for_project(
+            &parent,
+            args,
+            "clone research source",
+            Arc::clone(&epoch_tracker),
+            project_epoch,
+        )
+        .await
+        {
+            Ok(output) => output,
+            Err(error) => {
+                return Err(clone_error_after_cleanup(&project_root, &destination, error).await);
+            }
+        };
+        let canonical_destination = match validate_completed_git_operation(
+            project_state,
+            &project_root,
+            project_epoch,
+            &resource,
+            &destination,
+        )
+        .await
+        {
+            Ok(destination) => destination,
+            Err(error) => {
+                return Err(clone_error_after_cleanup(&project_root, &destination, error).await);
+            }
+        };
+        if let Err(error) = validate_repository_git_config(&canonical_destination) {
+            return Err(
+                clone_error_after_cleanup(&project_root, &canonical_destination, error).await,
+            );
+        }
         self.invalidate(resource_id)?;
 
         Ok(ResearchSourceGitResult {
@@ -414,16 +510,18 @@ impl ResearchSourceState {
     ) -> AppResult<ResearchSourceGitResult> {
         validate_resource_id(resource_id)?;
         let _git_guard = self.git_lock.lock().await;
-        let _project_guard = project_state.lock_project_operation().await;
+        let project_guard = project_state.lock_project_operation().await;
+        let (project_root, project_epoch, epoch_tracker) = project_state.project_root_epoch()?;
         let profile = research_profile::load_unlocked(project_state).await?;
-        let resource = configured_git_resource(&profile, resource_id)?;
-        let remote = configured_remote(resource)?;
+        let resource = configured_git_resource(&profile, resource_id)?.clone();
+        let remote = configured_remote(&resource)?.to_owned();
         let local_path = resource.local_path.as_deref().ok_or_else(|| {
             AppError::ResearchSource(format!(
                 "git resource '{resource_id}' does not define a local path"
             ))
         })?;
         let repository = existing_fetch_repository(project_state, local_path).await?;
+        validate_repository_git_config(&repository)?;
         let args = vec![
             OsString::from("-c"),
             OsString::from("submodule.recurse=false"),
@@ -442,9 +540,27 @@ impl ResearchSourceState {
             OsString::from("fetch"),
             OsString::from("--prune"),
             OsString::from("--"),
-            OsString::from(remote),
+            OsString::from(remote.as_str()),
         ];
-        let output = run_research_git(&repository, args, "fetch research source").await?;
+        drop(project_guard);
+
+        let output = run_research_git_for_project(
+            &repository,
+            args,
+            "fetch research source",
+            Arc::clone(&epoch_tracker),
+            project_epoch,
+        )
+        .await?;
+        let repository = validate_completed_git_operation(
+            project_state,
+            &project_root,
+            project_epoch,
+            &resource,
+            &repository,
+        )
+        .await?;
+        validate_repository_git_config(&repository)?;
         self.invalidate(resource_id)?;
 
         Ok(ResearchSourceGitResult {
@@ -489,6 +605,57 @@ fn configured_git_resource<'a>(
         )));
     }
     Ok(resource)
+}
+
+async fn validate_completed_git_operation(
+    project_state: &AppState,
+    expected_project_root: &Path,
+    expected_project_epoch: u64,
+    expected_resource: &ResearchResource,
+    expected_repository: &Path,
+) -> AppResult<PathBuf> {
+    let _project_guard = project_state.lock_project_operation().await;
+    let (active_root, active_epoch, _) = project_state.project_root_epoch()?;
+    if active_epoch != expected_project_epoch
+        || !filesystem::paths_equal(&active_root, expected_project_root)
+    {
+        return Err(AppError::ResearchSource(
+            "the active project changed while the research Git operation was in progress"
+                .to_owned(),
+        ));
+    }
+
+    let profile = research_profile::load_unlocked(project_state).await?;
+    let active_resource = configured_git_resource(&profile, &expected_resource.id)?;
+    if active_resource != expected_resource {
+        return Err(AppError::ResearchSource(
+            "the research source profile changed while the Git operation was in progress"
+                .to_owned(),
+        ));
+    }
+    // Revalidate the path from the saved profile instead of trusting the
+    // pre-operation path or anything returned by Git.
+    let local_path = active_resource.local_path.as_deref().ok_or_else(|| {
+        AppError::ResearchSource(format!(
+            "git resource '{}' no longer defines a local path",
+            active_resource.id
+        ))
+    })?;
+    let active_repository = existing_fetch_repository(project_state, local_path).await?;
+    let canonical_expected = dunce::canonicalize(expected_repository).map_err(|source| {
+        AppError::io(
+            "resolve completed research source repository",
+            expected_repository.to_string_lossy().into_owned(),
+            source,
+        )
+    })?;
+    if !filesystem::paths_equal(&active_repository, &canonical_expected) {
+        return Err(AppError::ResearchSource(
+            "the configured research source path changed while the Git operation was in progress"
+                .to_owned(),
+        ));
+    }
+    Ok(active_repository)
 }
 
 async fn configured_source_root(
@@ -639,6 +806,75 @@ async fn new_clone_destination(state: &AppState, local_path: &str) -> AppResult<
     Ok(destination)
 }
 
+async fn clone_error_after_cleanup(
+    project_root: &Path,
+    destination: &Path,
+    error: AppError,
+) -> AppError {
+    match cleanup_failed_clone(project_root, destination).await {
+        Ok(()) => error,
+        Err(cleanup_error) => AppError::ResearchSource(format!(
+            "{error}; additionally failed to remove the partial clone: {cleanup_error}"
+        )),
+    }
+}
+
+async fn cleanup_failed_clone(project_root: &Path, destination: &Path) -> AppResult<()> {
+    let metadata = match tokio::fs::symlink_metadata(destination).await {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
+        Err(source) => {
+            return Err(AppError::io(
+                "inspect partial research clone",
+                destination.to_string_lossy().into_owned(),
+                source,
+            ))
+        }
+    };
+    if metadata.file_type().is_symlink() {
+        // Never follow a replacement symlink. Removing only the exact directory
+        // entry cannot affect its target outside the project.
+        return tokio::fs::remove_file(destination).await.map_err(|source| {
+            AppError::io(
+                "remove partial research clone symlink",
+                destination.to_string_lossy().into_owned(),
+                source,
+            )
+        });
+    }
+    if !metadata.is_dir() {
+        return Err(AppError::ResearchSource(format!(
+            "refusing to remove unexpected non-directory clone target: {}",
+            destination.to_string_lossy()
+        )));
+    }
+    let canonical = dunce::canonicalize(destination).map_err(|source| {
+        AppError::io(
+            "resolve partial research clone",
+            destination.to_string_lossy().into_owned(),
+            source,
+        )
+    })?;
+    if !path_is_within(project_root, &canonical)
+        || filesystem::paths_equal(project_root, &canonical)
+        || !filesystem::paths_equal(destination, &canonical)
+    {
+        return Err(AppError::ResearchSource(format!(
+            "refusing to remove partial clone outside its validated destination: {}",
+            canonical.to_string_lossy()
+        )));
+    }
+    tokio::fs::remove_dir_all(&canonical)
+        .await
+        .map_err(|source| {
+            AppError::io(
+                "remove partial research clone",
+                canonical.to_string_lossy().into_owned(),
+                source,
+            )
+        })
+}
+
 async fn existing_fetch_repository(state: &AppState, local_path: &str) -> AppResult<PathBuf> {
     let requested = configured_local_path(state, local_path)?;
     let metadata = tokio::fs::symlink_metadata(&requested)
@@ -735,6 +971,92 @@ async fn ensure_existing_git_directory(state: &AppState, repository: &Path) -> A
     Ok(())
 }
 
+fn validate_repository_git_config(repository: &Path) -> AppResult<()> {
+    let config = repository.join(".git").join("config");
+    let bytes = read_file_no_follow_bounded(repository, &config, MAX_GIT_CONFIG_BYTES).map_err(
+        |source| {
+            AppError::io(
+                "read isolated research Git configuration",
+                config.to_string_lossy().into_owned(),
+                source,
+            )
+        },
+    )?;
+    let text = std::str::from_utf8(&bytes).map_err(|_| {
+        AppError::ResearchSource("research repository Git config is not valid UTF-8".to_owned())
+    })?;
+    validate_repository_git_config_text(text)
+}
+
+fn validate_repository_git_config_text(config: &str) -> AppResult<()> {
+    let mut section = String::new();
+    for (line_index, raw_line) in config.lines().enumerate() {
+        let line = raw_line.trim();
+        if line.is_empty() || line.starts_with('#') || line.starts_with(';') {
+            continue;
+        }
+        if let Some(header) = line.strip_prefix('[') {
+            let Some(end) = header.find(']') else {
+                return Err(AppError::ResearchSource(format!(
+                    "research repository Git config has an invalid section on line {}",
+                    line_index + 1
+                )));
+            };
+            let header = header[..end].trim();
+            section = header
+                .split(|character: char| character.is_ascii_whitespace() || character == '.')
+                .next()
+                .unwrap_or_default()
+                .to_ascii_lowercase();
+            if matches!(
+                section.as_str(),
+                "alias"
+                    | "credential"
+                    | "filter"
+                    | "http"
+                    | "include"
+                    | "includeif"
+                    | "pager"
+                    | "protocol"
+                    | "url"
+            ) {
+                return Err(AppError::ResearchSource(format!(
+                    "research repository Git config contains disallowed section '{section}'"
+                )));
+            }
+            continue;
+        }
+
+        let key = line
+            .split_once('=')
+            .map_or(line, |(key, _)| key)
+            .split_ascii_whitespace()
+            .next()
+            .unwrap_or_default()
+            .to_ascii_lowercase();
+        let disallowed = (section == "core"
+            && matches!(
+                key.as_str(),
+                "askpass"
+                    | "editor"
+                    | "fsmonitor"
+                    | "gitproxy"
+                    | "hookspath"
+                    | "pager"
+                    | "sshcommand"
+            ))
+            || (section == "remote"
+                && matches!(key.as_str(), "proxy" | "receivepack" | "uploadpack" | "vcs"));
+        if disallowed {
+            return Err(AppError::ResearchSource(format!(
+                "research repository Git config contains disallowed key '{section}.{key}'"
+            )));
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
 async fn run_research_git<I, S>(
     working_directory: &Path,
     args: I,
@@ -744,6 +1066,47 @@ where
     I: IntoIterator<Item = S>,
     S: AsRef<OsStr>,
 {
+    run_research_git_internal(working_directory, args, operation, None).await
+}
+
+async fn run_research_git_for_project<I, S>(
+    working_directory: &Path,
+    args: I,
+    operation: &'static str,
+    project_epoch: Arc<AtomicU64>,
+    expected_project_epoch: u64,
+) -> AppResult<Output>
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<OsStr>,
+{
+    run_research_git_internal(
+        working_directory,
+        args,
+        operation,
+        Some((project_epoch, expected_project_epoch)),
+    )
+    .await
+}
+
+async fn run_research_git_internal<I, S>(
+    working_directory: &Path,
+    args: I,
+    operation: &'static str,
+    project_activation: Option<(Arc<AtomicU64>, u64)>,
+) -> AppResult<Output>
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<OsStr>,
+{
+    if project_activation
+        .as_ref()
+        .is_some_and(|(epoch, expected)| epoch.load(Ordering::Acquire) != *expected)
+    {
+        return Err(AppError::ResearchSource(
+            "the active project changed before the research Git operation started".to_owned(),
+        ));
+    }
     let display_root = working_directory.to_string_lossy().into_owned();
     let isolation = GitCommandIsolation::create().map_err(|source| {
         AppError::git_io(
@@ -766,10 +1129,12 @@ where
         .env("GIT_CONFIG_NOSYSTEM", "1")
         .env("GIT_CONFIG_GLOBAL", &isolation.global_config)
         .env("GIT_CONFIG_COUNT", "0")
+        .env("GIT_PAGER", "cat")
         .env("GIT_TERMINAL_PROMPT", "0")
         .env("GCM_INTERACTIVE", "Never")
         .env("GIT_SSH_COMMAND", "ssh")
         .env("SSH_ASKPASS_REQUIRE", "never")
+        .env("PAGER", "cat")
         .env_remove("GIT_ALTERNATE_OBJECT_DIRECTORIES")
         .env_remove("GIT_ASKPASS")
         .env_remove("GIT_COMMON_DIR")
@@ -833,13 +1198,19 @@ where
     } else {
         GIT_FETCH_TIMEOUT
     };
-    let output = match timeout(operation_timeout, transaction).await {
-        Ok(Ok(output)) => output,
-        Ok(Err(error)) => {
+    let cancellation = wait_for_project_epoch_change(project_activation);
+    let completion = tokio::select! {
+        result = transaction => GitRunCompletion::Completed(result),
+        _ = sleep(operation_timeout) => GitRunCompletion::TimedOut,
+        _ = cancellation => GitRunCompletion::ProjectChanged,
+    };
+    let output = match completion {
+        GitRunCompletion::Completed(Ok(output)) => output,
+        GitRunCompletion::Completed(Err(error)) => {
             terminate_git_process_tree(&mut child, process_id).await;
             return Err(error);
         }
-        Err(_) => {
+        GitRunCompletion::TimedOut => {
             terminate_git_process_tree(&mut child, process_id).await;
             return Err(AppError::git_io(
                 operation,
@@ -851,6 +1222,12 @@ where
                         operation_timeout.as_secs()
                     ),
                 ),
+            ));
+        }
+        GitRunCompletion::ProjectChanged => {
+            terminate_git_process_tree(&mut child, process_id).await;
+            return Err(AppError::ResearchSource(
+                "the active project changed; the research Git operation was cancelled".to_owned(),
             ));
         }
     };
@@ -865,6 +1242,19 @@ where
         });
     }
     Ok(output)
+}
+
+async fn wait_for_project_epoch_change(project_activation: Option<(Arc<AtomicU64>, u64)>) {
+    let Some((project_epoch, expected_project_epoch)) = project_activation else {
+        pending::<()>().await;
+        return;
+    };
+    loop {
+        if project_epoch.load(Ordering::Acquire) != expected_project_epoch {
+            return;
+        }
+        sleep(Duration::from_millis(50)).await;
+    }
 }
 
 async fn read_research_git_pipe<R>(
@@ -1117,6 +1507,12 @@ fn build_source_index(resource_id: String, root: PathBuf) -> AppResult<BuiltSour
                 Ok(path) if path_is_within(&root, &path) => path,
                 _ => continue,
             };
+            let relative = canonical
+                .strip_prefix(&root)
+                .map_err(|_| AppError::OutsideProject(canonical.to_string_lossy().into_owned()))?;
+            if is_sensitive_relative_path(relative) {
+                continue;
+            }
             let bytes = match read_source_file_bounded(&root, &canonical) {
                 Ok(bytes) if bytes.len() as u64 <= MAX_FILE_BYTES => bytes,
                 Ok(_) => {
@@ -1135,9 +1531,9 @@ fn build_source_index(resource_id: String, root: PathBuf) -> AppResult<BuiltSour
             let Ok(content) = String::from_utf8(bytes) else {
                 continue;
             };
-            let relative = canonical
-                .strip_prefix(&root)
-                .map_err(|_| AppError::OutsideProject(canonical.to_string_lossy().into_owned()))?;
+            if contains_likely_secret(&content) {
+                continue;
+            }
             let path = relative_path_string(relative)?;
             let bytes = content.len() as u64;
             total_bytes = total_bytes.saturating_add(bytes);
@@ -1269,12 +1665,16 @@ fn compare_search_results(
 }
 
 fn read_source_file_bounded(root: &Path, path: &Path) -> io::Result<Vec<u8>> {
+    read_file_no_follow_bounded(root, path, MAX_FILE_BYTES)
+}
+
+fn read_file_no_follow_bounded(root: &Path, path: &Path, max_bytes: u64) -> io::Result<Vec<u8>> {
     let mut options = fs::OpenOptions::new();
     options.read(true);
     configure_source_open_no_follow(&mut options);
     let mut file = options.open(path)?;
     let opened_metadata = file.metadata()?;
-    if !opened_metadata.is_file() || opened_metadata.len() > MAX_FILE_BYTES {
+    if !opened_metadata.is_file() || opened_metadata.len() > max_bytes {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
             "research source changed to a non-file or oversized file before it was opened",
@@ -1282,7 +1682,13 @@ fn read_source_file_bounded(root: &Path, path: &Path) -> io::Result<Vec<u8>> {
     }
     validate_opened_source_file(root, path, &opened_metadata)?;
     let mut bytes = Vec::new();
-    Read::take(&mut file, MAX_FILE_BYTES + 1).read_to_end(&mut bytes)?;
+    Read::take(&mut file, max_bytes + 1).read_to_end(&mut bytes)?;
+    if bytes.len() as u64 > max_bytes {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "validated file exceeded its read limit",
+        ));
+    }
     let completed_metadata = file.metadata()?;
     if !same_file_identity(&opened_metadata, &completed_metadata) {
         return Err(io::Error::new(
@@ -1367,7 +1773,7 @@ fn validate_resource_id(resource_id: &str) -> AppResult<()> {
             .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
     {
         return Err(AppError::ResearchSource(
-            "resource id must contain only ASCII letters, digits, '.', '-', or '_' and be at most 96 bytes"
+            "resource id must contain only ASCII letters, digits, '.', '-', or '_' and be at most 128 bytes"
                 .to_owned(),
         ));
     }
@@ -1384,6 +1790,29 @@ fn is_sensitive_file_name(name: &str) -> bool {
     let lower = name.to_ascii_lowercase();
     lower == ".env"
         || lower.starts_with(".env.")
+        || matches!(
+            lower.as_str(),
+            ".dockercfg"
+                | ".dockerconfigjson"
+                | ".git-credentials"
+                | ".htpasswd"
+                | ".netrc"
+                | "_netrc"
+                | ".npmrc"
+                | ".pypirc"
+                | ".vault-token"
+                | "application_default_credentials.json"
+                | "auth.json"
+                | "authconfig.json"
+                | "azureauth.json"
+                | "credentials.json"
+                | "docker-config.json"
+                | "kubeconfig"
+                | "oauth.json"
+                | "secrets.json"
+                | "serviceaccount.json"
+                | "terraform.tfstate"
+        )
         || lower == "secret"
         || lower == "secrets"
         || lower.starts_with("secret.")
@@ -1395,12 +1824,268 @@ fn is_sensitive_file_name(name: &str) -> bool {
         || lower.contains("private-key")
         || lower.contains("private_key")
         || lower.contains(".secret")
+        || lower.contains("service-account")
+        || lower.contains("service_account")
+        || lower.contains("serviceaccount-key")
+        || lower.contains("access-token")
+        || lower.contains("access_token")
+        || lower.contains("auth-token")
+        || lower.contains("auth_token")
+        || lower.contains("client-secret")
+        || lower.contains("client_secret")
+        || lower.contains("refresh-token")
+        || lower.contains("refresh_token")
+        || lower.starts_with("token.")
+        || lower.starts_with("tokens.")
+        || lower.ends_with(".tfstate.backup")
         || matches!(
             Path::new(&lower)
                 .extension()
                 .and_then(|value| value.to_str()),
             Some("pem" | "key" | "p12" | "pfx" | "crt" | "cer" | "der")
         )
+}
+
+fn is_sensitive_relative_path(path: &Path) -> bool {
+    let components = path
+        .components()
+        .filter_map(|component| match component {
+            std::path::Component::Normal(name) => Some(name.to_string_lossy().to_ascii_lowercase()),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+    let Some(file_name) = components.last() else {
+        return true;
+    };
+    if is_sensitive_file_name(file_name) {
+        return true;
+    }
+    components.windows(2).any(|pair| {
+        matches!(pair[0].as_str(), ".docker" | ".aws" | ".azure" | ".kube")
+            && matches!(
+                pair[1].as_str(),
+                "config" | "config.json" | "credentials" | "credentials.json" | "token"
+            )
+    })
+}
+
+fn contains_likely_secret(content: &str) -> bool {
+    let lower = content.to_ascii_lowercase();
+    [
+        "-----begin private key-----",
+        "-----begin rsa private key-----",
+        "-----begin ec private key-----",
+        "-----begin openssh private key-----",
+        "-----begin encrypted private key-----",
+        "\"type\": \"service_account\"",
+        "\"type\":\"service_account\"",
+        "accountkey=",
+        "sharedaccesssignature=",
+    ]
+    .iter()
+    .any(|marker| lower.contains(marker))
+        || (lower.contains("\"type\"") && lower.contains("\"service_account\""))
+        || contains_fixed_prefix_token(content, &["AKIA", "ASIA"], 16, is_upper_token_byte)
+        || contains_fixed_prefix_token(content, &["AIza"], 35, is_token_byte)
+        || contains_minimum_prefix_token(
+            content,
+            &["ghp_", "gho_", "ghu_", "ghs_", "ghr_"],
+            30,
+            is_token_byte,
+        )
+        || contains_minimum_prefix_token(content, &["github_pat_"], 22, is_token_byte)
+        || contains_minimum_prefix_token(
+            content,
+            &["xoxb-", "xoxp-", "xoxa-", "xoxr-", "xoxs-"],
+            20,
+            is_token_byte,
+        )
+        || contains_minimum_prefix_token(content, &["sk_live_", "rk_live_"], 16, is_token_byte)
+        || content.lines().any(line_contains_secret_assignment)
+        || content.lines().any(line_contains_embedded_credentials)
+}
+
+fn contains_fixed_prefix_token(
+    content: &str,
+    prefixes: &[&str],
+    tail_length: usize,
+    valid_byte: fn(u8) -> bool,
+) -> bool {
+    prefixes.iter().any(|prefix| {
+        content.match_indices(prefix).any(|(index, _)| {
+            let tail = content.as_bytes().get(index + prefix.len()..);
+            tail.is_some_and(|tail| {
+                tail.len() >= tail_length
+                    && tail[..tail_length].iter().copied().all(valid_byte)
+                    && tail.get(tail_length).is_none_or(|byte| !valid_byte(*byte))
+            })
+        })
+    })
+}
+
+fn contains_minimum_prefix_token(
+    content: &str,
+    prefixes: &[&str],
+    minimum_tail_length: usize,
+    valid_byte: fn(u8) -> bool,
+) -> bool {
+    prefixes.iter().any(|prefix| {
+        content.match_indices(prefix).any(|(index, _)| {
+            content.as_bytes()[index + prefix.len()..]
+                .iter()
+                .copied()
+                .take_while(|byte| valid_byte(*byte))
+                .count()
+                >= minimum_tail_length
+        })
+    })
+}
+
+fn is_upper_token_byte(byte: u8) -> bool {
+    byte.is_ascii_uppercase() || byte.is_ascii_digit()
+}
+
+fn is_token_byte(byte: u8) -> bool {
+    byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'-')
+}
+
+fn line_contains_secret_assignment(line: &str) -> bool {
+    const SECRET_KEYS: &[&str] = &[
+        "account_key",
+        "api_key",
+        "apikey",
+        "access_key",
+        "access_token",
+        "auth",
+        "auth_token",
+        "authorization",
+        "client_secret",
+        "connection_string",
+        "connectionstring",
+        "password",
+        "passwd",
+        "private_key",
+        "refresh_token",
+        "sas_token",
+        "secret",
+        "secret_key",
+        "token",
+    ];
+
+    let lower = line.to_ascii_lowercase();
+    SECRET_KEYS.iter().any(|key| {
+        lower.match_indices(key).any(|(start, _)| {
+            let before = lower.as_bytes().get(start.wrapping_sub(1)).copied();
+            if start > 0 && before.is_some_and(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+            {
+                return false;
+            }
+            let mut separator_index = start + key.len();
+            let bytes = lower.as_bytes();
+            while bytes
+                .get(separator_index)
+                .is_some_and(|byte| byte.is_ascii_whitespace() || matches!(byte, b'\'' | b'"'))
+            {
+                separator_index += 1;
+            }
+            if !bytes
+                .get(separator_index)
+                .is_some_and(|byte| matches!(byte, b':' | b'='))
+            {
+                return false;
+            }
+            let value = line[separator_index + 1..].trim();
+            secret_assignment_value(value, key)
+        })
+    })
+}
+
+fn secret_assignment_value(value: &str, key: &str) -> bool {
+    let value = value.trim_start();
+    if value.is_empty() {
+        return false;
+    }
+    let (candidate, quoted) = match value.as_bytes()[0] {
+        quote @ (b'\'' | b'"' | b'`') => {
+            let remainder = &value[1..];
+            let Some(end) = remainder.find(char::from(quote)) else {
+                return false;
+            };
+            (&remainder[..end], true)
+        }
+        _ => (
+            value
+                .split(|character: char| character.is_ascii_whitespace() || character == ',')
+                .next()
+                .unwrap_or_default(),
+            false,
+        ),
+    };
+    let candidate = candidate.trim();
+    if is_obvious_secret_placeholder(candidate) {
+        return false;
+    }
+    let high_risk_key = matches!(
+        key,
+        "password" | "passwd" | "private_key" | "client_secret" | "secret_key"
+    );
+    if quoted {
+        return candidate.len() >= if high_risk_key { 4 } else { 8 };
+    }
+    if candidate.contains('(') || candidate.contains(')') || candidate.contains('.') {
+        return false;
+    }
+    candidate.len() >= if high_risk_key { 8 } else { 12 }
+        && candidate.bytes().all(|byte| {
+            byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'-' | b'+' | b'/' | b'=')
+        })
+}
+
+fn is_obvious_secret_placeholder(value: &str) -> bool {
+    let lower = value.to_ascii_lowercase();
+    lower.is_empty()
+        || matches!(lower.as_str(), "null" | "none" | "undefined")
+        || lower.starts_with('$')
+        || lower.starts_with("{{")
+        || (lower.starts_with('<') && lower.ends_with('>'))
+        || lower.contains("process.env")
+        || lower.contains("getenv")
+        || lower.contains("os.environ")
+        || lower.contains("placeholder")
+        || lower.contains("replace-me")
+        || lower.contains("replace_me")
+        || lower.contains("changeme")
+        || lower.starts_with("your-")
+        || lower.starts_with("your_")
+        || lower
+            .chars()
+            .all(|character| matches!(character, '*' | 'x'))
+}
+
+fn line_contains_embedded_credentials(line: &str) -> bool {
+    let lower = line.to_ascii_lowercase();
+    if let Some(scheme) = lower.find("://") {
+        let authority = lower[scheme + 3..]
+            .split(['/', '?', '#'])
+            .next()
+            .unwrap_or_default();
+        if let Some((userinfo, _)) = authority.rsplit_once('@') {
+            if userinfo.contains(':') && !userinfo.starts_with("${") {
+                return true;
+            }
+        }
+    }
+    for marker in ["authorization: bearer ", "authorization = bearer "] {
+        if let Some(start) = lower.find(marker) {
+            let token = line[start + marker.len()..]
+                .trim()
+                .trim_matches(|character| matches!(character, '\'' | '"'));
+            if token.len() >= 16 && !is_obvious_secret_placeholder(token) {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 fn source_language(name: &str) -> Option<&'static str> {
@@ -1597,13 +2282,71 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn search_or_index_builds_once_from_saved_path_then_uses_the_cache() {
+        let project = tempdir().expect("project tempdir");
+        let source = project.path().join("source");
+        fs::create_dir_all(&source).expect("source directory");
+        let source_file = source.join("policy.rs");
+        fs::write(&source_file, "fn cached_policy_needle() {}\n").expect("initial source");
+        let state = active_state(project.path());
+        configure_source(&state, "repo", "source", ResearchChatAccess::IndexedRead).await;
+        let indexes = ResearchSourceState::default();
+
+        let first = indexes
+            .search_or_index(&state, "repo", "cached_policy_needle", Some(5))
+            .await
+            .expect("first call indexes from saved localPath");
+        assert_eq!(first.len(), 1);
+        assert_eq!(first[0].path, "policy.rs");
+
+        fs::write(&source_file, "fn changed_after_index() {}\n").expect("change source on disk");
+        let cached = indexes
+            .search_or_index(&state, "repo", "cached_policy_needle", Some(5))
+            .await
+            .expect("cache hit must not rebuild");
+        assert_eq!(cached.len(), 1);
+        assert!(cached[0].snippet.contains("cached_policy_needle"));
+        let absent_from_cache = indexes
+            .search_or_index(&state, "repo", "changed_after_index", Some(5))
+            .await
+            .expect("empty cache result is still a cache hit");
+        assert!(absent_from_cache.is_empty());
+    }
+
+    #[tokio::test]
     async fn excludes_secrets_binaries_dependencies_and_symlinks() {
         let project = tempdir().expect("project tempdir");
         let source = project.path().join("source");
         fs::create_dir_all(source.join("node_modules/pkg")).expect("dependency directory");
+        fs::create_dir_all(source.join(".docker")).expect("docker config directory");
+        fs::create_dir_all(source.join(".aws")).expect("cloud credential directory");
+        fs::create_dir_all(source.join("config")).expect("config directory");
         fs::write(source.join("main.py"), "print('safe')\n").expect("safe source");
+        fs::write(
+            source.join("auth.ts"),
+            "const token = process.env.ACCESS_TOKEN\n",
+        )
+        .expect("safe auth source");
         fs::write(source.join(".env"), "TOKEN=do-not-index\n").expect("env file");
         fs::write(source.join("private_key.pem"), "do-not-index\n").expect("key file");
+        fs::write(
+            source.join("config/service-account.json"),
+            "{\"type\":\"service_account\",\"private_key\":\"hidden\"}\n",
+        )
+        .expect("service account file");
+        fs::write(
+            source.join("leaked-token.rs"),
+            "const TOKEN: &str = \"ghp_abcdefghijklmnopqrstuvwxyz123456\";\n",
+        )
+        .expect("token-bearing source");
+        fs::write(source.join("password.yml"), "password: hunter2-secret\n")
+            .expect("password config");
+        fs::write(source.join(".docker/config.json"), "{\"auths\":{}}\n").expect("docker config");
+        fs::write(
+            source.join(".aws/credentials.json"),
+            "{\"accessKey\":\"hidden\"}\n",
+        )
+        .expect("cloud credential file");
         fs::write(source.join("image.rs"), b"fn x() {}\0hidden").expect("binary source");
         fs::write(source.join("node_modules/pkg/index.js"), "do-not-index\n")
             .expect("dependency source");
@@ -1622,8 +2365,57 @@ mod tests {
                 .iter()
                 .map(|file| file.path.as_str())
                 .collect::<Vec<_>>(),
-            vec!["main.py"]
+            vec!["auth.ts", "main.py"]
         );
+    }
+
+    #[test]
+    fn detects_high_confidence_secrets_without_rejecting_environment_lookups() {
+        for secret in [
+            "private_key = \"-----BEGIN PRIVATE KEY-----\"",
+            "aws_key = \"AKIA1234567890ABCDEF\"",
+            "token = \"github_pat_abcdefghijklmnopqrstuvwxyz123456\"",
+            "password: correct-horse-battery-staple",
+            "endpoint = \"https://user:password@example.test/api\"",
+            "Authorization: Bearer abcdefghijklmnopqrstuvwxyz",
+            "{\"type\":\"service_account\"}",
+        ] {
+            assert!(contains_likely_secret(secret), "missed secret: {secret}");
+        }
+
+        for safe in [
+            "const token = process.env.ACCESS_TOKEN;",
+            "password: ${DATABASE_PASSWORD}",
+            "api_key = \"<your-api-key>\"",
+            "fn refresh_token() -> Token { todo!() }",
+            "authorization: Bearer {{ token }}",
+        ] {
+            assert!(
+                !contains_likely_secret(safe),
+                "false positive for safe lookup: {safe}"
+            );
+        }
+    }
+
+    #[test]
+    fn excludes_common_auth_cloud_and_container_paths() {
+        for path in [
+            ".aws/credentials",
+            ".docker/config.json",
+            ".kube/config",
+            "config/service-account.json",
+            "deploy/application_default_credentials.json",
+            "ops/client_secret.yaml",
+            "terraform.tfstate.backup",
+        ] {
+            assert!(
+                is_sensitive_relative_path(Path::new(path)),
+                "sensitive path was allowed: {path}"
+            );
+        }
+        assert!(!is_sensitive_relative_path(Path::new(
+            "src/auth/session.ts"
+        )));
     }
 
     #[tokio::test]
@@ -1693,6 +2485,73 @@ mod tests {
         assert!(matches!(error, AppError::ResearchSource(_)));
     }
 
+    #[tokio::test]
+    async fn git_completion_rejects_a_changed_profile_or_project() {
+        let first = tempdir().expect("first project");
+        let second = tempdir().expect("second project");
+        fs::create_dir_all(first.path().join("sources/project/.git")).expect("research repository");
+        let state = active_state(first.path());
+        configure_source(
+            &state,
+            "official-code",
+            "sources/project",
+            ResearchChatAccess::IndexedRead,
+        )
+        .await;
+        let (project_root, project_epoch, _) =
+            state.project_root_epoch().expect("project snapshot");
+        let profile = research_profile::load(&state)
+            .await
+            .expect("profile snapshot");
+        let resource = configured_git_resource(&profile, "official-code")
+            .expect("configured resource")
+            .clone();
+        let repository = dunce::canonicalize(first.path().join("sources/project"))
+            .expect("canonical repository");
+
+        configure_source(
+            &state,
+            "official-code",
+            "sources/project",
+            ResearchChatAccess::Metadata,
+        )
+        .await;
+        assert!(validate_completed_git_operation(
+            &state,
+            &project_root,
+            project_epoch,
+            &resource,
+            &repository,
+        )
+        .await
+        .is_err());
+
+        state
+            .set_project_root(dunce::canonicalize(second.path()).expect("canonical second"))
+            .expect("activate second project");
+        assert!(validate_completed_git_operation(
+            &state,
+            &project_root,
+            project_epoch,
+            &resource,
+            &repository,
+        )
+        .await
+        .is_err());
+    }
+
+    #[tokio::test]
+    async fn project_epoch_change_wakes_git_cancellation_without_waiting_for_timeout() {
+        let epoch = Arc::new(AtomicU64::new(7));
+        epoch.store(8, Ordering::Release);
+        timeout(
+            Duration::from_millis(250),
+            wait_for_project_epoch_change(Some((epoch, 7))),
+        )
+        .await
+        .expect("epoch cancellation should be prompt");
+    }
+
     #[test]
     fn accepts_only_credential_free_https_or_standard_git_ssh_remotes() {
         assert!(validate_https_remote("https://github.com/example/project.git").is_ok());
@@ -1730,10 +2589,12 @@ mod tests {
         assert!(GIT_ISOLATION_CONFIG.contains(&"credential.helper="));
         assert!(GIT_ISOLATION_CONFIG.contains(&"credential.interactive=false"));
         assert!(GIT_ISOLATION_CONFIG.contains(&"core.askPass="));
+        assert!(GIT_ISOLATION_CONFIG.contains(&"core.pager=cat"));
         assert!(GIT_ISOLATION_CONFIG.contains(&"core.sshCommand=ssh"));
         assert!(GIT_ISOLATION_CONFIG.contains(&"core.fsmonitor=false"));
         assert!(GIT_ISOLATION_CONFIG.contains(&"gc.auto=0"));
         assert!(GIT_ISOLATION_CONFIG.contains(&"maintenance.auto=false"));
+        assert!(GIT_ISOLATION_CONFIG.contains(&"pager.fetch=false"));
 
         let isolation = GitCommandIsolation::create().expect("isolated Git environment");
         assert!(isolation.hooks.is_dir());
@@ -1742,6 +2603,24 @@ mod tests {
             fs::read(&isolation.global_config).expect("empty config"),
             b""
         );
+    }
+
+    #[test]
+    fn repository_git_config_rejects_execution_and_transport_overrides() {
+        let safe = "[core]\nrepositoryformatversion = 0\n[remote \"origin\"]\nurl = https://example.invalid/repo.git\nfetch = +refs/heads/*:refs/remotes/origin/*\n";
+        assert!(validate_repository_git_config_text(safe).is_ok());
+
+        for dangerous in [
+            "[core]\nsshCommand = false\n",
+            "[credential]\nhelper = !false\n",
+            "[include]\npath = /tmp/untrusted\n",
+            "[url \"ssh://elsewhere/\"]\ninsteadOf = https://example.invalid/\n",
+            "[http \"https://example.invalid/\"]\nproxy = http://127.0.0.1:8080\n",
+            "[pager]\nfetch = false\n",
+            "[remote \"origin\"]\nproxy = !false\n",
+        ] {
+            assert!(validate_repository_git_config_text(dangerous).is_err());
+        }
     }
 
     #[cfg(unix)]
@@ -1976,6 +2855,49 @@ mod tests {
         )
         .await
         .is_err());
+    }
+
+    #[tokio::test]
+    async fn failed_clone_cleanup_removes_only_the_validated_destination() {
+        let project = tempdir().expect("project tempdir");
+        let project_root = dunce::canonicalize(project.path()).expect("canonical project");
+        let destination = project_root.join("sources/project");
+        let sibling = project_root.join("sources/keep.txt");
+        fs::create_dir_all(destination.join(".git/objects")).expect("partial clone");
+        fs::write(destination.join("partial"), "partial clone\n").expect("partial file");
+        fs::write(&sibling, "keep\n").expect("sibling file");
+
+        cleanup_failed_clone(&project_root, &destination)
+            .await
+            .expect("clean partial clone");
+
+        assert!(!destination.exists());
+        assert_eq!(
+            fs::read_to_string(sibling).expect("sibling preserved"),
+            "keep\n"
+        );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn failed_clone_cleanup_unlinks_a_replacement_symlink_without_following_it() {
+        let project = tempdir().expect("project tempdir");
+        let outside = tempdir().expect("outside tempdir");
+        let project_root = dunce::canonicalize(project.path()).expect("canonical project");
+        let destination = project_root.join("source-link");
+        let outside_file = outside.path().join("preserved.txt");
+        fs::write(&outside_file, "preserve\n").expect("outside file");
+        std::os::unix::fs::symlink(outside.path(), &destination).expect("replacement symlink");
+
+        cleanup_failed_clone(&project_root, &destination)
+            .await
+            .expect("unlink replacement symlink");
+
+        assert!(!destination.exists());
+        assert_eq!(
+            fs::read_to_string(outside_file).expect("outside target preserved"),
+            "preserve\n"
+        );
     }
 
     #[tokio::test]

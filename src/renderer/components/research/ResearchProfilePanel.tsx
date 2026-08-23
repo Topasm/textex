@@ -40,6 +40,24 @@ const CHAT_ACCESS_OPTIONS: Array<{ value: ResearchResource['chatAccess']; label:
   { value: 'snapshot', label: 'Read saved snapshot' }
 ]
 
+function chatAccessOptions(
+  kind: ResearchResource['kind']
+): Array<{ value: ResearchResource['chatAccess']; label: string }> {
+  return CHAT_ACCESS_OPTIONS.filter(({ value }) =>
+    kind === 'git' ? value !== 'snapshot' : value !== 'indexed-read'
+  )
+}
+
+function safeChatAccess(
+  kind: ResearchResource['kind'],
+  access: ResearchResource['chatAccess']
+): ResearchResource['chatAccess'] {
+  if (access === 'none' || access === 'metadata') return access
+  if (kind === 'git' && access === 'indexed-read') return access
+  if (kind !== 'git' && access === 'snapshot') return access
+  return 'metadata'
+}
+
 function createId(prefix: string): string {
   if (typeof crypto.randomUUID === 'function') return crypto.randomUUID()
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`
@@ -130,6 +148,7 @@ export function ResearchProfilePanel() {
 
   useEffect(() => {
     const generation = ++loadGeneration.current
+    const root = projectRoot
     saveGeneration.current += 1
     indexGeneration.current += 1
     editRevision.current = 0
@@ -152,19 +171,29 @@ export function ResearchProfilePanel() {
     void window.api
       .researchProfileLoad()
       .then((loaded) => {
-        if (loadGeneration.current === generation) {
+        if (
+          loadGeneration.current === generation &&
+          useProjectStore.getState().projectRoot === root
+        ) {
           setProfile(copyProfile(loaded))
           editRevision.current = 0
           clearResearchProfileDraft()
         }
       })
       .catch((error: unknown) => {
-        if (loadGeneration.current === generation) {
+        if (
+          loadGeneration.current === generation &&
+          useProjectStore.getState().projectRoot === root
+        ) {
           setStatus(error instanceof Error ? error.message : String(error))
         }
       })
       .finally(() => {
-        if (loadGeneration.current === generation) setLoading(false)
+        if (
+          loadGeneration.current === generation &&
+          useProjectStore.getState().projectRoot === root
+        )
+          setLoading(false)
       })
   }, [projectRoot])
 
@@ -200,6 +229,17 @@ export function ResearchProfilePanel() {
       ...current,
       resources: current.resources.map((resource) =>
         resource.id === id ? { ...resource, [field]: value } : resource
+      )
+    }))
+  }
+
+  const updateResourceKind = (id: string, kind: ResearchResource['kind']) => {
+    update((current) => ({
+      ...current,
+      resources: current.resources.map((resource) =>
+        resource.id === id
+          ? { ...resource, kind, chatAccess: safeChatAccess(kind, resource.chatAccess) }
+          : resource
       )
     }))
   }
@@ -575,9 +615,8 @@ export function ResearchProfilePanel() {
                   <select
                     value={resource.kind}
                     onChange={(event) =>
-                      updateResource(
+                      updateResourceKind(
                         resource.id,
-                        'kind',
                         event.target.value as ResearchResource['kind']
                       )
                     }
@@ -617,7 +656,7 @@ export function ResearchProfilePanel() {
                       )
                     }
                   >
-                    {CHAT_ACCESS_OPTIONS.map((option) => (
+                    {chatAccessOptions(resource.kind).map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>

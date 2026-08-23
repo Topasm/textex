@@ -86,6 +86,16 @@ pub async fn activate_project(app: AppHandle, project_path: String) -> AppResult
 }
 
 #[tauri::command]
+pub async fn get_active_project(state: State<'_, AppState>) -> AppResult<Option<String>> {
+    let _project_operation = state.lock_project_operation().await;
+    match state.project_root() {
+        Ok(root) => filesystem::path_to_string(&root).map(Some),
+        Err(crate::error::AppError::ProjectNotOpen) => Ok(None),
+        Err(error) => Err(error),
+    }
+}
+
+#[tauri::command]
 pub async fn add_recent_project(
     app: AppHandle,
     settings_state: State<'_, SettingsState>,

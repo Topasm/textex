@@ -63,6 +63,7 @@ Object.defineProperty(window, 'api', {
     createDirectory: vi.fn(),
     openDirectory: vi.fn(),
     activateProject: vi.fn(async (projectPath: string) => projectPath),
+    getActiveProject: vi.fn().mockResolvedValue(null),
     deactivateProject: vi.fn(),
     readDirectory: vi.fn(),
     watchDirectory: vi.fn(),

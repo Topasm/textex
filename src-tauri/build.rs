@@ -104,6 +104,7 @@ fn main() {
         "load_settings",
         "save_settings",
         "activate_project",
+        "get_active_project",
         "add_recent_project",
         "remove_recent_project",
         "update_recent_project",

@@ -189,6 +189,9 @@ const openDirectory: DesktopApi['openDirectory'] = () =>
 const activateProject: DesktopApi['activateProject'] = (projectPath) =>
   invoke<string>(TAURI_COMMANDS.activateProject, { projectPath })
 
+const getActiveProject: DesktopApi['getActiveProject'] = () =>
+  invoke<string | null>(TAURI_COMMANDS.getActiveProject)
+
 const deactivateProject: DesktopApi['deactivateProject'] = () => {
   directoryWatcherGeneration += 1
   return invoke<{ success: boolean }>(TAURI_COMMANDS.deactivateProject)
@@ -776,6 +779,7 @@ const tauriDesktopApi = {
   openFile,
   openDirectory,
   activateProject,
+  getActiveProject,
   deactivateProject,
   readDirectory,
   readFile,

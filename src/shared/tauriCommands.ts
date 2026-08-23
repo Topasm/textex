@@ -18,6 +18,7 @@ export const TAURI_COMMANDS = {
   openFile: 'open_file',
   openDirectory: 'open_directory',
   activateProject: 'activate_project',
+  getActiveProject: 'get_active_project',
   deactivateProject: 'deactivate_project',
   readDirectory: 'read_directory',
   readFile: 'read_file',

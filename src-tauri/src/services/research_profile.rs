@@ -6,7 +6,7 @@ use tokio::{fs, io::AsyncReadExt};
 use crate::{
     error::{AppError, AppResult},
     models::{ResearchPerson, ResearchProfile, ResearchResource},
-    services::filesystem,
+    services::{filesystem, research_limits},
     state::AppState,
 };
 
@@ -14,10 +14,8 @@ const PROFILE_FILE: &str = "research-profile.json";
 const MAX_PROFILE_BYTES: u64 = 256 * 1024;
 const MAX_SHORT_TEXT_BYTES: usize = 16 * 1024;
 const MAX_ABSTRACT_BYTES: usize = 256 * 1024;
-const MAX_INSTRUCTION_BYTES: usize = 64 * 1024;
 const MAX_AUTHORS: usize = 256;
 const MAX_RESOURCES: usize = 512;
-const MAX_INSTRUCTIONS: usize = 256;
 
 pub async fn load(state: &AppState) -> AppResult<ResearchProfile> {
     let _project_operation = state.lock_project_operation().await;
@@ -155,17 +153,35 @@ fn validate(profile: &ResearchProfile) -> AppResult<()> {
             ));
         }
     }
+    if profile
+        .resources
+        .iter()
+        .filter(|resource| resource.chat_access != crate::models::ResearchChatAccess::None)
+        .count()
+        > research_limits::MAX_CHAT_RESOURCES
+    {
+        return Err(profile_error(
+            "research profile has too many Chat-enabled resources",
+        ));
+    }
 
-    if profile.instructions.len() > MAX_INSTRUCTIONS {
+    if profile.instructions.len() > research_limits::MAX_CHAT_INSTRUCTIONS {
         return Err(profile_error("research profile has too many instructions"));
     }
+    let mut instruction_bytes = 0usize;
     for instruction in &profile.instructions {
         validate_text(
             "research instruction",
             instruction,
-            MAX_INSTRUCTION_BYTES,
+            research_limits::MAX_CHAT_INSTRUCTION_BYTES,
             false,
         )?;
+        instruction_bytes = instruction_bytes.saturating_add(instruction.len());
+    }
+    if instruction_bytes > research_limits::MAX_CHAT_INSTRUCTIONS_TOTAL_BYTES {
+        return Err(profile_error(
+            "research profile instructions exceed the Chat size limit",
+        ));
     }
     Ok(())
 }
@@ -207,7 +223,29 @@ fn validate_resource(resource: &ResearchResource) -> AppResult<()> {
         "resource branch",
         resource.branch.as_deref(),
         MAX_SHORT_TEXT_BYTES,
-    )
+    )?;
+    let valid_access = match resource.kind {
+        crate::models::ResearchResourceKind::Git => matches!(
+            resource.chat_access,
+            crate::models::ResearchChatAccess::None
+                | crate::models::ResearchChatAccess::Metadata
+                | crate::models::ResearchChatAccess::IndexedRead
+        ),
+        crate::models::ResearchResourceKind::Website
+        | crate::models::ResearchResourceKind::Dataset
+        | crate::models::ResearchResourceKind::Documentation => matches!(
+            resource.chat_access,
+            crate::models::ResearchChatAccess::None
+                | crate::models::ResearchChatAccess::Metadata
+                | crate::models::ResearchChatAccess::Snapshot
+        ),
+    };
+    if !valid_access {
+        return Err(profile_error(
+            "research resource kind and Chat access mode are incompatible",
+        ));
+    }
+    Ok(())
 }
 
 fn validate_id(label: &str, value: &str) -> AppResult<()> {
@@ -422,6 +460,56 @@ mod tests {
         let mut credential_url = profile();
         credential_url.resources[0].url = Some("https://token@example.test/private.git".to_owned());
         assert!(validate(&credential_url).is_err());
+    }
+
+    #[test]
+    fn persisted_chat_limits_match_native_chat_assembly_limits() {
+        let mut too_many_instructions = profile();
+        too_many_instructions.instructions =
+            vec!["instruction".to_owned(); research_limits::MAX_CHAT_INSTRUCTIONS + 1];
+        assert!(validate(&too_many_instructions).is_err());
+
+        let mut oversized_instruction = profile();
+        oversized_instruction.instructions =
+            vec!["x".repeat(research_limits::MAX_CHAT_INSTRUCTION_BYTES + 1)];
+        assert!(validate(&oversized_instruction).is_err());
+
+        let mut too_many_chat_resources = profile();
+        let template = too_many_chat_resources.resources[0].clone();
+        too_many_chat_resources.resources = (0..=research_limits::MAX_CHAT_RESOURCES)
+            .map(|index| ResearchResource {
+                id: format!("resource-{index}"),
+                ..template.clone()
+            })
+            .collect();
+        assert!(validate(&too_many_chat_resources).is_err());
+
+        let mut allowed = profile();
+        allowed.instructions =
+            vec!["instruction".to_owned(); research_limits::MAX_CHAT_INSTRUCTIONS];
+        let template = allowed.resources[0].clone();
+        allowed.resources = (0..research_limits::MAX_CHAT_RESOURCES)
+            .map(|index| ResearchResource {
+                id: format!("resource-{index}"),
+                ..template.clone()
+            })
+            .collect();
+        assert!(validate(&allowed).is_ok());
+    }
+
+    #[test]
+    fn rejects_resource_kind_and_chat_access_mismatches() {
+        let mut git_snapshot = profile();
+        git_snapshot.resources[0].chat_access = ResearchChatAccess::Snapshot;
+        assert!(validate(&git_snapshot).is_err());
+
+        let mut website_index = profile();
+        website_index.resources[0].kind = ResearchResourceKind::Website;
+        website_index.resources[0].chat_access = ResearchChatAccess::IndexedRead;
+        assert!(validate(&website_index).is_err());
+
+        website_index.resources[0].chat_access = ResearchChatAccess::Snapshot;
+        assert!(validate(&website_index).is_ok());
     }
 
     #[tokio::test]

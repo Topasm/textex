@@ -251,6 +251,7 @@ describe('Tauri DesktopApi adapter', () => {
     }
     invokeMock
       .mockResolvedValueOnce('/project')
+      .mockResolvedValueOnce('/project')
       .mockResolvedValueOnce({ success: true })
       .mockResolvedValueOnce(settings)
       .mockResolvedValueOnce(settings)
@@ -260,6 +261,7 @@ describe('Tauri DesktopApi adapter', () => {
 
     const api = createTauriApi()
     await expect(api.activateProject('/project')).resolves.toBe('/project')
+    await expect(api.getActiveProject()).resolves.toBe('/project')
     await expect(api.deactivateProject()).resolves.toEqual({ success: true })
     await expect(api.loadSettings()).resolves.toBe(settings)
     await expect(api.saveSettings({ theme: 'dark' })).resolves.toBe(settings)
@@ -269,6 +271,7 @@ describe('Tauri DesktopApi adapter', () => {
 
     expect(invokeMock.mock.calls).toEqual([
       ['activate_project', { projectPath: '/project' }],
+      ['get_active_project'],
       ['deactivate_project'],
       ['load_settings'],
       ['save_settings', { partial: { theme: 'dark' } }],

@@ -58,6 +58,7 @@ describe('openProject', () => {
 
     vi.mocked(window.api.readDirectory).mockResolvedValue(tree)
     vi.mocked(window.api.activateProject).mockImplementation(async (path) => path)
+    vi.mocked(window.api.getActiveProject).mockResolvedValue(null)
     vi.mocked(window.api.readFile).mockResolvedValue({
       filePath: `${projectRoot}/main.tex`,
       content: '\\section{Intro}'
@@ -141,6 +142,55 @@ describe('openProject', () => {
     expect(window.api.deactivateProject).toHaveBeenCalledOnce()
     expect(useProjectStore.getState().projectRoot).toBeNull()
     expect(useEditorStore.getState().openFiles).toEqual({})
+  })
+
+  it('clears stale renderer state when native activation failure closed the old project', async () => {
+    const oldRoot = '/workspace/current'
+    const oldFile = `${oldRoot}/paper.tex`
+    useProjectStore.getState().setProjectRoot(oldRoot)
+    useEditorStore.getState().openFileInTab(oldFile, 'saved')
+    vi.mocked(window.api.activateProject).mockRejectedValueOnce(new Error('cleanup failed'))
+    vi.mocked(window.api.getActiveProject).mockResolvedValueOnce(null)
+
+    await expect(openProject('/workspace/replacement')).rejects.toThrow('cleanup failed')
+
+    expect(window.api.getActiveProject).toHaveBeenCalledOnce()
+    expect(useProjectStore.getState().projectRoot).toBeNull()
+    expect(useEditorStore.getState().openFiles).toEqual({})
+  })
+
+  it('preserves renderer state when activation is rejected before native deactivation', async () => {
+    const oldRoot = '/workspace/current'
+    const oldFile = `${oldRoot}/paper.tex`
+    useProjectStore.getState().setProjectRoot(oldRoot)
+    useEditorStore.getState().openFileInTab(oldFile, 'saved')
+    vi.mocked(window.api.activateProject).mockRejectedValueOnce(new Error('not authorized'))
+    vi.mocked(window.api.getActiveProject).mockResolvedValueOnce(oldRoot)
+
+    await expect(openProject('/workspace/replacement')).rejects.toThrow('not authorized')
+
+    expect(useProjectStore.getState().projectRoot).toBe(oldRoot)
+    expect(useEditorStore.getState().openFiles).toHaveProperty(oldFile)
+  })
+
+  it('does not let stale activation reconciliation clear a newer project', async () => {
+    const oldRoot = '/workspace/current'
+    const replacementRoot = '/workspace/replacement'
+    const nativeAuthority = deferred<string | null>()
+    useProjectStore.getState().setProjectRoot(oldRoot)
+    vi.mocked(window.api.activateProject).mockRejectedValueOnce(new Error('activation failed'))
+    vi.mocked(window.api.getActiveProject).mockReturnValueOnce(nativeAuthority.promise)
+    vi.mocked(window.api.readDirectory).mockResolvedValue([])
+
+    const failedOpen = openProject('/workspace/failed', { autoOpenFirstTex: false })
+    await vi.waitFor(() => expect(window.api.getActiveProject).toHaveBeenCalledOnce())
+
+    await openProject(replacementRoot, { autoOpenFirstTex: false })
+    nativeAuthority.resolve(null)
+    await expect(failedOpen).rejects.toThrow('activation failed')
+
+    expect(useProjectStore.getState().projectRoot).toBe(replacementRoot)
+    expect(window.api.watchDirectory).toHaveBeenCalledWith(replacementRoot)
   })
 
   it('does not auto-open the first tex file when disabled', async () => {

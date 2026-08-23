@@ -308,6 +308,38 @@ describe('ResearchProfilePanel', () => {
     expect(screen.getByText('Index limit reached')).toBeInTheDocument()
   })
 
+  it('limits Chat access by resource kind and repairs invalid access on kind changes', async () => {
+    window.api.researchProfileLoad = vi.fn().mockResolvedValue({
+      ...emptyProfile,
+      resources: [
+        {
+          id: 'official-code',
+          kind: 'git',
+          label: 'Official code',
+          localPath: 'sources/official',
+          chatAccess: 'indexed-read'
+        }
+      ]
+    })
+    render(<ResearchProfilePanel />)
+    const kind = await screen.findByLabelText('Kind')
+    const access = screen.getByLabelText('Chat access')
+
+    expect(access).toHaveValue('indexed-read')
+    expect(screen.getByRole('option', { name: 'Read indexed source' })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: 'Read saved snapshot' })).not.toBeInTheDocument()
+
+    fireEvent.change(kind, { target: { value: 'website' } })
+    expect(access).toHaveValue('metadata')
+    expect(screen.queryByRole('option', { name: 'Read indexed source' })).not.toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Read saved snapshot' })).toBeInTheDocument()
+
+    fireEvent.change(access, { target: { value: 'snapshot' } })
+    fireEvent.change(kind, { target: { value: 'git' } })
+    expect(access).toHaveValue('metadata')
+    expect(screen.queryByRole('option', { name: 'Read saved snapshot' })).not.toBeInTheDocument()
+  })
+
   it('requires confirmation, saves the profile, and clones by resource id only', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     const profile: ResearchProfile = {

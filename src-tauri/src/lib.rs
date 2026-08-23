@@ -245,6 +245,7 @@ pub fn run() {
             commands::settings::load_settings,
             commands::settings::save_settings,
             commands::settings::activate_project,
+            commands::settings::get_active_project,
             commands::settings::add_recent_project,
             commands::settings::remove_recent_project,
             commands::settings::update_recent_project,
