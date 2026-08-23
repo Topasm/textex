@@ -41,6 +41,7 @@ revision-aware Tectonic compile, system Git vertical slice다. 새 기능은 Tau
 | SyncTeX | 지원 | Rust가 plain/gzip SyncTeX를 parse·mtime cache하고 magic root 및 project boundary를 유지하며 forward/inverse/line-map command를 제공한다. |
 | BibTeX/label index | 지원 | ProjectIndex generation별로 `.bib`/`.tex`를 한 번만 scan·cache하며 단일 BibTeX 파일 parse도 project boundary와 10 MiB 제한을 적용한다. |
 | Zotero/Better BibTeX | 지원 | loopback 전용 Rust HTTP client가 probe, search, CAYW, 선택 citekey export와 collection→project `.bib` atomic sync를 제공하며 redirect, 크기와 timeout을 제한한다. |
+| local history | 지원 | Rust가 project-scoped gzip snapshot을 원자 저장하고 50개로 prune하며 snapshot 경로와 50 MiB decompression limit을 검증한다. |
 | 나머지 desktop API | 미지원 | 호출 시 `has not been migrated` 오류를 반환한다. |
 
 파일 읽기는 5 MiB를 넘으면 renderer에 경고 정보를 전달하고, editor 정지를 막기
@@ -366,7 +367,7 @@ Electron에서만 동작한다.
 
 - project-scoped custom protocol과 PDFium A/B
 - TexLab lifecycle와 LSP JSON-RPC
-- history와 project metadata
+- project metadata
 - spellcheck, templates와 Pandoc export
 - AI provider와 Claude/Codex CLI integration
 - PTY terminal

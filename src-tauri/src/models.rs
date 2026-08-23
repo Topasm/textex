@@ -78,6 +78,14 @@ pub struct ZoteroSyncResult {
     pub entry_count: u32,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HistoryItem {
+    pub timestamp: u64,
+    pub size: u64,
+    pub path: String,
+}
+
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PackageData {

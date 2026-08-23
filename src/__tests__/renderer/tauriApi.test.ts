@@ -514,6 +514,24 @@ describe('Tauri DesktopApi adapter', () => {
     ])
   })
 
+  it('maps history snapshots to project-scoped Rust commands', async () => {
+    const item = { timestamp: 123, size: 42, path: '/project/.textex/history/main.tex/123.gz' }
+    invokeMock
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce([item])
+      .mockResolvedValueOnce('old')
+
+    const api = createTauriApi()
+    await expect(api.saveHistorySnapshot('/project/main.tex', 'current')).resolves.toBeUndefined()
+    await expect(api.getHistoryList('/project/main.tex')).resolves.toEqual([item])
+    await expect(api.loadHistorySnapshot('/project/main.tex', item.path)).resolves.toBe('old')
+    expect(invokeMock.mock.calls).toEqual([
+      ['save_history_snapshot', { filePath: '/project/main.tex', content: 'current' }],
+      ['get_history_list', { filePath: '/project/main.tex' }],
+      ['load_history_snapshot', { filePath: '/project/main.tex', snapshotPath: item.path }]
+    ])
+  })
+
   it('maps the Rust-owned updater and bridges Channel progress to existing events', async () => {
     invokeMock
       .mockResolvedValueOnce({

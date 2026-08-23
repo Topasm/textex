@@ -195,6 +195,25 @@ pub(crate) async fn validate_save_file_target(
     resolve_write_target(state, requested).await
 }
 
+pub(crate) async fn validate_existing_project_file(
+    state: &AppState,
+    file_path: &str,
+) -> AppResult<PathBuf> {
+    let requested = require_absolute_str(file_path)?;
+    let canonical = canonicalize(requested, "resolve project file").await?;
+    ensure_inside_project(state, &canonical)?;
+    ensure_regular_file(&canonical).await?;
+    Ok(canonical)
+}
+
+pub(crate) async fn validate_project_directory_target(
+    state: &AppState,
+    directory_path: PathBuf,
+) -> AppResult<PathBuf> {
+    let requested = require_absolute_path(&directory_path)?;
+    resolve_directory_target(state, requested).await
+}
+
 pub async fn save_file_as(
     app: &AppHandle,
     state: &AppState,

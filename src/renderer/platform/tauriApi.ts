@@ -43,6 +43,9 @@ type MigratedDesktopApi = Pick<
   | 'gitDiff'
   | 'gitLog'
   | 'gitFileLog'
+  | 'saveHistorySnapshot'
+  | 'getHistoryList'
+  | 'loadHistorySnapshot'
   | 'loadPackageData'
   | 'getDocumentOutline'
   | 'watchDirectory'
@@ -219,6 +222,15 @@ const gitLog: DesktopApi['gitLog'] = (workDir) => invoke(TAURI_COMMANDS.gitLog, 
 
 const gitFileLog: DesktopApi['gitFileLog'] = (workDir, filePath) =>
   invoke(TAURI_COMMANDS.gitFileLog, { workDir, filePath })
+
+const saveHistorySnapshot: DesktopApi['saveHistorySnapshot'] = (filePath, content) =>
+  invoke(TAURI_COMMANDS.saveHistorySnapshot, { filePath, content })
+
+const getHistoryList: DesktopApi['getHistoryList'] = (filePath) =>
+  invoke(TAURI_COMMANDS.getHistoryList, { filePath })
+
+const loadHistorySnapshot: DesktopApi['loadHistorySnapshot'] = (filePath, snapshotPath) =>
+  invoke(TAURI_COMMANDS.loadHistorySnapshot, { filePath, snapshotPath })
 
 const loadPackageData: DesktopApi['loadPackageData'] = (packageNames) =>
   invoke(TAURI_COMMANDS.loadPackageData, { packageNames })
@@ -411,6 +423,9 @@ const migratedApi: MigratedDesktopApi = {
   gitDiff,
   gitLog,
   gitFileLog,
+  saveHistorySnapshot,
+  getHistoryList,
+  loadHistorySnapshot,
   loadPackageData,
   getDocumentOutline,
   watchDirectory,

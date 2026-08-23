@@ -1,6 +1,7 @@
 pub mod compiler;
 pub mod filesystem;
 pub mod git;
+pub mod history;
 pub mod package_data;
 pub mod project_index;
 pub mod references;

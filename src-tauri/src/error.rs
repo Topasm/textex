@@ -76,6 +76,9 @@ pub enum AppError {
     #[error("Reference index operation failed: {0}")]
     ReferenceIndex(String),
 
+    #[error("History operation failed: {0}")]
+    History(String),
+
     #[error("Zotero operation failed: {0}")]
     Zotero(String),
 

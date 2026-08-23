@@ -343,6 +343,7 @@
 |       |   +-- mod.rs
 |       |   +-- filesystem.rs      # Thin Tauri filesystem commands
 |       |   +-- git.rs             # Thin project-scoped Git commands
+|       |   +-- history.rs         # Project-scoped snapshot commands
 |       |   +-- package_data.rs    # Bundled LaTeX metadata command
 |       |   +-- settings.rs        # Settings and recent-project commands
 |       |   +-- watcher.rs         # Directory watcher lifecycle commands
@@ -355,6 +356,7 @@
 |           +-- mod.rs
 |           +-- filesystem.rs      # Path validation and async file operations
 |           +-- git.rs             # Validated system Git process service
+|           +-- history.rs         # Atomic gzip history with bounded restore
 |           +-- package_data.rs    # Cached package JSON parser/resource loader
 |           +-- settings.rs        # Typed atomic settings persistence
 |           +-- watcher.rs         # Debounced native directory watcher

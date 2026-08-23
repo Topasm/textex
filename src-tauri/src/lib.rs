@@ -4,6 +4,7 @@ mod models;
 mod services;
 mod state;
 
+use services::history::HistoryState;
 use services::package_data::PackageDataState;
 use services::project_index::ProjectIndexState;
 use services::references::ReferenceIndexState;
@@ -26,6 +27,7 @@ pub fn run() {
         .manage(DirectoryWatcherState::default())
         .manage(SettingsState::default())
         .manage(PackageDataState::default())
+        .manage(HistoryState::default())
         .manage(ProjectIndexState::default())
         .manage(ReferenceIndexState::default())
         .manage(SyncTexState::default())
@@ -55,6 +57,9 @@ pub fn run() {
             commands::git::git_diff,
             commands::git::git_log,
             commands::git::git_file_log,
+            commands::history::save_history_snapshot,
+            commands::history::get_history_list,
+            commands::history::load_history_snapshot,
             commands::package_data::load_package_data,
             commands::project_index::get_project_index,
             commands::references::parse_bib_file,
