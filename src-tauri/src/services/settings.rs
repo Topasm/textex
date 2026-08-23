@@ -15,6 +15,7 @@ use super::filesystem;
 
 const SETTINGS_FILE_NAME: &str = "settings.json";
 const MAX_RECENT_PROJECTS: usize = 10;
+const MAX_RENDERER_SESSION_ENTRY_BYTES: usize = 2 * 1024 * 1024;
 
 #[derive(Default)]
 pub struct SettingsState {
@@ -26,6 +27,52 @@ pub fn settings_path(app: &AppHandle) -> AppResult<PathBuf> {
         .app_config_dir()
         .map(|directory| directory.join(SETTINGS_FILE_NAME))
         .map_err(|error| AppError::RuntimePath(error.to_string()))
+}
+
+pub fn legacy_settings_paths(settings_path: &Path) -> Vec<PathBuf> {
+    let Some(config_root) = settings_path.parent().and_then(Path::parent) else {
+        return Vec::new();
+    };
+
+    ["TextEx", "textex", "com.textex.app"]
+        .into_iter()
+        .map(|directory| config_root.join(directory).join(SETTINGS_FILE_NAME))
+        .filter(|candidate| candidate != settings_path)
+        .collect()
+}
+
+pub async fn load_settings_with_legacy_import(
+    state: &SettingsState,
+    path: &Path,
+    legacy_paths: &[PathBuf],
+) -> AppResult<UserSettings> {
+    let _guard = state.operation_lock.lock().await;
+    if fs::try_exists(path).await.map_err(|source| {
+        AppError::io(
+            "inspect settings",
+            path.to_string_lossy().into_owned(),
+            source,
+        )
+    })? {
+        return load_settings(path).await;
+    }
+
+    for legacy_path in legacy_paths {
+        let Ok(bytes) = fs::read(legacy_path).await else {
+            continue;
+        };
+        let Ok(mut settings) = serde_json::from_slice::<UserSettings>(&bytes) else {
+            continue;
+        };
+        if validate_renderer_session(&settings).is_err() {
+            settings.renderer_session = None;
+        }
+
+        write_settings(path, &settings).await?;
+        return Ok(settings);
+    }
+
+    Ok(UserSettings::default())
 }
 
 pub async fn load_settings(path: &Path) -> AppResult<UserSettings> {
@@ -67,6 +114,7 @@ pub async fn save_settings(
 
     let next: UserSettings = serde_json::from_value(Value::Object(current.clone()))
         .map_err(|error| AppError::Settings(format!("invalid settings update: {error}")))?;
+    validate_renderer_session(&next)?;
     write_settings(path, &next).await?;
     Ok(next)
 }
@@ -264,6 +312,31 @@ async fn write_settings(path: &Path, settings: &UserSettings) -> AppResult<()> {
     filesystem::write_files_transactionally(vec![(path.to_path_buf(), bytes)]).await
 }
 
+fn validate_renderer_session(settings: &UserSettings) -> AppResult<()> {
+    let Some(session) = &settings.renderer_session else {
+        return Ok(());
+    };
+    if session.version != 1 {
+        return Err(AppError::Settings(
+            "unsupported renderer session version".to_owned(),
+        ));
+    }
+
+    for entry in [&session.editor, &session.project, &session.pdf]
+        .into_iter()
+        .flatten()
+    {
+        if entry.len() > MAX_RENDERER_SESSION_ENTRY_BYTES
+            || !serde_json::from_str::<Value>(entry).is_ok_and(|value| value.is_object())
+        {
+            return Err(AppError::Settings(
+                "invalid renderer session entry".to_owned(),
+            ));
+        }
+    }
+    Ok(())
+}
+
 fn project_name(path: &Path) -> AppResult<String> {
     path.file_name()
         .and_then(|name| name.to_str())
@@ -303,7 +376,8 @@ mod tests {
     use tempfile::tempdir;
 
     use super::{
-        activate_project, add_recent_project, load_settings, save_settings, SettingsState,
+        activate_project, add_recent_project, load_settings, load_settings_with_legacy_import,
+        save_settings, SettingsState,
     };
     use crate::state::AppState;
 
@@ -334,6 +408,80 @@ mod tests {
             assert_eq!(settings.font_size, 18);
             assert!(settings.recent_projects.is_empty());
             assert!(settings_path.is_file());
+        });
+    }
+
+    #[test]
+    fn imports_legacy_settings_only_when_the_tauri_file_is_absent() {
+        tauri::async_runtime::block_on(async {
+            let directory = tempdir().expect("temp directory");
+            let settings_path = directory.path().join("tauri/settings.json");
+            let legacy_path = directory.path().join("TextEx/settings.json");
+            fs::create_dir_all(legacy_path.parent().unwrap()).expect("create legacy directory");
+            fs::write(
+                &legacy_path,
+                serde_json::to_vec_pretty(&json!({
+                    "theme": "dark",
+                    "fontSize": 19,
+                    "recentProjects": [{
+                        "path": "/projects/paper",
+                        "name": "paper",
+                        "lastOpened": "2026-08-23T00:00:00Z"
+                    }]
+                }))
+                .unwrap(),
+            )
+            .expect("write legacy settings");
+
+            let state = SettingsState::default();
+            let imported = load_settings_with_legacy_import(
+                &state,
+                &settings_path,
+                std::slice::from_ref(&legacy_path),
+            )
+            .await
+            .expect("import settings");
+            assert_eq!(imported.font_size, 19);
+            assert_eq!(imported.recent_projects.len(), 1);
+            assert!(imported.bracket_pair_colorization);
+
+            fs::write(
+                &legacy_path,
+                serde_json::to_vec_pretty(&json!({ "fontSize": 22 })).unwrap(),
+            )
+            .expect("replace legacy settings");
+            let preserved = load_settings_with_legacy_import(
+                &state,
+                &settings_path,
+                std::slice::from_ref(&legacy_path),
+            )
+            .await
+            .expect("preserve settings");
+            assert_eq!(preserved.font_size, 19);
+        });
+    }
+
+    #[test]
+    fn rejects_invalid_renderer_session_payloads() {
+        tauri::async_runtime::block_on(async {
+            let directory = tempdir().expect("temp directory");
+            let settings_path = directory.path().join("config/settings.json");
+            let state = SettingsState::default();
+
+            let result = save_settings(
+                &state,
+                &settings_path,
+                json!({
+                    "rendererSession": {
+                        "version": 2,
+                        "editor": "{\"state\":{}}"
+                    }
+                }),
+            )
+            .await;
+
+            assert!(result.is_err());
+            assert!(!settings_path.exists());
         });
     }
 

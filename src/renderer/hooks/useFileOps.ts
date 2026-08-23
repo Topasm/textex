@@ -32,7 +32,8 @@ export function useFileOps(): FileOps {
     const { appendLog, setLogPanelOpen } = useCompileStore.getState()
     const { settings } = useSettingsStore.getState()
 
-    const initialSnapshot = filePath ? documentRegistry.snapshot(filePath) : null
+    if (!filePath) return
+    const initialSnapshot = documentRegistry.snapshot(filePath)
     if (!initialSnapshot) return
     let snapshotToSave = initialSnapshot
 

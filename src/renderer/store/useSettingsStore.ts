@@ -1,27 +1,16 @@
 import { create } from 'zustand'
 import { subscribeWithSelector, persist } from 'zustand/middleware'
 import type { UserSettings } from '../../shared/types'
+import {
+  createDefaultUserSettings,
+  mergeUserSettings,
+  sanitizeUserSettings
+} from '../../shared/defaultSettings'
 import { FONT_SIZE_MIN, FONT_SIZE_MAX } from '../constants'
 
 export type Theme = UserSettings['theme']
 
-// Keys that the main process cares about -- sync these via IPC on change
-const MAIN_PROCESS_KEYS = new Set<keyof UserSettings>([
-  'aiProvider',
-  'aiModel',
-  'aiEnabled',
-  'aiThinkingEnabled',
-  'aiThinkingBudget',
-  'aiPromptGenerate',
-  'aiPromptFix',
-  'aiPromptAcademic',
-  'aiPromptSummarize',
-  'aiPromptLonger',
-  'aiPromptShorter',
-  'spellCheckLanguage',
-  'theme',
-  'language'
-])
+export const SETTINGS_STORAGE_KEY = 'textex-settings-v2'
 
 /** Resolve the effective theme: 'system' → OS preference, others pass through */
 export function resolveTheme(theme: string): string {
@@ -39,31 +28,28 @@ function applyTheme(theme: string): void {
 }
 
 let syncTimer: ReturnType<typeof setTimeout> | undefined
+function settingsForNative(settings: UserSettings): Partial<UserSettings> {
+  const nativeSettings = { ...settings }
+  delete nativeSettings.recentProjects
+  delete nativeSettings.rendererSession
+  return nativeSettings
+}
+
 function syncToMain(): void {
   clearTimeout(syncTimer)
   syncTimer = setTimeout(() => {
     const settings = useSettingsStore.getState().settings
-    const partial: Partial<UserSettings> = {}
-    for (const key of MAIN_PROCESS_KEYS) {
-      if (settings[key] !== undefined) {
-        ;(partial as Record<string, unknown>)[key] = settings[key]
-      }
-    }
-    window.api.saveSettings(partial).catch(() => {
+    // Recent projects are maintained through validated native commands. Keep
+    // every other setting mirrored natively so a different desktop shell can
+    // hydrate the same preferences on first launch.
+    window.api.saveSettings(settingsForNative(settings)).catch(() => {
       /* ignore */
     })
   }, 500)
 }
 
 export function sanitizeSettings(input: unknown): Partial<UserSettings> {
-  if (!input || typeof input !== 'object') return {}
-  const settings = {
-    ...(input as Partial<UserSettings> & {
-      minimap?: unknown
-    })
-  }
-  delete settings.minimap
-  return settings
+  return sanitizeUserSettings(input)
 }
 
 export function migratePersistedSettings(
@@ -77,59 +63,7 @@ export function migratePersistedSettings(
   }
 }
 
-const defaultSettings: UserSettings = {
-  theme: 'system',
-  pdfInvertMode: false,
-  name: '',
-  email: '',
-  affiliation: '',
-  fontSize: 14,
-  wordWrap: true,
-  vimMode: false,
-  formatOnSave: true,
-  autoCompile: true,
-  watchOpenFiles: true,
-  mathPreviewEnabled: true,
-  spellCheckEnabled: false,
-  spellCheckLanguage: 'en-US',
-  sectionHighlightEnabled: false,
-  sectionHighlightColors: [
-    '#e06c75', // red
-    '#e5c07b', // orange/amber
-    '#98c379', // green
-    '#61afef', // blue
-    '#c678dd', // violet
-    '#56b6c2', // cyan
-    '#d19a66' // warm orange
-  ],
-  lspEnabled: true,
-  zoteroEnabled: false,
-  zoteroPort: 23119,
-  zoteroCollection: '',
-  gitEnabled: true,
-  autoUpdateEnabled: true,
-  aiEnabled: false,
-  aiProvider: '',
-  aiModel: '',
-  aiThinkingEnabled: false,
-  aiThinkingBudget: 0,
-  aiPromptGenerate: '',
-  aiPromptFix: '',
-  aiPromptAcademic: '',
-  aiPromptSummarize: '',
-  aiPromptLonger: '',
-  aiPromptShorter: '',
-  autoHideSidebar: false,
-  sidebarPosition: 'left',
-  showStatusBar: true,
-  bibGroupMode: 'flat',
-  lineNumbers: true,
-  tabSize: 4,
-  language: 'en',
-  pdfViewMode: 'continuous',
-  showPdfToolbarControls: true,
-  scrollSyncEnabled: false
-}
+const defaultSettings = createDefaultUserSettings()
 
 interface SettingsState {
   settings: UserSettings
@@ -152,24 +86,23 @@ export const useSettingsStore = create<SettingsState>()(
           // Update native title bar overlay to match the new theme
           window.api?.setTheme?.(value as string).catch(() => {})
         }
-        // Sync main-process-relevant fields via IPC
-        if (MAIN_PROCESS_KEYS.has(key)) {
-          syncToMain()
-        }
+        syncToMain()
       },
       increaseFontSize: () => {
         const currentSize = get().settings.fontSize
         const next = Math.min(FONT_SIZE_MAX, currentSize + 1)
         set((state) => ({ settings: { ...state.settings, fontSize: next } }))
+        syncToMain()
       },
       decreaseFontSize: () => {
         const currentSize = get().settings.fontSize
         const next = Math.max(FONT_SIZE_MIN, currentSize - 1)
         set((state) => ({ settings: { ...state.settings, fontSize: next } }))
+        syncToMain()
       }
     })),
     {
-      name: 'textex-settings-v2',
+      name: SETTINGS_STORAGE_KEY,
       version: 1,
       migrate: (persistedState) => migratePersistedSettings(persistedState),
       partialize: (state) => ({
@@ -201,6 +134,29 @@ export const useSettingsStore = create<SettingsState>()(
     }
   )
 )
+
+/**
+ * Establish a native settings mirror without overwriting an existing renderer
+ * profile. A fresh WebView (including the first Tauri launch) hydrates from the
+ * native file; an existing profile remains authoritative and is exported for
+ * a future shell migration.
+ */
+export async function hydrateSettingsFromNative(): Promise<void> {
+  try {
+    const hasRendererSettings = localStorage.getItem(SETTINGS_STORAGE_KEY) !== null
+    if (!hasRendererSettings) {
+      const nativeSettings = await window.api.loadSettings()
+      const settings = mergeUserSettings({ ...nativeSettings, rendererSession: undefined })
+      useSettingsStore.setState({ settings })
+      applyTheme(settings.theme)
+    }
+
+    await window.api.saveSettings(settingsForNative(useSettingsStore.getState().settings))
+  } catch {
+    // Settings migration must never prevent the editor from starting. The
+    // native API can be unavailable in browser-only development builds.
+  }
+}
 
 // Listen for OS theme changes and re-apply when using 'system' theme
 if (typeof window !== 'undefined' && window.matchMedia) {

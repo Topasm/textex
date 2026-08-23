@@ -128,9 +128,10 @@ export const useEditorStore = create<EditorState>()(
         documentRegistry.open(requestedPath, content)
         const filePath = documentRegistry.getFilePath(requestedPath) ?? requestedPath
         const model = documentRegistry.getModel(filePath)
+        if (!model) return
         const snapshot = wasOpen
           ? documentRegistry.replaceFromDisk(filePath, content)
-          : model?.snapshot()
+          : model.snapshot()
         if (!snapshot) return
 
         const openFiles = { ...state.openFiles }

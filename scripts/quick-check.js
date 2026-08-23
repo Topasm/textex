@@ -29,7 +29,7 @@ const results = { passed: [], failed: [] };
 log('Running quick checks (no tests)...', 'cyan');
 console.log();
 
-// TypeScript (Electron/CLI baseline and the Tauri renderer adapter)
+// TypeScript (Node, web, CLI, MCP, Tauri adapter, and tests)
 process.stdout.write('TypeScript... ');
 const typeCheck = run('npm run typecheck');
 if (typeCheck.success) {

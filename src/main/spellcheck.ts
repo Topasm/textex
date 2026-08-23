@@ -41,9 +41,10 @@ function ensureWorker(): Worker {
   })
 
   worker.on('error', (err) => {
+    const error = err instanceof Error ? err : new Error(String(err))
     // Reject all pending callbacks
     for (const cb of pendingCallbacks.values()) {
-      cb.reject(err)
+      cb.reject(error)
     }
     pendingCallbacks.clear()
     worker = null

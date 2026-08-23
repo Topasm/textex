@@ -3,6 +3,7 @@ import { useCompileStore } from '../store/useCompileStore'
 import { usePdfStore } from '../store/usePdfStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { useUiStore } from '../store/useUiStore'
+import { getDesktopCapabilities } from '../platform/capabilities'
 
 export interface AppCommandContext {
   checkForUpdates: () => Promise<void>
@@ -33,6 +34,7 @@ export async function executeAppCommand(
   command: AppCommandId,
   context: AppCommandContext
 ): Promise<void> {
+  const capabilities = getDesktopCapabilities()
   switch (command) {
     case 'file.open':
       await context.openFile()
@@ -47,13 +49,13 @@ export async function executeAppCommand(
       await context.saveAs()
       return
     case 'file.newTemplate':
-      context.openTemplateGallery()
+      if (capabilities.templates) context.openTemplateGallery()
       return
     case 'compile.run':
       await context.compile()
       return
     case 'ai.draft':
-      context.runAiDraft()
+      if (capabilities.ai) context.runAiDraft()
       return
     case 'edit.find':
       useUiStore.getState().requestOmniSearchFocus('tex')
@@ -65,7 +67,7 @@ export async function executeAppCommand(
       context.toggleLog()
       return
     case 'view.toggleTerminal':
-      context.toggleTerminal()
+      if (capabilities.pty) context.toggleTerminal()
       return
     case 'view.search.citations':
       useUiStore.getState().requestOmniSearchFocus('cite')
@@ -97,7 +99,9 @@ export async function executeAppCommand(
     }
     default:
       if (isExportCommand(command)) {
-        await context.exportDocument(getExportFormat(command))
+        if (capabilities.documentExport) {
+          await context.exportDocument(getExportFormat(command))
+        }
       }
   }
 }

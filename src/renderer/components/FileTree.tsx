@@ -14,7 +14,7 @@ import {
   projectPathKey
 } from '../services/projectIndex'
 import type { ProjectTreeRow } from '../services/projectIndex'
-import type { ProjectIndexEntry } from '../../shared/types'
+import type { DirectoryEntry, GitFileStatus, ProjectIndexEntry } from '../../shared/types'
 
 function iconWrapper(kind: string, path: ReactNode): ReactNode {
   return (

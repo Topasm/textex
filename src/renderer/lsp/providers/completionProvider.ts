@@ -1,4 +1,4 @@
-import type { languages as monacoLanguages } from 'monaco-editor'
+import type { IRange, languages as monacoLanguages } from 'monaco-editor'
 import { MonacoInstance } from '../types'
 import { lspCompletionKindToMonaco } from '../utils'
 import { sendRequest, isInitialized } from '../lspClient'
@@ -10,7 +10,7 @@ interface CompletionMapResult {
   insertTextRules?: monacoLanguages.CompletionItemInsertTextRule
   detail: string
   documentation?: string
-  range: monacoLanguages.IRange
+  range: IRange
   sortText?: string
   filterText?: string
 }
@@ -18,7 +18,7 @@ interface CompletionMapResult {
 type MapItemFn = (
   item: Record<string, unknown>,
   monaco: MonacoInstance,
-  range: monacoLanguages.IRange
+  range: IRange
 ) => CompletionMapResult
 
 function makeCompletionProvider(
@@ -38,7 +38,7 @@ function makeCompletionProvider(
 
         const items = Array.isArray(result) ? result : result?.items || []
         const word = model.getWordUntilPosition(position)
-        const range: monacoLanguages.IRange = {
+        const range: IRange = {
           startLineNumber: position.lineNumber,
           endLineNumber: position.lineNumber,
           startColumn: word.startColumn,

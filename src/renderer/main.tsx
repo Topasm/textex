@@ -5,6 +5,8 @@ import App from './App'
 import ErrorBoundary from './components/ErrorBoundary'
 import { installDesktopApi } from './platform/desktopApi'
 import { installRuntimePerformance } from './services/runtimePerformance'
+import { installRendererSessionBridge } from './services/rendererSession'
+import { hydrateSettingsFromNative } from './store/useSettingsStore'
 import './styles/index.css'
 
 // Set platform attribute for CSS-based platform targeting (e.g. title bar overlay padding)
@@ -18,6 +20,8 @@ if (navigator.platform.startsWith('Win')) {
 
 async function bootstrap(): Promise<void> {
   await installDesktopApi()
+  await installRendererSessionBridge()
+  await hydrateSettingsFromNative()
   installRuntimePerformance()
 
   ReactDOM.createRoot(document.getElementById('root')!).render(

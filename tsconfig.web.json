@@ -4,11 +4,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "target": "ESNext",
-    "lib": [
-      "ESNext",
-      "DOM",
-      "DOM.Iterable"
-    ],
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
     "outDir": "./out",
     "rootDir": "./src",
@@ -20,6 +16,17 @@
   },
   "include": [
     "src/renderer/**/*",
-    "src/shared/**/*"
+    "src/renderer/**/*.json",
+    "src/shared/auxparser.ts",
+    "src/shared/compileProtocol.ts",
+    "src/shared/contentOutline.ts",
+    "src/shared/defaultSettings.ts",
+    "src/shared/hash.ts",
+    "src/shared/lifecycle.ts",
+    "src/shared/performance.ts",
+    "src/shared/tableParser.ts",
+    "src/shared/tauriCommands.ts",
+    "src/shared/templates.ts",
+    "src/shared/types.ts"
   ]
 }

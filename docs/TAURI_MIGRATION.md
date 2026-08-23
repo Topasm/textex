@@ -126,6 +126,21 @@ Electron preload, Tauri adapter, 공유 타입과 테스트를 함께 갱신한�
 - `download_and_install_update`
 - `restart_app`
 
+설정 기본값은 `src/shared/defaultSettings.ts`의 Electron/renderer 정의와 Rust
+`UserSettings::default()`를 동일하게 유지한다. renderer는 기존 localStorage 프로필이
+있으면 그 값을 native `settings.json`에 미러링하고, 새 WebView에서는 native 설정을
+먼저 불러온다. Tauri 설정 파일이 아직 없을 때에만 같은 플랫폼 설정 루트의 legacy
+Electron `TextEx`, `textex`, `com.textex.app` 설정을 가져오므로 기존 Tauri 사용자
+설정을 덮어쓰지 않는다. 최근 프로젝트는 renderer의 일반 설정 저장에서 제외하고
+검증된 전용 command로만 변경한다.
+
+열린 탭/활성 파일/커서, 현재 프로젝트와 sidebar, PDF layout은 versioned
+`rendererSession` snapshot으로 native 설정에 함께 저장한다. 새 WebView에서 해당
+localStorage key가 비어 있을 때만 snapshot을 복원한 뒤 각 Zustand store를
+rehydrate한다. 현재 WebView 값은 절대 덮어쓰지 않으며 malformed 또는 2 MiB를 넘는
+entry는 가져오지 않는다. 이 bridge를 포함한 Electron 버전을 한 번 실행하면 이후
+Tauri 최초 실행에서 같은 session을 이어받을 수 있다.
+
 `src-tauri/build.rs`의 app manifest와
 `src-tauri/capabilities/main-window.json`에서 동일한 allow-list를 유지한다.
 `withGlobalTauri`는 `false`이고 renderer에 shell 또는 filesystem plugin 권한을 직접
@@ -354,8 +369,8 @@ cargo test --manifest-path src-tauri/Cargo.toml
 저장, 선택 취소, project 밖 경로와 symlink 탈출 거부를 수동 확인한다. Windows의
 대소문자 경로와 Linux/macOS의 symlink 동작은 각 플랫폼에서 따로 검증한다.
 
-`npm run check`와 `npm run pre-commit`은 Tauri adapter용 TypeScript 검사와
-`cargo fmt --check`를 실행하지만 Cargo build/test는 실행하지 않는다. rustfmt는
+`npm run check`와 `npm run pre-commit`은 Node, web, CLI, MCP, Tauri adapter, test
+TypeScript 검사와 `cargo fmt --check`를 실행하지만 Cargo build/test는 실행하지 않는다. rustfmt는
 Tauri를 compile/link하지 않으므로 WebKitGTK 4.1 개발 패키지가 없는 Rocky Linux
 host에서도 기본 gate를 실행할 수 있다. Rust 동작 변경에는 위 Cargo 검증 또는
 `npm run build:tauri:container`를 별도로 추가한다.
@@ -373,6 +388,11 @@ Electron에서만 동작한다.
 - PTY terminal
 - menu/window integration, 세 플랫폼 signed release CI와 notarization
 
+renderer는 `src/renderer/platform/capabilities.ts`의 runtime manifest를 사용한다. 아직
+backend가 없는 기능은 startup hook, command/shortcut, toolbar, home, settings에서
+노출하거나 호출하지 않는다. adapter의 reject fallback은 누락된 gating을 발견하기 위한
+마지막 방어선이며 기능 지원 여부를 판단하는 수단으로 사용하지 않는다.
+
 Tectonic은 필수 sidecar로 등록되어 package 전 검증되지만 TexLab은 아직 등록되어 있지
 않다. 기본 `build`와 `package:*`가 성공하더라도 큰 PDF의 scroll latency와
 나머지 LaTeX workflow의 기능 동등성 또는 public release 준비를 의미하지 않는다.
@@ -388,7 +408,7 @@ Tectonic은 필수 sidecar로 등록되어 package 전 검증되지만 TexLab은
 
 1. raw IPC보다 큰 PDF에는 project-scoped custom protocol을 A/B 측정하고 PDF.js 대비
    PDFium의 latency/memory/package-size tradeoff를 기록한다.
-2. Pandoc, bibliography, history, AI/Zotero 등 나머지 service를 이관한다.
+2. Pandoc export, spellcheck, templates, AI와 project metadata service를 이관한다.
 3. TexLab은 project-wide definition/rename/semantic diagnostics의 실사용 필요성을 측정할
    때까지 HOLD한다.
 4. PTY는 마지막에 cross-platform 구현과 Windows console QA를 함께 진행한다.

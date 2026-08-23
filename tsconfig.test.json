@@ -16,12 +16,15 @@
         "forceConsistentCasingInFileNames": true,
         "resolveJsonModule": true,
         "types": [
-            "vitest/globals"
+            "vitest/globals",
+            "vite/client",
+            "node"
         ]
     },
     "include": [
         "src/**/*.test.ts",
         "src/**/*.test.tsx",
-        "src/__tests__/**/*"
+        "src/__tests__/**/*",
+        "src/renderer/types/**/*.d.ts"
     ]
 }

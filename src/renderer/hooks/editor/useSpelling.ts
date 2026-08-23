@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import type { MutableRefObject } from 'react'
 import type { editor as monacoEditor } from 'monaco-editor'
 import { useSettingsStore } from '../../store/useSettingsStore'
+import { isFeatureEnabled } from '../../utils/featureFlags'
 
 type MonacoInstance = typeof import('monaco-editor')
 
@@ -61,7 +62,7 @@ export function useSpelling({ enabled, editorRef, monacoRef }: UseSpellingParams
     const model = editor.getModel()
     if (!model) return
 
-    if (!useSettingsStore.getState().settings.spellCheckEnabled) {
+    if (!isFeatureEnabled(useSettingsStore.getState().settings, 'spellcheck')) {
       const existing = monaco.editor.getModelMarkers({ owner: 'spellcheck' })
       if (existing.length > 0) {
         monaco.editor.setModelMarkers(model, 'spellcheck', [])

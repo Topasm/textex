@@ -62,7 +62,7 @@ export const AppearanceTab = () => {
           </div>
         </div>
         <Toggle
-          checked={settings.pdfInvertMode}
+          checked={settings.pdfInvertMode ?? false}
           onChange={(checked) => updateSetting('pdfInvertMode', checked)}
         />
       </div>

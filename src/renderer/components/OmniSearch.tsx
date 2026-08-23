@@ -39,9 +39,9 @@ import type {
   TexSearchResult,
   ProjectFileSearchResult
 } from './omnisearch-panels'
-import type { ZoteroSearchResult } from '../types/api'
-import type { BibEntry, RecentProject } from '../../shared/types'
+import type { BibEntry, RecentProject, ZoteroSearchResult } from '../../shared/types'
 import { searchProjectFiles } from '../services/projectIndex'
+import { getDesktopCapabilities } from '../platform/capabilities'
 
 const MODE_CONFIGS: Record<SearchMode, ModeConfig> = {
   file: {
@@ -131,6 +131,7 @@ export function OmniSearch({
   onOpenSettings
 }: OmniSearchProps) {
   const { t } = useTranslation()
+  const capabilities = getDesktopCapabilities()
   const settings = useSettingsStore((s) => s.settings)
   const zoteroEnabled = isFeatureEnabled(settings, 'zotero')
   const zoteroPort = settings.zoteroPort
@@ -142,6 +143,15 @@ export function OmniSearch({
   const pdfMatchCount = usePdfStore((s) => s.pdfMatchCount)
   const pdfCurrentMatch = usePdfStore((s) => s.pdfCurrentMatch)
   const projectFileSearchEnabled = typeof window.api.getProjectIndex === 'function'
+  const availableHomeCommands = useMemo(
+    () =>
+      HOME_SLASH_COMMANDS.filter(
+        (command) =>
+          (command.command !== '/draft' || capabilities.ai) &&
+          (command.command !== '/template' || capabilities.templates)
+      ),
+    [capabilities.ai, capabilities.templates]
+  )
 
   const isHomeMode = !projectRoot
 
@@ -237,13 +247,15 @@ export function OmniSearch({
       const cmdQuery = q.toLowerCase()
       const firstSpace = q.indexOf(' ')
       const cmdPart = firstSpace > 0 ? q.slice(0, firstSpace).toLowerCase() : cmdQuery
-      return HOME_SLASH_COMMANDS.filter((cmd) => cmd.command.startsWith(cmdPart)).map((cmd) => ({
-        kind: 'command' as const,
-        label: cmd.label,
-        detail: t(cmd.descriptionKey),
-        badgeKey: 'searchBar.command',
-        data: cmd
-      }))
+      return availableHomeCommands
+        .filter((cmd) => cmd.command.startsWith(cmdPart))
+        .map((cmd) => ({
+          kind: 'command' as const,
+          label: cmd.label,
+          detail: t(cmd.descriptionKey),
+          badgeKey: 'searchBar.command',
+          data: cmd
+        }))
     }
 
     const lower = q.toLowerCase()
@@ -266,23 +278,32 @@ export function OmniSearch({
       }
     }
 
-    for (const tmpl of templates) {
-      if (
-        tmpl.name.toLowerCase().includes(lower) ||
-        tmpl.description.toLowerCase().includes(lower)
-      ) {
-        results.push({
-          kind: 'template',
-          label: tmpl.name,
-          detail: tmpl.description,
-          badgeKey: 'searchBar.template',
-          data: tmpl
-        })
+    if (capabilities.templates) {
+      for (const tmpl of templates) {
+        if (
+          tmpl.name.toLowerCase().includes(lower) ||
+          tmpl.description.toLowerCase().includes(lower)
+        ) {
+          results.push({
+            kind: 'template',
+            label: tmpl.name,
+            detail: tmpl.description,
+            badgeKey: 'searchBar.template',
+            data: tmpl
+          })
+        }
       }
     }
 
     return results
-  }, [isHomeMode, deferredSearchTerm, recentProjects, t])
+  }, [
+    availableHomeCommands,
+    capabilities.templates,
+    deferredSearchTerm,
+    isHomeMode,
+    recentProjects,
+    t
+  ])
 
   // Update dropdown state when home results change
   useEffect(() => {

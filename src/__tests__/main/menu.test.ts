@@ -75,7 +75,8 @@ describe('createAppMenuTemplate', () => {
       ])
     )
 
-    const licensesItem = helpMenu?.submenu?.find(
+    const helpSubmenu = Array.isArray(helpMenu?.submenu) ? helpMenu.submenu : []
+    const licensesItem = helpSubmenu.find(
       (item) => 'label' in item && item.label === 'Open Source Licenses'
     )
     expect(licensesItem).toBeDefined()

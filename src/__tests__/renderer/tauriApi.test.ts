@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createTauriApi } from '../../renderer/platform/tauriApi'
 import { installDesktopApi } from '../../renderer/platform/desktopApi'
+import {
+  configureDesktopCapabilities,
+  getDesktopCapabilities
+} from '../../renderer/platform/capabilities'
 
 const invokeMock = vi.hoisted(() => vi.fn())
 const isTauriMock = vi.hoisted(() => vi.fn())
@@ -22,6 +26,7 @@ const originalApi = window.api
 
 describe('Tauri DesktopApi adapter', () => {
   beforeEach(() => {
+    configureDesktopCapabilities('electron')
     invokeMock.mockReset()
     isTauriMock.mockReset()
     channelInstances.length = 0
@@ -33,6 +38,7 @@ describe('Tauri DesktopApi adapter', () => {
   })
 
   afterEach(() => {
+    configureDesktopCapabilities('electron')
     window.api = originalApi
     delete document.documentElement.dataset.desktopRuntime
   })
@@ -621,6 +627,7 @@ describe('Tauri DesktopApi adapter', () => {
 
     expect(window.api).toBe(electronApi)
     expect(document.documentElement.dataset.desktopRuntime).toBe('electron')
+    expect(getDesktopCapabilities().runtime).toBe('electron')
     expect(isTauriMock).not.toHaveBeenCalled()
   })
 
@@ -632,6 +639,7 @@ describe('Tauri DesktopApi adapter', () => {
 
     expect(window.api.openDirectory).toBeTypeOf('function')
     expect(document.documentElement.dataset.desktopRuntime).toBe('tauri')
+    expect(getDesktopCapabilities().runtime).toBe('tauri')
     expect(isTauriMock).toHaveBeenCalledOnce()
   })
 

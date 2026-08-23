@@ -189,6 +189,7 @@ pub struct UserSettings {
     pub smooth_scrolling: bool,
     pub font_ligatures: bool,
     pub minimap_enabled: bool,
+    pub renderer_session: Option<RendererSessionSnapshot>,
 }
 
 impl Default for UserSettings {
@@ -247,13 +248,23 @@ impl Default for UserSettings {
             pdf_view_mode: PdfViewMode::Continuous,
             show_pdf_toolbar_controls: true,
             scroll_sync_enabled: false,
-            bracket_pair_colorization: false,
-            sticky_scroll_enabled: false,
-            smooth_scrolling: false,
+            bracket_pair_colorization: true,
+            sticky_scroll_enabled: true,
+            smooth_scrolling: true,
             font_ligatures: false,
             minimap_enabled: false,
+            renderer_session: None,
         }
     }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RendererSessionSnapshot {
+    pub version: u8,
+    pub editor: Option<String>,
+    pub project: Option<String>,
+    pub pdf: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]

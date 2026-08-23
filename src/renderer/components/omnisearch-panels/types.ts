@@ -1,6 +1,10 @@
 import type { BookOpen } from 'lucide-react'
-import type { ZoteroSearchResult } from '../../types/api'
-import type { BibEntry, ProjectIndexEntry, RecentProject } from '../../../shared/types'
+import type {
+  BibEntry,
+  ProjectIndexEntry,
+  RecentProject,
+  ZoteroSearchResult
+} from '../../../shared/types'
 
 export type SearchMode = 'file' | 'cite' | 'zotero' | 'pdf' | 'tex'
 

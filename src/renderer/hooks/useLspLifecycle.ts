@@ -14,6 +14,7 @@ import {
 import { loader } from '@monaco-editor/react'
 import { extractBandSymbols, mergeBandSymbols } from './editor/useDocumentSymbols'
 import { documentRegistry } from '../models/documentRegistry'
+import { getDesktopCapabilities } from '../platform/capabilities'
 
 /**
  * Manages the LSP client lifecycle:
@@ -29,9 +30,14 @@ export function useLspLifecycle(
 ): void {
   const prevFilePathRef = useRef<string | null>(null)
   const lspStatus = useUiStore((s) => s.lspStatus)
+  const lspSupported = getDesktopCapabilities().lsp
 
   // LSP start/stop
   useEffect(() => {
+    if (!lspSupported) {
+      useUiStore.getState().setLspStatus('stopped')
+      return
+    }
     if (!projectRoot || !lspEnabled) {
       stopLspClient()
       useUiStore.getState().setLspStatus('stopped')
@@ -59,10 +65,11 @@ export function useLspLifecycle(
       cancelled = true
       stopLspClient()
     }
-  }, [projectRoot, lspEnabled])
+  }, [projectRoot, lspEnabled, lspSupported])
 
   // LSP status listener
   useEffect(() => {
+    if (!lspSupported) return
     window.api.onLspStatus((status: string, error?: string) => {
       useUiStore.getState().setLspStatus(status as LspStatus)
       useUiStore.getState().setLspError(error || null)
@@ -70,10 +77,11 @@ export function useLspLifecycle(
     return () => {
       window.api.removeLspStatusListener()
     }
-  }, [])
+  }, [lspSupported])
 
   // Notify LSP of document changes without publishing text through React state.
   useEffect(() => {
+    if (!lspSupported) return
     let timer: ReturnType<typeof setTimeout> | undefined
     const unsub = useEditorStore.subscribe(
       (state) => state.revision,
@@ -99,10 +107,15 @@ export function useLspLifecycle(
       clearTimeout(timer)
       unsub()
     }
-  }, [])
+  }, [lspSupported])
 
   // Notify LSP when switching files
   useEffect(() => {
+    if (!lspSupported) {
+      prevFilePathRef.current = null
+      useUiStore.getState().setDocumentSymbols([])
+      return
+    }
     const prevFile = prevFilePathRef.current
     prevFilePathRef.current = filePath
 
@@ -113,9 +126,10 @@ export function useLspLifecycle(
     if (!filePath) {
       useUiStore.getState().setDocumentSymbols([])
     }
-  }, [filePath])
+  }, [filePath, lspSupported])
 
   useEffect(() => {
+    if (!lspSupported) return
     const lspRunning = lspEnabled && lspStatus === 'running'
 
     if (!filePath || !lspRunning) return
@@ -143,5 +157,5 @@ export function useLspLifecycle(
     }, 50)
 
     return () => clearTimeout(timer)
-  }, [filePath, lspEnabled, lspStatus])
+  }, [filePath, lspEnabled, lspStatus, lspSupported])
 }

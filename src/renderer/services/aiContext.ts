@@ -1,4 +1,4 @@
-import type { editor as monacoEditor } from 'monaco-editor'
+import type { Selection } from 'monaco-editor'
 import type {
   AiAction,
   AiContextEntry,
@@ -108,7 +108,7 @@ function findPathInSectionNodes(
   return []
 }
 
-function buildNeighborContext(content: string, selection: monacoEditor.ISelection) {
+function buildNeighborContext(content: string, selection: Selection) {
   const start = offsetFromLineColumn(content, selection.startLineNumber, selection.startColumn)
   const end = offsetFromLineColumn(content, selection.endLineNumber, selection.endColumn)
 
@@ -127,7 +127,7 @@ function buildNeighborContext(content: string, selection: monacoEditor.ISelectio
 async function resolveOutlineContext(
   filePath: string,
   content: string,
-  selection: monacoEditor.ISelection
+  selection: Selection
 ): Promise<Pick<AiLightContext, 'sectionPath' | 'outline'>> {
   const symbols = useUiStore.getState().documentSymbols
   if (symbols.length > 0) {
@@ -165,7 +165,7 @@ export function getFreshAiContextEntry(
   return entry.contentHash === hashTextContent(content) ? entry : null
 }
 
-export async function buildAiLightContext(selection: monacoEditor.ISelection): Promise<{
+export async function buildAiLightContext(selection: Selection): Promise<{
   filePath: string
   lightContext: AiLightContext
   summaryContext: AiContextEntry | null
@@ -191,7 +191,7 @@ export async function buildAiLightContext(selection: monacoEditor.ISelection): P
 
 export async function buildAiProcessRequest(
   action: AiAction,
-  selection: monacoEditor.ISelection,
+  selection: Selection,
   selectedText: string
 ): Promise<AiProcessRequest> {
   const { filePath, lightContext, summaryContext } = await buildAiLightContext(selection)
@@ -206,7 +206,7 @@ export async function buildAiProcessRequest(
 
 export async function buildAiCustomProcessRequest(
   command: string,
-  selection: monacoEditor.ISelection,
+  selection: Selection,
   selectedText: string
 ): Promise<AiCustomProcessRequest> {
   const { filePath, lightContext, summaryContext } = await buildAiLightContext(selection)

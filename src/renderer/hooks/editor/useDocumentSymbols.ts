@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import { lspRequestDocumentSymbols } from '../../lsp/lspClient'
 import { useEditorStore } from '../../store/useEditorStore'
 import { useSettingsStore } from '../../store/useSettingsStore'
+import { isFeatureEnabled } from '../../utils/featureFlags'
 import { useUiStore } from '../../store/useUiStore'
 import type { DocumentSymbolNode, SectionNode } from '../../../shared/types'
 import { documentRegistry } from '../../models/documentRegistry'
@@ -93,7 +94,8 @@ let pendingFetchKey: string | null = null
 
 function fetchOutline(currentFile: string, snapshot: DocumentSnapshot): void {
   const lspAvailable =
-    useSettingsStore.getState().settings.lspEnabled && useUiStore.getState().lspStatus === 'running'
+    isFeatureEnabled(useSettingsStore.getState().settings, 'lsp') &&
+    useUiStore.getState().lspStatus === 'running'
 
   // Deduplicate: skip if a request for the same file is already in flight
   const requestKey = `${snapshot.documentId}:${snapshot.revision}`

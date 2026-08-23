@@ -2,6 +2,7 @@ import { useCallback, useMemo } from 'react'
 import { useProjectStore } from '../store/useProjectStore'
 import type { BibEntry, CitationGroup } from '../../shared/types'
 import { logError } from '../utils/errorMessage'
+import { getDesktopCapabilities } from '../platform/capabilities'
 
 type BibGroupMode = 'flat' | 'author' | 'year' | 'type' | 'custom'
 
@@ -42,6 +43,7 @@ function groupEntries(entries: BibEntry[], mode: BibGroupMode): GroupedBib[] {
 }
 
 export function useCitationGroupOps() {
+  const citationGroupsSupported = getDesktopCapabilities().citationGroups
   const citationGroups = useProjectStore((s) => s.citationGroups)
   const setCitationGroups = useProjectStore((s) => s.setCitationGroups)
   const projectRoot = useProjectStore((s) => s.projectRoot)
@@ -49,13 +51,13 @@ export function useCitationGroupOps() {
   const saveGroups = useCallback(
     (groups: CitationGroup[]) => {
       setCitationGroups(groups)
-      if (projectRoot) {
+      if (citationGroupsSupported && projectRoot) {
         window.api
           .saveCitationGroups(projectRoot, groups)
           .catch((err) => logError('saveCitationGroups', err))
       }
     },
-    [setCitationGroups, projectRoot]
+    [citationGroupsSupported, setCitationGroups, projectRoot]
   )
 
   const createGroup = useCallback(() => {

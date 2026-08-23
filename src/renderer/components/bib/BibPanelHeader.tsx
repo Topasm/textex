@@ -7,13 +7,15 @@ interface BibPanelHeaderProps {
   onFilterChange: (value: string) => void
   groupMode: BibGroupMode
   onGroupModeChange: (mode: BibGroupMode) => void
+  customGroupsAvailable?: boolean
 }
 
 export function BibPanelHeader({
   filter,
   onFilterChange,
   groupMode,
-  onGroupModeChange
+  onGroupModeChange,
+  customGroupsAvailable = true
 }: BibPanelHeaderProps) {
   const { t } = useTranslation()
 
@@ -34,7 +36,7 @@ export function BibPanelHeader({
         <option value="author">{t('bibPanel.byAuthor')}</option>
         <option value="year">{t('bibPanel.byYear')}</option>
         <option value="type">{t('bibPanel.byType')}</option>
-        <option value="custom">{t('bibPanel.custom')}</option>
+        {customGroupsAvailable && <option value="custom">{t('bibPanel.custom')}</option>}
       </select>
     </div>
   )

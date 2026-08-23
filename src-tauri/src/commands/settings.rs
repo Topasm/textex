@@ -9,8 +9,17 @@ use crate::{
 };
 
 #[tauri::command]
-pub async fn load_settings(app: AppHandle) -> AppResult<UserSettings> {
-    settings::load_settings(&settings::settings_path(&app)?).await
+pub async fn load_settings(
+    app: AppHandle,
+    settings_state: State<'_, SettingsState>,
+) -> AppResult<UserSettings> {
+    let path = settings::settings_path(&app)?;
+    settings::load_settings_with_legacy_import(
+        settings_state.inner(),
+        &path,
+        &settings::legacy_settings_paths(&path),
+    )
+    .await
 }
 
 #[tauri::command]

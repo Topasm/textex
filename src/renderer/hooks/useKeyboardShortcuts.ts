@@ -3,6 +3,7 @@ import type { AppCommandId } from '../../shared/types'
 import { useEditorStore } from '../store/useEditorStore'
 import { useSettingsStore } from '../store/useSettingsStore'
 import { commandRegistry } from '../services/commandRegistry'
+import { getDesktopCapabilities } from '../platform/capabilities'
 
 interface KeyboardShortcutsOpts {
   runCommand: (command: AppCommandId) => void
@@ -16,6 +17,7 @@ export function useKeyboardShortcuts(opts: KeyboardShortcutsOpts): void {
   const { runCommand } = opts
 
   useEffect(() => {
+    const capabilities = getDesktopCapabilities()
     commandRegistry.clear()
 
     commandRegistry.register('file.open', { key: 'o', mod: true }, () => runCommand('file.open'))
@@ -32,9 +34,11 @@ export function useKeyboardShortcuts(opts: KeyboardShortcutsOpts): void {
     commandRegistry.register('view.toggleLog', { key: 'l', mod: true }, () =>
       runCommand('view.toggleLog')
     )
-    commandRegistry.register('view.toggleTerminal', { key: '`', mod: true }, () =>
-      runCommand('view.toggleTerminal')
-    )
+    if (capabilities.pty) {
+      commandRegistry.register('view.toggleTerminal', { key: '`', mod: true }, () =>
+        runCommand('view.toggleTerminal')
+      )
+    }
     commandRegistry.register('edit.find', { key: 'f', mod: true }, () => runCommand('edit.find'))
     commandRegistry.register('font.increase', { key: ['=', '+'], mod: true, alt: true }, () =>
       useSettingsStore.getState().increaseFontSize()
@@ -77,12 +81,16 @@ export function useKeyboardShortcuts(opts: KeyboardShortcutsOpts): void {
         state.setActiveTab(paths[(idx + 1) % paths.length])
       }
     })
-    commandRegistry.register('file.newTemplate', { key: 'n', mod: true, shift: true }, () =>
-      runCommand('file.newTemplate')
-    )
-    commandRegistry.register('ai.draft', { key: ['d', 'D'], mod: true, shift: true }, () =>
-      runCommand('ai.draft')
-    )
+    if (capabilities.templates) {
+      commandRegistry.register('file.newTemplate', { key: 'n', mod: true, shift: true }, () =>
+        runCommand('file.newTemplate')
+      )
+    }
+    if (capabilities.ai) {
+      commandRegistry.register('ai.draft', { key: ['d', 'D'], mod: true, shift: true }, () =>
+        runCommand('ai.draft')
+      )
+    }
     commandRegistry.register(
       'view.search.citations',
       { key: ['c', 'C'], mod: true, shift: true },

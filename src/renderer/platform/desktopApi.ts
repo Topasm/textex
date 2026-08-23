@@ -1,4 +1,5 @@
 import type { DesktopApi } from '../types/api'
+import { configureDesktopCapabilities } from './capabilities'
 
 function hasDesktopApi(value: unknown): value is DesktopApi {
   if (!value || typeof value !== 'object') return false
@@ -20,6 +21,7 @@ function hasDesktopApi(value: unknown): value is DesktopApi {
  */
 export async function installDesktopApi(): Promise<void> {
   if (hasDesktopApi(window.api)) {
+    configureDesktopCapabilities('electron')
     document.documentElement.dataset.desktopRuntime = 'electron'
     return
   }
@@ -31,5 +33,6 @@ export async function installDesktopApi(): Promise<void> {
 
   const { createTauriApi } = await import('./tauriApi')
   window.api = createTauriApi()
+  configureDesktopCapabilities('tauri')
   document.documentElement.dataset.desktopRuntime = 'tauri'
 }

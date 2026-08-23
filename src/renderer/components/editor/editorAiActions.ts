@@ -1,4 +1,5 @@
 import type { editor as monacoEditor } from 'monaco-editor'
+import type { AiAction } from '../../../shared/types'
 import { buildAiCustomProcessRequest, buildAiProcessRequest } from '../../services/aiContext'
 
 export interface AiActionDef {
@@ -7,7 +8,7 @@ export interface AiActionDef {
   buttonLabel: string
   order: number
   mode: 'replace' | 'alert'
-  action: string
+  action: AiAction
 }
 
 export const AI_ACTIONS: AiActionDef[] = [
@@ -54,7 +55,7 @@ export const AI_ACTIONS: AiActionDef[] = [
 ]
 
 export async function runAiAction(
-  editor: monacoEditor.IStandaloneCodeEditor,
+  editor: monacoEditor.ICodeEditor,
   def: AiActionDef
 ): Promise<void> {
   const selection = editor.getSelection()
@@ -83,7 +84,7 @@ export async function runAiAction(
 }
 
 export async function runAiCustomCommand(
-  editor: monacoEditor.IStandaloneCodeEditor,
+  editor: monacoEditor.ICodeEditor,
   command: string
 ): Promise<void> {
   const selection = editor.getSelection()

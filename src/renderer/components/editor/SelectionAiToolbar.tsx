@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { editor as monacoEditor } from 'monaco-editor'
+import type { editor as monacoEditor, Selection } from 'monaco-editor'
 import type { AiActionDef } from './editorAiActions'
 import type { AiContextStatus } from '../../services/aiContext'
 import './SelectionAiToolbar.css'
@@ -10,7 +10,7 @@ const TOOLBAR_MARGIN = 8
 
 interface SelectionAiToolbarProps {
   editorRef: React.RefObject<monacoEditor.IStandaloneCodeEditor | null>
-  selection: monacoEditor.ISelection
+  selection: Selection
   actions: readonly AiActionDef[]
   onAction: (action: AiActionDef) => void
   onCommand: (command: string) => void
@@ -32,7 +32,7 @@ function clamp(value: number, min: number, max: number): number {
 
 function getToolbarPosition(
   editor: monacoEditor.IStandaloneCodeEditor,
-  selection: monacoEditor.ISelection
+  selection: Selection
 ): ToolbarPosition | null {
   const editorDom = editor.getDomNode()
   if (!editorDom) return null

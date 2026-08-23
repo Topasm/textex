@@ -1,10 +1,12 @@
 import { useEffect } from 'react'
 import { useProjectStore } from '../store/useProjectStore'
+import { getDesktopCapabilities } from '../platform/capabilities'
 
 /**
  * Automatically loads bib entries and citation groups when projectRoot changes.
  */
 export function useBibAutoLoad(projectRoot: string | null): void {
+  const citationGroupsSupported = getDesktopCapabilities().citationGroups
   useEffect(() => {
     if (!projectRoot) return
     window.api
@@ -13,12 +15,15 @@ export function useBibAutoLoad(projectRoot: string | null): void {
         useProjectStore.getState().setBibEntries(entries)
       })
       .catch(() => {})
-    // Also load citation groups
-    window.api
-      .loadCitationGroups(projectRoot)
-      .then((groups) => {
-        useProjectStore.getState().setCitationGroups(groups)
-      })
-      .catch(() => {})
-  }, [projectRoot])
+    if (citationGroupsSupported) {
+      window.api
+        .loadCitationGroups(projectRoot)
+        .then((groups) => {
+          useProjectStore.getState().setCitationGroups(groups)
+        })
+        .catch(() => {})
+    } else {
+      useProjectStore.getState().setCitationGroups([])
+    }
+  }, [citationGroupsSupported, projectRoot])
 }

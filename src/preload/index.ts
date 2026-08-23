@@ -1,6 +1,13 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
 import type { IpcChannel, IpcRequest, IpcResponse } from '../shared/ipcChannels'
-import type { AppCommandId, DirectoryChangeEvent } from '../shared/types'
+import type {
+  AiCustomProcessRequest,
+  AiProcessRequest,
+  AppCommandId,
+  ClaudeTerminalRequest,
+  CodexTerminalRequest,
+  DirectoryChangeEvent
+} from '../shared/types'
 import type {
   CompileDiagnosticsEvent,
   CompileLogEvent,
@@ -310,14 +317,15 @@ contextBridge.exposeInMainWorld('api', {
     invoke('ai:generate', input, provider, model),
   aiSaveApiKey: (provider: string, apiKey: string) => invoke('ai:save-api-key', provider, apiKey),
   aiHasApiKey: (provider: string) => invoke('ai:has-api-key', provider),
-  aiProcess: (request) => invoke('ai:process', request),
-  aiProcessCustom: (request) => invoke('ai:process-custom', request),
+  aiProcess: (request: AiProcessRequest) => invoke('ai:process', request),
+  aiProcessCustom: (request: AiCustomProcessRequest) => invoke('ai:process-custom', request),
   aiUpdateContext: (filePath: string, content: string) =>
     invoke('ai:update-context', filePath, content),
   aiCheckCli: () => invoke('ai:check-cli'),
   aiCheckCodexCli: () => invoke('ai:check-codex-cli'),
-  aiOpenClaudeTerminal: (request) => invoke('ai:open-claude-terminal', request),
-  aiOpenCodexTerminal: (request) => invoke('ai:open-codex-terminal', request),
+  aiOpenClaudeTerminal: (request: ClaudeTerminalRequest) =>
+    invoke('ai:open-claude-terminal', request),
+  aiOpenCodexTerminal: (request: CodexTerminalRequest) => invoke('ai:open-codex-terminal', request),
 
   // PTY (embedded terminal)
   ptyCreate: (options: {

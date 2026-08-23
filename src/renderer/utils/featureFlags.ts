@@ -1,4 +1,5 @@
 import type { UserSettings } from '../../shared/types'
+import { getDesktopCapabilities } from '../platform/capabilities'
 
 type FeatureFlag = 'git' | 'zotero' | 'ai' | 'lsp' | 'spellcheck'
 
@@ -7,16 +8,17 @@ type FeatureFlag = 'git' | 'zotero' | 'ai' | 'lsp' | 'spellcheck'
  * Centralizes inline boolean checks scattered across components.
  */
 export function isFeatureEnabled(settings: UserSettings, flag: FeatureFlag): boolean {
+  const capabilities = getDesktopCapabilities()
   switch (flag) {
     case 'git':
       return settings.gitEnabled !== false
     case 'zotero':
       return !!settings.zoteroEnabled
     case 'ai':
-      return !!settings.aiEnabled && !!settings.aiProvider
+      return capabilities.ai && !!settings.aiEnabled && !!settings.aiProvider
     case 'lsp':
-      return !!settings.lspEnabled
+      return capabilities.lsp && !!settings.lspEnabled
     case 'spellcheck':
-      return !!settings.spellCheckEnabled
+      return capabilities.spellcheck && !!settings.spellCheckEnabled
   }
 }

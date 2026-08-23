@@ -4,6 +4,7 @@ import { FolderOpen, FileText, FilePlus } from 'lucide-react'
 import type { RecentProject } from '../../shared/types'
 import { logError } from '../utils/errorMessage'
 import { RecentProjectList } from './home/RecentProjectList'
+import { getDesktopCapabilities } from '../platform/capabilities'
 
 interface HomeScreenProps {
   onOpenFolder: () => void
@@ -13,6 +14,7 @@ interface HomeScreenProps {
 
 function HomeScreen({ onOpenFolder, onNewBlankProject, onNewFromTemplate }: HomeScreenProps) {
   const { t } = useTranslation()
+  const capabilities = getDesktopCapabilities()
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([])
 
   useEffect(() => {
@@ -36,14 +38,18 @@ function HomeScreen({ onOpenFolder, onNewBlankProject, onNewFromTemplate }: Home
           <FolderOpen size={18} />
           {t('homeScreen.openFolder')}
         </button>
-        <button className="home-action-btn" onClick={onNewBlankProject}>
-          <FilePlus size={18} />
-          {t('homeScreen.newBlankProject')}
-        </button>
-        <button className="home-action-btn" onClick={onNewFromTemplate}>
-          <FileText size={18} />
-          {t('homeScreen.newFromTemplate')}
-        </button>
+        {capabilities.templates && (
+          <>
+            <button className="home-action-btn" onClick={onNewBlankProject}>
+              <FilePlus size={18} />
+              {t('homeScreen.newBlankProject')}
+            </button>
+            <button className="home-action-btn" onClick={onNewFromTemplate}>
+              <FileText size={18} />
+              {t('homeScreen.newFromTemplate')}
+            </button>
+          </>
+        )}
       </div>
 
       <RecentProjectList recentProjects={recentProjects} setRecentProjects={setRecentProjects} />

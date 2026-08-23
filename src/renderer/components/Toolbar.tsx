@@ -17,6 +17,7 @@ import { useSettingsStore } from '../store/useSettingsStore'
 import { OmniSearch } from './OmniSearch'
 import PdfZoomDropdown from './PdfZoomDropdown'
 import { isFeatureEnabled } from '../utils/featureFlags'
+import { getDesktopCapabilities } from '../platform/capabilities'
 
 interface ToolbarProps {
   onSave: () => void
@@ -50,6 +51,7 @@ const Toolbar = React.memo(function Toolbar({
   const isDirty = useEditorStore((s) => s.isDirty)
   const compileStatus = useCompileStore((s) => s.compileStatus)
   const settings = useSettingsStore((s) => s.settings)
+  const capabilities = getDesktopCapabilities()
   const aiEnabled = isFeatureEnabled(settings, 'ai')
   const currentPage = usePdfStore((s) => s.currentPage)
   const numPages = usePdfStore((s) => s.numPages)
@@ -150,24 +152,24 @@ const Toolbar = React.memo(function Toolbar({
         </button>
 
         {aiEnabled && (
-          <>
-            <button
-              className="toolbar-btn"
-              onClick={onAiAssistant}
-              title={t('toolbar.aiAssistant')}
-              aria-label={t('toolbar.aiAssistant')}
-            >
-              <Sparkles size={16} />
-            </button>
-            <button
-              className={`toolbar-btn${isTerminalPaneOpen ? ' active' : ''}`}
-              onClick={onToggleTerminalPane}
-              title={t('toolbar.terminalPane')}
-              aria-label={t('toolbar.terminalPane')}
-            >
-              <SquareTerminal size={16} />
-            </button>
-          </>
+          <button
+            className="toolbar-btn"
+            onClick={onAiAssistant}
+            title={t('toolbar.aiAssistant')}
+            aria-label={t('toolbar.aiAssistant')}
+          >
+            <Sparkles size={16} />
+          </button>
+        )}
+        {capabilities.pty && (
+          <button
+            className={`toolbar-btn${isTerminalPaneOpen ? ' active' : ''}`}
+            onClick={onToggleTerminalPane}
+            title={t('toolbar.terminalPane')}
+            aria-label={t('toolbar.terminalPane')}
+          >
+            <SquareTerminal size={16} />
+          </button>
         )}
 
         <div className="toolbar-search-slot">

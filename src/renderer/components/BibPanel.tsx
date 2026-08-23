@@ -9,11 +9,15 @@ import { BibGroupHeader } from './bib/BibGroupHeader'
 import { BibEntryCard } from './bib/BibEntryCard'
 import { useCitationGroupOps, groupEntries } from '../hooks/useCitationGroups'
 import type { BibGroupMode } from '../hooks/useCitationGroups'
+import { getDesktopCapabilities } from '../platform/capabilities'
 
 function BibPanel() {
   const { t } = useTranslation()
   const bibEntries = useProjectStore((s) => s.bibEntries)
-  const bibGroupMode = useSettingsStore((s) => s.settings.bibGroupMode) as BibGroupMode
+  const configuredGroupMode = useSettingsStore((s) => s.settings.bibGroupMode) as BibGroupMode
+  const citationGroupsSupported = getDesktopCapabilities().citationGroups
+  const bibGroupMode =
+    configuredGroupMode === 'custom' && !citationGroupsSupported ? 'flat' : configuredGroupMode
   const updateSetting = useSettingsStore((s) => s.updateSetting)
   const [filter, setFilter] = useState('')
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
@@ -78,6 +82,7 @@ function BibPanel() {
           filter={filter}
           onFilterChange={setFilter}
           groupMode={bibGroupMode}
+          customGroupsAvailable={citationGroupsSupported}
           onGroupModeChange={(mode) => updateSetting('bibGroupMode', mode)}
         />
         <div className="bib-custom-toolbar">
@@ -148,6 +153,7 @@ function BibPanel() {
         filter={filter}
         onFilterChange={setFilter}
         groupMode={bibGroupMode}
+        customGroupsAvailable={citationGroupsSupported}
         onGroupModeChange={(mode) => updateSetting('bibGroupMode', mode)}
       />
       <div className="bib-list">

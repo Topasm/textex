@@ -2,11 +2,13 @@ import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import { Toggle } from './Toggle'
+import { getDesktopCapabilities } from '../../platform/capabilities'
 
 export const AutomationTab = () => {
   const { t } = useTranslation()
   const settings = useSettingsStore((state) => state.settings)
   const updateSetting = useSettingsStore((state) => state.updateSetting)
+  const capabilities = getDesktopCapabilities()
 
   return (
     <div className="settings-tab-content settings-animate-in">
@@ -39,45 +41,51 @@ export const AutomationTab = () => {
               onChange={(checked) => updateSetting('watchOpenFiles', checked)}
             />
           </div>
-          <div className="settings-row">
-            <div>
-              <div className="settings-row-label">{t('settings.automation.spellCheck')}</div>
-              <div className="settings-row-description">
-                {t('settings.automation.spellCheckDesc')}
+          {capabilities.spellcheck && (
+            <>
+              <div className="settings-row">
+                <div>
+                  <div className="settings-row-label">{t('settings.automation.spellCheck')}</div>
+                  <div className="settings-row-description">
+                    {t('settings.automation.spellCheckDesc')}
+                  </div>
+                </div>
+                <Toggle
+                  checked={settings.spellCheckEnabled}
+                  onChange={(checked) => updateSetting('spellCheckEnabled', checked)}
+                />
               </div>
-            </div>
-            <Toggle
-              checked={settings.spellCheckEnabled}
-              onChange={(checked) => updateSetting('spellCheckEnabled', checked)}
-            />
-          </div>
-          {settings.spellCheckEnabled && (
-            <div className="settings-spellcheck-sub">
-              <label className="settings-label">{t('settings.automation.spellLanguage')}</label>
-              <select
-                value={settings.spellCheckLanguage ?? 'en-US'}
-                onChange={(e) => {
-                  updateSetting('spellCheckLanguage', e.target.value)
-                  window.api.spellSetLanguage(e.target.value)
-                }}
-                className="settings-select settings-select-medium"
-              >
-                <option value="en-US">English (US)</option>
-              </select>
+              {settings.spellCheckEnabled && (
+                <div className="settings-spellcheck-sub">
+                  <label className="settings-label">{t('settings.automation.spellLanguage')}</label>
+                  <select
+                    value={settings.spellCheckLanguage ?? 'en-US'}
+                    onChange={(e) => {
+                      updateSetting('spellCheckLanguage', e.target.value)
+                      void window.api.spellSetLanguage(e.target.value)
+                    }}
+                    className="settings-select settings-select-medium"
+                  >
+                    <option value="en-US">English (US)</option>
+                  </select>
+                </div>
+              )}
+            </>
+          )}
+          {capabilities.lsp && (
+            <div className="settings-row">
+              <div>
+                <div className="settings-row-label">{t('settings.automation.languageServer')}</div>
+                <div className="settings-row-description">
+                  {t('settings.automation.languageServerDesc')}
+                </div>
+              </div>
+              <Toggle
+                checked={settings.lspEnabled}
+                onChange={(checked) => updateSetting('lspEnabled', checked)}
+              />
             </div>
           )}
-          <div className="settings-row">
-            <div>
-              <div className="settings-row-label">{t('settings.automation.languageServer')}</div>
-              <div className="settings-row-description">
-                {t('settings.automation.languageServerDesc')}
-              </div>
-            </div>
-            <Toggle
-              checked={settings.lspEnabled}
-              onChange={(checked) => updateSetting('lspEnabled', checked)}
-            />
-          </div>
         </div>
       </div>
     </div>

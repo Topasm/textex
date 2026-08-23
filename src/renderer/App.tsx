@@ -40,6 +40,7 @@ import { stopLspClient } from './lsp/lspClient'
 import type { AppCommandId } from '../shared/types'
 import { runtimePerformance } from './services/runtimePerformance'
 import { documentRegistry } from './models/documentRegistry'
+import { getDesktopCapabilities } from './platform/capabilities'
 import {
   beginCompileTicket,
   canPublishCompileResponse,
@@ -70,6 +71,7 @@ const PreviewPane = lazy(() => import('./components/PreviewPane'))
 
 function App() {
   const { t } = useTranslation()
+  const capabilities = getDesktopCapabilities()
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   useAutoCompile()
   const { handleOpen, handleSave, handleSaveAs } = useFileOps()
@@ -88,12 +90,13 @@ function App() {
   const projectRoot = useProjectStore((s) => s.projectRoot)
   const isGitRepo = useProjectStore((s) => s.isGitRepo)
   const settings = useSettingsStore((s) => s.settings)
-  const lspEnabled = settings.lspEnabled
+  const lspEnabled = isFeatureEnabled(settings, 'lsp')
   const gitEnabled = isFeatureEnabled(settings, 'git')
   const autoHideSidebar = useSettingsStore((s) => s.settings.autoHideSidebar)
   const showStatusBar = useSettingsStore((s) => s.settings.showStatusBar)
   const sidebarPosition = settings.sidebarPosition ?? 'left'
   const isTerminalPaneOpen = useUiStore((s) => s.isTerminalPaneOpen)
+  const terminalPaneOpen = capabilities.pty && isTerminalPaneOpen
   const isTemplateGalleryOpen = useUiStore((s) => s.isTemplateGalleryOpen)
   const toggleTerminalPane = useUiStore((s) => s.toggleTerminalPane)
 
@@ -101,10 +104,18 @@ function App() {
   const [isAiAssistantOpen, setIsAiAssistantOpen] = useState(false)
   const [draftPrefill, setDraftPrefill] = useState<string | undefined>(undefined)
 
-  const handleAiDraft = useCallback((prefill?: string) => {
-    setDraftPrefill(typeof prefill === 'string' ? prefill : undefined)
-    setIsDraftModalOpen(true)
-  }, [])
+  const handleAiDraft = useCallback(
+    (prefill?: string) => {
+      if (!capabilities.ai) return
+      setDraftPrefill(typeof prefill === 'string' ? prefill : undefined)
+      setIsDraftModalOpen(true)
+    },
+    [capabilities.ai]
+  )
+
+  const handleToggleTerminalPane = useCallback(() => {
+    if (capabilities.pty) toggleTerminalPane()
+  }, [capabilities.pty, toggleTerminalPane])
 
   const handleDraftInsert = useCallback((latex: string) => {
     useEditorStore.getState().requestInsertAtCursor(latex)
@@ -218,24 +229,30 @@ function App() {
     })
   }, [])
 
-  const handleExport = useCallback(async (format: string): Promise<void> => {
-    const fp = useEditorStore.getState().filePath
-    if (!fp) return
-    useUiStore.getState().setExportStatus('exporting')
-    try {
-      const result = await window.api.exportDocument(fp, format)
-      useUiStore.getState().setExportStatus(result?.success ? 'success' : 'error')
-    } catch (err: unknown) {
-      useCompileStore.getState().appendLog(`Export failed: ${errorMessage(err)}`)
-      useUiStore.getState().setExportStatus('error')
-    }
-  }, [])
+  const handleExport = useCallback(
+    async (format: string): Promise<void> => {
+      if (!capabilities.documentExport) return
+      const fp = useEditorStore.getState().filePath
+      if (!fp) return
+      useUiStore.getState().setExportStatus('exporting')
+      try {
+        const result = await window.api.exportDocument(fp, format)
+        useUiStore.getState().setExportStatus(result?.success ? 'success' : 'error')
+      } catch (err: unknown) {
+        useCompileStore.getState().appendLog(`Export failed: ${errorMessage(err)}`)
+        useUiStore.getState().setExportStatus('error')
+      }
+    },
+    [capabilities.documentExport]
+  )
 
   const handleOpenTemplateGallery = useCallback(() => {
+    if (!capabilities.templates) return
     useUiStore.getState().setTemplateGalleryOpen(true)
-  }, [])
+  }, [capabilities.templates])
 
   const handleNewBlankProject = useCallback(async () => {
+    if (!capabilities.templates) return
     const blankContent = `\\documentclass[12pt,a4paper]{article}
 
 \\usepackage[utf8]{inputenc}
@@ -265,7 +282,7 @@ function App() {
     } catch {
       // user cancelled
     }
-  }, [])
+  }, [capabilities.templates])
 
   const handleCheckForUpdates = useCallback(async (): Promise<void> => {
     const result = await window.api.updateCheck()
@@ -287,7 +304,7 @@ function App() {
         save: handleSave,
         saveAs: handleSaveAs,
         toggleLog: toggleLogPanel,
-        toggleTerminal: toggleTerminalPane,
+        toggleTerminal: handleToggleTerminalPane,
         exportDocument: handleExport
       })
     },
@@ -301,7 +318,7 @@ function App() {
       handleOpenTemplateGallery,
       handleSave,
       handleSaveAs,
-      toggleTerminalPane
+      handleToggleTerminalPane
     ]
   )
 
@@ -346,7 +363,7 @@ function App() {
   } = useDragResize({
     sidebarPosition,
     sidebarTabs: sidebarTabs.map((tab) => tab.key),
-    terminalPaneOpen: isTerminalPaneOpen,
+    terminalPaneOpen,
     terminalRatio
   })
 
@@ -441,9 +458,11 @@ function App() {
         onReturnHome={handleCloseProject}
         onNewFromTemplate={handleOpenTemplateGallery}
         onAiDraft={handleAiDraft}
-        onAiAssistant={() => setIsAiAssistantOpen(true)}
-        onToggleTerminalPane={toggleTerminalPane}
-        isTerminalPaneOpen={isTerminalPaneOpen}
+        onAiAssistant={() => {
+          if (capabilities.ai) setIsAiAssistantOpen(true)
+        }}
+        onToggleTerminalPane={handleToggleTerminalPane}
+        isTerminalPaneOpen={terminalPaneOpen}
         onOpenSettings={() => setIsSettingsOpen(true)}
       />
       {isSettingsOpen && (
@@ -451,7 +470,7 @@ function App() {
           <SettingsModal onClose={() => setIsSettingsOpen(false)} />
         </Suspense>
       )}
-      {isAiAssistantOpen && (
+      {capabilities.ai && isAiAssistantOpen && (
         <Suspense fallback={null}>
           <AiAssistantModal
             isOpen
@@ -460,7 +479,7 @@ function App() {
           />
         </Suspense>
       )}
-      {isDraftModalOpen && (
+      {capabilities.ai && isDraftModalOpen && (
         <Suspense fallback={null}>
           <DraftModal
             isOpen
@@ -489,7 +508,7 @@ function App() {
               <div
                 className="editor-pane"
                 style={{
-                  width: `${splitRatio * (isTerminalPaneOpen ? 1 - terminalRatio : 1) * 100}%`
+                  width: `${splitRatio * (terminalPaneOpen ? 1 - terminalRatio : 1) * 100}%`
                 }}
               >
                 <TabBar />
@@ -505,7 +524,7 @@ function App() {
               <div
                 className="preview-pane"
                 style={{
-                  width: `${(1 - splitRatio) * (isTerminalPaneOpen ? 1 - terminalRatio : 1) * 100}%`
+                  width: `${(1 - splitRatio) * (terminalPaneOpen ? 1 - terminalRatio : 1) * 100}%`
                 }}
               >
                 <PreviewErrorBoundary>
@@ -514,7 +533,7 @@ function App() {
                   </Suspense>
                 </PreviewErrorBoundary>
               </div>
-              {isTerminalPaneOpen && (
+              {terminalPaneOpen && (
                 <>
                   <div
                     className="split-divider terminal-split-divider"
@@ -535,7 +554,7 @@ function App() {
       )}
       <LogPanel />
       {showStatusBar && <StatusBar />}
-      {isTemplateGalleryOpen && (
+      {capabilities.templates && isTemplateGalleryOpen && (
         <Suspense fallback={null}>
           <TemplateGallery />
         </Suspense>

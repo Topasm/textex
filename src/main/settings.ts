@@ -3,69 +3,11 @@ import path from 'path'
 import fs from 'fs/promises'
 import type { RecentProject, RecentProjectUpdates, UserSettings } from '../shared/types'
 import { listPapers } from '../shared/structure'
-
-const defaults: UserSettings = {
-  theme: 'system',
-  fontSize: 14,
-  autoCompile: true,
-  spellCheckEnabled: false,
-  spellCheckLanguage: 'en-US',
-  gitEnabled: true,
-  autoUpdateEnabled: true,
-  lspEnabled: true,
-  zoteroEnabled: false,
-  zoteroPort: 23119,
-  zoteroCollection: '',
-  name: '',
-  email: '',
-  affiliation: '',
-  wordWrap: true,
-  vimMode: false,
-  formatOnSave: true,
-  mathPreviewEnabled: true,
-  pdfInvertMode: false,
-  autoHideSidebar: false,
-  sidebarPosition: 'left',
-  showStatusBar: true,
-  sectionHighlightEnabled: false,
-  sectionHighlightColors: [
-    '#e06c75',
-    '#e5c07b',
-    '#98c379',
-    '#61afef',
-    '#c678dd',
-    '#56b6c2',
-    '#d19a66'
-  ],
-  bibGroupMode: 'flat',
-  lineNumbers: true,
-  tabSize: 4,
-  aiEnabled: false,
-  aiProvider: '',
-  aiApiKey: '',
-  aiModel: '',
-  aiThinkingEnabled: false,
-  aiThinkingBudget: 0,
-  aiPromptGenerate: '',
-  aiPromptFix: '',
-  aiPromptAcademic: '',
-  aiPromptSummarize: '',
-  aiPromptLonger: '',
-  aiPromptShorter: '',
-  recentProjects: [],
-  language: 'en'
-}
-
-function sanitizeSettings(input: unknown): Partial<UserSettings> {
-  if (!input || typeof input !== 'object') return {}
-  const settings = {
-    ...(input as Partial<UserSettings> & {
-      minimap?: unknown
-    })
-  }
-  delete settings.minimap
-  return settings
-}
+import {
+  createDefaultUserSettings,
+  mergeUserSettings,
+  sanitizeUserSettings
+} from '../shared/defaultSettings'
 
 function getSettingsPath(): string {
   return path.join(app.getPath('userData'), 'settings.json')
@@ -123,19 +65,18 @@ function pickMoreRecentLastOpened(a: string, b: string): string {
 export async function loadSettings(): Promise<UserSettings> {
   try {
     const raw = await fs.readFile(getSettingsPath(), 'utf-8')
-    const parsed = sanitizeSettings(JSON.parse(raw))
-    return { ...defaults, ...parsed }
+    return mergeUserSettings(JSON.parse(raw))
   } catch {
-    return { ...defaults }
+    return createDefaultUserSettings()
   }
 }
 
 export async function saveSettings(
   partial: Partial<UserSettings> | Record<string, unknown>
 ): Promise<UserSettings> {
-  const current = sanitizeSettings(await loadSettings())
-  const nextPartial = sanitizeSettings(partial)
-  const merged = { ...defaults, ...current, ...nextPartial }
+  const current = sanitizeUserSettings(await loadSettings())
+  const nextPartial = sanitizeUserSettings(partial)
+  const merged = mergeUserSettings({ ...current, ...nextPartial })
   const settingsPath = getSettingsPath()
   const tmpPath = settingsPath + '.tmp'
   try {

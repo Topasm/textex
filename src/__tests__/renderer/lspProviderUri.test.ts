@@ -107,7 +107,9 @@ describe('LSP providers', () => {
       invoke: async (monaco: MonacoInstance, model: ReturnType<typeof createModel>) => {
         await createCompletionProvider(monaco).provideCompletionItems(
           model as never,
-          position as never
+          position as never,
+          {} as never,
+          {} as never
         )
       }
     },
@@ -115,21 +117,32 @@ describe('LSP providers', () => {
       name: 'hover',
       method: 'textDocument/hover',
       invoke: async (monaco: MonacoInstance, model: ReturnType<typeof createModel>) => {
-        await createHoverProvider(monaco).provideHover(model as never, position as never)
+        await createHoverProvider(monaco).provideHover(
+          model as never,
+          position as never,
+          {} as never
+        )
       }
     },
     {
       name: 'definition',
       method: 'textDocument/definition',
       invoke: async (monaco: MonacoInstance, model: ReturnType<typeof createModel>) => {
-        await createDefinitionProvider(monaco).provideDefinition(model as never, position as never)
+        await createDefinitionProvider(monaco).provideDefinition(
+          model as never,
+          position as never,
+          {} as never
+        )
       }
     },
     {
       name: 'document symbol',
       method: 'textDocument/documentSymbol',
       invoke: async (monaco: MonacoInstance, model: ReturnType<typeof createModel>) => {
-        await createDocumentSymbolProvider(monaco).provideDocumentSymbols(model as never)
+        await createDocumentSymbolProvider(monaco).provideDocumentSymbols(
+          model as never,
+          {} as never
+        )
       }
     },
     {
@@ -139,7 +152,8 @@ describe('LSP providers', () => {
         await createRenameProvider(monaco).provideRenameEdits(
           model as never,
           position as never,
-          'newName'
+          'newName',
+          {} as never
         )
       }
     },
@@ -147,14 +161,22 @@ describe('LSP providers', () => {
       name: 'prepare rename',
       method: 'textDocument/prepareRename',
       invoke: async (monaco: MonacoInstance, model: ReturnType<typeof createModel>) => {
-        await createRenameProvider(monaco).resolveRenameLocation(model as never, position as never)
+        await createRenameProvider(monaco).resolveRenameLocation!(
+          model as never,
+          position as never,
+          {} as never
+        )
       }
     },
     {
       name: 'formatting',
       method: 'textDocument/formatting',
       invoke: async (monaco: MonacoInstance, model: ReturnType<typeof createModel>) => {
-        await createFormattingProvider(monaco).provideDocumentFormattingEdits(model as never)
+        await createFormattingProvider(monaco).provideDocumentFormattingEdits(
+          model as never,
+          {} as never,
+          {} as never
+        )
       }
     }
   ])('uses the Monaco model URI for $name requests', async ({ method, invoke }) => {

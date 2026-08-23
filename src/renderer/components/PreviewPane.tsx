@@ -42,7 +42,7 @@ import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl
 
 interface PageViewportInfo {
-  viewport: { convertToViewportPoint(x: number, y: number): [number, number]; viewBox: number[] }
+  viewport: { convertToViewportPoint(x: number, y: number): number[]; viewBox: number[] }
   element: HTMLDivElement
   pageWidth: number // actual PDF page width in points
   pageHeight: number // actual PDF page height in points
@@ -98,12 +98,16 @@ function PreviewPane() {
   /** Calculate estimated height for a page. */
   const getPageHeight = useCallback(
     (pageNum: number): number => {
-      return estimatePageHeight(containerWidth, zoomLevel, pageAspectRatios.get(pageNum))
+      return estimatePageHeight(
+        containerWidth ?? undefined,
+        zoomLevel,
+        pageAspectRatios.get(pageNum)
+      )
     },
     [containerWidth, pageAspectRatios, zoomLevel]
   )
 
-  const pageWidth = calcPageWidth(containerWidth, zoomLevel)
+  const pageWidth = calcPageWidth(containerWidth ?? undefined, zoomLevel)
 
   // Pre-compute cumulative page heights and offsets for O(log N) binary search
   const { totalHeight, pageOffsets, cumulativeHeights } = useMemo(

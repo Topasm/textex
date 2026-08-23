@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCompileStore } from '../store/useCompileStore'
 import { useEditorStore } from '../store/useEditorStore'
+import type { Diagnostic, DiagnosticSeverity } from '../../shared/types'
 
 type SeverityFilter = 'error' | 'warning' | 'info'
 

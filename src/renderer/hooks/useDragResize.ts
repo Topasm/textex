@@ -199,8 +199,8 @@ export function useDragResize({
 
   // ---- Sidebar swipe / horizontal scroll to switch tabs ----
   const lastSwipeTime = useRef(0)
-  const slideAnimTimer = useRef<ReturnType<typeof setTimeout>>()
-  const slideAnimClearTimer = useRef<ReturnType<typeof setTimeout>>()
+  const slideAnimTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const slideAnimClearTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const [slideAnim, setSlideAnim] = useState<SlideAnim>(null)
 
   // Clean up animation timers on unmount

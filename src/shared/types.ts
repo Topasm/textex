@@ -199,6 +199,13 @@ export interface RecentProjectUpdates {
   pinned?: boolean
 }
 
+export interface RendererSessionSnapshot {
+  version: 1
+  editor?: string
+  project?: string
+  pdf?: string
+}
+
 export interface UserSettings {
   theme: 'system' | 'dark' | 'light' | 'high-contrast' | 'glass'
   fontSize: number
@@ -250,6 +257,7 @@ export interface UserSettings {
   smoothScrolling?: boolean
   fontLigatures?: boolean
   minimapEnabled?: boolean
+  rendererSession?: RendererSessionSnapshot
 }
 
 export type AiAction = 'fix' | 'academic' | 'summarize' | 'longer' | 'shorter'

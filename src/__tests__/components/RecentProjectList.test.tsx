@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { RecentProjectList } from '../../renderer/components/home/RecentProjectList'
+import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 
 vi.mock('../../renderer/utils/openProject', () => ({
   openProject: vi.fn()
@@ -17,7 +18,10 @@ describe('RecentProjectList', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(window.api.openDirectory).mockResolvedValue(null)
-    vi.mocked(window.api.updateRecentProject).mockResolvedValue({ recentProjects: [] })
+    vi.mocked(window.api.updateRecentProject).mockResolvedValue({
+      ...useSettingsStore.getState().settings,
+      recentProjects: []
+    })
   })
 
   it('opens path editing from the kebab menu and saves a typed path with Enter', async () => {
@@ -30,6 +34,7 @@ describe('RecentProjectList', () => {
       }
     ]
     vi.mocked(window.api.updateRecentProject).mockResolvedValueOnce({
+      ...useSettingsStore.getState().settings,
       recentProjects: nextProjects
     })
 

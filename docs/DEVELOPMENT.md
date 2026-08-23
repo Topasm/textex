@@ -131,8 +131,11 @@ npm run preview:web      # Preview renderer assets; native APIs are unavailable
 npm run postinstall:electron # Rebuild native modules for legacy Electron
 
 # Type Checking
-npm run typecheck        # Run the baseline tsc and Tauri adapter checks
+npm run typecheck        # Check Node, web, CLI, MCP, Tauri adapter, and test code
+npm run typecheck:web    # Check the complete renderer and browser-safe shared code
+npm run typecheck:node   # Check main, preload, and Node shared code
 npm run typecheck:tauri  # Check the Tauri renderer adapter explicitly
+npm run typecheck:test   # Check Vitest test code and mocks
 
 # Testing
 npm run test             # Run the complete Vitest suite
@@ -214,8 +217,8 @@ Before every commit, run the full gate, which includes tests:
 npm run pre-commit
 ```
 
-`check`와 `pre-commit`은 Tauri adapter TypeScript 검사와 `cargo fmt --check`를
-포함하지만 Cargo build/test는 실행하지 않는다. rustfmt는 Tauri를 compile/link하지
+`check`와 `pre-commit`은 Node, web, CLI, MCP, Tauri adapter, test TypeScript 검사와
+`cargo fmt --check`를 포함하지만 Cargo build/test는 실행하지 않는다. rustfmt는 Tauri를 compile/link하지
 않으므로 WebKitGTK 4.1 개발 패키지가 없는 Rocky Linux host에서도 기본 gate를 실행할
 수 있다. Rust 동작 변경은 WebKitGTK 4.1이 있는 host 또는
 `npm run build:tauri:container`에서 위 Cargo build/test 검증도 추가로 통과해야 한다.

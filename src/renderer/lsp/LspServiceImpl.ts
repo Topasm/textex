@@ -63,7 +63,7 @@ function uriToFilePath(uri: string): string {
     const decodedPath = decodeURIComponent(parsed.pathname)
     if (parsed.host) {
       const unc = `//${parsed.host}${decodedPath}`
-      return process.platform === 'win32' ? unc.replace(/\//g, '\\') : unc
+      return navigator.userAgent.includes('Windows') ? unc.replace(/\//g, '\\') : unc
     }
     if (/^\/[a-zA-Z]:\//.test(decodedPath)) {
       return decodedPath.slice(1).replace(/\//g, '\\')

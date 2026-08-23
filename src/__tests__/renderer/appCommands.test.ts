@@ -4,6 +4,7 @@ import { useCompileStore } from '../../renderer/store/useCompileStore'
 import { usePdfStore } from '../../renderer/store/usePdfStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { useUiStore } from '../../renderer/store/useUiStore'
+import { configureDesktopCapabilities } from '../../renderer/platform/capabilities'
 
 const context = {
   checkForUpdates: vi.fn().mockResolvedValue(undefined),
@@ -16,11 +17,13 @@ const context = {
   save: vi.fn().mockResolvedValue(undefined),
   saveAs: vi.fn().mockResolvedValue(undefined),
   toggleLog: vi.fn(),
+  toggleTerminal: vi.fn(),
   exportDocument: vi.fn().mockResolvedValue(undefined)
 }
 
 describe('executeAppCommand', () => {
   beforeEach(() => {
+    configureDesktopCapabilities('electron')
     vi.clearAllMocks()
     useUiStore.setState({
       omniSearchFocusRequested: false,
@@ -88,5 +91,19 @@ describe('executeAppCommand', () => {
 
     expect(context.compile).toHaveBeenCalledOnce()
     expect(context.toggleLog).toHaveBeenCalledOnce()
+  })
+
+  it('ignores commands whose backend domain is unavailable in Tauri', async () => {
+    configureDesktopCapabilities('tauri')
+
+    await executeAppCommand('file.newTemplate', context)
+    await executeAppCommand('file.export.docx', context)
+    await executeAppCommand('ai.draft', context)
+    await executeAppCommand('view.toggleTerminal', context)
+
+    expect(context.openTemplateGallery).not.toHaveBeenCalled()
+    expect(context.exportDocument).not.toHaveBeenCalled()
+    expect(context.runAiDraft).not.toHaveBeenCalled()
+    expect(context.toggleTerminal).not.toHaveBeenCalled()
   })
 })

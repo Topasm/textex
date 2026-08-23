@@ -27,6 +27,12 @@ let currentSelection: {
   endColumn: number
 } | null = null
 
+interface MockEditorModel {
+  getValue: () => string
+  setValue: (text: string) => void
+  getValueInRange: () => string
+}
+
 const mockEditor = {
   createContextKey: vi.fn().mockReturnValue({ set: vi.fn() }),
   onDidChangeCursorPosition: vi.fn((cb) => {
@@ -74,7 +80,7 @@ const mockEditor = {
       }) as DOMRect
     return node
   }),
-  getModel: vi.fn(() => null),
+  getModel: vi.fn<() => MockEditorModel | null>(() => null),
   addAction: vi.fn(),
   executeEdits: vi.fn(),
   focus: vi.fn(),

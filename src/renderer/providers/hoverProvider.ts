@@ -1,5 +1,6 @@
 import type { editor as monacoEditor } from 'monaco-editor'
 import katex from 'katex'
+import type { BibEntry, LabelInfo } from '../../shared/types'
 
 type MonacoInstance = typeof import('monaco-editor')
 

@@ -7,6 +7,7 @@ import { EditorTab } from './settings/EditorTab'
 import { AiTab } from './settings/AiTab'
 import { IntegrationsTab } from './settings/IntegrationsTab'
 import { AutomationTab } from './settings/AutomationTab'
+import { getDesktopCapabilities } from '../platform/capabilities'
 
 type TabId = 'general' | 'appearance' | 'editor' | 'ai' | 'integrations' | 'automation'
 
@@ -32,8 +33,10 @@ const TAB_IDS: TabId[] = ['general', 'appearance', 'editor', 'ai', 'integrations
 
 export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
   const { t } = useTranslation()
+  const capabilities = getDesktopCapabilities()
   const [activeTab, setActiveTab] = useState<TabId>('general')
   const ActiveContent = TAB_CONTENT[activeTab]
+  const tabIds = capabilities.ai ? TAB_IDS : TAB_IDS.filter((id) => id !== 'ai')
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -52,7 +55,7 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
         <div className="settings-layout">
           {/* Sidebar */}
           <div className="settings-sidebar">
-            {TAB_IDS.map((id) => {
+            {tabIds.map((id) => {
               const Icon = TAB_ICONS[id]
               return (
                 <button

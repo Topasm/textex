@@ -6,6 +6,7 @@ import { useCompileStore } from '../../renderer/store/useCompileStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { usePdfStore } from '../../renderer/store/usePdfStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
+import { configureDesktopCapabilities } from '../../renderer/platform/capabilities'
 
 vi.mock('../../renderer/components/OmniSearch', () => ({
   OmniSearch: () => <div data-testid="omni-search-mock">Search citations...</div>
@@ -26,6 +27,7 @@ const defaultProps = {
 }
 
 beforeEach(() => {
+  configureDesktopCapabilities('electron')
   useEditorStore.setState({
     filePath: null,
     isDirty: false
@@ -113,6 +115,22 @@ describe('Toolbar', () => {
     render(<Toolbar {...defaultProps} />)
     fireEvent.click(screen.getByTitle(/Terminal pane/))
     expect(defaultProps.onToggleTerminalPane).toHaveBeenCalledOnce()
+  })
+
+  it('hides unavailable AI and terminal actions in Tauri', () => {
+    configureDesktopCapabilities('tauri')
+    useSettingsStore.setState({
+      settings: {
+        ...useSettingsStore.getState().settings,
+        aiEnabled: true,
+        aiProvider: 'openai'
+      }
+    })
+
+    render(<Toolbar {...defaultProps} />)
+
+    expect(screen.queryByTitle(/AI Assistant/)).not.toBeInTheDocument()
+    expect(screen.queryByTitle(/Terminal pane/)).not.toBeInTheDocument()
   })
 
   it('shows OmniSearch with default citations mode', () => {

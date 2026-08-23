@@ -13,8 +13,10 @@ export function registerPerformanceHandlers(): void {
       cpuPercent: metric.cpu.percentCPUUsage,
       workingSetKiB: metric.memory.workingSetSize,
       peakWorkingSetKiB: metric.memory.peakWorkingSetSize,
-      privateKiB: metric.memory.privateBytes,
-      sharedKiB: metric.memory.sharedBytes
+      privateKiB: metric.memory.privateBytes ?? 0,
+      // Newer Electron types omit sharedBytes, but older runtimes/platforms may
+      // still report it. Preserve the metric when present.
+      sharedKiB: (metric.memory as { sharedBytes?: number }).sharedBytes ?? 0
     }))
 
     return {

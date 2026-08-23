@@ -185,7 +185,7 @@ describe('LspClient', () => {
           })
         }
       })
-    } as Window['api']
+    } as unknown as Window['api']
 
     await client.start(
       '/workspace/project',

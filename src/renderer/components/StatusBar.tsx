@@ -5,6 +5,8 @@ import { useEditorStore } from '../store/useEditorStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { useSettingsStore } from '../store/useSettingsStore'
 import { useUiStore } from '../store/useUiStore'
+import { isFeatureEnabled } from '../utils/featureFlags'
+import { getDesktopCapabilities } from '../platform/capabilities'
 
 const StatusBar = React.memo(function StatusBar() {
   const { t } = useTranslation()
@@ -14,10 +16,12 @@ const StatusBar = React.memo(function StatusBar() {
   const diagnostics = useCompileStore((s) => s.diagnostics)
   const isGitRepo = useProjectStore((s) => s.isGitRepo)
   const gitBranch = useProjectStore((s) => s.gitBranch)
-  const spellCheckEnabled = useSettingsStore((s) => s.settings.spellCheckEnabled)
+  const settings = useSettingsStore((s) => s.settings)
+  const capabilities = getDesktopCapabilities()
+  const spellCheckEnabled = isFeatureEnabled(settings, 'spellcheck')
   const sectionHighlightEnabled = useSettingsStore((s) => s.settings.sectionHighlightEnabled)
   const lspStatus = useUiStore((s) => s.lspStatus)
-  const lspEnabled = useSettingsStore((s) => s.settings.lspEnabled)
+  const lspEnabled = isFeatureEnabled(settings, 'lsp')
 
   const toggleLogPanel = useCompileStore((s) => s.toggleLogPanel)
 
@@ -123,23 +127,25 @@ const StatusBar = React.memo(function StatusBar() {
           {t('statusBar.sections')}:{' '}
           {sectionHighlightEnabled ? t('statusBar.on') : t('statusBar.off')}
         </span>
-        <span
-          className="status-spellcheck"
-          onClick={() =>
-            useSettingsStore.getState().updateSetting('spellCheckEnabled', !spellCheckEnabled)
-          }
-          title={t('statusBar.toggleSpellCheck')}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault()
+        {capabilities.spellcheck && (
+          <span
+            className="status-spellcheck"
+            onClick={() =>
               useSettingsStore.getState().updateSetting('spellCheckEnabled', !spellCheckEnabled)
             }
-          }}
-        >
-          {t('statusBar.spell')}: {spellCheckEnabled ? t('statusBar.on') : t('statusBar.off')}
-        </span>
+            title={t('statusBar.toggleSpellCheck')}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                useSettingsStore.getState().updateSetting('spellCheckEnabled', !spellCheckEnabled)
+              }
+            }}
+          >
+            {t('statusBar.spell')}: {spellCheckEnabled ? t('statusBar.on') : t('statusBar.off')}
+          </span>
+        )}
         <span>
           {t('statusBar.ln')} {cursorLine}, {t('statusBar.col')} {cursorColumn}
         </span>

@@ -9,7 +9,7 @@ import {
 } from '../../editor/activeEditorAdapter'
 
 interface PageViewportInfo {
-  viewport: { convertToViewportPoint(x: number, y: number): [number, number]; viewBox: number[] }
+  viewport: { convertToViewportPoint(x: number, y: number): number[]; viewBox: number[] }
   element: HTMLDivElement
   pageWidth: number
   pageHeight: number

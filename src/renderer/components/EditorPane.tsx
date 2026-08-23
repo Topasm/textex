@@ -20,7 +20,7 @@ import { useEditorCommands } from '../hooks/editor/useEditorCommands'
 import { useHistoryPanel } from '../hooks/editor/useHistoryPanel'
 import { useTableEditor } from '../hooks/editor/useTableEditor'
 import { DiffEditor } from '@monaco-editor/react'
-import type { editor as monacoEditor } from 'monaco-editor'
+import type { editor as monacoEditor, Selection } from 'monaco-editor'
 import {
   AI_ACTIONS,
   registerAiActions,
@@ -37,6 +37,7 @@ import { MonacoEditorAdapter } from '../editor/MonacoEditorAdapter'
 import { setActiveEditorAdapter } from '../editor/activeEditorAdapter'
 import { runtimePerformance } from '../services/runtimePerformance'
 import { documentRegistry } from '../models/documentRegistry'
+import { isFeatureEnabled } from '../utils/featureFlags'
 
 // Lazy-load heavy modals that are rarely shown
 const TableEditorModal = lazy(() =>
@@ -57,9 +58,9 @@ function EditorPane() {
   const cachedAiContext = useAiContextStore((s) => (filePath ? s.entries[filePath] : null))
   const theme = settings.theme
   const fontSize = settings.fontSize
-  const spellCheckEnabled = settings.spellCheckEnabled
+  const spellCheckEnabled = isFeatureEnabled(settings, 'spellcheck')
   const mathPreviewEnabled = settings.mathPreviewEnabled !== false
-  const aiEnabled = !!settings.aiEnabled && !!settings.aiProvider
+  const aiEnabled = isFeatureEnabled(settings, 'ai')
   const editorRef = useRef<monacoEditor.IStandaloneCodeEditor | null>(null)
   const monacoRef = useRef<MonacoInstance | null>(null)
   const editorAdapterRef = useRef<EditorAdapter | null>(null)
@@ -74,7 +75,7 @@ function EditorPane() {
   const completionDisposablesRef = useRef<{ dispose(): void }[]>([])
   const aiEnabledKeyRef = useRef<{ set(value: boolean): void } | null>(null)
   const mouseSelectionStartedRef = useRef(false)
-  const pendingMouseSelectionRef = useRef<monacoEditor.ISelection | null>(null)
+  const pendingMouseSelectionRef = useRef<Selection | null>(null)
   const registerClickNavigation = useClickNavigation()
   const { runSpellCheck } = useSpelling({
     enabled: spellCheckEnabled,
@@ -106,8 +107,9 @@ function EditorPane() {
   useSectionHighlight({ editorRef, monacoRef })
   const { handleDrop: handleSmartImageDrop } = useSmartImageDrop()
   const [showMathPreview, setShowMathPreview] = useState(true)
-  const [selectionAiToolbarSelection, setSelectionAiToolbarSelection] =
-    useState<monacoEditor.ISelection | null>(null)
+  const [selectionAiToolbarSelection, setSelectionAiToolbarSelection] = useState<Selection | null>(
+    null
+  )
   const [isUpdatingAiContext, setIsUpdatingAiContext] = useState(false)
   const [isNarrow, setIsNarrow] = useState(false)
   const editorContainerRef = useRef<HTMLDivElement | null>(null)

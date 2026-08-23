@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { openProject } from '../../renderer/utils/openProject'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
+import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 import type { DirectoryEntry } from '../../shared/types'
 
 const projectRoot = '/workspace/project'
@@ -37,11 +38,11 @@ describe('openProject', () => {
       filePath: `${projectRoot}/main.tex`,
       content: '\\section{Intro}'
     })
-    vi.mocked(window.api.watchDirectory).mockResolvedValue(undefined)
+    vi.mocked(window.api.watchDirectory).mockResolvedValue({ success: true })
     vi.mocked(window.api.gitIsRepo).mockResolvedValue(false)
     vi.mocked(window.api.findBibInProject).mockResolvedValue([])
     vi.mocked(window.api.scanLabels).mockResolvedValue([])
-    vi.mocked(window.api.addRecentProject).mockResolvedValue({})
+    vi.mocked(window.api.addRecentProject).mockResolvedValue(useSettingsStore.getState().settings)
   })
 
   it('does not auto-open the first tex file when disabled', async () => {
