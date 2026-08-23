@@ -5,13 +5,7 @@ import { defineConfig } from 'vite'
 const tauriHost = process.env.TAURI_DEV_HOST
 const isTauriDebug = process.env.TAURI_ENV_DEBUG === 'true'
 
-/**
- * Renderer-only build shared by the Tauri shell.
- *
- * Electron continues to use electron.vite.config.ts while the migration is in
- * progress. Keeping a standalone Vite entry lets both desktop runtimes render
- * the same React application without coupling the renderer to either backend.
- */
+/** Renderer build embedded by the Tauri shell. */
 export default defineConfig({
   root: resolve(__dirname, 'src/renderer'),
   clearScreen: false,

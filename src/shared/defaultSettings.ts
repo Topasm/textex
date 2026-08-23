@@ -26,6 +26,7 @@ export function createDefaultUserSettings(): UserSettings {
     zoteroEnabled: false,
     zoteroPort: 23119,
     zoteroCollection: '',
+    citeOnlineToZotero: false,
     aiEnabled: false,
     aiProvider: '',
     aiApiKey: '',
@@ -75,6 +76,7 @@ export function sanitizeUserSettings(input: unknown): Partial<UserSettings> {
     })
   }
   delete settings.minimap
+  delete settings.aiApiKey
   if ('rendererSession' in settings) {
     const rendererSession = sanitizeRendererSessionSnapshot(settings.rendererSession)
     if (rendererSession) {

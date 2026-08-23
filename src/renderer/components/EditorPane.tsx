@@ -32,6 +32,11 @@ import { SelectionAiToolbar } from './editor/SelectionAiToolbar'
 import { getAiContextStatus, updateCurrentDocumentAiContext } from '../services/aiContext'
 import { configureMonacoLanguages, getMonacoTheme } from '../data/monacoConfig'
 import { generateFigureSnippet } from '../utils/figureSnippet'
+import {
+  addReferenceAndBuildCitation,
+  parseReferenceDragData,
+  TEXTEX_REFERENCE_MIME
+} from './research/referenceActions'
 import type { EditorAdapter } from '../editor/EditorAdapter'
 import { MonacoEditorAdapter } from '../editor/MonacoEditorAdapter'
 import { setActiveEditorAdapter } from '../editor/activeEditorAdapter'
@@ -426,9 +431,41 @@ function EditorPane() {
             return
           }
 
-          const text = e.dataTransfer.getData('text/plain')
           const editorAdapter = editorAdapterRef.current
-          if (!text || !editorAdapter) return
+          if (!editorAdapter) return
+
+          const referenceData = e.dataTransfer.getData(TEXTEX_REFERENCE_MIME)
+          if (referenceData) {
+            const payload = parseReferenceDragData(referenceData)
+            const targetPosition = editorAdapter.getPositionAtClientPoint(e.clientX, e.clientY)
+            if (!payload || !targetPosition) return
+            const targetSnapshot = editorAdapter.materializeSnapshot()
+            try {
+              const citation = await addReferenceAndBuildCitation(payload)
+              const currentSnapshot = editorAdapter.materializeSnapshot()
+              if (
+                editorAdapterRef.current !== editorAdapter ||
+                currentSnapshot.documentId !== targetSnapshot.documentId ||
+                currentSnapshot.engineRevision !== targetSnapshot.engineRevision
+              )
+                return
+              editorAdapter.applyEdits('reference-drop', [
+                {
+                  range: { start: targetPosition, end: targetPosition },
+                  text: citation,
+                  forceMoveMarkers: true
+                }
+              ])
+              editorAdapter.setPosition(targetPosition)
+              editorAdapter.focus()
+            } catch (error) {
+              console.error('ReferenceDrop: Failed to add reference', error)
+            }
+            return
+          }
+
+          const text = e.dataTransfer.getData('text/plain')
+          if (!text) return
 
           const targetPosition = editorAdapter.getPositionAtClientPoint(e.clientX, e.clientY)
           if (targetPosition) {

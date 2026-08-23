@@ -9,7 +9,8 @@ import {
   Search,
   FolderOpen,
   Terminal,
-  Files
+  Files,
+  Globe2
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useEditorStore } from '../store/useEditorStore'
@@ -29,7 +30,8 @@ import {
   ZoteroSearchPanel,
   PdfSearchPanel,
   TexSearchPanel,
-  ProjectFileSearchPanel
+  ProjectFileSearchPanel,
+  OnlineSearchPanel
 } from './omnisearch-panels'
 import type {
   SearchMode,
@@ -39,9 +41,15 @@ import type {
   TexSearchResult,
   ProjectFileSearchResult
 } from './omnisearch-panels'
-import type { BibEntry, RecentProject, ZoteroSearchResult } from '../../shared/types'
+import type {
+  BibEntry,
+  OnlineReference,
+  RecentProject,
+  ZoteroSearchResult
+} from '../../shared/types'
 import { searchProjectFiles } from '../services/projectIndex'
 import { getDesktopCapabilities } from '../platform/capabilities'
+import { addReferenceAtCursor } from './research/referenceActions'
 
 const MODE_CONFIGS: Record<SearchMode, ModeConfig> = {
   file: {
@@ -61,6 +69,12 @@ const MODE_CONFIGS: Record<SearchMode, ModeConfig> = {
     placeholder: 'omniSearch.searchZotero',
     label: 'omniSearch.zotero',
     shortcut: '/z'
+  },
+  online: {
+    icon: Globe2,
+    placeholder: 'omniSearch.searchOnline',
+    label: 'omniSearch.online',
+    shortcut: '/o'
   },
   pdf: {
     icon: FileSearch,
@@ -82,8 +96,14 @@ const SLASH_PREFIXES: Record<string, SearchMode> = {
   '/files': 'file',
   '/c': 'cite',
   '/cite': 'cite',
+  '/r': 'cite',
+  '/ref': 'cite',
+  '/references': 'cite',
   '/z': 'zotero',
   '/zotero': 'zotero',
+  '/o': 'online',
+  '/online': 'online',
+  '/paper': 'online',
   '/p': 'pdf',
   '/pdf': 'pdf',
   '/t': 'tex',
@@ -142,7 +162,6 @@ export function OmniSearch({
   const omniSearchFocusMode = useUiStore((s) => s.omniSearchFocusMode)
   const pdfMatchCount = usePdfStore((s) => s.pdfMatchCount)
   const pdfCurrentMatch = usePdfStore((s) => s.pdfCurrentMatch)
-  const projectFileSearchEnabled = typeof window.api.getProjectIndex === 'function'
   const availableHomeCommands = useMemo(
     () =>
       HOME_SLASH_COMMANDS.filter(
@@ -162,6 +181,8 @@ export function OmniSearch({
 
   // Cite/Zotero state
   const [zoteroResults, setZoteroResults] = useState<ZoteroSearchResult[]>([])
+  const [onlineResults, setOnlineResults] = useState<OnlineReference[]>([])
+  const [onlineLoading, setOnlineLoading] = useState(false)
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set())
   const [highlightedIndex, setHighlightedIndex] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -212,6 +233,7 @@ export function OmniSearch({
     setHomeHighlightedIndex(0)
     setSelectedKeys(new Set())
     setZoteroResults([])
+    setOnlineResults([])
     setTexResults([])
     setLoading(false)
   }, [projectRoot])
@@ -367,7 +389,7 @@ export function OmniSearch({
       if (spaceIdx > 0) {
         const prefix = value.slice(0, spaceIdx).toLowerCase()
         const newMode = SLASH_PREFIXES[prefix]
-        if (newMode && (newMode !== 'file' || projectFileSearchEnabled)) {
+        if (newMode) {
           setMode(newMode)
           setSearchTerm(value.slice(spaceIdx + 1))
           return
@@ -375,7 +397,7 @@ export function OmniSearch({
       }
       setSearchTerm(value)
     },
-    [isHomeMode, projectFileSearchEnabled]
+    [isHomeMode]
   )
 
   // Reset state on mode change (editor mode only)
@@ -392,6 +414,8 @@ export function OmniSearch({
     setHighlightedIndex(0)
     setIsDropdownOpen(mode === 'pdf' && initialTerm.length > 0)
     setZoteroResults([])
+    setOnlineResults([])
+    setOnlineLoading(false)
     setTexResults([])
     setLoading(false)
   }, [mode, isHomeMode])
@@ -451,6 +475,49 @@ export function OmniSearch({
     }, 300)
     return () => clearTimeout(timer)
   }, [isHomeMode, mode, searchTerm, zoteroPort, zoteroEnabled])
+
+  // ---- ONLINE MODE: Debounced Crossref + arXiv search ----
+  const onlineSearchGenRef = useRef(0)
+  useEffect(() => {
+    if (isHomeMode || mode !== 'online') return
+    const normalized = searchTerm.trim()
+    if (normalized.length < 2) {
+      setOnlineResults([])
+      setOnlineLoading(false)
+      setIsDropdownOpen(false)
+      return
+    }
+    setOnlineLoading(true)
+    const generation = ++onlineSearchGenRef.current
+    const timer = setTimeout(async () => {
+      try {
+        const results = await window.api.researchSearchOnline(normalized)
+        if (onlineSearchGenRef.current !== generation) return
+        setOnlineResults(results)
+        setHighlightedIndex(0)
+        setIsDropdownOpen(true)
+      } catch (error) {
+        if (onlineSearchGenRef.current !== generation) return
+        setOnlineResults([])
+        logError('OmniSearch:onlineReferences', error)
+        setIsDropdownOpen(true)
+      } finally {
+        if (onlineSearchGenRef.current === generation) setOnlineLoading(false)
+      }
+    }, 350)
+    return () => clearTimeout(timer)
+  }, [isHomeMode, mode, searchTerm])
+
+  const addOnlineReference = useCallback(async (reference: OnlineReference) => {
+    try {
+      await addReferenceAtCursor({ source: 'online', reference })
+      setSearchTerm('')
+      setOnlineResults([])
+      setIsDropdownOpen(false)
+    } catch (error) {
+      logError('OmniSearch:addOnlineReference', error)
+    }
+  }, [])
 
   // ---- PDF MODE: Drive usePdfSearch via store ----
   useEffect(() => {
@@ -656,6 +723,23 @@ export function OmniSearch({
           e.preventDefault()
           handlePdfNext()
         }
+      } else if (mode === 'online') {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault()
+          if (onlineResults.length) {
+            setHighlightedIndex((previous) => (previous + 1) % onlineResults.length)
+          }
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault()
+          if (onlineResults.length) {
+            setHighlightedIndex(
+              (previous) => (previous - 1 + onlineResults.length) % onlineResults.length
+            )
+          }
+        } else if (e.key === 'Enter' && onlineResults[highlightedIndex]) {
+          e.preventDefault()
+          void addOnlineReference(onlineResults[highlightedIndex])
+        }
       } else if (mode === 'tex') {
         if (e.key === 'ArrowDown') {
           e.preventDefault()
@@ -689,6 +773,7 @@ export function OmniSearch({
       projectFileResults,
       citeResults,
       zoteroResults,
+      onlineResults,
       texResults,
       highlightedIndex,
       insertCitation,
@@ -698,7 +783,8 @@ export function OmniSearch({
       handlePdfPrev,
       handleTexNext,
       handleTexPrev,
-      handleProjectFileSelect
+      handleProjectFileSelect,
+      addOnlineReference
     ]
   )
 
@@ -777,6 +863,19 @@ export function OmniSearch({
       )
     }
 
+    if (mode === 'online') {
+      return (
+        <OnlineSearchPanel
+          loading={onlineLoading}
+          results={onlineResults}
+          searchTerm={searchTerm}
+          highlightedIndex={highlightedIndex}
+          setHighlightedIndex={setHighlightedIndex}
+          addReference={(reference) => void addOnlineReference(reference)}
+        />
+      )
+    }
+
     if (mode === 'pdf') {
       return (
         <PdfSearchPanel
@@ -820,7 +919,9 @@ export function OmniSearch({
                 zoteroResults.length > 0 ||
                 loading ||
                 searchTerm.length > 2
-              : texResults.length > 0 || searchTerm.length > 0)
+              : mode === 'online'
+                ? onlineResults.length > 0 || onlineLoading || searchTerm.length > 1
+                : texResults.length > 0 || searchTerm.length > 0)
 
   return (
     <div
@@ -843,23 +944,21 @@ export function OmniSearch({
           </button>
           {isModeMenuOpen && (
             <div className="omni-search-mode-menu">
-              {(Object.keys(MODE_CONFIGS) as SearchMode[])
-                .filter((mode) => mode !== 'file' || projectFileSearchEnabled)
-                .map((m) => {
-                  const cfg = MODE_CONFIGS[m]
-                  const Icon = cfg.icon
-                  return (
-                    <button
-                      key={m}
-                      className={`omni-search-mode-item${m === mode ? ' active' : ''}`}
-                      onClick={() => handleModeSelect(m)}
-                    >
-                      <Icon size={14} />
-                      <span>{t(cfg.label)}</span>
-                      <kbd>{cfg.shortcut}</kbd>
-                    </button>
-                  )
-                })}
+              {(Object.keys(MODE_CONFIGS) as SearchMode[]).map((m) => {
+                const cfg = MODE_CONFIGS[m]
+                const Icon = cfg.icon
+                return (
+                  <button
+                    key={m}
+                    className={`omni-search-mode-item${m === mode ? ' active' : ''}`}
+                    onClick={() => handleModeSelect(m)}
+                  >
+                    <Icon size={14} />
+                    <span>{t(cfg.label)}</span>
+                    <kbd>{cfg.shortcut}</kbd>
+                  </button>
+                )
+              })}
             </div>
           )}
         </div>
@@ -882,6 +981,7 @@ export function OmniSearch({
             (zoteroResults.length > 0 || (!zoteroEnabled && searchTerm.length > 0))
           )
             setIsDropdownOpen(true)
+          else if (mode === 'online' && searchTerm.length > 1) setIsDropdownOpen(true)
           else if (mode === 'tex' && texResults.length > 0) setIsDropdownOpen(true)
           else if (mode === 'pdf' && searchTerm.length > 0) setIsDropdownOpen(true)
         }}

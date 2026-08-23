@@ -1,239 +1,97 @@
-# TextEx — System Architecture
+# TextEx System Architecture
 
-## Overview
+TextEx is a Tauri 2 desktop application with one React renderer and one Rust
+native backend. Tectonic is bundled as a sidecar. The CLI and MCP server remain
+standalone Node.js processes and reuse pure modules under `src/shared/`.
 
-TextEx is a self-contained desktop LaTeX editor built on Electron. It provides a
-split-pane interface (code left, PDF preview right) and bundles the Tectonic LaTeX
-engine so users never need to install TeX Live, MiKTeX, or any other distribution.
+## Runtime boundary
 
----
-
-## Process Model
-
-Electron applications run two kinds of processes. TextEx uses them as follows:
-
-### Main Process (Node.js)
-
-Runs in a Node.js environment with full OS access.
-
-| Responsibility | Detail |
-|---|---|
-| Window lifecycle | Create, resize, close the BrowserWindow |
-| File I/O | Read/write `.tex` files via `fs` / `dialog` |
-| Child process management | Spawn the bundled `tectonic` binary |
-| IPC hub | Handle `invoke` / `send` messages from the renderer |
-
-Security constraint: `nodeIntegration` is **disabled** in the renderer.
-All renderer <-> main communication goes through a Context Bridge (preload script).
-
-### Renderer Process (Chromium + React)
-
-Runs inside a sandboxed Chromium tab.
-
-| Responsibility | Detail |
-|---|---|
-| UI | React component tree rendered with Vite HMR |
-| Code editing | Monaco Editor (`@monaco-editor/react`) |
-| PDF display | `react-pdf` (PDF.js wrapper) |
-| State | 6 split Zustand stores: project, editor, compile, PDF, settings, UI |
-
-### Sidecar Binary: Tectonic (LaTeX Compiler)
-
-- Rust-compiled, single executable.
-- Stored in `resources/bin/{platform}`.
-- On first compile, Tectonic downloads any missing LaTeX packages to a local
-  cache (`~/.cache/Tectonic` on Linux/macOS, `%LOCALAPPDATA%\Tectonic` on Windows).
-- After the initial cache is populated, compilation works fully offline.
-
-### Sidecar Binary: TexLab (Language Server)
-
-- Rust-compiled LaTeX language server implementing the Language Server Protocol.
-- **License:** GPL-3.0 — runs as a **separate process** communicating solely via
-  the standardized LSP protocol over stdio. This is an "aggregate" distribution;
-  TexLab's GPL does not apply to TextEx (MIT).
-- Stored in `resources/bin/{platform}` alongside Tectonic.
-- Provides: real-time diagnostics, completions, hover documentation, go-to-definition,
-  document symbols/outline, formatting, rename, and **code folding** across files.
-- Managed by `TexLabManager` singleton (`src/main/texlab.ts`) with auto-restart
-  (up to 3 retries with backoff).
-- Users can override the bundled binary via the `texlabPath` setting.
-- Bundled notices in `resources/licenses/` include the TexLab GPL text/notice,
-  generated third-party notices, and Electron/Chromium runtime notices.
-- These notice files are surfaced in-app via `Help > Open Source Licenses`.
-
-**IPC flow for LSP:**
-```
-Renderer (Monaco + LSP client)
-    ↕ window.api.lsp*  (contextBridge)
-Main Process (TexLabManager)
-    ↕ stdio (Content-Length headers)
-TexLab child process
-```
-
-### CLI Process
-
-A standalone Node.js entry point (`src/cli/index.ts`) that reuses shared compiler
-and pandoc logic without any Electron dependencies.
-
-| Responsibility | Detail |
-|---|---|
-| Argument parsing | `commander` routes subcommands (compile, init, export, templates) |
-| Compilation | Delegates to `src/shared/compiler.ts` (no `BrowserWindow`, no `app`) |
-| File watching | `chokidar` for `--watch` mode |
-| Export | Delegates to `src/shared/pandoc.ts` |
-
-### MCP Server
-
-A stdio-based [Model Context Protocol](https://modelcontextprotocol.io/) server
-(`src/mcp/server.ts`) that exposes TextEx compilation as AI-callable tools.
-
-| Responsibility | Detail |
-|---|---|
-| Transport | stdio (stdin/stdout JSON-RPC) via `@modelcontextprotocol/sdk` |
-| `compile_latex` tool | Accepts file path, returns `{ success, pdfPath?, error? }` |
-| `get_compile_log` tool | Returns last compile's stdout/stderr |
-| Compilation | Delegates to `src/shared/compiler.ts` |
-
----
-
-## IPC Contract
-
-See [IPC_SPEC.md](IPC_SPEC.md) for the full channel reference with payloads, handler
-logic, and type declarations.
-
-Channel namespaces: `fs:*`, `latex:*`, `lsp:*`, `synctex:*`, `settings:*`,
-`bib:*`, `spell:*`, `git:*`, `update:*`, `export:*`, `zotero:*`.
-
----
-
-## Data Flow: Auto-Compile Loop
-
-```
- User types in Monaco
+```text
+React / Monaco / PDF.js
+        |
+        | typed window.api (DesktopApi)
+        v
+renderer/platform/tauriApi.ts
+        |
+        | Tauri invoke + Channel
+        v
+src-tauri/src/commands/*       thin request adapters
         |
         v
- Debounce timer (1 000 ms idle)
+src-tauri/src/services/*       filesystem, compile, index, Git, SyncTeX, ...
         |
-        v
- Auto-save file to disk
-        |
-        +-- Save fails --> Log error, abort compile
-        |
-        v
- Renderer sends `latex:compile` via IPC
-        |
-        v
- Main reads file, resolves magic comment (%! TeX root = ...)
-        |
-        v
- Main kills any active compile, spawns `tectonic -X compile <rootFile>`
-        |                                        |
-        |                  +---------------------+
-        |                  v                     v
-        |           stdout/stderr           exit code / signal
-        |           streamed to             checked
-        |           `latex:log`
-        |                                        |
-        v                                        v
- On exit code 0:                          On non-zero exit:
-  Read .pdf -> Base64 -> send              Send error + logs
-  `latex:compile` result                   `latex:compile` rejection
-        |                                        |
-        v                                        v
- react-pdf re-renders                    Error panel shows output
- (preserves scroll position)             On signal (cancelled):
-                                          Silently ignored
+        +---- Tectonic sidecar
+        +---- project files and .textex metadata
+        +---- OS dialogs, updater, and external URL opener
 ```
 
-### CLI Compile
+UI components and feature hooks do not import `@tauri-apps/api` directly. The
+adapter is installed before React mounts and rejects browser-only execution.
+Command names live in `src/shared/tauriCommands.ts`; request/response types live
+in shared TypeScript contracts and Rust models.
 
-```
- textex compile <file.tex>
-        |
-        v
- Resolve Tectonic binary (src/shared/compiler.ts)
-   - No app.isPackaged — uses env var or CLI flag for dev/prod detection
-        |
-        v
- Spawn tectonic -X compile <file>
-        |                       |
-        v                       v
- stdout/stderr              exit code
- printed to terminal        0 = success, non-zero = error
- (unless --quiet)
-        |
-        v
- --watch? Re-run on file change (chokidar)
-```
+## Renderer ownership
 
-### MCP Compile
+- Monaco models own editable document text.
+- `DocumentModel` owns document identity, revision, and saved revision.
+- `DocumentRegistry` binds file paths to models and materializes text only for
+  save, compile, and full-document analysis.
+- Domain Zustand stores own UI metadata, never a second canonical document
+  string. Components use fine-grained selectors.
+- Async compile, PDF, outline, watcher, and index results publish only when
+  their document revision or generation is still current.
 
-```
- AI client sends JSON-RPC request
-        |
-        v
- MCP server (src/mcp/server.ts) receives tool call
-        |
-        +-- compile_latex: file path
-        |       |
-        |       v
-        |   src/shared/compiler.ts — spawn Tectonic
-        |       |
-        |       v
-        |   Return { success: true, pdfPath } or { success: false, error }
-        |
-        +-- get_compile_log:
-                |
-                v
-            Return buffered stdout/stderr from last compile
-```
+## Native ownership
 
----
+Tauri commands are grouped by domain and delegate to services. `AppState` holds
+the active canonical project root and native service state. Every path-bearing
+operation validates absolute paths, canonical containment, symlinks, file type,
+and size before reading or writing. Multi-file writes use staged files and
+atomic replacement where the platform permits it.
 
-## Security Model
+The project index scans metadata without materializing file contents, excludes
+hidden/noisy/symlinked trees, and applies watcher deltas by generation. FileTree
+and PDF pages virtualize their DOM output.
 
-1. **Renderer sandbox** -- `nodeIntegration: false`, `contextIsolation: true`.
-2. **Preload Context Bridge** -- only the explicitly exposed API surface is
-   available to renderer code. No raw `require('child_process')` access.
-3. **IPC input validation** -- `validateFilePath()` in `ipc.ts` rejects
-   non-string, empty, and relative file paths on `fs:save` and `latex:compile`
-   handlers, preventing path traversal from the renderer.
-4. **External URL restriction** -- `setWindowOpenHandler` in `main.ts` only
-   allows `shell.openExternal` for `http:` and `https:` protocols, blocking
-   `file:`, `javascript:`, and other potentially dangerous schemes.
-5. **Listener management** -- The preload script tracks the current `latex:log`
-   listener and removes the previous one before attaching a new one, preventing
-   listener leaks.
-6. **Binary integrity** -- Tectonic and TexLab binaries are shipped inside
-   `extraResources` and are not user-writable at runtime on macOS/Linux
-   (packaged app is read-only).
-7. **Error boundary** -- A React `ErrorBoundary` component wraps the entire app
-   to catch rendering errors and display a recovery UI.
-8. **LSP isolation** -- TexLab runs as a separate child process communicating
-   via stdio. No network ports are opened. The LSP client gracefully degrades
-   if TexLab is unavailable.
+## Compilation pipeline
 
----
+1. The renderer snapshots the active `DocumentModel` revision.
+2. The snapshot is saved and marked clean only if that exact revision remains
+   current.
+3. The renderer submits a typed compile request with document and revision IDs.
+4. Rust resolves the magic root, schedules Tectonic with latest-wins priority,
+   and streams bounded log/diagnostic events through a Tauri `Channel`.
+5. Only a matching response becomes the pending PDF generation.
+6. The preview swaps generations after the target page is ready, preserving the
+   currently displayed PDF during compilation and rendering.
 
-## Platform Binary Resolution
+## Security model
 
-```
-isDev?
-  +- yes -> <project-root>/resources/bin/<platformDir>/<arch>/<binary>, then legacy platform path
-  +- no  -> process.resourcesPath/bin/<arch>/<binary>, then legacy bin path
+- Tauri global injection is disabled; only imported APIs are used.
+- The main window receives a generated allow-list of application commands.
+- CSP blocks remote scripts, arbitrary connections, frames, and objects.
+- External URLs are limited to `https`, `http`, and `mailto` and are opened
+  without a shell.
+- Zotero traffic is loopback-only with redirect, timeout, and size limits.
+- ZIP templates reject traversal, links, excessive entries, and decompression
+  limits.
+- The updater requires an embedded public key and signed platform artifacts.
+- AI API keys are migrated out of renderer/local settings into a mode-0600
+  native credential file. Transformation CLIs run in an app-cache workspace;
+  Claude tools are disabled and Codex uses read-only/no-approval isolation.
+- Embedded terminal links return through the validated native URL opener.
 
-process.platform
-  +- win32  -> platformDir: win, binary: tectonic.exe / texlab.exe
-  +- darwin -> platformDir: mac, binary: tectonic / texlab
-  +- linux  -> platformDir: linux, binary: tectonic / texlab
-```
+## CLI and MCP
 
-**TexLab resolution order:**
-1. Custom user path (`texlabPath` setting)
-2. Bundled binary (`resources/bin/{platform}/texlab`)
-3. Fallback to system PATH (`texlab`)
+`src/cli/` and `src/mcp/` are not desktop backends. They use Node.js only in
+their own processes and reuse pure compiler, parser, and export modules from
+`src/shared/`. No renderer or Tauri module may be imported into shared code.
 
-**CLI / MCP note:** The shared compiler (`src/shared/compiler.ts`) uses a
-parameterized dev/prod detection via `isDev`/`resourcesPath`/`devBasePath`
-options, allowing the same binary resolution logic to work in Electron, CLI,
-and MCP contexts.
+## Current capability scope
+
+Filesystem, compilation, PDF delivery, SyncTeX, Git, templates, settings,
+history, bibliography/Zotero and online research, spellcheck, export, project
+metadata, updater, performance sampling, AI provider/CLI execution, TexLab
+process management, and the embedded PTY are implemented in Rust. TexLab is an
+optional external executable discovered from `TEXTEX_TEXLAB_PATH` or `PATH`;
+it is not bundled with the application.

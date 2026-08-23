@@ -4,11 +4,15 @@ mod models;
 mod services;
 mod state;
 
+use services::ai::AiState;
 use services::history::HistoryState;
+use services::lsp::LspState;
 use services::package_data::PackageDataState;
 use services::project_data::ProjectDataState;
 use services::project_index::ProjectIndexState;
+use services::pty::PtyState;
 use services::references::ReferenceIndexState;
+use services::research::ResearchState;
 use services::runtime::PerformanceState;
 use services::settings::SettingsState;
 use services::spellcheck::SpellcheckState;
@@ -19,22 +23,115 @@ use services::watcher::DirectoryWatcherState;
 use services::zotero::ZoteroSyncState;
 use state::AppState;
 
+const PACKAGE_SMOKE_ENV: &str = "TEXTEX_PACKAGE_SMOKE";
+const EMBEDDED_TAURI_CONFIG: &str = include_str!("../tauri.conf.json");
+
+fn package_smoke_requested() -> bool {
+    std::env::var_os(PACKAGE_SMOKE_ENV).is_some_and(|value| value == "1")
+}
+
+fn validate_embedded_package_config(config: &str) -> Result<(), String> {
+    let config: serde_json::Value = serde_json::from_str(config)
+        .map_err(|error| format!("embedded tauri.conf.json is invalid: {error}"))?;
+    if config.get("identifier").and_then(serde_json::Value::as_str) != Some("com.topasm.textex") {
+        return Err("embedded application identifier is invalid".to_owned());
+    }
+    let updater = config
+        .pointer("/plugins/updater")
+        .and_then(serde_json::Value::as_object)
+        .ok_or_else(|| "embedded updater configuration is missing".to_owned())?;
+    if !updater
+        .get("pubkey")
+        .is_some_and(serde_json::Value::is_string)
+    {
+        return Err("embedded updater public-key field is missing".to_owned());
+    }
+    let external_bins = config
+        .pointer("/bundle/externalBin")
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(|| "embedded externalBin configuration is missing".to_owned())?;
+    if !external_bins
+        .iter()
+        .any(|value| value.as_str() == Some("binaries/tectonic"))
+    {
+        return Err("embedded Tectonic sidecar configuration is missing".to_owned());
+    }
+    let resources = config
+        .pointer("/bundle/resources")
+        .and_then(serde_json::Value::as_object)
+        .ok_or_else(|| "embedded resource configuration is missing".to_owned())?;
+    if !resources
+        .iter()
+        .any(|(source, target)| source.contains("tectonic-cache") || target == "tectonic-cache/")
+    {
+        return Err("embedded Tectonic cache resource configuration is missing".to_owned());
+    }
+    Ok(())
+}
+
+fn validate_packaged_sidecar() -> Result<(), String> {
+    let executable = std::env::current_exe()
+        .map_err(|error| format!("cannot resolve packaged executable: {error}"))?;
+    let directory = executable
+        .parent()
+        .ok_or_else(|| "packaged executable has no parent directory".to_owned())?;
+    let sidecar = directory.join(if cfg!(windows) {
+        "tectonic.exe"
+    } else {
+        "tectonic"
+    });
+    let metadata = std::fs::symlink_metadata(&sidecar).map_err(|error| {
+        format!(
+            "packaged Tectonic sidecar is missing at {}: {error}",
+            sidecar.to_string_lossy()
+        )
+    })?;
+    if metadata.file_type().is_symlink() || !metadata.is_file() {
+        return Err(format!(
+            "packaged Tectonic sidecar is not a regular file: {}",
+            sidecar.to_string_lossy()
+        ));
+    }
+    Ok(())
+}
+
+fn run_package_smoke() -> Result<(), String> {
+    validate_embedded_package_config(EMBEDDED_TAURI_CONFIG)?;
+    validate_packaged_sidecar()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    if package_smoke_requested() {
+        match run_package_smoke() {
+            Ok(()) => println!("TextEx package smoke: ok"),
+            Err(error) => {
+                eprintln!("TextEx package smoke: failed: {error}");
+                std::process::exit(2);
+            }
+        }
+        return;
+    }
     let updater_plugin = tauri_plugin_updater::Builder::new()
         .pubkey(services::updater::updater_public_key())
         .build();
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(updater_plugin)
+        .menu(services::menu::build)
+        .on_menu_event(services::menu::handle_event)
         .manage(AppState::default())
+        .manage(AiState::default())
         .manage(DirectoryWatcherState::default())
         .manage(SettingsState::default())
         .manage(PackageDataState::default())
         .manage(HistoryState::default())
+        .manage(LspState::default())
         .manage(ProjectIndexState::default())
+        .manage(PtyState::default())
         .manage(ProjectDataState::default())
         .manage(ReferenceIndexState::default())
+        .manage(ResearchState::default())
         .manage(PerformanceState::default())
         .manage(SpellcheckState::default())
         .manage(TemplateState::default())
@@ -42,11 +139,22 @@ pub fn run() {
         .manage(AppUpdaterState::default())
         .manage(ZoteroSyncState::default())
         .invoke_handler(tauri::generate_handler![
+            commands::ai::ai_generate,
+            commands::ai::ai_process,
+            commands::ai::ai_process_custom,
+            commands::ai::ai_update_context,
+            commands::ai::ai_save_api_key,
+            commands::ai::ai_has_api_key,
+            commands::ai::ai_check_cli,
+            commands::ai::ai_check_codex_cli,
+            commands::ai::ai_open_claude_terminal,
+            commands::ai::ai_open_codex_terminal,
             commands::filesystem::open_file,
             commands::filesystem::open_directory,
             commands::filesystem::read_directory,
             commands::filesystem::read_file,
             commands::filesystem::save_file,
+            commands::filesystem::write_file_binary,
             commands::filesystem::save_file_as,
             commands::filesystem::save_file_batch,
             commands::filesystem::create_file,
@@ -106,8 +214,24 @@ pub fn run() {
             commands::zotero::zotero_cite_cayw,
             commands::zotero::zotero_export_bibtex,
             commands::zotero::zotero_sync_collection,
+            commands::zotero::zotero_collections,
+            commands::zotero::zotero_add_to_project,
+            commands::zotero::zotero_save_online,
+            commands::research::research_search_online,
+            commands::research::research_add_online,
+            commands::research::research_load_config,
+            commands::research::research_save_config,
+            commands::pty::pty_create,
+            commands::pty::pty_write,
+            commands::pty::pty_resize,
+            commands::pty::pty_dispose,
+            commands::lsp::lsp_start,
+            commands::lsp::lsp_stop,
+            commands::lsp::lsp_send,
+            commands::lsp::lsp_status,
             commands::watcher::watch_directory,
             commands::watcher::unwatch_directory,
+            commands::watcher::deactivate_project,
             commands::settings::load_settings,
             commands::settings::save_settings,
             commands::settings::activate_project,
@@ -129,4 +253,26 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("failed to run TextEx Tauri application");
+}
+
+#[cfg(test)]
+mod package_smoke_tests {
+    use super::*;
+
+    #[test]
+    fn embedded_package_config_passes_smoke_validation() {
+        validate_embedded_package_config(EMBEDDED_TAURI_CONFIG).unwrap();
+    }
+
+    #[test]
+    fn package_config_requires_updater_sidecar_and_cache() {
+        let missing_updater = EMBEDDED_TAURI_CONFIG.replace("\"updater\"", "\"removed\"");
+        assert!(validate_embedded_package_config(&missing_updater).is_err());
+
+        let missing_sidecar = EMBEDDED_TAURI_CONFIG.replace("binaries/tectonic", "binaries/other");
+        assert!(validate_embedded_package_config(&missing_sidecar).is_err());
+
+        let missing_cache = EMBEDDED_TAURI_CONFIG.replace("tectonic-cache", "other-cache");
+        assert!(validate_embedded_package_config(&missing_cache).is_err());
+    }
 }

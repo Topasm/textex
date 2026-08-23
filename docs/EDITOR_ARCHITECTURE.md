@@ -1,9 +1,9 @@
 # TextEx 2.0 Editor Architecture
 
-이 문서는 TextEx 2.0 Phase 1의 editor 경계를 정의한다. Tauri command와 packaging은
-[TAURI_MIGRATION.md](TAURI_MIGRATION.md), 현재 Electron process model은
-[ARCHITECTURE.md](ARCHITECTURE.md)를 따른다. Phase 1에서는 editor engine을 교체하거나
-새 native capability를 추가하지 않는다.
+이 문서는 TextEx 2.0 Phase 1의 editor 경계를 정의한다. 현재 Tauri runtime과 command
+boundary는 [ARCHITECTURE.md](ARCHITECTURE.md), target별 bundle은
+[PACKAGING.md](PACKAGING.md)를 따른다. Phase 1에서는 editor engine을 교체하거나 새 native
+capability를 추가하지 않는다.
 
 ## Decision
 
@@ -11,9 +11,9 @@ Phase 1은 Monaco를 유지하면서 `EditorAdapter`와 `DocumentModel`을 도�
 참고하는 것은 buffer/snapshot/revision과 edit-aware anchor라는 구현 원칙뿐이다. GPUI나
 Zed source code를 가져오지 않는다.
 
-CodeMirror 6는 즉시 도입할 dependency가 아니라 Phase 8의 측정 대상이다. Tauri 이관과
-editor engine 교체를 같은 단계에서 진행하지 않는다. 이 원칙으로 회귀가 발생했을 때
-desktop runtime과 editor 중 어느 경계가 원인인지 분리할 수 있다.
+CodeMirror 6는 즉시 도입할 dependency가 아니라 Phase 8의 측정 대상이다. native backend
+확장과 editor engine 교체를 같은 단계에서 진행하지 않는다. 이 원칙으로 회귀가 발생했을
+때 desktop runtime과 editor 중 어느 경계가 원인인지 분리할 수 있다.
 
 ## Motivation
 
@@ -46,7 +46,7 @@ React / Zustand
 
 DocumentModel.snapshot(revision N)
        +-- spell/outline/package analysis
-       +-- TexLab synchronization
+       +-- revision-gated TexLab synchronization
        +-- save/compile request
 ```
 
@@ -138,8 +138,9 @@ Phase 1은 다음 순서의 작은 변경으로 진행한다.
    경로를 제거한다.
 5. **완료:** `useEditorStore`에서 full `content`, `openFiles[*].content`, raw Monaco editor
    instance와 controlled refresh state를 제거한다. PDF scroll sync도 adapter API를 사용한다.
-6. **진행 중:** spell, outline, package detection, TexLab didChange와 save/compile 입력을 revision
-   snapshot/delta contract로 전환한다.
+6. **완료:** spell, outline, package detection과 save/compile 입력을 revision
+   snapshot/delta contract로 전환하고 TexLab didChange 및 provider 결과도 현재
+   document revision에서만 반영한다.
 
 완료 조건은 기존 Monaco 기능과 keyboard/IME/undo behavior가 유지되고, async stale-result와
 save-race test가 통과하며, 지속 입력 시 React/Zustand에 전체 문서 문자열을 publish하지 않는
@@ -177,9 +178,9 @@ installer 크기와 비교하면 안 된다.
 
 ### Runtime measurement
 
-Runtime 계측은 개발 build에서 자동 활성화되고 production build에서는
-`TEXTEX_PERFORMANCE=1`일 때만 활성화된다. 활성화되면 renderer가 다음 값을 최대 2,000개
-sample의 bounded buffer에 기록한다.
+Runtime 계측은 개발 build에서 자동 활성화된다. production renderer에서는 WebView URL의
+`performance=1` query parameter가 있을 때만 활성화된다. 활성화되면 renderer가 다음 값을
+최대 2,000개 sample의 bounded buffer에 기록한다.
 
 | Metric | 시작/종료 지점 |
 | --- | --- |
@@ -190,16 +191,15 @@ sample의 bounded buffer에 기록한다.
 | `pdf.scrollFrame` | PDF scroll 중 연속 animation frame 간격 |
 | `renderer.longTask` | Chromium Long Tasks API가 보고한 renderer task |
 
-Electron에서는 `performance:memory` typed IPC가 `app.getAppMetrics()`를 직렬화하여 전체
-working set/private memory와 process별 값을 제공한다. renderer JS heap과 application
-memory는 시작 시점, 30초 간격, report 생성 직전에 수집한다. Tauri가 동일한 process
-memory contract를 구현하기 전까지 Tauri report에는 application memory가 비어 있을 수 있다.
+Tauri의 typed `getPerformanceMemory` command는 Rust `sysinfo` sampler로 application process
+tree의 working set/private estimate와 process별 값을 제공한다. renderer JS heap과
+application memory는 시작 시점, 30초 간격, report 생성 직전에 수집한다.
 
-Production 조건을 측정할 때는 다음처럼 build를 실행한다.
+release-mode Tauri shell에서 반복 측정할 때는 다음 명령을 사용한다. `preview`는 개발
+renderer를 사용하므로 runtime recorder가 자동 활성화된다.
 
 ```bash
-npm run build:electron
-TEXTEX_PERFORMANCE=1 npm run preview:electron
+npm run preview
 ```
 
 측정할 project를 열고 고정 fixture에서 입력, compile/PDF render와 scroll scenario를 수행한
@@ -226,8 +226,9 @@ startup cold run은 동일한 session fixture를 사용하고 compile은 cold-ca
 ## Monaco versus CodeMirror A/B Gate
 
 Phase 8에서 같은 commit, production build, OS/architecture와 fixture로 두 adapter를 비교한다.
-각 결과에는 commit, Node/runtime version, CPU, memory, OS, build command와 5회 cold-run의
-median을 함께 기록한다. typing frame/latency처럼 반복 sample이 있는 지표는 p95도 기록한다.
+각 결과에는 commit, Node/Rust/WebView version, CPU, memory, OS, build command와 5회
+cold-run의 median을 함께 기록한다. typing frame/latency처럼 반복 sample이 있는 지표는
+p95도 기록한다.
 
 | Scenario | 측정값 |
 | --- | --- |
@@ -252,16 +253,15 @@ typing p95가 회귀하지 않을 때만 별도 migration으로 제안한다. �
 ```text
 Phase 0  reproducible performance baseline
 Phase 1  EditorAdapter + DocumentModel, Monaco retained
-Phase 2  Tauri shell/filesystem parity
+Phase 2  Tauri shell/filesystem boundary (complete)
 Phase 3  Rust ProjectManager + watcher
 Phase 4  revision-aware CompileManager + Tectonic
 Phase 5  PDF delivery + virtualization
-Phase 6  TexLab manager and streaming
-Phase 7  PTY
+Phase 6  TexLab manager and bounded streaming (complete; executable optional)
+Phase 7  bounded native PTY (complete)
 Phase 8  Monaco/CodeMirror A/B decision
-Phase 9  Electron removal after platform/release parity
 ```
 
-현재 repository에는 Phase 2의 Tauri filesystem vertical slice가 먼저 존재한다. 이를
-되돌리지 않고 Phase 1 경계를 적용한 뒤 이후 service가 revision-aware snapshot을 소비하게
-한다. 구현 상태와 release 제한은 계속 [TAURI_MIGRATION.md](TAURI_MIGRATION.md)에 기록한다.
+현재 repository에는 Tauri filesystem, project index, compile, PDF, updater service가 존재한다.
+이를 되돌리지 않고 Phase 1 경계를 유지하면서 이후 service가 revision-aware snapshot을
+소비하게 한다. 현재 runtime 범위는 [ARCHITECTURE.md](ARCHITECTURE.md)에 기록한다.

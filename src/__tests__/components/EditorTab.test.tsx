@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { EditorTab } from '../../renderer/components/settings/EditorTab'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
@@ -14,20 +14,12 @@ describe('EditorTab', () => {
     }))
   })
 
-  it('renders the sidebar position selector and updates the store', () => {
+  it('keeps the navigator fixed and omits the legacy position selector', () => {
     render(<EditorTab />)
 
     expect(screen.queryByText('Minimap')).toBeInTheDocument()
 
-    const sidebarLabel = screen.getByText('Sidebar Position')
-    const row = sidebarLabel.closest('.settings-row')
-    const select = row?.querySelector('select')
-
-    expect(select).not.toBeNull()
-    expect(select).toHaveValue('left')
-
-    fireEvent.change(select as HTMLSelectElement, { target: { value: 'right' } })
-
-    expect(useSettingsStore.getState().settings.sidebarPosition).toBe('right')
+    expect(screen.queryByText('Sidebar Position')).not.toBeInTheDocument()
+    expect(useSettingsStore.getState().settings.sidebarPosition).toBe('left')
   })
 })

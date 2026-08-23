@@ -140,7 +140,9 @@ describe('LspClient', () => {
 
     const doInitializeSpy = vi
       .spyOn(
-        client as unknown as { doInitialize: (workspaceRoot: string) => Promise<void> },
+        client as unknown as {
+          doInitialize: (workspaceRoot: string, generation?: number) => Promise<void>
+        },
         'doInitialize'
       )
       .mockRejectedValue(new Error('initialize failed'))
@@ -158,12 +160,45 @@ describe('LspClient', () => {
 
     expect(windowApi.onLspMessage).toHaveBeenCalledOnce()
     expect(windowApi.lspStart).toHaveBeenCalledWith('/workspace/project')
-    expect(doInitializeSpy).toHaveBeenCalledWith('/workspace/project')
+    expect(doInitializeSpy).toHaveBeenCalledWith('/workspace/project', expect.any(Number))
     expect(registerProvidersSpy).not.toHaveBeenCalled()
     expect(windowApi.removeLspMessageListener).toHaveBeenCalledOnce()
     expect(windowApi.lspStop).toHaveBeenCalledOnce()
     expect(client.initialized).toBe(false)
     expect(client.currentDocUri()).toBe('')
+  })
+
+  it('does not initialize a superseded native startup', async () => {
+    let resolveStart: ((value: { success: boolean }) => void) | undefined
+    window.api = {
+      ...createWindowApiMock(),
+      lspStart: vi.fn(
+        () =>
+          new Promise<{ success: boolean }>((resolve) => {
+            resolveStart = resolve
+          })
+      )
+    } as unknown as Window['api']
+    const client = new LspClient()
+    const initialize = vi.spyOn(
+      client as unknown as {
+        doInitialize: (workspaceRoot: string, generation?: number) => Promise<void>
+      },
+      'doInitialize'
+    )
+
+    const pending = client.start(
+      '/workspace/old',
+      createMonacoMock([]),
+      () => null,
+      () => ''
+    )
+    client.stop()
+    resolveStart?.({ success: true })
+    await pending
+
+    expect(initialize).not.toHaveBeenCalled()
+    expect(client.initialized).toBe(false)
   })
 
   it('opens the current file immediately after successful startup', async () => {

@@ -25,6 +25,10 @@ export const SIDEBAR_DEFAULT_WIDTH = 240
 export const SIDEBAR_WIDTH_MIN = 150
 export const SIDEBAR_WIDTH_MAX = 500
 
+export const RESEARCH_PANEL_DEFAULT_WIDTH = 380
+export const RESEARCH_PANEL_WIDTH_MIN = 320
+export const RESEARCH_PANEL_WIDTH_MAX = 520
+
 // ── Export formats ──────────────────────────────────────────
 export const EXPORT_FORMATS = [
   { name: 'HTML', ext: 'html' },

@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FolderTree, BookOpen, ListTree, StickyNote, Clock, GitBranch } from 'lucide-react'
+import { FolderTree, ListTree, StickyNote, Clock, GitBranch, PanelRightOpen } from 'lucide-react'
 import Toolbar from './components/Toolbar'
 import LogPanel from './components/LogPanel'
 import StatusBar from './components/StatusBar'
 import FileTree from './components/FileTree'
 import TabBar from './components/TabBar'
-import BibPanel from './components/BibPanel'
+import { ResearchPanel } from './components/ResearchPanel'
+import { BibliographyRegistrationDialog } from './components/research/BibliographyRegistrationDialog'
 import OutlinePanel from './components/OutlinePanel'
 import GitPanel from './components/GitPanel'
 import { TodoPanel } from './components/TodoPanel'
@@ -33,7 +34,7 @@ import type { SidebarView } from './store/useProjectStore'
 import { usePdfStore } from './store/usePdfStore'
 import { useUiStore } from './store/useUiStore'
 import { useSettingsStore } from './store/useSettingsStore'
-import { openProject } from './utils/openProject'
+import { deactivateProject, openProject } from './utils/openProject'
 import { errorMessage, logError } from './utils/errorMessage'
 import { isFeatureEnabled } from './utils/featureFlags'
 import { stopLspClient } from './lsp/lspClient'
@@ -55,9 +56,6 @@ const SettingsModal = lazy(() =>
 )
 const DraftModal = lazy(() =>
   import('./components/DraftModal').then((m) => ({ default: m.DraftModal }))
-)
-const AiAssistantModal = lazy(() =>
-  import('./components/AiAssistantModal').then((m) => ({ default: m.AiAssistantModal }))
 )
 const TemplateGallery = lazy(() => import('./components/TemplateGallery'))
 const TerminalPane = lazy(() =>
@@ -86,6 +84,7 @@ function App() {
   const isSidebarOpen = useProjectStore((s) => s.isSidebarOpen)
   const sidebarView = useProjectStore((s) => s.sidebarView)
   const sidebarWidth = useProjectStore((s) => s.sidebarWidth)
+  const isResearchPanelOpen = useProjectStore((s) => s.isResearchPanelOpen)
   const filePath = useEditorStore((s) => s.filePath)
   const projectRoot = useProjectStore((s) => s.projectRoot)
   const isGitRepo = useProjectStore((s) => s.isGitRepo)
@@ -94,14 +93,12 @@ function App() {
   const gitEnabled = isFeatureEnabled(settings, 'git')
   const autoHideSidebar = useSettingsStore((s) => s.settings.autoHideSidebar)
   const showStatusBar = useSettingsStore((s) => s.settings.showStatusBar)
-  const sidebarPosition = settings.sidebarPosition ?? 'left'
   const isTerminalPaneOpen = useUiStore((s) => s.isTerminalPaneOpen)
   const terminalPaneOpen = capabilities.pty && isTerminalPaneOpen
   const isTemplateGalleryOpen = useUiStore((s) => s.isTemplateGalleryOpen)
   const toggleTerminalPane = useUiStore((s) => s.toggleTerminalPane)
 
   const [isDraftModalOpen, setIsDraftModalOpen] = useState(false)
-  const [isAiAssistantOpen, setIsAiAssistantOpen] = useState(false)
   const [draftPrefill, setDraftPrefill] = useState<string | undefined>(undefined)
 
   const handleAiDraft = useCallback(
@@ -183,9 +180,9 @@ function App() {
   // ---- Close project ----
   const handleCloseProject = useCallback(async (): Promise<void> => {
     try {
-      await window.api.unwatchDirectory()
+      await deactivateProject()
     } catch (err) {
-      logError('App:unwatchDirectory', err)
+      logError('App:deactivateProject', err)
     }
     stopLspClient()
     // Reset all stores on project close
@@ -326,7 +323,6 @@ function App() {
   const iconSize = 14
   const allSidebarTabs: { key: SidebarView; label: string; icon: React.ReactNode }[] = [
     { key: 'files', label: t('sidebar.files'), icon: <FolderTree size={iconSize} /> },
-    { key: 'bib', label: t('sidebar.bib'), icon: <BookOpen size={iconSize} /> },
     { key: 'outline', label: t('sidebar.outline'), icon: <ListTree size={iconSize} /> },
     { key: 'todo', label: t('sidebar.notes'), icon: <StickyNote size={iconSize} /> },
     { key: 'timeline', label: t('sidebar.timeline'), icon: <Clock size={iconSize} /> },
@@ -361,7 +357,7 @@ function App() {
     handleSidebarWheel,
     slideAnim
   } = useDragResize({
-    sidebarPosition,
+    sidebarPosition: 'left',
     sidebarTabs: sidebarTabs.map((tab) => tab.key),
     terminalPaneOpen,
     terminalRatio
@@ -369,23 +365,13 @@ function App() {
 
   const showHomeScreen = !projectRoot
   const sidebarHandleStyle = autoHideSidebar
-    ? sidebarPosition === 'right'
-      ? { right: `${sidebarWidth}px`, left: 'auto' }
-      : { left: `${sidebarWidth}px`, right: 'auto' }
+    ? { left: `${sidebarWidth}px`, right: 'auto' }
     : undefined
-  const sidebarWrapperClass = `sidebar-wrapper sidebar-${sidebarPosition}${autoHideSidebar ? ' sidebar-auto-hide' : ''}`
+  const sidebarWrapperClass = `sidebar-wrapper sidebar-left${autoHideSidebar ? ' sidebar-auto-hide' : ''}`
   const sidebarElement = (
     <div className={sidebarWrapperClass}>
-      {sidebarPosition === 'right' && (
-        <div
-          className={`sidebar-resize-handle sidebar-${sidebarPosition}`}
-          style={sidebarHandleStyle}
-          onMouseDown={handleSidebarDividerMouseDown}
-          onDoubleClick={handleSidebarDividerDoubleClick}
-        />
-      )}
       <div
-        className={`sidebar sidebar-${sidebarPosition}`}
+        className="sidebar sidebar-left"
         ref={sidebarRef}
         style={{ width: `${sidebarWidth}px` }}
         onWheel={handleSidebarWheel}
@@ -431,20 +417,17 @@ function App() {
         <div className={`sidebar-content${slideAnim ? ` sidebar-${slideAnim}` : ''}`}>
           {sidebarView === 'files' && <FileTree />}
           {sidebarView === 'git' && <GitPanel />}
-          {sidebarView === 'bib' && <BibPanel />}
           {sidebarView === 'outline' && <OutlinePanel />}
           {sidebarView === 'todo' && <TodoPanel />}
           {sidebarView === 'timeline' && <TimelinePanel />}
         </div>
       </div>
-      {sidebarPosition === 'left' && (
-        <div
-          className={`sidebar-resize-handle sidebar-${sidebarPosition}`}
-          style={sidebarHandleStyle}
-          onMouseDown={handleSidebarDividerMouseDown}
-          onDoubleClick={handleSidebarDividerDoubleClick}
-        />
-      )}
+      <div
+        className="sidebar-resize-handle sidebar-left"
+        style={sidebarHandleStyle}
+        onMouseDown={handleSidebarDividerMouseDown}
+        onDoubleClick={handleSidebarDividerDoubleClick}
+      />
     </div>
   )
 
@@ -459,7 +442,7 @@ function App() {
         onNewFromTemplate={handleOpenTemplateGallery}
         onAiDraft={handleAiDraft}
         onAiAssistant={() => {
-          if (capabilities.ai) setIsAiAssistantOpen(true)
+          useProjectStore.getState().openResearchPanel('chat')
         }}
         onToggleTerminalPane={handleToggleTerminalPane}
         isTerminalPaneOpen={terminalPaneOpen}
@@ -468,15 +451,6 @@ function App() {
       {isSettingsOpen && (
         <Suspense fallback={null}>
           <SettingsModal onClose={() => setIsSettingsOpen(false)} />
-        </Suspense>
-      )}
-      {capabilities.ai && isAiAssistantOpen && (
-        <Suspense fallback={null}>
-          <AiAssistantModal
-            isOpen
-            onClose={() => setIsAiAssistantOpen(false)}
-            onAiDraft={() => handleAiDraft()}
-          />
         </Suspense>
       )}
       {capabilities.ai && isDraftModalOpen && (
@@ -502,7 +476,7 @@ function App() {
         />
       ) : (
         <div className="workspace">
-          {sidebarPosition === 'left' && (isSidebarOpen || autoHideSidebar) && sidebarElement}
+          {(isSidebarOpen || autoHideSidebar) && sidebarElement}
           <div className="editor-area">
             <div className="editor-main-content" ref={mainContentRef}>
               <div
@@ -549,10 +523,21 @@ function App() {
               )}
             </div>
           </div>
-          {sidebarPosition === 'right' && (isSidebarOpen || autoHideSidebar) && sidebarElement}
+          {!isResearchPanelOpen && (
+            <button
+              className="research-panel-toggle"
+              onClick={() => useProjectStore.getState().openResearchPanel('references')}
+              title="Open research panel"
+              aria-label="Open research panel"
+            >
+              <PanelRightOpen size={16} />
+            </button>
+          )}
+          <ResearchPanel onAiDraft={() => handleAiDraft()} />
         </div>
       )}
       <LogPanel />
+      <BibliographyRegistrationDialog />
       {showStatusBar && <StatusBar />}
       {capabilities.templates && isTemplateGalleryOpen && (
         <Suspense fallback={null}>

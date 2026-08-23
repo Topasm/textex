@@ -39,6 +39,7 @@ export function TerminalPane() {
   const dataDisposeRef = useRef<(() => void) | null>(null)
   const exitDisposeRef = useRef<(() => void) | null>(null)
   const resizeObserverRef = useRef<ResizeObserver | null>(null)
+  const sessionGenerationRef = useRef(0)
 
   const [exited, setExited] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -48,15 +49,23 @@ export function TerminalPane() {
     [filePath, projectRoot]
   )
 
-  const teardown = useCallback(async () => {
-    dataDisposeRef.current?.()
+  const teardownCurrent = useCallback(async () => {
+    const disposeData = dataDisposeRef.current
     dataDisposeRef.current = null
-    exitDisposeRef.current?.()
+    const disposeExit = exitDisposeRef.current
     exitDisposeRef.current = null
-    resizeObserverRef.current?.disconnect()
+    const resizeObserver = resizeObserverRef.current
     resizeObserverRef.current = null
     const id = sessionIdRef.current
     sessionIdRef.current = null
+    const term = termRef.current
+    termRef.current = null
+    fitRef.current = null
+
+    disposeData?.()
+    disposeExit?.()
+    resizeObserver?.disconnect()
+    term?.dispose()
     if (id) {
       try {
         await window.api.ptyDispose(id)
@@ -64,10 +73,12 @@ export function TerminalPane() {
         // PTY may already be gone
       }
     }
-    termRef.current?.dispose()
-    termRef.current = null
-    fitRef.current = null
   }, [])
+
+  const stopSession = useCallback(async () => {
+    sessionGenerationRef.current += 1
+    await teardownCurrent()
+  }, [teardownCurrent])
 
   const startSession = useCallback(async () => {
     if (!workDir) {
@@ -76,7 +87,10 @@ export function TerminalPane() {
     }
     if (!containerRef.current) return
 
-    await teardown()
+    const generation = sessionGenerationRef.current + 1
+    sessionGenerationRef.current = generation
+    await teardownCurrent()
+    if (generation !== sessionGenerationRef.current || !containerRef.current) return
     setExited(false)
     setErrorMsg(null)
 
@@ -92,7 +106,11 @@ export function TerminalPane() {
     })
     const fit = new FitAddon()
     term.loadAddon(fit)
-    term.loadAddon(new WebLinksAddon())
+    term.loadAddon(
+      new WebLinksAddon((_event, uri) => {
+        void window.api.openExternal(uri).catch(() => {})
+      })
+    )
     term.open(containerRef.current)
 
     try {
@@ -122,10 +140,22 @@ export function TerminalPane() {
         cols: term.cols,
         rows: term.rows
       })
+      if (generation !== sessionGenerationRef.current || termRef.current !== term) {
+        try {
+          await window.api.ptyDispose(id)
+        } catch {
+          // The stale session may already have exited.
+        }
+        return
+      }
       sessionIdRef.current = id
 
-      dataDisposeRef.current = window.api.onPtyData(id, (data) => term.write(data))
-      exitDisposeRef.current = window.api.onPtyExit(id, () => setExited(true))
+      dataDisposeRef.current = window.api.onPtyData(id, (data) => {
+        if (generation === sessionGenerationRef.current) term.write(data)
+      })
+      exitDisposeRef.current = window.api.onPtyExit(id, () => {
+        if (generation === sessionGenerationRef.current) setExited(true)
+      })
 
       term.onData((data) => {
         window.api.ptyWrite(id, data).catch(() => {})
@@ -148,18 +178,19 @@ export function TerminalPane() {
 
       term.focus()
     } catch (err) {
+      if (generation !== sessionGenerationRef.current) return
       setErrorMsg(errorMessage(err))
-      await teardown()
+      await stopSession()
     }
-  }, [teardown, workDir])
+  }, [stopSession, teardownCurrent, workDir])
 
   useEffect(() => {
     if (!workDir || sessionIdRef.current) return
     void startSession()
     return () => {
-      void teardown()
+      void stopSession()
     }
-  }, [startSession, teardown, workDir])
+  }, [startSession, stopSession, workDir])
 
   useEffect(() => {
     const handler = () => {

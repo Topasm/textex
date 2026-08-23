@@ -45,6 +45,8 @@ describe('IntegrationsTab Zotero collection sync', () => {
     })
     expect(window.api.parseBibFile).toHaveBeenCalledWith('/project/references.bib')
     expect(useProjectStore.getState().bibEntries).toHaveLength(1)
-    expect(await screen.findByText(/Synced 1 bibliography entry/)).toBeInTheDocument()
+    expect(
+      await screen.findByText(/Synced 1 bibliography entry to zotero\.bib/)
+    ).toBeInTheDocument()
   })
 })

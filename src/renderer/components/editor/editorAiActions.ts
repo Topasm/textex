@@ -54,6 +54,24 @@ export const AI_ACTIONS: AiActionDef[] = [
   }
 ]
 
+function selectionIsCurrent(
+  editor: monacoEditor.ICodeEditor,
+  model: monacoEditor.ITextModel,
+  versionId: number,
+  selection: NonNullable<ReturnType<monacoEditor.ICodeEditor['getSelection']>>,
+  selectedText: string
+): boolean {
+  return (
+    editor.getModel() === model &&
+    model.getVersionId() === versionId &&
+    model.getValueInRange(selection) === selectedText
+  )
+}
+
+function warnStaleAiResult(): void {
+  alert('The document changed while AI was processing. No text was replaced.')
+}
+
 export async function runAiAction(
   editor: monacoEditor.ICodeEditor,
   def: AiActionDef
@@ -63,10 +81,15 @@ export async function runAiAction(
   if (!selection || !model || selection.isEmpty()) return
 
   const text = model.getValueInRange(selection)
+  const versionId = model.getVersionId()
   try {
     const request = await buildAiProcessRequest(def.action, selection, text)
     const result = await window.api.aiProcess(request)
     if (def.mode === 'replace') {
+      if (!selectionIsCurrent(editor, model, versionId, selection, text)) {
+        warnStaleAiResult()
+        return
+      }
       editor.executeEdits(def.id, [
         {
           range: selection,
@@ -95,9 +118,14 @@ export async function runAiCustomCommand(
   if (!trimmedCommand) return
 
   const text = model.getValueInRange(selection)
+  const versionId = model.getVersionId()
   try {
     const request = await buildAiCustomProcessRequest(trimmedCommand, selection, text)
     const result = await window.api.aiProcessCustom(request)
+    if (!selectionIsCurrent(editor, model, versionId, selection, text)) {
+      warnStaleAiResult()
+      return
+    }
     editor.executeEdits('ai-custom-command', [
       {
         range: selection,

@@ -3,6 +3,10 @@ import { useEditorStore } from '../store/useEditorStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { useSettingsStore } from '../store/useSettingsStore'
 import { getDesktopCapabilities } from '../platform/capabilities'
+import {
+  invalidateResearchProjectOpenSync,
+  syncResearchOnProjectOpen
+} from '../services/researchProjectLifecycle'
 
 /**
  * Restores the previous editing session on mount:
@@ -20,6 +24,8 @@ export function useSessionRestore(): boolean {
   const capabilities = getDesktopCapabilities()
 
   useEffect(() => {
+    let active = true
+    invalidateResearchProjectOpenSync()
     const restoreSession = async (): Promise<void> => {
       const projectState = useProjectStore.getState()
       const editorState = useEditorStore.getState()
@@ -32,8 +38,13 @@ export function useSessionRestore(): boolean {
 
       try {
         savedRoot = await window.api.activateProject(savedRoot)
+        if (!active) return
         useProjectStore.getState().setProjectRoot(savedRoot)
+        void syncResearchOnProjectOpen(savedRoot).catch(() => {
+          // Session restoration is not blocked by an optional Zotero sync.
+        })
       } catch {
+        if (!active) return
         useProjectStore.getState().setProjectRoot(null)
         setSessionRestored(true)
         return
@@ -112,7 +123,11 @@ export function useSessionRestore(): boolean {
       setSessionRestored(true)
     }
 
-    restoreSession()
+    void restoreSession()
+    return () => {
+      active = false
+      invalidateResearchProjectOpenSync()
+    }
   }, [])
 
   // Also init spell check and check for updates on mount

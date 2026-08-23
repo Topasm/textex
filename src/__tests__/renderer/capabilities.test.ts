@@ -1,30 +1,10 @@
-import { afterEach, describe, expect, it } from 'vitest'
-import {
-  configureDesktopCapabilities,
-  getDesktopCapabilities
-} from '../../renderer/platform/capabilities'
+import { describe, expect, it } from 'vitest'
+import { getDesktopCapabilities } from '../../renderer/platform/capabilities'
 import { isFeatureEnabled } from '../../renderer/utils/featureFlags'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 
-afterEach(() => configureDesktopCapabilities('electron'))
-
 describe('desktop runtime capabilities', () => {
-  it('exposes the complete legacy backend in Electron', () => {
-    configureDesktopCapabilities('electron')
-
-    expect(getDesktopCapabilities()).toMatchObject({
-      runtime: 'electron',
-      ai: true,
-      documentExport: true,
-      lsp: true,
-      pty: true,
-      spellcheck: true,
-      templates: true
-    })
-  })
-
-  it('exposes migrated domains and disables pending domains in Tauri', () => {
-    configureDesktopCapabilities('tauri')
+  it('exposes native domains and disables unavailable Tauri domains', () => {
     const settings = {
       ...useSettingsStore.getState().settings,
       aiEnabled: true,
@@ -35,19 +15,19 @@ describe('desktop runtime capabilities', () => {
 
     expect(getDesktopCapabilities()).toMatchObject({
       runtime: 'tauri',
-      ai: false,
+      ai: true,
       citationGroups: true,
       documentExport: true,
-      lsp: false,
+      lsp: true,
       openExternal: true,
       performanceMemory: true,
       projectMetadata: true,
-      pty: false,
+      pty: true,
       spellcheck: true,
       templates: true
     })
-    expect(isFeatureEnabled(settings, 'ai')).toBe(false)
-    expect(isFeatureEnabled(settings, 'lsp')).toBe(false)
+    expect(isFeatureEnabled(settings, 'ai')).toBe(true)
+    expect(isFeatureEnabled(settings, 'lsp')).toBe(true)
     expect(isFeatureEnabled(settings, 'spellcheck')).toBe(true)
   })
 })

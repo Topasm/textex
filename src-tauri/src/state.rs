@@ -3,7 +3,7 @@ use std::{
     path::PathBuf,
     sync::{
         atomic::{AtomicU64, Ordering},
-        Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard,
+        Arc, Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard,
     },
 };
 
@@ -16,6 +16,7 @@ use crate::{
 
 pub struct AppState {
     project_root: RwLock<Option<PathBuf>>,
+    project_epoch: Arc<AtomicU64>,
     compiler: Mutex<CompilerRuntime>,
     compiler_changed: Notify,
     next_compilation_id: AtomicU64,
@@ -59,6 +60,7 @@ impl Default for AppState {
     fn default() -> Self {
         Self {
             project_root: RwLock::new(None),
+            project_epoch: Arc::new(AtomicU64::new(0)),
             compiler: Mutex::new(CompilerRuntime::default()),
             compiler_changed: Notify::new(),
             next_compilation_id: AtomicU64::new(0),
@@ -68,12 +70,36 @@ impl Default for AppState {
 
 impl AppState {
     pub fn set_project_root(&self, root: PathBuf) -> AppResult<()> {
-        *self.write_root()? = Some(root);
+        let mut root_guard = self.write_root()?;
+        *root_guard = Some(root);
+        self.project_epoch.fetch_add(1, Ordering::Release);
+        drop(root_guard);
         Ok(())
+    }
+
+    /// Clears the trusted project root and advances the epoch so in-flight
+    /// filesystem, watcher, index, and compile work can no longer publish
+    /// results for the closed project. The returned epoch belongs to the
+    /// project that was active before the close.
+    pub fn clear_project_root(&self) -> AppResult<Option<(PathBuf, u64)>> {
+        let mut root_guard = self.write_root()?;
+        let project_epoch = self.project_epoch.load(Ordering::Acquire);
+        let root = root_guard.take();
+        self.project_epoch.fetch_add(1, Ordering::Release);
+        drop(root_guard);
+        Ok(root.map(|root| (root, project_epoch)))
     }
 
     pub fn project_root(&self) -> AppResult<PathBuf> {
         self.read_root()?.clone().ok_or(AppError::ProjectNotOpen)
+    }
+
+    pub(crate) fn project_root_epoch(&self) -> AppResult<(PathBuf, u64, Arc<AtomicU64>)> {
+        let root_guard = self.read_root()?;
+        let root = root_guard.clone().ok_or(AppError::ProjectNotOpen)?;
+        let epoch = self.project_epoch.load(Ordering::Acquire);
+        drop(root_guard);
+        Ok((root, epoch, Arc::clone(&self.project_epoch)))
     }
 
     pub(crate) async fn begin_compilation(
@@ -282,6 +308,8 @@ impl Drop for PendingRegistration<'_> {
 
 #[cfg(test)]
 mod tests {
+    use std::{path::PathBuf, sync::atomic::Ordering};
+
     use super::AppState;
     use crate::{
         error::AppError,
@@ -297,6 +325,27 @@ mod tests {
             file_path: "/project/main.tex".to_owned(),
             priority,
         }
+    }
+
+    #[test]
+    fn clearing_a_project_invalidates_its_epoch_and_root() {
+        let state = AppState::default();
+        let root = PathBuf::from("/project");
+        state
+            .set_project_root(root.clone())
+            .expect("activate project");
+        let (_, active_epoch, epoch_tracker) =
+            state.project_root_epoch().expect("active project epoch");
+
+        assert_eq!(
+            state.clear_project_root().expect("clear project"),
+            Some((root, active_epoch))
+        );
+        assert!(matches!(
+            state.project_root(),
+            Err(AppError::ProjectNotOpen)
+        ));
+        assert!(epoch_tracker.load(Ordering::Acquire) > active_epoch);
     }
 
     #[tokio::test]

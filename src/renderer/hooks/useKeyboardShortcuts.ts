@@ -1,5 +1,10 @@
 import { useEffect } from 'react'
 import type { AppCommandId } from '../../shared/types'
+import {
+  APP_COMMAND_MANIFEST,
+  RENDERER_SHORTCUT_MANIFEST,
+  type RendererShortcutId
+} from '../../shared/appCommandManifest'
 import { useEditorStore } from '../store/useEditorStore'
 import { useSettingsStore } from '../store/useSettingsStore'
 import { commandRegistry } from '../services/commandRegistry'
@@ -20,88 +25,42 @@ export function useKeyboardShortcuts(opts: KeyboardShortcutsOpts): void {
     const capabilities = getDesktopCapabilities()
     commandRegistry.clear()
 
-    commandRegistry.register('file.open', { key: 'o', mod: true }, () => runCommand('file.open'))
-    commandRegistry.register('file.openFolder', { key: 'o', mod: true, shift: true }, () =>
-      runCommand('file.openFolder')
-    )
-    commandRegistry.register('file.saveAs', { key: 's', mod: true, shift: true }, () =>
-      runCommand('file.saveAs')
-    )
-    commandRegistry.register('file.save', { key: 's', mod: true }, () => runCommand('file.save'))
-    commandRegistry.register('compile.run', { key: 'Enter', mod: true }, () =>
-      runCommand('compile.run')
-    )
-    commandRegistry.register('view.toggleLog', { key: 'l', mod: true }, () =>
-      runCommand('view.toggleLog')
-    )
-    if (capabilities.pty) {
-      commandRegistry.register('view.toggleTerminal', { key: '`', mod: true }, () =>
-        runCommand('view.toggleTerminal')
-      )
-    }
-    commandRegistry.register('edit.find', { key: 'f', mod: true }, () => runCommand('edit.find'))
-    commandRegistry.register('font.increase', { key: ['=', '+'], mod: true, alt: true }, () =>
-      useSettingsStore.getState().increaseFontSize()
-    )
-    commandRegistry.register('font.decrease', { key: '-', mod: true, alt: true }, () =>
-      useSettingsStore.getState().decreaseFontSize()
-    )
-    commandRegistry.register('pdf.zoomIn', { key: ['=', '+'], mod: true }, () =>
-      runCommand('pdf.zoomIn')
-    )
-    commandRegistry.register('pdf.zoomOut', { key: '-', mod: true }, () =>
-      runCommand('pdf.zoomOut')
-    )
-    commandRegistry.register('pdf.fitWidth', { key: '0', mod: true }, () =>
-      runCommand('pdf.fitWidth')
-    )
-    commandRegistry.register('pdf.fitHeight', { key: '9', mod: true }, () =>
-      runCommand('pdf.fitHeight')
-    )
-    commandRegistry.register('view.toggleSidebar', { key: 'b', mod: true }, () =>
-      runCommand('view.toggleSidebar')
-    )
-    commandRegistry.register('tab.close', { key: 'w', mod: true }, () => {
-      const state = useEditorStore.getState()
-      if (state.activeFilePath) state.closeTab(state.activeFilePath)
-    })
-    commandRegistry.register('tab.prev', { key: 'Tab', mod: true, shift: true }, () => {
-      const state = useEditorStore.getState()
-      const paths = Object.keys(state.openFiles)
-      if (paths.length > 1 && state.activeFilePath) {
-        const idx = paths.indexOf(state.activeFilePath)
-        state.setActiveTab(paths[(idx - 1 + paths.length) % paths.length])
+    for (const command of APP_COMMAND_MANIFEST) {
+      if (!('shortcut' in command)) continue
+      if ('requiredCapability' in command && !capabilities[command.requiredCapability]) {
+        continue
       }
-    })
-    commandRegistry.register('tab.next', { key: 'Tab', mod: true }, () => {
-      const state = useEditorStore.getState()
-      const paths = Object.keys(state.openFiles)
-      if (paths.length > 1 && state.activeFilePath) {
-        const idx = paths.indexOf(state.activeFilePath)
-        state.setActiveTab(paths[(idx + 1) % paths.length])
+      commandRegistry.register(command.id, command.shortcut, () => runCommand(command.id))
+    }
+
+    const rendererHandlers: Record<RendererShortcutId, () => void> = {
+      'font.increase': () => useSettingsStore.getState().increaseFontSize(),
+      'font.decrease': () => useSettingsStore.getState().decreaseFontSize(),
+      'tab.close': () => {
+        const state = useEditorStore.getState()
+        if (state.activeFilePath) state.closeTab(state.activeFilePath)
+      },
+      'tab.prev': () => {
+        const state = useEditorStore.getState()
+        const paths = Object.keys(state.openFiles)
+        if (paths.length > 1 && state.activeFilePath) {
+          const idx = paths.indexOf(state.activeFilePath)
+          state.setActiveTab(paths[(idx - 1 + paths.length) % paths.length])
+        }
+      },
+      'tab.next': () => {
+        const state = useEditorStore.getState()
+        const paths = Object.keys(state.openFiles)
+        if (paths.length > 1 && state.activeFilePath) {
+          const idx = paths.indexOf(state.activeFilePath)
+          state.setActiveTab(paths[(idx + 1) % paths.length])
+        }
       }
-    })
-    if (capabilities.templates) {
-      commandRegistry.register('file.newTemplate', { key: 'n', mod: true, shift: true }, () =>
-        runCommand('file.newTemplate')
-      )
     }
-    if (capabilities.ai) {
-      commandRegistry.register('ai.draft', { key: ['d', 'D'], mod: true, shift: true }, () =>
-        runCommand('ai.draft')
-      )
+
+    for (const command of RENDERER_SHORTCUT_MANIFEST) {
+      commandRegistry.register(command.id, command.shortcut, rendererHandlers[command.id])
     }
-    commandRegistry.register(
-      'view.search.citations',
-      { key: ['c', 'C'], mod: true, shift: true },
-      () => runCommand('view.search.citations')
-    )
-    commandRegistry.register('view.search.pdf', { key: ['f', 'F'], mod: true, shift: true }, () =>
-      runCommand('view.search.pdf')
-    )
-    commandRegistry.register('app.settings', { key: ',', mod: true }, () =>
-      runCommand('app.settings')
-    )
 
     const handler = (e: KeyboardEvent): void => commandRegistry.handleKeyDown(e)
     window.addEventListener('keydown', handler)

@@ -5,7 +5,7 @@
 [![Build Status](https://github.com/Topasm/textex/actions/workflows/build.yml/badge.svg)](https://github.com/Topasm/textex/actions/workflows/build.yml)
 [![Release](https://img.shields.io/github/v/release/Topasm/textex?include_prereleases&label=latest)](https://github.com/Topasm/textex/releases/latest)
 
-**무료**, **로컬 우선** 데스크톱 LaTeX 에디터입니다. TextEx는 전적으로 사용자의 컴퓨터에서 실행되며 — 계정도, 클라우드도, 인터넷도 필요 없습니다. 왼쪽에는 Monaco 코드 에디터, 오른쪽에는 실시간 PDF 미리보기를 제공하는 분할 화면 인터페이스를 갖추고 있으며, [Tectonic](https://tectonic-typesetting.github.io/) 엔진이 내장되어 있어 TeX Live나 MiKTeX 같은 별도의 TeX 배포판을 설치할 필요가 **없습니다**.
+**무료**, **로컬 우선** Tauri 데스크톱 LaTeX 에디터입니다. TextEx는 전적으로 사용자의 컴퓨터에서 실행되며 — 계정도, 클라우드도, 인터넷도 필요 없습니다. 왼쪽에는 Monaco 코드 에디터, 오른쪽에는 실시간 PDF 미리보기를 제공하는 분할 화면 인터페이스를 갖추고 있으며, [Tectonic](https://tectonic-typesetting.github.io/) 엔진이 내장되어 있어 TeX Live나 MiKTeX 같은 별도의 TeX 배포판을 설치할 필요가 **없습니다**.
 
 <p align="center">
   <img src="docs/images/main-editor.png" alt="TextEx — 실시간 PDF 미리보기를 갖춘 분할 화면 LaTeX 에디터" width="900" />
@@ -24,10 +24,15 @@
 | **Monaco 에디터** | 구문 강조, 자동 완성, 스니펫, Vim 모드 |
 | **멀티 파일 프로젝트** | 사이드바 파일 트리, 탭 바, `\input`/`\include` 탐색 |
 | **인용 관리** | BibTeX 자동 완성 + Zotero 연동 |
-| **AI 어시스턴트** | 노트에서 LaTeX 생성, 문법 수정, 학술 스타일 변환 |
+| **연구 & AI** | Crossref/arXiv 검색 및 네이티브 HTTP, Claude CLI, Codex CLI 도우미 |
+| **언어 & 터미널** | 선택적 TexLab 언어 기능과 네이티브 PTY 내장 터미널 |
 | **Git 통합** | 내장 스테이징, 커밋, 디프, 브랜치 정보 |
-| **내보내기** | Pandoc을 통해 Word, HTML, Markdown으로 변환 |
+| **내보내기** | Pandoc을 통해 DOCX, ODT, HTML, EPUB으로 변환 |
 | **7개 언어** | EN, KO, ES, FR, DE, PT, ZH |
+
+> **선택적 연동:** AI API 제공자와 온라인 논문 검색에는 네트워크가 필요합니다.
+> Claude/Codex CLI 및 TexLab 기능은 해당 실행 파일이 `PATH`에 있어야 하며,
+> 핵심 편집기와 내장 Tectonic 컴파일러는 이들 없이도 로컬에서 동작합니다.
 
 ---
 
@@ -44,8 +49,9 @@
 | 플랫폼 | 파일 |
 |----------|------|
 | Windows x64 | `.exe` 설치 파일 |
-| macOS Intel + Apple Silicon | universal `.dmg` |
-| Linux x64 | `.AppImage` |
+| macOS Apple Silicon (arm64) | arm64 `.dmg` |
+| macOS Intel (x64) | x64 `.dmg` |
+| Linux x64 | `.AppImage` 또는 `.deb` |
 
 ### 2. OS별 설정
 
@@ -59,8 +65,8 @@ xattr -cr /Applications/TextEx.app
 **Linux:**
 AppImage를 실행 가능하게 만드세요:
 ```bash
-chmod +x TextEx-*-linux-x86_64.AppImage
-./TextEx-*-linux-x86_64.AppImage
+chmod +x TextEx_*.AppImage
+./TextEx_*.AppImage
 ```
 
 ---
@@ -68,7 +74,7 @@ chmod +x TextEx-*-linux-x86_64.AppImage
 ## 사용 가이드
 
 ### 새 프로젝트 만들기
-- **폴더 열기**: 파일 메뉴 > **Open Folder**를 클릭하여 프로젝트 디렉토리를 선택합니다.
+- **폴더 열기**: 홈 화면의 **Open Folder**를 사용하여 프로젝트 디렉토리를 선택합니다.
 - **템플릿 사용**: **New from Template**을 사용하여 미리 구성된 LaTeX 템플릿(article, beamer, thesis, letter 등)으로 빠르게 시작하세요.
 
 <p align="center">
@@ -85,7 +91,7 @@ chmod +x TextEx-*-linux-x86_64.AppImage
 
 ### 문서 작성하기
 TextEx는 다음과 같은 기능을 갖춘 최신 Monaco 기반 에디터를 제공합니다:
-- **구문 강조**: 시맨틱 컬러링을 갖춘 완전한 LaTeX 구문 지원.
+- **구문 강조**: Monaco의 로컬 tokenizer를 사용한 LaTeX 구문 컬러링.
 - **자동 완성**: 명령어, 환경, 라벨, 인용 키에 대한 지능형 제안.
 - **스니펫**: 일반적인 패턴(예: `begin`, `figure`, `table`)을 빠르게 삽입.
 - **수학 미리보기**: `$...$` 또는 `\[...\]` 내에서 입력하는 즉시 수식 렌더링.
@@ -128,14 +134,9 @@ TextEx는 다음과 같은 기능을 갖춘 최신 Monaco 기반 에디터를 �
 - **인용 툴팁**: PDF 미리보기에서 인용 위에 마우스를 올리면 제목, 저자, 연도를 확인할 수 있습니다.
 - **Zotero 연동**:
   1. Better BibTeX가 설치된 Zotero가 실행 중인지 확인하세요.
-  2. `Ctrl+Shift+Z`를 눌러 Zotero 라이브러리를 검색합니다.
-  3. 논문을 선택하여 인용 키를 삽입합니다.
-
-### AI 어시스턴트
-- 툴바의 **AI Draft**를 클릭하거나 `Ctrl+Shift+D`를 누르세요.
-- LaTeX 콘텐츠를 생성할 프롬프트를 입력하세요.
-- 에디터 내 기능: 텍스트를 선택한 후 문법 수정, 학술 스타일 변환, 요약, 더 길게/짧게 만들기 사용.
-- OpenAI, Anthropic, Gemini, Claude CLI, Codex CLI 지원. 설정 > AI에서 구성하세요.
+  2. 오른쪽 Research 패널에서 Project, Zotero, Crossref/arXiv 참고문헌을 사용합니다.
+  3. 논문을 에디터로 드래그하거나 OmniSearch의 `/r`, `/z`, `/o`를 사용합니다.
+  4. 온라인 검색 결과는 Zotero에 영구 저장하거나 프로젝트 참고문헌에 바로 추가할 수 있습니다.
 
 ### 생산성 도구
 
@@ -143,7 +144,7 @@ TextEx는 다음과 같은 기능을 갖춘 최신 Monaco 기반 에디터를 �
   <img src="docs/images/omnisearch.png" alt="검색 결과가 표시된 OmniSearch 대화상자" width="900" />
 </p>
 
-- **OmniSearch**: `Ctrl+P`를 눌러 파일, 인용, PDF 텍스트, 명령어를 통합 검색.
+- **OmniSearch**: 툴바 검색 필드에서 파일, 인용, PDF 텍스트, 명령어를 통합 검색.
 - **할 일 패널**: 사이드바에서 집필 작업을 관리.
 - **메모 패널**: 아이디어를 위한 빠른 메모장.
 - **타임라인**: 로컬 파일 히스토리를 보고 이전 저장 상태로 복원.
@@ -157,12 +158,11 @@ TextEx는 다음과 같은 기능을 갖춘 최신 Monaco 기반 에디터를 �
 |----------|--------|
 | `Ctrl/Cmd + S` | 저장 |
 | `Ctrl/Cmd + Enter` | 컴파일 |
-| `Ctrl/Cmd + P` | OmniSearch |
 | `Ctrl/Cmd + L` | 로그 패널 토글 |
 | `Ctrl/Cmd + B` | 사이드바 토글 |
 | `Ctrl/Cmd + F` | 에디터 / PDF에서 찾기 |
-| `Ctrl/Cmd + Shift + Z` | Zotero 검색 |
-| `Ctrl/Cmd + Shift + D` | AI Draft |
+| `Ctrl/Cmd + Shift + C` | 인용 검색 |
+| `Ctrl/Cmd + Shift + F` | PDF 텍스트 검색 |
 | `Shift + Alt + F` | 문서 포맷팅 |
 | `Ctrl/Cmd + 0` | PDF 너비에 맞추기 |
 | `Ctrl/Cmd + 9` | PDF 높이에 맞추기 |
@@ -187,11 +187,10 @@ TextEx는 다음과 같은 기능을 갖춘 최신 Monaco 기반 에디터를 �
 
 ## 오픈소스 고지
 
-앱 안에서는 `Help > Open Source Licenses` 메뉴를 통해 오픈소스 고지를
-확인할 수 있습니다. 번들된 고지 파일은 `resources/licenses/` 아래에 있으며,
-`THIRD-PARTY-NOTICES.txt`, `ELECTRON-LICENSES.chromium.html`, TexLab GPL 관련
-파일이 포함됩니다. [docs/LICENSES.md](docs/LICENSES.md)는 사람이 읽기 쉬운
-요약 문서이며, 전체 번들 고지 파일 모음 자체는 아닙니다.
+번들된 고지 파일은 `resources/licenses/` 아래에 있으며 npm과 Rust 의존성
+고지 및 Tectonic 라이선스 파일이 포함됩니다.
+[docs/LICENSES.md](docs/LICENSES.md)는 사람이 읽기 쉬운 요약 문서이며, 전체
+번들 고지 파일 모음 자체는 아닙니다.
 
 ## 라이선스
 

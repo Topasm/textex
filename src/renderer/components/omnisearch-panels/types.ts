@@ -6,7 +6,7 @@ import type {
   ZoteroSearchResult
 } from '../../../shared/types'
 
-export type SearchMode = 'file' | 'cite' | 'zotero' | 'pdf' | 'tex'
+export type SearchMode = 'file' | 'cite' | 'zotero' | 'online' | 'pdf' | 'tex'
 
 export interface ModeConfig {
   icon: typeof BookOpen

@@ -1,6 +1,6 @@
 /**
  * VS Code-style disposable pattern for deterministic resource cleanup.
- * Used across main, preload, and renderer processes.
+ * Runtime-neutral utility shared by renderer and reusable TypeScript services.
  */
 
 export interface IDisposable {

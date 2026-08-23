@@ -1,127 +1,22 @@
-# TextEx — Implementation Status
+# Implementation Status
 
-**91 / 98 tasks complete** across 18 phases.
+## Current priorities
 
-## Acceptance Criteria
+1. Add packaged-app end-to-end smoke tests for edit/save/compile/PDF/restart,
+   TexLab discovery, PTY teardown, and AI credential migration.
+2. Add macOS Developer ID/notarization and Windows Authenticode credentials to
+   the protected release environment.
+3. Convert performance baselines into deterministic CI budgets.
+4. Continue splitting large filesystem, compiler, FileTree, and OmniSearch
+   modules along tested responsibility boundaries.
 
-The MVP is complete when:
+## Completed architectural work
 
-1. A user can install the app on their OS without any prior TeX installation. *(Pending: packaging smoke test)*
-2. [x] They can open or create a `.tex` file.
-3. [x] They can type LaTeX and see a PDF preview update within a few seconds.
-4. [x] Compilation errors are displayed clearly.
-5. [x] They can save their work.
-
----
-
-## Completed
-
-### Phase 0: Project Bootstrap (7/7)
-Electron + React + TypeScript project with electron-vite, plain CSS theming, full folder structure.
-
-### Phase 1: Tectonic Binary Setup (5/5)
-Bundled Tectonic 0.17.0 (musl on Linux) for Linux/macOS/Windows. Verified standalone compilation.
-
-### Phase 2: Main Process — Compiler Service (3/3)
-`compiler.ts` (Tectonic spawn, cancel, binary resolution), `ipc.ts` (fs/latex IPC handlers with path validation), `main.ts` (BrowserWindow with context isolation).
-
-### Phase 3: Preload / Context Bridge (2/2)
-`preload/index.ts` exposing `window.api` via contextBridge. Type declarations in `api.d.ts`.
-
-### Phase 4: Zustand Store (1/1)
-Single store with `subscribeWithSelector` middleware. File state, compile status, PDF data, logs, cursor, UI state.
-
-### Phase 5: UI Components (7/7)
-- **App.tsx** — flexbox split layout, keyboard shortcuts, IPC log listener
-- **Toolbar** — Open/Save/Compile buttons with kbd hints, dirty indicator
-- **EditorPane** — Monaco editor (latex language, word wrap, cursor tracking)
-- **PreviewPane** — react-pdf with multi-page, zoom, scroll preservation, ResizeObserver
-- **LogPanel** — collapsible monospace log with auto-scroll, auto-open on error
-- **StatusBar** — compile status dot, cursor position, git branch, LSP indicator, spell toggle
-- **ErrorBoundary** — catches render errors with reload button
-
-### Phase 6: Auto-Compile & Keyboard Shortcuts (3/3)
-`useAutoCompile` hook (1s debounce, auto-save, cancel handling), `useFileOps` hook, `Ctrl+O/S/Shift+S/Enter/L` shortcuts.
-
-### Phase 8: Packaging (4/5)
-electron-builder config (NSIS/DMG/AppImage), Tectonic binaries for all platforms, Linux AppImage verified, binary path resolution confirmed for dev/prod.
-
-### Phase 9: Polish (16/16)
-- **Draggable split-pane** — splitRatio store state, drag resize, double-click reset
-- **PDF zoom** — 25–400% range, keyboard shortcuts, fit width
-- **Themes** — dark/light/high-contrast via CSS custom properties, persisted
-- **SyncTeX** — forward sync (editor→PDF) and inverse sync (Ctrl+Click PDF→editor)
-- **Multi-file projects** — FileTree sidebar with lazy loading, TabBar with multi-tab
-- **Snippet/template gallery** — ~50 LaTeX snippets, 5 document templates
-- **Auto-update** — electron-updater with notification banner
-- **CI/CD** — GitHub Actions matrix (Linux, macOS universal, Windows), tag-triggered
-- **App icons** — icon.png/ico/icns
-- **ESLint + Prettier** — v9 flat config, typescript-eslint, format scripts
-- **Unit tests** — Vitest + @testing-library/react
-- **Font size setting** — Ctrl+Shift+=/- shortcuts, persisted, 8–32px range
-- **BibTeX support** — .bib parser, BibPanel sidebar, \cite{} completion
-- **Git integration** — git.ts backend, GitPanel (stage/unstage/commit), branch in status bar
-- **Spell checker** — dictionary-based (en-US), Monaco markers + code actions, toggle
-- **Export** — pandoc backend for HTML/DOCX/ODT/EPUB via toolbar dropdown
-
-### Phase 10: CLI (9/10)
-`textex compile`, `textex init`, `textex export`, `textex templates` commands. Shared compiler/pandoc logic in `src/shared/`. Watch mode via chokidar.
-
-### Phase 11: MCP Server (5/5)
-`@modelcontextprotocol/sdk` stdio server with `compile_latex` and `get_compile_log` tools. Documented for Claude Desktop.
-
-### Phase 12: TexLab LSP Integration (15/15)
-- **TexLabManager** — binary resolution (bundled/custom/PATH), stdio LSP parsing, auto-restart with backoff
-- **IPC bridge** — `lsp:start/stop/send/status` handlers, `lsp:message/status-change` push channels
-- **Preload** — 8 LSP methods on `window.api`
-- **LSP client** — lightweight JSON-RPC client, initialize handshake, Monaco providers (completion, hover, definition, symbols, rename, formatting, folding range), diagnostics routing
-- **App lifecycle** — start/stop on projectRoot change, debounced didChange, didOpen/didClose on file switch
-- **GPL compliance** — TEXLAB-NOTICE.txt, TEXLAB-GPL-3.0.txt, extraResources in builder
-- **Binaries** — TexLab v5.25.1 for Linux/macOS/Windows; macOS includes an Apple Silicon binary
-
-### Phase 13: IDE Features (5/5)
-- **Magic comment parsing** — `%! TeX root = ./main.tex` support in `src/shared/magicComments.ts`; IPC handler resolves root file before compiling
-- **LSP code folding** — `foldingRange` capability + provider registration in `lspClient.ts`; folds sections, environments, comments
-- **Inverse search flash** — yellow fade-out line decoration in `usePendingJump.ts` on PDF→source jumps
-- **Enhanced Problems Panel** — diagnostics grouped by file with collapsible headers, severity filter buttons, problem count in tab label
-- **Semantic Highlighting** — `semanticTokens` LSP capability for rich syntax coloring (macros, environments, math)
-
-### Phase 14: Preferences & Formatting (6/6)
-- **Settings Store** — `localStorage` persistence, typed settings object, immediate apply
-- **Settings Modal** — Redesigned with tabs (Appearance, Editor, Integrations, Automation)
-- **Prettier Integration** — `prettier/standalone` + `prettier-plugin-latex` for code formatting
-- **Format on Save** — auto-format on save based on settings
-- **Editor Integration** — dynamic font size/word wrap/theme updates
-
-### Phase 15: Zotero Integration (5/5)
-- **Settings** — toggle enable/disable, configure port (default 23119)
-- **Search Modal** — `Ctrl+Shift+C` to search library, insert citation `\cite{key}`
-- ~~**CAYW Picker** — `Ctrl+Shift+C` to open native Zotero picker~~ *(removed — merged into Search Modal)*
-- **Show in Zotero** — Open selected paper in Zotero app from search results
-- **Drag and Drop** — Drag references from BibPanel directly to editor
-
-### Phase 16: CI/CD Improvements (2/2)
-- **GitHub Actions** — `build.yml` for Linux/macOS/Windows, lint/typecheck steps
-- **Artifacts** — proper upload of AppImage/DMG/Exe setup
-
-### Phase 17: User Experience Enhancements (4/4)
-- **User Info Settings** — Configure Name, Email, Affiliation for templates
-- **AI Draft** — "Bring Your Own Key" integration for OpenAI/Anthropic content generation
-- **Citation Groups** — Organize bibliography entries into custom groups
-- **Settings Modal Theming** — Replaced non-functional Tailwind classes with `settings-*` CSS classes using CSS custom properties; fully themed across dark/light/high-contrast
-
-### Phase 18: Killer Features (3/3)
-- **Visual Table Editor** — WYSIWYG table editing with `react-data-grid` via CodeLens
-- **Local History** — Automated file snapshots with diff view and restoration
-- **AI Writing Assistant** — Context menu integration for grammar fixing, rewriting, and summarization
-- **Smart Image Drop** — Drag & drop images into editor with auto-copy and code generation
-
----
-
-## Remaining (7 tasks)
-
-| Task | Status | Priority | Description |
-|------|--------|----------|-------------|
-| **7.1–7.5** Integration tests | Pending | Medium | Requires display server (X11/Wayland) for UI testing |
-| **8.4** Smoke test packaged app | Pending | High | Manual verification of packaged build install/run |
-| **10.10** CLI unit tests | Pending | Low | Test CLI command parsing and execution |
+- Tauri-only desktop runtime and packaging
+- Typed renderer/native API boundary
+- Rust project-root and symlink containment
+- Revision-aware documents and latest-wins compilation
+- Virtualized file tree and PDF generations
+- Tauri updater with signed multi-platform release metadata
+- Native AI HTTP/CLI, TexLab/LSP, research, and bounded PTY services
+- Split Zustand stores with fine-grained selectors

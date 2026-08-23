@@ -23,6 +23,11 @@ import {
   CitationGroup,
   ZoteroSearchResult,
   ZoteroSyncResult,
+  ZoteroSaveResult,
+  ZoteroCollection,
+  OnlineReference,
+  ReferenceAddResult,
+  ResearchConfig,
   HistoryItem,
   SectionNode,
   ProjectDatabase,
@@ -62,11 +67,13 @@ export interface GitStatusResult {
   not_added: string[]
 }
 
-/** Runtime-neutral contract implemented by both the Electron preload and Tauri adapter. */
+/** Typed renderer boundary implemented by the Tauri adapter. */
 export interface DesktopApi {
   // File System
   openFile(): Promise<OpenFileResult | null>
   saveFile(content: string, filePath: string): Promise<SaveResult>
+  /** Imports bytes without JSON expansion and returns the collision-safe destination path. */
+  writeFileBinary(filePath: string, data: Uint8Array): Promise<SaveAsResult>
   saveFileBatch(files: Array<{ content: string; filePath: string }>): Promise<SaveResult>
   saveFileAs(content: string): Promise<SaveAsResult | null>
   createTemplateProject(
@@ -78,6 +85,8 @@ export interface DesktopApi {
   openDirectory(): Promise<string | null>
   /** Activates a dialog-authorized or native-persisted recent project root. */
   activateProject(projectPath: string): Promise<string>
+  /** Closes the trusted project session and all native project resources. */
+  deactivateProject(): Promise<{ success: boolean }>
   createFile(filePath: string): Promise<{ success: boolean }>
   createDirectory(dirPath: string): Promise<{ success: boolean }>
   copyFile(source: string, dest: string): Promise<{ success: boolean }>
@@ -90,8 +99,8 @@ export interface DesktopApi {
   unwatchDirectory(): Promise<{ success: boolean }>
   onDirectoryChanged(cb: (change: DirectoryChangeEvent) => void): void
   removeDirectoryChangedListener(): void
-  /** Tauri migration capability; lazily builds the native flat project metadata index. */
-  getProjectIndex?(): Promise<ProjectIndexSnapshot>
+  /** Lazily builds or restores the native flat project metadata index. */
+  getProjectIndex(): Promise<ProjectIndexSnapshot>
 
   // Compilation
   compile(request: CompileRequest): Promise<CompileResponse>
@@ -183,6 +192,13 @@ export interface DesktopApi {
     targetFile?: string,
     port?: number
   ): Promise<ZoteroSyncResult>
+  zoteroCollections(port?: number): Promise<ZoteroCollection[]>
+  zoteroAddToProject(citekey: string, port?: number): Promise<ReferenceAddResult>
+  zoteroSaveOnline(reference: OnlineReference, port?: number): Promise<ZoteroSaveResult>
+  researchSearchOnline(query: string): Promise<OnlineReference[]>
+  researchAddOnline(reference: OnlineReference): Promise<ReferenceAddResult>
+  researchLoadConfig(): Promise<ResearchConfig>
+  researchSaveConfig(config: ResearchConfig): Promise<ResearchConfig>
 
   // Citation Groups
   loadCitationGroups(projectRoot: string): Promise<CitationGroup[]>
@@ -258,9 +274,6 @@ export interface DesktopApi {
   ): Promise<ProjectBookmark>
   projectBookmarksRemove(projectRoot: string, id: string): Promise<{ success: boolean }>
 }
-
-/** @deprecated Use DesktopApi for code shared by Electron and Tauri. */
-export type ElectronAPI = DesktopApi
 
 declare global {
   interface Window {

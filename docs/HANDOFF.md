@@ -11,18 +11,16 @@ At the v1.0.8 handoff baseline:
 
 - The repository is public at `Topasm/textex`, with `main` as the default
   branch.
-- GitHub Actions validates lint, types, formatting, tests, Linux, Windows, and
-  macOS universal packaging.
+- GitHub Actions validates lint, types, formatting, tests, Rust checks, and Tauri
+  packaging for Linux x64, Windows x64, macOS arm64, and macOS x64.
 - A `v*` tag can publish a public GitHub Release. Follow
   [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) before creating one.
-- Tectonic 0.17.0 is bundled. macOS universal packaging needs both x64 and
-  arm64 binaries.
-- The migration Tauri build supports macOS Apple Silicon only; the public
-  Electron release remains universal until the runtime switch.
+- Tectonic 0.17.0 is bundled as a target-qualified sidecar. macOS arm64 and x64
+  packages each carry the matching architecture-specific binary.
 - macOS CI output is ad-hoc signed and not Apple-notarized.
-- The build currently needs no custom Actions secret; GitHub provides the
-  workflow `GITHUB_TOKEN`. Do not assume that remains true if signing,
-  notarization, or an external publishing service is added.
+- Ordinary branch and pull-request builds need no custom Actions secret. A tagged
+  updater release requires `TEXTEX_UPDATER_PUBLIC_KEY`,
+  `TAURI_SIGNING_PRIVATE_KEY`, and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
 - `main` does not currently have branch protection. Enable a ruleset before
   broadening write access if the repository will have multiple maintainers.
 - Dependabot checks npm and GitHub Actions weekly. Review open dependency PRs
@@ -99,6 +97,7 @@ cd textex
 git status --short --branch
 node --version
 npm ci
+npm run setup:tauri
 ```
 
 Node.js 22.13 or newer is required. Read these files before changing code:
@@ -114,7 +113,6 @@ Run the full acceptance build:
 ```bash
 npm run pre-commit
 npm run build
-npm run build:electron
 npm run build:cli
 npm run build:mcp
 node out/cli/cli/index.js --version
@@ -155,8 +153,8 @@ Recommended minimums are:
 
 - require pull requests for changes to `main`;
 - require the current `Lint & Typecheck` and `Test` checks;
-- for packaging or release changes, require successful Linux, Windows, and
-  macOS universal jobs before tagging;
+- for packaging or release changes, require successful Linux x64, Windows x64,
+  macOS arm64, and macOS x64 jobs before tagging;
 - block force pushes and branch deletion for `main`;
 - keep administrators subject to the rules unless emergency bypass ownership
   is explicitly assigned.
@@ -173,8 +171,9 @@ gh pr list --repo Topasm/textex --state open --author app/dependabot
 git ls-remote --heads origin
 ```
 
-An empty `gh secret list` is expected for the current ad-hoc release flow. If
-secrets are later added, document only their names and purpose, never values.
+For a release owner, `gh secret list` should show the three updater-signing secret
+names listed above. It never reveals their values. Keep platform signing or
+notarization credentials separate and document only names and purpose.
 
 ## 6. Branch and Pull Request Hygiene
 
@@ -209,10 +208,10 @@ gh release view v1.0.8 --json url,tagName,isDraft,isPrerelease,assets
 Key invariants:
 
 - validate the exact release commit on `main` before creating its tag;
-- wait for all three platform builds because fail-fast is disabled on purpose;
+- wait for all four target builds because fail-fast is disabled on purpose;
 - keep version strings synchronized across the app, CLI, MCP server, and lock;
-- preserve macOS universal native-module and sidecar rules;
-- publish updater manifests, blockmaps, macOS ZIP, and checksums;
+- preserve separate macOS arm64/x64 packages and target-qualified Tectonic sidecars;
+- publish installers, signed updater archives, `latest.json`, and `checksums.txt`;
 - never move a tag after a GitHub Release exists.
 
 ## 8. Transfer Project Knowledge Outside Git

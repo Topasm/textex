@@ -46,6 +46,7 @@ Object.defineProperty(window, 'api', {
     // File operations (original)
     openFile: vi.fn(),
     saveFile: vi.fn(),
+    writeFileBinary: vi.fn(),
     saveFileAs: vi.fn(),
     compile: vi.fn(),
     cancelCompile: vi.fn(),
@@ -59,8 +60,10 @@ Object.defineProperty(window, 'api', {
     // Multi-file / directory operations
     readFile: vi.fn(),
     readFileBinary: vi.fn(),
+    createDirectory: vi.fn(),
     openDirectory: vi.fn(),
     activateProject: vi.fn(async (projectPath: string) => projectPath),
+    deactivateProject: vi.fn(),
     readDirectory: vi.fn(),
     watchDirectory: vi.fn(),
     unwatchDirectory: vi.fn(),
@@ -167,7 +170,19 @@ Object.defineProperty(window, 'api', {
     zoteroCiteCAYW: vi.fn(),
     zoteroExportBibtex: vi.fn(),
     zoteroSyncCollection: vi.fn(),
-
+    zoteroCollections: vi.fn().mockResolvedValue([]),
+    zoteroAddToProject: vi.fn(),
+    zoteroSaveOnline: vi.fn(),
+    researchSearchOnline: vi.fn().mockResolvedValue([]),
+    researchAddOnline: vi.fn(),
+    researchLoadConfig: vi.fn().mockResolvedValue({
+      version: 1,
+      referencesFile: 'references.bib',
+      zoteroFile: 'zotero.bib',
+      zoteroCollection: null,
+      syncOnOpen: false
+    }),
+    researchSaveConfig: vi.fn(),
     // Citation groups / history / templates / project data
     loadCitationGroups: vi.fn(),
     saveCitationGroups: vi.fn(),

@@ -70,6 +70,7 @@ export function useIpcListeners(
       let disposed = false
       let indexLoad: Promise<void> | null = null
       let pendingIndexDeltas: ProjectIndexDelta[] = []
+      let indexReloadGeneration = 0
       const projectIndex = new ProjectIndexRefreshCoordinator({
         projectRoot,
         readDirectory: (directoryPath) => window.api.readDirectory(directoryPath),
@@ -80,11 +81,17 @@ export function useIpcListeners(
       })
 
       const loadProjectIndex = (): void => {
-        if (!window.api.getProjectIndex || indexLoad || disposed) return
+        if (indexLoad || disposed) return
+        const requestedReloadGeneration = indexReloadGeneration
         indexLoad = window.api
           .getProjectIndex()
           .then((snapshot) => {
-            if (disposed || projectPathKey(snapshot.root) !== projectPathKey(projectRoot)) return
+            if (
+              disposed ||
+              requestedReloadGeneration !== indexReloadGeneration ||
+              projectPathKey(snapshot.root) !== projectPathKey(projectRoot)
+            )
+              return
             const projectState = useProjectStore.getState()
             projectState.setProjectIndex(snapshot)
             const pending = pendingIndexDeltas.sort(
@@ -104,12 +111,22 @@ export function useIpcListeners(
           })
           .finally(() => {
             indexLoad = null
-            if (!disposed && pendingIndexDeltas.length > 0) loadProjectIndex()
+            if (
+              !disposed &&
+              (requestedReloadGeneration !== indexReloadGeneration || pendingIndexDeltas.length > 0)
+            )
+              loadProjectIndex()
           })
       }
 
       window.api.onDirectoryChanged((change) => {
         projectIndex.enqueue(change)
+        if (change.indexInvalidated) {
+          indexReloadGeneration += 1
+          pendingIndexDeltas = []
+          useProjectStore.getState().setProjectIndex(null)
+          loadProjectIndex()
+        }
         if (change.indexDelta) {
           const state = useProjectStore.getState()
           if (indexLoad || !state.projectIndex) {

@@ -1,4 +1,5 @@
 import { Channel, invoke } from '@tauri-apps/api/core'
+import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import type { DesktopApi, OpenFileResult, SaveAsResult, SaveResult } from '../types/api'
 import type {
   DirectoryChangeEvent,
@@ -18,103 +19,26 @@ import type {
 import { parseContentOutline } from '../../shared/contentOutline'
 import { builtInTemplates } from '../../shared/templates'
 import type { Template } from '../../shared/templates'
+import { APP_COMMAND_MANIFEST, type AppCommandId } from '../../shared/appCommandManifest'
 
-type MigratedDesktopApi = Pick<
-  DesktopApi,
-  | 'openFile'
-  | 'openDirectory'
-  | 'activateProject'
-  | 'readDirectory'
-  | 'readFile'
-  | 'saveFile'
-  | 'saveFileAs'
-  | 'saveFileBatch'
-  | 'createFile'
-  | 'createDirectory'
-  | 'copyFile'
-  | 'renamePath'
-  | 'deletePath'
-  | 'readFileBase64'
-  | 'readFileBinary'
-  | 'createTemplateProject'
-  | 'gitIsRepo'
-  | 'gitInit'
-  | 'gitStatus'
-  | 'gitStage'
-  | 'gitUnstage'
-  | 'gitCommit'
-  | 'gitDiff'
-  | 'gitLog'
-  | 'gitFileLog'
-  | 'saveHistorySnapshot'
-  | 'getHistoryList'
-  | 'loadHistorySnapshot'
-  | 'loadPackageData'
-  | 'getDocumentOutline'
-  | 'watchDirectory'
-  | 'unwatchDirectory'
-  | 'onDirectoryChanged'
-  | 'removeDirectoryChangedListener'
-  | 'getProjectIndex'
-  | 'projectInit'
-  | 'projectExists'
-  | 'projectLoad'
-  | 'projectSave'
-  | 'projectTouch'
-  | 'projectCompileLoad'
-  | 'projectCompileSave'
-  | 'projectCompileClear'
-  | 'projectCompileLogSave'
-  | 'projectCompileLogLoad'
-  | 'projectSnippetsLoad'
-  | 'projectSnippetsAdd'
-  | 'projectSnippetsRemove'
-  | 'projectBookmarksLoad'
-  | 'projectBookmarksAdd'
-  | 'projectBookmarksRemove'
-  | 'loadCitationGroups'
-  | 'saveCitationGroups'
-  | 'parseBibFile'
-  | 'findBibInProject'
-  | 'scanLabels'
-  | 'spellInit'
-  | 'spellCheck'
-  | 'spellSuggest'
-  | 'spellAddWord'
-  | 'spellSetLanguage'
-  | 'listTemplates'
-  | 'addTemplate'
-  | 'removeTemplate'
-  | 'importTemplateZip'
-  | 'zoteroProbe'
-  | 'zoteroSearch'
-  | 'zoteroCiteCAYW'
-  | 'zoteroExportBibtex'
-  | 'zoteroSyncCollection'
-  | 'compile'
-  | 'cancelCompile'
-  | 'onCompileLog'
-  | 'removeCompileLogListener'
-  | 'onDiagnostics'
-  | 'removeDiagnosticsListener'
-  | 'synctexForward'
-  | 'synctexInverse'
-  | 'synctexBuildLineMap'
-  | 'exportDocument'
-  | 'getExportFormats'
-  | 'openExternal'
-  | 'getPerformanceMemory'
-  | 'loadSettings'
-  | 'saveSettings'
-  | 'addRecentProject'
-  | 'removeRecentProject'
-  | 'updateRecentProject'
-  | 'updateCheck'
-  | 'updateDownload'
-  | 'updateInstall'
-  | 'onUpdateEvent'
-  | 'removeUpdateListeners'
->
+const aiGenerate: DesktopApi['aiGenerate'] = (input, provider, model) =>
+  invoke(TAURI_COMMANDS.aiGenerate, { input, provider, model })
+const aiProcess: DesktopApi['aiProcess'] = (request) =>
+  invoke(TAURI_COMMANDS.aiProcess, { request })
+const aiProcessCustom: DesktopApi['aiProcessCustom'] = (request) =>
+  invoke(TAURI_COMMANDS.aiProcessCustom, { request })
+const aiUpdateContext: DesktopApi['aiUpdateContext'] = (filePath, content) =>
+  invoke(TAURI_COMMANDS.aiUpdateContext, { filePath, content })
+const aiSaveApiKey: DesktopApi['aiSaveApiKey'] = (provider, apiKey) =>
+  invoke(TAURI_COMMANDS.aiSaveApiKey, { provider, apiKey })
+const aiHasApiKey: DesktopApi['aiHasApiKey'] = (provider) =>
+  invoke(TAURI_COMMANDS.aiHasApiKey, { provider })
+const aiCheckCli: DesktopApi['aiCheckCli'] = () => invoke(TAURI_COMMANDS.aiCheckCli)
+const aiCheckCodexCli: DesktopApi['aiCheckCodexCli'] = () => invoke(TAURI_COMMANDS.aiCheckCodexCli)
+const aiOpenClaudeTerminal: DesktopApi['aiOpenClaudeTerminal'] = (request) =>
+  invoke(TAURI_COMMANDS.aiOpenClaudeTerminal, { request })
+const aiOpenCodexTerminal: DesktopApi['aiOpenCodexTerminal'] = (request) =>
+  invoke(TAURI_COMMANDS.aiOpenCodexTerminal, { request })
 
 type TauriCompileEvent =
   | (CompileLogEvent & { event: 'log' })
@@ -145,10 +69,35 @@ type TauriUpdateDownloadEvent =
     }
   | { event: 'finished' }
 
+type TauriPtyEvent =
+  | { event: 'data'; id: string; data: string }
+  | { event: 'exit'; id: string; exitCode: number; signal: number | null }
+  | { event: 'overflow'; id: string; droppedBytes: number }
+
+type TauriLspEvent =
+  { event: 'message'; message: object } | { event: 'status'; status: string; error?: string }
+
 let compileLogCallback: ((event: CompileLogEvent) => void) | null = null
 let diagnosticsCallback: ((event: CompileDiagnosticsEvent) => void) | null = null
 let directoryChangeCallback: ((change: DirectoryChangeEvent) => void) | null = null
+let directoryWatcherGeneration = 0
 const updateCallbacks = new Map<string, (...args: unknown[]) => void>()
+const ptyDataCallbacks = new Map<string, Set<(data: string) => void>>()
+const ptyExitCallbacks = new Map<string, Set<(exitCode: number, signal: number | null) => void>>()
+const pendingPtyData = new Map<string, string>()
+const pendingPtyExit = new Map<string, { exitCode: number; signal: number | null }>()
+const ptyEventChannels = new Map<string, Channel<TauriPtyEvent>>()
+let lspMessageCallback: ((message: object) => void) | null = null
+let lspStatusCallback: ((status: string, error?: string) => void) | null = null
+let lspGeneration = 0
+let lspTransition: Promise<void> = Promise.resolve()
+const MAX_PENDING_PTY_DATA = 256 * 1024
+const PTY_OVERFLOW_NOTICE = '\r\n[TextEx terminal output truncated]\r\n'
+const APP_COMMAND_EVENT = 'app-command'
+const appCommandIds = new Set<string>(APP_COMMAND_MANIFEST.map(({ id }) => id))
+let appCommandCallback: ((command: AppCommandId) => void) | null = null
+let appCommandListener: Promise<UnlistenFn> | null = null
+let appCommandListenerGeneration = 0
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
@@ -156,6 +105,34 @@ function errorMessage(error: unknown): string {
 
 function emitUpdateEvent(event: string, ...args: unknown[]): void {
   updateCallbacks.get(event)?.(...args)
+}
+
+const onAppCommand: DesktopApi['onAppCommand'] = (callback) => {
+  appCommandCallback = callback
+  if (appCommandListener) return
+
+  const generation = ++appCommandListenerGeneration
+  const pending = listen<string>(APP_COMMAND_EVENT, ({ payload }) => {
+    if (
+      generation === appCommandListenerGeneration &&
+      appCommandIds.has(payload) &&
+      appCommandCallback
+    ) {
+      appCommandCallback(payload as AppCommandId)
+    }
+  })
+  appCommandListener = pending
+  void pending.catch(() => {
+    if (appCommandListener === pending) appCommandListener = null
+  })
+}
+
+const removeAppCommandListener: DesktopApi['removeAppCommandListener'] = () => {
+  appCommandCallback = null
+  appCommandListenerGeneration += 1
+  const pending = appCommandListener
+  appCommandListener = null
+  void pending?.then((unlisten) => unlisten()).catch(() => undefined)
 }
 
 const openFile: DesktopApi['openFile'] = () =>
@@ -167,6 +144,11 @@ const openDirectory: DesktopApi['openDirectory'] = () =>
 const activateProject: DesktopApi['activateProject'] = (projectPath) =>
   invoke<string>(TAURI_COMMANDS.activateProject, { projectPath })
 
+const deactivateProject: DesktopApi['deactivateProject'] = () => {
+  directoryWatcherGeneration += 1
+  return invoke<{ success: boolean }>(TAURI_COMMANDS.deactivateProject)
+}
+
 const readDirectory: DesktopApi['readDirectory'] = (dirPath) =>
   invoke<DirectoryEntry[]>(TAURI_COMMANDS.readDirectory, { dirPath })
 
@@ -175,6 +157,20 @@ const readFile: DesktopApi['readFile'] = (filePath) =>
 
 const saveFile: DesktopApi['saveFile'] = (content, filePath) =>
   invoke<SaveResult>(TAURI_COMMANDS.saveFile, { content, filePath })
+
+const BINARY_FILE_PATH_HEADER = 'x-textex-file-path'
+
+function encodeBinaryFilePath(filePath: string): string {
+  const bytes = new TextEncoder().encode(filePath)
+  let binary = ''
+  for (const byte of bytes) binary += String.fromCharCode(byte)
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/u, '')
+}
+
+const writeFileBinary: DesktopApi['writeFileBinary'] = (filePath, data) =>
+  invoke<SaveAsResult>(TAURI_COMMANDS.writeFileBinary, data, {
+    headers: { [BINARY_FILE_PATH_HEADER]: encodeBinaryFilePath(filePath) }
+  })
 
 const saveFileAs: DesktopApi['saveFileAs'] = (content) =>
   invoke<SaveAsResult | null>(TAURI_COMMANDS.saveFileAs, { content })
@@ -276,13 +272,18 @@ const getDocumentOutline: DesktopApi['getDocumentOutline'] = async (filePath, co
   parseContentOutline(content, filePath)
 
 const watchDirectory: DesktopApi['watchDirectory'] = (dirPath) => {
+  const generation = ++directoryWatcherGeneration
   const onEvent = new Channel<DirectoryChangeEvent>()
-  onEvent.onmessage = (event) => directoryChangeCallback?.(event)
+  onEvent.onmessage = (event) => {
+    if (generation === directoryWatcherGeneration) directoryChangeCallback?.(event)
+  }
   return invoke<{ success: boolean }>(TAURI_COMMANDS.watchDirectory, { dirPath, onEvent })
 }
 
-const unwatchDirectory: DesktopApi['unwatchDirectory'] = () =>
-  invoke<{ success: boolean }>(TAURI_COMMANDS.unwatchDirectory)
+const unwatchDirectory: DesktopApi['unwatchDirectory'] = () => {
+  directoryWatcherGeneration += 1
+  return invoke<{ success: boolean }>(TAURI_COMMANDS.unwatchDirectory)
+}
 
 const onDirectoryChanged: DesktopApi['onDirectoryChanged'] = (callback) => {
   directoryChangeCallback = callback
@@ -401,6 +402,27 @@ const zoteroExportBibtex: DesktopApi['zoteroExportBibtex'] = (citekeys, port) =>
 const zoteroSyncCollection: DesktopApi['zoteroSyncCollection'] = (collection, targetFile, port) =>
   invoke(TAURI_COMMANDS.zoteroSyncCollection, { collection, targetFile, port })
 
+const zoteroCollections: DesktopApi['zoteroCollections'] = (port) =>
+  invoke(TAURI_COMMANDS.zoteroCollections, { port })
+
+const zoteroAddToProject: DesktopApi['zoteroAddToProject'] = (citekey, port) =>
+  invoke(TAURI_COMMANDS.zoteroAddToProject, { citekey, port })
+
+const zoteroSaveOnline: DesktopApi['zoteroSaveOnline'] = (reference, port) =>
+  invoke(TAURI_COMMANDS.zoteroSaveOnline, { reference, port })
+
+const researchSearchOnline: DesktopApi['researchSearchOnline'] = (query) =>
+  invoke(TAURI_COMMANDS.researchSearchOnline, { query })
+
+const researchAddOnline: DesktopApi['researchAddOnline'] = (reference) =>
+  invoke(TAURI_COMMANDS.researchAddOnline, { reference })
+
+const researchLoadConfig: DesktopApi['researchLoadConfig'] = () =>
+  invoke(TAURI_COMMANDS.researchLoadConfig)
+
+const researchSaveConfig: DesktopApi['researchSaveConfig'] = (config) =>
+  invoke(TAURI_COMMANDS.researchSaveConfig, { config })
+
 const compile: DesktopApi['compile'] = (request: CompileRequest) => {
   const onEvent = new Channel<TauriCompileEvent>()
   onEvent.onmessage = (event) => {
@@ -444,6 +466,144 @@ const openExternal: DesktopApi['openExternal'] = (url) =>
 const getPerformanceMemory: DesktopApi['getPerformanceMemory'] = () =>
   invoke(TAURI_COMMANDS.getPerformanceMemory)
 
+function emitPtyData(id: string, data: string): void {
+  const callbacks = ptyDataCallbacks.get(id)
+  if (callbacks?.size) {
+    callbacks.forEach((callback) => callback(data))
+    return
+  }
+  const buffered = `${pendingPtyData.get(id) ?? ''}${data}`
+  pendingPtyData.set(id, buffered.slice(-MAX_PENDING_PTY_DATA))
+}
+
+function clearPtySession(id: string): void {
+  ptyDataCallbacks.delete(id)
+  ptyExitCallbacks.delete(id)
+  pendingPtyData.delete(id)
+  pendingPtyExit.delete(id)
+}
+
+const ptyCreate: DesktopApi['ptyCreate'] = async (options) => {
+  const onEvent = new Channel<TauriPtyEvent>()
+  onEvent.onmessage = (event) => {
+    if (event.event === 'data') {
+      emitPtyData(event.id, event.data)
+      return
+    }
+    if (event.event === 'overflow') {
+      emitPtyData(event.id, PTY_OVERFLOW_NOTICE)
+      return
+    }
+    const callbacks = ptyExitCallbacks.get(event.id)
+    if (callbacks?.size) {
+      callbacks.forEach((callback) => callback(event.exitCode, event.signal))
+    } else {
+      pendingPtyExit.set(event.id, { exitCode: event.exitCode, signal: event.signal })
+    }
+  }
+  const result = await invoke<{ id: string }>(TAURI_COMMANDS.ptyCreate, { options, onEvent })
+  ptyEventChannels.set(result.id, onEvent)
+  return result
+}
+
+const ptyWrite: DesktopApi['ptyWrite'] = (id, data) => invoke(TAURI_COMMANDS.ptyWrite, { id, data })
+
+const ptyResize: DesktopApi['ptyResize'] = (id, cols, rows) =>
+  invoke(TAURI_COMMANDS.ptyResize, { id, cols: Math.floor(cols), rows: Math.floor(rows) })
+
+const ptyDispose: DesktopApi['ptyDispose'] = async (id) => {
+  try {
+    return await invoke<{ success: boolean }>(TAURI_COMMANDS.ptyDispose, { id })
+  } finally {
+    const channel = ptyEventChannels.get(id)
+    if (channel) channel.onmessage = () => {}
+    ptyEventChannels.delete(id)
+    clearPtySession(id)
+  }
+}
+
+const onPtyData: DesktopApi['onPtyData'] = (id, callback) => {
+  const callbacks = ptyDataCallbacks.get(id) ?? new Set()
+  callbacks.add(callback)
+  ptyDataCallbacks.set(id, callbacks)
+  const buffered = pendingPtyData.get(id)
+  if (buffered) {
+    pendingPtyData.delete(id)
+    callback(buffered)
+  }
+  return () => {
+    callbacks.delete(callback)
+    if (!callbacks.size) ptyDataCallbacks.delete(id)
+  }
+}
+
+const onPtyExit: DesktopApi['onPtyExit'] = (id, callback) => {
+  const callbacks = ptyExitCallbacks.get(id) ?? new Set()
+  callbacks.add(callback)
+  ptyExitCallbacks.set(id, callbacks)
+  const pending = pendingPtyExit.get(id)
+  if (pending) {
+    pendingPtyExit.delete(id)
+    callback(pending.exitCode, pending.signal)
+  }
+  return () => {
+    callbacks.delete(callback)
+    if (!callbacks.size) ptyExitCallbacks.delete(id)
+  }
+}
+
+const lspStart: DesktopApi['lspStart'] = (workspaceRoot) => {
+  const generation = ++lspGeneration
+  const onEvent = new Channel<TauriLspEvent>()
+  onEvent.onmessage = (event) => {
+    if (generation !== lspGeneration) return
+    if (event.event === 'message') {
+      lspMessageCallback?.(event.message)
+    } else {
+      lspStatusCallback?.(event.status, event.error)
+    }
+  }
+  const transition = lspTransition
+    .catch(() => {})
+    .then(() => {
+      if (generation !== lspGeneration) return { success: false }
+      return invoke<{ success: boolean }>(TAURI_COMMANDS.lspStart, { workspaceRoot, onEvent })
+    })
+  lspTransition = transition.then(
+    () => {},
+    () => {}
+  )
+  return transition
+}
+
+const lspStop: DesktopApi['lspStop'] = () => {
+  lspGeneration += 1
+  const transition = lspTransition
+    .catch(() => {})
+    .then(() => invoke<{ success: boolean }>(TAURI_COMMANDS.lspStop))
+  lspTransition = transition.then(
+    () => {},
+    () => {}
+  )
+  return transition
+}
+const lspSend: DesktopApi['lspSend'] = (message) =>
+  lspTransition.then(() => invoke(TAURI_COMMANDS.lspSend, { message }))
+const lspStatus: DesktopApi['lspStatus'] = () =>
+  lspTransition.then(() => invoke(TAURI_COMMANDS.lspStatus))
+const onLspMessage: DesktopApi['onLspMessage'] = (callback) => {
+  lspMessageCallback = callback
+}
+const removeLspMessageListener: DesktopApi['removeLspMessageListener'] = () => {
+  lspMessageCallback = null
+}
+const onLspStatus: DesktopApi['onLspStatus'] = (callback) => {
+  lspStatusCallback = callback
+}
+const removeLspStatusListener: DesktopApi['removeLspStatusListener'] = () => {
+  lspStatusCallback = null
+}
+
 const onCompileLog: DesktopApi['onCompileLog'] = (callback) => {
   compileLogCallback = callback
 }
@@ -464,6 +624,8 @@ const loadSettings: DesktopApi['loadSettings'] = () => invoke(TAURI_COMMANDS.loa
 
 const saveSettings: DesktopApi['saveSettings'] = (partial) =>
   invoke(TAURI_COMMANDS.saveSettings, { partial })
+
+const setTheme: DesktopApi['setTheme'] = async () => {}
 
 const addRecentProject: DesktopApi['addRecentProject'] = (projectPath) =>
   invoke(TAURI_COMMANDS.addRecentProject, { projectPath })
@@ -529,13 +691,25 @@ const removeUpdateListeners: DesktopApi['removeUpdateListeners'] = () => {
   updateCallbacks.clear()
 }
 
-const migratedApi: MigratedDesktopApi = {
+const tauriDesktopApi = {
+  aiGenerate,
+  aiProcess,
+  aiProcessCustom,
+  aiUpdateContext,
+  aiSaveApiKey,
+  aiHasApiKey,
+  aiCheckCli,
+  aiCheckCodexCli,
+  aiOpenClaudeTerminal,
+  aiOpenCodexTerminal,
   openFile,
   openDirectory,
   activateProject,
+  deactivateProject,
   readDirectory,
   readFile,
   saveFile,
+  writeFileBinary,
   saveFileAs,
   saveFileBatch,
   createFile,
@@ -600,6 +774,13 @@ const migratedApi: MigratedDesktopApi = {
   zoteroCiteCAYW,
   zoteroExportBibtex,
   zoteroSyncCollection,
+  zoteroCollections,
+  zoteroAddToProject,
+  zoteroSaveOnline,
+  researchSearchOnline,
+  researchAddOnline,
+  researchLoadConfig,
+  researchSaveConfig,
   compile,
   cancelCompile,
   onCompileLog,
@@ -613,8 +794,23 @@ const migratedApi: MigratedDesktopApi = {
   getExportFormats,
   openExternal,
   getPerformanceMemory,
+  ptyCreate,
+  ptyWrite,
+  ptyResize,
+  ptyDispose,
+  onPtyData,
+  onPtyExit,
+  lspStart,
+  lspStop,
+  lspSend,
+  lspStatus,
+  onLspMessage,
+  removeLspMessageListener,
+  onLspStatus,
+  removeLspStatusListener,
   loadSettings,
   saveSettings,
+  setTheme,
   addRecentProject,
   removeRecentProject,
   updateRecentProject,
@@ -622,52 +818,16 @@ const migratedApi: MigratedDesktopApi = {
   updateDownload,
   updateInstall,
   onUpdateEvent,
-  removeUpdateListeners
-}
-
-function unsupported(method: string): (...args: unknown[]) => Promise<never> {
-  return () =>
-    Promise.reject(
-      new Error(`Desktop API method "${method}" has not been migrated to the Tauri backend yet`)
-    )
-}
-
-const listenerFallbacks: Partial<DesktopApi> = {
-  onAppCommand: () => {},
-  removeAppCommandListener: () => {},
-  onLspMessage: () => {},
-  removeLspMessageListener: () => {},
-  onLspStatus: () => {},
-  removeLspStatusListener: () => {},
-  // LSP startup still rejects explicitly while TexLab is pending, but stop is
-  // called unconditionally by the shared lifecycle and must never create an
-  // unhandled rejection during Tauri startup/cleanup.
-  lspStop: async () => ({ success: false }),
-  onPtyData: () => () => {},
-  onPtyExit: () => () => {},
-  setTheme: async () => {}
-}
+  removeUpdateListeners,
+  onAppCommand,
+  removeAppCommandListener
+} satisfies DesktopApi
 
 /**
- * Creates the transitional Tauri implementation of the existing DesktopApi.
- * Unsupported calls fail explicitly while event registration remains a safe
- * no-op, allowing the shared renderer to boot during incremental migration.
+ * Creates the Tauri implementation of the renderer's DesktopApi boundary.
+ * The concrete object satisfies the complete boundary at compile time, so a
+ * newly added DesktopApi method cannot silently fall through at runtime.
  */
 export function createTauriApi(): DesktopApi {
-  const implemented: Partial<DesktopApi> = {
-    ...migratedApi,
-    ...listenerFallbacks
-  }
-
-  return new Proxy(implemented, {
-    get(target, property, receiver) {
-      if (Reflect.has(target, property)) {
-        return Reflect.get(target, property, receiver)
-      }
-      if (typeof property === 'string') {
-        return unsupported(property)
-      }
-      return undefined
-    }
-  }) as DesktopApi
+  return tauriDesktopApi
 }

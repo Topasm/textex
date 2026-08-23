@@ -97,8 +97,17 @@ pub enum AppError {
     #[error("Performance sampling failed: {0}")]
     Performance(String),
 
+    #[error("Terminal operation failed: {0}")]
+    Pty(String),
+
+    #[error("Language server operation failed: {0}")]
+    Lsp(String),
+
     #[error("Zotero operation failed: {0}")]
     Zotero(String),
+
+    #[error("AI operation failed: {0}")]
+    Ai(String),
 
     #[error("Settings operation failed: {0}")]
     Settings(String),
@@ -175,9 +184,8 @@ impl AppError {
     }
 }
 
-// Tauri command errors must implement Serialize. A string payload preserves
-// the renderer's existing Electron behavior, where rejected IPC calls expose
-// a human-readable Error message.
+// Tauri command errors must implement Serialize. A string payload keeps
+// rejected native calls human-readable at the typed renderer boundary.
 impl Serialize for AppError {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where

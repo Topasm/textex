@@ -31,6 +31,81 @@ pub struct PerformanceMemorySample {
     pub processes: Vec<ProcessMemoryMetric>,
 }
 
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PtyCreateOptions {
+    pub cwd: String,
+    pub cols: Option<u16>,
+    pub rows: Option<u16>,
+    pub shell: Option<String>,
+    #[serde(default)]
+    pub env: HashMap<String, String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub struct PtyCreateResult {
+    pub id: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(tag = "event", rename_all = "lowercase")]
+pub enum PtyEvent {
+    Data {
+        id: String,
+        data: String,
+    },
+    Exit {
+        id: String,
+        #[serde(rename = "exitCode")]
+        exit_code: u32,
+        signal: Option<i32>,
+    },
+    Overflow {
+        id: String,
+        #[serde(rename = "droppedBytes")]
+        dropped_bytes: u64,
+    },
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum LspStatus {
+    #[default]
+    Stopped,
+    Starting,
+    Running,
+    Error,
+}
+
+impl LspStatus {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Stopped => "stopped",
+            Self::Starting => "starting",
+            Self::Running => "running",
+            Self::Error => "error",
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[serde(tag = "event", rename_all = "lowercase")]
+pub enum LspEvent {
+    Message {
+        message: serde_json::Value,
+    },
+    Status {
+        status: LspStatus,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        error: Option<String>,
+    },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub struct LspStatusResult {
+    pub status: &'static str,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Template {
@@ -138,6 +213,70 @@ pub struct ZoteroSyncResult {
     pub file_path: String,
     pub bytes_written: u64,
     pub entry_count: u32,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZoteroCollection {
+    pub key: String,
+    pub name: String,
+    pub parent_key: Option<String>,
+    pub item_count: u32,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OnlineReference {
+    pub source: String,
+    pub id: String,
+    pub title: String,
+    pub authors: Vec<String>,
+    pub year: String,
+    #[serde(rename = "type")]
+    pub item_type: String,
+    pub doi: Option<String>,
+    pub arxiv_id: Option<String>,
+    pub url: Option<String>,
+    pub r#abstract: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReferenceAddResult {
+    pub file_path: String,
+    pub citekey: String,
+    pub inserted: bool,
+    pub duplicate: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZoteroSaveResult {
+    pub item_key: String,
+    pub citekey: Option<String>,
+    pub duplicate: bool,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResearchConfig {
+    pub version: u8,
+    pub references_file: String,
+    pub zotero_file: String,
+    pub zotero_collection: Option<String>,
+    pub sync_on_open: bool,
+}
+
+impl Default for ResearchConfig {
+    fn default() -> Self {
+        Self {
+            version: 1,
+            references_file: "references.bib".to_owned(),
+            zotero_file: "zotero.bib".to_owned(),
+            zotero_collection: None,
+            sync_on_open: false,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -284,6 +423,7 @@ pub struct UserSettings {
     pub zotero_enabled: bool,
     pub zotero_port: u16,
     pub zotero_collection: String,
+    pub cite_online_to_zotero: bool,
     pub ai_enabled: bool,
     pub ai_provider: AiProvider,
     pub ai_model: String,
@@ -340,6 +480,7 @@ impl Default for UserSettings {
             zotero_enabled: false,
             zotero_port: 23119,
             zotero_collection: String::new(),
+            cite_online_to_zotero: false,
             ai_enabled: false,
             ai_provider: AiProvider::None,
             ai_model: String::new(),
@@ -411,7 +552,7 @@ pub enum Theme {
     Glass,
 }
 
-#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
 pub enum AiProvider {
     #[default]
     #[serde(rename = "")]
@@ -426,6 +567,93 @@ pub enum AiProvider {
     ClaudeCli,
     #[serde(rename = "codex-cli")]
     CodexCli,
+}
+
+impl AiProvider {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::None => "",
+            Self::OpenAi => "openai",
+            Self::Anthropic => "anthropic",
+            Self::Gemini => "gemini",
+            Self::ClaudeCli => "claude-cli",
+            Self::CodexCli => "codex-cli",
+        }
+    }
+
+    pub fn uses_api_key(self) -> bool {
+        matches!(self, Self::OpenAi | Self::Anthropic | Self::Gemini)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum AiAction {
+    Fix,
+    Academic,
+    Summarize,
+    Longer,
+    Shorter,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AiLightContext {
+    pub file_path: String,
+    pub section_path: Vec<String>,
+    pub outline: Vec<String>,
+    pub before_selection: String,
+    pub after_selection: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AiContextEntry {
+    pub file_path: String,
+    pub content_hash: String,
+    pub generated_at: String,
+    pub summary: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AiProcessRequest {
+    pub action: AiAction,
+    pub selected_text: String,
+    pub file_path: String,
+    pub light_context: AiLightContext,
+    pub summary_context: Option<AiContextEntry>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AiCustomProcessRequest {
+    pub command: String,
+    pub selected_text: String,
+    pub file_path: String,
+    pub light_context: AiLightContext,
+    pub summary_context: Option<AiContextEntry>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AiTerminalRequest {
+    pub work_dir: String,
+    #[serde(default)]
+    pub resume: bool,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AiTerminalResult {
+    pub success: bool,
+    pub work_dir: String,
+    pub command: String,
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub struct AiGenerateResult {
+    pub latex: String,
 }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
@@ -623,6 +851,11 @@ pub struct DirectoryChangeEvent {
     pub filename: String,
     #[serde(rename = "indexDelta", skip_serializing_if = "Option::is_none")]
     pub index_delta: Option<ProjectIndexDelta>,
+    #[serde(
+        rename = "indexInvalidated",
+        skip_serializing_if = "std::ops::Not::not"
+    )]
+    pub index_invalidated: bool,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
@@ -829,6 +1062,7 @@ mod tests {
             event_type: DirectoryChangeType::Rename,
             filename: "chapters/intro.tex".to_owned(),
             index_delta: None,
+            index_invalidated: false,
         };
 
         assert_eq!(
@@ -855,6 +1089,7 @@ mod tests {
                 }],
                 removed_paths: Vec::new(),
             }),
+            index_invalidated: false,
         };
         assert_eq!(
             serde_json::to_value(indexed_event).expect("serialize indexed directory change"),

@@ -1,6 +1,13 @@
 import { create } from 'zustand'
 import { subscribeWithSelector, persist } from 'zustand/middleware'
-import { SIDEBAR_DEFAULT_WIDTH, SIDEBAR_WIDTH_MIN, SIDEBAR_WIDTH_MAX } from '../constants'
+import {
+  RESEARCH_PANEL_DEFAULT_WIDTH,
+  RESEARCH_PANEL_WIDTH_MAX,
+  RESEARCH_PANEL_WIDTH_MIN,
+  SIDEBAR_DEFAULT_WIDTH,
+  SIDEBAR_WIDTH_MIN,
+  SIDEBAR_WIDTH_MAX
+} from '../constants'
 import type {
   DirectoryEntry,
   BibEntry,
@@ -14,7 +21,25 @@ import type { AuxCitationMap } from '../../shared/auxparser'
 import type { GitStatusResult } from '../types/api'
 import { applyProjectIndexDelta, projectPathKey } from '../services/projectIndex'
 
-export type SidebarView = 'files' | 'git' | 'bib' | 'outline' | 'todo' | 'timeline'
+export type SidebarView = 'files' | 'git' | 'outline' | 'todo' | 'timeline'
+export type ResearchPanelTab = 'chat' | 'references'
+export type ReferenceSource = 'project' | 'zotero' | 'online'
+
+export interface BibliographyRegistrationRequest {
+  filePath: string
+  bibliographyFile: string
+  originalContent: string
+  proposedContent: string
+  command: string
+  mode: 'bibtex' | 'biblatex'
+}
+
+interface PersistedResearchPanelState {
+  open: boolean
+  tab: ResearchPanelTab
+  width: number
+  source: ReferenceSource
+}
 
 interface ProjectState {
   projectRoot: string | null
@@ -24,6 +49,13 @@ interface ProjectState {
   isSidebarOpen: boolean
   sidebarView: SidebarView
   sidebarWidth: number
+  isResearchPanelOpen: boolean
+  researchPanelTab: ResearchPanelTab
+  researchPanelWidth: number
+  researchReferenceSource: ReferenceSource
+  researchSearchQuery: string
+  bibliographyRegistrationRequest: BibliographyRegistrationRequest | null
+  researchPanelStates: Record<string, PersistedResearchPanelState>
 
   // BibTeX
   bibEntries: BibEntry[]
@@ -53,6 +85,14 @@ interface ProjectState {
   toggleSidebar: () => void
   setSidebarView: (view: SidebarView) => void
   setSidebarWidth: (width: number) => void
+  toggleResearchPanel: () => void
+  openResearchPanel: (tab?: ResearchPanelTab) => void
+  closeResearchPanel: () => void
+  setResearchPanelTab: (tab: ResearchPanelTab) => void
+  setResearchPanelWidth: (width: number) => void
+  setResearchReferenceSource: (source: ReferenceSource) => void
+  setResearchSearchQuery: (query: string) => void
+  setBibliographyRegistrationRequest: (request: BibliographyRegistrationRequest | null) => void
   setBibEntries: (entries: BibEntry[]) => void
   setCitationGroups: (groups: CitationGroup[]) => void
   setAuxCitationMap: (map: AuxCitationMap | null) => void
@@ -74,6 +114,13 @@ export const useProjectStore = create<ProjectState>()(
       isSidebarOpen: false,
       sidebarView: 'files',
       sidebarWidth: SIDEBAR_DEFAULT_WIDTH,
+      isResearchPanelOpen: false,
+      researchPanelTab: 'references',
+      researchPanelWidth: RESEARCH_PANEL_DEFAULT_WIDTH,
+      researchReferenceSource: 'project',
+      researchSearchQuery: '',
+      bibliographyRegistrationRequest: null,
+      researchPanelStates: {},
 
       bibEntries: [],
       citationGroups: [],
@@ -86,7 +133,20 @@ export const useProjectStore = create<ProjectState>()(
       gitStatus: null,
 
       setProjectRoot: (projectRoot) =>
-        set({ projectRoot, directoryRefreshVersions: {}, projectIndex: null }),
+        set((state) => {
+          const saved = projectRoot ? state.researchPanelStates[projectRoot] : undefined
+          return {
+            projectRoot,
+            directoryRefreshVersions: {},
+            projectIndex: null,
+            isResearchPanelOpen: saved?.open ?? false,
+            researchPanelTab: saved?.tab ?? 'references',
+            researchPanelWidth: saved?.width ?? RESEARCH_PANEL_DEFAULT_WIDTH,
+            researchReferenceSource: saved?.source ?? 'project',
+            researchSearchQuery: '',
+            bibliographyRegistrationRequest: null
+          }
+        }),
       setDirectoryTree: (directoryTree) => set({ directoryTree }),
       invalidateDirectory: (directoryPath) =>
         set((state) => {
@@ -116,6 +176,26 @@ export const useProjectStore = create<ProjectState>()(
         set({
           sidebarWidth: Math.max(SIDEBAR_WIDTH_MIN, Math.min(SIDEBAR_WIDTH_MAX, sidebarWidth))
         }),
+      toggleResearchPanel: () =>
+        set((state) => {
+          const open = !state.isResearchPanelOpen
+          return persistResearchPanelState(state, { open })
+        }),
+      openResearchPanel: (tab) =>
+        set((state) => persistResearchPanelState(state, { open: true, ...(tab ? { tab } : {}) })),
+      closeResearchPanel: () => set((state) => persistResearchPanelState(state, { open: false })),
+      setResearchPanelTab: (tab) => set((state) => persistResearchPanelState(state, { tab })),
+      setResearchPanelWidth: (width) =>
+        set((state) =>
+          persistResearchPanelState(state, {
+            width: Math.max(RESEARCH_PANEL_WIDTH_MIN, Math.min(RESEARCH_PANEL_WIDTH_MAX, width))
+          })
+        ),
+      setResearchReferenceSource: (source) =>
+        set((state) => persistResearchPanelState(state, { source })),
+      setResearchSearchQuery: (researchSearchQuery) => set({ researchSearchQuery }),
+      setBibliographyRegistrationRequest: (bibliographyRegistrationRequest) =>
+        set({ bibliographyRegistrationRequest }),
       setBibEntries: (bibEntries) => set({ bibEntries }),
       setCitationGroups: (citationGroups) => set({ citationGroups }),
       setAuxCitationMap: (auxCitationMap) => set({ auxCitationMap }),
@@ -132,7 +212,8 @@ export const useProjectStore = create<ProjectState>()(
         projectRoot: state.projectRoot,
         isSidebarOpen: state.isSidebarOpen,
         sidebarView: state.sidebarView,
-        sidebarWidth: state.sidebarWidth
+        sidebarWidth: state.sidebarWidth,
+        researchPanelStates: state.researchPanelStates
       }),
       onRehydrateStorage: () => (state) => {
         // Migrate removed sidebar views
@@ -142,7 +223,31 @@ export const useProjectStore = create<ProjectState>()(
         if (state && (state.sidebarView as string) === 'structure') {
           state.sidebarView = 'outline'
         }
+        if (state && (state.sidebarView as string) === 'bib') {
+          state.sidebarView = 'files'
+        }
       }
     }
   )
 )
+
+function persistResearchPanelState(
+  state: ProjectState,
+  change: Partial<PersistedResearchPanelState>
+): Partial<ProjectState> {
+  const next = {
+    open: change.open ?? state.isResearchPanelOpen,
+    tab: change.tab ?? state.researchPanelTab,
+    width: change.width ?? state.researchPanelWidth,
+    source: change.source ?? state.researchReferenceSource
+  }
+  return {
+    isResearchPanelOpen: next.open,
+    researchPanelTab: next.tab,
+    researchPanelWidth: next.width,
+    researchReferenceSource: next.source,
+    researchPanelStates: state.projectRoot
+      ? { ...state.researchPanelStates, [state.projectRoot]: next }
+      : state.researchPanelStates
+  }
+}

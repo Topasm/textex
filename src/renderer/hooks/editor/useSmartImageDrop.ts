@@ -4,6 +4,26 @@ import { useProjectStore } from '../../store/useProjectStore'
 import { generateFigureSnippet } from '../../utils/figureSnippet'
 import { IMAGE_EXTENSIONS } from '../../utils/imageExtensions'
 
+export const MAX_DROPPED_IMAGE_BYTES = 50 * 1024 * 1024
+
+export function droppedImageFileName(name: string): string | null {
+  const sourceName = name.split(/[\\/]/).pop()?.trim()
+  if (!sourceName || sourceName === '.' || sourceName === '..') return null
+
+  const extensionIndex = sourceName.lastIndexOf('.')
+  if (extensionIndex <= 0 || extensionIndex === sourceName.length - 1) return null
+  const extension = sourceName.slice(extensionIndex).toLowerCase()
+  const stem = sourceName
+    .slice(0, extensionIndex)
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .replace(/^[.-]+|[.-]+$/g, '')
+    .replace(/-{2,}/g, '-')
+
+  return `${stem || 'image'}${extension}`
+}
+
 export function useSmartImageDrop() {
   const projectRoot = useProjectStore((state) => state.projectRoot)
 
@@ -12,11 +32,18 @@ export function useSmartImageDrop() {
       if (!event.dataTransfer.files || event.dataTransfer.files.length === 0) return
 
       const file = event.dataTransfer.files[0]
-      const extension = '.' + file.name.split('.').pop()?.toLowerCase()
+      const fileName = droppedImageFileName(file.name)
+      if (!fileName) return
+      const extension = '.' + fileName.split('.').pop()?.toLowerCase()
       if (!IMAGE_EXTENSIONS.has(extension)) return
 
       event.preventDefault()
       event.stopPropagation()
+
+      if (file.size > MAX_DROPPED_IMAGE_BYTES) {
+        alert('Image files larger than 50 MB cannot be imported.')
+        return
+      }
 
       if (!projectRoot || !editorAdapter) {
         console.warn('SmartImageDrop: Missing projectRoot or editor instance')
@@ -28,20 +55,12 @@ export function useSmartImageDrop() {
         const imagesDirectory = `${projectRoot}${separator}images`
         await window.api.createDirectory(imagesDirectory)
 
-        const destinationPath = `${imagesDirectory}${separator}${file.name}`
-        interface ElectronFile extends File {
-          path: string
-        }
-        const sourcePath = (file as ElectronFile).path
+        const destinationPath = `${imagesDirectory}${separator}${fileName}`
+        const bytes = new Uint8Array(await file.arrayBuffer())
+        const imported = await window.api.writeFileBinary(destinationPath, bytes)
+        const importedFileName = imported.filePath.split(/[\\/]/).pop() || fileName
 
-        if (sourcePath) {
-          await window.api.copyFile(sourcePath, destinationPath)
-        } else {
-          console.error('SmartImageDrop: Could not get source path from dropped file')
-          return
-        }
-
-        const snippet = generateFigureSnippet(`images/${file.name}`, file.name)
+        const snippet = generateFigureSnippet(`images/${importedFileName}`, importedFileName)
         const targetPosition = editorAdapter.getPositionAtClientPoint(event.clientX, event.clientY)
 
         if (targetPosition) {

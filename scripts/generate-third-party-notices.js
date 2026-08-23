@@ -9,18 +9,9 @@ const rootDir = path.resolve(__dirname, '..')
 const resourcesLicensesDir = path.join(rootDir, 'resources', 'licenses')
 const outputPath = path.join(resourcesLicensesDir, 'THIRD-PARTY-NOTICES.txt')
 const rustOutputPath = path.join(resourcesLicensesDir, 'RUST-THIRD-PARTY-NOTICES.txt')
-const electronChromiumLicensesPath = path.join(
-  resourcesLicensesDir,
-  'ELECTRON-LICENSES.chromium.html'
-)
-
 const packageJson = readJson(path.join(rootDir, 'package.json'))
 
-const bundledPackageNames = [
-  ...Object.keys(packageJson.dependencies || {}),
-  'dictionary-en',
-  'electron'
-]
+const bundledPackageNames = Object.keys(packageJson.dependencies || {})
 
 const packageNames = [...new Set(bundledPackageNames)].sort((left, right) =>
   left.localeCompare(right)
@@ -36,9 +27,6 @@ sections.push('')
 sections.push('Additional bundled notice files:')
 sections.push('- TECTONIC-NOTICE.txt')
 sections.push('- TECTONIC-MIT.txt')
-sections.push('- TEXLAB-NOTICE.txt')
-sections.push('- TEXLAB-GPL-3.0.txt')
-sections.push('- ELECTRON-LICENSES.chromium.html')
 sections.push('- RUST-THIRD-PARTY-NOTICES.txt')
 sections.push('')
 sections.push(
@@ -51,13 +39,6 @@ appendFileSection(
   'Bundled Notice',
   'Tectonic',
   path.join(resourcesLicensesDir, 'TECTONIC-NOTICE.txt')
-)
-
-appendFileSection(
-  sections,
-  'Bundled Notice',
-  'TexLab',
-  path.join(resourcesLicensesDir, 'TEXLAB-NOTICE.txt')
 )
 
 for (const packageName of packageNames) {
@@ -97,27 +78,12 @@ sections.push(divider('='))
 sections.push('Reference')
 sections.push(divider('-'))
 sections.push('Tectonic MIT full license text is bundled separately in TECTONIC-MIT.txt.')
-sections.push('TexLab GPL-3.0 full license text is bundled separately in TEXLAB-GPL-3.0.txt.')
-sections.push(
-  'Electron Chromium and other embedded runtime notices are bundled separately in ELECTRON-LICENSES.chromium.html.'
-)
 sections.push('Tauri/Rust dependency notices are bundled in RUST-THIRD-PARTY-NOTICES.txt.')
 sections.push('')
 
 fs.mkdirSync(resourcesLicensesDir, { recursive: true })
 fs.writeFileSync(outputPath, `${sections.join('\n').trimEnd()}\n`, 'utf8')
 generateRustNotices(rustOutputPath)
-
-const chromiumNoticesSource = path.join(
-  rootDir,
-  'node_modules',
-  'electron',
-  'dist',
-  'LICENSES.chromium.html'
-)
-if (fs.existsSync(chromiumNoticesSource)) {
-  fs.copyFileSync(chromiumNoticesSource, electronChromiumLicensesPath)
-}
 
 function divider(char) {
   return char.repeat(80)

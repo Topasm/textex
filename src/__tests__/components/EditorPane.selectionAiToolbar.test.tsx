@@ -31,6 +31,7 @@ interface MockEditorModel {
   getValue: () => string
   setValue: (text: string) => void
   getValueInRange: () => string
+  getVersionId: () => number
 }
 
 const mockEditor = {
@@ -306,13 +307,15 @@ describe('EditorPane selection AI toolbar', () => {
     const user = userEvent.setup()
     window.api.aiProcessCustom = vi.fn().mockResolvedValue('rewritten text')
     let modelText = '\\section{Intro}\nselected text in context'
-    mockEditor.getModel = vi.fn(() => ({
+    const model = {
       getValue: vi.fn(() => modelText),
       setValue: vi.fn((text: string) => {
         modelText = text
       }),
-      getValueInRange: vi.fn(() => 'selected text')
-    }))
+      getValueInRange: vi.fn(() => 'selected text'),
+      getVersionId: vi.fn(() => 1)
+    }
+    mockEditor.getModel = vi.fn(() => model)
 
     render(<EditorPane />)
 

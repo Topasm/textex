@@ -120,6 +120,22 @@ export const IntegrationsTab = () => {
                   </div>
                 </div>
                 <div style={{ marginTop: 14 }}>
+                  <div className="settings-flex-row">
+                    <div>
+                      <label className="settings-label settings-no-mb">
+                        Save online papers to Zotero when citing
+                      </label>
+                      <p className="settings-section-description">
+                        Ask Zotero for local write permission, then use the Better BibTeX key.
+                      </p>
+                    </div>
+                    <Toggle
+                      checked={settings.citeOnlineToZotero}
+                      onChange={(checked) => updateSetting('citeOnlineToZotero', checked)}
+                    />
+                  </div>
+                </div>
+                <div style={{ marginTop: 14 }}>
                   <label className="settings-label" htmlFor="zotero-collection">
                     {t('settings.integrations.collectionPath')}
                   </label>

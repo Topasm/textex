@@ -23,7 +23,8 @@ function createSelection() {
 function createEditor() {
   const selection = createSelection()
   const model = {
-    getValueInRange: vi.fn().mockReturnValue('text')
+    getValueInRange: vi.fn().mockReturnValue('text'),
+    getVersionId: vi.fn().mockReturnValue(1)
   }
 
   return {
@@ -189,6 +190,29 @@ describe('editorAiActions', () => {
           summary: 'fresh summary'
         })
       })
+    )
+  })
+
+  it('does not apply a delayed AI result after the document changes', async () => {
+    let resolveResult: ((value: string) => void) | undefined
+    window.api.aiProcess = vi.fn(
+      () =>
+        new Promise<string>((resolve) => {
+          resolveResult = resolve
+        })
+    )
+    const { editor, model } = createEditor()
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
+
+    const pending = runAiAction(editor as never, AI_ACTIONS[0])
+    await vi.waitFor(() => expect(window.api.aiProcess).toHaveBeenCalledOnce())
+    model.getVersionId.mockReturnValue(2)
+    resolveResult?.('late result')
+    await pending
+
+    expect(editor.executeEdits).not.toHaveBeenCalled()
+    expect(alertSpy).toHaveBeenCalledWith(
+      'The document changed while AI was processing. No text was replaced.'
     )
   })
 })

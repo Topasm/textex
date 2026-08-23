@@ -6,12 +6,13 @@ export const createFormattingProvider = (
   _monaco: MonacoInstance
 ): monacoLanguages.DocumentFormattingEditProvider => {
   return {
-    provideDocumentFormattingEdits: async (model) => {
+    provideDocumentFormattingEdits: async (model, options, token) => {
       if (!isInitialized()) return []
+      const sourceVersion = model.getVersionId()
       try {
         const result = (await sendRequest('textDocument/formatting', {
           textDocument: { uri: model.uri.toString() },
-          options: { tabSize: 2, insertSpaces: true }
+          options: { tabSize: options.tabSize, insertSpaces: options.insertSpaces }
         })) as Array<{
           range: {
             start: { line: number; character: number }
@@ -20,7 +21,13 @@ export const createFormattingProvider = (
           newText: string
         }> | null
 
-        if (!result) return []
+        if (
+          !result ||
+          token.isCancellationRequested ||
+          model.isDisposed() ||
+          model.getVersionId() !== sourceVersion
+        )
+          return []
         return result.map((edit) => ({
           range: {
             startLineNumber: edit.range.start.line + 1,

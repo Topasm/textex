@@ -36,8 +36,8 @@ import {
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
 
-// Use ?url import for reliable URL resolution in Vite/Electron
-// The new URL() pattern can fail for node_modules dependencies
+// Use ?url so Vite emits a stable worker asset URL for the Tauri webview.
+// The new URL() pattern can fail for node_modules dependencies.
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 pdfjs.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl
 

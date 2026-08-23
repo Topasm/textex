@@ -23,6 +23,7 @@
         "decorations": true,
         "resizable": true,
         "fullscreen": false,
+        "dragDropEnabled": false,
         "backgroundColor": "#1e1e1e"
       }
     ],
@@ -49,6 +50,10 @@
     "category": "Productivity",
     "shortDescription": "A local-first Tauri LaTeX editor",
     "longDescription": "TextEx is a Tauri-powered, local-first desktop LaTeX editor with a React editing shell and native Rust services.",
-    "icon": ["../build/icon.png", "../build/icon.ico", "../build/icon.icns"]
+    "icon": ["../build/icon.png", "../build/icon.ico", "../build/icon.icns"],
+    "macOS": {
+      "hardenedRuntime": true,
+      "entitlements": "Entitlements.plist"
+    }
   }
 }

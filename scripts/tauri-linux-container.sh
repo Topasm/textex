@@ -28,9 +28,8 @@ if [[ "$image_containerfile_sha" != "$containerfile_sha" ]]; then
 fi
 
 if [[ $# -eq 0 ]]; then
-  # The Tauri build only consumes browser-side JavaScript. Skip dependency
-  # lifecycle scripts so legacy Electron-only native modules such as node-pty
-  # are not rebuilt inside the rootless Linux packaging container.
+  # Keep the container build reproducible and avoid running unrelated package
+  # lifecycle scripts as root inside the build image.
   set -- bash -lc 'npm ci --ignore-scripts --include=optional && npm run setup:tauri && npm run build:tauri'
 fi
 

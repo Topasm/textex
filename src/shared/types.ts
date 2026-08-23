@@ -8,31 +8,7 @@ export interface Diagnostic {
   message: string
 }
 
-export type AppCommandId =
-  | 'file.open'
-  | 'file.openFolder'
-  | 'file.save'
-  | 'file.saveAs'
-  | 'file.newTemplate'
-  | 'file.export.html'
-  | 'file.export.docx'
-  | 'file.export.odt'
-  | 'file.export.epub'
-  | 'compile.run'
-  | 'ai.draft'
-  | 'edit.find'
-  | 'view.toggleSidebar'
-  | 'view.toggleLog'
-  | 'view.toggleTerminal'
-  | 'view.search.citations'
-  | 'view.search.pdf'
-  | 'pdf.zoomIn'
-  | 'pdf.zoomOut'
-  | 'pdf.zoomReset'
-  | 'pdf.fitWidth'
-  | 'pdf.fitHeight'
-  | 'app.settings'
-  | 'app.checkUpdates'
+export type { AppCommandId } from './appCommandManifest'
 
 export interface SyncTeXForwardResult {
   page: number
@@ -64,6 +40,8 @@ export interface DirectoryChangeEvent {
   /** Project-root-relative path emitted by the native directory watcher. */
   filename: string
   indexDelta?: ProjectIndexDelta
+  /** The native incremental index failed and must be loaded again authoritatively. */
+  indexInvalidated?: boolean
 }
 
 export interface ProjectIndexEntry {
@@ -219,6 +197,7 @@ export interface UserSettings {
   zoteroEnabled: boolean
   zoteroPort: number
   zoteroCollection: string
+  citeOnlineToZotero: boolean
   aiEnabled?: boolean
   aiProvider: 'openai' | 'anthropic' | 'gemini' | 'claude-cli' | 'codex-cli' | ''
   aiApiKey?: string
@@ -325,6 +304,47 @@ export interface ZoteroSyncResult {
   filePath: string
   bytesWritten: number
   entryCount: number
+}
+
+export interface ZoteroCollection {
+  key: string
+  name: string
+  parentKey: string | null
+  itemCount: number
+}
+
+export interface OnlineReference {
+  source: 'crossref' | 'arxiv'
+  id: string
+  title: string
+  authors: string[]
+  year: string
+  type: string
+  doi?: string
+  arxivId?: string
+  url?: string
+  abstract?: string
+}
+
+export interface ReferenceAddResult {
+  filePath: string
+  citekey: string
+  inserted: boolean
+  duplicate: boolean
+}
+
+export interface ZoteroSaveResult {
+  itemKey: string
+  citekey: string | null
+  duplicate: boolean
+}
+
+export interface ResearchConfig {
+  version: 1
+  referencesFile: string
+  zoteroFile: string
+  zoteroCollection: string | null
+  syncOnOpen: boolean
 }
 
 export interface HistoryItem {

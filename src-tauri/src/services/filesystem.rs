@@ -27,6 +27,7 @@ const LARGE_FILE_WARN_BYTES: u64 = 5 * 1024 * 1024;
 const LARGE_FILE_REFUSE_BYTES: u64 = 50 * 1024 * 1024;
 const BASE64_TRANSFER_LIMIT_BYTES: u64 = 10 * 1024 * 1024;
 const RAW_BINARY_TRANSFER_LIMIT_BYTES: u64 = 256 * 1024 * 1024;
+const BINARY_WRITE_LIMIT_BYTES: usize = 50 * 1024 * 1024;
 const MEBIBYTE: u64 = 1024 * 1024;
 const TEMP_FILE_ATTEMPTS: usize = 32;
 static TEMP_FILE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
@@ -187,6 +188,83 @@ pub async fn save_file(
     Ok(SuccessResult::ok())
 }
 
+pub async fn write_file_binary(
+    state: &AppState,
+    file_path: &str,
+    data: Vec<u8>,
+) -> AppResult<SaveFileAsResult> {
+    ensure_binary_write_size(data.len())?;
+    let requested = require_absolute_str(file_path)?;
+    let target = resolve_write_target(state, requested).await?;
+    let target = write_binary_without_overwrite(target, &data).await?;
+    Ok(SaveFileAsResult {
+        file_path: path_to_string(&target)?,
+    })
+}
+
+async fn write_binary_without_overwrite(target: PathBuf, data: &[u8]) -> AppResult<PathBuf> {
+    let staged = stage_bytes(&target, data).await?;
+    for suffix in 0..1_000_u16 {
+        let candidate = collision_safe_path(&target, suffix)?;
+        match fs::hard_link(&staged, &candidate).await {
+            Ok(()) => {
+                let _ = fs::remove_file(&staged).await;
+                return Ok(candidate);
+            }
+            Err(source) if source.kind() == io::ErrorKind::AlreadyExists => continue,
+            Err(source) => {
+                let _ = fs::remove_file(&staged).await;
+                return Err(AppError::io(
+                    "commit imported binary",
+                    candidate.to_string_lossy().into_owned(),
+                    source,
+                ));
+            }
+        }
+    }
+
+    let _ = fs::remove_file(&staged).await;
+    Err(AppError::io(
+        "commit imported binary",
+        target.to_string_lossy().into_owned(),
+        io::Error::new(
+            io::ErrorKind::AlreadyExists,
+            "could not reserve a collision-safe image name",
+        ),
+    ))
+}
+
+fn collision_safe_path(target: &Path, suffix: u16) -> AppResult<PathBuf> {
+    if suffix == 0 {
+        return Ok(target.to_path_buf());
+    }
+    let parent = target.parent().ok_or_else(|| {
+        AppError::InvalidPath(format!(
+            "path has no parent directory: {}",
+            target.to_string_lossy()
+        ))
+    })?;
+    let stem = target
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .ok_or_else(|| AppError::NonUtf8Path(target.to_string_lossy().into_owned()))?;
+    let extension = target.extension().and_then(|value| value.to_str());
+    let file_name = match extension {
+        Some(extension) => format!("{stem}-{}.{}", suffix + 1, extension),
+        None => format!("{stem}-{}", suffix + 1),
+    };
+    Ok(parent.join(file_name))
+}
+
+fn ensure_binary_write_size(size: usize) -> AppResult<()> {
+    if size > BINARY_WRITE_LIMIT_BYTES {
+        return Err(AppError::FileTooLarge {
+            size_mb: rounded_mebibytes(size as u64),
+        });
+    }
+    Ok(())
+}
+
 pub(crate) async fn validate_save_file_target(
     state: &AppState,
     file_path: &str,
@@ -278,7 +356,7 @@ pub async fn save_file_batch(
 pub async fn create_file(state: &AppState, file_path: &str) -> AppResult<SuccessResult> {
     let requested = require_absolute_str(file_path)?;
     let target = resolve_write_target(state, requested).await?;
-    // Electron's fs.writeFile() truncates an existing regular file.
+    // Match the editor's create-file contract by truncating an existing file.
     write_files_transactionally(vec![(target, Vec::new())]).await?;
     Ok(SuccessResult::ok())
 }
@@ -307,7 +385,7 @@ pub async fn copy_file(
     let source = resolve_existing_file(state, require_absolute_str(source)?, "copy source").await?;
     let destination = resolve_write_target(state, require_absolute_str(destination)?).await?;
 
-    // Node's fs.copyFile(source, source) succeeds without changing the file.
+    // Copying a file onto itself is a successful no-op.
     if comparable_path_identity(&source) == comparable_path_identity(&destination) {
         return Ok(SuccessResult::ok());
     }
@@ -1202,8 +1280,8 @@ fn decode_text_file(mut bytes: Vec<u8>) -> String {
         Err(error) => error.into_bytes(),
     };
 
-    // Match Buffer's latin1 fallback, including the existing Electron edge
-    // case where a literal replacement character also triggers the fallback.
+    // Preserve the legacy latin1 fallback, including the edge case where a
+    // literal replacement character also triggers the fallback.
     bytes.into_iter().map(char::from).collect()
 }
 
@@ -1213,9 +1291,10 @@ mod tests {
     use super::path_is_within;
     use super::{
         create_directory, create_file, decode_text_file, delete_path, encode_base64,
-        ensure_binary_size, mime_type_for_path, open_selected_file, read_file_base64,
-        read_file_binary, rename_path, save_as_selected, save_file_batch,
-        BASE64_TRANSFER_LIMIT_BYTES, RAW_BINARY_TRANSFER_LIMIT_BYTES,
+        ensure_binary_size, ensure_binary_write_size, mime_type_for_path, open_selected_file,
+        read_file_base64, read_file_binary, rename_path, save_as_selected, save_file_batch,
+        write_file_binary, BASE64_TRANSFER_LIMIT_BYTES, BINARY_WRITE_LIMIT_BYTES,
+        RAW_BINARY_TRANSFER_LIMIT_BYTES,
     };
     use crate::{models::SaveFileInput, state::AppState};
     use std::{
@@ -1282,7 +1361,7 @@ mod tests {
     }
 
     #[test]
-    fn matches_electron_fallback_for_a_literal_replacement_character() {
+    fn preserves_latin1_fallback_for_a_literal_replacement_character() {
         assert_eq!(
             decode_text_file("\u{fffd}".as_bytes().to_vec()),
             "\u{ef}\u{bf}\u{bd}"
@@ -1439,7 +1518,61 @@ mod tests {
     }
 
     #[test]
-    fn create_and_copy_preserve_electron_parent_and_overwrite_policies() {
+    fn binary_writes_are_project_scoped_and_size_bounded() {
+        let project = TestDirectory::new("binary-write-project");
+        let outside = TestDirectory::new("binary-write-outside");
+        let state = AppState::default();
+        state
+            .set_project_root(project.path().to_path_buf())
+            .expect("set project root");
+
+        let image = project.child("figure.png");
+        let first_result = block_on(write_file_binary(
+            &state,
+            &path_string(&image),
+            vec![137, 80, 78, 71],
+        ))
+        .expect("write binary inside project");
+        assert_eq!(first_result.file_path, path_string(&image));
+        assert_eq!(fs::read(&image).expect("read image"), [137, 80, 78, 71]);
+
+        let second_result = block_on(write_file_binary(
+            &state,
+            &path_string(&image),
+            vec![255, 216, 255],
+        ))
+        .expect("write colliding binary with a suffix");
+        let second_image = project.child("figure-2.png");
+        assert_eq!(second_result.file_path, path_string(&second_image));
+        assert_eq!(
+            fs::read(&image).expect("read original image"),
+            [137, 80, 78, 71]
+        );
+        assert_eq!(
+            fs::read(&second_image).expect("read suffixed image"),
+            [255, 216, 255]
+        );
+
+        let outside_image = outside.child("outside.png");
+        let outside_error = block_on(write_file_binary(
+            &state,
+            &path_string(&outside_image),
+            vec![1, 2, 3],
+        ))
+        .expect_err("binary write outside the project must fail");
+        assert!(outside_error
+            .to_string()
+            .contains("outside the open project"));
+        assert!(!outside_image.exists());
+
+        assert!(ensure_binary_write_size(BINARY_WRITE_LIMIT_BYTES).is_ok());
+        let oversized_error = ensure_binary_write_size(BINARY_WRITE_LIMIT_BYTES + 1)
+            .expect_err("oversized binary write must fail");
+        assert!(oversized_error.to_string().contains("too large"));
+    }
+
+    #[test]
+    fn create_and_copy_preserve_parent_and_overwrite_policies() {
         let project = TestDirectory::new("create-copy");
         let state = AppState::default();
         state

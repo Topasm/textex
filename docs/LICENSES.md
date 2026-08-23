@@ -1,33 +1,24 @@
-# Third-Party Licenses
+# Open-Source Licenses
 
-This document is a human-readable summary of notable third-party software used
-by TextEx. The authoritative bundled notice set lives in `resources/licenses/`,
-including `THIRD-PARTY-NOTICES.txt`, `ELECTRON-LICENSES.chromium.html`,
-`TEXLAB-NOTICE.txt`, and `TEXLAB-GPL-3.0.txt`.
+TextEx is distributed under the MIT license. Bundled third-party notices are
+generated into `resources/licenses/` and are available from the application.
 
-Pandoc is referenced below as an optional external dependency for export
-workflows. It is not bundled inside the app.
+Major bundled components include Tauri, React, Monaco Editor, PDF.js, Tectonic,
+Tokio, and their locked dependency graphs. The Tectonic notice and full license
+text are stored separately alongside the generated JavaScript and Rust notice
+files.
 
-TextEx is built on or integrates with these open-source projects:
+Pandoc is optional and is not bundled. A user-installed Pandoc copy is governed
+by its own license terms.
 
-| Component | Source | License |
-|-----------|--------|---------|
-| [Electron](https://www.electronjs.org/) | Desktop application shell | MIT |
-| [Tectonic](https://tectonic-typesetting.github.io/) | Self-contained LaTeX engine (no TeX Live needed) | MIT |
-| [React](https://react.dev/) | UI framework | MIT |
-| [Monaco Editor](https://microsoft.github.io/monaco-editor/) | Code editor (same engine as VS Code) | MIT |
-| [react-pdf](https://github.com/wojtekmaj/react-pdf) / [PDF.js](https://mozilla.github.io/pdf.js/) | PDF rendering in the browser | Apache-2.0 |
-| [Zustand](https://github.com/pmndrs/zustand) | Lightweight state management | MIT |
-| [electron-vite](https://electron-vite.org/) | Build tooling for Electron + Vite | MIT |
-| [electron-builder](https://www.electron.build/) | Cross-platform packaging and distribution | MIT |
-| [electron-updater](https://www.electron.build/auto-update) | Seamless in-app auto-updates | MIT |
-| [Tauri updater](https://github.com/tauri-apps/plugins-workspace) | Signed updates for the Tauri runtime | Apache-2.0 OR MIT |
-| [lucide-react](https://lucide.dev/) | Icon library used in the UI | ISC |
-| [nspell](https://github.com/wooorm/nspell) | Hunspell-compatible spell checker | MIT |
-| [dictionary-en](https://github.com/wooorm/dictionaries/tree/main/dictionaries/en) | Bundled English Hunspell dictionary data | MIT AND BSD |
-| [Pandoc](https://pandoc.org/) | Optional external document converter for export | GPL-2.0 |
-| [Commander.js](https://github.com/tj/commander.js) | CLI argument parsing | MIT |
-| [chokidar](https://github.com/paulmillr/chokidar) | File watching for CLI `--watch` mode | MIT |
-| [MCP SDK](https://github.com/modelcontextprotocol/sdk) | Model Context Protocol server framework | MIT |
-| [TexLab](https://github.com/latex-lsp/texlab) | LaTeX language server (diagnostics, completions, hover, rename) | GPL-3.0 |
-| [KaTeX](https://katex.org/) | Math typesetting for previews | MIT |
+After any dependency change run:
+
+```bash
+npm ci
+npm run licenses:generate
+git diff -- resources/licenses
+```
+
+The generator reads production npm dependencies and the locked Cargo runtime
+and build graph. Development-only dependencies are not represented as bundled
+application code.

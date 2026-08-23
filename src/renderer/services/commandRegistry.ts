@@ -4,29 +4,18 @@
  */
 
 import { HIDDEN_EDITOR_ACTIONS } from '../constants'
-
-interface KeyBinding {
-  /** The key to match (e.g. 's', 'Enter', 'Tab') */
-  key: string | string[]
-  /** Requires Ctrl (or Cmd on macOS) */
-  mod: boolean
-  /** Requires Alt/Option. Mirrors shift handling to avoid shortcut collisions. */
-  alt?: boolean
-  /** Requires Shift. When `mod` is true and `shift` is false, the binding
-   *  only fires when Shift is NOT held (prevents collisions like Ctrl+S vs Ctrl+Shift+S). */
-  shift?: boolean
-}
+import type { ShortcutBinding } from '../../shared/appCommandManifest'
 
 interface Command {
   id: string
-  binding: KeyBinding
+  binding: ShortcutBinding
   handler: () => void
 }
 
 export class CommandRegistry {
   private commands: Command[] = []
 
-  register(id: string, binding: KeyBinding, handler: () => void): void {
+  register(id: string, binding: ShortcutBinding, handler: () => void): void {
     this.commands = this.commands.filter((c) => c.id !== id)
     this.commands.push({ id, binding, handler })
   }
@@ -46,7 +35,7 @@ export class CommandRegistry {
     this.commands = []
   }
 
-  private matches(e: KeyboardEvent, b: KeyBinding, mod: boolean): boolean {
+  private matches(e: KeyboardEvent, b: ShortcutBinding, mod: boolean): boolean {
     if (b.mod !== mod) return false
 
     // When mod is active, shift acts as an explicit discriminator
@@ -62,7 +51,12 @@ export class CommandRegistry {
     }
 
     const keys = Array.isArray(b.key) ? b.key : [b.key]
-    return keys.includes(e.key)
+    return keys.some((key) => {
+      if (key.length === 1 && e.key.length === 1) {
+        return key.toLocaleLowerCase() === e.key.toLocaleLowerCase()
+      }
+      return key === e.key
+    })
   }
 }
 

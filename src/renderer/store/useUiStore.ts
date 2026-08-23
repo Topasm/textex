@@ -31,7 +31,7 @@ interface UiState {
 
   // OmniSearch focus request
   omniSearchFocusRequested: boolean
-  omniSearchFocusMode: 'file' | 'cite' | 'zotero' | 'pdf' | 'tex' | null
+  omniSearchFocusMode: 'file' | 'cite' | 'zotero' | 'online' | 'pdf' | 'tex' | null
 
   // External file change conflicts
   externalChangeConflicts: string[]
@@ -50,7 +50,7 @@ interface UiState {
   setLspStatus: (status: LspStatus) => void
   setLspError: (error: string | null) => void
   setDocumentSymbols: (symbols: DocumentSymbolNode[]) => void
-  requestOmniSearchFocus: (mode?: 'file' | 'cite' | 'zotero' | 'pdf' | 'tex') => void
+  requestOmniSearchFocus: (mode?: 'file' | 'cite' | 'zotero' | 'online' | 'pdf' | 'tex') => void
   clearOmniSearchFocus: () => void
   addExternalChangeConflict: (filePath: string) => void
   removeExternalChangeConflict: (filePath: string) => void

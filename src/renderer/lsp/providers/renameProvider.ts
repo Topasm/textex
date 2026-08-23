@@ -4,8 +4,14 @@ import { sendRequest, isInitialized } from '../lspClient'
 
 export const createRenameProvider = (monaco: MonacoInstance): monacoLanguages.RenameProvider => {
   return {
-    provideRenameEdits: async (model, position, newName) => {
+    provideRenameEdits: async (model, position, newName, token) => {
       if (!isInitialized()) return null
+      const sourceVersion = model.getVersionId()
+      const startingVersions = new Map(
+        monaco.editor
+          .getModels()
+          .map((openModel) => [openModel.uri.toString(), openModel.getVersionId()] as const)
+      )
       try {
         const result = (await sendRequest('textDocument/rename', {
           textDocument: { uri: model.uri.toString() },
@@ -24,12 +30,27 @@ export const createRenameProvider = (monaco: MonacoInstance): monacoLanguages.Re
           >
         } | null
 
-        if (!result?.changes) return null
+        if (
+          !result?.changes ||
+          token.isCancellationRequested ||
+          model.isDisposed() ||
+          model.getVersionId() !== sourceVersion
+        )
+          return null
         const edits: monacoLanguages.IWorkspaceTextEdit[] = []
         for (const [uri, changes] of Object.entries(result.changes)) {
+          const resource = monaco.Uri.parse(uri)
+          const resourceKey = resource.toString()
+          const openModel = monaco.editor.getModel(resource)
+          if (
+            openModel &&
+            (startingVersions.get(resourceKey) === undefined ||
+              startingVersions.get(resourceKey) !== openModel.getVersionId())
+          )
+            return null
           for (const change of changes) {
             edits.push({
-              resource: monaco.Uri.parse(uri),
+              resource,
               textEdit: {
                 range: {
                   startLineNumber: change.range.start.line + 1,
@@ -39,7 +60,7 @@ export const createRenameProvider = (monaco: MonacoInstance): monacoLanguages.Re
                 },
                 text: change.newText
               },
-              versionId: undefined as unknown as number
+              versionId: openModel?.getVersionId()
             })
           }
         }
@@ -48,12 +69,13 @@ export const createRenameProvider = (monaco: MonacoInstance): monacoLanguages.Re
         return null
       }
     },
-    resolveRenameLocation: async (model, position) => {
+    resolveRenameLocation: async (model, position, token) => {
       if (!isInitialized())
         return {
           range: { startLineNumber: 1, startColumn: 1, endLineNumber: 1, endColumn: 1 },
           text: ''
         }
+      const sourceVersion = model.getVersionId()
       try {
         const result = (await sendRequest('textDocument/prepareRename', {
           textDocument: { uri: model.uri.toString() },
@@ -66,7 +88,12 @@ export const createRenameProvider = (monaco: MonacoInstance): monacoLanguages.Re
           placeholder?: string
         } | null
 
-        if (!result)
+        if (
+          !result ||
+          token.isCancellationRequested ||
+          model.isDisposed() ||
+          model.getVersionId() !== sourceVersion
+        )
           return {
             range: { startLineNumber: 1, startColumn: 1, endLineNumber: 1, endColumn: 1 },
             text: '',

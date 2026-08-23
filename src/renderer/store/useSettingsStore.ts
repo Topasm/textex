@@ -32,6 +32,7 @@ function settingsForNative(settings: UserSettings): Partial<UserSettings> {
   const nativeSettings = { ...settings }
   delete nativeSettings.recentProjects
   delete nativeSettings.rendererSession
+  delete nativeSettings.aiApiKey
   return nativeSettings
 }
 
@@ -84,7 +85,7 @@ export const useSettingsStore = create<SettingsState>()(
         if (key === 'theme') {
           applyTheme(value as string)
           // Update native title bar overlay to match the new theme
-          window.api?.setTheme?.(value as string).catch(() => {})
+          void Promise.resolve(window.api?.setTheme?.(value as string)).catch(() => {})
         }
         syncToMain()
       },
@@ -106,7 +107,7 @@ export const useSettingsStore = create<SettingsState>()(
       version: 1,
       migrate: (persistedState) => migratePersistedSettings(persistedState),
       partialize: (state) => ({
-        settings: state.settings
+        settings: sanitizeSettings(state.settings)
       }),
       onRehydrateStorage: () => (state) => {
         if (state?.settings) {
@@ -137,9 +138,8 @@ export const useSettingsStore = create<SettingsState>()(
 
 /**
  * Establish a native settings mirror without overwriting an existing renderer
- * profile. A fresh WebView (including the first Tauri launch) hydrates from the
- * native file; an existing profile remains authoritative and is exported for
- * a future shell migration.
+ * profile. A fresh WebView hydrates from the native file; an existing profile
+ * remains authoritative and is mirrored back to Rust.
  */
 export async function hydrateSettingsFromNative(): Promise<void> {
   try {
@@ -153,8 +153,7 @@ export async function hydrateSettingsFromNative(): Promise<void> {
 
     await window.api.saveSettings(settingsForNative(useSettingsStore.getState().settings))
   } catch {
-    // Settings migration must never prevent the editor from starting. The
-    // native API can be unavailable in browser-only development builds.
+    // A malformed legacy profile must never prevent the editor from starting.
   }
 }
 
@@ -167,5 +166,4 @@ if (typeof window !== 'undefined' && window.matchMedia) {
     }
   })
 }
-// Note: the main process listens to nativeTheme.on('updated') separately
 // to update the title bar overlay when OS theme changes with 'system' selected.

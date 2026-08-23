@@ -6,23 +6,28 @@ TextEx uses a "Zero-Friction" configuration system where settings are applied in
 
 ### Storage
 - **Mechanism**: `localStorage` via `zustand/middleware/persist`.
-- **Key**: `textex-storage`
+- **Key**: `textex-settings-v2`
+- **Native mirror**: Settings other than recent-project and renderer-session data are
+  mirrored through the typed Tauri settings API.
+- **AI credentials**: API keys are never persisted in `localStorage` or the general
+  settings mirror. Rust stores them separately with owner-only permissions on Unix.
 - **Scope**: Settings are global across the application.
 
-### Settings Schema (`UserSettings`)
+### Selected Settings Schema (`UserSettings`)
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `theme` | `'system' \| 'light' \| 'dark'` | `'system'` | UI and Editor theme. |
+| `theme` | `'system' \| 'light' \| 'dark' \| 'high-contrast' \| 'glass'` | `'system'` | UI and Editor theme. |
 | `fontSize` | `number` | `14` | Editor font size in pixels. |
 | `autoCompile` | `boolean` | `true` | Compile automatically on type (debounced). |
-| `formatOnSave` | `boolean` | `false` | Run formatter when saving files. |
+| `watchOpenFiles` | `boolean` | `true` | Watch open project files for external changes. |
+| `formatOnSave` | `boolean` | `true` | Run formatter when saving files. |
 | `wordWrap` | `boolean` | `true` | Soft wrap lines in the editor. |
-| `spellCheckEnabled` | `boolean` | `true` | Enable inline spell checking. |
+| `spellCheckEnabled` | `boolean` | `false` | Enable inline spell checking. |
 | `spellCheckLanguage` | `string` | `'en-US'` | Hunspell dictionary language. |
 | `gitEnabled` | `boolean` | `true` | Enable Git integration features. |
 | `autoUpdateEnabled` | `boolean` | `true` | Check for updates on startup. |
-| `lspEnabled` | `boolean` | `true` | Enable TexLab language server. |
+| `lspEnabled` | `boolean` | `true` | Enable the optional TexLab language server when its executable is available. |
 | `zoteroEnabled` | `boolean` | `false` | Enable Zotero/Better BibTeX integration. |
 | `zoteroPort` | `number` | `23119` | Better BibTeX JSON-RPC port. |
 | `zoteroCollection` | `string` | `""` | Better BibTeX pull-export collection path used for project bibliography sync. |
@@ -31,18 +36,22 @@ TextEx uses a "Zero-Friction" configuration system where settings are applied in
 | `name` | `string` | `''` | User's full name (for templates/metadata). |
 | `email` | `string` | `''` | User's email address (for templates/metadata). |
 | `affiliation` | `string` | `''` | User's institution (for templates/metadata). |
-| `aiProvider` | `'' \| 'openai' \| 'anthropic' \| 'gemini' \| 'claude-cli' \| 'codex-cli'` | `''` | AI Draft provider. |
-| `aiModel` | `string` | `''` | AI Draft model name. |
+| `aiProvider` | `'' \| 'openai' \| 'anthropic' \| 'gemini' \| 'claude-cli' \| 'codex-cli'` | `''` | Native HTTP or isolated CLI provider used by AI actions. |
+| `aiModel` | `string` | `''` | Model identifier for the selected AI provider. |
 
 ### Settings Modal
 The `SettingsModal` component provides a tabbed interface (800×500) for modifying these values. It is accessible via the gear icon in the Toolbar. The modal uses shared `.modal-*` CSS classes for chrome and `settings-*` CSS classes for layout/form elements, all themed via CSS custom properties.
 
-**Tabs:**
-- **General** — User information (name, email, affiliation)
-- **Appearance** — Theme cards (Light/Dark/System), PDF Night Mode toggle
-- **Editor** — Font Size slider, Word Wrap / Format on Save / Auto-hide Sidebar toggles
-- **Integrations** — Zotero connection (enable, port, live status probe), AI Draft (provider, model, API key)
-- **Automation** — Auto Compile, Spell Check, Language Server toggles
+**Visible Tauri tabs:**
+- **General** — User information, updates, and language
+- **Appearance** — Theme, PDF Night Mode, PDF layout controls, and scroll sync
+- **Editor** — Typography, formatting, layout, and Monaco behavior
+- **AI** — Provider, model, credential, thinking, and prompt controls
+- **Integrations** — Zotero and Git
+- **Automation** — Auto Compile, external-file watching, Spell Check, and TexLab
+
+Claude CLI, Codex CLI, and TexLab controls require their corresponding executables;
+the editor reports discovery/startup errors without falling back to a Node backend.
 
 ## Code Formatting
 
@@ -59,8 +68,10 @@ TextEx integrates [Prettier](https://prettier.io/) for opinionated, consistent L
 
 ## Syntax Highlighting
 
-TextEx features **Semantic Highlighting** powered by the TexLab language server.
+TextEx currently highlights LaTeX with its local Monaco Monarch tokenizer.
 
-- **Standard**: Basic keyword and comment coloring via Monaco's built-in tokenizer.
-- **Semantic**: Rich coloring for macros, environments, math modes, and citations based on the language server's understanding of the code structure.
-- **Theme**: Adapts to the selected application theme (Light/Dark/High-Contrast).
+- **Standard**: Commands, environments, comments, delimiters, and math receive local syntax coloring.
+- **Sections**: Optional section bands use the configurable section color palette.
+- **Theme**: Coloring adapts to the selected application theme.
+- **TexLab**: When available and enabled, TexLab supplies diagnostics, completion,
+  symbols, formatting, rename, folding, and semantic-token capabilities.

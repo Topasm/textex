@@ -21,6 +21,7 @@ use crate::{
         CompileDiagnostic, CompileDiagnosticSeverity, CompileEvent, CompileIdentity,
         CompileRequest, CompileResponse, CompileStage,
     },
+    services::tectonic_cache,
     state::AppState,
 };
 
@@ -59,8 +60,14 @@ pub async fn compile_latex(
     let tex_path = resolve_magic_root(state, &selected_tex_path).await?;
     let display_tex_path = path_to_string(&tex_path)?;
     let tectonic_path = resolve_tectonic_executable(app)?;
-    let cache_dir = prepare_cache_directory(app).await?;
+    let prepared_cache = tectonic_cache::prepare(app).await?;
+    let cache_dir = prepared_cache.path;
     let mut lease = state.begin_compilation(&request).await?;
+
+    let _ = on_event.send(CompileEvent::Log {
+        identity: identity.clone(),
+        text: prepared_cache.status,
+    });
 
     send_progress(
         &on_event,
@@ -631,19 +638,6 @@ fn send_progress(
     });
 }
 
-async fn prepare_cache_directory(app: &AppHandle) -> AppResult<PathBuf> {
-    let cache_dir = app
-        .path()
-        .app_cache_dir()
-        .map_err(|error| AppError::RuntimePath(error.to_string()))?
-        .join("tectonic");
-    let display_cache_dir = cache_dir.to_string_lossy().into_owned();
-    fs::create_dir_all(&cache_dir).await.map_err(|source| {
-        AppError::compiler_io("create cache directory for", display_cache_dir, source)
-    })?;
-    Ok(cache_dir)
-}
-
 pub(crate) async fn validate_project_tex_file(
     state: &AppState,
     file_path: &str,
@@ -854,8 +848,8 @@ fn packaged_candidates(
     push_unique(&mut candidates, executable_dir.join(&executable_name));
 
     if let Some(resource_dir) = resource_dir {
-        // Also accept an explicitly bundled resource layout, which is useful
-        // while Electron and Tauri packaging coexist.
+        // Also accept an explicitly bundled resource layout for portable and
+        // development packages.
         push_unique(&mut candidates, resource_dir.join(&executable_name));
         push_unique(
             &mut candidates,

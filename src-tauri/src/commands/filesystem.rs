@@ -1,7 +1,11 @@
-use tauri::{ipc::Response, AppHandle, State};
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
+use tauri::{
+    ipc::{InvokeBody, Request, Response},
+    AppHandle, State,
+};
 
 use crate::{
-    error::AppResult,
+    error::{AppError, AppResult},
     models::{
         Base64FileResult, DirectoryEntry, OpenFileResult, SaveFileAsResult, SaveFileInput,
         SuccessResult,
@@ -50,6 +54,36 @@ pub async fn save_file(
     file_path: String,
 ) -> AppResult<SuccessResult> {
     filesystem::save_file(state.inner(), &file_path, content).await
+}
+
+const BINARY_FILE_PATH_HEADER: &str = "x-textex-file-path";
+
+#[tauri::command]
+pub async fn write_file_binary(
+    state: State<'_, AppState>,
+    request: Request<'_>,
+) -> AppResult<SaveFileAsResult> {
+    let encoded_path = request
+        .headers()
+        .get(BINARY_FILE_PATH_HEADER)
+        .ok_or_else(|| AppError::InvalidPath("missing binary destination header".to_owned()))?
+        .to_str()
+        .map_err(|_| AppError::InvalidPath("invalid binary destination header".to_owned()))?;
+    let file_path =
+        String::from_utf8(URL_SAFE_NO_PAD.decode(encoded_path).map_err(|_| {
+            AppError::InvalidPath("invalid binary destination encoding".to_owned())
+        })?)
+        .map_err(|_| AppError::InvalidPath("binary destination is not UTF-8".to_owned()))?;
+    let data = match request.body() {
+        InvokeBody::Raw(data) => data.clone(),
+        InvokeBody::Json(_) => {
+            return Err(AppError::InvalidPath(
+                "binary file writes require a raw IPC body".to_owned(),
+            ));
+        }
+    };
+
+    filesystem::write_file_binary(state.inner(), &file_path, data).await
 }
 
 #[tauri::command]

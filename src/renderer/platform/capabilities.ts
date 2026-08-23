@@ -1,22 +1,22 @@
-export type DesktopRuntime = 'electron' | 'tauri'
+export type DesktopRuntime = 'tauri'
 
-/** Optional feature domains whose backends are not yet identical across runtimes. */
+/** Feature domains exposed by the Tauri desktop backend. */
 export interface DesktopCapabilities {
-  runtime: DesktopRuntime
-  ai: boolean
-  citationGroups: boolean
-  documentExport: boolean
-  lsp: boolean
-  openExternal: boolean
-  performanceMemory: boolean
-  projectMetadata: boolean
-  pty: boolean
-  spellcheck: boolean
-  templates: boolean
+  readonly runtime: DesktopRuntime
+  readonly ai: boolean
+  readonly citationGroups: boolean
+  readonly documentExport: boolean
+  readonly lsp: boolean
+  readonly openExternal: boolean
+  readonly performanceMemory: boolean
+  readonly projectMetadata: boolean
+  readonly pty: boolean
+  readonly spellcheck: boolean
+  readonly templates: boolean
 }
 
-const ELECTRON_CAPABILITIES: DesktopCapabilities = Object.freeze({
-  runtime: 'electron',
+const TAURI_CAPABILITIES: DesktopCapabilities = Object.freeze({
+  runtime: 'tauri',
   ai: true,
   citationGroups: true,
   documentExport: true,
@@ -29,28 +29,6 @@ const ELECTRON_CAPABILITIES: DesktopCapabilities = Object.freeze({
   templates: true
 })
 
-const TAURI_CAPABILITIES: DesktopCapabilities = Object.freeze({
-  runtime: 'tauri',
-  ai: false,
-  citationGroups: true,
-  documentExport: true,
-  lsp: false,
-  openExternal: true,
-  performanceMemory: true,
-  projectMetadata: true,
-  pty: false,
-  spellcheck: true,
-  templates: true
-})
-
-// Electron remains the test/legacy default. Production bootstrap always sets
-// this explicitly before React mounts.
-let activeCapabilities = ELECTRON_CAPABILITIES
-
-export function configureDesktopCapabilities(runtime: DesktopRuntime): void {
-  activeCapabilities = runtime === 'tauri' ? TAURI_CAPABILITIES : ELECTRON_CAPABILITIES
-}
-
 export function getDesktopCapabilities(): DesktopCapabilities {
-  return activeCapabilities
+  return TAURI_CAPABILITIES
 }

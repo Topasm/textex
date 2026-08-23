@@ -1,6 +1,6 @@
 /**
- * Runtime-neutral performance report contracts shared by Electron, Tauri,
- * renderer tooling, and future benchmark runners.
+ * Performance report contracts shared by the Tauri backend, renderer tooling,
+ * and benchmark runners.
  */
 
 export type RuntimePerformanceMetric =

@@ -1,6 +1,10 @@
 # Zotero Integration
 
-TextEx integrates directly with [Zotero](https://www.zotero.org/) via the [Better BibTeX](https://retorque.re/zotero-better-bibtex/) plugin, allowing you to search your library and insert citations without leaving the editor.
+TextEx integrates with [Zotero](https://www.zotero.org/) through the
+[Better BibTeX](https://retorque.re/zotero-better-bibtex/) plugin and Zotero's
+[Local API](https://www.zotero.org/support/dev/web_api/v3/local_api). The right-side
+Research panel keeps project references, Zotero collections, online search, and AI entry points
+available while the file navigator remains open.
 
 ## Prerequisites
 
@@ -22,6 +26,21 @@ To configure this:
 
 ## Usage
 
+### Research panel
+
+Open **References** in the right Research panel and choose a source:
+
+- **Project** searches every project `.bib` file and preserves citation-card drag and drop.
+- **Zotero** searches Better BibTeX, shows the collection hierarchy, and adds selected items to
+  `references.bib` before inserting `\cite{...}`.
+- **Online** searches Crossref and arXiv. **Add & cite** merges the item into `references.bib`;
+  **Save to library** requests Zotero write authorization and creates a permanent Zotero item.
+
+Collection synchronization atomically replaces `zotero.bib`; individually selected and online
+items are atomically merged into `references.bib`. These separate managed files prevent a full
+collection refresh from deleting individually added references. A collection can be configured to
+sync when its project opens, and manual sync always shows the target and item count first.
+
 ### Inserting Citations (Inline Search)
 1.  Press `Ctrl+Shift+C` (or `Cmd+Shift+C` on macOS) to focus the citation search bar in the toolbar, or click it directly.
 2.  Type 3+ characters to search your library (title, author, year, etc.).
@@ -31,7 +50,19 @@ To configure this:
 6.  Press `Escape` to close the dropdown.
 
 ### Drag and Drop
-Drag a reference from the "Bib" panel in the sidebar directly into the editor to insert its citation.
+Drag a Project, Zotero, or Online reference card from the Research panel into the editor. Zotero
+and Online cards finish their bibliography import before inserting the final citation key.
+
+When TextEx creates a managed bibliography that is not registered in the active TeX document, it
+shows a BibTeX/BibLaTeX change preview. The editor is changed only after confirmation and only if
+the document has not changed since the preview was created.
+
+### OmniSearch prefixes
+
+- `/r` or `/c`: project references
+- `/z`: Zotero
+- `/o`, `/online`, or `/paper`: Crossref and arXiv
+- `/p`: PDF text search (unchanged)
 
 ### Show in Zotero
 Click the "Show in Zotero" button in search results to open the paper in the Zotero app.
@@ -56,14 +87,16 @@ Ports: Zotero = `23119`, Juris-M = `24119`, or user-defined.
 
 | Channel | Direction | Payload | Response |
 |---|---|---|---|
-| `zotero:probe` | Renderer -> Main | `(port?: number)` | `boolean` |
-| `zotero:search` | Renderer -> Main | `(term: string, port?: number)` | `ZoteroSearchResult[]` |
-| `zotero:cite-cayw` | Renderer -> Main | `(port?: number)` | `string` (LaTeX cite command) |
-| `zotero:export-bibtex` | Renderer -> Main | `(citekeys: string[], port?: number)` | `string` (BibTeX source) |
+| `zotero_search` | Renderer -> Rust | `(term, port)` | `ZoteroSearchResult[]` |
+| `zotero_collections` | Renderer -> Rust | `(port)` | `ZoteroCollection[]` |
+| `zotero_add_to_project` | Renderer -> Rust | `(citekey, port)` | `ReferenceAddResult` |
+| `zotero_sync_collection` | Renderer -> Rust | `(collection, target, port)` | `ZoteroSyncResult` |
+| `zotero_save_online` | Renderer -> Rust | `(reference, port)` | `ZoteroSaveResult` |
+| `research_search_online` | Renderer -> Rust | `(query)` | `OnlineReference[]` |
 
-Tauri additionally exposes `zotero_sync_collection`. It uses Better BibTeX's
+`zotero_sync_collection` uses Better BibTeX's
 pull-export collection path (for example `/0/8CV58ZVD`), caps the response at
-50 MiB, and transactionally replaces `references.bib` or another project-local
+50 MiB, and transactionally replaces `zotero.bib` or another project-local
 `.bib` target only after the complete UTF-8 export has arrived. Sync requests
 are serialized, their target is validated before download, and a successful
 write invalidates the generation-cached reference index immediately.
@@ -98,11 +131,12 @@ Results shown in dropdown -> User selects -> \cite{key1,key2} inserted at cursor
 
 | File | Role |
 |------|------|
-| `src/main/zotero.ts` | BBT HTTP client (probe, search, CAYW, export) |
-| `src-tauri/src/services/zotero.rs` | Tauri loopback-only BBT HTTP client with bounded requests |
-| `src-tauri/src/commands/zotero.rs` | Tauri probe, search, CAYW, and export commands |
-| `src/main/ipc.ts` | `zotero:*` IPC handler registration |
-| `src/preload/index.ts` | `window.api.zotero*` bridge methods |
+| `src-tauri/src/services/zotero.rs` | Loopback-only BBT and Zotero Local API client |
+| `src-tauri/src/services/research.rs` | Crossref/arXiv search and atomic BibTeX merge |
+| `src-tauri/src/commands/zotero.rs` | Validated Zotero command boundary |
+| `src-tauri/src/commands/research.rs` | Validated research command boundary |
+| `src/renderer/components/ResearchPanel.tsx` | Independent right panel shell |
+| `src/renderer/components/research/` | Project, Zotero, Online, and Chat views |
 | `src/renderer/types/api.d.ts` | `ZoteroSearchResult` type + API declarations |
 
 ---
@@ -121,7 +155,7 @@ Results shown in dropdown -> User selects -> \cite{key1,key2} inserted at cursor
 ## Non-Goals
 
 - Reading Zotero's SQLite database directly
-- Full bibliography management (import notes, annotations, PDFs)
+- Importing Zotero notes, annotations, or attachment files
 - Syncing entire Zotero libraries
 - Supporting Zotero without Better BibTeX
 - Building a custom citation style processor

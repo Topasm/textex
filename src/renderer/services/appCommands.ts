@@ -63,6 +63,9 @@ export async function executeAppCommand(
     case 'view.toggleSidebar':
       useProjectStore.getState().toggleSidebar()
       return
+    case 'view.toggleResearchPanel':
+      useProjectStore.getState().toggleResearchPanel()
+      return
     case 'view.toggleLog':
       context.toggleLog()
       return

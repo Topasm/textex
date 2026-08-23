@@ -4,6 +4,7 @@ export { ZoteroSearchPanel } from './ZoteroSearchPanel'
 export { PdfSearchPanel } from './PdfSearchPanel'
 export { TexSearchPanel } from './TexSearchPanel'
 export { ProjectFileSearchPanel } from './ProjectFileSearchPanel'
+export { OnlineSearchPanel } from './OnlineSearchPanel'
 export type {
   SearchMode,
   ModeConfig,

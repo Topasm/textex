@@ -21,7 +21,8 @@ describe('useSettingsStore minimap migration', () => {
       sanitizeSettings({
         theme: 'dark',
         fontSize: 18,
-        minimap: true
+        minimap: true,
+        aiApiKey: 'legacy-secret'
       })
     ).toEqual({
       theme: 'dark',
@@ -41,7 +42,8 @@ describe('useSettingsStore minimap migration', () => {
         settings: {
           theme: 'dark',
           fontSize: 16,
-          minimap: true
+          minimap: true,
+          aiApiKey: 'legacy-secret'
         }
       },
       0
@@ -52,7 +54,8 @@ describe('useSettingsStore minimap migration', () => {
         settings: {
           theme: 'dark',
           fontSize: 16,
-          minimap: true
+          minimap: true,
+          aiApiKey: 'legacy-secret'
         }
       })
     )
@@ -69,6 +72,7 @@ describe('useSettingsStore minimap migration', () => {
       ...createDefaultUserSettings(),
       theme: 'dark',
       fontSize: 18,
+      aiApiKey: 'legacy-secret',
       recentProjects: [
         {
           path: '/projects/paper',
@@ -81,9 +85,10 @@ describe('useSettingsStore minimap migration', () => {
     await hydrateSettingsFromNative()
 
     expect(useSettingsStore.getState().settings).toMatchObject({ theme: 'dark', fontSize: 18 })
-    expect(window.api.saveSettings).toHaveBeenCalledWith(
-      expect.not.objectContaining({ recentProjects: expect.anything() })
-    )
+    expect(useSettingsStore.getState().settings.aiApiKey).toBe('')
+    const saved = vi.mocked(window.api.saveSettings).mock.calls.at(-1)?.[0]
+    expect(saved).not.toHaveProperty('recentProjects')
+    expect(saved).not.toHaveProperty('aiApiKey')
   })
 
   it('preserves an existing renderer profile and exports it natively', async () => {

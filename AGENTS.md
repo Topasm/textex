@@ -2,89 +2,89 @@
 
 ## Project
 
-TextEx is an Electron, React, and TypeScript desktop LaTeX editor. Keep the main,
-preload, and renderer process boundary intact: renderer code accesses native
-capabilities only through the typed preload API.
+TextEx is a Tauri 2, React, Rust, and TypeScript desktop LaTeX editor. Tauri is
+the only desktop runtime. Renderer code accesses native capabilities only
+through the typed `DesktopApi` adapter and never imports Node.js or Tauri APIs
+from components and feature hooks directly.
 
 ## Commands
 
-- Install locked dependencies with `npm ci`. Use `npm install` only when the
-  dependency graph or lockfile is intentionally being changed.
+- Install locked dependencies with `npm ci`.
 - Run fast verification with `npm run check`; it does not run tests.
-- Run the full commit gate with `npm run pre-commit` (typecheck, lint, format,
-  and tests).
+- Run the full local gate with `npm run pre-commit`.
 - Run individual checks with `npm run typecheck`, `npm run lint`,
-  `npm run format:check`, and `npm run test`.
-- Build the desktop app with `npm run build`.
+  `npm run format:check`, `npm run test`, and `npm run format:rust:check`.
+- Run Rust tests and lints with `cargo test --locked --manifest-path
+  src-tauri/Cargo.toml` and `cargo clippy --locked --manifest-path
+  src-tauri/Cargo.toml -- -D warnings`.
+- Build with `npm run build`; package with `npm run package:linux`,
+  `npm run package:mac`, `npm run package:mac:x64`, or `npm run package:win`.
 - Build the CLI and MCP server with `npm run build:cli` and `npm run build:mcp`.
 - Follow [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md) for every
   version, packaging, tag, or release change.
 
 ## Architecture Rules
 
-- Define every request/response IPC channel in `src/shared/ipcChannels.ts` and
-  expose renderer-facing methods through `src/preload/index.ts`.
-- Keep `src/shared/` free of Electron and renderer imports so the desktop app,
-  CLI, and MCP server can reuse it.
+- Define Tauri command names in `src/shared/tauriCommands.ts`, expose them
+  through `src/renderer/platform/tauriApi.ts`, and register them in
+  `src-tauri/src/lib.rs` plus `src-tauri/build.rs` capabilities.
+- Keep Tauri command handlers thin; put native logic in domain services under
+  `src-tauri/src/services/`.
+- Keep `src/shared/` free of Tauri, React, and renderer imports so the desktop
+  app, CLI, and MCP server can reuse pure contracts and parsers.
 - Use fine-grained Zustand selectors. Do not recreate the removed monolithic
   `useAppStore`.
-- Preserve `contextIsolation: true`, `nodeIntegration: false`, and the renderer
-  sandbox.
+- Preserve project-root and symlink containment checks for every filesystem,
+  compiler, Git, template, history, and integration operation.
 - Account for Windows case-insensitive paths when naming adjacent files and
   directories.
 
 ## Working Agreements
 
 - Preserve unrelated working-tree changes and keep changes narrowly scoped.
-- Add or update tests when behavior changes, then run the relevant focused test
-  before the full check suite.
-- Use shared constants and typed interfaces instead of introducing new string
-  literals for cross-process contracts.
-- Update documentation when commands, packaging, IPC behavior, or public
+- Add or update tests when behavior changes, then run focused tests before the
+  full check suite.
+- Use shared constants and typed interfaces instead of cross-boundary string
+  literals.
+- Update documentation when commands, packaging, native behavior, or public
   integrations change.
-- Follow [docs/HANDOFF.md](docs/HANDOFF.md) when transferring repository or
-  maintainer ownership. Never copy personal access tokens or signing keys into
-  the repository or chat history.
+- Never copy personal access tokens, updater signing keys, or platform signing
+  certificates into the repository or chat history.
 
-## Dependency Update Guardrails
+## Dependency Guardrails
 
-- Keep `package.json` and `package-lock.json` in sync and verify updates from a
-  clean install with `npm ci`.
-- Run `npm audit` after dependency changes. Review failures instead of applying
-  an unbounded force upgrade.
-- Run `npm run licenses:generate` when dependency or license data changes, and
-  review the generated files under `resources/licenses/`.
-- Dependabot checks npm and GitHub Actions weekly. A green lint/test job is not
-  enough for packaging changes; wait for Linux, Windows, and macOS jobs.
+- Keep `package.json` and `package-lock.json` in sync and verify dependency
+  changes with `npm ci` and `npm audit`.
+- Run `npm run licenses:generate` when dependency or license data changes and
+  review `resources/licenses/`.
+- Keep `Cargo.toml` and `Cargo.lock` synchronized and use locked Cargo commands
+  in CI.
 
 ## Release and Packaging Guardrails
 
-- A `v*` tag or a manual workflow dispatch with publishing enabled can create a
-  public GitHub Release. Do not trigger either while testing a release change.
+- A `v*` tag creates a public GitHub Release. Do not create or push a tag while
+  testing release changes.
 - Push the release commit to `main` first and wait for the complete
-  `Build & Package` workflow to pass on Linux, Windows, and macOS universal.
-  Only then create and push the version tag.
-- Keep the release version synchronized in `package.json`, the root entries in
-  `package-lock.json`, `src/cli/index.ts`, `src/mcp/server.ts`, and
-  `src/renderer/components/SettingsModal.tsx`. The tag must be exactly
-  `v<package.json version>`.
-- Preserve the macOS `x64ArchFiles` coverage in `electron-builder.yml` for all
-  files under Darwin-specific native prebuild directories and for sidecars.
-  Do not narrow it to `*.node`: `node-pty` also ships an extensionless
-  `spawn-helper`.
-- A universal macOS build requires both x64 and arm64 Tectonic binaries. Keep
-  the Tectonic version, asset URLs, local binary layout, and documentation in
-  sync when upgrading it.
-- Releases must include the platform installers, macOS ZIP, generated
-  blockmaps, all three `latest*.yml` updater manifests, and `checksums.txt`.
+  `Build & Package` workflow to pass on Linux, Windows, macOS arm64, and macOS
+  x64. Only then create the version tag.
+- Keep the version synchronized in `package.json`, the root entries in
+  `package-lock.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`,
+  `src/cli/index.ts`, `src/mcp/server.ts`, and the settings UI. Preserve the
+  `src-tauri/tauri.conf.json` pointer to `../package.json`.
+- Tagged updater builds require `TEXTEX_UPDATER_PUBLIC_KEY`,
+  `TAURI_SIGNING_PRIVATE_KEY`, and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
+- Releases must contain installers, updater archives and signatures for every
+  supported platform, `latest.json`, and `checksums.txt`.
 - Never move or replace a tag after a GitHub Release exists. Publish a new patch
-  version instead. A failed unpublished tag may be replaced only after
-  confirming that no Release exists and the repaired `main` workflow is green.
+  version instead.
 
 ## Code Review Rules
 
-- Flag renderer code that directly imports Node or Electron modules.
-- Flag IPC additions that bypass the channel map, input validation, or preload
-  bridge.
-- Flag release changes that omit updater metadata (`latest*.yml`) or blockmaps
-  required by `electron-updater`.
+- Flag renderer features that import Node.js or `@tauri-apps/api` directly
+  instead of using `DesktopApi`.
+- Flag commands that bypass the shared command map, input validation, project
+  boundary, or capability registration.
+- Flag async document, compile, PDF, and index results that do not prove they
+  still belong to the current document revision or generation.
+- Flag release changes that omit updater signatures or a complete
+  `latest.json` platform map.

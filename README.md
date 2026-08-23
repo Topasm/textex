@@ -5,7 +5,7 @@
 [![Build Status](https://github.com/Topasm/textex/actions/workflows/build.yml/badge.svg)](https://github.com/Topasm/textex/actions/workflows/build.yml)
 [![Release](https://img.shields.io/github/v/release/Topasm/textex?include_prereleases&label=latest)](https://github.com/Topasm/textex/releases/latest)
 
-A **free**, **local-first** desktop LaTeX editor. TextEx runs entirely on your machine — no account, no cloud, no internet required. It provides a split-pane interface with a Monaco code editor on the left and live PDF preview on the right, with a bundled [Tectonic](https://tectonic-typesetting.github.io/) engine so you **do not** need to install TeX Live, MiKTeX, or any other TeX distribution.
+A **free**, **local-first** Tauri desktop LaTeX editor. TextEx runs entirely on your machine — no account, no cloud, no internet required. It provides a split-pane interface with a Monaco code editor on the left and live PDF preview on the right, with a bundled [Tectonic](https://tectonic-typesetting.github.io/) engine so you **do not** need to install TeX Live, MiKTeX, or any other TeX distribution.
 
 <p align="center">
   <img src="docs/images/main-editor.png" alt="TextEx — Split-pane LaTeX editor with live PDF preview" width="900" />
@@ -24,10 +24,15 @@ A **free**, **local-first** desktop LaTeX editor. TextEx runs entirely on your m
 | **Monaco Editor** | Syntax highlighting, auto-completion, snippets, Vim mode |
 | **Multi-File Projects** | Sidebar file tree, tab bar, `\input`/`\include` navigation |
 | **Citations** | BibTeX auto-complete + Zotero integration |
-| **AI Assistant** | Generate LaTeX from notes, fix grammar, rewrite academically |
+| **Research & AI** | Crossref/arXiv search plus native HTTP, Claude CLI, and Codex CLI assistants |
+| **Language & Terminal** | Optional TexLab language features and an embedded native PTY terminal |
 | **Git Integration** | Built-in staging, commits, diffs, and branch info |
-| **Export** | Convert to Word, HTML, and Markdown via Pandoc |
+| **Export** | Convert to DOCX, ODT, HTML, and EPUB via Pandoc |
 | **7 Languages** | EN, KO, ES, FR, DE, PT, ZH |
+
+> **Optional integrations:** AI API providers and online reference search require network
+> access. Claude/Codex CLI and TexLab features require the corresponding executable on
+> `PATH`; the core editor and bundled Tectonic compiler remain local and work without them.
 
 ---
 
@@ -44,8 +49,9 @@ Grab the latest release from the [Releases page](https://github.com/Topasm/texte
 | Platform | File |
 |----------|------|
 | Windows x64 | `.exe` installer |
-| macOS Intel + Apple Silicon | universal `.dmg` |
-| Linux x64 | `.AppImage` |
+| macOS Apple Silicon (arm64) | arm64 `.dmg` |
+| macOS Intel (x64) | x64 `.dmg` |
+| Linux x64 | `.AppImage` or `.deb` |
 
 ### 2. OS-Specific Setup
 
@@ -59,8 +65,8 @@ Or right-click the app > **Open** > **Open** in Gatekeeper.
 **Linux:**
 Make the AppImage executable:
 ```bash
-chmod +x TextEx-*-linux-x86_64.AppImage
-./TextEx-*-linux-x86_64.AppImage
+chmod +x TextEx_*.AppImage
+./TextEx_*.AppImage
 ```
 
 ---
@@ -68,7 +74,7 @@ chmod +x TextEx-*-linux-x86_64.AppImage
 ## User Guide
 
 ### Creating a New Project
-- **Open Folder**: Click the file menu > **Open Folder** to select a directory for your project.
+- **Open Folder**: Use **Open Folder** on the home screen to select a project directory.
 - **Use Templates**: Use **New from Template** to start quickly with a pre-configured LaTeX template (article, beamer, thesis, letter, and more).
 
 <p align="center">
@@ -85,7 +91,7 @@ Open any folder to get a full project view with sidebar file tree, tabs, and `\i
 
 ### Writing Your Document
 TextEx features a modern Monaco-based editor with:
-- **Syntax Highlighting**: Full LaTeX syntax support with semantic coloring.
+- **Syntax Highlighting**: LaTeX syntax coloring through Monaco's local tokenizer.
 - **Auto-Completion**: Intelligent suggestions for commands, environments, labels, and citation keys.
 - **Snippets**: Quickly insert common patterns (e.g., `begin`, `figure`, `table`).
 - **Math Preview**: Live-rendered math equations as you type inside `$...$` or `\[...\]`.
@@ -128,14 +134,9 @@ Enable **Scroll Sync** in Settings > Appearance to keep the editor and PDF align
 - **Citation Tooltips**: Hover over a citation in the PDF preview to see title, author, and year.
 - **Zotero Integration**:
   1. Ensure Zotero with Better BibTeX is running.
-  2. Press `Ctrl+Shift+Z` to search your Zotero library.
-  3. Select a paper to insert its citation key.
-
-### AI Assistant
-- Click **AI Draft** in the toolbar or press `Ctrl+Shift+D`.
-- Enter your prompt to generate LaTeX content.
-- In-editor actions: select text and use Fix Grammar, Academic Rewrite, Summarize, Make Longer/Shorter.
-- Supports OpenAI, Anthropic, Gemini, Claude CLI, and Codex CLI. Configure in Settings > AI.
+  2. Open the right Research panel for Project, Zotero, and Crossref/arXiv references.
+  3. Drag a paper into the editor, or use `/r`, `/z`, and `/o` in OmniSearch.
+  4. Save online results to Zotero independently, or add them directly to the project bibliography.
 
 ### Productivity Tools
 
@@ -143,7 +144,7 @@ Enable **Scroll Sync** in Settings > Appearance to keep the editor and PDF align
   <img src="docs/images/omnisearch.png" alt="OmniSearch dialog with search results" width="900" />
 </p>
 
-- **OmniSearch**: Press `Ctrl+P` to search across files, citations, PDF text, and commands.
+- **OmniSearch**: Use the toolbar search field to search across files, citations, PDF text, and commands.
 - **Todo Panel**: Track writing tasks in the sidebar.
 - **Notes Panel**: Quick scratchpad for ideas.
 - **Timeline**: View local file history and revert to any previous save.
@@ -157,12 +158,11 @@ Enable **Scroll Sync** in Settings > Appearance to keep the editor and PDF align
 |----------|--------|
 | `Ctrl/Cmd + S` | Save |
 | `Ctrl/Cmd + Enter` | Compile |
-| `Ctrl/Cmd + P` | OmniSearch |
 | `Ctrl/Cmd + L` | Toggle log panel |
 | `Ctrl/Cmd + B` | Toggle sidebar |
 | `Ctrl/Cmd + F` | Find in editor / PDF |
-| `Ctrl/Cmd + Shift + Z` | Zotero search |
-| `Ctrl/Cmd + Shift + D` | AI Draft |
+| `Ctrl/Cmd + Shift + C` | Search citations |
+| `Ctrl/Cmd + Shift + F` | Search PDF text |
 | `Shift + Alt + F` | Format document |
 | `Ctrl/Cmd + 0` | Fit PDF to width |
 | `Ctrl/Cmd + 9` | Fit PDF to height |
@@ -187,11 +187,10 @@ Enable **Scroll Sync** in Settings > Appearance to keep the editor and PDF align
 
 ## Open-Source Notices
 
-Open-source notices are available in the app via `Help > Open Source Licenses`.
-The bundled notice artifacts live in `resources/licenses/`, including
-`THIRD-PARTY-NOTICES.txt`, `ELECTRON-LICENSES.chromium.html`, and the TexLab GPL
-files. [docs/LICENSES.md](docs/LICENSES.md) is a human-readable summary, not the
-full bundled notice set.
+Bundled notice artifacts live in `resources/licenses/`, including npm and Rust
+dependency notices plus the Tectonic license files.
+[docs/LICENSES.md](docs/LICENSES.md) is a human-readable summary, not the full
+bundled notice set.
 
 ## License
 

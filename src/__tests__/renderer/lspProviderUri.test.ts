@@ -22,6 +22,10 @@ function createMonacoMock(): MonacoInstance {
     Uri: {
       parse: vi.fn((value: string) => ({ toString: () => value, path: '/project/main.tex' }))
     },
+    editor: {
+      getModels: vi.fn(() => []),
+      getModel: vi.fn(() => null)
+    },
     languages: {
       CompletionItemKind: {
         Text: 1,
@@ -60,6 +64,8 @@ function createMonacoMock(): MonacoInstance {
 function createModel() {
   return {
     uri: { toString: () => modelUri },
+    getVersionId: vi.fn(() => 1),
+    isDisposed: vi.fn(() => false),
     getWordUntilPosition: vi.fn(() => ({ startColumn: 1, endColumn: 4 })),
     getValueInRange: vi.fn(() => 'value')
   }
@@ -174,7 +180,7 @@ describe('LSP providers', () => {
       invoke: async (monaco: MonacoInstance, model: ReturnType<typeof createModel>) => {
         await createFormattingProvider(monaco).provideDocumentFormattingEdits(
           model as never,
-          {} as never,
+          { tabSize: 4, insertSpaces: true } as never,
           {} as never
         )
       }
@@ -192,5 +198,34 @@ describe('LSP providers', () => {
       })
     )
     expect(lspClientMock.currentDocUri).not.toHaveBeenCalled()
+  })
+
+  it('drops formatting edits when the Monaco model changes while awaiting TexLab', async () => {
+    let resolveRequest: ((value: unknown) => void) | undefined
+    lspClientMock.sendRequest.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveRequest = resolve
+      })
+    )
+    const monaco = createMonacoMock()
+    const model = createModel()
+    model.getVersionId.mockReturnValueOnce(1).mockReturnValue(2)
+    const pending = createFormattingProvider(monaco).provideDocumentFormattingEdits(
+      model as never,
+      { tabSize: 4, insertSpaces: true } as never,
+      { isCancellationRequested: false } as never
+    )
+
+    resolveRequest?.([
+      {
+        range: {
+          start: { line: 0, character: 0 },
+          end: { line: 0, character: 1 }
+        },
+        newText: 'stale'
+      }
+    ])
+
+    await expect(pending).resolves.toEqual([])
   })
 })

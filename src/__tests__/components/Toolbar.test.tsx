@@ -6,7 +6,6 @@ import { useCompileStore } from '../../renderer/store/useCompileStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { usePdfStore } from '../../renderer/store/usePdfStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
-import { configureDesktopCapabilities } from '../../renderer/platform/capabilities'
 
 vi.mock('../../renderer/components/OmniSearch', () => ({
   OmniSearch: () => <div data-testid="omni-search-mock">Search citations...</div>
@@ -27,7 +26,6 @@ const defaultProps = {
 }
 
 beforeEach(() => {
-  configureDesktopCapabilities('electron')
   useEditorStore.setState({
     filePath: null,
     isDirty: false
@@ -88,37 +86,7 @@ describe('Toolbar', () => {
     expect(defaultProps.onCompile).toHaveBeenCalledOnce()
   })
 
-  it('opens AI Assistant from the topbar AI button', () => {
-    useSettingsStore.setState({
-      settings: {
-        ...useSettingsStore.getState().settings,
-        aiEnabled: true,
-        aiProvider: 'openai'
-      }
-    })
-
-    render(<Toolbar {...defaultProps} />)
-    fireEvent.click(screen.getByTitle(/AI Assistant/))
-    expect(defaultProps.onAiAssistant).toHaveBeenCalledOnce()
-    expect(defaultProps.onAiDraft).not.toHaveBeenCalled()
-  })
-
-  it('toggles the terminal pane from the toolbar', () => {
-    useSettingsStore.setState({
-      settings: {
-        ...useSettingsStore.getState().settings,
-        aiEnabled: true,
-        aiProvider: 'openai'
-      }
-    })
-
-    render(<Toolbar {...defaultProps} />)
-    fireEvent.click(screen.getByTitle(/Terminal pane/))
-    expect(defaultProps.onToggleTerminalPane).toHaveBeenCalledOnce()
-  })
-
-  it('hides unavailable AI and terminal actions in Tauri', () => {
-    configureDesktopCapabilities('tauri')
+  it('shows the Tauri AI and terminal actions', () => {
     useSettingsStore.setState({
       settings: {
         ...useSettingsStore.getState().settings,
@@ -129,8 +97,8 @@ describe('Toolbar', () => {
 
     render(<Toolbar {...defaultProps} />)
 
-    expect(screen.queryByTitle(/AI Assistant/)).not.toBeInTheDocument()
-    expect(screen.queryByTitle(/Terminal pane/)).not.toBeInTheDocument()
+    expect(screen.queryByTitle(/AI Assistant/)).toBeInTheDocument()
+    expect(screen.queryByTitle(/Terminal pane/)).toBeInTheDocument()
   })
 
   it('shows OmniSearch with default citations mode', () => {

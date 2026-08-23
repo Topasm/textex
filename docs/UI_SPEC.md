@@ -6,8 +6,7 @@ The application uses a horizontal split-pane layout:
 
 ```
 +----------------------------------------------------------+
-|  Native App Menu: File  Edit  View  Window  Help         |
-|  Toolbar: [Home] [Save] [Compile] [AI]  [OmniSearch]     |
+|  Toolbar: [Home] [Save] [Compile]  [OmniSearch]          |
 |           [Sync] [Page] [Zoom]   file.tex (dot = dirty) [Log] |
 +----------------------------+-----------------------------+
 |                            |                             |
@@ -45,7 +44,6 @@ ErrorBoundary
     +-- LogPanel
     +-- StatusBar
     +-- SettingsModal (Overlay)
-    +-- DraftModal (Overlay, supports initialPrompt prefill)
     +-- TemplateGallery (Overlay)
 ```
 
@@ -60,22 +58,29 @@ ErrorBoundary
 
 ### `App.tsx`
 - Root layout using Flexbox.
-- Manages the split ratio (default 50/50, draggable divider is a stretch goal).
+- Composes the workspace, resizable split panes, left Navigator, independent right Research panel,
+  overlays, and status surfaces.
 - Mounts all top-level components.
-- Registers keyboard shortcuts via a `keydown` event listener.
-- Sets up the `latex:log` IPC listener on mount (using `useAppStore.getState()` to
-  avoid stale closure issues).
-- Manages `draftPrefill` state alongside `isDraftModalOpen` so the `/draft` slash
-  command can pre-fill the DraftModal prompt. `handleAiDraft(prefill?)` sets both
-  and is passed to HomeScreen and Toolbar.
+- Registers manifest-backed keyboard shortcuts through `useKeyboardShortcuts`.
+- Uses domain Zustand stores and fine-grained selectors rather than a monolithic app store.
+- Accesses native functionality only through the typed `window.api` Tauri adapter.
+- Routes AI Draft and Claude/Codex CLI entry points through the Research panel's Chat tab.
+
+### `ResearchPanel.tsx`
+
+- Resizable and collapsible right-side panel, persisted per project and closed by default.
+- Uses an overlay with backdrop and Escape dismissal below 1200 px.
+- **Chat** contains AI Draft and Claude/Codex CLI entry points.
+- **References** switches among Project (`BibPanel` reuse), Zotero, and Online sources.
+- Zotero collections may sync on project open or manually to `zotero.bib`; individual additions
+  and Crossref/arXiv results merge into `references.bib` before citation insertion.
 
 ### `Toolbar.tsx`
-- Acts as a slim document toolbar beneath the native app menu.
+- Acts as the primary document command surface at the top of the application.
 - Left group:
   - `Home` closes the current project and returns to the home screen.
   - `Save` calls `window.api.saveFile(...)` / `saveFileAs(...)` through shared app commands.
   - `Compile` triggers manual compilation.
-  - `AI Draft` opens the DraftModal when enabled.
 - Center group:
   - `OmniSearch` stays visible as the primary command/search surface.
 - Right group:
@@ -84,24 +89,25 @@ ErrorBoundary
   - Zoom dropdown with presets and fit actions
   - Current file badge (`Untitled` fallback, dirty dot when unsaved)
   - `Log` toggle button
-- File operations that do not need constant visibility (`Open`, `Open Folder`, `Save As`,
-  `New from Template`, `Export`, `Settings`) live in the native application menu instead of a
-  renderer dropdown.
+- Other commands (`Open`, `Open Folder`, `Save As`, `New from Template`, `Export`,
+  `Settings`) are reached through the home screen, OmniSearch, or keyboard shortcuts.
+- AI/Research and terminal controls are capability-gated and rendered by the Tauri runtime.
 
 ### `EditorPane.tsx`
 - Wraps `@monaco-editor/react`.
-- Language: `latex` (Monaco built-in recognition).
+- Language: custom `latex` registration with a local Monarch tokenizer.
 - Theme: VS Code dark (default), ivory-light (light), hc-black (high-contrast).
-- `onChange` handler updates Zustand store and triggers debounced auto-compile.
+- Monaco models own editable text. Change events update document revision metadata and
+  trigger debounced auto-compile without copying the full document into Zustand.
 - Cursor position tracked via `onDidChangeCursorPosition` (disposable stored
   in a ref and cleaned up on unmount).
-- **Code folding:** LSP-powered via `textDocument/foldingRange` — fold arrows appear
-  in the gutter for sections, environments, and comment blocks.
+- Syntax highlighting always has a local LaTeX Monarch fallback. When optional TexLab is
+  available, its negotiated capabilities add diagnostics, folding, and semantic tokens.
 - **Inverse search flash:** When jumping to a line (from PDF click or Problems panel),
   a yellow fade-out highlight draws attention to the target line (1s animation).
 - Config:
   - `wordWrap: 'on'`
-  - `fontSize: from store (8–32px)`
+  - `fontSize: from store (10–32px)`
   - `lineNumbers: 'on'`
   - `scrollBeyondLastLine: false`
   - `automaticLayout: true`
@@ -109,7 +115,8 @@ ErrorBoundary
 
 ### `PreviewPane.tsx`
 - Wraps `react-pdf`'s `<Document>` and `<Page>` components.
-- Accepts `pdfBase64` from the store; converts to `Uint8Array` for PDF.js.
+- Consumes a revision-qualified `pdfPath`, reads bytes through the typed Tauri API,
+  and stages each generation as `Uint8Array` data for PDF.js.
 - Features:
   - Scroll through pages continuously.
   - Multi-page support with dynamic page count via `onDocumentLoadSuccess`.
@@ -144,125 +151,82 @@ ErrorBoundary
   - Diagnostic counts (error/warning) from compilation
   - Git branch indicator when in a git repo
 - Right side:
-  - LSP status: `Connected` / `Starting...` / `Error` / `Off` (shown when LSP enabled)
   - Spell check toggle: `Spell: On/Off` (clickable)
+  - Section highlighting toggle
   - Cursor position (`Ln X, Col Y`) from Monaco's `onDidChangeCursorPosition`.
 
 ### `SettingsModal.tsx`
 - Modal overlay (800×500) for application settings, using shared `.modal-overlay` /
   `.modal-content` / `.modal-header` / `.modal-footer` CSS classes.
-- Left sidebar with five icon tabs; right scrollable content area.
+- Left sidebar with six visible icon tabs; right scrollable content area.
 - **General**: User information card (Name, Email, Affiliation) for templates/metadata.
-- **Appearance**: Theme selector cards (Light/Dark/System) with checkmark, PDF Night Mode toggle.
+- **Appearance**: Theme selector cards (Light/Dark/Glass/System), PDF Night Mode,
+  PDF layout controls, and scroll sync.
 - **Editor**: Font Size range slider with monospace badge, behavior toggles (Word Wrap,
   Format on Save, Auto-hide Sidebar).
-- **Integrations**: Zotero card (enable/disable toggle, port input, live connection probe),
-  AI Draft card (provider select, model input, API key with save button).
-- **Automation**: Compiler & Tools toggles (Auto Compile, Spell Check, Language Server).
+- **AI**: Native HTTP/CLI provider, model, credential, and prompt controls.
+- **Integrations**: Zotero and Git cards.
+- **Automation**: Auto Compile, external-file watching, Spell Check, and TexLab toggles.
 - All styling uses `settings-*` CSS classes referencing CSS custom properties
   (`--accent`, `--bg-input`, `--card-bg`, etc.) — fully themed across dark/light/high-contrast.
 - Toggle component uses `aria-checked` attribute with CSS-only animation (no JS class toggling).
 - Persistence: Updates `settings` slice in Zustand store, saved to `localStorage`.
 
 ### `HomeScreen.tsx`
-Displayed when no project is open (browser new-tab style landing page).
+Displayed when no project is open.
 
 **Layout (top to bottom):**
 1. **Brand** — "TextEx" title + "LaTeX Editor" subtitle.
-2. **Search bar** — auto-focused on mount, with a Search icon and clear button.
-   - Typing a project name or template name filters recent projects and templates
-     in a dropdown below the search bar.
-   - Typing `/` shows slash commands in the dropdown.
-   - Arrow keys navigate the dropdown, Enter selects, Escape dismisses.
-3. **Action buttons** — "Open Folder" (primary) and "New from Template".
-4. **Recent projects grid** — responsive CSS grid of tiles (`minmax(200px, 1fr)`),
-   each tile shows a folder icon, project name, path, and relative date. A remove
-   button appears on hover (top-right corner).
+2. **Action buttons** — "Open Folder" (primary), "New Blank Project", and
+   "New from Template".
+3. **Recent projects list** — pinned and recent entries with open, rename/tag, pin,
+   and remove actions.
 
-**Slash commands:**
+**Props:** `onOpenFolder`, `onNewBlankProject`, `onNewFromTemplate`.
 
-| Command | Action |
-|---------|--------|
-| `/draft [prompt]` | Opens DraftModal, optionally pre-filled with the text after `/draft` |
-| `/template` | Opens TemplateGallery modal |
-| `/open` | Opens native folder picker dialog |
-| `/help` | Opens SettingsModal |
+### Capability-gated UI
 
-**Props:** `onOpenFolder`, `onNewFromTemplate`, `onAiDraft(prefill?)`, `onOpenSettings`.
-
-**Search result types:** Each dropdown item shows an icon, label, detail text, and a
-badge pill ("Recent", "Template", or "Command").
-
-### `DraftModal.tsx`
-- Modal overlay for AI-powered LaTeX document generation.
-- Three phases: `input` → `generating` → `preview`.
-- Accepts an optional `initialPrompt` prop to pre-fill the input textarea
-  (used by the `/draft` slash command from the home screen search bar).
-- Input phase: textarea with placeholder, Generate button (Ctrl+Enter).
-- Preview phase: editable generated LaTeX, Insert into Editor button.
+The Tauri runtime reports native AI, PTY, and LSP capabilities. `DraftModal`, Research
+chat, `TerminalPane`, and TexLab lifecycle surfaces remain gated through the capability
+map so a future target can omit a domain without bypassing `DesktopApi`.
 
 ---
 
-## Zustand Store Shape
+## Zustand Store Boundaries
 
-```typescript
-export type CompileStatus = 'idle' | 'compiling' | 'success' | 'error'
+- `useEditorStore` — active/open document IDs, dirty/revision metadata, cursor, and
+  pending editor actions. Monaco models own the canonical text through `DocumentRegistry`.
+- `useCompileStore` — compile status, bounded logs, diagnostics, and revision-qualified
+  PDF paths.
+- `usePdfStore` — split/zoom/page/search/SyncTeX UI state and persisted layout.
+- `useProjectStore` — project root/index, sidebar, bibliography, package, and Git state.
+- `useUiStore` — transient overlays, update/export state, search focus, and conflicts.
+- `useSettingsStore` — persisted `UserSettings` and the native settings mirror.
 
-interface AppState {
-  // File
-  filePath: string | null
-  content: string
-  isDirty: boolean
-
-  // Compilation
-  compileStatus: CompileStatus
-  pdfBase64: string | null
-  logs: string
-
-  // UI
-  isLogPanelOpen: boolean
-  cursorLine: number
-  cursorColumn: number
-
-  // Settings
-  settings: UserSettings
-
-  // Actions
-  setContent: (content: string) => void
-  setFilePath: (path: string | null) => void
-  setDirty: (dirty: boolean) => void
-  setCompileStatus: (status: CompileStatus) => void
-  setPdfBase64: (data: string | null) => void
-  appendLog: (text: string) => void
-  clearLogs: () => void
-  toggleLogPanel: () => void
-  setLogPanelOpen: (open: boolean) => void
-  setCursorPosition: (line: number, column: number) => void
-  updateSetting: <K extends keyof UserSettings>(key: K, value: UserSettings[K]) => void
-}
-```
+Components subscribe with fine-grained selectors; there is no monolithic `useAppStore`.
 
 ---
 
 ## Auto-Compile Hook (`useAutoCompile.ts`)
 
-- Watches `content` and `filePath` changes in store.
+- Subscribes to active document revision and file-path changes.
 - 1000ms debounce timer.
-- Saves file first; if save fails, logs the error and aborts (does not compile).
-- On save success, clears dirty flag.
-- Triggers compilation via `window.api.compile(filePath)`.
+- Snapshots and batch-saves dirty document models first; a save error aborts compilation.
+- Marks only the exact saved revision clean, preserving edits made during an in-flight save.
+- Submits a typed revision-qualified request through `window.api.compile(...)`.
 - Silently ignores "Compilation was cancelled" errors (from compile cancellation).
-- Updates `compileStatus` and `pdfBase64` on success, opens log panel on error.
-- Full dependency array includes all store selectors used in the effect.
+- Publishes only the latest matching response to `useCompileStore`.
 
 ---
 
 ## File Operations Hook (`useFileOps.ts`)
 
-- `handleOpen()` -- native dialog, loads content into store, clears dirty flag.
-- `handleSave()` -- saves to disk using `useAppStore.getState()` for fresh content.
-  Falls back to Save As if no file path exists.
-- `handleSaveAs()` -- save dialog, updates path in store, clears dirty flag.
+- `handleOpen()` -- opens the native dialog, activates the parent project, and registers
+  the selected file's Monaco-backed document model.
+- `handleSave()` -- snapshots the active `DocumentModel`, optionally formats it, and marks
+  only the saved revision clean.
+- `handleSaveAs()` -- saves the active snapshot, opens the returned path, and closes the
+  old tab when the path changes.
 
 ---
 
@@ -271,17 +235,26 @@ interface AppState {
 | Shortcut | Action |
 |---|---|
 | `Ctrl/Cmd + O` | Open file |
+| `Ctrl/Cmd + Shift + O` | Open folder |
 | `Ctrl/Cmd + S` | Save file |
 | `Ctrl/Cmd + Shift + S` | Save as |
 | `Ctrl/Cmd + Enter` | Manual compile |
 | `Ctrl/Cmd + L` | Toggle log panel |
+| `Ctrl/Cmd + B` | Toggle sidebar |
+| `Ctrl/Cmd + Shift + B` | Toggle Research panel |
+| `Ctrl/Cmd + F` | Find in editor |
+| `Ctrl/Cmd + Shift + C` | Search citations |
+| `Ctrl/Cmd + Shift + F` | Search PDF text |
+| `Ctrl/Cmd + 0` / `9` | Fit PDF width / height |
+| `Ctrl/Cmd + ,` | Open settings |
 
 ---
 
 ## Styling Notes
 
 - Plain CSS (no Tailwind) in `src/renderer/styles/index.css`.
-- Three themes via CSS custom properties: dark (default), light, high-contrast.
+- Themes use CSS custom properties; the settings UI exposes light, dark, glass,
+  and system-following modes.
 - Color palette (dark defaults shown):
   - Background: `#1e1e1e` (`--bg-primary`)
   - Editor gutter / sidebar: `#252526` (`--bg-secondary`)

@@ -1,241 +1,32 @@
-# TextEx — Compiler Service (`src/main/compiler.ts`)
+# Compiler Service
 
-## Purpose
+The desktop compiler is implemented in Rust under
+`src-tauri/src/services/compiler.rs`. The Tauri command adapter accepts a typed
+`CompileRequest` containing request, document, revision, file, and priority
+identity.
 
-Wraps the bundled Tectonic binary. Handles:
-- Locating the correct platform binary (dev vs. packaged).
-- Verifying the binary exists and is executable before spawning.
-- Cancelling any in-progress compilation before starting a new one.
-- Spawning the child process with the right arguments.
-- Streaming both stdout and stderr to the renderer for live log display.
-- Reading the resulting PDF on successful compilation.
+## Invariants
 
----
+- The input and resolved magic-root file must remain inside the active project.
+- Only `.tex` project files are accepted.
+- Tectonic is the target-qualified bundled sidecar verified by the setup
+  manifest.
+- The optional curated support cache is versioned for the bundled Tectonic,
+  bounded by file/count/total limits, SHA-256 verified, and atomically installed
+  only into the application cache on first use.
+- A missing, empty, invalid, or incomplete seed never blocks compilation. The
+  compiler emits an explicit cache status log and lets Tectonic fetch uncached
+  support files through its existing network fallback.
+- Queue priority, latest-wins coalescing, cancellation, timeout, and bounded
+  stdout/stderr prevent obsolete work from blocking current edits.
+- Log and diagnostic events retain request/document/revision identity.
+- A stale response cannot replace the current PDF generation.
+- Output paths and SyncTeX inputs are validated before being returned.
 
-## Binary Resolution
+The standalone CLI and MCP server use `src/shared/compiler.ts` in their own
+Node.js processes. That implementation is intentionally separate from the
+desktop command transport but shares document parsing and Tectonic conventions.
 
-```
-getTectonicPath()
-|
-+- process.platform
-|   +- win32  -> "tectonic.exe"
-|   +- darwin -> "tectonic"
-|   +- linux  -> "tectonic"
-|
-+- app.isPackaged?
-|   +- false (dev)  -> <project-root>/resources/bin/<platform>/<arch>/tectonic[.exe], then platform fallback
-|   +- true  (prod) -> <process.resourcesPath>/bin/<arch>/tectonic[.exe], then bin fallback
-|
-+- return absolute path
-```
-
-**Important:** On macOS and Linux, the binary must have execute permission
-(`chmod +x`). The build script should ensure this. On macOS, the binary may need
-to be ad-hoc signed or the app notarized to avoid Gatekeeper blocks.
-
----
-
-## Compilation Cancellation
-
-The module tracks the active child process in a module-level `activeProcess`
-variable. Before each new compilation, `cancelCompilation()` kills any running
-process. The `close` handler checks for a signal to distinguish cancellation
-from normal exit:
-
-- If `signal` is set (process was killed), the promise rejects with
-  `"Compilation was cancelled"`.
-- The renderer's auto-compile hook silently ignores cancellation errors so
-  the user is not shown spurious error messages.
-
-The `cancelCompilation()` function is also exported and registered as the
-`latex:cancel` IPC handler in `ipc.ts`.
-
----
-
-## Reference Implementation
-
-```typescript
-import { spawn, ChildProcess } from 'child_process'
-import path from 'path'
-import fs from 'fs/promises'
-import { app, BrowserWindow } from 'electron'
-
-const isDev = !app.isPackaged
-
-let activeProcess: ChildProcess | null = null
-
-export function cancelCompilation(): boolean {
-  if (activeProcess) {
-    activeProcess.kill()
-    activeProcess = null
-    return true
-  }
-  return false
-}
-
-function getTectonicPath(): string {
-  const platform = process.platform
-  const binName = platform === 'win32' ? 'tectonic.exe' : 'tectonic'
-
-  const platformDir =
-    platform === 'win32' ? 'win' : platform === 'darwin' ? 'mac' : 'linux'
-
-  const basePath = isDev
-    ? path.join(__dirname, '../../resources/bin', platformDir)
-    : path.join(process.resourcesPath!, 'bin')
-
-  return path.join(basePath, binName)
-}
-
-export interface CompileResult {
-  pdfBase64: string
-}
-
-export async function compileLatex(
-  filePath: string,
-  win: BrowserWindow
-): Promise<CompileResult> {
-  const binary = getTectonicPath()
-  const workDir = path.dirname(filePath)
-
-  // Verify binary exists
-  try {
-    await fs.access(binary, fs.constants.X_OK)
-  } catch {
-    throw new Error(
-      `LaTeX engine not found at ${binary}. The application may need to be reinstalled.`
-    )
-  }
-
-  // Kill any running compilation before starting a new one
-  cancelCompilation()
-
-  return new Promise((resolve, reject) => {
-    const args = ['-X', 'compile', filePath]
-    const child: ChildProcess = spawn(binary, args, { cwd: workDir })
-    activeProcess = child
-
-    let output = ''
-
-    child.stderr?.on('data', (chunk: Buffer) => {
-      const text = chunk.toString()
-      output += text
-      win.webContents.send('latex:log', text)
-    })
-
-    child.stdout?.on('data', (chunk: Buffer) => {
-      const text = chunk.toString()
-      output += text
-      win.webContents.send('latex:log', text)
-    })
-
-    child.on('error', (err) => {
-      activeProcess = null
-      reject(new Error(`Failed to start tectonic: ${err.message}`))
-    })
-
-    child.on('close', async (code, signal) => {
-      activeProcess = null
-
-      if (signal) {
-        reject(new Error('Compilation was cancelled'))
-        return
-      }
-
-      if (code === 0) {
-        const pdfPath = filePath.replace(/\.tex$/, '.pdf')
-        try {
-          const pdfBuffer = await fs.readFile(pdfPath)
-          resolve({ pdfBase64: pdfBuffer.toString('base64') })
-        } catch {
-          reject(new Error(`Compilation succeeded but PDF not found at ${pdfPath}`))
-        }
-      } else {
-        reject(new Error(output || `tectonic exited with code ${code}`))
-      }
-    })
-  })
-}
-```
-
----
-
-## Tectonic CLI Quick Reference
-
-| Command | Description |
-|---|---|
-| `tectonic -X compile file.tex` | Compile a .tex file to PDF |
-| `tectonic --help` | Show help |
-| `tectonic -X compile --keep-intermediates file.tex` | Keep .aux, .log, etc. |
-| `tectonic -X compile --synctex file.tex` | Generate SyncTeX data (for inverse search) |
-
----
-
-## Tectonic Cache
-
-On first compile, Tectonic downloads LaTeX packages to a local cache:
-
-| OS | Default cache location |
-|---|---|
-| Linux | `~/.cache/Tectonic/` |
-| macOS | `~/Library/Caches/Tectonic/` |
-| Windows | `%LOCALAPPDATA%\Tectonic\` |
-
-The first compile of a document using common packages (article class, amsmath,
-graphicx, etc.) downloads ~50-150 MB. Subsequent compiles are fully offline.
-
----
-
-## Magic Comment Resolution (Multi-file Projects)
-
-When the `latex:compile` IPC handler receives a file path, it reads the file
-content and checks the first 5 lines for a **magic comment**:
-
-```
-%! TeX root = ./main.tex
-```
-
-If found, the relative path is resolved against the current file's directory,
-and the **root file** is compiled instead of the active file. This allows users
-to edit `chapter1.tex` and have compilation target `main.tex` automatically.
-
-Implementation: `src/shared/magicComments.ts` (pure Node.js, no Electron deps).
-
----
-
-## Error Handling Strategy
-
-1. **Invalid file path** -- `validateFilePath()` in `ipc.ts` rejects non-string,
-   empty, or relative paths before `compileLatex()` is called.
-2. **Binary not found** -- `fs.access` with `X_OK` flag checks existence and
-   execute permission before spawn. Shows: "LaTeX engine not found at {path}.
-   The application may need to be reinstalled."
-3. **Spawn failure** -- Catch `error` event (e.g., permission denied on Unix).
-4. **Non-zero exit** -- Surface combined stdout+stderr in the LogPanel. Common issues:
-   - Undefined control sequence -> syntax error in .tex
-   - Missing package -> Tectonic will auto-download if online
-   - Font not found -> may need OS-level font installation
-5. **PDF not generated** -- Even with exit code 0, verify the .pdf file exists
-   before attempting to read it.
-6. **Cancellation** -- When a new compile starts while one is running, the old
-   process is killed. The signal-based rejection is caught and silently ignored
-   by the auto-compile hook.
-
----
-
-## Implemented Enhancements
-
-- **SyncTeX support** -- Tectonic compiles with `--synctex` flag. Forward sync
-  (`synctexForward`) jumps from editor line to PDF position. Inverse sync
-  (`Ctrl+Click` on PDF) jumps to source line. Electron uses
-  `src/main/synctex.ts`; Tauri uses the project-scoped Rust parser in
-  `src-tauri/src/services/synctex.rs`.
-- **TexLab LSP integration** -- Real-time diagnostics, completions, hover docs,
-  go-to-definition, document symbols, formatting, and rename — without requiring
-  a full compile cycle. Managed by `TexLabManager` in `src/main/texlab.ts`.
-  See `docs/ARCHITECTURE.md` for the IPC proxy architecture.
-
-## Future Enhancements
-
-- **Incremental compilation** -- Keep intermediates and only recompile changed
-  files in multi-file projects.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the end-to-end pipeline and
+[IPC_SPEC.md](IPC_SPEC.md) for command registration rules.
+Seed staging and package smoke details are in [PACKAGING.md](PACKAGING.md).

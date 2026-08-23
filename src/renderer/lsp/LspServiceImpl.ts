@@ -117,6 +117,7 @@ export class LspClient {
   private options: LspClientOptions | null = null
   private disposables = new DisposableStore()
   private documentVersions = new Map<string, number>()
+  private lifecycleGeneration = 0
 
   // Request deduplication: map from dedupe key to the in-flight request ID
   private inflightRequests = new Map<DedupeKey, RequestId>()
@@ -196,12 +197,20 @@ export class LspClient {
         method
       })
       this.inflightRequests.set(dedupeKey, id)
-      window.api.lspSend({ jsonrpc: '2.0', id, method, params })
+      void Promise.resolve(window.api.lspSend({ jsonrpc: '2.0', id, method, params })).catch(
+        (cause) => {
+          const pending = this.pendingRequests.get(id)
+          if (!pending) return
+          this.pendingRequests.delete(id)
+          this.inflightRequests.delete(dedupeKey)
+          pending.reject(cause instanceof Error ? cause : new Error(String(cause)))
+        }
+      )
     })
   }
 
   private sendNotification(method: string, params: unknown): void {
-    window.api.lspSend({ jsonrpc: '2.0', method, params })
+    void Promise.resolve(window.api.lspSend({ jsonrpc: '2.0', method, params })).catch(() => {})
   }
 
   private handleMessage(message: Record<string, unknown>): void {
@@ -229,7 +238,9 @@ export class LspClient {
 
     // Server request (e.g. window/showMessage) — respond with null
     if ('method' in message && 'id' in message) {
-      window.api.lspSend({ jsonrpc: '2.0', id: message.id, result: null })
+      void Promise.resolve(
+        window.api.lspSend({ jsonrpc: '2.0', id: message.id, result: null })
+      ).catch(() => {})
     }
   }
 
@@ -295,7 +306,10 @@ export class LspClient {
     monaco.editor.setModelMarkers(model, LSP_MARKER_OWNER, markers)
   }
 
-  private async doInitialize(workspaceRoot: string): Promise<void> {
+  private async doInitialize(
+    workspaceRoot: string,
+    generation = this.lifecycleGeneration
+  ): Promise<void> {
     const rootUri = filePathToUri(workspaceRoot)
     const result = (await this.sendRequest(
       'initialize',
@@ -371,6 +385,9 @@ export class LspClient {
       15000
     )) as Record<string, unknown>
 
+    if (generation !== this.lifecycleGeneration) {
+      throw new Error('LSP initialization superseded')
+    }
     this.serverCapabilities = (result?.capabilities || {}) as Record<string, unknown>
     this.sendNotification('initialized', {})
     this._initialized = true
@@ -450,6 +467,7 @@ export class LspClient {
     getDocUri: () => string | null,
     getDocContent: () => string
   ): Promise<void> {
+    const generation = ++this.lifecycleGeneration
     this.options = {
       monaco: monacoInstance,
       getDocumentUri: getDocUri,
@@ -457,16 +475,21 @@ export class LspClient {
     }
 
     window.api.onLspMessage((message: object) => {
-      this.handleMessage(message as Record<string, unknown>)
+      if (generation === this.lifecycleGeneration) {
+        this.handleMessage(message as Record<string, unknown>)
+      }
     })
 
     try {
-      await window.api.lspStart(workspaceRoot)
-      await this.doInitialize(workspaceRoot)
+      const started = await window.api.lspStart(workspaceRoot)
+      if (generation !== this.lifecycleGeneration) return
+      if (!started.success) throw new Error('TexLab is unavailable')
+      await this.doInitialize(workspaceRoot, generation)
     } catch {
-      this.stop()
+      if (generation === this.lifecycleGeneration) this.stop()
       return
     }
+    if (generation !== this.lifecycleGeneration) return
 
     this.registerProviders(monacoInstance)
 
@@ -504,24 +527,25 @@ export class LspClient {
   }
 
   stop(): void {
+    this.lifecycleGeneration += 1
     // Stop health monitoring
     if (this.healthCheckTimer) {
       clearInterval(this.healthCheckTimer)
       this.healthCheckTimer = null
     }
 
-    if (this._initialized) {
-      try {
-        this.sendRequest('shutdown', null)
-          .then(() => this.sendNotification('exit', null))
-          .catch(() => this.sendNotification('exit', null))
-      } catch {
-        // ignore
+    const monaco = this.options?.monaco
+    if (monaco?.editor?.getModels && monaco.editor.setModelMarkers) {
+      for (const model of monaco.editor.getModels()) {
+        monaco.editor.setModelMarkers(model, LSP_MARKER_OWNER, [])
       }
     }
 
     this._initialized = false
     this.serverCapabilities = {}
+    for (const pending of this.pendingRequests.values()) {
+      pending.reject(new Error('LSP client stopped'))
+    }
     this.pendingRequests.clear()
     this.inflightRequests.clear()
     this.nextRequestId = 1
@@ -531,7 +555,7 @@ export class LspClient {
     this.disposables = new DisposableStore()
 
     window.api.removeLspMessageListener()
-    window.api.lspStop()
+    void Promise.resolve(window.api.lspStop()).catch(() => {})
   }
 
   currentDocUri(): string {

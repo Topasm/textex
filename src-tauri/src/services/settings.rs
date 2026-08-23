@@ -273,6 +273,10 @@ pub async fn activate_project(
         .project_root()
         .is_ok_and(|root| filesystem::paths_equal(&root, &canonical))
     {
+        // Treat reopening the same directory as a new project session. This
+        // advances the epoch so watcher/index work from the prior renderer
+        // transition cannot attach itself after the reopen.
+        project_state.set_project_root(canonical.clone())?;
         return filesystem::path_to_string(&canonical);
     }
 

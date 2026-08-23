@@ -2,22 +2,17 @@ name: Build & Package
 
 on:
   workflow_dispatch:
-    inputs:
-      publish_release:
-        description: 'Publish Release?'
-        required: false
-        type: boolean
-        default: false
-      prerelease:
-        description: 'Release as pre-release (beta)? Published immediately but not shown as Latest.'
-        required: false
-        type: boolean
-        default: false
   push:
     branches:
       - main
     tags:
       - 'v*'
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -32,11 +27,14 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --include=optional
+
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.97.1 --profile minimal --component rustfmt
 
       - name: Lint
         run: npm run lint
@@ -47,6 +45,9 @@ jobs:
       - name: Format check
         run: npm run format:check
 
+      - name: Tauri Rust format check
+        run: npm run format:rust:check
+
   test:
     runs-on: ubuntu-latest
     name: Test
@@ -55,193 +56,611 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --include=optional
 
       - name: Run tests
         run: npm run test
 
+  rust-test:
+    runs-on: ubuntu-22.04
+    name: Tauri Rust Test & Licenses
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            minisign \
+            patchelf \
+            xdg-utils
+
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.97.1 --profile minimal --component clippy
+
+      - name: Install locked dependencies
+        run: npm ci --include=optional
+
+      - name: Verify npm native bindings
+        run: |
+          npx vite --version
+          npx tauri --version
+
+      - name: Prepare verified Linux Tectonic sidecar
+        run: |
+          node scripts/setup-tauri-sidecars.js --target x86_64-unknown-linux-gnu
+          node scripts/setup-tauri-sidecars.js --target x86_64-unknown-linux-gnu --check
+          node scripts/prepare-tectonic-cache-seed.js --check
+
+      - name: Audit npm dependencies
+        run: npm audit --audit-level=high
+
+      - name: Run Rust tests
+        run: cargo test --locked --manifest-path src-tauri/Cargo.toml
+
+      - name: Run Rust lints
+        run: cargo clippy --locked --manifest-path src-tauri/Cargo.toml -- -D warnings
+
+      - name: Verify generated license notices
+        shell: bash
+        run: |
+          npm run licenses:generate
+          git diff --exit-code -- resources/licenses
+          test -z "$(git status --porcelain --untracked-files=all -- resources/licenses)"
+
+  release-preflight:
+    runs-on: ubuntu-latest
+    name: Release Tag Preflight
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          node-version-file: .nvmrc
+
+      - name: Verify tag version and main ancestry before exposing signing secrets
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          test "$GITHUB_REF_NAME" = "v$(node -p \"require('./package.json').version\")"
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main
+
   build:
-    needs: [lint, test]
+    needs: [lint, test, rust-test, release-preflight]
     strategy:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             platform: linux
-            tectonic_asset: tectonic-0.17.0-x86_64-unknown-linux-musl.tar.gz
-            tectonic_dir: linux
-            binary_name: tectonic
-            build_args: --linux
-          - os: macos-latest
-            platform: mac-universal
-            tectonic_asset: tectonic-0.17.0-x86_64-apple-darwin.tar.gz
-            tectonic_dir: mac
-            binary_name: tectonic
-            build_args: --mac --universal
+            target: x86_64-unknown-linux-gnu
+            rust_targets: x86_64-unknown-linux-gnu
+            package_command: npm run package:linux
+            updater_command: npm run package:updater:linux
+            artifact_paths: |
+              src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage
+              src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.sig
+              src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb
+              src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.sig
+          - os: macos-15
+            platform: mac-arm64
+            target: aarch64-apple-darwin
+            rust_targets: aarch64-apple-darwin
+            package_command: npm run package:mac
+            updater_command: npm run package:updater:mac
+            artifact_paths: |
+              src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+              src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz
+              src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.sig
+          - os: macos-15
+            platform: mac-x64
+            target: x86_64-apple-darwin
+            rust_targets: x86_64-apple-darwin
+            package_command: npm run package:mac:x64
+            updater_command: npm run package:updater:mac:x64
+            artifact_paths: |
+              src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
+              src-tauri/target/x86_64-apple-darwin/release/bundle/macos/*.app.tar.gz
+              src-tauri/target/x86_64-apple-darwin/release/bundle/macos/*.sig
           - os: windows-latest
             platform: win
-            tectonic_asset: tectonic-0.17.0-x86_64-pc-windows-msvc.zip
-            tectonic_dir: win
-            binary_name: tectonic.exe
-            build_args: --win
+            target: x86_64-pc-windows-msvc
+            rust_targets: x86_64-pc-windows-msvc
+            package_command: npm run package:win
+            updater_command: npm run package:updater:win
+            artifact_paths: |
+              src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
+              src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.sig
 
     runs-on: ${{ matrix.os }}
-    name: Build (${{ matrix.platform }})
+    name: Tauri Build (${{ matrix.platform }})
 
     steps:
       - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install Linux build dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            minisign \
+            patchelf \
+            xdg-utils
 
-      - name: Rebuild legacy Electron native modules
-        run: npm run postinstall:electron
-
-      - name: Download Tectonic binary
+      - name: Install pinned Rust toolchain and targets
         shell: bash
         run: |
-          RELEASE_BASE="https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.17.0"
+          rustup toolchain install 1.97.1 --profile minimal
+          rustup target add --toolchain 1.97.1 ${{ matrix.rust_targets }}
 
-          if [[ "${{ matrix.platform }}" == "mac-universal" ]]; then
-            mkdir -p resources/bin/mac resources/bin/mac/arm64
-            curl --fail --location --retry 3 -o tectonic-x64.tar.gz "$RELEASE_BASE/tectonic-0.17.0-x86_64-apple-darwin.tar.gz"
-            curl --fail --location --retry 3 -o tectonic-arm64.tar.gz "$RELEASE_BASE/tectonic-0.17.0-aarch64-apple-darwin.tar.gz"
-            tar xzf tectonic-x64.tar.gz -C resources/bin/mac
-            tar xzf tectonic-arm64.tar.gz -C resources/bin/mac/arm64
-            rm tectonic-x64.tar.gz tectonic-arm64.tar.gz
-            chmod +x resources/bin/mac/tectonic resources/bin/mac/arm64/tectonic
-          else
-            mkdir -p "resources/bin/${{ matrix.tectonic_dir }}"
-            RELEASE_URL="$RELEASE_BASE/${{ matrix.tectonic_asset }}"
-            if [[ "${{ matrix.tectonic_asset }}" == *.zip ]]; then
-              curl --fail --location --retry 3 -o tectonic.zip "$RELEASE_URL"
-              unzip tectonic.zip -d "resources/bin/${{ matrix.tectonic_dir }}"
-              rm tectonic.zip
-            else
-              curl --fail --location --retry 3 -o tectonic.tar.gz "$RELEASE_URL"
-              tar xzf tectonic.tar.gz -C "resources/bin/${{ matrix.tectonic_dir }}"
-              rm tectonic.tar.gz
-            fi
-            chmod +x "resources/bin/${{ matrix.tectonic_dir }}/${{ matrix.binary_name }}" || true
+      - name: Install locked dependencies
+        run: npm ci --include=optional
+
+      - name: Report pinned toolchain and native bindings
+        shell: bash
+        run: |
+          node --version
+          npm --version
+          rustc -Vv
+          cargo --version
+          npx vite --version
+          npx tauri --version
+          if [[ "${{ matrix.platform }}" == "mac-arm64" ]]; then
+            test "$(uname -m)" = "arm64"
           fi
 
-          ls -lh "resources/bin/${{ matrix.tectonic_dir }}/"
-
-      - name: Build and package
+      - name: Prepare and verify Tectonic sidecars and cache seed
         shell: bash
-        run: npx electron-vite build && npx electron-builder ${{ matrix.build_args }} --publish never
+        run: |
+          node scripts/setup-tauri-sidecars.js --target "${{ matrix.target }}"
+          node scripts/setup-tauri-sidecars.js --target "${{ matrix.target }}" --check
+          node scripts/prepare-tectonic-cache-seed.js --check
+
+          find src-tauri/binaries -maxdepth 1 -type f -print
+
+      - name: Verify updater signing configuration
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Skip auto-discovery of Developer ID certificates on macOS CI.
-          # Without a real certificate, electron-builder ad-hoc signs with '-',
-          # which keeps Team IDs consistent across the main binary and frameworks.
-          CSC_IDENTITY_AUTO_DISCOVERY: ${{ startsWith(matrix.platform, 'mac') && 'false' || '' }}
+          TEXTEX_UPDATER_PUBLIC_KEY: ${{ secrets.TEXTEX_UPDATER_PUBLIC_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          test -n "$TEXTEX_UPDATER_PUBLIC_KEY"
+          test -n "$TAURI_SIGNING_PRIVATE_KEY"
+          test -n "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD"
 
-      - name: Re-sign macOS app (ad-hoc)
-        if: startsWith(matrix.platform, 'mac')
+      - name: Import macOS Developer ID certificate and prepare notary credentials
+        if: startsWith(github.ref, 'refs/tags/v') && startsWith(matrix.platform, 'mac-')
+        shell: bash
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_NOTARY_API_KEY: ${{ secrets.APPLE_NOTARY_API_KEY }}
+          APPLE_NOTARY_KEY_ID: ${{ secrets.APPLE_NOTARY_KEY_ID }}
+          APPLE_NOTARY_ISSUER_ID: ${{ secrets.APPLE_NOTARY_ISSUER_ID }}
+        run: |
+          for value in \
+            "$APPLE_CERTIFICATE" \
+            "$APPLE_CERTIFICATE_PASSWORD" \
+            "$APPLE_NOTARY_API_KEY" \
+            "$APPLE_NOTARY_KEY_ID" \
+            "$APPLE_NOTARY_ISSUER_ID"; do
+            test -n "$value"
+          done
+
+          certificate_path="$RUNNER_TEMP/textex-developer-id.p12"
+          notary_key_path="$RUNNER_TEMP/AuthKey_${APPLE_NOTARY_KEY_ID}.p8"
+          keychain_path="$RUNNER_TEMP/textex-signing.keychain-db"
+          keychain_password=$(openssl rand -hex 32)
+          printf '%s' "$APPLE_CERTIFICATE" | /usr/bin/base64 -D > "$certificate_path"
+          printf '%s' "$APPLE_NOTARY_API_KEY" | /usr/bin/base64 -D > "$notary_key_path"
+          chmod 600 "$certificate_path" "$notary_key_path"
+
+          security create-keychain -p "$keychain_password" "$keychain_path"
+          security set-keychain-settings -lut 21600 "$keychain_path"
+          security unlock-keychain -p "$keychain_password" "$keychain_path"
+          security import "$certificate_path" -k "$keychain_path" \
+            -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$keychain_password" "$keychain_path"
+          security list-keychains -d user -s "$keychain_path"
+
+          identities=$(security find-identity -v -p codesigning "$keychain_path" |
+            sed -n 's/.*"\(Developer ID Application:.*\)"/\1/p')
+          test "$(printf '%s\n' "$identities" | sed '/^$/d' | wc -l | tr -d ' ')" -eq 1
+          identity=$(printf '%s\n' "$identities" | sed -n '1p')
+          test -n "$identity"
+
+          {
+            echo "APPLE_SIGNING_IDENTITY=$identity"
+            echo "APPLE_API_ISSUER=$APPLE_NOTARY_ISSUER_ID"
+            echo "APPLE_API_KEY=$APPLE_NOTARY_KEY_ID"
+            echo "APPLE_API_KEY_PATH=$notary_key_path"
+            echo "TEXTEX_MAC_KEYCHAIN=$keychain_path"
+            echo "TEXTEX_NOTARY_KEY_PATH=$notary_key_path"
+            echo "TEXTEX_NOTARY_KEY_ID=$APPLE_NOTARY_KEY_ID"
+            echo "TEXTEX_NOTARY_ISSUER_ID=$APPLE_NOTARY_ISSUER_ID"
+          } >> "$GITHUB_ENV"
+
+      - name: Prepare optional Windows Authenticode certificate
+        if: startsWith(github.ref, 'refs/tags/v') && matrix.platform == 'win'
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          $hasCertificate = -not [string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE)
+          $hasPassword = -not [string]::IsNullOrWhiteSpace($env:WINDOWS_CERTIFICATE_PASSWORD)
+          if ($hasCertificate -xor $hasPassword) {
+            throw 'WINDOWS_CERTIFICATE and WINDOWS_CERTIFICATE_PASSWORD must be configured together'
+          }
+
+          $configPath = Join-Path $env:RUNNER_TEMP 'textex-windows-signing.json'
+          $config = @{ bundle = @{ createUpdaterArtifacts = $true } }
+          if ($hasCertificate) {
+            $certificatePath = Join-Path $env:RUNNER_TEMP 'textex-code-signing.pfx'
+            try {
+              [IO.File]::WriteAllBytes(
+                $certificatePath,
+                [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE)
+              )
+            } catch {
+              throw 'WINDOWS_CERTIFICATE is not valid base64'
+            }
+            $securePassword = ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -Force -AsPlainText
+            $certificate = Import-PfxCertificate -FilePath $certificatePath -CertStoreLocation 'Cert:\CurrentUser\My' -Password $securePassword
+            if (-not $certificate -or -not $certificate.HasPrivateKey) {
+              throw 'The imported Windows certificate does not contain a private key'
+            }
+            $codeSigningEku = $certificate.EnhancedKeyUsageList | Where-Object {
+              $_.ObjectId.Value -eq '1.3.6.1.5.5.7.3.3'
+            }
+            if (-not $codeSigningEku) { throw 'The imported certificate is not valid for code signing' }
+            $config.bundle.windows = @{
+              certificateThumbprint = $certificate.Thumbprint
+              digestAlgorithm = 'sha256'
+              timestampUrl = 'http://timestamp.digicert.com'
+            }
+            "TEXTEX_WINDOWS_CERTIFICATE_THUMBPRINT=$($certificate.Thumbprint)" >> $env:GITHUB_ENV
+            'TEXTEX_WINDOWS_AUTHENTICODE=true' >> $env:GITHUB_ENV
+          } else {
+            Write-Host 'Windows Authenticode secrets are absent; producing updater-signed smoke artifacts.'
+            'TEXTEX_WINDOWS_AUTHENTICODE=false' >> $env:GITHUB_ENV
+          }
+          $config | ConvertTo-Json -Depth 5 | Set-Content -Encoding utf8 $configPath
+          "TEXTEX_WINDOWS_SIGNING_CONFIG=$configPath" >> $env:GITHUB_ENV
+
+      - name: Build unsigned Tauri package
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        shell: bash
+        run: ${{ matrix.package_command }}
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ startsWith(matrix.platform, 'mac-') && '-' || '' }}
+          RUST_BACKTRACE: 1
+
+      - name: Build signed Tauri updater package
+        if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
         run: |
-          APP_PATH=$(find dist/mac* -name '*.app' -maxdepth 1 2>/dev/null | head -1)
-          if [ -n "$APP_PATH" ]; then
-            echo "Re-signing $APP_PATH with consistent ad-hoc identity..."
-            codesign --deep --force --sign - "$APP_PATH"
-            echo "Verifying signature..."
-            codesign --verify --deep --strict "$APP_PATH" && echo "Signature OK" || echo "Signature verification warning (expected for ad-hoc)"
+          if [[ "${{ matrix.platform }}" == "win" ]]; then
+            npx tauri build --config "$TEXTEX_WINDOWS_SIGNING_CONFIG" \
+              --bundles nsis --target x86_64-pc-windows-msvc
+          else
+            ${{ matrix.updater_command }}
           fi
+        env:
+          RUST_BACKTRACE: 1
+          TEXTEX_UPDATER_PUBLIC_KEY: ${{ secrets.TEXTEX_UPDATER_PUBLIC_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+      - name: Notarize, staple, and validate macOS DMG
+        if: startsWith(github.ref, 'refs/tags/v') && startsWith(matrix.platform, 'mac-')
+        shell: bash
+        run: |
+          dmg=$(find "src-tauri/target/${{ matrix.target }}/release/bundle/dmg" \
+            -name '*.dmg' -type f -print -quit)
+          test -n "$dmg" && test -s "$dmg"
+          result="$RUNNER_TEMP/notary-result.json"
+          xcrun notarytool submit "$dmg" \
+            --key "$TEXTEX_NOTARY_KEY_PATH" \
+            --key-id "$TEXTEX_NOTARY_KEY_ID" \
+            --issuer "$TEXTEX_NOTARY_ISSUER_ID" \
+            --wait --timeout 30m --output-format json > "$result"
+          node -e "const r=require(process.argv[1]); if(r.status !== 'Accepted') throw new Error('notary status: '+r.status)" "$result"
+          xcrun stapler staple "$dmg"
+          xcrun stapler validate "$dmg"
+          spctl --assess --type open --context context:primary-signature -vv "$dmg"
+
+      - name: Verify Linux updater signatures
+        if: startsWith(github.ref, 'refs/tags/v') && matrix.platform == 'linux'
+        shell: bash
+        env:
+          TEXTEX_UPDATER_PUBLIC_KEY: ${{ secrets.TEXTEX_UPDATER_PUBLIC_KEY }}
+        run: |
+          command -v minisign
+          public_key=$(mktemp)
+          printf '%s' "$TEXTEX_UPDATER_PUBLIC_KEY" | base64 --decode > "$public_key"
+          verified=0
+          while IFS= read -r -d '' signature; do
+            artifact=${signature%.sig}
+            test -s "$artifact" && test -s "$signature"
+            decoded_signature=$(mktemp)
+            base64 --decode "$signature" > "$decoded_signature"
+            minisign -Vm "$artifact" -p "$public_key" -x "$decoded_signature"
+            verified=$((verified + 1))
+          done < <(find "src-tauri/target/${{ matrix.target }}/release/bundle" \
+            -name '*.sig' -type f -print0)
+          test "$verified" -eq 2
+
+      - name: Verify Linux bundles
+        if: matrix.platform == 'linux'
+        shell: bash
+        run: |
+          deb=$(find src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb -name '*.deb' -type f -print -quit)
+          appimage=$(find src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage -name '*.AppImage' -type f -print -quit)
+          test -n "$deb" && test -n "$appimage"
+          dpkg-deb --info "$deb"
+          verify_dir=$(mktemp -d)
+          dpkg-deb --extract "$deb" "$verify_dir"
+          test -x "$verify_dir/usr/bin/tectonic"
+          package_metadata=$(find "$verify_dir" -path '*/data/packages/amsmath.json' -type f -print -quit)
+          cache_manifest=$(find "$verify_dir" -path '*/tectonic-cache/manifest.json' -type f -print -quit)
+          executable=$(find "$verify_dir/usr/bin" -maxdepth 1 -type f -perm -111 ! -name tectonic -print -quit)
+          test -s "$package_metadata"
+          test -s "$cache_manifest" && test -x "$executable"
+          "$verify_dir/usr/bin/tectonic" --version
+          TEXTEX_PACKAGE_SMOKE=1 "$executable" | grep -F 'TextEx package smoke: ok'
+          sha256sum "$deb" "$appimage"
+
+      - name: Verify macOS bundle
+        if: startsWith(matrix.platform, 'mac-')
+        shell: bash
+        run: |
+          dmg=$(find "src-tauri/target/${{ matrix.target }}/release/bundle/dmg" -name '*.dmg' -type f -print -quit)
+          test -n "$dmg"
+          hdiutil verify "$dmg"
+
+          mount_dir=$(mktemp -d)
+          cleanup() {
+            hdiutil detach "$mount_dir" >/dev/null 2>&1 || true
+            rmdir "$mount_dir" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+          hdiutil attach "$dmg" -readonly -nobrowse -mountpoint "$mount_dir"
+
+          app=$(find "$mount_dir" -maxdepth 2 -name '*.app' -type d -print -quit)
+          tectonic="$app/Contents/MacOS/tectonic"
+          executable="$app/Contents/MacOS/textex-tauri"
+          package_metadata="$app/Contents/Resources/data/packages/amsmath.json"
+          cache_manifest="$app/Contents/Resources/tectonic-cache/manifest.json"
+          test -n "$app" && test -x "$tectonic" && test -x "$executable"
+          test -s "$package_metadata" && test -s "$cache_manifest"
+          "$tectonic" --version | grep -F 'Tectonic 0.17.0'
+          TEXTEX_PACKAGE_SMOKE=1 "$executable" | grep -F 'TextEx package smoke: ok'
+          expected_arch=${{ matrix.platform == 'mac-arm64' && 'arm64' || 'x86_64' }}
+          test "$(lipo -archs "$tectonic")" = "$expected_arch"
+          test "$(lipo -archs "$executable")" = "$expected_arch"
+          codesign --verify --deep --strict "$app"
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            codesign -dv --verbose=4 "$app" 2>&1 | grep -F 'Authority=Developer ID Application:'
+            entitlements="$RUNNER_TEMP/textex-entitlements.plist"
+            codesign -d --entitlements :- "$app" > "$entitlements"
+            test "$(plutil -extract com.apple.security.cs.allow-jit raw "$entitlements")" = "true"
+            spctl --assess --type execute -vv "$app"
+            updater=$(find "src-tauri/target/${{ matrix.target }}/release/bundle/macos" \
+              -name '*.app.tar.gz' -type f -print -quit)
+            test -n "$updater" && test -s "$updater" && test -s "$updater.sig"
+            updater_extract=$(mktemp -d)
+            tar -xzf "$updater" -C "$updater_extract"
+            updater_app=$(find "$updater_extract" -name '*.app' -type d -print -quit)
+            test -n "$updater_app"
+            codesign --verify --deep --strict "$updater_app"
+            xcrun stapler validate "$updater_app"
+            spctl --assess --type execute -vv "$updater_app"
+          fi
+          shasum -a 256 "$dmg"
+
+      - name: Verify Windows bundle
+        if: matrix.platform == 'win'
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem 'src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe' | Select-Object -First 1
+          if (-not $installer) { throw 'No NSIS installer was produced' }
+          $installer | Format-List Name,Length,FullName
+          Get-FileHash -Algorithm SHA256 $installer.FullName
+          $extractDir = Join-Path $env:RUNNER_TEMP 'textex-nsis'
+          New-Item -ItemType Directory -Force -Path $extractDir | Out-Null
+          & 'C:\Program Files\7-Zip\7z.exe' x $installer.FullName "-o$extractDir" -y | Out-Host
+          if ($LASTEXITCODE -ne 0) { throw "Could not inspect NSIS installer: $LASTEXITCODE" }
+          $packageMetadata = Get-ChildItem $extractDir -Recurse -File -Filter 'amsmath.json' |
+            Where-Object { $_.FullName -match '[\\/]data[\\/]packages[\\/]amsmath\.json$' } |
+            Select-Object -First 1
+          if (-not $packageMetadata -or $packageMetadata.Length -eq 0) {
+            throw 'Bundled LaTeX package metadata is missing from the NSIS installer'
+          }
+          $cacheManifest = Get-ChildItem $extractDir -Recurse -File -Filter 'manifest.json' |
+            Where-Object { $_.FullName -match '[\\/]tectonic-cache[\\/]manifest\.json$' } |
+            Select-Object -First 1
+          if (-not $cacheManifest -or $cacheManifest.Length -eq 0) {
+            throw 'Bundled Tectonic cache manifest is missing from the NSIS installer'
+          }
+          $appExecutable = Get-ChildItem $extractDir -Recurse -File -Filter 'textex-tauri.exe' |
+            Select-Object -First 1
+          if (-not $appExecutable) { throw 'Packaged TextEx executable is missing' }
+          if ($env:GITHUB_REF -like 'refs/tags/v*') {
+            $updaterSignature = "$($installer.FullName).sig"
+            if (-not (Test-Path $updaterSignature) -or (Get-Item $updaterSignature).Length -eq 0) {
+              throw 'Windows updater signature is missing'
+            }
+            if ($env:TEXTEX_WINDOWS_AUTHENTICODE -eq 'true') {
+              foreach ($signedFile in @($installer.FullName, $appExecutable.FullName)) {
+                $signature = Get-AuthenticodeSignature $signedFile
+                if ($signature.Status -ne 'Valid') {
+                  throw "Invalid Authenticode signature for ${signedFile}: $($signature.Status)"
+                }
+              }
+            }
+          }
+          $env:TEXTEX_PACKAGE_SMOKE = '1'
+          try {
+            & $appExecutable.FullName | Out-Host
+            if ($LASTEXITCODE -ne 0) { throw "Packaged TextEx smoke failed: $LASTEXITCODE" }
+          } finally {
+            Remove-Item Env:TEXTEX_PACKAGE_SMOKE -ErrorAction SilentlyContinue
+          }
+
+      - name: Remove temporary macOS signing material
+        if: always() && startsWith(github.ref, 'refs/tags/v') && startsWith(matrix.platform, 'mac-')
+        shell: bash
+        run: |
+          if [[ -n "${TEXTEX_MAC_KEYCHAIN:-}" ]]; then
+            security delete-keychain "$TEXTEX_MAC_KEYCHAIN" >/dev/null 2>&1 || true
+          }
+          rm -f "$RUNNER_TEMP/textex-developer-id.p12" "${TEXTEX_NOTARY_KEY_PATH:-}"
+
+      - name: Remove temporary Windows signing material
+        if: always() && startsWith(github.ref, 'refs/tags/v') && matrix.platform == 'win'
+        shell: pwsh
+        run: |
+          if ($env:TEXTEX_WINDOWS_CERTIFICATE_THUMBPRINT) {
+            Remove-Item "Cert:\CurrentUser\My\$env:TEXTEX_WINDOWS_CERTIFICATE_THUMBPRINT" -Force -ErrorAction SilentlyContinue
+          }
+          Remove-Item "$env:RUNNER_TEMP/textex-code-signing.pfx" -Force -ErrorAction SilentlyContinue
+
+      - name: Report renderer and package sizes
+        shell: bash
+        run: |
+          npm run measure:renderer
+          node <<'NODE'
+          const fs = require('node:fs')
+          const path = require('node:path')
+
+          const root = path.join('src-tauri', 'target')
+          const artifacts = []
+          const visit = (directory) => {
+            for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+              const filePath = path.join(directory, entry.name)
+              if (entry.isDirectory()) visit(filePath)
+              else if (filePath.includes(`${path.sep}bundle${path.sep}`)) artifacts.push(filePath)
+            }
+          }
+
+          visit(root)
+          if (artifacts.length === 0) throw new Error('No Tauri bundle artifacts were produced')
+          for (const filePath of artifacts.sort()) {
+            console.log(`${fs.statSync(filePath).size}\t${filePath}`)
+          }
+          NODE
+
+      - name: Report partial bundle paths
+        if: always()
+        shell: bash
+        run: find src-tauri/target -path '*/release/bundle/*' -type f -print 2>/dev/null || true
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: TextEx-${{ matrix.platform }}
-          path: |
-            dist/*.AppImage
-            dist/*.blockmap
-            dist/*.deb
-            dist/*.dmg
-            dist/*.exe
-            dist/*.zip
-            dist/latest*.yml
-          if-no-files-found: warn
+          name: TextEx-Tauri-${{ matrix.platform }}
+          path: ${{ matrix.artifact_paths }}
+          if-no-files-found: error
+          retention-days: 14
 
   release:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v') || inputs.publish_release == true || (github.event_name == 'workflow_dispatch' && inputs.prerelease == true)
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
-      - name: Download all artifacts
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: Verify release version
+        shell: bash
+        run: test "$GITHUB_REF_NAME" = "v$(node -p \"require('./package.json').version\")"
+
+      - name: Verify tagged commit is on main
+        shell: bash
+        run: |
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main
+
+      - name: Download signed packages
         uses: actions/download-artifact@v8
         with:
+          pattern: TextEx-Tauri-*
           path: artifacts
 
-      - name: Extract version
-        id: version
+      - name: Verify updater signatures against the embedded public key
+        shell: bash
+        env:
+          TEXTEX_UPDATER_PUBLIC_KEY: ${{ secrets.TEXTEX_UPDATER_PUBLIC_KEY }}
+        run: |
+          test -n "$TEXTEX_UPDATER_PUBLIC_KEY"
+          sudo apt-get update
+          sudo apt-get install -y minisign
+          public_key=$(mktemp)
+          printf '%s' "$TEXTEX_UPDATER_PUBLIC_KEY" | base64 --decode > "$public_key"
+          verified=0
+          while IFS= read -r -d '' signature; do
+            artifact=${signature%.sig}
+            test -s "$artifact"
+            test -s "$signature"
+            decoded_signature=$(mktemp)
+            base64 --decode "$signature" > "$decoded_signature"
+            minisign -Vm "$artifact" -p "$public_key" -x "$decoded_signature"
+            verified=$((verified + 1))
+          done < <(find artifacts -name '*.sig' -type f -print0)
+          test "$verified" -eq 5
+
+      - name: Build updater manifest and checksums
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+        run: node scripts/generate-tauri-update-manifest.js artifacts release-artifacts
+
+      - name: Verify release set
         shell: bash
         run: |
-          VERSION=$(node -p "require('./package.json').version")
-          if [[ "$GITHUB_REF" == refs/tags/v* && "$GITHUB_REF_NAME" != "v$VERSION" ]]; then
-            echo "Tag $GITHUB_REF_NAME does not match package.json version $VERSION" >&2
-            exit 1
-          fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          test -f release-artifacts/latest.json
+          test -f release-artifacts/checksums.txt
+          test "$(find release-artifacts -name '*.sig' -type f | wc -l)" -eq 5
+          node -e "const p=require('./release-artifacts/latest.json').platforms; for (const k of ['linux-x86_64','linux-x86_64-appimage','linux-x86_64-deb','darwin-aarch64','darwin-x86_64','windows-x86_64']) if (!p[k]) throw new Error('missing '+k)"
 
-      - name: Prepare release artifacts
-        shell: bash
-        run: |
-          mkdir -p release-artifacts
-
-          find artifacts -type f \( \
-            -name "*.AppImage" -o -name "*.blockmap" -o -name "*.deb" -o \
-            -name "*.dmg" -o -name "*.exe" -o -name "*.zip" -o \
-            -name "latest*.yml" \
-          \) -exec cp {} release-artifacts/ \;
-
-          test -f release-artifacts/latest.yml
-          test -f release-artifacts/latest-mac.yml
-          test -f release-artifacts/latest-linux.yml
-
-          # Generate checksums
-          cd release-artifacts
-          sha256sum * > checksums.txt
-
-          echo "Release artifacts:"
-          ls -lh
-
-      - name: Create GitHub Release
+      - name: Publish GitHub Release
         uses: softprops/action-gh-release@v3
         with:
           draft: false
-          tag_name: v${{ steps.version.outputs.version }}
-          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') || github.event_name == 'workflow_dispatch' && inputs.prerelease == true }}
           generate_release_notes: true
           files: release-artifacts/*
-          body: |
-            ## Installation
-
-            | Platform | File | Notes |
-            |----------|------|-------|
-            | Windows | `TextEx-${{ steps.version.outputs.version }}-windows-x64.exe` | NSIS installer |
-            | macOS (Intel + Apple Silicon) | `TextEx-${{ steps.version.outputs.version }}-macos-universal.dmg` | Drag to Applications |
-            | Linux (.deb) | `TextEx-${{ steps.version.outputs.version }}-linux-amd64.deb` | `sudo dpkg -i TextEx-*.deb` |
-            | Linux (.AppImage) | `TextEx-${{ steps.version.outputs.version }}-linux-x86_64.AppImage` | `chmod +x` and run |
-
-            ## Security Notes
-
-            - **Windows:** SmartScreen may show a warning. Click "More info" then "Run anyway".
-            - **macOS:** Gatekeeper may block the app. Run `xattr -cr "/Applications/TextEx.app"` in Terminal.
-            - **Linux:** Verify SHA256 checksums against `checksums.txt` before installation.
-
-            ## What's Changed

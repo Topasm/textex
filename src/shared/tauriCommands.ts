@@ -1,15 +1,27 @@
 /**
- * Renderer-side names for the Rust commands available during the incremental
- * Tauri migration. Keep this map aligned with `src-tauri/build.rs` and the
- * handler list in `src-tauri/src/lib.rs`.
+ * Renderer-side names for the Rust commands exposed by the Tauri application.
+ * Keep this map aligned with `src-tauri/build.rs` and the handler list in
+ * `src-tauri/src/lib.rs`.
  */
 export const TAURI_COMMANDS = {
+  aiGenerate: 'ai_generate',
+  aiProcess: 'ai_process',
+  aiProcessCustom: 'ai_process_custom',
+  aiUpdateContext: 'ai_update_context',
+  aiSaveApiKey: 'ai_save_api_key',
+  aiHasApiKey: 'ai_has_api_key',
+  aiCheckCli: 'ai_check_cli',
+  aiCheckCodexCli: 'ai_check_codex_cli',
+  aiOpenClaudeTerminal: 'ai_open_claude_terminal',
+  aiOpenCodexTerminal: 'ai_open_codex_terminal',
   openFile: 'open_file',
   openDirectory: 'open_directory',
   activateProject: 'activate_project',
+  deactivateProject: 'deactivate_project',
   readDirectory: 'read_directory',
   readFile: 'read_file',
   saveFile: 'save_file',
+  writeFileBinary: 'write_file_binary',
   saveFileAs: 'save_file_as',
   saveFileBatch: 'save_file_batch',
   createFile: 'create_file',
@@ -69,6 +81,21 @@ export const TAURI_COMMANDS = {
   zoteroCiteCayw: 'zotero_cite_cayw',
   zoteroExportBibtex: 'zotero_export_bibtex',
   zoteroSyncCollection: 'zotero_sync_collection',
+  zoteroCollections: 'zotero_collections',
+  zoteroAddToProject: 'zotero_add_to_project',
+  zoteroSaveOnline: 'zotero_save_online',
+  researchSearchOnline: 'research_search_online',
+  researchAddOnline: 'research_add_online',
+  researchLoadConfig: 'research_load_config',
+  researchSaveConfig: 'research_save_config',
+  ptyCreate: 'pty_create',
+  ptyWrite: 'pty_write',
+  ptyResize: 'pty_resize',
+  ptyDispose: 'pty_dispose',
+  lspStart: 'lsp_start',
+  lspStop: 'lsp_stop',
+  lspSend: 'lsp_send',
+  lspStatus: 'lsp_status',
   watchDirectory: 'watch_directory',
   unwatchDirectory: 'unwatch_directory',
   loadSettings: 'load_settings',

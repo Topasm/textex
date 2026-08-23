@@ -4,7 +4,6 @@ import { useCompileStore } from '../../renderer/store/useCompileStore'
 import { usePdfStore } from '../../renderer/store/usePdfStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { useUiStore } from '../../renderer/store/useUiStore'
-import { configureDesktopCapabilities } from '../../renderer/platform/capabilities'
 
 const context = {
   checkForUpdates: vi.fn().mockResolvedValue(undefined),
@@ -23,7 +22,6 @@ const context = {
 
 describe('executeAppCommand', () => {
   beforeEach(() => {
-    configureDesktopCapabilities('electron')
     vi.clearAllMocks()
     useUiStore.setState({
       omniSearchFocusRequested: false,
@@ -61,6 +59,9 @@ describe('executeAppCommand', () => {
 
     await executeAppCommand('view.toggleSidebar', context)
     expect(useProjectStore.getState().isSidebarOpen).toBe(true)
+
+    await executeAppCommand('view.toggleResearchPanel', context)
+    expect(useProjectStore.getState().isResearchPanelOpen).toBe(true)
   })
 
   it('updates the PDF store for zoom and fit commands', async () => {
@@ -93,9 +94,7 @@ describe('executeAppCommand', () => {
     expect(context.toggleLog).toHaveBeenCalledOnce()
   })
 
-  it('routes migrated domains and ignores unavailable domains in Tauri', async () => {
-    configureDesktopCapabilities('tauri')
-
+  it('routes available Tauri domains', async () => {
     await executeAppCommand('file.newTemplate', context)
     await executeAppCommand('file.export.docx', context)
     await executeAppCommand('ai.draft', context)
@@ -103,7 +102,7 @@ describe('executeAppCommand', () => {
 
     expect(context.openTemplateGallery).toHaveBeenCalledOnce()
     expect(context.exportDocument).toHaveBeenCalledWith('docx')
-    expect(context.runAiDraft).not.toHaveBeenCalled()
-    expect(context.toggleTerminal).not.toHaveBeenCalled()
+    expect(context.runAiDraft).toHaveBeenCalledOnce()
+    expect(context.toggleTerminal).toHaveBeenCalledOnce()
   })
 })

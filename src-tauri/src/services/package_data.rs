@@ -36,8 +36,8 @@ pub async fn load_package_data(
     let metadata_directory = resolve_metadata_directory(app)?;
     let mut pending = VecDeque::new();
     for package_name in package_names {
-        // Match the Electron service: invalid or path-like package names are
-        // ignored while valid names in the same request still load.
+        // Invalid or path-like names are ignored while valid names in the same
+        // request still load.
         if validate_package_name(&package_name).is_ok() {
             pending.push_back(package_name);
         }

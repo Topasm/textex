@@ -1,277 +1,87 @@
-# TextEx — Legacy Electron Packaging & Distribution
+# Tauri Packaging
 
-This document describes the Electron artifacts used by the current public
-release workflow during the Tauri migration. Unqualified `package:*` commands
-now build Tauri artifacts; use `package:electron:*` for the configuration below.
+TextEx packages one Tauri application and a target-qualified Tectonic sidecar.
+Package commands verify both the sidecar and the curated offline-cache manifest
+before invoking the Tauri CLI.
 
-## Build Tool
+| Platform | Command | Primary installer | Updater artifact |
+| --- | --- | --- | --- |
+| Linux x64 | `npm run package:linux` | AppImage + DEB | AppImage + DEB `.sig` files |
+| macOS arm64 | `npm run package:mac` | DMG | `.app.tar.gz` + `.sig` |
+| macOS x64 | `npm run package:mac:x64` | DMG | `.app.tar.gz` + `.sig` |
+| Windows x64 | `npm run package:win` | NSIS EXE | EXE + `.sig` |
 
-**electron-builder** handles creating platform-specific installers.
+Updater builds use the corresponding `package:updater:*` command and require:
 
----
+- `TEXTEX_UPDATER_PUBLIC_KEY`
+- `TAURI_SIGNING_PRIVATE_KEY`
+- `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
 
-## `electron-builder.yml`
+Never place private signing material in repository files or command output.
 
-```yaml
-appId: com.textex.app
-productName: TextEx
-copyright: Copyright © 2026
+## Platform signing in CI
 
-directories:
-  output: dist
-  buildResources: build    # icons, etc.
+Version-tag builds use a base64-encoded Developer ID PKCS#12 and App Store
+Connect notary key from `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`,
+`APPLE_NOTARY_API_KEY`, `APPLE_NOTARY_KEY_ID`, and
+`APPLE_NOTARY_ISSUER_ID`. CI imports them into temporary files/keychains,
+enables the hardened runtime with `src-tauri/Entitlements.plist`, lets Tauri
+notarize the application before updater-archive creation, then explicitly
+notarizes, staples, and validates the DMG. It also extracts the updater archive
+and verifies that its application carries a valid Developer ID signature and
+stapled notarization ticket.
 
-# Bundle Tectonic + TexLab binaries for the target platform
-extraResources:
-  - from: "resources/bin/${os}"
-    to: "bin"
-    filter:
-      - "**/*"
-  - from: "resources/dictionaries"
-    to: "dictionaries"
-    filter:
-      - "**/*"
-  - from: "resources/data/packages"
-    to: "data/packages"
-    filter:
-      - "**/*"
-  - from: "resources/licenses"
-    to: "licenses"
-    filter:
-      - "**/*"
+Windows Authenticode uses the optional pair `WINDOWS_CERTIFICATE` (base64 PFX)
+and `WINDOWS_CERTIFICATE_PASSWORD`. Both or neither must be configured. When
+present, CI signs and verifies both the NSIS installer and packaged executable;
+Tauri updater signing remains mandatory either way. Linux CI installs
+`minisign` and verifies both generated AppImage and DEB updater signatures
+against the embedded public key.
 
-files:
-  - "out/**/*"             # Compiled main/preload/renderer
+Branch and pull-request packages remain unsigned smoke artifacts. Platform
+credentials are required and exposed only to version-tag jobs. See
+[RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) for the blocking release process.
 
-win:
-  icon: build/icon.ico
-  artifactName: '${productName}-${version}-windows-${arch}.${ext}'
-  target:
-    - target: nsis
-      arch: [x64]
+## Bundle contents
 
-mac:
-  icon: build/icon.icns
-  artifactName: '${productName}-${version}-macos-${arch}.${ext}'
-  x64ArchFiles: '{Contents/Resources/app.asar.unpacked/node_modules/**/*darwin*/**,Contents/Resources/bin/**}'
-  target:
-    - dmg
-    - zip                  # Required by electron-updater on macOS
-  hardenedRuntime: true
-  entitlements: build/entitlements.mac.plist
-  entitlementsInherit: build/entitlements.mac.plist
+The Tauri configuration bundles:
 
-linux:
-  icon: build/icon.png
-  artifactName: '${productName}-${version}-linux-${arch}.${ext}'
-  target:
-    - target: AppImage
-      arch: [x64]
-  category: Office
+- the Tectonic 0.17 sidecar for the exact target triple;
+- LaTeX package metadata;
+- Hunspell dictionaries;
+- open-source license notices;
+- the versioned Tectonic cache seed manifest and any curated seed files.
+
+Each platform job inspects its installer and proves that the application,
+Tectonic binary, cache manifest, and package metadata are present. It then runs
+the packaged executable with `TEXTEX_PACKAGE_SMOKE=1`, which validates embedded
+Tauri/updater/resource configuration and the adjacent sidecar without opening a
+window. macOS jobs verify both architectures independently.
+
+## Curated Tectonic cache seed
+
+The checked-in seed is intentionally an empty, deterministic manifest, so a
+normal build keeps Tectonic's existing network fallback. Release engineering
+may stage a reviewed cache snapshot without adding a downloader to the build:
+
+```bash
+node scripts/prepare-tectonic-cache-seed.js \
+  --source /absolute/path/to/reviewed-cache \
+  --seed-version tectonic-0.17-YYYYMMDD
+npm run check:tectonic-cache-seed
 ```
 
-**Build assets** (all present in `build/`):
-- `build/icon.png` -- 1024x1024 RGBA PNG (24 KB) -- used for Linux
-- `build/icon.ico` -- Multi-resolution ICO (16x16 through 256x256, 25 KB) -- used for Windows
-- `build/icon.icns` -- macOS ICNS format (68 KB)
-- `build/entitlements.mac.plist` -- macOS entitlements for hardened runtime (JIT, unsigned memory, dyld env vars)
+The script rejects symlinks, path escapes, oversized files and caches, and
+source/output overlap. It sorts paths, records every byte count and SHA-256,
+and atomically replaces only generated `resources/tectonic-cache/files` and
+`manifest.json`. It never downloads support files. On first compile the Rust
+service verifies the same limits and hashes, installs into a staged sibling
+directory, and atomically activates it. A missing, empty, or rejected seed is
+reported in compile logs and leaves network fallback enabled.
 
----
+## Release metadata
 
-## Binary Organization
-
-Before building, organize the `resources/bin/` directory:
-
-```
-resources/
-+-- bin/
-|   +-- win/
-|   |   +-- tectonic.exe     # From Tectonic GitHub Releases
-|   |   +-- texlab.exe       # From TexLab GitHub Releases
-|   +-- mac/
-|   |   +-- arm64/
-|   |   |   +-- tectonic      # From Tectonic GitHub Releases
-|   |   |   +-- texlab        # From TexLab GitHub Releases
-|   |   +-- texlab            # Legacy x86_64 TexLab fallback
-|   +-- linux/
-|       +-- tectonic          # From Tectonic GitHub Releases
-|       +-- texlab            # From TexLab GitHub Releases
-+-- licenses/
-|   +-- THIRD-PARTY-NOTICES.txt # Bundled third-party notices for app/runtime deps
-|   +-- ELECTRON-LICENSES.chromium.html # Chromium/Electron embedded runtime notices
-|   +-- TEXLAB-GPL-3.0.txt   # Full GPL-3.0 license text
-|   +-- TEXLAB-NOTICE.txt    # Attribution and aggregate notice
-+-- dictionaries/            # Spell check dictionaries
-+-- data/packages/           # LaTeX package metadata
-```
-
-**Tectonic binaries** (latest):
-
-| Platform | File | Variant |
-|---|---|---|
-| Linux | `resources/bin/linux/tectonic` | `x86_64-unknown-linux-musl` (statically linked) |
-| macOS Intel | `resources/bin/mac/tectonic` | `x86_64-apple-darwin` (Mach-O x86_64) |
-| macOS Apple Silicon | `resources/bin/mac/arm64/tectonic` | `aarch64-apple-darwin` (Mach-O arm64) |
-| Windows | `resources/bin/win/tectonic.exe` | `x86_64-pc-windows-msvc` (PE32+ x86-64) |
-
-**TexLab binaries** (latest, GPL-3.0):
-
-| Platform | File |
-|---|---|
-| Linux | `resources/bin/linux/texlab` |
-| macOS Apple Silicon | `resources/bin/mac/arm64/texlab` |
-| macOS Intel fallback | `resources/bin/mac/texlab` |
-| Windows | `resources/bin/win/texlab.exe` |
-
-The `${os}` variable in `electron-builder.yml` resolves to `win`, `mac`, or
-`linux` at build time, copying only the relevant binaries.
-
-On macOS, TextEx first looks for an architecture-specific binary under
-`Resources/bin/${arch}/` in packaged builds, falling back to the legacy
-`Resources/bin/` location if needed. In development, the equivalent path is
-`resources/bin/mac/${arch}/`.
-
-### GPL-3.0 Compliance (TexLab)
-
-TexLab is GPL-3.0 licensed. TextEx is MIT. They communicate exclusively via the
-standardized LSP protocol over stdio (separate processes). This constitutes an
-"aggregate" distribution under GPL-3.0 Section 5.
-
-Required files bundled in `resources/licenses/`:
-- `THIRD-PARTY-NOTICES.txt` — bundled third-party notices for app/runtime dependencies
-- `ELECTRON-LICENSES.chromium.html` — Chromium/Electron embedded runtime notices
-- `TEXLAB-GPL-3.0.txt` — Full GPL-3.0 license text
-- `TEXLAB-NOTICE.txt` — Attribution, source code link, aggregate notice
-
-Users can substitute their own TexLab binary via the `texlabPath` setting.
-
----
-
-## Build Commands
-
-In `package.json`:
-
-```json
-{
-  "scripts": {
-    "dev:electron": "electron-vite dev",
-    "build:electron": "electron-vite build",
-    "package:electron:win": "electron-vite build && electron-builder --win",
-    "package:electron:mac": "electron-vite build && electron-builder --mac --arm64",
-    "package:electron:mac:x64": "electron-vite build && electron-builder --mac --x64",
-    "package:electron:mac:universal": "electron-vite build && electron-builder --mac --universal",
-    "package:electron:linux": "electron-vite build && electron-builder --linux"
-  }
-}
-```
-
-Tagged CI releases build a universal macOS application and publish the original
-installer names together with `latest.yml`, `latest-mac.yml`,
-`latest-linux.yml`, and generated blockmaps. These metadata files and exact
-artifact names are required for GitHub Releases updates through
-`electron-updater`.
-
-Do not narrow `mac.x64ArchFiles` to `**/*.node`. Native packages such as
-`node-pty` also contain an extensionless `darwin-*/spawn-helper` Mach-O binary.
-The current pattern deliberately covers every file in Darwin-specific prebuild
-directories plus architecture-specific sidecars.
-
-**Note:** The package scripts run `electron-vite build` first to ensure compiled
-output in `out/` is up to date before packaging.
-
----
-
-## Build Results (Linux)
-
-The Linux AppImage can be built on a headless x86_64 Linux server using the
-current Electron and electron-builder versions from `package-lock.json`.
-
-**Output:**
-```
-dist/
-├── TextEx-1.0.8-linux-x86_64.AppImage   (executable)
-├── latest-linux.yml         (auto-update manifest)
-├── builder-debug.yml
-└── linux-unpacked/          (uncompressed app directory)
-    ├── textex               (main Electron binary)
-    └── resources/
-        ├── app.asar         (bundled app code, 81 MB)
-        └── bin/
-            └── tectonic     (Tectonic 0.17.0, musl)
-```
-
-**Binary path resolution verified:** In the packaged app, the Tectonic binary is
-at `resources/bin/tectonic`. The `getTectonicPath()` function in
-`src/shared/compiler.ts` resolves this via `process.resourcesPath + '/bin/tectonic'`
-or `process.resourcesPath + '/bin/${arch}/tectonic'` in production mode, which
-matches the `extraResources` output location.
-
-**Smoke test not performed:** The build was done on a headless server without a
-display server (X11/Wayland). The AppImage requires a graphical environment to
-launch. Smoke testing should be performed on a desktop Linux machine.
-
----
-
-## macOS Notarization
-
-For distribution outside the Mac App Store:
-
-1. Sign with a Developer ID certificate.
-2. `hardenedRuntime: true` is already set in `electron-builder.yml`.
-3. `build/entitlements.mac.plist` is created with the following entitlements:
-   - `com.apple.security.cs.allow-jit` -- required for Electron's V8 engine
-   - `com.apple.security.cs.allow-unsigned-executable-memory` -- required for Electron
-   - `com.apple.security.cs.allow-dyld-environment-variables` -- for Electron compatibility
-4. Use `electron-builder`'s `afterSign` hook to call `xcrun notarytool submit`.
-
-**Note:** legacy macOS builds (`npm run package:electron:mac`) must be run on a macOS machine.
-Cross-compilation from Linux is not supported by electron-builder for DMG targets.
-
----
-
-## File Sizes
-
-### Actual Linux Build Results
-
-| Output | Size |
-|---|---|
-| `dist/TextEx-1.0.8-linux-x86_64.AppImage` | varies by release |
-| `dist/linux-unpacked/` (uncompressed) | varies by release |
-
-### Component Breakdown (approximate)
-
-| Component | Approx. Size |
-|---|---|
-| Electron shell + Chromium | ~200 MB (unpacked) |
-| Tectonic binary (Linux) | ~36 MB |
-| app.asar (React + Monaco + PDF.js + app code) | varies by release |
-| **AppImage (compressed)** | varies by release |
-
-**Note:** Windows (NSIS) and macOS (DMG) builds will differ in size due to
-different Tectonic binary sizes (48 MB and 50 MB respectively) and
-platform-specific Electron overheads.
-
----
-
-## CI/CD Considerations
-
-Follow the blocking [Release Safety Checklist](RELEASE_CHECKLIST.md) before
-creating a version tag or enabling publication in a manual workflow run.
-
-For automated builds (e.g., GitHub Actions):
-
-1. Download Tectonic binaries for all three platforms in a setup step.
-2. Place them in `resources/bin/{win,mac,linux}/`.
-3. Run `electron-builder` with the appropriate `--{platform}` flag.
-4. Upload artifacts (`.exe`, `.dmg`, `.AppImage`) to GitHub Releases.
-
-Example workflow step:
-```yaml
-- name: Download Tectonic (Linux)
-  run: |
-    mkdir -p resources/bin/linux
-    curl -L -o /tmp/tectonic-linux.tar.gz \
-      https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.17.0/tectonic-0.17.0-x86_64-unknown-linux-musl.tar.gz
-    tar -xzf /tmp/tectonic-linux.tar.gz -C resources/bin/linux
-    chmod +x resources/bin/linux/tectonic
-```
+`scripts/generate-tauri-update-manifest.js` accepts downloaded CI artifacts,
+requires one signed updater artifact per supported platform, writes the Tauri
+`latest.json` platform map, and generates `checksums.txt`. Duplicate filenames,
+missing signatures, missing platforms, and tag/version mismatches fail closed.
