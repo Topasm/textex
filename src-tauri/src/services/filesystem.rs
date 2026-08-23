@@ -200,10 +200,7 @@ pub(crate) async fn validate_existing_project_file(
     file_path: &str,
 ) -> AppResult<PathBuf> {
     let requested = require_absolute_str(file_path)?;
-    let canonical = canonicalize(requested, "resolve project file").await?;
-    ensure_inside_project(state, &canonical)?;
-    ensure_regular_file(&canonical).await?;
-    Ok(canonical)
+    resolve_existing_file(state, requested, "resolve project file").await
 }
 
 pub(crate) async fn validate_project_directory_target(
