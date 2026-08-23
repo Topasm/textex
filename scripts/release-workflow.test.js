@@ -5,6 +5,10 @@ const assert = require('node:assert/strict')
 
 const root = path.resolve(__dirname, '..')
 const workflow = fs.readFileSync(path.join(root, '.github/workflows/build.yml'), 'utf8')
+const minisignInstaller = fs.readFileSync(
+  path.join(root, 'scripts/install-minisign-linux.sh'),
+  'utf8'
+)
 const tauriConfig = JSON.parse(
   fs.readFileSync(path.join(root, 'src-tauri/tauri.conf.json'), 'utf8')
 )
@@ -84,10 +88,32 @@ test('tagged Windows and Linux packages receive platform verification', () => {
   assert.match(workflow, /Import-PfxCertificate/)
   assert.match(workflow, /Get-AuthenticodeSignature/)
   assert.match(workflow, /Verify Linux updater signatures/)
-  assert.match(workflow, /sudo apt-get install -y[\s\S]*minisign/)
+  assert.match(workflow, /bash scripts\/install-minisign-linux\.sh/)
+  assert.doesNotMatch(workflow, /apt-get install[^\n]*minisign/)
   assert.match(workflow, /command -v minisign/)
   assert.match(workflow, /minisign -Vm/)
   assert.match(workflow, /test "\$verified" -eq 2/)
+})
+
+test('Linux Minisign installation is version and digest pinned before extraction', () => {
+  assert.match(minisignInstaller, /^set -euo pipefail$/m)
+  assert.match(minisignInstaller, /^readonly MINISIGN_VERSION=0\.12$/m)
+  assert.match(
+    minisignInstaller,
+    /^readonly MINISIGN_SHA256=9a599b48ba6eb7b1e80f12f36b94ceca7c00b7a5173c95c3efc88d9822957e73$/m
+  )
+  assert.match(
+    minisignInstaller,
+    /releases\/download\/\$\{MINISIGN_VERSION\}\/minisign-\$\{MINISIGN_VERSION\}-linux\.tar\.gz/
+  )
+  assert.match(minisignInstaller, /sha256sum --check --strict/)
+  assert.ok(
+    minisignInstaller.indexOf('sha256sum --check --strict') <
+      minisignInstaller.indexOf('tar --extract'),
+    'the pinned digest must be verified before archive extraction'
+  )
+  assert.match(minisignInstaller, /\$\{RUNNER_TEMP:\?RUNNER_TEMP is required\}/)
+  assert.doesNotMatch(minisignInstaller, /releases\/latest|curl[^\n]*\|/)
 })
 
 test('PowerShell signing commands do not use POSIX continuations', () => {

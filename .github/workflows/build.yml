@@ -84,7 +84,6 @@ jobs:
             libwebkit2gtk-4.1-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev \
-            minisign \
             patchelf \
             xdg-utils
 
@@ -231,7 +230,6 @@ jobs:
             libwebkit2gtk-4.1-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev \
-            minisign \
             patchelf \
             xdg-utils
 
@@ -243,6 +241,11 @@ jobs:
 
       - name: Install locked dependencies
         run: npm ci --include=optional
+
+      - name: Install pinned Minisign verifier
+        if: startsWith(github.ref, 'refs/tags/v') && matrix.platform == 'linux'
+        shell: bash
+        run: bash scripts/install-minisign-linux.sh
 
       - name: Report pinned toolchain and native bindings
         shell: bash
@@ -648,14 +651,16 @@ jobs:
           pattern: TextEx-Tauri-*
           path: artifacts
 
+      - name: Install pinned Minisign verifier
+        shell: bash
+        run: bash scripts/install-minisign-linux.sh
+
       - name: Verify updater signatures against the embedded public key
         shell: bash
         env:
           TEXTEX_UPDATER_PUBLIC_KEY: ${{ secrets.TEXTEX_UPDATER_PUBLIC_KEY }}
         run: |
           test -n "$TEXTEX_UPDATER_PUBLIC_KEY"
-          sudo apt-get update
-          sudo apt-get install -y minisign
           public_key=$(mktemp)
           printf '%s' "$TEXTEX_UPDATER_PUBLIC_KEY" | base64 --decode > "$public_key"
           verified=0
