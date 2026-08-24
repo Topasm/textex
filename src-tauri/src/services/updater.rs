@@ -404,7 +404,7 @@ mod tests {
         key[..2].copy_from_slice(b"Ed");
         let encoded_key = BASE64.encode(key);
         let public_key_file = format!("untrusted comment: TextEx updater\n{encoded_key}\n");
-        let tauri_public_key = BASE64.encode(public_key_file);
+        let tauri_public_key = BASE64.encode(&public_key_file);
 
         assert!(valid_signing_key(&tauri_public_key));
         assert!(!valid_signing_key(""));
