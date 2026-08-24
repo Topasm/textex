@@ -1225,12 +1225,20 @@ fn resolve_collection<'a>(
     reference: &str,
 ) -> AppResult<&'a ZoteroPlanningCollection> {
     let reference = validate_mutation_text(reference, "collection reference", 2_048)?;
-    let exact_paths = targets
+    if let Some(target) = targets
         .iter()
-        .filter(|target| target.path.eq_ignore_ascii_case(reference))
-        .collect::<Vec<_>>();
-    if exact_paths.len() == 1 {
-        return Ok(exact_paths[0]);
+        .find(|target| target.key.eq_ignore_ascii_case(reference))
+    {
+        return Ok(target);
+    }
+    if reference.contains('/') {
+        let exact_paths = targets
+            .iter()
+            .filter(|target| target.path.eq_ignore_ascii_case(reference))
+            .collect::<Vec<_>>();
+        if exact_paths.len() == 1 {
+            return Ok(exact_paths[0]);
+        }
     }
     let names = targets
         .iter()
@@ -1242,7 +1250,7 @@ fn resolve_collection<'a>(
             "collection ‘{reference}’ was not found"
         ))),
         _ => Err(AppError::Zotero(format!(
-            "collection name ‘{reference}’ is ambiguous; use its full path"
+            "collection name ‘{reference}’ is ambiguous; use its full path or key"
         ))),
     }
 }
@@ -2260,6 +2268,10 @@ mod tests {
             "EFGH6789"
         );
         assert!(resolve_collection(&inventory, "ForRSS").is_err());
+        assert_eq!(
+            resolve_collection(&inventory, "JKLM2345").unwrap().path,
+            "ForRSS"
+        );
     }
 
     #[test]

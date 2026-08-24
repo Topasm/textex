@@ -213,18 +213,6 @@ fn validate_resource(resource: &ResearchResource) -> AppResult<()> {
         MAX_SHORT_TEXT_BYTES,
         false,
     )?;
-    validate_optional_web_url("resource URL", resource.url.as_deref())?;
-    validate_optional_ssh_url(resource.ssh_url.as_deref())?;
-    validate_optional_text(
-        "resource local path",
-        resource.local_path.as_deref(),
-        MAX_SHORT_TEXT_BYTES,
-    )?;
-    validate_optional_text(
-        "resource branch",
-        resource.branch.as_deref(),
-        MAX_SHORT_TEXT_BYTES,
-    )?;
     if resource.kind == crate::models::ResearchResourceKind::Git {
         if resource
             .url
@@ -244,6 +232,21 @@ fn validate_resource(resource: &ResearchResource) -> AppResult<()> {
                 "Git resource SSH URL must use the standard git@host:path form",
             ));
         }
+    } else {
+        validate_optional_web_url("resource URL", resource.url.as_deref())?;
+        validate_optional_ssh_url(resource.ssh_url.as_deref())?;
+    }
+    validate_optional_text(
+        "resource local path",
+        resource.local_path.as_deref(),
+        MAX_SHORT_TEXT_BYTES,
+    )?;
+    validate_optional_text(
+        "resource branch",
+        resource.branch.as_deref(),
+        MAX_SHORT_TEXT_BYTES,
+    )?;
+    if resource.kind == crate::models::ResearchResourceKind::Git {
         if resource
             .branch
             .as_deref()
