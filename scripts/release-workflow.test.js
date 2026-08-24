@@ -41,6 +41,11 @@ test('tag preflight requires a successful main push workflow for the exact commi
     workflow,
     /actions\/workflows\/build\.yml\/runs[\s\S]*-f branch=main[\s\S]*-f event=push[\s\S]*-f status=success[\s\S]*-f head_sha="\$GITHUB_SHA"[\s\S]*test "\$successful_main_runs" -ge 1/
   )
+  assert.doesNotMatch(
+    workflow,
+    /node -p \\"/,
+    'YAML literal shell blocks must not escape the Node expression quotes'
+  )
 })
 
 test('workflow actions are pinned to immutable commit SHAs', () => {
