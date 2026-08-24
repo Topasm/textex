@@ -62,12 +62,23 @@ The GitHub repository must contain all three updater secrets:
 - `TAURI_SIGNING_PRIVATE_KEY`
 - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
 
+Generate and back up this key pair on a trusted maintainer Mac using the exact
+commands in [PACKAGING.md](PACKAGING.md#tauri-packaging). Tauri updater
+signatures cannot be disabled; Apple platform signing is a separate optional
+layer.
+
 Platform code-signing/notarization credentials are separate from Tauri updater
 signing and must follow the platform owner policy.
 
-Tagged macOS jobs also require all five secrets below. The certificate must be
-a base64-encoded PKCS#12 containing one `Developer ID Application` identity;
-the API key must be the base64-encoded App Store Connect `.p8` key:
+Tagged macOS jobs can use ad-hoc signing without Apple credentials, matching the
+legacy v1.0.8 distribution model. This path is not notarized, so users may need
+to allow TextEx manually in macOS Privacy & Security.
+
+For normal Gatekeeper installation, configure all five secrets below. They are
+an all-or-nothing group: a partial set fails the build instead of falling back.
+The certificate must be a base64-encoded PKCS#12 containing one `Developer ID
+Application` identity; the API key must be the base64-encoded App Store Connect
+`.p8` key:
 
 - `APPLE_CERTIFICATE`
 - `APPLE_CERTIFICATE_PASSWORD`
@@ -75,7 +86,7 @@ the API key must be the base64-encoded App Store Connect `.p8` key:
 - `APPLE_NOTARY_KEY_ID`
 - `APPLE_NOTARY_ISSUER_ID`
 
-CI imports the certificate into an ephemeral keychain and maps the notary
+When configured, CI imports the certificate into an ephemeral keychain and maps the notary
 credentials to Tauri's `APPLE_API_ISSUER`, `APPLE_API_KEY`, and
 `APPLE_API_KEY_PATH` variables. Tauri therefore notarizes the application
 before creating the updater archive. CI separately submits the DMG with

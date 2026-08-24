@@ -17,7 +17,8 @@ At the v1.0.8 handoff baseline:
   [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) before creating one.
 - Tectonic 0.17.0 is bundled as a target-qualified sidecar. macOS arm64 and x64
   packages each carry the matching architecture-specific binary.
-- macOS CI output is ad-hoc signed and not Apple-notarized.
+- macOS CI output is ad-hoc signed and not Apple-notarized unless all five
+  optional Developer ID and notary secrets are configured together.
 - Ordinary branch and pull-request builds need no custom Actions secret. A tagged
   updater release requires `TEXTEX_UPDATER_PUBLIC_KEY`,
   `TAURI_SIGNING_PRIVATE_KEY`, and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.

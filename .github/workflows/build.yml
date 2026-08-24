@@ -283,7 +283,7 @@ jobs:
           test -n "$TAURI_SIGNING_PRIVATE_KEY"
           test -n "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD"
 
-      - name: Import macOS Developer ID certificate and prepare notary credentials
+      - name: Prepare optional macOS Developer ID signing and notarization
         if: startsWith(github.ref, 'refs/tags/v') && startsWith(matrix.platform, 'mac-')
         shell: bash
         env:
@@ -293,14 +293,31 @@ jobs:
           APPLE_NOTARY_KEY_ID: ${{ secrets.APPLE_NOTARY_KEY_ID }}
           APPLE_NOTARY_ISSUER_ID: ${{ secrets.APPLE_NOTARY_ISSUER_ID }}
         run: |
+          configured=0
           for value in \
             "$APPLE_CERTIFICATE" \
             "$APPLE_CERTIFICATE_PASSWORD" \
             "$APPLE_NOTARY_API_KEY" \
             "$APPLE_NOTARY_KEY_ID" \
             "$APPLE_NOTARY_ISSUER_ID"; do
-            test -n "$value"
+            if [[ -n "$value" ]]; then
+              configured=$((configured + 1))
+            fi
           done
+
+          if [[ "$configured" -eq 0 ]]; then
+            echo 'Apple Developer ID credentials are absent; using ad-hoc macOS signing without notarization.'
+            {
+              echo 'APPLE_SIGNING_IDENTITY=-'
+              echo 'TEXTEX_MAC_NOTARIZATION=false'
+            } >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          if [[ "$configured" -ne 5 ]]; then
+            echo 'All five Apple signing and notarization secrets must be configured together.' >&2
+            exit 1
+          fi
 
           certificate_path="$RUNNER_TEMP/textex-developer-id.p12"
           notary_key_path="$RUNNER_TEMP/AuthKey_${APPLE_NOTARY_KEY_ID}.p8"
@@ -334,6 +351,7 @@ jobs:
             echo "TEXTEX_NOTARY_KEY_PATH=$notary_key_path"
             echo "TEXTEX_NOTARY_KEY_ID=$APPLE_NOTARY_KEY_ID"
             echo "TEXTEX_NOTARY_ISSUER_ID=$APPLE_NOTARY_ISSUER_ID"
+            echo 'TEXTEX_MAC_NOTARIZATION=true'
           } >> "$GITHUB_ENV"
 
       - name: Prepare optional Windows Authenticode certificate
@@ -409,7 +427,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
       - name: Notarize, staple, and validate macOS DMG
-        if: startsWith(github.ref, 'refs/tags/v') && startsWith(matrix.platform, 'mac-')
+        if: startsWith(github.ref, 'refs/tags/v') && startsWith(matrix.platform, 'mac-') && env.TEXTEX_MAC_NOTARIZATION == 'true'
         shell: bash
         run: |
           dmg=$(find "src-tauri/target/${{ matrix.target }}/release/bundle/dmg" \
@@ -497,11 +515,9 @@ jobs:
           test "$(lipo -archs "$executable")" = "$expected_arch"
           codesign --verify --deep --strict "$app"
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            codesign -dv --verbose=4 "$app" 2>&1 | grep -F 'Authority=Developer ID Application:'
             entitlements="$RUNNER_TEMP/textex-entitlements.plist"
             codesign -d --entitlements :- "$app" > "$entitlements"
             test "$(plutil -extract com.apple.security.cs.allow-jit raw "$entitlements")" = "true"
-            spctl --assess --type execute -vv "$app"
             updater=$(find "src-tauri/target/${{ matrix.target }}/release/bundle/macos" \
               -name '*.app.tar.gz' -type f -print -quit)
             test -n "$updater" && test -s "$updater" && test -s "$updater.sig"
@@ -510,8 +526,15 @@ jobs:
             updater_app=$(find "$updater_extract" -name '*.app' -type d -print -quit)
             test -n "$updater_app"
             codesign --verify --deep --strict "$updater_app"
-            xcrun stapler validate "$updater_app"
-            spctl --assess --type execute -vv "$updater_app"
+            if [[ "${TEXTEX_MAC_NOTARIZATION:-false}" == 'true' ]]; then
+              codesign -dv --verbose=4 "$app" 2>&1 | grep -F 'Authority=Developer ID Application:'
+              spctl --assess --type execute -vv "$app"
+              xcrun stapler validate "$updater_app"
+              spctl --assess --type execute -vv "$updater_app"
+            else
+              codesign -dv --verbose=4 "$app" 2>&1 | grep -F 'Signature=adhoc'
+              codesign -dv --verbose=4 "$updater_app" 2>&1 | grep -F 'Signature=adhoc'
+            fi
           fi
           shasum -a 256 "$dmg"
 

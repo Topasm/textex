@@ -51,7 +51,7 @@ test('workflow actions are pinned to immutable commit SHAs', () => {
   }
 })
 
-test('tagged macOS builds require Developer ID signing and explicit notarization', () => {
+test('tagged macOS builds support an all-or-none Developer ID notarization upgrade', () => {
   for (const secret of [
     'APPLE_CERTIFICATE',
     'APPLE_CERTIFICATE_PASSWORD',
@@ -64,6 +64,13 @@ test('tagged macOS builds require Developer ID signing and explicit notarization
   assert.match(workflow, /security import/)
   assert.match(workflow, /\/usr\/bin\/base64 -D/)
   assert.match(workflow, /Developer ID Application:/)
+  assert.match(workflow, /configured=0/)
+  assert.match(workflow, /if \[\[ "\$configured" -eq 0 \]\]/)
+  assert.match(workflow, /if \[\[ "\$configured" -ne 5 \]\]/)
+  assert.match(workflow, /APPLE_SIGNING_IDENTITY=-/)
+  assert.match(workflow, /TEXTEX_MAC_NOTARIZATION=false/)
+  assert.match(workflow, /TEXTEX_MAC_NOTARIZATION=true/)
+  assert.match(workflow, /Signature=adhoc/)
   assert.match(workflow, /xcrun notarytool submit/)
   assert.match(workflow, /xcrun stapler staple/)
   assert.match(workflow, /xcrun stapler validate/)
