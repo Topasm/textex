@@ -356,20 +356,23 @@ fn valid_signing_key(value: &str) -> bool {
     if value.is_empty() || value.trim() != value || value.len() > MAX_SIGNATURE_BYTES {
         return false;
     }
-    let Ok(decoded) = BASE64.decode(value) else {
+    let Ok(public_key_file) = BASE64.decode(value) else {
         return false;
     };
-    let Ok(text) = std::str::from_utf8(&decoded) else {
+    let Ok(public_key_file) = std::str::from_utf8(&public_key_file) else {
         return false;
     };
-    let mut lines = text.lines();
+    let mut lines = public_key_file.lines();
     let Some(comment) = lines.next() else {
         return false;
     };
     let Some(encoded_key) = lines.next() else {
         return false;
     };
-    if !comment.starts_with("untrusted comment:") || encoded_key.is_empty() {
+    if !comment.starts_with("untrusted comment:")
+        || encoded_key.is_empty()
+        || lines.next().is_some()
+    {
         return false;
     }
     BASE64.decode(encoded_key).is_ok_and(|key| {
@@ -396,17 +399,19 @@ mod tests {
     }
 
     #[test]
-    fn signing_key_must_be_a_bounded_encoded_minisign_public_key() {
+    fn signing_key_must_be_a_bounded_minisign_public_key() {
         let mut key = [7_u8; MINISIGN_PUBLIC_KEY_BYTES];
         key[..2].copy_from_slice(b"Ed");
         let encoded_key = BASE64.encode(key);
         let public_key_file = format!("untrusted comment: TextEx updater\n{encoded_key}\n");
-        let encoded_file = BASE64.encode(public_key_file);
+        let tauri_public_key = BASE64.encode(public_key_file);
 
-        assert!(valid_signing_key(&encoded_file));
+        assert!(valid_signing_key(&tauri_public_key));
         assert!(!valid_signing_key(""));
-        assert!(!valid_signing_key("not-base64"));
-        assert!(!valid_signing_key(&BASE64.encode("missing key line")));
+        assert!(!valid_signing_key("missing key line"));
+        assert!(!valid_signing_key(
+            &BASE64.encode(format!("{public_key_file}extra line"))
+        ));
     }
 
     #[test]

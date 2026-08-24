@@ -45,6 +45,10 @@ gh secret set -R Topasm/textex TAURI_SIGNING_PRIVATE_KEY_PASSWORD
 
 The final command prompts for the password without placing it in shell history.
 Do not use `--body` for private material on a shared machine.
+Tagged CI removes the secret's outer base64 wrapper, validates the nested
+Minisign public-key box, and injects the one-line Tauri public key into an
+ephemeral updater config and the compiled application. It never prints either
+decoded value.
 
 ## Platform signing in CI
 

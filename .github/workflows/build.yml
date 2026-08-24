@@ -153,7 +153,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
         run: |
-          test "$GITHUB_REF_NAME" = "v$(node -p \"require('./package.json').version\")"
+          test "$GITHUB_REF_NAME" = "v$(node -p "require('./package.json').version")"
           git fetch --no-tags origin main:refs/remotes/origin/main
           git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main
 
@@ -187,7 +187,6 @@ jobs:
             target: x86_64-unknown-linux-gnu
             rust_targets: x86_64-unknown-linux-gnu
             package_command: npm run package:linux
-            updater_command: npm run package:updater:linux
             artifact_paths: |
               src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage
               src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.sig
@@ -198,7 +197,6 @@ jobs:
             target: aarch64-apple-darwin
             rust_targets: aarch64-apple-darwin
             package_command: npm run package:mac
-            updater_command: npm run package:updater:mac
             artifact_paths: |
               src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
               src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz
@@ -208,7 +206,6 @@ jobs:
             target: x86_64-apple-darwin
             rust_targets: x86_64-apple-darwin
             package_command: npm run package:mac:x64
-            updater_command: npm run package:updater:mac:x64
             artifact_paths: |
               src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
               src-tauri/target/x86_64-apple-darwin/release/bundle/macos/*.app.tar.gz
@@ -218,7 +215,6 @@ jobs:
             target: x86_64-pc-windows-msvc
             rust_targets: x86_64-pc-windows-msvc
             package_command: npm run package:win
-            updater_command: npm run package:updater:win
             artifact_paths: |
               src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
               src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.sig
@@ -299,11 +295,11 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
         env:
-          TEXTEX_UPDATER_PUBLIC_KEY: ${{ secrets.TEXTEX_UPDATER_PUBLIC_KEY }}
+          TEXTEX_UPDATER_PUBLIC_KEY_BASE64: ${{ secrets.TEXTEX_UPDATER_PUBLIC_KEY }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
-          test -n "$TEXTEX_UPDATER_PUBLIC_KEY"
+          test -n "$TEXTEX_UPDATER_PUBLIC_KEY_BASE64"
           test -n "$TAURI_SIGNING_PRIVATE_KEY"
           test -n "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD"
 
@@ -438,15 +434,24 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
         run: |
-          if [[ "${{ matrix.platform }}" == "win" ]]; then
-            npx tauri build --config "$TEXTEX_WINDOWS_SIGNING_CONFIG" \
-              --bundles nsis --target x86_64-pc-windows-msvc
-          else
-            ${{ matrix.updater_command }}
-          fi
+          updater_config="$RUNNER_TEMP/textex-tauri-updater.json"
+          updater_public_key="$RUNNER_TEMP/textex-updater.pub"
+          node scripts/prepare-tauri-updater-config.js \
+            "$updater_config" "$updater_public_key" "${TEXTEX_WINDOWS_SIGNING_CONFIG:-}"
+          export TEXTEX_UPDATER_PUBLIC_KEY
+          TEXTEX_UPDATER_PUBLIC_KEY=$(< "$updater_public_key")
+
+          case "${{ matrix.platform }}" in
+            linux) bundles=appimage,deb ;;
+            mac-*) bundles=dmg ;;
+            win) bundles=nsis ;;
+            *) echo 'Unsupported updater platform' >&2; exit 1 ;;
+          esac
+          npx tauri build --config "$updater_config" \
+            --bundles "$bundles" --target "${{ matrix.target }}"
         env:
           RUST_BACKTRACE: 1
-          TEXTEX_UPDATER_PUBLIC_KEY: ${{ secrets.TEXTEX_UPDATER_PUBLIC_KEY }}
+          TEXTEX_UPDATER_PUBLIC_KEY_BASE64: ${{ secrets.TEXTEX_UPDATER_PUBLIC_KEY }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
@@ -476,7 +481,7 @@ jobs:
         run: |
           command -v minisign
           public_key=$(mktemp)
-          printf '%s' "$TEXTEX_UPDATER_PUBLIC_KEY" | base64 --decode > "$public_key"
+          printf '%s' "$TEXTEX_UPDATER_PUBLIC_KEY" | base64 --decode | base64 --decode > "$public_key"
           verified=0
           while IFS= read -r -d '' signature; do
             artifact=${signature%.sig}
@@ -540,7 +545,7 @@ jobs:
           codesign --verify --deep --strict "$app"
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             entitlements="$RUNNER_TEMP/textex-entitlements.plist"
-            codesign -d --entitlements :- "$app" > "$entitlements"
+            codesign -d --entitlements - "$executable" > "$entitlements"
             test "$(plutil -extract com.apple.security.cs.allow-jit raw "$entitlements")" = "true"
             updater=$(find "src-tauri/target/${{ matrix.target }}/release/bundle/macos" \
               -name '*.app.tar.gz' -type f -print -quit)
@@ -617,7 +622,7 @@ jobs:
         run: |
           if [[ -n "${TEXTEX_MAC_KEYCHAIN:-}" ]]; then
             security delete-keychain "$TEXTEX_MAC_KEYCHAIN" >/dev/null 2>&1 || true
-          }
+          fi
           rm -f "$RUNNER_TEMP/textex-developer-id.p12" "${TEXTEX_NOTARY_KEY_PATH:-}"
 
       - name: Remove temporary Windows signing material
@@ -687,7 +692,7 @@ jobs:
 
       - name: Verify release version
         shell: bash
-        run: test "$GITHUB_REF_NAME" = "v$(node -p \"require('./package.json').version\")"
+        run: test "$GITHUB_REF_NAME" = "v$(node -p "require('./package.json').version")"
 
       - name: Verify tagged commit is on main
         shell: bash
@@ -712,7 +717,7 @@ jobs:
         run: |
           test -n "$TEXTEX_UPDATER_PUBLIC_KEY"
           public_key=$(mktemp)
-          printf '%s' "$TEXTEX_UPDATER_PUBLIC_KEY" | base64 --decode > "$public_key"
+          printf '%s' "$TEXTEX_UPDATER_PUBLIC_KEY" | base64 --decode | base64 --decode > "$public_key"
           verified=0
           while IFS= read -r -d '' signature; do
             artifact=${signature%.sig}
