@@ -1171,7 +1171,9 @@ export function ResearchChatPanel({
     return <div className="research-empty">Open a project to use Research Chat.</div>
 
   const headerStatus = !profile
-    ? 'Loading research context…'
+    ? status
+      ? 'Research context unavailable'
+      : 'Loading research context…'
     : busy
       ? 'Working with selected context…'
       : `${selectedContextCount} of ${contextOptions.length} contexts selected`
@@ -1233,6 +1235,14 @@ export function ResearchChatPanel({
                   </button>
                 ))}
               </div>
+            </section>
+          ) : status ? (
+            <section className="research-chat-empty" aria-label="Research Chat unavailable">
+              <span className="research-chat-empty-icon" aria-hidden="true">
+                <Sparkles size={21} />
+              </span>
+              <h3>Research Chat unavailable</h3>
+              <p>{status}</p>
             </section>
           ) : (
             <section className="research-chat-empty" aria-label="Loading Research Chat">
