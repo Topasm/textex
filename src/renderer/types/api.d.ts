@@ -4,6 +4,12 @@ import {
   AiCustomProcessRequest,
   AiProcessRequest,
   ResearchChatRequest,
+  ZoteroPlanRequest,
+  ZoteroMutationPlan,
+  ZoteroMutationResult,
+  ResearchChatSession,
+  ResearchChatSessionScope,
+  ResearchChatSessionSnapshot,
   ClaudeTerminalRequest,
   ClaudeTerminalResult,
   CodexTerminalRequest,
@@ -210,12 +216,19 @@ export interface DesktopApi {
   zoteroCollections(port?: number): Promise<ZoteroCollection[]>
   zoteroAddToProject(citekey: string, port?: number): Promise<ReferenceAddResult>
   zoteroSaveOnline(reference: OnlineReference, port?: number): Promise<ZoteroSaveResult>
+  zoteroApplyMutationPlan(plan: ZoteroMutationPlan): Promise<ZoteroMutationResult>
   researchSearchOnline(query: string): Promise<OnlineReference[]>
   researchAddOnline(reference: OnlineReference): Promise<ReferenceAddResult>
   researchLoadConfig(): Promise<ResearchConfig>
   researchSaveConfig(config: ResearchConfig): Promise<ResearchConfig>
   researchProfileLoad(): Promise<ResearchProfile>
   researchProfileSave(profile: ResearchProfile): Promise<ResearchProfile>
+  researchChatSessionLoad(): Promise<ResearchChatSessionSnapshot>
+  researchChatSessionSave(
+    scope: ResearchChatSessionScope,
+    session: ResearchChatSession
+  ): Promise<ResearchChatSessionSnapshot>
+  researchChatSessionClear(scope: ResearchChatSessionScope): Promise<ResearchChatSessionSnapshot>
   researchResourceSnapshot(resourceId: string): Promise<ResearchResourceSnapshot>
   researchSourceIndex(resourceId: string, localPath: string): Promise<ResearchSourceIndex>
   researchSourceSearch(
@@ -237,6 +250,7 @@ export interface DesktopApi {
   aiProcess(request: AiProcessRequest): Promise<string>
   aiProcessCustom(request: AiCustomProcessRequest): Promise<string>
   aiResearchChat(request: ResearchChatRequest): Promise<string>
+  aiPlanZotero(request: ZoteroPlanRequest, port?: number): Promise<ZoteroMutationPlan>
   aiUpdateContext(filePath: string, content: string): Promise<AiContextEntry>
   aiCheckCli(): Promise<boolean>
   aiCheckCodexCli(): Promise<boolean>

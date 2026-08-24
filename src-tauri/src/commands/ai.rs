@@ -8,17 +8,21 @@ use crate::{
     error::{AppError, AppResult},
     models::{
         AiContextEntry, AiCustomProcessRequest, AiGenerateResult, AiProcessRequest,
-        AiTerminalRequest, AiTerminalResult, ResearchChatAccess, ResearchChatContext,
-        ResearchChatContextKind, ResearchChatRequest, ResearchProfile, ResearchResource,
-        ResearchResourceKind, SuccessResult, UserSettings,
+        AiTerminalRequest, AiTerminalResult, BibEntry, ResearchChatAccess, ResearchChatContext,
+        ResearchChatContextKind, ResearchChatRequest, ResearchProfile, ResearchReferenceSource,
+        ResearchResource, ResearchResourceKind, SuccessResult, UserSettings, ZoteroMutationPlan,
+        ZoteroPlanRequest, ZoteroSearchResult,
     },
     services::{
         ai::{self, AiState},
         filesystem,
+        project_index::ProjectIndexState,
+        references::{self, ReferenceIndexState},
         research::ResearchState,
         research_profile, research_snapshot,
         research_source::ResearchSourceState,
         settings::{self, SettingsState},
+        zotero,
     },
     state::AppState,
 };
@@ -164,6 +168,8 @@ pub async fn ai_research_chat(
     project_state: State<'_, AppState>,
     research_state: State<'_, ResearchState>,
     source_state: State<'_, ResearchSourceState>,
+    project_index: State<'_, ProjectIndexState>,
+    reference_index: State<'_, ReferenceIndexState>,
     mut request: ResearchChatRequest,
 ) -> AppResult<String> {
     // Fail before taking project/profile locks or starting native enrichment.
@@ -199,6 +205,20 @@ pub async fn ai_research_chat(
         &expansions,
     )
     .await;
+    tokio::time::timeout(
+        Duration::from_secs(35),
+        expand_native_reference_contexts(
+            project_state.inner(),
+            project_index.inner(),
+            reference_index.inner(),
+            &settings,
+            &mut request,
+            &project_root,
+            project_epoch,
+        ),
+    )
+    .await
+    .map_err(|_| AppError::Ai("native reference context assembly timed out".to_owned()))??;
 
     // Native metadata and source/snapshot enrichment can make the request
     // larger than the renderer-provided selection hints. Enforce the same
@@ -234,6 +254,35 @@ pub async fn ai_research_chat(
     ensure_research_profile_current(project_state.inner(), &starting_profile).await?;
     validate_document_context_sources(project_state.inner(), &request).await?;
     Ok(response)
+}
+
+#[tauri::command]
+pub async fn ai_plan_zotero(
+    app: AppHandle,
+    ai_state: State<'_, AiState>,
+    settings_state: State<'_, SettingsState>,
+    project_state: State<'_, AppState>,
+    request: ZoteroPlanRequest,
+    port: Option<u16>,
+) -> AppResult<ZoteroMutationPlan> {
+    ai::validate_zotero_plan_request(&request)?;
+    let (project_root, project_epoch, _) = project_state.project_root_epoch()?;
+    let settings = current_settings(&app, ai_state.inner(), settings_state.inner()).await?;
+    let cli_work_dir = ai::cli_work_dir(&app)?;
+    let (server_id, inventory) = zotero::planning_inventory(port).await?;
+    let inventory = serde_json::to_value(&inventory)
+        .map_err(|error| AppError::Ai(format!("invalid Zotero collection inventory: {error}")))?;
+    let draft = ai::plan_zotero_mutations(
+        ai_state.inner(),
+        &ai::credential_path(&app)?,
+        &cli_work_dir,
+        &settings,
+        &request,
+        &inventory,
+    )
+    .await?;
+    ensure_research_project_activation(project_state.inner(), &project_root, project_epoch)?;
+    zotero::resolve_mutation_draft(project_state.inner(), draft, server_id, port).await
 }
 
 fn ensure_research_project_activation(
@@ -274,6 +323,7 @@ fn prepare_research_chat_contexts(
     let mut has_paper = false;
     let mut has_authors = false;
     let mut has_document = false;
+    let mut selected_references = HashSet::new();
     let mut expansions = Vec::new();
     for (context_index, context) in request.contexts.iter_mut().enumerate() {
         match context.kind {
@@ -383,9 +433,211 @@ fn prepare_research_chat_contexts(
                     });
                 }
             }
+            ResearchChatContextKind::Reference => {
+                if selected_references.len()
+                    >= crate::services::research_limits::MAX_CHAT_REFERENCE_CONTEXTS
+                {
+                    return Err(invalid_research_context(
+                        "research chat has too many reference contexts",
+                    ));
+                }
+                let descriptor = context.reference.clone().ok_or_else(|| {
+                    invalid_research_context("reference context is missing its descriptor")
+                })?;
+                let identity = match descriptor.source {
+                    ResearchReferenceSource::Project => format!(
+                        "project:{}",
+                        descriptor.citekey.as_deref().unwrap_or_default()
+                    ),
+                    ResearchReferenceSource::Zotero => format!(
+                        "zotero:{}",
+                        descriptor.citekey.as_deref().unwrap_or_default()
+                    ),
+                    ResearchReferenceSource::Online => format!(
+                        "online:{}",
+                        descriptor
+                            .online_reference
+                            .as_ref()
+                            .map(|reference| reference.id.as_str())
+                            .unwrap_or_default()
+                    ),
+                };
+                if !selected_references.insert(identity) {
+                    return Err(invalid_research_context(
+                        "research reference context is duplicated",
+                    ));
+                }
+                context.resource_id = None;
+                context.content.clear();
+                match descriptor.source {
+                    ResearchReferenceSource::Project | ResearchReferenceSource::Zotero => {
+                        context.label = descriptor.citekey.clone().unwrap_or_default();
+                        context.source = None;
+                    }
+                    ResearchReferenceSource::Online => {
+                        let reference = descriptor.online_reference.as_ref().ok_or_else(|| {
+                            invalid_research_context(
+                                "online reference context is missing validated metadata",
+                            )
+                        })?;
+                        context.label.clone_from(&reference.title);
+                        context.source = reference
+                            .doi
+                            .as_ref()
+                            .map(|doi| format!("https://doi.org/{doi}"))
+                            .or_else(|| reference.url.clone());
+                        context.content = online_reference_content(reference);
+                    }
+                }
+            }
         }
     }
     Ok(expansions)
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn expand_native_reference_contexts(
+    project_state: &AppState,
+    project_index: &ProjectIndexState,
+    reference_index: &ReferenceIndexState,
+    settings: &UserSettings,
+    request: &mut ResearchChatRequest,
+    expected_root: &Path,
+    expected_epoch: u64,
+) -> AppResult<()> {
+    let needs_project = request.contexts.iter().any(|context| {
+        context.kind == ResearchChatContextKind::Reference
+            && context
+                .reference
+                .as_ref()
+                .is_some_and(|descriptor| descriptor.source == ResearchReferenceSource::Project)
+    });
+    let project_entries = if needs_project {
+        let (_, active_epoch, epoch_tracker) = project_state.project_root_epoch()?;
+        ensure_research_project_activation(project_state, expected_root, expected_epoch)?;
+        let revision = reference_index.request_revision();
+        let snapshot = project_index.snapshot(project_state).await?;
+        Some(
+            references::project_index(
+                reference_index,
+                snapshot,
+                active_epoch,
+                epoch_tracker.as_ref(),
+                revision,
+            )
+            .await?
+            .bib_entries,
+        )
+    } else {
+        None
+    };
+
+    for context in &mut request.contexts {
+        if context.kind != ResearchChatContextKind::Reference {
+            continue;
+        }
+        let descriptor = context.reference.clone().ok_or_else(|| {
+            invalid_research_context("reference context is missing its descriptor")
+        })?;
+        match descriptor.source {
+            ResearchReferenceSource::Project => {
+                let citekey = descriptor.citekey.as_deref().unwrap_or_default();
+                let entry = project_entries
+                    .as_ref()
+                    .and_then(|entries| entries.iter().find(|entry| entry.key == citekey))
+                    .ok_or_else(|| {
+                        invalid_research_context(
+                            "project reference is not in the active project bibliography",
+                        )
+                    })?;
+                apply_project_reference(context, entry);
+            }
+            ResearchReferenceSource::Zotero => {
+                if !settings.zotero_enabled {
+                    return Err(invalid_research_context(
+                        "Zotero reference context requires the enabled Zotero integration",
+                    ));
+                }
+                let citekey = descriptor.citekey.as_deref().unwrap_or_default();
+                let results = zotero::search(citekey, Some(settings.zotero_port)).await?;
+                let entry = results
+                    .iter()
+                    .find(|entry| entry.citekey == citekey)
+                    .ok_or_else(|| {
+                        invalid_research_context(
+                            "Zotero reference is not available from the configured library",
+                        )
+                    })?;
+                apply_zotero_reference(context, entry);
+            }
+            ResearchReferenceSource::Online => {}
+        }
+    }
+    ensure_research_project_activation(project_state, expected_root, expected_epoch)
+}
+
+fn apply_project_reference(context: &mut ResearchChatContext, entry: &BibEntry) {
+    context.label = if entry.title.trim().is_empty() {
+        entry.key.clone()
+    } else {
+        entry.title.clone()
+    };
+    context.source = entry.file.as_ref().map(|file| {
+        entry
+            .line
+            .map_or_else(|| file.clone(), |line| format!("{file}:{line}"))
+    });
+    let mut details = vec![
+        format!("Citekey: {}", entry.key),
+        format!("Title: {}", entry.title),
+        format!("Authors: {}", entry.author),
+        format!("Year: {}", entry.year),
+        format!("Type: {}", entry.entry_type),
+    ];
+    if let Some(journal) = &entry.journal {
+        details.push(format!("Journal: {journal}"));
+    }
+    context.content = details.join("\n");
+}
+
+fn apply_zotero_reference(context: &mut ResearchChatContext, entry: &ZoteroSearchResult) {
+    context.label = if entry.title.trim().is_empty() {
+        entry.citekey.clone()
+    } else {
+        entry.title.clone()
+    };
+    context.source = Some(format!("Zotero citekey: {}", entry.citekey));
+    context.content = [
+        format!("Citekey: {}", entry.citekey),
+        format!("Title: {}", entry.title),
+        format!("Authors: {}", entry.author),
+        format!("Year: {}", entry.year),
+        format!("Type: {}", entry.item_type),
+    ]
+    .join("\n");
+}
+
+fn online_reference_content(reference: &crate::models::OnlineReference) -> String {
+    [
+        Some(format!("Title: {}", reference.title)),
+        (!reference.authors.is_empty())
+            .then(|| format!("Authors: {}", reference.authors.join("; "))),
+        (!reference.year.is_empty()).then(|| format!("Year: {}", reference.year)),
+        Some(format!("Type: {}", reference.item_type)),
+        reference.doi.as_ref().map(|value| format!("DOI: {value}")),
+        reference
+            .arxiv_id
+            .as_ref()
+            .map(|value| format!("arXiv: {value}")),
+        reference
+            .r#abstract
+            .as_ref()
+            .map(|value| format!("Abstract: {value}")),
+    ]
+    .into_iter()
+    .flatten()
+    .collect::<Vec<_>>()
+    .join("\n")
 }
 
 async fn ensure_research_profile_current(
@@ -745,6 +997,7 @@ mod tests {
                 label: resource.label.clone(),
                 source: resource.url.clone(),
                 content: resource_context_content(resource),
+                reference: None,
             }],
             instructions: profile.instructions.clone(),
         }
@@ -859,6 +1112,7 @@ mod tests {
                 label: "renderer label".to_owned(),
                 source: (kind == ResearchChatContextKind::Document).then(|| "main.tex".to_owned()),
                 content: "renderer content".to_owned(),
+                reference: None,
             };
             let mut request = ResearchChatRequest {
                 message: "Question".to_owned(),
@@ -891,6 +1145,7 @@ mod tests {
                 label: "selection".to_owned(),
                 source: None,
                 content: "selection".to_owned(),
+                reference: None,
             },
             ResearchChatContext {
                 kind: ResearchChatContextKind::Author,
@@ -898,6 +1153,7 @@ mod tests {
                 label: "selection".to_owned(),
                 source: None,
                 content: "selection".to_owned(),
+                reference: None,
             },
             ResearchChatContext {
                 kind: ResearchChatContextKind::Document,
@@ -905,11 +1161,86 @@ mod tests {
                 label: "main.tex".to_owned(),
                 source: Some("main.tex".to_owned()),
                 content: "\\documentclass{article}".to_owned(),
+                reference: None,
             },
         ]);
 
         assert!(prepare_research_chat_contexts(&profile, &mut request).is_ok());
         assert_eq!(request.contexts.len(), 4);
+    }
+
+    #[test]
+    fn online_reference_context_discards_renderer_content_and_rebuilds_validated_metadata() {
+        let profile = ResearchProfile::default();
+        let reference = crate::models::OnlineReference {
+            source: "crossref".to_owned(),
+            id: "10.1000/example".to_owned(),
+            title: "Trusted paper title".to_owned(),
+            authors: vec!["A. Researcher".to_owned()],
+            year: "2026".to_owned(),
+            item_type: "article".to_owned(),
+            doi: Some("10.1000/example".to_owned()),
+            arxiv_id: None,
+            url: Some("https://example.test/paper".to_owned()),
+            r#abstract: Some("Validated abstract metadata.".to_owned()),
+        };
+        let mut request = ResearchChatRequest {
+            message: "Compare this reference.".to_owned(),
+            history: Vec::new(),
+            contexts: vec![ResearchChatContext {
+                kind: ResearchChatContextKind::Reference,
+                resource_id: None,
+                label: "Spoofed label".to_owned(),
+                source: Some("https://attacker.invalid".to_owned()),
+                content: "renderer-controlled paper content".to_owned(),
+                reference: Some(crate::models::ResearchReferenceDescriptor {
+                    source: ResearchReferenceSource::Online,
+                    citekey: None,
+                    online_reference: Some(reference),
+                }),
+            }],
+            instructions: Vec::new(),
+        };
+
+        ai::validate_research_chat_request(&request).unwrap();
+        prepare_research_chat_contexts(&profile, &mut request).unwrap();
+        assert_eq!(request.contexts[0].label, "Trusted paper title");
+        assert!(request.contexts[0]
+            .content
+            .contains("Validated abstract metadata."));
+        assert!(!request.contexts[0].content.contains("renderer-controlled"));
+        assert_eq!(
+            request.contexts[0].source.as_deref(),
+            Some("https://doi.org/10.1000/example")
+        );
+    }
+
+    #[test]
+    fn research_chat_limits_reference_contexts_independently() {
+        let profile = ResearchProfile::default();
+        let contexts = (0..=crate::services::research_limits::MAX_CHAT_REFERENCE_CONTEXTS)
+            .map(|index| ResearchChatContext {
+                kind: ResearchChatContextKind::Reference,
+                resource_id: None,
+                label: format!("Reference {index}"),
+                source: None,
+                content: String::new(),
+                reference: Some(crate::models::ResearchReferenceDescriptor {
+                    source: ResearchReferenceSource::Project,
+                    citekey: Some(format!("paper{index}")),
+                    online_reference: None,
+                }),
+            })
+            .collect();
+        let mut request = ResearchChatRequest {
+            message: "Compare references.".to_owned(),
+            history: Vec::new(),
+            contexts,
+            instructions: Vec::new(),
+        };
+
+        assert!(ai::validate_research_chat_request(&request).is_ok());
+        assert!(prepare_research_chat_contexts(&profile, &mut request).is_err());
     }
 
     #[test]

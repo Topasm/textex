@@ -23,6 +23,7 @@ describe('SettingsModal', () => {
     render(<SettingsModal onClose={vi.fn()} />)
 
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: 'Settings' })).toHaveClass('settings-sidebar')
     expect(screen.getByRole('button', { name: 'General' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Appearance' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Editor' })).toBeInTheDocument()

@@ -32,6 +32,8 @@ const aiProcessCustom: DesktopApi['aiProcessCustom'] = (request) =>
   invoke(TAURI_COMMANDS.aiProcessCustom, { request })
 const aiResearchChat: DesktopApi['aiResearchChat'] = (request) =>
   invoke(TAURI_COMMANDS.aiResearchChat, { request })
+const aiPlanZotero: DesktopApi['aiPlanZotero'] = (request, port) =>
+  invoke(TAURI_COMMANDS.aiPlanZotero, { request, port })
 const aiUpdateContext: DesktopApi['aiUpdateContext'] = (filePath, content) =>
   invoke(TAURI_COMMANDS.aiUpdateContext, { filePath, content })
 const aiSaveApiKey: DesktopApi['aiSaveApiKey'] = (provider, apiKey) =>
@@ -449,6 +451,9 @@ const zoteroAddToProject: DesktopApi['zoteroAddToProject'] = (citekey, port) =>
 const zoteroSaveOnline: DesktopApi['zoteroSaveOnline'] = (reference, port) =>
   invoke(TAURI_COMMANDS.zoteroSaveOnline, { reference, port })
 
+const zoteroApplyMutationPlan: DesktopApi['zoteroApplyMutationPlan'] = (plan) =>
+  invoke(TAURI_COMMANDS.zoteroApplyMutationPlan, { plan })
+
 const researchSearchOnline: DesktopApi['researchSearchOnline'] = (query) =>
   invoke(TAURI_COMMANDS.researchSearchOnline, { query })
 
@@ -466,6 +471,15 @@ const researchProfileLoad: DesktopApi['researchProfileLoad'] = () =>
 
 const researchProfileSave: DesktopApi['researchProfileSave'] = (profile) =>
   invoke(TAURI_COMMANDS.researchProfileSave, { profile })
+
+const researchChatSessionLoad: DesktopApi['researchChatSessionLoad'] = () =>
+  invoke(TAURI_COMMANDS.researchChatSessionLoad)
+
+const researchChatSessionSave: DesktopApi['researchChatSessionSave'] = (scope, session) =>
+  invoke(TAURI_COMMANDS.researchChatSessionSave, { scope, session })
+
+const researchChatSessionClear: DesktopApi['researchChatSessionClear'] = (scope) =>
+  invoke(TAURI_COMMANDS.researchChatSessionClear, { scope })
 
 const researchResourceSnapshot: DesktopApi['researchResourceSnapshot'] = (resourceId) =>
   invoke(TAURI_COMMANDS.researchResourceSnapshot, { resourceId })
@@ -773,6 +787,7 @@ const tauriDesktopApi = {
   aiProcess,
   aiProcessCustom,
   aiResearchChat,
+  aiPlanZotero,
   aiUpdateContext,
   aiSaveApiKey,
   aiHasApiKey,
@@ -856,12 +871,16 @@ const tauriDesktopApi = {
   zoteroCollections,
   zoteroAddToProject,
   zoteroSaveOnline,
+  zoteroApplyMutationPlan,
   researchSearchOnline,
   researchAddOnline,
   researchLoadConfig,
   researchSaveConfig,
   researchProfileLoad,
   researchProfileSave,
+  researchChatSessionLoad,
+  researchChatSessionSave,
+  researchChatSessionClear,
   researchResourceSnapshot,
   researchSourceIndex,
   researchSourceSearch,

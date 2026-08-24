@@ -1,6 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import FileTree from '../../renderer/components/FileTree'
+import { useEditorStore } from '../../renderer/store/useEditorStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
 import type { ProjectIndexEntry } from '../../shared/types'
 
@@ -31,10 +32,22 @@ describe('virtualized FileTree', () => {
       },
       gitStatus: null
     })
+    useEditorStore.setState({ activeFilePath: null })
   })
 
   it('mounts only viewport and overscan rows for a large project', () => {
     const { container } = render(<FileTree />)
+
+    const newFileButton = screen.getByRole('button', { name: 'New File' })
+    const newFolderButton = screen.getByRole('button', { name: 'New Folder' })
+    expect(newFileButton.querySelector('.lucide-file-plus-corner')).toHaveAttribute(
+      'aria-hidden',
+      'true'
+    )
+    expect(newFolderButton.querySelector('.lucide-folder-plus')).toHaveAttribute(
+      'aria-hidden',
+      'true'
+    )
 
     expect(container.querySelector('.file-tree-virtual-space')).toHaveStyle({ height: '240000px' })
     expect(container.querySelectorAll('[data-file-tree-path]').length).toBeLessThanOrEqual(7)
@@ -80,5 +93,27 @@ describe('virtualized FileTree', () => {
     fireEvent.click(screen.getByText('chapters'))
     expect(container.querySelector('.file-tree-virtual-space')).toHaveStyle({ height: '24px' })
     expect(screen.queryByText('chapter-00.tex')).not.toBeInTheDocument()
+  })
+
+  it('updates selection when the active indexed file changes', () => {
+    const { container } = render(<FileTree />)
+    const firstPath = fileEntry(0).path
+    const secondPath = fileEntry(1).path
+
+    act(() => useEditorStore.setState({ activeFilePath: firstPath }))
+    expect(container.querySelector('[data-file-tree-path="file-00000.tex"]')).toHaveClass(
+      'selected'
+    )
+    expect(container.querySelector('[data-file-tree-path="file-00001.tex"]')).not.toHaveClass(
+      'selected'
+    )
+
+    act(() => useEditorStore.setState({ activeFilePath: secondPath }))
+    expect(container.querySelector('[data-file-tree-path="file-00000.tex"]')).not.toHaveClass(
+      'selected'
+    )
+    expect(container.querySelector('[data-file-tree-path="file-00001.tex"]')).toHaveClass(
+      'selected'
+    )
   })
 })

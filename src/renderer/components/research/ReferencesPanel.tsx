@@ -1,20 +1,45 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import BibPanel from '../BibPanel'
 import { ZoteroReferences } from './ZoteroReferences'
 import { OnlineReferences } from './OnlineReferences'
 import { useProjectStore } from '../../store/useProjectStore'
 import { parseZoteroCollectionDragData, TEXTEX_ZOTERO_COLLECTION_MIME } from './referenceActions'
 import type { ZoteroCollectionDragPayload } from './referenceActions'
+import type { ReferenceDragPayload } from './referenceActions'
+import type { ResearchConfig } from '../../../shared/types'
 
-export function ReferencesPanel() {
+interface ReferencesPanelProps {
+  onAddToChat?: (payload: ReferenceDragPayload) => void
+}
+
+export function ReferencesPanel({ onAddToChat }: ReferencesPanelProps = {}) {
   const source = useProjectStore((state) => state.researchReferenceSource)
   const projectRoot = useProjectStore((state) => state.projectRoot)
   const [pendingCollection, setPendingCollection] = useState<ZoteroCollectionDragPayload | null>(
     null
   )
+  const [pendingConfig, setPendingConfig] = useState<ResearchConfig | null>(null)
   const [keepSynchronized, setKeepSynchronized] = useState(true)
   const [importing, setImporting] = useState(false)
   const [error, setError] = useState('')
+  const projectGeneration = useRef(0)
+  const importInFlight = useRef(false)
+
+  useEffect(() => {
+    const generation = ++projectGeneration.current
+    importInFlight.current = false
+    setPendingCollection(null)
+    setPendingConfig(null)
+    setKeepSynchronized(true)
+    setImporting(false)
+    setError('')
+    return () => {
+      if (projectGeneration.current === generation) projectGeneration.current += 1
+    }
+  }, [projectRoot])
+
+  const isCurrentProject = (generation: number, root: string) =>
+    projectGeneration.current === generation && useProjectStore.getState().projectRoot === root
 
   const receiveCollection = (event: React.DragEvent) => {
     const payload = parseZoteroCollectionDragData(
@@ -24,35 +49,60 @@ export function ReferencesPanel() {
     event.preventDefault()
     setError('')
     setPendingCollection(payload)
+    setPendingConfig(null)
     useProjectStore.getState().setResearchReferenceSource('project')
+    const generation = projectGeneration.current
+    const root = projectRoot
+    if (!root) {
+      setError('Open a project before importing a Zotero collection.')
+      return
+    }
+    void window.api
+      .researchLoadConfig()
+      .then((config) => {
+        if (isCurrentProject(generation, root)) setPendingConfig(config)
+      })
+      .catch((caught) => {
+        if (isCurrentProject(generation, root)) {
+          setError(caught instanceof Error ? caught.message : String(caught))
+        }
+      })
   }
 
   const importCollection = async () => {
-    if (!pendingCollection || !projectRoot || importing) return
+    if (!pendingCollection || !pendingConfig || !projectRoot || importInFlight.current) return
+    const generation = projectGeneration.current
+    const root = projectRoot
+    const collection = pendingCollection
+    importInFlight.current = true
     setImporting(true)
     setError('')
     try {
-      const config = await window.api.researchLoadConfig()
-      const separator = projectRoot.includes('\\') ? '\\' : '/'
-      const target = `${projectRoot.replace(/[\\/]$/, '')}${separator}${config.zoteroFile}`
-      await window.api.zoteroSyncCollection(
-        pendingCollection.collection.key,
-        target,
-        pendingCollection.port
-      )
+      const separator = root.includes('\\') ? '\\' : '/'
+      const target = `${root.replace(/[\\/]$/, '')}${separator}${pendingConfig.zoteroFile}`
+      await window.api.zoteroSyncCollection(collection.collection.key, target, collection.port)
+      if (!isCurrentProject(generation, root)) return
       await window.api.researchSaveConfig({
-        ...config,
-        zoteroCollection: pendingCollection.collection.key,
+        ...pendingConfig,
+        zoteroCollection: collection.collection.key,
         syncOnOpen: keepSynchronized
       })
-      const entries = await window.api.findBibInProject(projectRoot)
+      if (!isCurrentProject(generation, root)) return
+      const entries = await window.api.findBibInProject(root)
+      if (!isCurrentProject(generation, root)) return
       useProjectStore.getState().setBibEntries(entries)
-      useProjectStore.getState().invalidateDirectory(projectRoot)
+      useProjectStore.getState().invalidateDirectory(root)
       setPendingCollection(null)
+      setPendingConfig(null)
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : String(caught))
+      if (isCurrentProject(generation, root)) {
+        setError(caught instanceof Error ? caught.message : String(caught))
+      }
     } finally {
-      setImporting(false)
+      if (isCurrentProject(generation, root)) {
+        importInFlight.current = false
+        setImporting(false)
+      }
     }
   }
   return (
@@ -61,8 +111,11 @@ export function ReferencesPanel() {
         {(['project', 'zotero', 'online'] as const).map((value) => (
           <button
             key={value}
+            id={`reference-source-tab-${value}`}
             role="tab"
             aria-selected={source === value}
+            aria-controls={`reference-source-panel-${value}`}
+            tabIndex={source === value ? 0 : -1}
             className={source === value ? 'active' : ''}
             onClick={() => useProjectStore.getState().setResearchReferenceSource(value)}
             onDragOver={(event) => {
@@ -94,7 +147,9 @@ export function ReferencesPanel() {
               <br />
               {pendingCollection.collection.itemCount} references
               <br />
-              Target: zotero.bib
+              <span>
+                Target: <code>{pendingConfig?.zoteroFile ?? 'Loading project settings…'}</code>
+              </span>
             </p>
             <label className="research-check-row">
               <input
@@ -104,16 +159,27 @@ export function ReferencesPanel() {
               />
               Keep synchronized when this project opens
             </label>
-            {error && <div className="research-status">{error}</div>}
+            {error && (
+              <div className="research-status" role="alert">
+                {error}
+              </div>
+            )}
             <div className="bibliography-registration-actions">
-              <button type="button" onClick={() => setPendingCollection(null)} disabled={importing}>
+              <button
+                type="button"
+                onClick={() => {
+                  setPendingCollection(null)
+                  setPendingConfig(null)
+                }}
+                disabled={importing}
+              >
                 Cancel
               </button>
               <button
                 type="button"
                 className="primary"
                 onClick={() => void importCollection()}
-                disabled={importing || !projectRoot}
+                disabled={importing || !projectRoot || !pendingConfig}
               >
                 {importing ? 'Importing…' : 'Import'}
               </button>
@@ -121,10 +187,15 @@ export function ReferencesPanel() {
           </section>
         </div>
       )}
-      <div className="reference-source-content">
-        {source === 'project' && <BibPanel />}
-        {source === 'zotero' && <ZoteroReferences />}
-        {source === 'online' && <OnlineReferences />}
+      <div
+        className="reference-source-content"
+        id={`reference-source-panel-${source}`}
+        role="tabpanel"
+        aria-labelledby={`reference-source-tab-${source}`}
+      >
+        {source === 'project' && <BibPanel onAddToChat={onAddToChat} />}
+        {source === 'zotero' && <ZoteroReferences onAddToChat={onAddToChat} />}
+        {source === 'online' && <OnlineReferences onAddToChat={onAddToChat} />}
       </div>
     </div>
   )

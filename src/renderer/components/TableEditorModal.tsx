@@ -1,7 +1,9 @@
 import React, { useState, useMemo } from 'react'
 import { DataGrid, Column, RenderEditCellProps } from 'react-data-grid'
+import { X } from 'lucide-react'
 import 'react-data-grid/lib/styles.css'
 import { parseLatexTable, generateLatexTable, TableData } from '../../shared/tableParser'
+import { ICON_SIZE } from './ui/IconSystem'
 import './TableEditorModal.css' // We'll need to create this for basic styling if needed
 
 interface Props {
@@ -63,8 +65,8 @@ export const TableEditorModal: React.FC<Props> = ({ initialLatex, onApply, onClo
       <div className="table-editor-modal">
         <div className="table-editor-header">
           <h3>Visual Table Editor</h3>
-          <button onClick={onClose} className="close-btn">
-            ×
+          <button onClick={onClose} className="close-btn" aria-label="Close">
+            <X size={ICON_SIZE.control} />
           </button>
         </div>
 

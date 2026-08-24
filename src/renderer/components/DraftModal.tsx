@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { X } from 'lucide-react'
 import { useSettingsStore } from '../store/useSettingsStore'
+import { ICON_SIZE } from './ui/IconSystem'
 
 interface DraftModalProps {
   isOpen: boolean
@@ -107,8 +109,13 @@ export const DraftModal: React.FC<DraftModalProps> = ({
       <div className="modal-content draft-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>{t('draftModal.title')}</h2>
-          <button className="close-button" onClick={onClose}>
-            &times;
+          <button
+            type="button"
+            className="close-button"
+            onClick={onClose}
+            aria-label={t('logPanel.close')}
+          >
+            <X size={ICON_SIZE.control} />
           </button>
         </div>
 

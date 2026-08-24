@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { deactivateProject, openProject } from '../../renderer/utils/openProject'
+import {
+  deactivateProject,
+  isCurrentProjectTransitionSnapshot,
+  openProject
+} from '../../renderer/utils/openProject'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
@@ -26,12 +30,15 @@ const defaultResearchConfig: ResearchConfig = {
 function deferred<T>(): {
   promise: Promise<T>
   resolve: (value: T) => void
+  reject: (reason?: unknown) => void
 } {
   let resolve!: (value: T) => void
-  const promise = new Promise<T>((promiseResolve) => {
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((promiseResolve, promiseReject) => {
     resolve = promiseResolve
+    reject = promiseReject
   })
-  return { promise, resolve }
+  return { promise, resolve, reject }
 }
 
 describe('openProject', () => {
@@ -140,8 +147,60 @@ describe('openProject', () => {
     await expect(deactivateProject()).resolves.toBe(true)
 
     expect(window.api.deactivateProject).toHaveBeenCalledOnce()
+    expect(window.api.removeDirectoryChangedListener).toHaveBeenCalledOnce()
     expect(useProjectStore.getState().projectRoot).toBeNull()
     expect(useEditorStore.getState().openFiles).toEqual({})
+  })
+
+  it('clears stale renderer state when native deactivation fails after closing authority', async () => {
+    const oldFile = `${projectRoot}/paper.tex`
+    useProjectStore.getState().setProjectRoot(projectRoot)
+    useEditorStore.getState().openFileInTab(oldFile, 'saved')
+    vi.mocked(window.api.deactivateProject).mockRejectedValueOnce(
+      new Error('watcher cleanup failed')
+    )
+    vi.mocked(window.api.getActiveProject).mockResolvedValueOnce(null)
+
+    await expect(deactivateProject()).rejects.toThrow('watcher cleanup failed')
+
+    expect(window.api.getActiveProject).toHaveBeenCalledOnce()
+    expect(window.api.removeDirectoryChangedListener).toHaveBeenCalledOnce()
+    expect(useProjectStore.getState().projectRoot).toBeNull()
+    expect(useEditorStore.getState().openFiles).toEqual({})
+  })
+
+  it('preserves renderer state when native deactivation fails before closing authority', async () => {
+    const oldFile = `${projectRoot}/paper.tex`
+    useProjectStore.getState().setProjectRoot(projectRoot)
+    useEditorStore.getState().openFileInTab(oldFile, 'saved')
+    vi.mocked(window.api.deactivateProject).mockRejectedValueOnce(new Error('state unavailable'))
+    vi.mocked(window.api.getActiveProject).mockResolvedValueOnce(projectRoot)
+
+    await expect(deactivateProject()).rejects.toThrow('state unavailable')
+
+    expect(window.api.getActiveProject).toHaveBeenCalledOnce()
+    expect(window.api.removeDirectoryChangedListener).not.toHaveBeenCalled()
+    expect(useProjectStore.getState().projectRoot).toBe(projectRoot)
+    expect(useEditorStore.getState().openFiles).toHaveProperty(oldFile)
+  })
+
+  it('does not let stale deactivation reconciliation clear a newer project', async () => {
+    const replacementRoot = '/workspace/replacement'
+    const nativeAuthority = deferred<string | null>()
+    useProjectStore.getState().setProjectRoot(projectRoot)
+    vi.mocked(window.api.deactivateProject).mockRejectedValueOnce(new Error('cleanup failed'))
+    vi.mocked(window.api.getActiveProject).mockReturnValueOnce(nativeAuthority.promise)
+    vi.mocked(window.api.readDirectory).mockResolvedValue([])
+
+    const failedClose = deactivateProject()
+    await vi.waitFor(() => expect(window.api.getActiveProject).toHaveBeenCalledOnce())
+
+    await openProject(replacementRoot, { autoOpenFirstTex: false })
+    nativeAuthority.resolve(null)
+    await expect(failedClose).rejects.toThrow('cleanup failed')
+
+    expect(useProjectStore.getState().projectRoot).toBe(replacementRoot)
+    expect(window.api.watchDirectory).toHaveBeenCalledWith(replacementRoot)
   })
 
   it('clears stale renderer state when native activation failure closed the old project', async () => {
@@ -171,6 +230,31 @@ describe('openProject', () => {
 
     expect(useProjectStore.getState().projectRoot).toBe(oldRoot)
     expect(useEditorStore.getState().openFiles).toHaveProperty(oldFile)
+  })
+
+  it('keeps the active generation valid while a failed replacement preserves authority', async () => {
+    const oldRoot = '/workspace/current'
+    const replacementRoot = '/workspace/replacement'
+    vi.mocked(window.api.readDirectory).mockResolvedValue([])
+    const oldSnapshot = await openProject(oldRoot, {
+      autoOpenFirstTex: false,
+      deferProjectEnrichment: true
+    })
+    expect(oldSnapshot).not.toBeNull()
+
+    const replacementActivation = deferred<string>()
+    vi.mocked(window.api.activateProject).mockReturnValueOnce(replacementActivation.promise)
+    vi.mocked(window.api.getActiveProject).mockResolvedValueOnce(oldRoot)
+
+    const replacement = openProject(replacementRoot, { autoOpenFirstTex: false })
+    await vi.waitFor(() => expect(window.api.activateProject).toHaveBeenCalledWith(replacementRoot))
+    expect(isCurrentProjectTransitionSnapshot(oldSnapshot!)).toBe(true)
+
+    replacementActivation.reject(new Error('not authorized'))
+    await expect(replacement).rejects.toThrow('not authorized')
+
+    expect(useProjectStore.getState().projectRoot).toBe(oldRoot)
+    expect(isCurrentProjectTransitionSnapshot(oldSnapshot!)).toBe(true)
   })
 
   it('does not let stale activation reconciliation clear a newer project', async () => {
@@ -205,6 +289,58 @@ describe('openProject', () => {
     expect(window.api.readFile).not.toHaveBeenCalled()
     expect(useEditorStore.getState().filePath).toBeNull()
     expect(useProjectStore.getState().projectRoot).toBe(projectRoot)
+  })
+
+  it('runs independent project enrichment without serial native waits', async () => {
+    const gitResult = deferred<boolean>()
+    const bibResult = deferred<Awaited<ReturnType<typeof window.api.findBibInProject>>>()
+    const labelResult = deferred<Awaited<ReturnType<typeof window.api.scanLabels>>>()
+    const recentResult = deferred<Awaited<ReturnType<typeof window.api.addRecentProject>>>()
+    vi.mocked(window.api.gitIsRepo).mockReturnValueOnce(gitResult.promise)
+    vi.mocked(window.api.findBibInProject).mockReturnValueOnce(bibResult.promise)
+    vi.mocked(window.api.scanLabels).mockReturnValueOnce(labelResult.promise)
+    vi.mocked(window.api.addRecentProject).mockReturnValueOnce(recentResult.promise)
+
+    const opening = openProject(projectRoot, { autoOpenFirstTex: false })
+
+    await vi.waitFor(() => {
+      expect(window.api.gitIsRepo).toHaveBeenCalledWith(projectRoot)
+      expect(window.api.findBibInProject).toHaveBeenCalledWith(projectRoot)
+      expect(window.api.scanLabels).toHaveBeenCalledWith(projectRoot)
+      expect(window.api.addRecentProject).toHaveBeenCalledWith(projectRoot)
+    })
+
+    gitResult.resolve(false)
+    bibResult.resolve([])
+    labelResult.resolve([])
+    recentResult.resolve(useSettingsStore.getState().settings)
+    await opening
+  })
+
+  it('can defer enrichment without allowing stale results into a newer project', async () => {
+    const firstRoot = '/workspace/deferred'
+    const secondRoot = '/workspace/current'
+    const firstGitResult = deferred<boolean>()
+    vi.mocked(window.api.readDirectory).mockResolvedValue([])
+    vi.mocked(window.api.gitIsRepo)
+      .mockReturnValueOnce(firstGitResult.promise)
+      .mockResolvedValueOnce(false)
+
+    await expect(
+      openProject(firstRoot, {
+        autoOpenFirstTex: false,
+        deferProjectEnrichment: true
+      })
+    ).resolves.toEqual({ generation: expect.any(Number), projectPath: firstRoot })
+
+    await openProject(secondRoot, { autoOpenFirstTex: false })
+    firstGitResult.resolve(true)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(useProjectStore.getState().projectRoot).toBe(secondRoot)
+    expect(useProjectStore.getState().isGitRepo).toBe(false)
+    expect(window.api.gitStatus).not.toHaveBeenCalledWith(firstRoot)
   })
 
   it('auto-opens the first tex file by default', async () => {

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useCallback, useState, useEffect, useReducer } from 'react'
+import { memo, useMemo, useRef, useCallback, useState, useEffect, useReducer } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import type { PDFPageProxy } from 'pdfjs-dist'
 import { useCompileStore } from '../store/useCompileStore'
@@ -715,4 +715,4 @@ function PreviewPane() {
   )
 }
 
-export default PreviewPane
+export default memo(PreviewPane)

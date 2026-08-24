@@ -7,6 +7,7 @@ interface HomePanelProps {
   homeHighlightedIndex: number
   setHomeHighlightedIndex: (index: number) => void
   handleHomeSelect: (result: HomeResult) => void
+  getOptionId: (index: number) => string
 }
 
 function homeResultIcon(result: HomeResult): React.ReactNode {
@@ -24,7 +25,8 @@ export function HomePanel({
   homeResults,
   homeHighlightedIndex,
   setHomeHighlightedIndex,
-  handleHomeSelect
+  handleHomeSelect,
+  getOptionId
 }: HomePanelProps) {
   const { t } = useTranslation()
 
@@ -33,6 +35,9 @@ export function HomePanel({
       {homeResults.map((result, i) => (
         <div
           key={`${result.kind}-${result.label}-${i}`}
+          id={getOptionId(i)}
+          role="option"
+          aria-selected={i === homeHighlightedIndex}
           className={`omni-search-result omni-search-home-result${i === homeHighlightedIndex ? ' highlighted' : ''}`}
           onMouseEnter={() => setHomeHighlightedIndex(i)}
           onClick={() => handleHomeSelect(result)}

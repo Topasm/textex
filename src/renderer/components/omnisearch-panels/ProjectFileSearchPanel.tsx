@@ -8,6 +8,7 @@ interface ProjectFileSearchPanelProps {
   highlightedIndex: number
   setHighlightedIndex: (index: number) => void
   openFile: (result: ProjectFileSearchResult) => void
+  getOptionId: (index: number) => string
 }
 
 export function ProjectFileSearchPanel({
@@ -15,7 +16,8 @@ export function ProjectFileSearchPanel({
   searchTerm,
   highlightedIndex,
   setHighlightedIndex,
-  openFile
+  openFile,
+  getOptionId
 }: ProjectFileSearchPanelProps) {
   const { t } = useTranslation()
 
@@ -28,6 +30,9 @@ export function ProjectFileSearchPanel({
       {results.map((result, index) => (
         <div
           key={result.path}
+          id={getOptionId(index)}
+          role="option"
+          aria-selected={index === highlightedIndex}
           className={`omni-search-result${index === highlightedIndex ? ' highlighted' : ''}`}
           onClick={() => openFile(result)}
           onMouseEnter={() => setHighlightedIndex(index)}
@@ -40,7 +45,9 @@ export function ProjectFileSearchPanel({
         </div>
       ))}
       {results.length > 0 && (
-        <div className="omni-search-footer">{t('omniSearch.enterToOpenFile')}</div>
+        <div className="omni-search-footer" role="presentation">
+          {t('omniSearch.enterToOpenFile')}
+        </div>
       )}
     </>
   )

@@ -8,6 +8,7 @@ interface OnlineSearchPanelProps {
   highlightedIndex: number
   setHighlightedIndex: (index: number) => void
   addReference: (reference: OnlineReference) => void
+  getOptionId: (index: number) => string
 }
 
 export function OnlineSearchPanel({
@@ -16,7 +17,8 @@ export function OnlineSearchPanel({
   searchTerm,
   highlightedIndex,
   setHighlightedIndex,
-  addReference
+  addReference,
+  getOptionId
 }: OnlineSearchPanelProps) {
   const { t } = useTranslation()
 
@@ -31,6 +33,10 @@ export function OnlineSearchPanel({
         <button
           type="button"
           key={`${reference.source}:${reference.id}`}
+          id={getOptionId(index)}
+          role="option"
+          aria-selected={index === highlightedIndex}
+          tabIndex={-1}
           className={`omni-search-result${index === highlightedIndex ? ' highlighted' : ''}`}
           onClick={() => addReference(reference)}
           onMouseEnter={() => setHighlightedIndex(index)}
@@ -45,7 +51,9 @@ export function OnlineSearchPanel({
         </button>
       ))}
       {results.length > 0 && (
-        <div className="omni-search-footer">{t('omniSearch.onlineInsertHint')}</div>
+        <div className="omni-search-footer" role="presentation">
+          {t('omniSearch.onlineInsertHint')}
+        </div>
       )}
     </>
   )

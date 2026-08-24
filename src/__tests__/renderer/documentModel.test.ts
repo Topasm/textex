@@ -71,6 +71,29 @@ describe('DocumentModel', () => {
     expect(model.isDirty).toBe(false)
   })
 
+  it('holds a history restore behind an explicit-save barrier until an editor change', () => {
+    const { model } = createModel('disk')
+
+    model.recordChange('history-restore')
+    expect(model.requiresExplicitSave).toBe(true)
+    model.recordChange('programmatic')
+    expect(model.requiresExplicitSave).toBe(true)
+
+    model.recordChange('editor')
+    expect(model.requiresExplicitSave).toBe(false)
+  })
+
+  it('clears the history restore barrier only after the current revision is saved', () => {
+    const { model } = createModel('disk')
+    const restored = model.recordChange('history-restore')
+    model.recordChange('programmatic')
+
+    expect(model.markSaved(restored.revision)).toBe(false)
+    expect(model.requiresExplicitSave).toBe(true)
+    expect(model.markSaved()).toBe(true)
+    expect(model.requiresExplicitSave).toBe(false)
+  })
+
   it('rejects stale asynchronous results after another edit', () => {
     const { model, edit } = createModel('one')
     const analysisInput = model.revisionSnapshot()

@@ -1,7 +1,9 @@
 import React, { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { X } from 'lucide-react'
 import { useEditorStore } from '../store/useEditorStore'
 import { closeEditorTab } from '../services/documentClose'
+import { ICON_SIZE } from './ui/IconSystem'
 
 const TabBar = React.memo(function TabBar() {
   const { t } = useTranslation()
@@ -89,7 +91,7 @@ const TabBar = React.memo(function TabBar() {
                 aria-hidden="true"
                 onClick={(event) => handleClose(event, fp)}
               >
-                {'\u00D7'}
+                <X size={ICON_SIZE.micro} />
               </span>
             </button>
           </div>

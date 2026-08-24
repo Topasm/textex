@@ -116,7 +116,12 @@
     "retry": "重试",
     "sessionRestoreFailed": "无法恢复 {{path}}：{{reason}}",
     "chooseReplacement": "选择替代文件夹",
-    "replacementOpenFailed": "无法打开替代文件夹 {{path}}：{{reason}}"
+    "replacementOpenFailed": "无法打开替代文件夹 {{path}}：{{reason}}",
+    "referenceDropInvalid": "参考文献数据无效，无法拖放。",
+    "referenceDropPositionUnavailable": "请选择有效的编辑器位置并重新拖放参考文献。",
+    "referenceDropDocumentChanged": "插入引文前文档已更改，请重试。",
+    "referenceDropFailed": "无法添加此参考文献：{{reason}}",
+    "referenceInsertSkipped": "活动文档或光标位置已更改，因此未插入引文。请重试。"
   },
   "settings": {
     "title": "设置",
@@ -276,7 +281,7 @@
     "automation": {
       "compilerTools": "编译器和工具",
       "autoCompile": "自动编译",
-      "autoCompileDesc": "通过快捷键保存时自动编译",
+      "autoCompileDesc": "编辑后短暂延迟并自动保存和编译",
       "watchOpenFiles": "监视打开的文件",
       "watchOpenFilesDesc": "自动重新加载被外部编辑器修改的文件",
       "spellCheck": "拼写检查",
@@ -324,6 +329,12 @@
     "noFolder": "未打开文件夹",
     "newFile": "新建文件",
     "newFolder": "新建文件夹",
+    "rename": "重命名",
+    "delete": "删除",
+    "confirmDelete": "要删除 {{name}} 吗？此操作无法撤销。",
+    "invalidName": "名称不能包含路径分隔符。",
+    "saveBeforeRename": "重命名前请保存或关闭已修改的文件。",
+    "saveBeforeDelete": "删除前请保存或关闭已修改的文件。",
     "expandFolder": "展开文件夹",
     "collapseFolder": "折叠文件夹"
   },
@@ -340,7 +351,12 @@
     "noFile": "没有打开的文件",
     "loading": "加载时间线…",
     "noHistory": "此文件没有可用的历史记录",
-    "localSave": "本地保存"
+    "localSave": "本地保存",
+    "restoreConfirm": "要在编辑器中恢复此快照吗？在您保存之前，它将保持为未保存状态。",
+    "restoreDirtyConfirm": "要用此快照替换当前未保存的更改吗？恢复的文本将保持为未保存状态。",
+    "restoreSuccess": "历史快照已恢复为未保存的更改。",
+    "restoreStale": "加载快照期间文档已更改，因此未恢复任何内容。",
+    "restoreFailed": "无法恢复历史快照：{{reason}}"
   },
   "draftModal": {
     "title": "AI 草稿",
@@ -406,7 +422,14 @@
     "noMatches": "无匹配项",
     "prevMatch": "上一个",
     "nextMatch": "下一个",
-    "goToLine": "跳转到第 {{line}} 行"
+    "goToLine": "跳转到第 {{line}} 行",
+    "home": "首页",
+    "searchLabel": "搜索{{mode}}",
+    "modeSelector": "搜索模式：{{mode}}",
+    "modeMenuLabel": "选择搜索模式",
+    "resultsLabel": "{{mode}}搜索结果",
+    "resultCount": "{{count}} 个结果",
+    "clearSearch": "清除搜索"
   },
   "errorBoundary": {
     "title": "出了点问题",
@@ -422,6 +445,17 @@
     "recent": "最近",
     "template": "模板",
     "command": "命令"
+  },
+  "projectSwitcher": {
+    "switchProject": "切换项目",
+    "currentProject": "当前项目：{{name}}",
+    "menuLabel": "切换到最近项目",
+    "current": "当前",
+    "currentItem": "{{name}}，当前项目",
+    "loading": "正在加载最近项目…",
+    "switching": "正在切换…",
+    "loadFailed": "无法加载最近项目。",
+    "openFailed": "无法打开 {{name}}：{{reason}} 最近项目条目已保留，可从主页恢复。"
   },
   "recentProjects": {
     "title": "最近的项目",
@@ -505,5 +539,9 @@
       "window_close": "关闭窗口",
       "app_quit": "退出 TextEx"
     }
+  },
+  "researchPanel": {
+    "invalidReferenceDrop": "此项目不是有效的 TextEx 参考文献。",
+    "openProjectForChatReference": "请先打开项目，再将参考文献添加到聊天。"
   }
 }

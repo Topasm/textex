@@ -13,6 +13,7 @@ use tauri::AppHandle;
 use tauri_plugin_dialog::DialogExt;
 use tokio::fs;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::sync::{Mutex, MutexGuard};
 
 use crate::{
     error::{AppError, AppResult},
@@ -20,6 +21,7 @@ use crate::{
         Base64FileResult, DirectoryEntry, DirectoryEntryType, OpenFileResult, SaveFileAsResult,
         SaveFileInput, SuccessResult,
     },
+    services::history::{self, HistoryState},
     state::AppState,
 };
 
@@ -31,6 +33,20 @@ const BINARY_WRITE_LIMIT_BYTES: usize = 50 * 1024 * 1024;
 const MEBIBYTE: u64 = 1024 * 1024;
 const TEMP_FILE_ATTEMPTS: usize = 32;
 static TEMP_FILE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
+/// Serializes source-text saves from snapshot capture through transaction
+/// commit. Callers acquire the project-operation guard before this lock; local
+/// history takes its own lock only after this one.
+#[derive(Default)]
+pub struct FileSaveState {
+    operation_lock: Mutex<()>,
+}
+
+impl FileSaveState {
+    async fn lock_source_save(&self) -> MutexGuard<'_, ()> {
+        self.operation_lock.lock().await
+    }
+}
 
 pub async fn open_file(app: &AppHandle, state: &AppState) -> AppResult<Option<OpenFileResult>> {
     let selected = app
@@ -181,13 +197,18 @@ async fn read_text_file_at(canonical: &Path) -> AppResult<OpenFileResult> {
 
 pub async fn save_file(
     state: &AppState,
+    save_state: &FileSaveState,
+    history_state: &HistoryState,
     file_path: &str,
     content: String,
 ) -> AppResult<SuccessResult> {
     let _project_operation = state.lock_project_operation().await;
+    let _save_operation = save_state.lock_source_save().await;
     let requested = require_absolute_str(file_path)?;
     let target = resolve_write_target(state, requested).await?;
-    write_files_transactionally(vec![(target, content.into_bytes())]).await?;
+    let targets = vec![(target, content.into_bytes())];
+    snapshot_changed_targets_best_effort(state, history_state, &targets).await;
+    write_files_transactionally(targets).await?;
 
     Ok(SuccessResult::ok())
 }
@@ -297,6 +318,8 @@ pub(crate) async fn validate_project_directory_target(
 pub async fn save_file_as(
     app: &AppHandle,
     state: &AppState,
+    save_state: &FileSaveState,
+    history_state: &HistoryState,
     content: String,
 ) -> AppResult<Option<SaveFileAsResult>> {
     let selected = app
@@ -313,29 +336,37 @@ pub async fn save_file_as(
     let selected_path = selected
         .into_path()
         .map_err(|error| AppError::InvalidPath(error.to_string()))?;
-    save_as_selected(state, selected_path, content)
+    save_as_selected(state, save_state, history_state, selected_path, content)
         .await
         .map(Some)
 }
 
 async fn save_as_selected(
     state: &AppState,
+    save_state: &FileSaveState,
+    history_state: &HistoryState,
     selected_path: PathBuf,
     content: String,
 ) -> AppResult<SaveFileAsResult> {
     let requested = require_absolute_path(&selected_path)?;
     let _project_operation = state.lock_project_operation().await;
+    let _save_operation = save_state.lock_source_save().await;
     let target = resolve_write_target(state, requested).await?;
     let file_path = path_to_string(&target)?;
-    write_files_transactionally(vec![(target, content.into_bytes())]).await?;
+    let targets = vec![(target, content.into_bytes())];
+    snapshot_changed_targets_best_effort(state, history_state, &targets).await;
+    write_files_transactionally(targets).await?;
     Ok(SaveFileAsResult { file_path })
 }
 
 pub async fn save_file_batch(
     state: &AppState,
+    save_state: &FileSaveState,
+    history_state: &HistoryState,
     files: Vec<SaveFileInput>,
 ) -> AppResult<SuccessResult> {
     let _project_operation = state.lock_project_operation().await;
+    let _save_operation = save_state.lock_source_save().await;
     let mut targets = Vec::with_capacity(files.len());
     let mut unique_targets = HashSet::with_capacity(files.len());
 
@@ -355,8 +386,61 @@ pub async fn save_file_batch(
         targets.push((target, file.content.into_bytes()));
     }
 
+    snapshot_changed_targets_best_effort(state, history_state, &targets).await;
     write_files_transactionally(targets).await?;
     Ok(SuccessResult::ok())
+}
+
+/// Captures the current disk text before a validated save replaces it.
+///
+/// Callers hold both the project-operation read lock and source-save lock,
+/// establishing the global project -> save -> history lock order. New files
+/// and text-identical saves do not produce snapshots. Text that expands beyond
+/// the history limit while being decoded (for example, a large legacy
+/// single-byte file) remains saveable but is deliberately not snapshotted.
+async fn snapshot_changed_targets_best_effort(
+    state: &AppState,
+    history_state: &HistoryState,
+    targets: &[(PathBuf, Vec<u8>)],
+) {
+    for (target, replacement) in targets {
+        if let Err(error) = snapshot_changed_target(state, history_state, target, replacement).await
+        {
+            eprintln!(
+                "TextEx local-history snapshot skipped for {}: {error}",
+                target.to_string_lossy()
+            );
+        }
+    }
+}
+
+async fn snapshot_changed_target(
+    state: &AppState,
+    history_state: &HistoryState,
+    target: &Path,
+    replacement: &[u8],
+) -> AppResult<()> {
+    match fs::symlink_metadata(target).await {
+        Ok(_) => {}
+        Err(source) if source.kind() == io::ErrorKind::NotFound => return Ok(()),
+        Err(source) => {
+            return Err(AppError::io(
+                "inspect file for history",
+                target.to_string_lossy().into_owned(),
+                source,
+            ));
+        }
+    }
+
+    let prior = read_text_file_at(target).await?;
+    let replacement = std::str::from_utf8(replacement)
+        .map_err(|_| AppError::History("text save payload is not valid UTF-8".to_owned()))?;
+    if prior.content == replacement || !history::accepts_snapshot_content(&prior.content) {
+        return Ok(());
+    }
+
+    history::save_snapshot(state, history_state, &prior.file_path, prior.content).await?;
+    Ok(())
 }
 
 pub async fn create_file(state: &AppState, file_path: &str) -> AppResult<SuccessResult> {
@@ -1261,16 +1345,23 @@ mod tests {
     use super::{
         create_directory, create_file, decode_text_file, delete_path, encode_base64,
         ensure_binary_size, ensure_binary_write_size, mime_type_for_path, open_selected_file,
-        read_file_base64, read_file_binary, rename_path, save_as_selected, save_file_batch,
-        write_file_binary, BASE64_TRANSFER_LIMIT_BYTES, BINARY_WRITE_LIMIT_BYTES,
-        RAW_BINARY_TRANSFER_LIMIT_BYTES,
+        read_file_base64, read_file_binary, rename_path, save_as_selected, save_file,
+        save_file_batch, write_file_binary, FileSaveState, BASE64_TRANSFER_LIMIT_BYTES,
+        BINARY_WRITE_LIMIT_BYTES, RAW_BINARY_TRANSFER_LIMIT_BYTES,
     };
-    use crate::{models::SaveFileInput, state::AppState};
+    use crate::{
+        models::SaveFileInput,
+        services::history::{self, HistoryState},
+        state::AppState,
+    };
     use std::{
         fs,
         future::Future,
         path::{Path, PathBuf},
-        sync::atomic::{AtomicU64, Ordering},
+        sync::{
+            atomic::{AtomicU64, Ordering},
+            Arc,
+        },
     };
 
     static TEST_DIRECTORY_SEQUENCE: AtomicU64 = AtomicU64::new(0);
@@ -1418,10 +1509,14 @@ mod tests {
         let first = TestDirectory::new("save-as-first");
         let second = TestDirectory::new("save-as-second");
         let state = AppState::default();
+        let save_state = FileSaveState::default();
+        let history_state = HistoryState::default();
         let first_file = first.child("untitled.tex");
 
         let no_project_error = block_on(save_as_selected(
             &state,
+            &save_state,
+            &history_state,
             first_file.clone(),
             "first".to_owned(),
         ))
@@ -1435,6 +1530,8 @@ mod tests {
 
         let result = block_on(save_as_selected(
             &state,
+            &save_state,
+            &history_state,
             first_file.clone(),
             "first".to_owned(),
         ))
@@ -1442,9 +1539,219 @@ mod tests {
         assert_eq!(result.file_path, path_string(&first_file));
 
         let outside = second.child("outside.tex");
-        let error = block_on(save_as_selected(&state, outside, "outside".to_owned()))
-            .expect_err("Save As outside the active project must fail");
+        let error = block_on(save_as_selected(
+            &state,
+            &save_state,
+            &history_state,
+            outside,
+            "outside".to_owned(),
+        ))
+        .expect_err("Save As outside the active project must fail");
         assert!(error.to_string().contains("outside the open project"));
+    }
+
+    #[test]
+    fn text_save_snapshots_only_changed_existing_disk_content() {
+        let project = TestDirectory::new("save-history");
+        let existing = project.child("main.tex");
+        let created = project.child("new.tex");
+        fs::write(&existing, [b'c', b'a', b'f', 0xe9]).expect("write legacy text fixture");
+        let state = AppState::default();
+        state
+            .set_project_root(project.path().to_path_buf())
+            .expect("set project root");
+        let save_state = FileSaveState::default();
+        let history_state = HistoryState::default();
+
+        block_on(save_file(
+            &state,
+            &save_state,
+            &history_state,
+            &path_string(&existing),
+            "caf\u{e9}".to_owned(),
+        ))
+        .expect("save decoded-identical text");
+        assert!(block_on(history::list(
+            &state,
+            &history_state,
+            &path_string(&existing)
+        ))
+        .expect("list unchanged history")
+        .is_empty());
+
+        block_on(save_file(
+            &state,
+            &save_state,
+            &history_state,
+            &path_string(&existing),
+            "updated".to_owned(),
+        ))
+        .expect("save changed text");
+        let snapshots = block_on(history::list(
+            &state,
+            &history_state,
+            &path_string(&existing),
+        ))
+        .expect("list changed history");
+        assert_eq!(snapshots.len(), 1);
+        assert_eq!(
+            block_on(history::load(
+                &state,
+                &history_state,
+                &path_string(&existing),
+                &snapshots[0].path,
+            ))
+            .expect("load prior text"),
+            "caf\u{e9}"
+        );
+        assert_eq!(
+            fs::read_to_string(&existing).expect("read saved text"),
+            "updated"
+        );
+
+        block_on(save_file(
+            &state,
+            &save_state,
+            &history_state,
+            &path_string(&created),
+            "new".to_owned(),
+        ))
+        .expect("save new file");
+        assert!(block_on(history::list(
+            &state,
+            &history_state,
+            &path_string(&created)
+        ))
+        .expect("list new-file history")
+        .is_empty());
+    }
+
+    #[test]
+    fn source_save_lock_serializes_snapshot_and_write_critical_sections() {
+        use tokio::sync::oneshot::{self, error::TryRecvError};
+
+        let save_state = Arc::new(FileSaveState::default());
+        block_on(async {
+            let (first_entered_tx, first_entered_rx) = oneshot::channel();
+            let (release_first_tx, release_first_rx) = oneshot::channel();
+            let first_state = Arc::clone(&save_state);
+            let first = tauri::async_runtime::spawn(async move {
+                let _guard = first_state.lock_source_save().await;
+                first_entered_tx.send(()).expect("signal first save entry");
+                release_first_rx.await.expect("release first save");
+            });
+            first_entered_rx.await.expect("first save entered");
+
+            let (second_entered_tx, mut second_entered_rx) = oneshot::channel();
+            let second_state = Arc::clone(&save_state);
+            let second = tauri::async_runtime::spawn(async move {
+                let _guard = second_state.lock_source_save().await;
+                second_entered_tx
+                    .send(())
+                    .expect("signal second save entry");
+            });
+            tokio::task::yield_now().await;
+            assert!(matches!(
+                second_entered_rx.try_recv(),
+                Err(TryRecvError::Empty)
+            ));
+
+            release_first_tx.send(()).expect("release first save");
+            second_entered_rx.await.expect("second save entered");
+            first.await.expect("join first save");
+            second.await.expect("join second save");
+        });
+    }
+
+    #[test]
+    fn overlapping_source_saves_commit_and_snapshot_in_lock_order() {
+        let project = TestDirectory::new("overlapping-source-saves");
+        let file = project.child("main.tex");
+        fs::write(&file, "initial").expect("write source fixture");
+        let state = AppState::default();
+        state
+            .set_project_root(project.path().to_path_buf())
+            .expect("set project root");
+        let save_state = FileSaveState::default();
+        let history_state = HistoryState::default();
+        let file_path = path_string(&file);
+
+        block_on(async {
+            let first = save_file(
+                &state,
+                &save_state,
+                &history_state,
+                &file_path,
+                "first".to_owned(),
+            );
+            let second = save_file(
+                &state,
+                &save_state,
+                &history_state,
+                &file_path,
+                "second".to_owned(),
+            );
+            let (first_result, second_result) = tokio::join!(first, second);
+            first_result.expect("commit first save");
+            second_result.expect("commit second save");
+        });
+
+        assert_eq!(fs::read_to_string(&file).expect("read source"), "second");
+        let snapshots = block_on(history::list(&state, &history_state, &file_path))
+            .expect("list serialized history");
+        assert_eq!(snapshots.len(), 2);
+        assert_eq!(
+            block_on(history::load(
+                &state,
+                &history_state,
+                &file_path,
+                &snapshots[0].path,
+            ))
+            .expect("load newest prior version"),
+            "first"
+        );
+        assert_eq!(
+            block_on(history::load(
+                &state,
+                &history_state,
+                &file_path,
+                &snapshots[1].path,
+            ))
+            .expect("load oldest prior version"),
+            "initial"
+        );
+    }
+
+    #[test]
+    fn source_save_succeeds_when_local_history_storage_is_unavailable() {
+        let project = TestDirectory::new("save-history-unavailable");
+        let file = project.child("main.tex");
+        fs::write(&file, "before").expect("write source fixture");
+        // A regular file at the metadata directory path makes history
+        // directory validation fail while leaving the source parent writable.
+        fs::write(project.child(".textex"), "not a directory")
+            .expect("block history directory creation");
+        let state = AppState::default();
+        state
+            .set_project_root(project.path().to_path_buf())
+            .expect("set project root");
+        let save_state = FileSaveState::default();
+        let history_state = HistoryState::default();
+
+        block_on(save_file(
+            &state,
+            &save_state,
+            &history_state,
+            &path_string(&file),
+            "after".to_owned(),
+        ))
+        .expect("history failure must not block source save");
+
+        assert_eq!(fs::read_to_string(&file).expect("read source"), "after");
+        assert_eq!(
+            fs::read_to_string(project.child(".textex")).expect("read history blocker"),
+            "not a directory"
+        );
     }
 
     #[test]
@@ -1461,9 +1768,13 @@ mod tests {
         state
             .set_project_root(project.path().to_path_buf())
             .expect("set project root");
+        let save_state = FileSaveState::default();
+        let history_state = HistoryState::default();
 
         block_on(save_file_batch(
             &state,
+            &save_state,
+            &history_state,
             vec![
                 SaveFileInput {
                     content: "new-first".to_owned(),
@@ -1484,6 +1795,8 @@ mod tests {
 
         let error = block_on(save_file_batch(
             &state,
+            &save_state,
+            &history_state,
             vec![
                 SaveFileInput {
                     content: "partial".to_owned(),

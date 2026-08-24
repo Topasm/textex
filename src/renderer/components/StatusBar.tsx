@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { CircleX, GitBranch, TriangleAlert } from 'lucide-react'
 import { useCompileStore } from '../store/useCompileStore'
 import { useEditorStore } from '../store/useEditorStore'
 import { useProjectStore } from '../store/useProjectStore'
@@ -7,6 +8,7 @@ import { useSettingsStore } from '../store/useSettingsStore'
 import { useUiStore } from '../store/useUiStore'
 import { isFeatureEnabled } from '../utils/featureFlags'
 import { getDesktopCapabilities } from '../platform/capabilities'
+import { ICON_SIZE } from './ui/IconSystem'
 
 const StatusBar = React.memo(function StatusBar() {
   const { t } = useTranslation()
@@ -48,6 +50,7 @@ const StatusBar = React.memo(function StatusBar() {
       <div className="status-left">
         <span
           className="status-compile-indicator"
+          data-responsive-priority="primary"
           onClick={toggleLogPanel}
           role="button"
           tabIndex={0}
@@ -65,12 +68,14 @@ const StatusBar = React.memo(function StatusBar() {
             <span className="status-diagnostics">
               {errorCount > 0 && (
                 <span className="status-errors">
-                  {'\u2716'} {errorCount}
+                  <CircleX size={ICON_SIZE.micro} />
+                  {errorCount}
                 </span>
               )}
               {warnCount > 0 && (
                 <span className="status-warnings">
-                  {'\u26A0'} {warnCount}
+                  <TriangleAlert size={ICON_SIZE.micro} />
+                  {warnCount}
                 </span>
               )}
             </span>
@@ -79,9 +84,11 @@ const StatusBar = React.memo(function StatusBar() {
         {isGitRepo && gitBranch && (
           <span
             className="status-git-branch"
+            data-responsive-priority="tertiary"
             title={t('statusBar.gitBranch', { branch: gitBranch })}
           >
-            {'\u2387'} {gitBranch}
+            <GitBranch size={ICON_SIZE.micro} />
+            {gitBranch}
           </span>
         )}
       </div>
@@ -89,6 +96,7 @@ const StatusBar = React.memo(function StatusBar() {
         {lspEnabled && (
           <span
             className={`status-lsp${lspStatus === 'error' ? ' status-lsp-error' : ''}`}
+            data-responsive-priority="secondary"
             title={
               lspStatus === 'error'
                 ? t('statusBar.lspErrorTitle')
@@ -107,6 +115,7 @@ const StatusBar = React.memo(function StatusBar() {
         )}
         <span
           className="status-spellcheck"
+          data-responsive-priority="secondary"
           onClick={() =>
             useSettingsStore
               .getState()
@@ -130,6 +139,7 @@ const StatusBar = React.memo(function StatusBar() {
         {capabilities.spellcheck && (
           <span
             className="status-spellcheck"
+            data-responsive-priority="secondary"
             onClick={() =>
               useSettingsStore.getState().updateSetting('spellCheckEnabled', !spellCheckEnabled)
             }
@@ -146,7 +156,7 @@ const StatusBar = React.memo(function StatusBar() {
             {t('statusBar.spell')}: {spellCheckEnabled ? t('statusBar.on') : t('statusBar.off')}
           </span>
         )}
-        <span>
+        <span className="status-cursor" data-responsive-priority="primary">
           {t('statusBar.ln')} {cursorLine}, {t('statusBar.col')} {cursorColumn}
         </span>
       </div>

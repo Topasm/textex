@@ -116,7 +116,12 @@
     "retry": "Erneut versuchen",
     "sessionRestoreFailed": "{{path}} konnte nicht wiederhergestellt werden: {{reason}}",
     "chooseReplacement": "Ersatzordner wählen",
-    "replacementOpenFailed": "Der Ersatzordner {{path}} konnte nicht geöffnet werden: {{reason}}"
+    "replacementOpenFailed": "Der Ersatzordner {{path}} konnte nicht geöffnet werden: {{reason}}",
+    "referenceDropInvalid": "Diese Referenz kann wegen ungültiger Daten nicht abgelegt werden.",
+    "referenceDropPositionUnavailable": "Wählen Sie eine gültige Editorposition und legen Sie die Referenz erneut ab.",
+    "referenceDropDocumentChanged": "Das Dokument wurde vor dem Einfügen des Zitats geändert. Versuchen Sie es erneut.",
+    "referenceDropFailed": "Diese Referenz konnte nicht hinzugefügt werden: {{reason}}",
+    "referenceInsertSkipped": "Das aktive Dokument oder die Cursorposition wurde geändert, daher wurde das Zitat nicht eingefügt. Versuchen Sie es erneut."
   },
   "settings": {
     "title": "Einstellungen",
@@ -276,7 +281,7 @@
     "automation": {
       "compilerTools": "Compiler & Werkzeuge",
       "autoCompile": "Automatische Kompilierung",
-      "autoCompileDesc": "Beim Speichern über Tastenkürzel automatisch kompilieren",
+      "autoCompileDesc": "Kurz nach dem Bearbeiten automatisch speichern und kompilieren",
       "watchOpenFiles": "Geöffnete Dateien überwachen",
       "watchOpenFilesDesc": "Von externen Editoren geänderte Dateien automatisch neu laden",
       "spellCheck": "Rechtschreibprüfung",
@@ -324,6 +329,12 @@
     "noFolder": "Kein Ordner geöffnet",
     "newFile": "Neue Datei",
     "newFolder": "Neuer Ordner",
+    "rename": "Umbenennen",
+    "delete": "Löschen",
+    "confirmDelete": "{{name}} löschen? Dies kann nicht rückgängig gemacht werden.",
+    "invalidName": "Namen dürfen keine Pfadtrennzeichen enthalten.",
+    "saveBeforeRename": "Speichern oder schließen Sie geänderte Dateien vor dem Umbenennen.",
+    "saveBeforeDelete": "Speichern oder schließen Sie geänderte Dateien vor dem Löschen.",
     "expandFolder": "Ordner aufklappen",
     "collapseFolder": "Ordner zuklappen"
   },
@@ -340,7 +351,12 @@
     "noFile": "Keine Datei geöffnet",
     "loading": "Zeitverlauf wird geladen…",
     "noHistory": "Kein Verlauf für diese Datei verfügbar",
-    "localSave": "Lokale Speicherung"
+    "localSave": "Lokale Speicherung",
+    "restoreConfirm": "Diesen Schnappschuss im Editor wiederherstellen? Er bleibt ungespeichert, bis Sie ihn speichern.",
+    "restoreDirtyConfirm": "Aktuelle ungespeicherte Änderungen durch diesen Schnappschuss ersetzen? Der wiederhergestellte Text bleibt ungespeichert.",
+    "restoreSuccess": "Verlaufsschnappschuss als ungespeicherte Änderung wiederhergestellt.",
+    "restoreStale": "Das Dokument wurde während des Ladens geändert; nichts wurde wiederhergestellt.",
+    "restoreFailed": "Verlaufsschnappschuss konnte nicht wiederhergestellt werden: {{reason}}"
   },
   "draftModal": {
     "title": "KI-Entwurf",
@@ -406,7 +422,14 @@
     "noMatches": "Keine Treffer",
     "prevMatch": "Vorheriger",
     "nextMatch": "Nächster",
-    "goToLine": "Gehe zu Zeile {{line}}"
+    "goToLine": "Gehe zu Zeile {{line}}",
+    "home": "Startseite",
+    "searchLabel": "{{mode}} durchsuchen",
+    "modeSelector": "Suchmodus: {{mode}}",
+    "modeMenuLabel": "Suchmodus auswählen",
+    "resultsLabel": "Suchergebnisse: {{mode}}",
+    "resultCount": "{{count}} Ergebnisse",
+    "clearSearch": "Suche löschen"
   },
   "errorBoundary": {
     "title": "Etwas ist schiefgelaufen",
@@ -422,6 +445,17 @@
     "recent": "Zuletzt verwendet",
     "template": "Vorlage",
     "command": "Befehl"
+  },
+  "projectSwitcher": {
+    "switchProject": "Projekt wechseln",
+    "currentProject": "Aktuelles Projekt: {{name}}",
+    "menuLabel": "Zu einem kürzlich verwendeten Projekt wechseln",
+    "current": "Aktuell",
+    "currentItem": "{{name}}, aktuelles Projekt",
+    "loading": "Kürzlich verwendete Projekte werden geladen…",
+    "switching": "Wechseln…",
+    "loadFailed": "Kürzlich verwendete Projekte konnten nicht geladen werden.",
+    "openFailed": "{{name}} konnte nicht geöffnet werden: {{reason}} Der Eintrag wurde zur Wiederherstellung über die Startseite beibehalten."
   },
   "recentProjects": {
     "title": "Aktuelle Projekte",
@@ -505,5 +539,9 @@
       "window_close": "Fenster schließen",
       "app_quit": "TextEx beenden"
     }
+  },
+  "researchPanel": {
+    "invalidReferenceDrop": "Dieses Element ist keine gültige TextEx-Referenz.",
+    "openProjectForChatReference": "Öffnen Sie ein Projekt, bevor Sie eine Referenz zum Chat hinzufügen."
   }
 }

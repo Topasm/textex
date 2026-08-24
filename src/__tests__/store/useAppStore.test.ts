@@ -505,6 +505,101 @@ describe('useAppStore', () => {
     })
   })
 
+  describe('restoreFilesInTabs', () => {
+    it('restores saved order and cursors without activating background tabs', () => {
+      const epoch = useEditorStore.getState().tabMutationEpoch
+
+      expect(
+        useEditorStore.getState().restoreFilesInTabs(
+          [
+            {
+              filePath: '/path/c.tex',
+              content: 'content C',
+              cursorLine: 30,
+              cursorColumn: 4
+            }
+          ],
+          {
+            orderedFilePaths: ['/path/c.tex'],
+            activeFilePath: '/path/c.tex',
+            expectedTabMutationEpoch: epoch
+          }
+        )
+      ).toBe(true)
+
+      expect(
+        useEditorStore.getState().restoreFilesInTabs(
+          [
+            {
+              filePath: '/path/a.tex',
+              content: 'content A',
+              cursorLine: 10,
+              cursorColumn: 2
+            },
+            {
+              filePath: '/path/b.tex',
+              content: 'content B',
+              cursorLine: 20,
+              cursorColumn: 3
+            }
+          ],
+          {
+            orderedFilePaths: ['/path/a.tex', '/path/b.tex', '/path/c.tex'],
+            expectedTabMutationEpoch: epoch
+          }
+        )
+      ).toBe(true)
+
+      const state = useEditorStore.getState()
+      expect(Object.keys(state.openFiles)).toEqual(['/path/a.tex', '/path/b.tex', '/path/c.tex'])
+      expect(state.activeFilePath).toBe('/path/c.tex')
+      expect(state.cursorLine).toBe(30)
+      expect(state.cursorColumn).toBe(4)
+      expect(state.openFiles['/path/a.tex']).toMatchObject({ cursorLine: 10, cursorColumn: 2 })
+    })
+
+    it('rejects a restore commit after a normal tab mutation', () => {
+      const staleEpoch = useEditorStore.getState().tabMutationEpoch
+      useEditorStore.getState().openFileInTab('/path/user.tex', 'user content')
+
+      expect(
+        useEditorStore.getState().restoreFilesInTabs(
+          [
+            {
+              filePath: '/path/stale.tex',
+              content: 'stale content',
+              cursorLine: 1,
+              cursorColumn: 1
+            }
+          ],
+          {
+            orderedFilePaths: ['/path/stale.tex'],
+            activeFilePath: '/path/stale.tex',
+            expectedTabMutationEpoch: staleEpoch
+          }
+        )
+      ).toBe(false)
+      expect(Object.keys(useEditorStore.getState().openFiles)).toEqual(['/path/user.tex'])
+      expect(documentRegistry.has('/path/stale.tex')).toBe(false)
+    })
+
+    it('persists the live cursor of the active tab for the next session', () => {
+      localStorage.removeItem('textex-editor-session')
+      useEditorStore.getState().openFileInTab('/path/active.tex', 'content')
+      useEditorStore.getState().setCursorPosition(42, 7)
+
+      const persisted = JSON.parse(localStorage.getItem('textex-editor-session') ?? '{}') as {
+        state?: {
+          _sessionCursors?: Record<string, { cursorLine: number; cursorColumn: number }>
+        }
+      }
+      expect(persisted.state?._sessionCursors?.['/path/active.tex']).toEqual({
+        cursorLine: 42,
+        cursorColumn: 7
+      })
+    })
+  })
+
   describe('setActiveTab', () => {
     it('persists current content when switching tabs', () => {
       // Open file A and edit it

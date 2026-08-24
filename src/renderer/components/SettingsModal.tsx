@@ -9,6 +9,7 @@ import { IntegrationsTab } from './settings/IntegrationsTab'
 import { AutomationTab } from './settings/AutomationTab'
 import { getDesktopCapabilities } from '../platform/capabilities'
 import UpdateNotification from './UpdateNotification'
+import { ICON_SIZE } from './ui/IconSystem'
 
 type TabId = 'general' | 'appearance' | 'editor' | 'ai' | 'integrations' | 'automation'
 
@@ -129,7 +130,7 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
         {/* Header */}
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <SettingsIcon size={18} />
+            <SettingsIcon size={ICON_SIZE.feature} />
             <h2 id={titleId}>{t('settings.title')}</h2>
           </div>
           <button
@@ -138,7 +139,7 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
             className="close-button"
             aria-label={t('logPanel.close')}
           >
-            <X size={18} />
+            <X size={ICON_SIZE.control} />
           </button>
         </div>
 
@@ -146,7 +147,7 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
 
         <div className="settings-layout">
           {/* Sidebar */}
-          <div className="settings-sidebar">
+          <nav className="settings-sidebar" aria-label={t('settings.title')}>
             {tabIds.map((id) => {
               const Icon = TAB_ICONS[id]
               return (
@@ -156,13 +157,14 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
                   type="button"
                   onClick={() => setActiveTab(id)}
                   className={`settings-tab${activeTab === id ? ' active' : ''}`}
+                  aria-current={activeTab === id ? 'page' : undefined}
                 >
-                  <Icon size={18} />
-                  {t(`settings.tabs.${id}`)}
+                  <Icon size={ICON_SIZE.control} />
+                  <span className="settings-tab-label">{t(`settings.tabs.${id}`)}</span>
                 </button>
               )
             })}
-          </div>
+          </nav>
 
           {/* Content */}
           <div className="settings-content">

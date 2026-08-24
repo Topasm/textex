@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useRef } from 'react'
 import { usePdfStore } from '../../store/usePdfStore'
 import { useUiStore } from '../../store/useUiStore'
 import { useSettingsStore } from '../../store/useSettingsStore'
@@ -23,6 +23,8 @@ export function useEditorCommands({
   showHistory,
   setHistoryMode
 }: EditorCommandsOptions) {
+  const formatRequestIdRef = useRef(0)
+
   return useCallback(
     (editor: monacoEditor.IStandaloneCodeEditor, monaco: MonacoInstance) => {
       // Ctrl+F: Sync Search — triggers both editor find widget AND PDF search bar
@@ -48,8 +50,19 @@ export function useEditorCommands({
       editor.addCommand(monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyF, async () => {
         const model = editor.getModel()
         if (!model) return
+        const requestId = ++formatRequestIdRef.current
+        const modelVersion = model.getVersionId()
         const text = model.getValue()
         const formatted = await formatLatex(text)
+
+        if (
+          requestId !== formatRequestIdRef.current ||
+          editor.getModel() !== model ||
+          model.getVersionId() !== modelVersion ||
+          formatted === text
+        ) {
+          return
+        }
 
         editor.executeEdits('prettier', [
           {

@@ -51,6 +51,52 @@ test('workflow actions are pinned to immutable commit SHAs', () => {
   }
 })
 
+test('Rust caches are profile, target, toolchain, lockfile, and release scoped', () => {
+  const cacheReferences = [
+    ...workflow.matchAll(/uses:\s+(actions\/cache@[^\s#]+)(?:\s+#\s+v4\.2\.4)?/g)
+  ].map((match) => match[1])
+  assert.deepEqual(cacheReferences, [
+    'actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809',
+    'actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809'
+  ])
+
+  const cacheKeys = [...workflow.matchAll(/^\s+key:\s+(textex-.*cargo-v1-.*)$/gm)].map(
+    (match) => match[1]
+  )
+  assert.equal(cacheKeys.length, 2)
+  for (const key of cacheKeys) {
+    assert.match(key, /startsWith\(github\.ref, 'refs\/tags\/v'\).*'release'.*'ci'/)
+    assert.match(key, /\$\{\{ runner\.os \}\}/)
+    assert.match(key, /hashFiles\('rust-toolchain\.toml'\)/)
+    assert.match(key, /hashFiles\('src-tauri\/Cargo\.toml'\)/)
+    assert.match(key, /hashFiles\('src-tauri\/Cargo\.lock'\)/)
+  }
+  assert.match(cacheKeys[0], /cargo-v1-test-.*x86_64-unknown-linux-gnu/)
+  assert.match(cacheKeys[1], /cargo-v1-build-.*\$\{\{ matrix\.target \}\}/)
+
+  const cacheSteps = [
+    ...workflow.matchAll(
+      /- name: Restore isolated Rust (?:test|release) cache\n([\s\S]*?)(?=\n\s+- name:)/g
+    )
+  ].map((match) => match[1])
+  assert.equal(cacheSteps.length, 2)
+  for (const cacheStep of cacheSteps) {
+    const pathBlock = cacheStep.match(/path: \|\n([\s\S]*?)\n\s+key:/)?.[1]
+    assert.ok(pathBlock, 'each Rust cache must declare explicit paths')
+    const cachedPaths = pathBlock
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+    for (const cachedPath of cachedPaths) {
+      assert.match(
+        cachedPath,
+        /^(?:~\/\.cargo\/(?:registry|git)|src-tauri\/target\/debug\/(?:\.fingerprint|build|deps|incremental)|src-tauri\/target\/\$\{\{ matrix\.target \}\}\/release\/(?:\.fingerprint|build|deps|incremental))$/,
+        `cache path must contain only reusable Cargo artifacts: ${cachedPath}`
+      )
+    }
+  }
+})
+
 test('tagged macOS builds support an all-or-none Developer ID notarization upgrade', () => {
   for (const secret of [
     'APPLE_CERTIFICATE',

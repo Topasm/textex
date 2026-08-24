@@ -3,8 +3,8 @@ use tauri::{AppHandle, Manager, State};
 use crate::{
     error::AppResult,
     models::{
-        OnlineReference, ReferenceAddResult, ZoteroCollection, ZoteroSaveResult,
-        ZoteroSearchResult, ZoteroSyncResult,
+        OnlineReference, ReferenceAddResult, ZoteroCollection, ZoteroMutationPlan,
+        ZoteroMutationResult, ZoteroSaveResult, ZoteroSearchResult, ZoteroSyncResult,
     },
     services::{
         project_index::ProjectIndexState,
@@ -77,6 +77,16 @@ pub async fn zotero_save_online(
 ) -> AppResult<ZoteroSaveResult> {
     let _write_guard = sync_state.lock().await;
     zotero::save_online_to_library(sync_state.inner(), reference, port).await
+}
+
+#[tauri::command]
+pub async fn zotero_apply_mutation_plan(
+    project_state: State<'_, AppState>,
+    sync_state: State<'_, ZoteroSyncState>,
+    plan: ZoteroMutationPlan,
+) -> AppResult<ZoteroMutationResult> {
+    let _write_guard = sync_state.lock().await;
+    zotero::apply_mutation_plan(sync_state.inner(), project_state.inner(), plan).await
 }
 
 #[tauri::command]

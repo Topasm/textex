@@ -31,12 +31,11 @@ body:has(
   min-height: 42px;
   padding: 9px 10px;
   color: var(--text-primary);
-  background: color-mix(in srgb, var(--bg-secondary) 96%, transparent);
-  border: 1px solid var(--border);
+  background: var(--ui-surface-raised, var(--bg-secondary));
+  border: 1px solid var(--ui-border-strong, var(--border));
   border-left: 3px solid var(--info);
-  border-radius: 7px;
-  box-shadow: 0 8px 24px var(--shadow-color);
-  backdrop-filter: blur(10px);
+  border-radius: var(--ui-radius-panel, 6px);
+  box-shadow: var(--ui-shadow-popover, 0 4px 14px var(--shadow-color));
   pointer-events: auto;
 }
 
@@ -99,13 +98,13 @@ body:has(
 .app-notification button {
   min-height: 28px;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control, 4px);
   cursor: pointer;
 }
 
 .app-notification-action {
   padding: 4px 9px;
-  color: white;
+  color: var(--accent-contrast, white);
   background: var(--accent);
 }
 
@@ -140,6 +139,12 @@ body:has(
 
 .notification-spinner {
   animation: spin 1s linear infinite;
+}
+
+[data-theme='glass'] .app-notification {
+  background: color-mix(in srgb, var(--ui-surface-raised, var(--bg-secondary)) 94%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 @media (prefers-reduced-motion: reduce) {

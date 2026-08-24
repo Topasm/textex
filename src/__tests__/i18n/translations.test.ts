@@ -70,16 +70,9 @@ describe.each(Object.entries(locales))('%s translations', (lang, locale) => {
     expect(emptyKeys).toEqual([])
   })
 
-  it('should warn about missing keys vs English', () => {
+  it('should contain every English translation key', () => {
     const missing = enKeys.filter((k) => !localeKeys.includes(k))
-    if (missing.length > 0) {
-      console.warn(
-        `[${lang}] Missing ${missing.length} keys: ${missing.slice(0, 5).join(', ')}${missing.length > 5 ? '...' : ''}`
-      )
-    }
-    // Allow up to 10% missing — fallback to English covers these
-    const threshold = Math.floor(enKeys.length * 0.1)
-    expect(missing.length).toBeLessThanOrEqual(threshold)
+    expect(missing, `[${lang}] is missing translation keys`).toEqual([])
   })
 
   it('should preserve interpolation placeholders', () => {

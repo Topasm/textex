@@ -1,13 +1,22 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Loader, Plus, RefreshCw, Save, Search } from 'lucide-react'
+import {
+  ChevronRight,
+  Loader,
+  MessageSquarePlus,
+  Plus,
+  RefreshCw,
+  Save,
+  Search
+} from 'lucide-react'
 import type { ResearchConfig, ZoteroCollection, ZoteroSearchResult } from '../../../shared/types'
 import { useProjectStore } from '../../store/useProjectStore'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import {
   addReferenceAtCursor,
   setReferenceDragData,
-  setZoteroCollectionDragData
+  setZoteroCollectionDragData,
+  type ReferenceDragPayload
 } from './referenceActions'
 
 const DEFAULT_CONFIG: ResearchConfig = {
@@ -18,34 +27,108 @@ const DEFAULT_CONFIG: ResearchConfig = {
   syncOnOpen: false
 }
 
-export function ZoteroReferences() {
+const COLLECTION_PAGE_SIZE = 200
+
+type CollectionRow = {
+  collection: ZoteroCollection
+  depth: number
+  parentKey: string | null
+  hasChildren: boolean
+}
+
+interface ZoteroReferencesProps {
+  onAddToChat?: (payload: ReferenceDragPayload) => void
+}
+
+function buildZoteroReferencePayload(item: ZoteroSearchResult, port: number): ReferenceDragPayload {
+  return {
+    source: 'zotero',
+    citekey: item.citekey,
+    port,
+    metadata: {
+      title: item.title,
+      authors: item.author
+        .split(/\s+and\s+/u)
+        .map((author) => author.trim())
+        .filter(Boolean),
+      year: item.year,
+      type: item.type
+    }
+  }
+}
+
+export function ZoteroReferences({ onAddToChat }: ZoteroReferencesProps = {}) {
   const projectRoot = useProjectStore((state) => state.projectRoot)
   const port = useSettingsStore((state) => state.settings.zoteroPort)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<ZoteroSearchResult[]>([])
   const [collections, setCollections] = useState<ZoteroCollection[]>([])
   const [config, setConfig] = useState<ResearchConfig>(DEFAULT_CONFIG)
+  const [expandedCollections, setExpandedCollections] = useState<Set<string>>(() => new Set())
+  const [collectionLimit, setCollectionLimit] = useState(COLLECTION_PAGE_SIZE)
+  const [focusedCollection, setFocusedCollection] = useState<string | null>(null)
   const [busy, setBusy] = useState<'load' | 'search' | 'save' | 'sync' | string | null>('load')
   const [message, setMessage] = useState('')
+  const scopeGeneration = useRef(0)
+  const operationInFlight = useRef(false)
+  const collectionRefs = useRef(new Map<string, HTMLButtonElement>())
+
+  const isCurrentScope = useCallback((generation: number, root: string | null, apiPort: number) => {
+    return (
+      scopeGeneration.current === generation &&
+      useProjectStore.getState().projectRoot === root &&
+      useSettingsStore.getState().settings.zoteroPort === apiPort
+    )
+  }, [])
 
   useEffect(() => {
-    let active = true
+    const generation = ++scopeGeneration.current
+    const root = projectRoot
+    const apiPort = port
+    operationInFlight.current = true
+    setBusy('load')
+    setMessage('')
+    setResults([])
+    setCollections([])
+    setConfig(DEFAULT_CONFIG)
+    setExpandedCollections(new Set())
+    setCollectionLimit(COLLECTION_PAGE_SIZE)
+    setFocusedCollection(null)
     Promise.all([window.api.researchLoadConfig(), window.api.zoteroCollections(port)])
       .then(([loadedConfig, loadedCollections]) => {
-        if (!active) return
+        if (!isCurrentScope(generation, root, apiPort)) return
         setConfig(loadedConfig)
         setCollections(loadedCollections)
+        const rows = orderCollections(loadedCollections)
+        const expanded = expandedAncestors(rows, loadedConfig.zoteroCollection)
+        setExpandedCollections(expanded)
+        const selectedIndex = filterExpandedCollections(rows, expanded).findIndex(
+          ({ collection }) => collection.key === loadedConfig.zoteroCollection
+        )
+        setCollectionLimit(
+          selectedIndex < 0
+            ? COLLECTION_PAGE_SIZE
+            : Math.max(
+                COLLECTION_PAGE_SIZE,
+                Math.ceil((selectedIndex + 1) / COLLECTION_PAGE_SIZE) * COLLECTION_PAGE_SIZE
+              )
+        )
       })
       .catch((error) => {
-        if (active) setMessage(error instanceof Error ? error.message : String(error))
+        if (isCurrentScope(generation, root, apiPort)) {
+          setMessage(error instanceof Error ? error.message : String(error))
+        }
       })
       .finally(() => {
-        if (active) setBusy(null)
+        if (isCurrentScope(generation, root, apiPort)) {
+          operationInFlight.current = false
+          setBusy(null)
+        }
       })
     return () => {
-      active = false
+      if (scopeGeneration.current === generation) scopeGeneration.current += 1
     }
-  }, [port, projectRoot])
+  }, [isCurrentScope, port, projectRoot])
 
   const targetFile = useMemo(() => {
     if (!projectRoot) return undefined
@@ -54,60 +137,193 @@ export function ZoteroReferences() {
   }, [config.zoteroFile, projectRoot])
 
   const collectionRows = useMemo(() => orderCollections(collections), [collections])
+  const visibleCollectionRows = useMemo(
+    () => filterExpandedCollections(collectionRows, expandedCollections),
+    [collectionRows, expandedCollections]
+  )
+  const renderedCollectionRows = useMemo(
+    () => visibleCollectionRows.slice(0, collectionLimit),
+    [collectionLimit, visibleCollectionRows]
+  )
+  const activeCollectionKey =
+    focusedCollection &&
+    renderedCollectionRows.some(({ collection }) => collection.key === focusedCollection)
+      ? focusedCollection
+      : (renderedCollectionRows.find(({ collection }) => collection.key === config.zoteroCollection)
+          ?.collection.key ??
+        renderedCollectionRows[0]?.collection.key ??
+        null)
+
+  const focusCollection = useCallback((key: string) => {
+    setFocusedCollection(key)
+    collectionRefs.current.get(key)?.focus()
+  }, [])
+
+  const toggleCollection = useCallback((key: string) => {
+    setExpandedCollections((current) => {
+      const next = new Set(current)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }, [])
+
+  const handleCollectionKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>, row: CollectionRow, index: number) => {
+      let targetIndex: number | null = null
+      switch (event.key) {
+        case 'ArrowDown':
+          targetIndex = Math.min(index + 1, renderedCollectionRows.length - 1)
+          break
+        case 'ArrowUp':
+          targetIndex = Math.max(index - 1, 0)
+          break
+        case 'Home':
+          targetIndex = 0
+          break
+        case 'End':
+          targetIndex = renderedCollectionRows.length - 1
+          break
+        case 'ArrowRight':
+          if (!row.hasChildren) return
+          if (!expandedCollections.has(row.collection.key)) {
+            event.preventDefault()
+            if (
+              index === renderedCollectionRows.length - 1 &&
+              renderedCollectionRows.length === collectionLimit
+            ) {
+              setCollectionLimit((current) => current + COLLECTION_PAGE_SIZE)
+            }
+            toggleCollection(row.collection.key)
+            return
+          }
+          if (renderedCollectionRows[index + 1]?.parentKey === row.collection.key) {
+            targetIndex = index + 1
+          }
+          break
+        case 'ArrowLeft':
+          if (row.hasChildren && expandedCollections.has(row.collection.key)) {
+            event.preventDefault()
+            toggleCollection(row.collection.key)
+            return
+          }
+          if (row.parentKey) {
+            targetIndex = renderedCollectionRows.findIndex(
+              ({ collection }) => collection.key === row.parentKey
+            )
+          }
+          break
+        default:
+          return
+      }
+      if (targetIndex === null || targetIndex < 0) return
+      event.preventDefault()
+      const target = renderedCollectionRows[targetIndex]
+      if (target) focusCollection(target.collection.key)
+    },
+    [
+      collectionLimit,
+      expandedCollections,
+      focusCollection,
+      renderedCollectionRows,
+      toggleCollection
+    ]
+  )
 
   const search = useCallback(
     async (event: FormEvent) => {
       event.preventDefault()
       const normalized = query.trim()
-      if (!normalized || busy) return
+      if (!normalized || operationInFlight.current) return
+      const generation = scopeGeneration.current
+      const root = projectRoot
+      const apiPort = port
+      operationInFlight.current = true
       setBusy('search')
       setMessage('')
       try {
         const items = await window.api.zoteroSearch(normalized, port)
+        if (!isCurrentScope(generation, root, apiPort)) return
         setResults(items)
         if (items.length === 0) setMessage('No matching Zotero items found.')
       } catch (error) {
-        setMessage(error instanceof Error ? error.message : String(error))
+        if (isCurrentScope(generation, root, apiPort)) {
+          setMessage(error instanceof Error ? error.message : String(error))
+        }
       } finally {
-        setBusy(null)
+        if (isCurrentScope(generation, root, apiPort)) {
+          operationInFlight.current = false
+          setBusy(null)
+        }
       }
     },
-    [busy, port, query]
+    [isCurrentScope, port, projectRoot, query]
   )
 
   const add = useCallback(
     async (item: ZoteroSearchResult) => {
+      if (operationInFlight.current) return
+      const generation = scopeGeneration.current
+      const root = projectRoot
+      const apiPort = port
+      operationInFlight.current = true
       setBusy(item.citekey)
       setMessage('')
       try {
-        await addReferenceAtCursor({ source: 'zotero', citekey: item.citekey, port })
-        setMessage(`Added @${item.citekey} and inserted its citation.`)
+        const inserted = await addReferenceAtCursor({
+          source: 'zotero',
+          citekey: item.citekey,
+          port
+        })
+        if (isCurrentScope(generation, root, apiPort)) {
+          setMessage(
+            inserted
+              ? `Added @${item.citekey} and inserted its citation.`
+              : `Added @${item.citekey} to the project bibliography, but the editor changed before citation insertion.`
+          )
+        }
       } catch (error) {
-        setMessage(error instanceof Error ? error.message : String(error))
+        if (isCurrentScope(generation, root, apiPort)) {
+          setMessage(error instanceof Error ? error.message : String(error))
+        }
       } finally {
-        setBusy(null)
+        if (isCurrentScope(generation, root, apiPort)) {
+          operationInFlight.current = false
+          setBusy(null)
+        }
       }
     },
-    [port]
+    [isCurrentScope, port, projectRoot]
   )
 
   const saveConfig = useCallback(async () => {
+    if (operationInFlight.current) return
+    const generation = scopeGeneration.current
+    const root = projectRoot
+    const apiPort = port
+    operationInFlight.current = true
     setBusy('save')
     setMessage('')
     try {
       const saved = await window.api.researchSaveConfig(config)
+      if (!isCurrentScope(generation, root, apiPort)) return
       setConfig(saved)
       setMessage('Research settings saved.')
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error))
+      if (isCurrentScope(generation, root, apiPort)) {
+        setMessage(error instanceof Error ? error.message : String(error))
+      }
     } finally {
-      setBusy(null)
+      if (isCurrentScope(generation, root, apiPort)) {
+        operationInFlight.current = false
+        setBusy(null)
+      }
     }
-  }, [config])
+  }, [config, isCurrentScope, port, projectRoot])
 
   const syncCollection = useCallback(
     async (confirmFirst = true) => {
-      if (!config.zoteroCollection || !targetFile) return
+      if (!config.zoteroCollection || !targetFile || operationInFlight.current) return
       const selected = collections.find((collection) => collection.key === config.zoteroCollection)
       if (
         confirmFirst &&
@@ -118,6 +334,10 @@ export function ZoteroReferences() {
       ) {
         return
       }
+      const generation = scopeGeneration.current
+      const root = projectRoot
+      const apiPort = port
+      operationInFlight.current = true
       setBusy('sync')
       setMessage('')
       try {
@@ -126,19 +346,34 @@ export function ZoteroReferences() {
           targetFile,
           port
         )
-        if (projectRoot) {
-          const entries = await window.api.findBibInProject(projectRoot)
+        if (!isCurrentScope(generation, root, apiPort)) return
+        if (root) {
+          const entries = await window.api.findBibInProject(root)
+          if (!isCurrentScope(generation, root, apiPort)) return
           useProjectStore.getState().setBibEntries(entries)
-          useProjectStore.getState().invalidateDirectory(projectRoot)
+          useProjectStore.getState().invalidateDirectory(root)
         }
         setMessage(`Synchronized ${result.entryCount} entries to ${config.zoteroFile}.`)
       } catch (error) {
-        setMessage(error instanceof Error ? error.message : String(error))
+        if (isCurrentScope(generation, root, apiPort)) {
+          setMessage(error instanceof Error ? error.message : String(error))
+        }
       } finally {
-        setBusy(null)
+        if (isCurrentScope(generation, root, apiPort)) {
+          operationInFlight.current = false
+          setBusy(null)
+        }
       }
     },
-    [collections, config.zoteroCollection, config.zoteroFile, port, projectRoot, targetFile]
+    [
+      collections,
+      config.zoteroCollection,
+      config.zoteroFile,
+      isCurrentScope,
+      port,
+      projectRoot,
+      targetFile
+    ]
   )
 
   if (busy === 'load') {
@@ -157,6 +392,7 @@ export function ZoteroReferences() {
           onClick={() => void saveConfig()}
           disabled={busy !== null}
           title="Save research settings"
+          aria-label="Save research settings"
         >
           <Save size={14} />
         </button>
@@ -165,6 +401,7 @@ export function ZoteroReferences() {
           onClick={() => void syncCollection(true)}
           disabled={busy !== null || !config.zoteroCollection || !projectRoot}
           title="Synchronize selected collection"
+          aria-label="Synchronize selected collection"
         >
           {busy === 'sync' ? <Loader className="spin" size={14} /> : <RefreshCw size={14} />}
         </button>
@@ -173,26 +410,67 @@ export function ZoteroReferences() {
         {collectionRows.length === 0 ? (
           <div className="research-muted">No Zotero collections found.</div>
         ) : (
-          collectionRows.map(({ collection, depth }) => (
+          renderedCollectionRows.map((row, index) => (
             <button
               type="button"
               draggable
               role="treeitem"
-              aria-selected={config.zoteroCollection === collection.key}
-              className={config.zoteroCollection === collection.key ? 'active' : ''}
-              style={{ paddingLeft: 10 + depth * 16 }}
-              key={collection.key}
-              onClick={() =>
-                setConfig((current) => ({ ...current, zoteroCollection: collection.key }))
+              aria-level={row.depth + 1}
+              aria-expanded={
+                row.hasChildren ? expandedCollections.has(row.collection.key) : undefined
               }
-              onDragStart={(event) => setZoteroCollectionDragData(event, { collection, port })}
+              aria-selected={config.zoteroCollection === row.collection.key}
+              className={config.zoteroCollection === row.collection.key ? 'active' : ''}
+              style={{ paddingLeft: 8 + row.depth * 16 }}
+              tabIndex={activeCollectionKey === row.collection.key ? 0 : -1}
+              key={row.collection.key}
+              ref={(element) => {
+                if (element) collectionRefs.current.set(row.collection.key, element)
+                else collectionRefs.current.delete(row.collection.key)
+              }}
+              onFocus={() => setFocusedCollection(row.collection.key)}
+              onKeyDown={(event) => handleCollectionKeyDown(event, row, index)}
+              onClick={() => {
+                setConfig((current) => ({ ...current, zoteroCollection: row.collection.key }))
+                if (row.hasChildren) {
+                  if (
+                    !expandedCollections.has(row.collection.key) &&
+                    index === renderedCollectionRows.length - 1 &&
+                    renderedCollectionRows.length === collectionLimit
+                  ) {
+                    setCollectionLimit((current) => current + COLLECTION_PAGE_SIZE)
+                  }
+                  toggleCollection(row.collection.key)
+                }
+              }}
+              onDragStart={(event) =>
+                setZoteroCollectionDragData(event, { collection: row.collection, port })
+              }
             >
-              <span>{collection.name}</span>
-              <small>{collection.itemCount}</small>
+              <ChevronRight
+                className={
+                  row.hasChildren && expandedCollections.has(row.collection.key)
+                    ? 'collection-chevron expanded'
+                    : 'collection-chevron'
+                }
+                size={13}
+                aria-hidden="true"
+              />
+              <span>{row.collection.name}</span>
+              <small>{row.collection.itemCount}</small>
             </button>
           ))
         )}
       </div>
+      {visibleCollectionRows.length > renderedCollectionRows.length && (
+        <button
+          type="button"
+          className="zotero-show-more"
+          onClick={() => setCollectionLimit((current) => current + COLLECTION_PAGE_SIZE)}
+        >
+          Show more collections ({visibleCollectionRows.length - renderedCollectionRows.length})
+        </button>
+      )}
       <label className="research-check-row">
         <input
           type="checkbox"
@@ -222,7 +500,7 @@ export function ZoteroReferences() {
             key={item.citekey}
             draggable
             onDragStart={(event) =>
-              setReferenceDragData(event, { source: 'zotero', citekey: item.citekey, port })
+              setReferenceDragData(event, buildZoteroReferencePayload(item, port))
             }
           >
             <div>
@@ -234,6 +512,15 @@ export function ZoteroReferences() {
               {item.year ? ` · ${item.year}` : ''}
             </span>
             <div className="reference-card-actions">
+              {onAddToChat && (
+                <button
+                  type="button"
+                  onClick={() => onAddToChat(buildZoteroReferencePayload(item, port))}
+                  aria-label={`Add ${item.title || item.citekey} to Chat`}
+                >
+                  <MessageSquarePlus size={13} /> Add to Chat
+                </button>
+              )}
               <button type="button" onClick={() => void add(item)} disabled={busy !== null}>
                 {busy === item.citekey ? <Loader className="spin" size={13} /> : <Plus size={13} />}
                 Add &amp; cite
@@ -251,9 +538,7 @@ export function ZoteroReferences() {
   )
 }
 
-function orderCollections(
-  collections: ZoteroCollection[]
-): Array<{ collection: ZoteroCollection; depth: number }> {
+function orderCollections(collections: ZoteroCollection[]): CollectionRow[] {
   const children = new Map<string | null, ZoteroCollection[]>()
   const known = new Set(collections.map((collection) => collection.key))
   for (const collection of collections) {
@@ -266,13 +551,61 @@ function orderCollections(
   for (const siblings of children.values()) {
     siblings.sort((left, right) => left.name.localeCompare(right.name))
   }
-  const rows: Array<{ collection: ZoteroCollection; depth: number }> = []
-  const visit = (parent: string | null, depth: number) => {
-    for (const collection of children.get(parent) ?? []) {
-      rows.push({ collection, depth })
-      visit(collection.key, depth + 1)
+  const rows: CollectionRow[] = []
+  const visited = new Set<string>()
+  const append = (roots: ZoteroCollection[], depth: number, parentKey: string | null): void => {
+    const stack = roots
+      .slice()
+      .reverse()
+      .map((collection) => ({ collection, depth, parentKey }))
+    while (stack.length > 0) {
+      const next = stack.pop()
+      if (!next || visited.has(next.collection.key)) continue
+      visited.add(next.collection.key)
+      rows.push({ ...next, hasChildren: false })
+      const descendants = children.get(next.collection.key) ?? []
+      for (let index = descendants.length - 1; index >= 0; index -= 1) {
+        stack.push({
+          collection: descendants[index],
+          depth: next.depth + 1,
+          parentKey: next.collection.key
+        })
+      }
     }
   }
-  visit(null, 0)
+  append(children.get(null) ?? [], 0, null)
+  // Malformed parent cycles should not hide the rest of the library or recurse forever.
+  for (const collection of collections) {
+    if (visited.has(collection.key)) continue
+    append([collection], 0, null)
+  }
+  const renderedParents = new Set(rows.flatMap((row) => (row.parentKey ? [row.parentKey] : [])))
+  for (const row of rows) row.hasChildren = renderedParents.has(row.collection.key)
   return rows
+}
+
+function filterExpandedCollections(rows: CollectionRow[], expanded: Set<string>): CollectionRow[] {
+  const hiddenDepths: number[] = []
+  return rows.filter((row) => {
+    while (hiddenDepths.length > 0 && row.depth <= hiddenDepths[hiddenDepths.length - 1]) {
+      hiddenDepths.pop()
+    }
+    const hidden = hiddenDepths.length > 0
+    if (!expanded.has(row.collection.key)) hiddenDepths.push(row.depth)
+    return !hidden
+  })
+}
+
+function expandedAncestors(rows: CollectionRow[], selectedKey: string | null): Set<string> {
+  if (!selectedKey) return new Set()
+  const byKey = new Map(rows.map((row) => [row.collection.key, row]))
+  const expanded = new Set<string>()
+  const visited = new Set<string>()
+  let parent = byKey.get(selectedKey)?.parentKey ?? null
+  while (parent && !visited.has(parent)) {
+    visited.add(parent)
+    expanded.add(parent)
+    parent = byKey.get(parent)?.parentKey ?? null
+  }
+  return expanded
 }

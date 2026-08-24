@@ -101,7 +101,7 @@ body,
 
 .startup-shell__toolbar {
   display: flex;
-  height: 48px;
+  height: 38px;
   flex: 0 0 auto;
   align-items: center;
   gap: 16px;
@@ -202,6 +202,7 @@ body,
   height: 34px;
   margin: 0;
   border-radius: 0;
+  border-top: 2px solid var(--startup-accent);
   border-right: 1px solid var(--startup-border);
   border-bottom: 1px solid var(--startup-border);
 }
@@ -256,8 +257,9 @@ body,
   align-items: center;
   gap: 8px;
   padding: 0 12px;
-  color: #ffffff;
-  background: var(--startup-accent);
+  color: var(--startup-muted);
+  background: var(--startup-surface);
+  border-top: 1px solid var(--startup-border);
   font-size: 12px;
 }
 
@@ -294,9 +296,9 @@ body,
   width: min(520px, calc(100vw - 48px));
   padding: 28px;
   border: 1px solid var(--startup-border);
-  border-radius: 12px;
+  border-radius: 6px;
   background: var(--startup-surface);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.16);
 }
 
 .startup-error h1 {

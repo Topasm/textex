@@ -1,5 +1,21 @@
-import { useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo } from 'react'
+import { memo, useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo } from 'react'
 import type { ReactNode } from 'react'
+import {
+  BookOpenText,
+  ChevronRight,
+  File,
+  FileCode2,
+  FileCog,
+  FileImage,
+  FilePlus2,
+  FileText,
+  Folder,
+  FolderOpen,
+  FolderPlus,
+  PencilLine,
+  Trash2,
+  type LucideIcon
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useEditorStore } from '../store/useEditorStore'
 import { useProjectStore } from '../store/useProjectStore'
@@ -15,94 +31,47 @@ import {
 } from '../services/projectIndex'
 import type { ProjectTreeRow } from '../services/projectIndex'
 import type { DirectoryEntry, GitFileStatus, ProjectIndexEntry } from '../../shared/types'
+import { ICON_SIZE } from './ui/IconSystem'
 
-function iconWrapper(kind: string, path: ReactNode): ReactNode {
+function iconWrapper(kind: string, Icon: LucideIcon): ReactNode {
   return (
     <span className={`file-tree-icon file-tree-icon-${kind}`} aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="currentColor">
-        {path}
-      </svg>
+      <Icon size={ICON_SIZE.compact} />
     </span>
   )
 }
 
 function DisclosureIcon({ expanded }: { expanded: boolean }) {
   return (
-    <svg
+    <ChevronRight
       className={`file-tree-disclosure-icon${expanded ? ' expanded' : ''}`}
-      viewBox="0 0 16 16"
-      fill="currentColor"
-      aria-hidden="true"
-    >
-      <path d="M5.2 3.5 11 8l-5.8 4.5V3.5Z" />
-    </svg>
+      size={ICON_SIZE.micro}
+    />
   )
 }
 
 function getFileIcon(name: string, type: 'file' | 'directory', expanded?: boolean): ReactNode {
   if (type === 'directory') {
-    return expanded
-      ? iconWrapper(
-          'folder-open',
-          <path d="M3.5 7.5c0-1.1.9-2 2-2h4.2l1.5 1.8h7.3c1.1 0 2 .9 2 2v1H7.7c-.9 0-1.7.6-1.9 1.5l-1.6 6.2H4.1c-.9 0-1.6-.7-1.6-1.6V7.5Zm2.4 4.3h14.7c.7 0 1.2.7 1 1.4l-1.3 5c-.1.5-.6.8-1 .8H4.7c-.7 0-1.2-.7-1-1.4l1.3-5c.1-.5.5-.8.9-.8Z" />
-        )
-      : iconWrapper(
-          'folder',
-          <path d="M3.5 7.7c0-1.2 1-2.2 2.2-2.2h4l1.6 1.8h7c1.2 0 2.2 1 2.2 2.2v7.8c0 1.2-1 2.2-2.2 2.2H5.7c-1.2 0-2.2-1-2.2-2.2V7.7Z" />
-        )
+    return expanded ? iconWrapper('folder-open', FolderOpen) : iconWrapper('folder', Folder)
   }
   const ext = name.split('.').pop()?.toLowerCase()
   switch (ext) {
     case 'tex':
-      return iconWrapper(
-        'tex',
-        <>
-          <path d="M6.5 3.8h7.6l3.9 3.9v12.5H6.5c-1 0-1.8-.8-1.8-1.8V5.6c0-1 .8-1.8 1.8-1.8Zm7.1 1.7v2.8c0 .5.4.9.9.9h2.8" />
-          <path d="M8 12.1h7.8v1.6H8zm2.3 3.1h3.2v1.6h-3.2z" />
-        </>
-      )
+      return iconWrapper('tex', FileCode2)
     case 'bib':
-      return iconWrapper(
-        'bib',
-        <>
-          <path d="M6.8 5.2h3.7c.6 0 1 .4 1 1v11.6c0 .6-.4 1-1 1H6.8c-.6 0-1-.4-1-1V6.2c0-.6.4-1 1-1Z" />
-          <path d="M12.4 5.8h4.1c.6 0 1 .4 1 1v10.9c0 .6-.4 1-1 1h-4.1c-.6 0-1-.4-1-1V6.8c0-.6.4-1 1-1Z" />
-        </>
-      )
+      return iconWrapper('bib', BookOpenText)
     case 'sty':
     case 'cls':
-      return iconWrapper(
-        'style',
-        <path d="m12 4.5 1 .5 1.1-.2.8.8-.2 1.1.5 1 .9.4v1.2l-.9.4-.5 1 .2 1.1-.8.8-1.1-.2-1 .5-.4.9H11l-.4-.9-1-.5-1.1.2-.8-.8.2-1.1-.5-1-.9-.4V8.1l.9-.4.5-1-.2-1.1.8-.8 1.1.2 1-.5.4-.9h1.2l.4.9Zm0 3a2.8 2.8 0 1 0 0 5.6 2.8 2.8 0 0 0 0-5.6Z" />
-      )
+      return iconWrapper('style', FileCog)
     case 'pdf':
-      return iconWrapper(
-        'pdf',
-        <>
-          <path d="M6.3 3.8h7.7L18 7.8v10.4c0 1.1-.9 2-2 2H6.3c-1.1 0-2-.9-2-2V5.8c0-1.1.9-2 2-2Z" />
-          <path d="M13.7 3.8v3.1c0 .6.5 1.1 1.1 1.1H18" />
-          <path d="M7.8 13.1h6.8v1.6H7.8z" />
-        </>
-      )
+      return iconWrapper('pdf', FileText)
     case 'png':
     case 'jpg':
     case 'jpeg':
     case 'svg':
-      return iconWrapper(
-        'image',
-        <>
-          <path d="M5.7 5.2h12.6c.9 0 1.5.7 1.5 1.5v10.6c0 .8-.6 1.5-1.5 1.5H5.7c-.9 0-1.5-.7-1.5-1.5V6.7c0-.8.6-1.5 1.5-1.5Z" />
-          <path d="M8.4 10.1a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm-2 6.3 3.2-3.5 2.3 2.5 2.7-3 2.9 4H6.4Z" />
-        </>
-      )
+      return iconWrapper('image', FileImage)
     default:
-      return iconWrapper(
-        'file',
-        <>
-          <path d="M6.3 3.8h7.6L18 7.9v10.3c0 1.1-.9 2-2 2H6.3c-1.1 0-2-.9-2-2V5.8c0-1.1.9-2 2-2Z" />
-          <path d="M13.8 3.8v3.1c0 .6.5 1.1 1.1 1.1H18" />
-        </>
-      )
+      return iconWrapper('file', File)
   }
 }
 
@@ -467,7 +436,7 @@ function FileTreeNode({ entry, depth, gitFiles, onChanged }: FileTreeNodeProps) 
                 title={t('fileTree.newFile')}
                 aria-label={t('fileTree.newFile')}
               >
-                +
+                <FilePlus2 size={ICON_SIZE.micro} />
               </button>
               <button
                 className="file-tree-action-btn"
@@ -475,7 +444,7 @@ function FileTreeNode({ entry, depth, gitFiles, onChanged }: FileTreeNodeProps) 
                 title={t('fileTree.newFolder')}
                 aria-label={t('fileTree.newFolder')}
               >
-                +&#x2395;
+                <FolderPlus size={ICON_SIZE.micro} />
               </button>
             </>
           )}
@@ -488,7 +457,7 @@ function FileTreeNode({ entry, depth, gitFiles, onChanged }: FileTreeNodeProps) 
             title={t('fileTree.rename')}
             aria-label={t('fileTree.rename')}
           >
-            &#x270E;
+            <PencilLine size={ICON_SIZE.micro} />
           </button>
           <button
             className="file-tree-action-btn file-tree-delete-btn"
@@ -496,7 +465,7 @@ function FileTreeNode({ entry, depth, gitFiles, onChanged }: FileTreeNodeProps) 
             title={t('fileTree.delete')}
             aria-label={t('fileTree.delete')}
           >
-            &times;
+            <Trash2 size={ICON_SIZE.micro} />
           </button>
         </span>
         {gitDeco && <span className={`file-tree-git ${gitDeco.className}`}>{gitDeco.label}</span>}
@@ -555,7 +524,7 @@ interface ProjectFileTreeRowProps {
   onDeleted: (entry: ProjectIndexEntry) => void
 }
 
-function ProjectFileTreeRow({
+const ProjectFileTreeRow = memo(function ProjectFileTreeRow({
   row,
   expanded,
   gitFiles,
@@ -570,7 +539,7 @@ function ProjectFileTreeRow({
   const [hoverPreview, setHoverPreview] = useState<DOMRect | null>(null)
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const itemRef = useRef<HTMLDivElement>(null)
-  const activeFilePath = useEditorStore((state) => state.activeFilePath)
+  const isActiveFile = useEditorStore((state) => state.activeFilePath === entry.path)
   const isImage = entry.type === 'file' && isImageFile(entry.name)
 
   const handleClick = useCallback(async () => {
@@ -698,7 +667,7 @@ function ProjectFileTreeRow({
       <div
         ref={itemRef}
         data-file-tree-path={entry.relativePath}
-        className={`file-tree-item${entry.path === activeFilePath ? ' selected' : ''}${isImage ? ' draggable-image' : ''}${entry.type === 'directory' ? ' is-directory' : ''}`}
+        className={`file-tree-item${isActiveFile ? ' selected' : ''}${isImage ? ' draggable-image' : ''}${entry.type === 'directory' ? ' is-directory' : ''}`}
         style={{ paddingLeft: `${8 + depth * 16}px`, height: FILE_TREE_ROW_HEIGHT }}
         onClick={() => void handleClick()}
         onContextMenu={(event) => {
@@ -744,7 +713,7 @@ function ProjectFileTreeRow({
                 title={t('fileTree.newFile')}
                 aria-label={t('fileTree.newFile')}
               >
-                +
+                <FilePlus2 size={ICON_SIZE.micro} />
               </button>
               <button
                 className="file-tree-action-btn"
@@ -755,7 +724,7 @@ function ProjectFileTreeRow({
                 title={t('fileTree.newFolder')}
                 aria-label={t('fileTree.newFolder')}
               >
-                +&#x2395;
+                <FolderPlus size={ICON_SIZE.micro} />
               </button>
             </>
           )}
@@ -768,7 +737,7 @@ function ProjectFileTreeRow({
             title={t('fileTree.rename')}
             aria-label={t('fileTree.rename')}
           >
-            &#x270E;
+            <PencilLine size={ICON_SIZE.micro} />
           </button>
           <button
             className="file-tree-action-btn file-tree-delete-btn"
@@ -776,7 +745,7 @@ function ProjectFileTreeRow({
             title={t('fileTree.delete')}
             aria-label={t('fileTree.delete')}
           >
-            &times;
+            <Trash2 size={ICON_SIZE.micro} />
           </button>
         </span>
         {gitDeco && <span className={`file-tree-git ${gitDeco.className}`}>{gitDeco.label}</span>}
@@ -790,7 +759,7 @@ function ProjectFileTreeRow({
       )}
     </div>
   )
-}
+})
 
 interface CreatingProjectRow {
   parentPath: string
@@ -960,7 +929,7 @@ function VirtualizedProjectFileTree({
           title={t('fileTree.newFile')}
           aria-label={t('fileTree.newFile')}
         >
-          +
+          <FilePlus2 size={ICON_SIZE.compact} />
         </button>
         <button
           className="file-tree-header-btn"
@@ -968,7 +937,7 @@ function VirtualizedProjectFileTree({
           title={t('fileTree.newFolder')}
           aria-label={t('fileTree.newFolder')}
         >
-          +&#x2395;
+          <FolderPlus size={ICON_SIZE.compact} />
         </button>
       </div>
       {rootCreatingType && (
@@ -1109,7 +1078,7 @@ function FileTree() {
           title={t('fileTree.newFile')}
           aria-label={t('fileTree.newFile')}
         >
-          +
+          <FilePlus2 size={ICON_SIZE.compact} />
         </button>
         <button
           className="file-tree-header-btn"
@@ -1117,7 +1086,7 @@ function FileTree() {
           title={t('fileTree.newFolder')}
           aria-label={t('fileTree.newFolder')}
         >
-          +&#x2395;
+          <FolderPlus size={ICON_SIZE.compact} />
         </button>
       </div>
       {creatingType && (
@@ -1144,4 +1113,4 @@ function FileTree() {
   )
 }
 
-export default FileTree
+export default memo(FileTree)

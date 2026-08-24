@@ -1,10 +1,11 @@
-import { useState, useCallback, useEffect, useRef, useMemo, useDeferredValue } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo, useDeferredValue, useId } from 'react'
 import {
   BookOpen,
   Library,
   FileSearch,
   Code,
   ChevronDown,
+  ChevronUp,
   X,
   Search,
   FolderOpen,
@@ -19,11 +20,13 @@ import { useProjectStore } from '../store/useProjectStore'
 import { useSettingsStore } from '../store/useSettingsStore'
 import { usePdfStore } from '../store/usePdfStore'
 import { useUiStore } from '../store/useUiStore'
+import { useNotificationStore } from '../store/useNotificationStore'
 import { useClickOutside } from '../hooks/useClickOutside'
 import { isFeatureEnabled } from '../utils/featureFlags'
 import { templates } from '../data/templates'
 import { openProject } from '../utils/openProject'
-import { logError } from '../utils/errorMessage'
+import { errorMessage, logError } from '../utils/errorMessage'
+import { focusCollectionItem, type CollectionFocusPosition } from '../utils/collectionFocus'
 import {
   HomePanel,
   CitationSearchPanel,
@@ -50,6 +53,7 @@ import type {
 import { searchProjectFiles } from '../services/projectIndex'
 import { getDesktopCapabilities } from '../platform/capabilities'
 import { addReferenceAtCursor } from './research/referenceActions'
+import './OmniSearch.css'
 
 const MODE_CONFIGS: Record<SearchMode, ModeConfig> = {
   file: {
@@ -194,6 +198,12 @@ export function OmniSearch({
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([])
   const [homeHighlightedIndex, setHomeHighlightedIndex] = useState(0)
   const deferredSearchTerm = useDeferredValue(searchTerm)
+  const generatedId = useId().replace(/:/g, '')
+  const inputId = `omni-search-${generatedId}`
+  const resultsId = `${inputId}-results`
+  const resultsStatusId = `${inputId}-status`
+  const modeMenuId = `${inputId}-mode-menu`
+  const getOptionId = useCallback((index: number) => `${resultsId}-option-${index}`, [resultsId])
   const projectFileResults = useMemo(
     () => searchProjectFiles(projectIndexEntries ?? [], deferredSearchTerm),
     [projectIndexEntries, deferredSearchTerm]
@@ -201,6 +211,7 @@ export function OmniSearch({
 
   const wrapperRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const modeButtonRef = useRef<HTMLButtonElement>(null)
   const modeMenuRef = useRef<HTMLDivElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -254,9 +265,7 @@ export function OmniSearch({
     const highlighted = dropdown.querySelector(
       '.omni-search-result.highlighted'
     ) as HTMLElement | null
-    if (highlighted) {
-      highlighted.scrollIntoView({ block: 'nearest' })
-    }
+    highlighted?.scrollIntoView?.({ block: 'nearest' })
   }, [highlightedIndex, homeHighlightedIndex])
 
   // ---- Home mode: filter results ----
@@ -332,9 +341,33 @@ export function OmniSearch({
     if (!isHomeMode) return
     setIsDropdownOpen(homeResults.length > 0)
     setHomeHighlightedIndex(0)
-  }, [isHomeMode, homeResults])
+  }, [deferredSearchTerm, homeResults.length, isHomeMode])
 
   // ---- Home mode: select result ----
+  const openRecentProject = useCallback(
+    async (project: RecentProject): Promise<void> => {
+      try {
+        await openProject(project.path)
+      } catch (error) {
+        useNotificationStore.getState().pushNotification({
+          id: `recent-project-open:${project.path}`,
+          message: t('projectSwitcher.openFailed', {
+            name: project.title || project.name,
+            reason: errorMessage(error)
+          }),
+          tone: 'error',
+          action: {
+            label: t('recentProjects.retry'),
+            run: async () => {
+              await openProject(project.path)
+            }
+          }
+        })
+      }
+    },
+    [t]
+  )
+
   const handleHomeSelect = useCallback(
     (result: HomeResult) => {
       setSearchTerm('')
@@ -343,12 +376,7 @@ export function OmniSearch({
       switch (result.kind) {
         case 'project': {
           const project = result.data as RecentProject
-          openProject(project.path).catch(() => {
-            window.api
-              .removeRecentProject(project.path)
-              .then((s) => setRecentProjects(s.recentProjects ?? []))
-              .catch((err) => logError('OmniSearch:removeRecent', err))
-          })
+          void openRecentProject(project)
           break
         }
         case 'template':
@@ -371,7 +399,7 @@ export function OmniSearch({
         }
       }
     },
-    [searchTerm, onOpenFolder, onNewFromTemplate, onAiDraft, onOpenSettings]
+    [searchTerm, onOpenFolder, onNewFromTemplate, onAiDraft, onOpenSettings, openRecentProject]
   )
 
   // Slash prefix detection (editor mode only)
@@ -433,11 +461,7 @@ export function OmniSearch({
     if (isHomeMode) return
     if (mode === 'cite') {
       setHighlightedIndex(0)
-      if (searchTerm && citeResults.length > 0) {
-        setIsDropdownOpen(true)
-      } else if (!searchTerm) {
-        setIsDropdownOpen(false)
-      }
+      setIsDropdownOpen(searchTerm.length > 0)
     }
   }, [isHomeMode, mode, searchTerm, citeResults.length])
 
@@ -505,16 +529,27 @@ export function OmniSearch({
     return () => clearTimeout(timer)
   }, [isHomeMode, mode, searchTerm])
 
-  const addOnlineReference = useCallback(async (reference: OnlineReference) => {
-    try {
-      await addReferenceAtCursor({ source: 'online', reference })
-      setSearchTerm('')
-      setOnlineResults([])
-      setIsDropdownOpen(false)
-    } catch (error) {
-      logError('OmniSearch:addOnlineReference', error)
-    }
-  }, [])
+  const addOnlineReference = useCallback(
+    async (reference: OnlineReference) => {
+      try {
+        const inserted = await addReferenceAtCursor({ source: 'online', reference })
+        if (!inserted) {
+          useNotificationStore.getState().pushNotification({
+            id: 'omni-search:reference-insert-skipped',
+            message: t('notifications.referenceInsertSkipped'),
+            tone: 'warning'
+          })
+          return
+        }
+        setSearchTerm('')
+        setOnlineResults([])
+        setIsDropdownOpen(false)
+      } catch (error) {
+        logError('OmniSearch:addOnlineReference', error)
+      }
+    },
+    [t]
+  )
 
   // ---- PDF MODE: Drive usePdfSearch via store ----
   useEffect(() => {
@@ -579,7 +614,7 @@ export function OmniSearch({
     }
     setTexResults(matches)
     setHighlightedIndex(0)
-    setIsDropdownOpen(matches.length > 0)
+    setIsDropdownOpen(true)
     // Auto-jump to first match (skipFocus to keep input focused)
     if (matches.length > 0) {
       useEditorStore.getState().requestJumpToLine(matches[0].line, 1, true)
@@ -664,6 +699,12 @@ export function OmniSearch({
         } else if (e.key === 'ArrowUp') {
           e.preventDefault()
           if (homeResults.length) setHomeHighlightedIndex((prev) => Math.max(prev - 1, 0))
+        } else if (e.key === 'Home' && homeResults.length) {
+          e.preventDefault()
+          setHomeHighlightedIndex(0)
+        } else if (e.key === 'End' && homeResults.length) {
+          e.preventDefault()
+          setHomeHighlightedIndex(homeResults.length - 1)
         } else if (e.key === 'Enter') {
           e.preventDefault()
           if (homeResults[homeHighlightedIndex]) {
@@ -686,6 +727,12 @@ export function OmniSearch({
               (previous) => (previous - 1 + projectFileResults.length) % projectFileResults.length
             )
           }
+        } else if (e.key === 'Home' && projectFileResults.length) {
+          e.preventDefault()
+          setHighlightedIndex(0)
+        } else if (e.key === 'End' && projectFileResults.length) {
+          e.preventDefault()
+          setHighlightedIndex(projectFileResults.length - 1)
         } else if (e.key === 'Enter' && projectFileResults[highlightedIndex]) {
           e.preventDefault()
           void handleProjectFileSelect(projectFileResults[highlightedIndex])
@@ -699,6 +746,12 @@ export function OmniSearch({
           e.preventDefault()
           if (results.length)
             setHighlightedIndex((prev) => (prev - 1 + results.length) % results.length)
+        } else if (e.key === 'Home' && results.length) {
+          e.preventDefault()
+          setHighlightedIndex(0)
+        } else if (e.key === 'End' && results.length) {
+          e.preventDefault()
+          setHighlightedIndex(results.length - 1)
         } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
           e.preventDefault()
           insertCitation()
@@ -733,6 +786,12 @@ export function OmniSearch({
               (previous) => (previous - 1 + onlineResults.length) % onlineResults.length
             )
           }
+        } else if (e.key === 'Home' && onlineResults.length) {
+          e.preventDefault()
+          setHighlightedIndex(0)
+        } else if (e.key === 'End' && onlineResults.length) {
+          e.preventDefault()
+          setHighlightedIndex(onlineResults.length - 1)
         } else if (e.key === 'Enter' && onlineResults[highlightedIndex]) {
           e.preventDefault()
           void addOnlineReference(onlineResults[highlightedIndex])
@@ -752,6 +811,15 @@ export function OmniSearch({
             setHighlightedIndex(prev)
             jumpToLine(texResults[prev].line)
           }
+        } else if (e.key === 'Home' && texResults.length) {
+          e.preventDefault()
+          setHighlightedIndex(0)
+          jumpToLine(texResults[0].line)
+        } else if (e.key === 'End' && texResults.length) {
+          e.preventDefault()
+          const last = texResults.length - 1
+          setHighlightedIndex(last)
+          jumpToLine(texResults[last].line)
         } else if (e.key === 'Enter' && e.shiftKey) {
           e.preventDefault()
           handleTexPrev()
@@ -804,6 +872,37 @@ export function OmniSearch({
     inputRef.current?.focus()
   }, [])
 
+  const focusModeMenuItem = useCallback((position: CollectionFocusPosition): void => {
+    focusCollectionItem<HTMLButtonElement>(modeMenuRef.current, '[role="menuitemradio"]', position)
+  }, [])
+
+  const openModeMenuFromKeyboard = (position: 'first' | 'last'): void => {
+    setIsModeMenuOpen(true)
+    requestAnimationFrame(() => focusModeMenuItem(position))
+  }
+
+  const handleModeMenuKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      focusModeMenuItem('next')
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      focusModeMenuItem('previous')
+    } else if (event.key === 'Home') {
+      event.preventDefault()
+      focusModeMenuItem('first')
+    } else if (event.key === 'End') {
+      event.preventDefault()
+      focusModeMenuItem('last')
+    } else if (event.key === 'Escape') {
+      event.preventDefault()
+      setIsModeMenuOpen(false)
+      modeButtonRef.current?.focus()
+    } else if (event.key === 'Tab') {
+      setIsModeMenuOpen(false)
+    }
+  }
+
   const modeConfig = MODE_CONFIGS[mode]
   const ModeIcon = modeConfig.icon
 
@@ -816,6 +915,7 @@ export function OmniSearch({
           homeHighlightedIndex={homeHighlightedIndex}
           setHomeHighlightedIndex={setHomeHighlightedIndex}
           handleHomeSelect={handleHomeSelect}
+          getOptionId={getOptionId}
         />
       )
     }
@@ -829,6 +929,7 @@ export function OmniSearch({
           setHighlightedIndex={setHighlightedIndex}
           selectedKeys={selectedKeys}
           toggleSelection={toggleSelection}
+          getOptionId={getOptionId}
         />
       )
     }
@@ -841,6 +942,7 @@ export function OmniSearch({
           highlightedIndex={highlightedIndex}
           setHighlightedIndex={setHighlightedIndex}
           openFile={(result) => void handleProjectFileSelect(result)}
+          getOptionId={getOptionId}
         />
       )
     }
@@ -856,6 +958,7 @@ export function OmniSearch({
           setHighlightedIndex={setHighlightedIndex}
           selectedKeys={selectedKeys}
           toggleSelection={toggleSelection}
+          getOptionId={getOptionId}
         />
       )
     }
@@ -869,6 +972,7 @@ export function OmniSearch({
           highlightedIndex={highlightedIndex}
           setHighlightedIndex={setHighlightedIndex}
           addReference={(reference) => void addOnlineReference(reference)}
+          getOptionId={getOptionId}
         />
       )
     }
@@ -893,8 +997,7 @@ export function OmniSearch({
           highlightedIndex={highlightedIndex}
           setHighlightedIndex={setHighlightedIndex}
           jumpToLine={jumpToLine}
-          handleTexPrev={handleTexPrev}
-          handleTexNext={handleTexNext}
+          getOptionId={getOptionId}
         />
       )
     }
@@ -920,37 +1023,100 @@ export function OmniSearch({
                 ? onlineResults.length > 0 || onlineLoading || searchTerm.length > 1
                 : texResults.length > 0 || searchTerm.length > 0)
 
+  const selectableResultCount = isHomeMode
+    ? homeResults.length
+    : mode === 'file'
+      ? projectFileResults.length
+      : mode === 'cite'
+        ? citeResults.length
+        : mode === 'zotero'
+          ? zoteroResults.length
+          : mode === 'online'
+            ? onlineResults.length
+            : mode === 'tex'
+              ? texResults.length
+              : 0
+  const activeIndex = isHomeMode ? homeHighlightedIndex : highlightedIndex
+  const activeDescendant =
+    showDropdown && selectableResultCount > 0
+      ? getOptionId(Math.min(activeIndex, selectableResultCount - 1))
+      : undefined
+  const searchBusy = loading || onlineLoading
+  const resultStatus = searchBusy
+    ? t('omniSearch.searching')
+    : selectableResultCount > 0
+      ? t('omniSearch.resultCount', { count: selectableResultCount })
+      : searchTerm
+        ? mode === 'pdf' && !isHomeMode
+          ? pdfMatchCount > 0
+            ? t('omniSearch.matches', { current: pdfCurrentMatch + 1, total: pdfMatchCount })
+            : t('omniSearch.noMatches')
+          : t('omniSearch.noResults')
+        : ''
+  const translatedMode = isHomeMode ? t('omniSearch.home') : t(modeConfig.label)
+  const popupRole = !isHomeMode && mode === 'pdf' ? 'dialog' : 'listbox'
+
   return (
     <div
       className={`omni-search-wrapper${isHomeMode ? ' omni-search-home-mode' : ''}`}
       ref={wrapperRef}
     >
       {isHomeMode ? (
-        <div className="omni-search-home-icon">
+        <div className="omni-search-home-icon" aria-hidden="true">
           <Search size={14} />
         </div>
       ) : (
         <div className="omni-search-mode-btn-wrapper" ref={modeMenuRef}>
           <button
+            ref={modeButtonRef}
+            type="button"
             className="omni-search-mode-btn"
             onClick={() => setIsModeMenuOpen(!isModeMenuOpen)}
-            title="Search mode"
+            onKeyDown={(event) => {
+              if (event.key === 'ArrowDown') {
+                event.preventDefault()
+                openModeMenuFromKeyboard('first')
+              } else if (event.key === 'ArrowUp') {
+                event.preventDefault()
+                openModeMenuFromKeyboard('last')
+              } else if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                openModeMenuFromKeyboard('first')
+              } else if (event.key === 'Escape' && isModeMenuOpen) {
+                event.preventDefault()
+                setIsModeMenuOpen(false)
+              }
+            }}
+            title={t('omniSearch.modeSelector', { mode: translatedMode })}
+            aria-label={t('omniSearch.modeSelector', { mode: translatedMode })}
+            aria-haspopup="menu"
+            aria-expanded={isModeMenuOpen}
+            aria-controls={isModeMenuOpen ? modeMenuId : undefined}
           >
-            <ModeIcon size={14} />
-            <ChevronDown size={10} />
+            <ModeIcon size={14} aria-hidden="true" />
+            <ChevronDown size={10} aria-hidden="true" />
           </button>
           {isModeMenuOpen && (
-            <div className="omni-search-mode-menu">
+            <div
+              id={modeMenuId}
+              className="omni-search-mode-menu"
+              role="menu"
+              aria-label={t('omniSearch.modeMenuLabel')}
+              onKeyDown={handleModeMenuKeyDown}
+            >
               {(Object.keys(MODE_CONFIGS) as SearchMode[]).map((m) => {
                 const cfg = MODE_CONFIGS[m]
                 const Icon = cfg.icon
                 return (
                   <button
                     key={m}
+                    type="button"
                     className={`omni-search-mode-item${m === mode ? ' active' : ''}`}
                     onClick={() => handleModeSelect(m)}
+                    role="menuitemradio"
+                    aria-checked={m === mode}
                   >
-                    <Icon size={14} />
+                    <Icon size={14} aria-hidden="true" />
                     <span>{t(cfg.label)}</span>
                     <kbd>{cfg.shortcut}</kbd>
                   </button>
@@ -962,8 +1128,18 @@ export function OmniSearch({
       )}
 
       <input
+        id={inputId}
         ref={inputRef}
         className="omni-search-input"
+        role="combobox"
+        aria-label={t('omniSearch.searchLabel', { mode: translatedMode })}
+        aria-autocomplete={popupRole === 'listbox' ? 'list' : undefined}
+        aria-haspopup={popupRole}
+        aria-expanded={showDropdown}
+        aria-controls={showDropdown ? resultsId : undefined}
+        aria-activedescendant={activeDescendant}
+        aria-describedby={resultsStatusId}
+        aria-busy={searchBusy}
         placeholder={isHomeMode ? t('searchBar.placeholder') : t(modeConfig.placeholder)}
         value={searchTerm}
         onChange={(e) => handleInputChange(e.target.value)}
@@ -972,31 +1148,90 @@ export function OmniSearch({
           if (isHomeMode) {
             if (homeResults.length > 0) setIsDropdownOpen(true)
           } else if (mode === 'file' && searchTerm.length > 0) setIsDropdownOpen(true)
-          else if (mode === 'cite' && citeResults.length > 0) setIsDropdownOpen(true)
+          else if (mode === 'cite' && searchTerm.length > 0) setIsDropdownOpen(true)
           else if (
             mode === 'zotero' &&
             (zoteroResults.length > 0 || (!zoteroEnabled && searchTerm.length > 0))
           )
             setIsDropdownOpen(true)
           else if (mode === 'online' && searchTerm.length > 1) setIsDropdownOpen(true)
-          else if (mode === 'tex' && texResults.length > 0) setIsDropdownOpen(true)
+          else if (mode === 'tex' && searchTerm.length > 0) setIsDropdownOpen(true)
           else if (mode === 'pdf' && searchTerm.length > 0) setIsDropdownOpen(true)
         }}
       />
 
       {!isHomeMode && selectedKeys.size > 0 && (
-        <span className="omni-search-badge">{selectedKeys.size}</span>
+        <span
+          className="omni-search-badge"
+          aria-label={t('omniSearch.selectedInsert', { count: selectedKeys.size })}
+        >
+          {selectedKeys.size}
+        </span>
       )}
 
       {searchTerm && (
-        <button className="omni-search-clear" onClick={handleClear} title="Clear">
-          <X size={12} />
+        <button
+          type="button"
+          className="omni-search-clear"
+          onClick={handleClear}
+          title={t('omniSearch.clearSearch')}
+          aria-label={t('omniSearch.clearSearch')}
+        >
+          <X size={12} aria-hidden="true" />
         </button>
       )}
 
+      <span
+        id={resultsStatusId}
+        className="omni-search-live-region"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {resultStatus}
+      </span>
+
       {showDropdown && (
         <div className="omni-search-dropdown" ref={dropdownRef}>
-          {renderDropdown()}
+          {!isHomeMode && mode === 'tex' && texResults.length > 0 && (
+            <div className="omni-search-tex-nav">
+              <span className="omni-search-tex-count">
+                {t('omniSearch.matches', {
+                  current: highlightedIndex + 1,
+                  total: texResults.length
+                })}
+              </span>
+              <button
+                type="button"
+                onClick={handleTexPrev}
+                title={t('omniSearch.prevMatch')}
+                aria-label={t('omniSearch.prevMatch')}
+              >
+                <ChevronUp size={14} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                onClick={handleTexNext}
+                title={t('omniSearch.nextMatch')}
+                aria-label={t('omniSearch.nextMatch')}
+              >
+                <ChevronDown size={14} aria-hidden="true" />
+              </button>
+            </div>
+          )}
+          <div
+            id={resultsId}
+            role={popupRole}
+            aria-label={t('omniSearch.resultsLabel', { mode: translatedMode })}
+            aria-busy={searchBusy}
+            aria-multiselectable={
+              popupRole === 'listbox' && !isHomeMode && (mode === 'cite' || mode === 'zotero')
+                ? true
+                : undefined
+            }
+          >
+            {renderDropdown()}
+          </div>
         </div>
       )}
     </div>

@@ -1,10 +1,11 @@
 import Editor, { BeforeMount, OnMount } from '@monaco-editor/react'
-import { useEffect, useRef, useState, useCallback, useMemo, lazy, Suspense } from 'react'
+import { memo, useEffect, useRef, useState, useCallback, useMemo, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useEditorStore } from '../store/useEditorStore'
 import { useAiContextStore } from '../store/useAiContextStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { useSettingsStore, resolveTheme } from '../store/useSettingsStore'
+import { useNotificationStore } from '../store/useNotificationStore'
 import { stopLspClient } from '../lsp/lspClient'
 import { useClickNavigation } from '../hooks/editor/useClickNavigation'
 import { useSpelling } from '../hooks/editor/useSpelling'
@@ -44,6 +45,7 @@ import { setActiveEditorAdapter } from '../editor/activeEditorAdapter'
 import { runtimePerformance } from '../services/runtimePerformance'
 import { documentRegistry } from '../models/documentRegistry'
 import { isFeatureEnabled } from '../utils/featureFlags'
+import { errorMessage, logError } from '../utils/errorMessage'
 import { LoadingFallback } from './LoadingFallback'
 
 // Lazy-load heavy modals that are rarely shown
@@ -63,6 +65,7 @@ function EditorPane() {
   const setCursorPosition = useEditorStore((s) => s.setCursorPosition)
   const projectRoot = useProjectStore((s) => s.projectRoot)
   const settings = useSettingsStore((s) => s.settings)
+  const pushNotification = useNotificationStore((s) => s.pushNotification)
   const cachedAiContext = useAiContextStore((s) => (filePath ? s.entries[filePath] : null))
   const theme = settings.theme
   const fontSize = settings.fontSize
@@ -441,7 +444,22 @@ function EditorPane() {
           if (referenceData) {
             const payload = parseReferenceDragData(referenceData)
             const targetPosition = editorAdapter.getPositionAtClientPoint(e.clientX, e.clientY)
-            if (!payload || !targetPosition) return
+            if (!payload) {
+              pushNotification({
+                id: 'reference-drop:invalid-payload',
+                message: t('notifications.referenceDropInvalid'),
+                tone: 'error'
+              })
+              return
+            }
+            if (!targetPosition) {
+              pushNotification({
+                id: 'reference-drop:invalid-position',
+                message: t('notifications.referenceDropPositionUnavailable'),
+                tone: 'warning'
+              })
+              return
+            }
             const targetSnapshot = editorAdapter.materializeSnapshot()
             try {
               const citation = await addReferenceAndBuildCitation(payload)
@@ -450,8 +468,14 @@ function EditorPane() {
                 editorAdapterRef.current !== editorAdapter ||
                 currentSnapshot.documentId !== targetSnapshot.documentId ||
                 currentSnapshot.engineRevision !== targetSnapshot.engineRevision
-              )
+              ) {
+                pushNotification({
+                  id: 'reference-drop:document-changed',
+                  message: t('notifications.referenceDropDocumentChanged'),
+                  tone: 'warning'
+                })
                 return
+              }
               editorAdapter.applyEdits('reference-drop', [
                 {
                   range: { start: targetPosition, end: targetPosition },
@@ -462,7 +486,12 @@ function EditorPane() {
               editorAdapter.setPosition(targetPosition)
               editorAdapter.focus()
             } catch (error) {
-              console.error('ReferenceDrop: Failed to add reference', error)
+              logError('ReferenceDrop:addReference', error)
+              pushNotification({
+                id: 'reference-drop:add-failed',
+                message: t('notifications.referenceDropFailed', { reason: errorMessage(error) }),
+                tone: 'error'
+              })
             }
             return
           }
@@ -616,4 +645,4 @@ function EditorPane() {
   )
 }
 
-export default EditorPane
+export default memo(EditorPane)

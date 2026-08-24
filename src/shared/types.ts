@@ -293,23 +293,69 @@ export interface AiCustomProcessRequest {
 export interface ResearchChatMessage {
   role: 'user' | 'assistant'
   content: string
+  /** Sources captured for this answer; ignored when the message is sent as provider history. */
+  sources?: ResearchChatSessionContext[]
+}
+
+export type ResearchChatSessionContextKind =
+  'paper' | 'document' | 'repository' | 'website' | 'author' | 'reference'
+
+/** Metadata-only description of a selected Chat context. Context bodies are never persisted. */
+export interface ResearchChatSessionContext {
+  id: string
+  kind: ResearchChatSessionContextKind
+  label: string
+  source?: string
+  resourceId?: string
+  citekey?: string
+  referenceSource?: 'project' | 'zotero' | 'online'
+  onlineReference?: OnlineReference
+}
+
+/** Per-project Research Chat state stored in .textex/research-chat.json. */
+export interface ResearchChatSession {
+  version: 1
+  messages: ResearchChatMessage[]
+  selectedContexts: ResearchChatSessionContext[]
+}
+
+/** Opaque native activation and compare-and-swap token for one project Chat session. */
+export interface ResearchChatSessionScope {
+  projectRoot: string
+  projectEpoch: string
+  revision: string
+}
+
+export interface ResearchChatSessionSnapshot extends ResearchChatSessionScope {
+  session: ResearchChatSession
 }
 
 interface ResearchChatContextBase {
   label: string
   source?: string
-  content: string
 }
+
+export type ResearchReferenceDescriptor =
+  | { source: 'project' | 'zotero'; citekey: string; onlineReference?: never }
+  | { source: 'online'; citekey?: string; onlineReference: OnlineReference }
 
 export type ResearchChatContext =
   | (ResearchChatContextBase & {
       kind: 'repository' | 'website'
       /** Binds native Chat-access validation to the saved project profile. */
       resourceId: string
+      content: string
     })
   | (ResearchChatContextBase & {
       kind: 'paper' | 'document' | 'author'
       resourceId?: never
+      content: string
+    })
+  | (ResearchChatContextBase & {
+      kind: 'reference'
+      resourceId?: never
+      content?: never
+      reference: ResearchReferenceDescriptor
     })
 
 export interface ResearchChatRequest {
@@ -317,6 +363,63 @@ export interface ResearchChatRequest {
   history: ResearchChatMessage[]
   contexts: ResearchChatContext[]
   instructions: string[]
+}
+
+export interface ZoteroPlanRequest {
+  message: string
+  history: ResearchChatMessage[]
+}
+
+export type ZoteroMutationOperation =
+  | {
+      kind: 'createCollection'
+      key: string
+      name: string
+      path: string
+      parentKey: string | null
+      parentLabel: string
+    }
+  | {
+      kind: 'moveCollection'
+      key: string
+      version: number
+      name: string
+      path: string
+      parentKey: string | null
+      parentLabel: string
+    }
+  | {
+      kind: 'renameCollection'
+      key: string
+      version: number
+      name: string
+      path: string
+      newName: string
+    }
+  | {
+      kind: 'updateItemTags'
+      key: string
+      version: number
+      title: string
+      currentTags: string[]
+      addTags: string[]
+      removeTags: string[]
+    }
+
+export interface ZoteroMutationPlan {
+  summary: string
+  serverId: string
+  port: number
+  projectRoot: string
+  projectEpoch: string
+  operations: ZoteroMutationOperation[]
+}
+
+export interface ZoteroMutationResult {
+  summary: string
+  applied: number
+  collectionChanges: number
+  itemChanges: number
 }
 
 export interface ClaudeTerminalRequest {

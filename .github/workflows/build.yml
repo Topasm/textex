@@ -90,6 +90,18 @@ jobs:
       - name: Install pinned Rust toolchain
         run: rustup toolchain install 1.97.1 --profile minimal --component clippy
 
+      - name: Restore isolated Rust test cache
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target/debug/.fingerprint
+            src-tauri/target/debug/build
+            src-tauri/target/debug/deps
+            src-tauri/target/debug/incremental
+          key: textex-${{ startsWith(github.ref, 'refs/tags/v') && 'release' || 'ci' }}-cargo-v1-test-${{ runner.os }}-x86_64-unknown-linux-gnu-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('src-tauri/Cargo.toml') }}-${{ hashFiles('src-tauri/Cargo.lock') }}
+
       - name: Install locked dependencies
         run: npm ci --include=optional
 
@@ -238,6 +250,18 @@ jobs:
         run: |
           rustup toolchain install 1.97.1 --profile minimal
           rustup target add --toolchain 1.97.1 ${{ matrix.rust_targets }}
+
+      - name: Restore isolated Rust release cache
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target/${{ matrix.target }}/release/.fingerprint
+            src-tauri/target/${{ matrix.target }}/release/build
+            src-tauri/target/${{ matrix.target }}/release/deps
+            src-tauri/target/${{ matrix.target }}/release/incremental
+          key: textex-${{ startsWith(github.ref, 'refs/tags/v') && 'release' || 'ci' }}-cargo-v1-build-${{ runner.os }}-${{ matrix.target }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('src-tauri/Cargo.toml') }}-${{ hashFiles('src-tauri/Cargo.lock') }}
 
       - name: Install locked dependencies
         run: npm ci --include=optional
@@ -609,6 +633,9 @@ jobs:
         shell: bash
         run: |
           npm run measure:renderer
+          if [[ "${{ matrix.platform }}" == "linux" ]]; then
+            npm run check:renderer-budget
+          fi
           node <<'NODE'
           const fs = require('node:fs')
           const path = require('node:path')

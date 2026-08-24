@@ -6,7 +6,8 @@
    TexLab discovery, PTY teardown, and AI credential migration.
 2. Add macOS Developer ID/notarization and Windows Authenticode credentials to
    the protected release environment.
-3. Convert performance baselines into deterministic CI budgets.
+3. Extend the renderer bundle CI budget into deterministic runtime startup,
+   input-to-frame, and edit-to-PDF budgets.
 4. Continue splitting large filesystem, compiler, FileTree, and OmniSearch
    modules along tested responsibility boundaries.
 

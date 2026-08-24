@@ -1,0 +1,562 @@
+/*
+ * Flat application chrome
+ *
+ * Keep geometry and feature-specific styles in index.css. This layer owns the
+ * visual depth contract: quiet surfaces, one-pixel boundaries, compact radii,
+ * and elevation reserved for content that actually floats above the workspace.
+ */
+
+:root {
+  --ui-icon-size-micro: 12px;
+  --ui-icon-size-compact: 14px;
+  --ui-icon-size-control: 16px;
+  --ui-icon-size-feature: 18px;
+  --ui-icon-stroke: 1.75;
+  --ui-radius-subtle: 2px;
+  --ui-radius-control: 4px;
+  --ui-radius-panel: 6px;
+  --ui-surface-app: var(--bg-primary);
+  --ui-surface-sidebar: var(--sidebar-bg);
+  --ui-surface-panel: var(--bg-secondary);
+  --ui-surface-raised: var(--modal-bg, var(--bg-secondary));
+  --ui-surface-input: var(--bg-input);
+  --ui-border: var(--border);
+  --ui-border-strong: color-mix(in srgb, var(--text-primary) 20%, var(--border));
+  --ui-selected-bg: color-mix(in srgb, var(--accent) 12%, var(--bg-primary));
+  --ui-focus-ring: var(--accent);
+  --ui-shadow-popover: 0 4px 14px color-mix(in srgb, var(--shadow-color) 55%, transparent);
+  --ui-shadow-modal: 0 8px 28px color-mix(in srgb, var(--shadow-color) 65%, transparent);
+  --accent-contrast: #07140a;
+}
+
+.ui-icon {
+  flex: 0 0 auto;
+  shape-rendering: geometricPrecision;
+}
+
+html .toolbar-btn > .ui-icon,
+html .toolbar button > .ui-icon {
+  width: var(--ui-icon-size-control);
+  height: var(--ui-icon-size-control);
+}
+
+html .sidebar-tab > .ui-icon,
+html .research-panel-tabs > button > .ui-icon,
+html .reference-source-tabs > button > .ui-icon,
+html .file-tree-icon > .ui-icon,
+html .file-tree-header-btn > .ui-icon {
+  width: var(--ui-icon-size-compact);
+  height: var(--ui-icon-size-compact);
+}
+
+html .file-tree-action-btn > .ui-icon,
+html .status-bar .ui-icon,
+html .tab-close > .ui-icon {
+  width: var(--ui-icon-size-micro);
+  height: var(--ui-icon-size-micro);
+}
+
+html .file-tree-header-btn,
+html .file-tree-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+html .file-tree-header-btn {
+  width: 24px;
+  height: 24px;
+}
+
+html .file-tree-action-btn {
+  width: 20px;
+  height: 20px;
+}
+
+html .status-errors,
+html .status-warnings {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+[data-theme='light'] {
+  --accent-contrast: #ffffff;
+}
+
+[data-theme='glass'] {
+  --accent-contrast: #07111f;
+}
+
+[data-theme='high-contrast'] {
+  --accent-contrast: #000000;
+  --ui-border-strong: var(--border);
+  --ui-selected-bg: var(--sidebar-selected);
+  --ui-shadow-popover: none;
+  --ui-shadow-modal: none;
+}
+
+/* Application chrome */
+html .toolbar {
+  min-height: 38px;
+  gap: 5px;
+  padding-block: 3px;
+  background: var(--ui-surface-panel);
+  border-color: var(--ui-border);
+}
+
+html .toolbar-sync-controls,
+html .toolbar-pdf-controls {
+  gap: 1px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: var(--ui-radius-control);
+}
+
+html .toolbar-btn,
+html .toolbar button {
+  height: 28px;
+  min-width: 28px;
+  background: transparent;
+  border-radius: var(--ui-radius-control);
+  transition:
+    background-color 120ms,
+    border-color 120ms,
+    color 120ms;
+}
+
+html .toolbar-btn:hover,
+html .toolbar button:hover {
+  background: var(--bg-hover);
+  border-color: transparent;
+}
+
+html .toolbar-btn.active,
+html .toolbar button.active {
+  color: var(--accent);
+  background: var(--ui-selected-bg);
+  border-color: transparent;
+}
+
+html .toolbar .compile-btn,
+html .toolbar .compile-btn:hover {
+  color: var(--accent-contrast);
+  border: 1px solid var(--accent);
+  box-shadow: none;
+}
+
+html .toolbar .compile-btn {
+  background: var(--accent);
+}
+
+html .toolbar .compile-btn:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+html .toolbar .file-name {
+  padding-inline: 6px;
+  background: transparent;
+  border: 0;
+  border-radius: var(--ui-radius-control);
+}
+
+html .toolbar .menu-dropdown-content,
+html .recent-project-switcher-menu {
+  margin-top: 3px;
+  padding: 4px;
+  background: var(--ui-surface-raised);
+  border-color: var(--ui-border-strong);
+  border-radius: var(--ui-radius-panel);
+  box-shadow: var(--ui-shadow-popover);
+}
+
+html .toolbar .menu-dropdown-content button,
+html .toolbar .recent-project-switcher-item {
+  border-radius: var(--ui-radius-control);
+}
+
+html .recent-project-switcher-error {
+  border-radius: var(--ui-radius-control);
+}
+
+html .tab-bar {
+  height: 34px;
+  background: var(--ui-surface-sidebar);
+  border-bottom: 1px solid var(--ui-border);
+}
+
+html .tab {
+  background: transparent;
+  border-top: 2px solid transparent;
+  border-right-color: var(--ui-border);
+}
+
+html .tab:hover {
+  background: var(--tab-hover-bg);
+}
+
+html .tab.active {
+  color: var(--text-primary);
+  background: var(--ui-surface-app);
+  border-top-color: var(--accent);
+}
+
+html .sidebar,
+html .research-panel {
+  background: var(--ui-surface-sidebar);
+}
+
+html .sidebar-header {
+  padding: 7px 10px;
+  background: transparent;
+}
+
+html .sidebar-tab,
+html .research-panel-tabs > button,
+html .reference-source-tabs > button {
+  border-bottom-width: 1px;
+}
+
+html .file-tree-item,
+html .git-file,
+html .outline-item,
+html .bib-entry,
+html .timeline-entry {
+  border-radius: 0;
+}
+
+html .file-tree-item.selected {
+  color: var(--text-primary);
+  background: var(--ui-selected-bg);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+html .split-divider,
+html .sidebar-resize-handle {
+  background: color-mix(in srgb, var(--ui-border) 72%, transparent);
+}
+
+html .status-bar {
+  min-height: 25px;
+  padding-block: 2px;
+  color: var(--text-secondary);
+  background: var(--ui-surface-sidebar);
+  border-top: 1px solid var(--ui-border);
+}
+
+html .status-spellcheck:hover,
+html .status-compile-indicator:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+/* Search and floating command surfaces */
+html .omni-search-input,
+html .omni-search-home-mode .omni-search-input,
+html .home-search-bar,
+html .command-palette-search,
+html .research-search {
+  background: var(--ui-surface-input);
+  border-color: var(--ui-border);
+  border-radius: var(--ui-radius-control);
+  box-shadow: none;
+}
+
+html .omni-search-input:focus,
+html .omni-search-home-mode .omni-search-input:focus,
+html .home-search-bar:focus-within,
+html .command-palette-search:focus-within,
+html .research-search:focus-within {
+  border-color: var(--accent);
+  box-shadow: none;
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+html .omni-search-mode-btn,
+html .omni-search-clear,
+html .omni-search-result,
+html .omni-search-home-result,
+html .home-search-result,
+html .command-palette-option {
+  border-radius: var(--ui-radius-control);
+}
+
+html .omni-search-mode-menu,
+html .omni-search-dropdown,
+html .home-search-dropdown {
+  color: var(--text-primary);
+  background: var(--ui-surface-raised);
+  border: 1px solid var(--ui-border-strong);
+  border-radius: var(--ui-radius-panel);
+  box-shadow: var(--ui-shadow-popover);
+}
+
+html .command-palette {
+  color: var(--text-primary);
+  background: var(--ui-surface-raised);
+  border: 1px solid var(--ui-border-strong);
+  border-radius: var(--ui-radius-panel);
+  box-shadow: var(--ui-shadow-modal);
+}
+
+html .omni-search-result.highlighted,
+html .omni-search-result.selected,
+html .home-search-result.selected,
+html .command-palette-option.active {
+  background: var(--ui-selected-bg);
+}
+
+/* Dialogs and settings */
+html .modal,
+html .modal-content,
+html .bibliography-registration-dialog,
+html .table-editor-modal {
+  background: var(--ui-surface-raised);
+  border: 1px solid var(--ui-border-strong);
+  border-radius: var(--ui-radius-panel);
+  box-shadow: var(--ui-shadow-modal);
+}
+
+html .modal-header,
+html .modal-footer,
+html .table-editor-header,
+html .table-editor-footer {
+  padding-block: 12px;
+}
+
+html .primary-button,
+html .bibliography-registration-actions button,
+html .template-action-btn,
+html .settings-input,
+html .settings-input-small,
+html .settings-select,
+html .settings-segmented-control,
+html .draft-input,
+html .draft-preview {
+  border-radius: var(--ui-radius-control);
+}
+
+html .primary-button,
+html .bibliography-registration-actions button.primary,
+html .git-commit-btn,
+html .home-action-primary,
+html .home-recent-item-tag,
+html .home-recent-item-tag-save,
+html .outline-highlight-toggle.active,
+html .research-chat-send,
+html .research-profile-save,
+html .todo-panel__add-btn,
+html .update-banner button:not(.update-dismiss):not(.update-release-link) {
+  color: var(--accent-contrast);
+}
+
+html .settings-sidebar {
+  background: var(--ui-surface-sidebar);
+}
+
+html .settings-tab {
+  border-radius: var(--ui-radius-control);
+}
+
+html .settings-tab.active {
+  color: var(--text-primary);
+  background: var(--ui-selected-bg);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+html .settings-section {
+  padding: 14px 0 18px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--ui-border);
+  border-radius: 0;
+}
+
+html .settings-section:first-child {
+  padding-top: 0;
+}
+
+html .settings-section-icon {
+  width: 34px;
+  height: 34px;
+  background: var(--ui-selected-bg);
+  border-radius: var(--ui-radius-control);
+}
+
+html .settings-theme-card,
+html .ai-assistant-summary,
+html .ai-assistant-action,
+html .ai-assistant-terminal,
+html .ai-assistant-terminal pre,
+html .ai-prompts-list {
+  border-width: 1px;
+  border-radius: var(--ui-radius-control);
+  box-shadow: none;
+}
+
+/* Home and panel content */
+html .home-brand {
+  margin-bottom: 28px;
+}
+
+html .home-title {
+  font-size: clamp(30px, 4vw, 36px);
+  letter-spacing: -0.035em;
+}
+
+html .home-action-btn {
+  border-radius: var(--ui-radius-control);
+}
+
+html .home-action-btn:not(.home-action-primary) {
+  background: transparent;
+}
+
+html .home-action-btn:not(.home-action-primary):hover {
+  background: var(--bg-hover);
+  border-color: var(--ui-border-strong);
+}
+
+html .home-recent-list {
+  gap: 0;
+  border-top: 1px solid var(--ui-border);
+}
+
+html .home-recent-item {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--ui-border);
+  border-radius: 0;
+}
+
+html .home-recent-item:hover,
+html .home-recent-item:focus-within {
+  background: var(--bg-hover);
+  border-color: var(--ui-border);
+}
+
+html .home-recent-item.pinned {
+  border-left: 2px solid var(--accent);
+}
+
+html .home-recent-item-dropdown,
+html .home-recent-item-tag-editor,
+html .home-recent-item-path-editor {
+  background: var(--ui-surface-raised);
+  border-color: var(--ui-border-strong);
+  border-radius: var(--ui-radius-panel);
+  box-shadow: var(--ui-shadow-popover);
+}
+
+html .research-profile-section,
+html .research-chat-message,
+html .research-inline-status,
+html .research-status,
+html .zotero-collection-tree {
+  background: transparent;
+  border-color: var(--ui-border);
+  border-radius: var(--ui-radius-control);
+  box-shadow: none;
+}
+
+html .research-profile-section > summary {
+  padding-block: 8px;
+}
+
+html .research-profile-items,
+html .reference-card-list {
+  gap: 0;
+  border-top: 1px solid var(--ui-border);
+}
+
+html .research-profile-card,
+html .reference-card {
+  padding-inline: 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--ui-border);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+html .update-banner {
+  background: var(--ui-surface-panel);
+  border-color: var(--update-banner-border);
+}
+
+/* A flat control still needs a strong, non-shadow keyboard focus cue. */
+html .settings-input:focus-visible,
+html .settings-input-small:focus-visible,
+html .settings-select:focus-visible,
+html .research-profile-field input:focus-visible,
+html .research-profile-field select:focus-visible,
+html .research-profile-field textarea:focus-visible,
+html .research-chat-composer textarea:focus-visible,
+html .draft-input:focus-visible,
+html .git-commit-input:focus-visible,
+html .bib-search input:focus-visible,
+html .template-add-form input:focus-visible,
+html .template-add-form textarea:focus-visible {
+  border-color: var(--accent);
+  outline: 2px solid var(--ui-focus-ring);
+  outline-offset: 1px;
+}
+
+/* Later-loaded utility surfaces use the same elevation contract. */
+html .loading-fallback--floating,
+html .math-preview-widget,
+html .image-preview-tooltip,
+html .citation-tooltip {
+  background: var(--ui-surface-raised);
+  border-color: var(--ui-border-strong);
+  border-radius: var(--ui-radius-panel);
+  box-shadow: var(--ui-shadow-popover);
+}
+
+html .loading-fallback--modal .loading-fallback__card {
+  background: var(--ui-surface-raised);
+  border-color: var(--ui-border-strong);
+  border-radius: var(--ui-radius-panel);
+  box-shadow: var(--ui-shadow-modal);
+}
+
+html .history-panel {
+  background: var(--ui-surface-panel);
+  border-color: var(--ui-border);
+  box-shadow: none;
+}
+
+@media (forced-colors: active) {
+  html .toolbar,
+  html .tab-bar,
+  html .sidebar,
+  html .status-bar,
+  html .modal-content,
+  html .command-palette,
+  html .omni-search-dropdown,
+  html .settings-section,
+  html .research-profile-section,
+  html .home-recent-item {
+    border-color: CanvasText;
+  }
+
+  html .tab.active,
+  html .settings-tab.active,
+  html .file-tree-item.selected {
+    color: HighlightText;
+    background: Highlight;
+  }
+
+  html button:focus-visible,
+  html input:focus-visible,
+  html select:focus-visible,
+  html textarea:focus-visible,
+  html summary:focus-visible,
+  html [role='button']:focus-visible {
+    outline-color: Highlight;
+  }
+}

@@ -138,6 +138,7 @@ export function ResearchProfilePanel() {
   const indexGeneration = useRef(0)
   const editRevision = useRef(0)
   const saveInFlight = useRef(false)
+  const sourceOperationInFlight = useRef(false)
 
   useEffect(
     () => () => {
@@ -153,6 +154,7 @@ export function ResearchProfilePanel() {
     indexGeneration.current += 1
     editRevision.current = 0
     saveInFlight.current = false
+    sourceOperationInFlight.current = false
     clearResearchProfileDraft()
     setStatus('')
     setSaving(false)
@@ -304,9 +306,10 @@ export function ResearchProfilePanel() {
 
   const indexSource = async (resource: ResearchResource) => {
     const localPath = resource.localPath?.trim()
-    if (!localPath || !projectRoot || indexingResourceId) return
+    if (!localPath || !projectRoot || sourceOperationInFlight.current) return
     const generation = ++indexGeneration.current
     const root = projectRoot
+    sourceOperationInFlight.current = true
     setIndexingResourceId(resource.id)
     setIndexErrors((current) => {
       const next = { ...current }
@@ -333,23 +336,30 @@ export function ResearchProfilePanel() {
         setStatus(`Source indexing failed: ${message}`)
       }
     } finally {
-      if (indexGeneration.current === generation) setIndexingResourceId(null)
+      if (indexGeneration.current === generation) {
+        sourceOperationInFlight.current = false
+        setIndexingResourceId(null)
+      }
     }
   }
 
   const runGitAction = async (resource: ResearchResource, action: 'clone' | 'fetch') => {
-    if (!profile || !projectRoot || gitResourceId || indexingResourceId) return
+    if (!profile || !projectRoot || saveInFlight.current || sourceOperationInFlight.current) return
+    sourceOperationInFlight.current = true
     const verb = action === 'clone' ? 'clone this repository' : 'fetch updates'
     if (
       !window.confirm(
         `Save this profile and ${verb} using your existing Git/SSH credentials?\n\n${resource.label || resource.id}`
       )
-    )
+    ) {
+      sourceOperationInFlight.current = false
       return
+    }
 
     const generation = ++indexGeneration.current
     const root = projectRoot
     const revision = editRevision.current
+    saveInFlight.current = true
     setGitResourceId(resource.id)
     setStatus(`${action === 'clone' ? 'Cloning' : 'Fetching'} ${resource.label || 'source'}…`)
     try {
@@ -379,7 +389,11 @@ export function ResearchProfilePanel() {
         setStatus(`Git ${action} failed: ${message}`)
       }
     } finally {
-      if (indexGeneration.current === generation) setGitResourceId(null)
+      if (indexGeneration.current === generation) {
+        saveInFlight.current = false
+        sourceOperationInFlight.current = false
+        setGitResourceId(null)
+      }
     }
   }
 
@@ -775,7 +789,11 @@ export function ResearchProfilePanel() {
       </ProfileSection>
 
       <div className="research-profile-footer">
-        <button className="research-profile-save" type="submit" disabled={saving}>
+        <button
+          className="research-profile-save"
+          type="submit"
+          disabled={saving || gitResourceId !== null}
+        >
           <Save size={14} /> {saving ? 'Saving…' : 'Save profile'}
         </button>
         {status && (

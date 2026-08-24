@@ -116,7 +116,12 @@
     "retry": "Try again",
     "sessionRestoreFailed": "Could not restore {{path}}: {{reason}}",
     "chooseReplacement": "Choose replacement",
-    "replacementOpenFailed": "Could not open replacement {{path}}: {{reason}}"
+    "replacementOpenFailed": "Could not open replacement {{path}}: {{reason}}",
+    "referenceDropInvalid": "This reference cannot be dropped because its data is invalid.",
+    "referenceDropPositionUnavailable": "Choose a valid editor position and drop the reference again.",
+    "referenceDropDocumentChanged": "The document changed before the citation could be inserted. Try again.",
+    "referenceDropFailed": "Could not add this reference: {{reason}}",
+    "referenceInsertSkipped": "The active document or cursor changed, so the citation was not inserted. Try again."
   },
   "settings": {
     "title": "Settings",
@@ -276,7 +281,7 @@
     "automation": {
       "compilerTools": "Compiler & Tools",
       "autoCompile": "Auto Compile",
-      "autoCompileDesc": "Automatically compile when saving via shortcuts",
+      "autoCompileDesc": "Automatically save and compile shortly after editing",
       "watchOpenFiles": "Watch Open Files",
       "watchOpenFilesDesc": "Automatically reload files changed by external editors",
       "spellCheck": "Spell Check",
@@ -346,7 +351,12 @@
     "noFile": "No file open",
     "loading": "Loading timeline\u2026",
     "noHistory": "No history available for this file",
-    "localSave": "Local save"
+    "localSave": "Local save",
+    "restoreConfirm": "Restore this snapshot into the editor? It will remain unsaved until you save it.",
+    "restoreDirtyConfirm": "Replace your current unsaved changes with this snapshot? The restored text will remain unsaved until you save it.",
+    "restoreSuccess": "History snapshot restored as an unsaved change.",
+    "restoreStale": "The document changed while the snapshot was loading, so nothing was restored.",
+    "restoreFailed": "Could not restore the history snapshot: {{reason}}"
   },
   "draftModal": {
     "title": "AI Draft",
@@ -412,7 +422,14 @@
     "noMatches": "No matches",
     "prevMatch": "Previous",
     "nextMatch": "Next",
-    "goToLine": "Go to line {{line}}"
+    "goToLine": "Go to line {{line}}",
+    "home": "Home",
+    "searchLabel": "Search {{mode}}",
+    "modeSelector": "Search mode: {{mode}}",
+    "modeMenuLabel": "Choose search mode",
+    "resultsLabel": "{{mode}} results",
+    "resultCount": "{{count}} results",
+    "clearSearch": "Clear search"
   },
   "errorBoundary": {
     "title": "Something went wrong",
@@ -428,6 +445,17 @@
     "recent": "Recent",
     "template": "Template",
     "command": "Command"
+  },
+  "projectSwitcher": {
+    "switchProject": "Switch project",
+    "currentProject": "Current project: {{name}}",
+    "menuLabel": "Switch recent project",
+    "current": "Current",
+    "currentItem": "{{name}}, current project",
+    "loading": "Loading recent projects…",
+    "switching": "Switching…",
+    "loadFailed": "Could not load recent projects.",
+    "openFailed": "Could not open {{name}}: {{reason}} The recent entry was kept for recovery from Home."
   },
   "recentProjects": {
     "title": "Recent Projects",
@@ -511,5 +539,9 @@
       "window_close": "Close Window",
       "app_quit": "Quit TextEx"
     }
+  },
+  "researchPanel": {
+    "invalidReferenceDrop": "This item is not a valid TextEx reference.",
+    "openProjectForChatReference": "Open a project before adding a reference to Chat."
   }
 }

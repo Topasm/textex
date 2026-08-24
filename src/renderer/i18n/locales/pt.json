@@ -116,7 +116,12 @@
     "retry": "Tentar novamente",
     "sessionRestoreFailed": "Não foi possível restaurar {{path}}: {{reason}}",
     "chooseReplacement": "Escolher substituto",
-    "replacementOpenFailed": "Não foi possível abrir o substituto {{path}}: {{reason}}"
+    "replacementOpenFailed": "Não foi possível abrir o substituto {{path}}: {{reason}}",
+    "referenceDropInvalid": "Esta referência não pode ser solta porque os dados são inválidos.",
+    "referenceDropPositionUnavailable": "Escolha uma posição válida no editor e solte a referência novamente.",
+    "referenceDropDocumentChanged": "O documento mudou antes da inserção da citação. Tente novamente.",
+    "referenceDropFailed": "Não foi possível adicionar esta referência: {{reason}}",
+    "referenceInsertSkipped": "O documento ativo ou a posição do cursor mudou, então a citação não foi inserida. Tente novamente."
   },
   "settings": {
     "title": "Configurações",
@@ -276,7 +281,7 @@
     "automation": {
       "compilerTools": "Compilador e ferramentas",
       "autoCompile": "Compilação automática",
-      "autoCompileDesc": "Compilar automaticamente ao salvar por atalhos de teclado",
+      "autoCompileDesc": "Salvar e compilar automaticamente logo após a edição",
       "watchOpenFiles": "Monitorar arquivos abertos",
       "watchOpenFilesDesc": "Recarregar automaticamente arquivos modificados por editores externos",
       "spellCheck": "Verificação ortográfica",
@@ -324,6 +329,12 @@
     "noFolder": "Nenhuma pasta aberta",
     "newFile": "Novo arquivo",
     "newFolder": "Nova pasta",
+    "rename": "Renomear",
+    "delete": "Excluir",
+    "confirmDelete": "Excluir {{name}}? Esta ação não pode ser desfeita.",
+    "invalidName": "Os nomes não podem conter separadores de caminho.",
+    "saveBeforeRename": "Salve ou feche os arquivos modificados antes de renomear.",
+    "saveBeforeDelete": "Salve ou feche os arquivos modificados antes de excluir.",
     "expandFolder": "Expandir pasta",
     "collapseFolder": "Recolher pasta"
   },
@@ -340,7 +351,12 @@
     "noFile": "Nenhum arquivo aberto",
     "loading": "Carregando linha do tempo…",
     "noHistory": "Nenhum histórico disponível para este arquivo",
-    "localSave": "Salvamento local"
+    "localSave": "Salvamento local",
+    "restoreConfirm": "Restaurar este instantâneo no editor? Ele permanecerá sem salvar até que você o salve.",
+    "restoreDirtyConfirm": "Substituir as alterações atuais não salvas por este instantâneo? O texto restaurado permanecerá sem salvar.",
+    "restoreSuccess": "Instantâneo do histórico restaurado como alteração não salva.",
+    "restoreStale": "O documento mudou durante o carregamento; nada foi restaurado.",
+    "restoreFailed": "Não foi possível restaurar o instantâneo do histórico: {{reason}}"
   },
   "draftModal": {
     "title": "Rascunho IA",
@@ -406,7 +422,14 @@
     "noMatches": "Sem correspondências",
     "prevMatch": "Anterior",
     "nextMatch": "Próximo",
-    "goToLine": "Ir para linha {{line}}"
+    "goToLine": "Ir para linha {{line}}",
+    "home": "Início",
+    "searchLabel": "Pesquisar em {{mode}}",
+    "modeSelector": "Modo de pesquisa: {{mode}}",
+    "modeMenuLabel": "Escolher modo de pesquisa",
+    "resultsLabel": "Resultados de {{mode}}",
+    "resultCount": "{{count}} resultados",
+    "clearSearch": "Limpar pesquisa"
   },
   "errorBoundary": {
     "title": "Algo deu errado",
@@ -422,6 +445,17 @@
     "recent": "Recentes",
     "template": "Modelo",
     "command": "Comando"
+  },
+  "projectSwitcher": {
+    "switchProject": "Trocar de projeto",
+    "currentProject": "Projeto atual: {{name}}",
+    "menuLabel": "Trocar para um projeto recente",
+    "current": "Atual",
+    "currentItem": "{{name}}, projeto atual",
+    "loading": "Carregando projetos recentes…",
+    "switching": "Trocando…",
+    "loadFailed": "Não foi possível carregar os projetos recentes.",
+    "openFailed": "Não foi possível abrir {{name}}: {{reason}} A entrada recente foi mantida para recuperação pela tela inicial."
   },
   "recentProjects": {
     "title": "Projetos recentes",
@@ -505,5 +539,9 @@
       "window_close": "Fechar janela",
       "app_quit": "Sair do TextEx"
     }
+  },
+  "researchPanel": {
+    "invalidReferenceDrop": "Este item não é uma referência válida do TextEx.",
+    "openProjectForChatReference": "Abra um projeto antes de adicionar uma referência ao Chat."
   }
 }

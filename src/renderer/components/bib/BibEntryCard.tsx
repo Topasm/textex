@@ -1,6 +1,12 @@
 import React, { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { MessageSquarePlus, X } from 'lucide-react'
 import type { BibEntry } from '../../../shared/types'
+import {
+  buildProjectReferenceDragPayload,
+  setReferenceDragData
+} from '../research/referenceActions'
+import { ICON_SIZE } from '../ui/IconSystem'
 
 interface BibEntryCardProps {
   entry: BibEntry
@@ -10,6 +16,7 @@ interface BibEntryCardProps {
   /** If provided, shows an add button with this label */
   onAdd?: () => void
   addTitle?: string
+  onAddToChat?: (payload: ReturnType<typeof buildProjectReferenceDragPayload>) => void
 }
 
 export const BibEntryCard = React.memo(function BibEntryCard({
@@ -17,7 +24,8 @@ export const BibEntryCard = React.memo(function BibEntryCard({
   onInsert,
   onRemove,
   onAdd,
-  addTitle
+  addTitle,
+  onAddToChat
 }: BibEntryCardProps) {
   const { t } = useTranslation()
   const cleanTitle = (entry.title || t('bibPanel.noTitle')).replace(/[{}]/g, '')
@@ -29,10 +37,9 @@ export const BibEntryCard = React.memo(function BibEntryCard({
 
   const handleDragStart = useCallback(
     (e: React.DragEvent) => {
-      e.dataTransfer.setData('text/plain', `\\cite{${entry.key}}`)
-      e.dataTransfer.effectAllowed = 'copy'
+      setReferenceDragData(e, buildProjectReferenceDragPayload(entry))
     },
-    [entry.key]
+    [entry]
   )
 
   return (
@@ -54,6 +61,20 @@ export const BibEntryCard = React.memo(function BibEntryCard({
     >
       <div className="bib-entry-header">
         <span className="bib-title">{cleanTitle}</span>
+        {onAddToChat && (
+          <button
+            type="button"
+            className="bib-entry-action-btn"
+            onClick={(event) => {
+              event.stopPropagation()
+              onAddToChat(buildProjectReferenceDragPayload(entry))
+            }}
+            title="Add to Chat"
+            aria-label={`Add ${cleanTitle} to Chat`}
+          >
+            <MessageSquarePlus size={ICON_SIZE.micro} />
+          </button>
+        )}
         {onRemove && (
           <button
             className="bib-entry-action-btn"
@@ -62,8 +83,9 @@ export const BibEntryCard = React.memo(function BibEntryCard({
               onRemove()
             }}
             title={t('bibPanel.removeFromGroup')}
+            aria-label={t('bibPanel.removeFromGroup')}
           >
-            ×
+            <X size={ICON_SIZE.micro} />
           </button>
         )}
         {onAdd && (

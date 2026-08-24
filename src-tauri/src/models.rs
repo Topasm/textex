@@ -789,6 +789,80 @@ pub enum ResearchChatRole {
 pub struct ResearchChatMessage {
     pub role: ResearchChatRole,
     pub content: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sources: Vec<ResearchChatSessionContext>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ResearchChatSessionContextKind {
+    Paper,
+    Document,
+    Repository,
+    Website,
+    Author,
+    Reference,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResearchChatSessionContext {
+    pub id: String,
+    pub kind: ResearchChatSessionContextKind,
+    pub label: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resource_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub citekey: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reference_source: Option<ResearchReferenceSource>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub online_reference: Option<OnlineReference>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ResearchReferenceSource {
+    Project,
+    Zotero,
+    Online,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResearchChatSession {
+    pub version: u8,
+    pub messages: Vec<ResearchChatMessage>,
+    pub selected_contexts: Vec<ResearchChatSessionContext>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResearchChatSessionScope {
+    pub project_root: String,
+    pub project_epoch: String,
+    pub revision: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResearchChatSessionSnapshot {
+    pub project_root: String,
+    pub project_epoch: String,
+    pub revision: String,
+    pub session: ResearchChatSession,
+}
+
+impl Default for ResearchChatSession {
+    fn default() -> Self {
+        Self {
+            version: 1,
+            messages: Vec::new(),
+            selected_contexts: Vec::new(),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Deserialize, Serialize)]
@@ -799,6 +873,17 @@ pub enum ResearchChatContextKind {
     Repository,
     Website,
     Author,
+    Reference,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResearchReferenceDescriptor {
+    pub source: ResearchReferenceSource,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub citekey: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub online_reference: Option<OnlineReference>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
@@ -809,7 +894,10 @@ pub struct ResearchChatContext {
     pub resource_id: Option<String>,
     pub label: String,
     pub source: Option<String>,
+    #[serde(default)]
     pub content: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reference: Option<ResearchReferenceDescriptor>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
@@ -819,6 +907,109 @@ pub struct ResearchChatRequest {
     pub history: Vec<ResearchChatMessage>,
     pub contexts: Vec<ResearchChatContext>,
     pub instructions: Vec<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZoteroPlanRequest {
+    pub message: String,
+    pub history: Vec<ResearchChatMessage>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZoteroMutationDraft {
+    pub summary: String,
+    pub operations: Vec<ZoteroMutationDraftOperation>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize)]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum ZoteroMutationDraftOperation {
+    CreateCollection {
+        name: String,
+        #[serde(default)]
+        parent: Option<String>,
+    },
+    MoveCollection {
+        collection: String,
+        #[serde(default)]
+        parent: Option<String>,
+    },
+    RenameCollection {
+        collection: String,
+        new_name: String,
+    },
+    UpdateItemTags {
+        query: String,
+        #[serde(default)]
+        add_tags: Vec<String>,
+        #[serde(default)]
+        remove_tags: Vec<String>,
+    },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZoteroMutationPlan {
+    pub summary: String,
+    pub server_id: String,
+    pub port: u16,
+    pub project_root: String,
+    pub project_epoch: String,
+    pub operations: Vec<ZoteroMutationOperation>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum ZoteroMutationOperation {
+    CreateCollection {
+        key: String,
+        name: String,
+        path: String,
+        parent_key: Option<String>,
+        parent_label: String,
+    },
+    MoveCollection {
+        key: String,
+        version: u64,
+        name: String,
+        path: String,
+        parent_key: Option<String>,
+        parent_label: String,
+    },
+    RenameCollection {
+        key: String,
+        version: u64,
+        name: String,
+        path: String,
+        new_name: String,
+    },
+    UpdateItemTags {
+        key: String,
+        version: u64,
+        title: String,
+        current_tags: Vec<String>,
+        add_tags: Vec<String>,
+        remove_tags: Vec<String>,
+    },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZoteroMutationResult {
+    pub summary: String,
+    pub applied: usize,
+    pub collection_changes: usize,
+    pub item_changes: usize,
 }
 
 #[derive(Clone, Debug, Deserialize)]

@@ -3,14 +3,14 @@ use tauri::State;
 use crate::{
     error::AppResult,
     models::{
-        OnlineReference, ReferenceAddResult, ResearchConfig, ResearchProfile,
-        ResearchResourceSnapshot,
+        OnlineReference, ReferenceAddResult, ResearchChatSession, ResearchChatSessionScope,
+        ResearchChatSessionSnapshot, ResearchConfig, ResearchProfile, ResearchResourceSnapshot,
     },
     services::{
         project_index::ProjectIndexState,
         references::ReferenceIndexState,
         research::{self, ResearchState},
-        research_profile, research_snapshot,
+        research_chat_session, research_profile, research_snapshot,
     },
     state::AppState,
 };
@@ -79,6 +79,34 @@ pub async fn research_profile_save(
 ) -> AppResult<ResearchProfile> {
     let _write_guard = research_state.lock().await;
     research_profile::save(state.inner(), profile).await
+}
+
+#[tauri::command]
+pub async fn research_chat_session_load(
+    state: State<'_, AppState>,
+) -> AppResult<ResearchChatSessionSnapshot> {
+    research_chat_session::load(state.inner()).await
+}
+
+#[tauri::command]
+pub async fn research_chat_session_save(
+    state: State<'_, AppState>,
+    research_state: State<'_, ResearchState>,
+    scope: ResearchChatSessionScope,
+    session: ResearchChatSession,
+) -> AppResult<ResearchChatSessionSnapshot> {
+    let _write_guard = research_state.lock().await;
+    research_chat_session::save(state.inner(), &scope, session).await
+}
+
+#[tauri::command]
+pub async fn research_chat_session_clear(
+    state: State<'_, AppState>,
+    research_state: State<'_, ResearchState>,
+    scope: ResearchChatSessionScope,
+) -> AppResult<ResearchChatSessionSnapshot> {
+    let _write_guard = research_state.lock().await;
+    research_chat_session::clear(state.inner(), &scope).await
 }
 
 #[tauri::command]

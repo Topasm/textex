@@ -6,7 +6,8 @@
  * analysis, and similar cold paths).
  */
 
-export type DocumentChangeSource = 'editor' | 'format' | 'external' | 'programmatic'
+export type DocumentChangeSource =
+  'editor' | 'format' | 'external' | 'programmatic' | 'history-restore'
 
 export interface DocumentRevisionSnapshot {
   readonly documentId: string
@@ -55,6 +56,7 @@ export class DocumentModel {
   #materializeText: () => string
   #revision = 0
   #savedRevision = 0
+  #requiresExplicitSave = false
   #cachedRevisionSnapshot: DocumentRevisionSnapshot | null = null
   #cachedMaterializedSnapshot: DocumentSnapshot | null = null
 
@@ -78,6 +80,11 @@ export class DocumentModel {
 
   get isDirty(): boolean {
     return this.#revision !== this.#savedRevision
+  }
+
+  /** Prevents restored history from being persisted by an automatic compile. */
+  get requiresExplicitSave(): boolean {
+    return this.#requiresExplicitSave
   }
 
   /** Returns an O(1), text-free checkpoint for stale-result validation. */
@@ -111,6 +118,8 @@ export class DocumentModel {
   recordChange(source: DocumentChangeSource = 'editor'): DocumentRevisionSnapshot {
     const before = this.revisionSnapshot()
     this.#revision = nextRevision(this.#revision)
+    if (source === 'history-restore') this.#requiresExplicitSave = true
+    else if (source === 'editor') this.#requiresExplicitSave = false
     this.#invalidateSnapshots()
     const after = this.revisionSnapshot()
     this.#emit(freezeEvent({ kind: 'content', source, before, after }))
@@ -122,6 +131,7 @@ export class DocumentModel {
     const before = this.revisionSnapshot()
     this.#revision = nextRevision(this.#revision)
     this.#savedRevision = this.#revision
+    this.#requiresExplicitSave = false
     this.#invalidateSnapshots()
     const after = this.revisionSnapshot()
     this.#emit(freezeEvent({ kind: 'reload', before, after }))
@@ -130,6 +140,7 @@ export class DocumentModel {
 
   markSaved(revision: number = this.#revision): boolean {
     if (revision !== this.#revision) return false
+    this.#requiresExplicitSave = false
     if (revision === this.#savedRevision) return true
 
     const previousSavedRevision = this.#savedRevision

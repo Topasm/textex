@@ -13,6 +13,7 @@ pub mod project_session;
 pub mod pty;
 pub mod references;
 pub mod research;
+pub mod research_chat_session;
 pub mod research_limits;
 pub mod research_profile;
 pub mod research_snapshot;

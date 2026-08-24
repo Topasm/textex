@@ -1,4 +1,4 @@
-import type { RendererSessionSnapshot } from '../../shared/types'
+import type { RendererSessionSnapshot, UserSettings } from '../../shared/types'
 import { MAX_RENDERER_SESSION_ENTRY_BYTES } from '../../shared/defaultSettings'
 import { useEditorStore } from '../store/useEditorStore'
 import { usePdfStore } from '../store/usePdfStore'
@@ -58,13 +58,14 @@ function hasSessionData(snapshot: RendererSessionSnapshot): boolean {
 
 let installed = false
 
-export async function installRendererSessionBridge(): Promise<void> {
+export async function installRendererSessionBridge(
+  nativeSettings: UserSettings | undefined
+): Promise<void> {
   if (installed) return
   installed = true
 
   try {
-    const nativeSettings = await window.api.loadSettings()
-    const restored = restoreRendererSessionSnapshot(localStorage, nativeSettings.rendererSession)
+    const restored = restoreRendererSessionSnapshot(localStorage, nativeSettings?.rendererSession)
     if (restored) {
       await Promise.all([
         useEditorStore.persist.rehydrate(),
@@ -72,26 +73,35 @@ export async function installRendererSessionBridge(): Promise<void> {
         usePdfStore.persist.rehydrate()
       ])
     }
+  } catch {
+    // Session restoration is best-effort. Synchronization still needs to be
+    // installed so a later renderer change can repair the native snapshot.
+  }
 
-    let syncTimer: ReturnType<typeof setTimeout> | undefined
-    const sync = (): void => {
-      clearTimeout(syncTimer)
-      syncTimer = setTimeout(() => {
+  let syncTimer: ReturnType<typeof setTimeout> | undefined
+  const sync = (): void => {
+    clearTimeout(syncTimer)
+    syncTimer = setTimeout(() => {
+      try {
         const rendererSession = readRendererSessionSnapshot(localStorage)
         if (!hasSessionData(rendererSession)) return
         window.api.saveSettings({ rendererSession }).catch(() => {})
-      }, SESSION_SYNC_DELAY_MS)
-    }
+      } catch {
+        // Persisted WebView storage may be unavailable during shutdown.
+      }
+    }, SESSION_SYNC_DELAY_MS)
+  }
 
-    useEditorStore.subscribe(sync)
-    useProjectStore.subscribe(sync)
-    usePdfStore.subscribe(sync)
+  useEditorStore.subscribe(sync)
+  useProjectStore.subscribe(sync)
+  usePdfStore.subscribe(sync)
 
+  try {
     const rendererSession = readRendererSessionSnapshot(localStorage)
     if (hasSessionData(rendererSession)) {
       await window.api.saveSettings({ rendererSession })
     }
   } catch {
-    // Session migration is best-effort and must not block application startup.
+    // Initial native synchronization must not block application startup.
   }
 }

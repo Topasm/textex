@@ -16,6 +16,17 @@ export interface CompileTicket {
 
 let nextRequestId = 0
 let latestRequestId = 0
+const pendingAutoCompileCancellationListeners = new Set<() => void>()
+
+/** Cancels debounced or pre-save automatic work before an explicit compile starts. */
+export function cancelPendingAutoCompile(): void {
+  for (const listener of pendingAutoCompileCancellationListeners) listener()
+}
+
+export function onPendingAutoCompileCancellation(listener: () => void): () => void {
+  pendingAutoCompileCancellationListeners.add(listener)
+  return () => pendingAutoCompileCancellationListeners.delete(listener)
+}
 
 /** Creates a renderer-side identity for one compile input revision. */
 export function beginCompileTicket(filePath: string, snapshot: DocumentSnapshot): CompileTicket {

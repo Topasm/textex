@@ -1,10 +1,14 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { formatDistanceToNow } from 'date-fns'
+import { GitCommitHorizontal, History } from 'lucide-react'
+import { documentRegistry } from '../models/documentRegistry'
 import { useEditorStore } from '../store/useEditorStore'
+import { useNotificationStore } from '../store/useNotificationStore'
 import { useProjectStore } from '../store/useProjectStore'
-import { logError } from '../utils/errorMessage'
+import { errorMessage, logError } from '../utils/errorMessage'
 import type { GitLogEntry, HistoryItem } from '../../shared/types'
+import { ICON_SIZE } from './ui/IconSystem'
 
 interface TimelineEntry {
   type: 'git' | 'local'
@@ -51,8 +55,11 @@ export function TimelinePanel() {
   const [entries, setEntries] = useState<TimelineEntry[]>([])
   const [loading, setLoading] = useState(false)
   const prevDirtyRef = useRef(isDirty)
+  const refreshRequestRef = useRef(0)
 
   const refresh = useCallback(async () => {
+    const requestId = ++refreshRequestRef.current
+    const requestedFilePath = activeFilePath
     if (!activeFilePath) {
       setEntries([])
       return
@@ -66,18 +73,27 @@ export function TimelinePanel() {
           : Promise.resolve([]),
         window.api.getHistoryList(activeFilePath)
       ])
+      if (
+        refreshRequestRef.current !== requestId ||
+        useEditorStore.getState().activeFilePath !== requestedFilePath
+      ) {
+        return
+      }
       setEntries(mergeTimeline(commits, snapshots))
     } catch (err) {
       logError('TimelinePanel:refresh', err)
-      setEntries([])
+      if (refreshRequestRef.current === requestId) setEntries([])
     } finally {
-      setLoading(false)
+      if (refreshRequestRef.current === requestId) setLoading(false)
     }
   }, [activeFilePath, projectRoot, isGitRepo])
 
   // Refresh when active file changes
   useEffect(() => {
     refresh()
+    return () => {
+      refreshRequestRef.current += 1
+    }
   }, [refresh])
 
   // Refresh after a save completes (isDirty transitions from true to false)
@@ -91,10 +107,47 @@ export function TimelinePanel() {
 
   const handleEntryClick = async (entry: TimelineEntry) => {
     if (activeFilePath && entry.type === 'local' && entry.snapshotPath) {
+      const editorState = useEditorStore.getState()
+      if (editorState.activeFilePath !== activeFilePath) return
+      const confirmationKey = editorState.isDirty
+        ? 'timelinePanel.restoreDirtyConfirm'
+        : 'timelinePanel.restoreConfirm'
+      if (!window.confirm(t(confirmationKey))) return
+
+      const requestedFilePath = activeFilePath
+      const requestedRevision = documentRegistry.revisionSnapshot(requestedFilePath)
+      if (!requestedRevision) return
+
       try {
-        await window.api.loadHistorySnapshot(activeFilePath, entry.snapshotPath)
+        const content = await window.api.loadHistorySnapshot(requestedFilePath, entry.snapshotPath)
+        const currentEditorState = useEditorStore.getState()
+        const currentModel = documentRegistry.getModel(requestedFilePath)
+        if (
+          currentEditorState.activeFilePath !== requestedFilePath ||
+          !currentModel?.isCurrent(requestedRevision)
+        ) {
+          useNotificationStore.getState().pushNotification({
+            id: 'timeline-restore-stale',
+            message: t('timelinePanel.restoreStale'),
+            tone: 'warning'
+          })
+          return
+        }
+
+        const restored = currentEditorState.updateActiveDocument(content, 'history-restore')
+        if (!restored) return
+        useNotificationStore.getState().pushNotification({
+          id: 'timeline-restore-success',
+          message: t('timelinePanel.restoreSuccess'),
+          tone: 'success'
+        })
       } catch (err) {
         logError('TimelinePanel:loadSnapshot', err)
+        useNotificationStore.getState().pushNotification({
+          id: 'timeline-restore-failed',
+          message: t('timelinePanel.restoreFailed', { reason: errorMessage(err) }),
+          tone: 'error'
+        })
       }
     }
   }
@@ -145,13 +198,9 @@ export function TimelinePanel() {
         >
           <div className="timeline-icon">
             {entry.type === 'git' ? (
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M10.5 7.75a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0zm1.43.75a4.002 4.002 0 0 1-7.86 0H.75a.75.75 0 0 1 0-1.5h3.32a4.001 4.001 0 0 1 7.86 0h3.32a.75.75 0 0 1 0 1.5h-3.32z" />
-              </svg>
+              <GitCommitHorizontal size={ICON_SIZE.compact} />
             ) : (
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 12.5a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11zM8 4a.75.75 0 0 1 .75.75v2.5h2.5a.75.75 0 0 1 0 1.5h-3.25A.75.75 0 0 1 7.25 8V4.75A.75.75 0 0 1 8 4z" />
-              </svg>
+              <History size={ICON_SIZE.compact} />
             )}
           </div>
           <div className="timeline-info">

@@ -10,7 +10,10 @@ use crate::{
         Base64FileResult, DirectoryEntry, OpenFileResult, SaveFileAsResult, SaveFileInput,
         SuccessResult,
     },
-    services::filesystem,
+    services::{
+        filesystem::{self, FileSaveState},
+        history::HistoryState,
+    },
     state::AppState,
 };
 
@@ -50,10 +53,19 @@ pub async fn read_file(state: State<'_, AppState>, file_path: String) -> AppResu
 #[tauri::command]
 pub async fn save_file(
     state: State<'_, AppState>,
+    save_state: State<'_, FileSaveState>,
+    history_state: State<'_, HistoryState>,
     content: String,
     file_path: String,
 ) -> AppResult<SuccessResult> {
-    filesystem::save_file(state.inner(), &file_path, content).await
+    filesystem::save_file(
+        state.inner(),
+        save_state.inner(),
+        history_state.inner(),
+        &file_path,
+        content,
+    )
+    .await
 }
 
 const BINARY_FILE_PATH_HEADER: &str = "x-textex-file-path";
@@ -90,17 +102,34 @@ pub async fn write_file_binary(
 pub async fn save_file_as(
     app: AppHandle,
     state: State<'_, AppState>,
+    save_state: State<'_, FileSaveState>,
+    history_state: State<'_, HistoryState>,
     content: String,
 ) -> AppResult<Option<SaveFileAsResult>> {
-    filesystem::save_file_as(&app, state.inner(), content).await
+    filesystem::save_file_as(
+        &app,
+        state.inner(),
+        save_state.inner(),
+        history_state.inner(),
+        content,
+    )
+    .await
 }
 
 #[tauri::command]
 pub async fn save_file_batch(
     state: State<'_, AppState>,
+    save_state: State<'_, FileSaveState>,
+    history_state: State<'_, HistoryState>,
     files: Vec<SaveFileInput>,
 ) -> AppResult<SuccessResult> {
-    filesystem::save_file_batch(state.inner(), files).await
+    filesystem::save_file_batch(
+        state.inner(),
+        save_state.inner(),
+        history_state.inner(),
+        files,
+    )
+    .await
 }
 
 #[tauri::command]

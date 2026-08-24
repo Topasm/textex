@@ -1,8 +1,10 @@
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Minus, Plus } from 'lucide-react'
 import { useProjectStore } from '../store/useProjectStore'
 import { getGitFileDecoration } from '../utils/gitStatus'
 import { logError } from '../utils/errorMessage'
+import { ICON_SIZE } from './ui/IconSystem'
 
 function GitPanel() {
   const { t } = useTranslation()
@@ -116,7 +118,7 @@ function GitPanel() {
                   title={t('gitPanel.unstage')}
                   aria-label={t('gitPanel.unstage')}
                 >
-                  {'\u2212'}
+                  <Minus size={ICON_SIZE.compact} />
                 </button>
               </div>
             )
@@ -145,7 +147,7 @@ function GitPanel() {
                   title={t('gitPanel.stage')}
                   aria-label={t('gitPanel.stage')}
                 >
-                  +
+                  <Plus size={ICON_SIZE.compact} />
                 </button>
               </div>
             )

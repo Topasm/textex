@@ -2688,6 +2688,49 @@ body,
   border-bottom-color: var(--accent);
 }
 
+.research-panel-tabs > button.drop-active {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-bottom-color: var(--accent);
+  outline: 1px dashed var(--accent);
+  outline-offset: -3px;
+}
+
+.research-panel-tool-separator {
+  align-self: stretch;
+  width: 1px;
+  margin: 7px 2px;
+  background: var(--border);
+}
+
+.research-panel-tabs > .research-panel-tool-btn {
+  position: relative;
+  flex: 0 0 32px;
+  padding: 0;
+}
+
+.research-panel-tabs > .research-panel-tool-btn.active {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  border-bottom-color: var(--accent);
+}
+
+.research-panel-tool-badge {
+  position: absolute;
+  top: 2px;
+  right: 1px;
+  min-width: 12px;
+  height: 12px;
+  padding: 0 3px;
+  color: var(--text-on-accent, #fff);
+  background: var(--error);
+  border-radius: 6px;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 12px;
+  text-align: center;
+}
+
 .research-panel-tabs .research-panel-close {
   margin-left: auto;
   padding-inline: 10px;
@@ -3126,6 +3169,37 @@ body,
   color: var(--text-secondary);
 }
 
+.zotero-collection-tree .collection-chevron {
+  flex: 0 0 auto;
+  color: var(--text-secondary);
+  opacity: 0;
+  transition: transform 120ms ease;
+}
+
+.zotero-collection-tree [aria-expanded] .collection-chevron {
+  opacity: 1;
+}
+
+.zotero-collection-tree .collection-chevron.expanded {
+  transform: rotate(90deg);
+}
+
+.zotero-show-more {
+  width: 100%;
+  margin: -2px 0 8px;
+  padding: 5px 8px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.zotero-show-more:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
 .research-check-row {
   display: flex;
   align-items: flex-start;
@@ -3213,6 +3287,37 @@ body,
   flex-direction: column;
 }
 
+.research-chat-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.research-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.research-icon-button:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+  border-color: var(--border);
+}
+
+.research-icon-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .research-chat-messages {
   flex: 1;
   min-height: 120px;
@@ -3247,10 +3352,178 @@ body,
   white-space: pre-wrap;
 }
 
+.research-chat-sources {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.research-chat-sources > span {
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.research-chat-source-card {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+}
+
+.research-chat-source-card > div:first-child {
+  min-width: 0;
+}
+
+.research-chat-source-card b,
+.research-chat-source-card small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.research-chat-source-card b {
+  font-size: 11px;
+}
+
+.research-chat-source-card small {
+  margin-top: 2px;
+  color: var(--text-secondary);
+  font-size: 9px;
+}
+
+.research-chat-source-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 4px;
+}
+
+.research-chat-source-actions button,
+.research-chat-insert-answer {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+  padding: 4px 6px;
+  color: var(--text-secondary);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 9px;
+}
+
+.research-chat-source-actions button:hover:not(:disabled),
+.research-chat-insert-answer:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: var(--accent);
+}
+
+.research-chat-source-actions button:disabled,
+.research-chat-insert-answer:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.research-chat-insert-answer {
+  margin-top: 7px;
+}
+
+.research-zotero-plan {
+  flex-shrink: 0;
+  margin: 8px 0;
+  padding: 10px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-secondary));
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  border-radius: 7px;
+}
+
+.research-zotero-plan-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  color: var(--text-primary);
+}
+
+.research-zotero-plan-heading strong,
+.research-zotero-plan-heading span {
+  display: block;
+}
+
+.research-zotero-plan-heading strong {
+  font-size: 12px;
+}
+
+.research-zotero-plan-heading span {
+  margin-top: 2px;
+  color: var(--text-secondary);
+  font-size: 9px;
+}
+
+.research-zotero-plan > p {
+  margin: 8px 0 5px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.research-zotero-plan ol {
+  max-height: 150px;
+  margin: 0;
+  padding-left: 20px;
+  overflow-y: auto;
+  color: var(--text-primary);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.research-zotero-plan-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 5px;
+  margin-top: 9px;
+}
+
+.research-zotero-plan-actions button {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  padding: 5px 7px;
+  color: var(--text-secondary);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.research-zotero-plan-actions button.primary {
+  color: var(--text-primary);
+  border-color: var(--accent);
+}
+
+.research-zotero-plan-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .research-chat-composer {
   flex-shrink: 0;
   padding-top: 8px;
   border-top: 1px solid var(--border);
+}
+
+.research-chat-composer.drop-active {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
 }
 
 .research-context-chips {
@@ -4003,7 +4276,8 @@ body,
     background-color 0.15s;
 }
 
-.bib-entry:hover .bib-entry-action-btn {
+.bib-entry:hover .bib-entry-action-btn,
+.bib-entry:focus-within .bib-entry-action-btn {
   opacity: 1;
 }
 

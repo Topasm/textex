@@ -1,23 +1,29 @@
 use std::{
-    collections::HashMap,
+    collections::{BTreeSet, HashMap, HashSet},
     path::Path,
-    sync::{atomic::Ordering, OnceLock},
-    time::Duration,
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        OnceLock,
+    },
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use reqwest::{redirect::Policy, Client};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use tokio::sync::Mutex;
 
 use crate::{
     error::{AppError, AppResult},
     models::{
-        OnlineReference, ReferenceAddResult, ZoteroCollection, ZoteroSaveResult,
-        ZoteroSearchResult, ZoteroSyncResult,
+        OnlineReference, ReferenceAddResult, ZoteroCollection, ZoteroMutationDraft,
+        ZoteroMutationDraftOperation, ZoteroMutationOperation, ZoteroMutationPlan,
+        ZoteroMutationResult, ZoteroSaveResult, ZoteroSearchResult, ZoteroSyncResult,
     },
     services::{
         filesystem, references,
         research::{self, ProjectCommit, ResearchState},
+        research_limits,
     },
     state::AppState,
 };
@@ -30,6 +36,12 @@ const MAX_RPC_RESPONSE_BYTES: usize = 8 * 1024 * 1024;
 const MAX_CAYW_RESPONSE_BYTES: usize = 64 * 1024;
 const MAX_COLLECTIONS: usize = 10_000;
 const MAX_LOCAL_API_RESPONSE_BYTES: usize = 2 * 1024 * 1024;
+const MAX_MUTATION_OPERATIONS: usize = 25;
+const MAX_MUTATION_ITEM_MATCHES: usize = 25;
+const MAX_COLLECTION_NAME_BYTES: usize = 255;
+const MAX_TAG_BYTES: usize = 255;
+const ZOTERO_KEY_ALPHABET: &[u8] = b"23456789ABCDEFGHIJKLMNPQRSTUVWXYZ";
+static ZOTERO_KEY_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Default)]
 pub struct ZoteroSyncState {
@@ -64,12 +76,47 @@ struct LocalWriteResponse {
     #[serde(default)]
     success: HashMap<String, serde_json::Value>,
     #[serde(default)]
+    unchanged: HashMap<String, serde_json::Value>,
+    #[serde(default)]
     failed: HashMap<String, serde_json::Value>,
 }
 
 #[derive(Deserialize)]
 struct LocalItemEnvelope {
+    key: String,
+    version: u64,
     data: LocalItemData,
+}
+
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZoteroPlanningCollection {
+    key: String,
+    name: String,
+    path: String,
+    parent_key: Option<String>,
+    version: u64,
+}
+
+#[derive(Clone, Deserialize)]
+struct LocalCollectionEnvelope {
+    key: String,
+    version: u64,
+    data: LocalCollectionData,
+}
+
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LocalCollectionData {
+    #[serde(default)]
+    name: String,
+    #[serde(default)]
+    parent_collection: serde_json::Value,
+}
+
+#[derive(Clone, Deserialize)]
+struct LocalTag {
+    tag: String,
 }
 
 #[derive(Deserialize)]
@@ -82,6 +129,8 @@ struct LocalItemData {
     doi: String,
     #[serde(default)]
     archive_location: String,
+    #[serde(default)]
+    tags: Vec<LocalTag>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -179,7 +228,11 @@ pub async fn export_bibtex(citekeys: Vec<String>, port: Option<u16>) -> AppResul
     if citekeys.is_empty() {
         return Ok(String::new());
     }
-    if citekeys.len() > MAX_CITEKEYS || citekeys.iter().any(|key| !valid_citekey(key)) {
+    if citekeys.len() > MAX_CITEKEYS
+        || citekeys
+            .iter()
+            .any(|key| !research_limits::is_safe_citation_key(key))
+    {
         return Err(AppError::Zotero("invalid citation key request".to_owned()));
     }
     let response: JsonRpcResponse<String> = json_rpc(
@@ -224,7 +277,7 @@ pub async fn add_to_project(
     citekey: String,
     port: Option<u16>,
 ) -> AppResult<ProjectCommit<ReferenceAddResult>> {
-    if !valid_citekey(&citekey) {
+    if !research_limits::is_safe_citation_key(&citekey) {
         return Err(AppError::Zotero("invalid citation key request".to_owned()));
     }
     let (root, epoch, epoch_counter) = state.project_root_epoch()?;
@@ -311,6 +364,825 @@ pub async fn save_online_to_library(
     Err(AppError::Zotero(
         "Zotero rejected the local write authorization".to_owned(),
     ))
+}
+
+pub async fn planning_inventory(
+    port: Option<u16>,
+) -> AppResult<(String, Vec<ZoteroPlanningCollection>)> {
+    let server_id = local_server_id(port).await?;
+    let collections = local_collections(port).await?;
+    let inventory = build_collection_inventory(&collections)?;
+    Ok((server_id, inventory))
+}
+
+pub async fn resolve_mutation_draft(
+    state: &AppState,
+    draft: ZoteroMutationDraft,
+    server_id: String,
+    port: Option<u16>,
+) -> AppResult<ZoteroMutationPlan> {
+    if draft.operations.is_empty() {
+        return Err(AppError::Zotero(
+            "the request did not produce a safe Zotero change".to_owned(),
+        ));
+    }
+    if draft.operations.len() > MAX_MUTATION_OPERATIONS {
+        return Err(AppError::Zotero(
+            "a Zotero plan may contain at most 25 operations".to_owned(),
+        ));
+    }
+    validate_mutation_text(&draft.summary, "plan summary", 2_048)?;
+    let (project_root, project_epoch, _) = state.project_root_epoch()?;
+    let port = port.unwrap_or(DEFAULT_PORT);
+    let collections = local_collections(Some(port)).await?;
+    let mut targets = build_collection_inventory(&collections)?;
+    let existing_keys = targets
+        .iter()
+        .map(|collection| collection.key.clone())
+        .collect::<HashSet<_>>();
+    let mut effective_parents = targets
+        .iter()
+        .map(|collection| (collection.key.clone(), collection.parent_key.clone()))
+        .collect::<HashMap<_, _>>();
+    let mut touched_collections = HashSet::new();
+    let mut touched_items = HashSet::new();
+    let mut operations = Vec::new();
+
+    for operation in draft.operations {
+        match operation {
+            ZoteroMutationDraftOperation::CreateCollection { name, parent } => {
+                let name =
+                    validate_mutation_text(&name, "collection name", MAX_COLLECTION_NAME_BYTES)?;
+                let parent_target = resolve_optional_collection(&targets, parent.as_deref())?;
+                let parent_key = parent_target.map(|target| target.key.clone());
+                if targets.iter().any(|target| {
+                    target.parent_key == parent_key && target.name.eq_ignore_ascii_case(name)
+                }) {
+                    return Err(AppError::Zotero(format!(
+                        "a collection named ‘{name}’ already exists at that location"
+                    )));
+                }
+                let key = generate_collection_key(targets.iter().map(|target| target.key.as_str()));
+                let parent_label = parent_target
+                    .map(|target| target.path.clone())
+                    .unwrap_or_else(|| "Library root".to_owned());
+                let path =
+                    child_collection_path(parent_target.map(|target| target.path.as_str()), name);
+                targets.push(ZoteroPlanningCollection {
+                    key: key.clone(),
+                    name: name.to_owned(),
+                    path: path.clone(),
+                    parent_key: parent_key.clone(),
+                    version: 0,
+                });
+                effective_parents.insert(key.clone(), parent_key.clone());
+                operations.push(ZoteroMutationOperation::CreateCollection {
+                    key,
+                    name: name.to_owned(),
+                    path,
+                    parent_key,
+                    parent_label,
+                });
+            }
+            ZoteroMutationDraftOperation::MoveCollection { collection, parent } => {
+                let target = resolve_collection(&targets, &collection)?.clone();
+                if !existing_keys.contains(&target.key) {
+                    return Err(AppError::Zotero(
+                        "a newly created collection cannot be moved in the same plan".to_owned(),
+                    ));
+                }
+                if !touched_collections.insert(target.key.clone()) {
+                    return Err(AppError::Zotero(format!(
+                        "collection ‘{}’ is changed more than once in the plan",
+                        target.path
+                    )));
+                }
+                let parent_target = resolve_optional_collection(&targets, parent.as_deref())?;
+                let parent_key = parent_target.map(|value| value.key.clone());
+                if parent_key.as_deref() == Some(target.key.as_str())
+                    || parent_key.as_deref().is_some_and(|key| {
+                        collection_descends_from(key, &target.key, &effective_parents)
+                    })
+                {
+                    return Err(AppError::Zotero(
+                        "a collection cannot be moved into itself or one of its descendants"
+                            .to_owned(),
+                    ));
+                }
+                effective_parents.insert(target.key.clone(), parent_key.clone());
+                operations.push(ZoteroMutationOperation::MoveCollection {
+                    key: target.key,
+                    version: target.version,
+                    name: target.name,
+                    path: target.path,
+                    parent_key,
+                    parent_label: parent_target
+                        .map(|value| value.path.clone())
+                        .unwrap_or_else(|| "Library root".to_owned()),
+                });
+            }
+            ZoteroMutationDraftOperation::RenameCollection {
+                collection,
+                new_name,
+            } => {
+                let target = resolve_collection(&targets, &collection)?.clone();
+                if !existing_keys.contains(&target.key) {
+                    return Err(AppError::Zotero(
+                        "a newly created collection cannot be renamed in the same plan".to_owned(),
+                    ));
+                }
+                if !touched_collections.insert(target.key.clone()) {
+                    return Err(AppError::Zotero(format!(
+                        "collection ‘{}’ is changed more than once in the plan",
+                        target.path
+                    )));
+                }
+                let new_name = validate_mutation_text(
+                    &new_name,
+                    "new collection name",
+                    MAX_COLLECTION_NAME_BYTES,
+                )?;
+                if targets.iter().any(|candidate| {
+                    candidate.key != target.key
+                        && candidate.parent_key == target.parent_key
+                        && candidate.name.eq_ignore_ascii_case(new_name)
+                }) {
+                    return Err(AppError::Zotero(format!(
+                        "a collection named ‘{new_name}’ already exists at that location"
+                    )));
+                }
+                operations.push(ZoteroMutationOperation::RenameCollection {
+                    key: target.key,
+                    version: target.version,
+                    name: target.name,
+                    path: target.path,
+                    new_name: new_name.to_owned(),
+                });
+            }
+            ZoteroMutationDraftOperation::UpdateItemTags {
+                query,
+                add_tags,
+                remove_tags,
+            } => {
+                let query = validate_mutation_text(&query, "item query", MAX_SEARCH_LENGTH)?;
+                let add_tags = validate_tags(add_tags)?;
+                let remove_tags = validate_tags(remove_tags)?;
+                if add_tags.is_empty() && remove_tags.is_empty() {
+                    return Err(AppError::Zotero(
+                        "a tag operation must add or remove at least one tag".to_owned(),
+                    ));
+                }
+                if add_tags.iter().any(|tag| remove_tags.contains(tag)) {
+                    return Err(AppError::Zotero(
+                        "the same tag cannot be added and removed in one operation".to_owned(),
+                    ));
+                }
+                let items = search_local_items(query, Some(port)).await?;
+                if items.is_empty() {
+                    return Err(AppError::Zotero(format!(
+                        "no Zotero items matched ‘{query}’"
+                    )));
+                }
+                if operations.len().saturating_add(items.len()) > MAX_MUTATION_ITEM_MATCHES {
+                    return Err(AppError::Zotero(
+                        "the Zotero plan would change more than 25 objects; narrow the item query"
+                            .to_owned(),
+                    ));
+                }
+                for item in items {
+                    if !touched_items.insert(item.key.clone()) {
+                        return Err(AppError::Zotero(format!(
+                            "item ‘{}’ is matched by more than one tag operation",
+                            item.data.title
+                        )));
+                    }
+                    let current_tags =
+                        normalized_tags(item.data.tags.into_iter().map(|tag| tag.tag).collect());
+                    operations.push(ZoteroMutationOperation::UpdateItemTags {
+                        key: item.key,
+                        version: item.version,
+                        title: if item.data.title.trim().is_empty() {
+                            "Untitled Zotero item".to_owned()
+                        } else {
+                            item.data.title
+                        },
+                        current_tags,
+                        add_tags: add_tags.clone(),
+                        remove_tags: remove_tags.clone(),
+                    });
+                }
+            }
+        }
+    }
+
+    Ok(ZoteroMutationPlan {
+        summary: draft.summary,
+        server_id,
+        port,
+        project_root: filesystem::path_to_string(&project_root)?,
+        project_epoch: project_epoch.to_string(),
+        operations,
+    })
+}
+
+pub async fn apply_mutation_plan(
+    sync_state: &ZoteroSyncState,
+    state: &AppState,
+    plan: ZoteroMutationPlan,
+) -> AppResult<ZoteroMutationResult> {
+    validate_resolved_plan(state, &plan)?;
+    let current_server_id = local_server_id(Some(plan.port)).await?;
+    if current_server_id != plan.server_id {
+        return Err(AppError::Zotero(
+            "Zotero restarted or the connected library changed; create a fresh preview".to_owned(),
+        ));
+    }
+    let current_collections = local_collections(Some(plan.port)).await?;
+    let current_collection_map = current_collections
+        .into_iter()
+        .map(|collection| (collection.key.clone(), collection))
+        .collect::<HashMap<_, _>>();
+    let mut collection_payload = Vec::new();
+    let mut item_payload = Vec::new();
+    let planned_keys = plan
+        .operations
+        .iter()
+        .filter_map(|operation| match operation {
+            ZoteroMutationOperation::CreateCollection { key, .. } => Some(key.clone()),
+            _ => None,
+        })
+        .collect::<HashSet<_>>();
+    let mut effective_parents = current_collection_map
+        .iter()
+        .map(|(key, collection)| {
+            (
+                key.clone(),
+                local_parent_key(&collection.data.parent_collection),
+            )
+        })
+        .collect::<HashMap<_, _>>();
+    for operation in &plan.operations {
+        if let ZoteroMutationOperation::CreateCollection {
+            key, parent_key, ..
+        } = operation
+        {
+            effective_parents.insert(key.clone(), parent_key.clone());
+        }
+    }
+    for operation in &plan.operations {
+        if let ZoteroMutationOperation::MoveCollection {
+            key, parent_key, ..
+        } = operation
+        {
+            if parent_key.as_deref() == Some(key.as_str())
+                || parent_key
+                    .as_deref()
+                    .is_some_and(|parent| collection_descends_from(parent, key, &effective_parents))
+            {
+                return Err(AppError::Zotero(
+                    "a collection cannot be moved into itself or one of its descendants".to_owned(),
+                ));
+            }
+            effective_parents.insert(key.clone(), parent_key.clone());
+        }
+    }
+
+    for operation in &plan.operations {
+        match operation {
+            ZoteroMutationOperation::CreateCollection {
+                key,
+                name,
+                parent_key,
+                ..
+            } => {
+                if current_collection_map.contains_key(key) {
+                    return Err(stale_plan_error());
+                }
+                validate_parent_key(parent_key, &current_collection_map, &planned_keys)?;
+                collection_payload.push(serde_json::json!({
+                    "key": key,
+                    "name": name,
+                    "parentCollection": local_parent_value(parent_key)
+                }));
+            }
+            ZoteroMutationOperation::MoveCollection {
+                key,
+                version,
+                name,
+                parent_key,
+                ..
+            } => {
+                let current = current_collection_map
+                    .get(key)
+                    .ok_or_else(stale_plan_error)?;
+                if current.version != *version || current.data.name != *name {
+                    return Err(stale_plan_error());
+                }
+                validate_parent_key(parent_key, &current_collection_map, &planned_keys)?;
+                collection_payload.push(serde_json::json!({
+                    "key": key,
+                    "version": version,
+                    "parentCollection": local_parent_value(parent_key)
+                }));
+            }
+            ZoteroMutationOperation::RenameCollection {
+                key,
+                version,
+                name,
+                new_name,
+                ..
+            } => {
+                let current = current_collection_map
+                    .get(key)
+                    .ok_or_else(stale_plan_error)?;
+                if current.version != *version || current.data.name != *name {
+                    return Err(stale_plan_error());
+                }
+                collection_payload.push(serde_json::json!({
+                    "key": key,
+                    "version": version,
+                    "name": new_name
+                }));
+            }
+            ZoteroMutationOperation::UpdateItemTags {
+                key,
+                version,
+                current_tags,
+                add_tags,
+                remove_tags,
+                ..
+            } => {
+                let current = local_item_by_key(key, Some(plan.port)).await?;
+                if current.version != *version
+                    || normalized_tags(current.data.tags.into_iter().map(|tag| tag.tag).collect())
+                        != *current_tags
+                {
+                    return Err(stale_plan_error());
+                }
+                let mut next = current_tags.iter().cloned().collect::<BTreeSet<_>>();
+                for tag in remove_tags {
+                    next.remove(tag);
+                }
+                next.extend(add_tags.iter().cloned());
+                let tags = next
+                    .into_iter()
+                    .map(|tag| serde_json::json!({ "tag": tag }))
+                    .collect::<Vec<_>>();
+                item_payload.push(serde_json::json!({
+                    "key": key,
+                    "version": version,
+                    "tags": tags
+                }));
+            }
+        }
+    }
+
+    // The plan was bound to an active project when previewed. Re-check it
+    // immediately before the first authorization prompt and external write.
+    validate_resolved_plan(state, &plan)?;
+    if !collection_payload.is_empty() {
+        write_local_batch(
+            sync_state,
+            "users/0/collections",
+            &collection_payload,
+            Some(plan.port),
+        )
+        .await?;
+    }
+    if !item_payload.is_empty() {
+        write_local_batch(sync_state, "users/0/items", &item_payload, Some(plan.port)).await?;
+    }
+    let collection_changes = collection_payload.len();
+    let item_changes = item_payload.len();
+    let applied = collection_changes + item_changes;
+    Ok(ZoteroMutationResult {
+        summary: format!("Applied {applied} approved Zotero change(s)."),
+        applied,
+        collection_changes,
+        item_changes,
+    })
+}
+
+async fn local_collections(port: Option<u16>) -> AppResult<Vec<LocalCollectionEnvelope>> {
+    let mut collections = Vec::new();
+    let mut start = 0usize;
+    while collections.len() < MAX_COLLECTIONS {
+        let mut url = reqwest::Url::parse(&local_api_endpoint(port, "users/0/collections")?)
+            .map_err(|error| AppError::Zotero(error.to_string()))?;
+        url.query_pairs_mut()
+            .append_pair("format", "json")
+            .append_pair("limit", "100")
+            .append_pair("start", &start.to_string());
+        let response = client()
+            .get(url)
+            .header("Zotero-API-Version", "3")
+            .header("Zotero-Allowed-Request", "1")
+            .timeout(Duration::from_secs(15))
+            .send()
+            .await
+            .map_err(zotero_request_error)?
+            .error_for_status()
+            .map_err(zotero_request_error)?;
+        let bytes = bounded_response(response, MAX_LOCAL_API_RESPONSE_BYTES).await?;
+        let page: Vec<LocalCollectionEnvelope> =
+            serde_json::from_slice(&bytes).map_err(|error| {
+                AppError::Zotero(format!("invalid local collection response: {error}"))
+            })?;
+        let page_len = page.len();
+        collections.extend(page);
+        if page_len < 100 {
+            break;
+        }
+        start = start.saturating_add(page_len);
+    }
+    if collections.len() > MAX_COLLECTIONS {
+        return Err(AppError::Zotero(
+            "the Zotero library has too many collections to plan safely".to_owned(),
+        ));
+    }
+    Ok(collections)
+}
+
+async fn search_local_items(query: &str, port: Option<u16>) -> AppResult<Vec<LocalItemEnvelope>> {
+    let mut url = reqwest::Url::parse(&local_api_endpoint(port, "users/0/items")?)
+        .map_err(|error| AppError::Zotero(error.to_string()))?;
+    url.query_pairs_mut()
+        .append_pair("q", query)
+        .append_pair("qmode", "everything")
+        .append_pair("format", "json")
+        .append_pair("limit", &MAX_MUTATION_ITEM_MATCHES.to_string());
+    let response = client()
+        .get(url)
+        .header("Zotero-API-Version", "3")
+        .header("Zotero-Allowed-Request", "1")
+        .timeout(Duration::from_secs(15))
+        .send()
+        .await
+        .map_err(zotero_request_error)?
+        .error_for_status()
+        .map_err(zotero_request_error)?;
+    let bytes = bounded_response(response, MAX_LOCAL_API_RESPONSE_BYTES).await?;
+    serde_json::from_slice(&bytes)
+        .map_err(|error| AppError::Zotero(format!("invalid local item response: {error}")))
+}
+
+async fn local_item_by_key(key: &str, port: Option<u16>) -> AppResult<LocalItemEnvelope> {
+    let response = client()
+        .get(local_api_endpoint(port, &format!("users/0/items/{key}"))?)
+        .header("Zotero-API-Version", "3")
+        .header("Zotero-Allowed-Request", "1")
+        .timeout(Duration::from_secs(15))
+        .send()
+        .await
+        .map_err(zotero_request_error)?
+        .error_for_status()
+        .map_err(zotero_request_error)?;
+    let bytes = bounded_response(response, MAX_LOCAL_API_RESPONSE_BYTES).await?;
+    serde_json::from_slice(&bytes)
+        .map_err(|error| AppError::Zotero(format!("invalid local item response: {error}")))
+}
+
+async fn write_local_batch(
+    sync_state: &ZoteroSyncState,
+    endpoint: &str,
+    payload: &[serde_json::Value],
+    port: Option<u16>,
+) -> AppResult<()> {
+    for attempt in 0..2 {
+        let authorization = local_authorization(sync_state, port).await?;
+        let response = client()
+            .post(local_api_endpoint(port, endpoint)?)
+            .header("Zotero-API-Version", "3")
+            .header("Zotero-Allowed-Request", "1")
+            .header("Zotero-Server-ID", &authorization.server_id)
+            .header("Zotero-API-Key", &authorization.key)
+            .json(payload)
+            .timeout(Duration::from_secs(30))
+            .send()
+            .await
+            .map_err(zotero_request_error)?;
+        if response.status() == reqwest::StatusCode::UNAUTHORIZED && attempt == 0 {
+            *sync_state.local_authorization.lock().await = None;
+            continue;
+        }
+        let response = response.error_for_status().map_err(zotero_request_error)?;
+        let bytes = bounded_response(response, MAX_LOCAL_API_RESPONSE_BYTES).await?;
+        let result: LocalWriteResponse = serde_json::from_slice(&bytes)
+            .map_err(|error| AppError::Zotero(format!("invalid local API response: {error}")))?;
+        if !authorization.remember {
+            *sync_state.local_authorization.lock().await = None;
+        }
+        if !result.failed.is_empty() {
+            return Err(AppError::Zotero(format!(
+                "Zotero rejected part of the approved batch: {}. Some earlier changes may already have been applied.",
+                serde_json::to_string(&result.failed).unwrap_or_else(|_| "unknown failure".to_owned())
+            )));
+        }
+        let reported = result.successful.len() + result.success.len() + result.unchanged.len();
+        if reported < payload.len() {
+            return Err(AppError::Zotero(
+                "Zotero returned an incomplete write result; refresh before trying again"
+                    .to_owned(),
+            ));
+        }
+        return Ok(());
+    }
+    Err(AppError::Zotero(
+        "Zotero rejected the local write authorization".to_owned(),
+    ))
+}
+
+fn build_collection_inventory(
+    collections: &[LocalCollectionEnvelope],
+) -> AppResult<Vec<ZoteroPlanningCollection>> {
+    let by_key = collections
+        .iter()
+        .map(|collection| (collection.key.as_str(), collection))
+        .collect::<HashMap<_, _>>();
+    let mut memo = HashMap::new();
+    let mut inventory = Vec::with_capacity(collections.len());
+    for collection in collections {
+        let path =
+            collection_inventory_path(&collection.key, &by_key, &mut memo, &mut HashSet::new())?;
+        inventory.push(ZoteroPlanningCollection {
+            key: collection.key.clone(),
+            name: collection.data.name.clone(),
+            path,
+            parent_key: local_parent_key(&collection.data.parent_collection),
+            version: collection.version,
+        });
+    }
+    inventory.sort_by(|left, right| left.path.to_lowercase().cmp(&right.path.to_lowercase()));
+    Ok(inventory)
+}
+
+fn collection_inventory_path(
+    key: &str,
+    collections: &HashMap<&str, &LocalCollectionEnvelope>,
+    memo: &mut HashMap<String, String>,
+    visiting: &mut HashSet<String>,
+) -> AppResult<String> {
+    if let Some(path) = memo.get(key) {
+        return Ok(path.clone());
+    }
+    if !visiting.insert(key.to_owned()) {
+        return Err(AppError::Zotero(
+            "the Zotero collection hierarchy contains a cycle".to_owned(),
+        ));
+    }
+    let collection = collections
+        .get(key)
+        .ok_or_else(|| AppError::Zotero("a Zotero collection parent is missing".to_owned()))?;
+    let parent_path = match local_parent_key(&collection.data.parent_collection) {
+        Some(parent) if collections.contains_key(parent.as_str()) => Some(
+            collection_inventory_path(&parent, collections, memo, visiting)?,
+        ),
+        Some(_) => {
+            return Err(AppError::Zotero(
+                "a Zotero collection parent is missing".to_owned(),
+            ))
+        }
+        None => None,
+    };
+    visiting.remove(key);
+    let path = child_collection_path(parent_path.as_deref(), &collection.data.name);
+    memo.insert(key.to_owned(), path.clone());
+    Ok(path)
+}
+
+fn child_collection_path(parent: Option<&str>, name: &str) -> String {
+    parent.map_or_else(|| name.to_owned(), |value| format!("{value} / {name}"))
+}
+
+fn local_parent_key(value: &serde_json::Value) -> Option<String> {
+    value
+        .as_str()
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned)
+}
+
+fn local_parent_value(parent_key: &Option<String>) -> serde_json::Value {
+    parent_key
+        .as_ref()
+        .map_or(serde_json::Value::Bool(false), |key| {
+            serde_json::Value::String(key.clone())
+        })
+}
+
+fn resolve_optional_collection<'a>(
+    targets: &'a [ZoteroPlanningCollection],
+    reference: Option<&str>,
+) -> AppResult<Option<&'a ZoteroPlanningCollection>> {
+    let Some(reference) = reference.map(str::trim).filter(|value| {
+        !value.is_empty()
+            && !matches!(value.to_ascii_lowercase().as_str(), "root" | "library root")
+            && *value != "/"
+    }) else {
+        return Ok(None);
+    };
+    resolve_collection(targets, reference).map(Some)
+}
+
+fn resolve_collection<'a>(
+    targets: &'a [ZoteroPlanningCollection],
+    reference: &str,
+) -> AppResult<&'a ZoteroPlanningCollection> {
+    let reference = validate_mutation_text(reference, "collection reference", 2_048)?;
+    let exact_paths = targets
+        .iter()
+        .filter(|target| target.path.eq_ignore_ascii_case(reference))
+        .collect::<Vec<_>>();
+    if exact_paths.len() == 1 {
+        return Ok(exact_paths[0]);
+    }
+    let names = targets
+        .iter()
+        .filter(|target| target.name.eq_ignore_ascii_case(reference))
+        .collect::<Vec<_>>();
+    match names.as_slice() {
+        [target] => Ok(*target),
+        [] => Err(AppError::Zotero(format!(
+            "collection ‘{reference}’ was not found"
+        ))),
+        _ => Err(AppError::Zotero(format!(
+            "collection name ‘{reference}’ is ambiguous; use its full path"
+        ))),
+    }
+}
+
+fn collection_descends_from(
+    candidate: &str,
+    ancestor: &str,
+    parents: &HashMap<String, Option<String>>,
+) -> bool {
+    let mut current = Some(candidate);
+    let mut visited = HashSet::new();
+    while let Some(key) = current {
+        if key == ancestor {
+            return true;
+        }
+        if !visited.insert(key.to_owned()) {
+            return true;
+        }
+        current = parents.get(key).and_then(Option::as_deref);
+    }
+    false
+}
+
+fn validate_mutation_text<'a>(value: &'a str, label: &str, max_bytes: usize) -> AppResult<&'a str> {
+    let trimmed = value.trim();
+    if trimmed.is_empty()
+        || trimmed != value
+        || trimmed.len() > max_bytes
+        || trimmed.chars().any(char::is_control)
+    {
+        return Err(AppError::Zotero(format!("invalid {label}")));
+    }
+    Ok(trimmed)
+}
+
+fn validate_tags(tags: Vec<String>) -> AppResult<Vec<String>> {
+    if tags.len() > 25 {
+        return Err(AppError::Zotero(
+            "a Zotero tag operation may contain at most 25 tags".to_owned(),
+        ));
+    }
+    let mut normalized = BTreeSet::new();
+    for tag in tags {
+        normalized.insert(validate_mutation_text(&tag, "Zotero tag", MAX_TAG_BYTES)?.to_owned());
+    }
+    Ok(normalized.into_iter().collect())
+}
+
+fn normalized_tags(tags: Vec<String>) -> Vec<String> {
+    tags.into_iter()
+        .filter(|tag| !tag.trim().is_empty())
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .collect()
+}
+
+fn generate_collection_key<'a>(existing: impl Iterator<Item = &'a str>) -> String {
+    let existing = existing.collect::<HashSet<_>>();
+    loop {
+        let sequence = ZOTERO_KEY_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        let digest = Sha256::digest(format!("TextEx:{timestamp}:{sequence}").as_bytes());
+        let key = digest
+            .iter()
+            .take(8)
+            .map(|byte| ZOTERO_KEY_ALPHABET[*byte as usize % ZOTERO_KEY_ALPHABET.len()] as char)
+            .collect::<String>();
+        if !existing.contains(key.as_str()) {
+            return key;
+        }
+    }
+}
+
+fn valid_local_key(key: &str) -> bool {
+    key.len() == 8 && key.bytes().all(|byte| ZOTERO_KEY_ALPHABET.contains(&byte))
+}
+
+fn validate_resolved_plan(state: &AppState, plan: &ZoteroMutationPlan) -> AppResult<()> {
+    validate_mutation_text(&plan.summary, "plan summary", 2_048)?;
+    validate_mutation_text(&plan.server_id, "Zotero server ID", 256)?;
+    if plan.port == 0
+        || plan.operations.is_empty()
+        || plan.operations.len() > MAX_MUTATION_OPERATIONS
+    {
+        return Err(AppError::Zotero("invalid Zotero mutation plan".to_owned()));
+    }
+    let expected_epoch = plan
+        .project_epoch
+        .parse::<u64>()
+        .map_err(|_| AppError::Zotero("invalid Zotero plan project epoch".to_owned()))?;
+    let (active_root, active_epoch, _) = state.project_root_epoch()?;
+    if active_epoch != expected_epoch
+        || !filesystem::paths_equal(&active_root, Path::new(&plan.project_root))
+    {
+        return Err(AppError::Zotero(
+            "the active project changed; create a fresh Zotero preview".to_owned(),
+        ));
+    }
+    let mut changed_keys = HashSet::new();
+    for operation in &plan.operations {
+        let key = match operation {
+            ZoteroMutationOperation::CreateCollection {
+                key, name, path, ..
+            } => {
+                validate_mutation_text(name, "collection name", MAX_COLLECTION_NAME_BYTES)?;
+                validate_mutation_text(path, "collection path", 2_048)?;
+                key
+            }
+            ZoteroMutationOperation::MoveCollection {
+                key, name, path, ..
+            } => {
+                validate_mutation_text(name, "collection name", MAX_COLLECTION_NAME_BYTES)?;
+                validate_mutation_text(path, "collection path", 2_048)?;
+                key
+            }
+            ZoteroMutationOperation::RenameCollection {
+                key,
+                name,
+                path,
+                new_name,
+                ..
+            } => {
+                validate_mutation_text(name, "collection name", MAX_COLLECTION_NAME_BYTES)?;
+                validate_mutation_text(path, "collection path", 2_048)?;
+                validate_mutation_text(new_name, "new collection name", MAX_COLLECTION_NAME_BYTES)?;
+                key
+            }
+            ZoteroMutationOperation::UpdateItemTags {
+                key,
+                title,
+                current_tags,
+                add_tags,
+                remove_tags,
+                ..
+            } => {
+                validate_mutation_text(title, "item title", 4_096)?;
+                validate_tags(current_tags.clone())?;
+                validate_tags(add_tags.clone())?;
+                validate_tags(remove_tags.clone())?;
+                if add_tags.iter().any(|tag| remove_tags.contains(tag)) {
+                    return Err(AppError::Zotero(
+                        "the same tag cannot be added and removed in one operation".to_owned(),
+                    ));
+                }
+                key
+            }
+        };
+        if !valid_local_key(key) || !changed_keys.insert(key.clone()) {
+            return Err(AppError::Zotero(
+                "the Zotero plan contains an invalid or repeated object key".to_owned(),
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn validate_parent_key(
+    parent_key: &Option<String>,
+    current: &HashMap<String, LocalCollectionEnvelope>,
+    planned: &HashSet<String>,
+) -> AppResult<()> {
+    if parent_key
+        .as_ref()
+        .is_some_and(|key| !current.contains_key(key) && !planned.contains(key))
+    {
+        return Err(stale_plan_error());
+    }
+    Ok(())
+}
+
+fn stale_plan_error() -> AppError {
+    AppError::Zotero(
+        "the Zotero library changed after the preview; create a fresh preview".to_owned(),
+    )
 }
 
 pub async fn sync_collection(
@@ -582,7 +1454,7 @@ async fn citation_key_for_item(item_key: &str, port: Option<u16>) -> AppResult<O
         .await?;
         let keys = rpc_result(response)?;
         if let Some(citekey) = keys.get(item_key).cloned().flatten() {
-            if valid_citekey(&citekey) {
+            if research_limits::is_safe_citation_key(&citekey) {
                 return Ok(Some(citekey));
             }
         }
@@ -802,10 +1674,6 @@ fn extract_year(date: &str) -> String {
         })
 }
 
-fn valid_citekey(key: &str) -> bool {
-    !key.is_empty() && key.len() <= 512 && !key.chars().any(char::is_control)
-}
-
 fn validate_collection(collection: &str) -> AppResult<&str> {
     let collection = collection.trim();
     if collection.is_empty()
@@ -923,6 +1791,24 @@ fn value_identifier(value: &serde_json::Value) -> Option<String> {
 mod tests {
     use super::*;
 
+    fn local_collection(
+        key: &str,
+        version: u64,
+        name: &str,
+        parent: Option<&str>,
+    ) -> LocalCollectionEnvelope {
+        LocalCollectionEnvelope {
+            key: key.to_owned(),
+            version,
+            data: LocalCollectionData {
+                name: name.to_owned(),
+                parent_collection: parent.map_or(serde_json::Value::Bool(false), |value| {
+                    serde_json::Value::String(value.to_owned())
+                }),
+            },
+        }
+    }
+
     #[test]
     fn formats_search_metadata() {
         let result = search_result(ZoteroItem {
@@ -953,6 +1839,45 @@ mod tests {
             "http://127.0.0.1:24119/api/users/0/items"
         );
         assert!(local_api_endpoint(Some(0), "users/0/items").is_err());
+    }
+
+    #[test]
+    fn builds_stable_collection_paths_and_rejects_ambiguous_names() {
+        let inventory = build_collection_inventory(&[
+            local_collection("ABCD2345", 1, "Writing", None),
+            local_collection("EFGH6789", 2, "ForRSS", Some("ABCD2345")),
+            local_collection("JKLM2345", 3, "ForRSS", None),
+        ])
+        .unwrap();
+        assert_eq!(
+            resolve_collection(&inventory, "Writing / ForRSS")
+                .unwrap()
+                .key,
+            "EFGH6789"
+        );
+        assert!(resolve_collection(&inventory, "ForRSS").is_err());
+    }
+
+    #[test]
+    fn generated_keys_and_root_parent_payload_follow_local_api_rules() {
+        let key = generate_collection_key(["ABCD2345"].into_iter());
+        assert!(valid_local_key(&key));
+        assert_ne!(key, "ABCD2345");
+        assert_eq!(local_parent_value(&None), serde_json::Value::Bool(false));
+        assert_eq!(
+            local_parent_value(&Some("ABCD2345".to_owned())),
+            serde_json::Value::String("ABCD2345".to_owned())
+        );
+    }
+
+    #[test]
+    fn detects_collection_cycles_before_writing() {
+        let parents = HashMap::from([
+            ("ABCD2345".to_owned(), None),
+            ("EFGH6789".to_owned(), Some("ABCD2345".to_owned())),
+        ]);
+        assert!(collection_descends_from("EFGH6789", "ABCD2345", &parents));
+        assert!(!collection_descends_from("ABCD2345", "EFGH6789", &parents));
     }
 
     #[test]

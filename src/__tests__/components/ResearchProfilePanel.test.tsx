@@ -384,4 +384,44 @@ describe('ResearchProfilePanel', () => {
       '/project/sources/official'
     )
   })
+
+  it('serializes repeated Git actions before React can disable their buttons', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    confirm.mockClear()
+    const pendingSave = deferred<ResearchProfile>()
+    const profile: ResearchProfile = {
+      ...emptyProfile,
+      resources: [
+        {
+          id: 'official-code',
+          kind: 'git',
+          label: 'Official code',
+          localPath: 'sources/official',
+          chatAccess: 'indexed-read'
+        }
+      ]
+    }
+    window.api.researchProfileLoad = vi.fn().mockResolvedValue(profile)
+    window.api.researchProfileSave = vi.fn().mockReturnValue(pendingSave.promise)
+    window.api.researchSourceClone = vi.fn().mockResolvedValue({
+      success: true,
+      resourceId: 'official-code',
+      localPath: '/project/sources/official',
+      action: 'cloned',
+      output: ''
+    })
+
+    render(<ResearchProfilePanel />)
+    const clone = await screen.findByRole('button', { name: 'Clone' })
+    fireEvent.click(clone)
+    fireEvent.click(clone)
+
+    expect(window.confirm).toHaveBeenCalledOnce()
+    expect(window.api.researchProfileSave).toHaveBeenCalledOnce()
+    await act(async () => {
+      pendingSave.resolve(profile)
+      await pendingSave.promise
+    })
+    await waitFor(() => expect(window.api.researchSourceClone).toHaveBeenCalledOnce())
+  })
 })

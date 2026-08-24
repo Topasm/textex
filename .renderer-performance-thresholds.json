@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "measuredAt": "2026-08-24",
+  "metrics": {
+    "initialJavaScript.rawBytes": {
+      "baselineBytes": 634392,
+      "maxBytes": 660000
+    },
+    "initialJavaScript.gzipBytes": {
+      "baselineBytes": 197837,
+      "maxBytes": 205000
+    },
+    "allJavaScript.rawBytes": {
+      "baselineBytes": 8868630,
+      "maxBytes": 9050000
+    },
+    "allRendererFiles.rawBytes": {
+      "baselineBytes": 9289961,
+      "maxBytes": 9500000
+    }
+  }
+}

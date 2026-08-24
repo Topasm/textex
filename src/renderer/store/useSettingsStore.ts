@@ -138,16 +138,31 @@ export const useSettingsStore = create<SettingsState>()(
   )
 )
 
+/** Load the native settings file once for all pre-mount renderer hydration. */
+export async function loadNativeSettingsSnapshot(): Promise<UserSettings | undefined> {
+  try {
+    return await window.api.loadSettings()
+  } catch {
+    // Native settings are best-effort; renderer defaults remain usable.
+    return undefined
+  }
+}
+
 /**
  * Establish a native settings mirror without overwriting an existing renderer
  * profile. A fresh WebView hydrates from the native file; an existing profile
  * remains authoritative and is mirrored back to Rust.
  */
-export async function hydrateSettingsFromNative(): Promise<void> {
+export async function hydrateSettingsFromNative(
+  nativeSettings: UserSettings | undefined
+): Promise<void> {
+  // A failed native read must not be followed by a write based on renderer
+  // defaults or a potentially stale local profile.
+  if (!nativeSettings) return
+
   try {
     const hasRendererSettings = localStorage.getItem(SETTINGS_STORAGE_KEY) !== null
     if (!hasRendererSettings) {
-      const nativeSettings = await window.api.loadSettings()
       const settings = mergeUserSettings({ ...nativeSettings, rendererSession: undefined })
       useSettingsStore.setState({ settings })
       applyTheme(settings.theme)

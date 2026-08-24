@@ -22,6 +22,7 @@
     "check:tauri-sidecars": "node scripts/setup-tauri-sidecars.js --check",
     "check:tectonic-cache-seed": "node scripts/prepare-tectonic-cache-seed.js --check",
     "check:release-version": "node scripts/check-release-version.js",
+    "check:renderer-budget": "node scripts/check-renderer-performance-budget.js",
     "measure:renderer": "node scripts/measure-renderer-bundle.js",
     "measure:runtime": "node scripts/summarize-runtime-performance.js",
     "licenses:generate": "node scripts/generate-third-party-notices.js",

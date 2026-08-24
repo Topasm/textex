@@ -1,4 +1,6 @@
 import { useTranslation } from 'react-i18next'
+import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ICON_SIZE } from '../ui/IconSystem'
 
 interface PdfSearchPanelProps {
   pdfMatchCount: number
@@ -27,18 +29,22 @@ export function PdfSearchPanel({
             : ''}
       </span>
       <button
+        type="button"
         onClick={handlePdfPrev}
         disabled={pdfMatchCount === 0}
         title={t('omniSearch.prevMatch')}
+        aria-label={t('omniSearch.prevMatch')}
       >
-        &#x25B2;
+        <ChevronUp size={ICON_SIZE.compact} />
       </button>
       <button
+        type="button"
         onClick={handlePdfNext}
         disabled={pdfMatchCount === 0}
         title={t('omniSearch.nextMatch')}
+        aria-label={t('omniSearch.nextMatch')}
       >
-        &#x25BC;
+        <ChevronDown size={ICON_SIZE.compact} />
       </button>
     </div>
   )

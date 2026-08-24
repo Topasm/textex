@@ -1,12 +1,21 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { BookmarkPlus, ExternalLink, Loader, Plus, Search } from 'lucide-react'
+import { BookmarkPlus, ExternalLink, Loader, MessageSquarePlus, Plus, Search } from 'lucide-react'
 import type { OnlineReference } from '../../../shared/types'
-import { addReferenceAtCursor, setReferenceDragData } from './referenceActions'
+import {
+  addReferenceAtCursor,
+  setReferenceDragData,
+  type ReferenceDragPayload
+} from './referenceActions'
 import { useProjectStore } from '../../store/useProjectStore'
 import { useSettingsStore } from '../../store/useSettingsStore'
 
-export function OnlineReferences() {
+interface OnlineReferencesProps {
+  onAddToChat?: (payload: ReferenceDragPayload) => void
+}
+
+export function OnlineReferences({ onAddToChat }: OnlineReferencesProps = {}) {
+  const projectRoot = useProjectStore((state) => state.projectRoot)
   const query = useProjectStore((state) => state.researchSearchQuery)
   const [results, setResults] = useState<OnlineReference[]>([])
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -14,60 +23,125 @@ export function OnlineReferences() {
   const [searching, setSearching] = useState(false)
   const [message, setMessage] = useState('')
   const port = useSettingsStore((state) => state.settings.zoteroPort)
+  const scopeGeneration = useRef(0)
+  const operationInFlight = useRef(false)
+
+  const isCurrentScope = useCallback((generation: number, root: string | null, apiPort: number) => {
+    return (
+      scopeGeneration.current === generation &&
+      useProjectStore.getState().projectRoot === root &&
+      useSettingsStore.getState().settings.zoteroPort === apiPort
+    )
+  }, [])
+
+  useEffect(() => {
+    const generation = ++scopeGeneration.current
+    operationInFlight.current = false
+    setResults([])
+    setBusyId(null)
+    setSavingId(null)
+    setSearching(false)
+    setMessage('')
+    return () => {
+      if (scopeGeneration.current === generation) scopeGeneration.current += 1
+    }
+  }, [port, projectRoot])
 
   const search = useCallback(
     async (event: FormEvent) => {
       event.preventDefault()
       const normalized = query.trim()
-      if (normalized.length < 2 || searching) return
+      if (normalized.length < 2 || operationInFlight.current) return
+      const generation = scopeGeneration.current
+      const root = projectRoot
+      const apiPort = port
+      operationInFlight.current = true
       setSearching(true)
       setMessage('')
       try {
         const references = await window.api.researchSearchOnline(normalized)
+        if (!isCurrentScope(generation, root, apiPort)) return
         setResults(references)
         if (references.length === 0) setMessage('No matching references found.')
       } catch (error) {
-        setResults([])
-        setMessage(error instanceof Error ? error.message : String(error))
+        if (isCurrentScope(generation, root, apiPort)) {
+          setResults([])
+          setMessage(error instanceof Error ? error.message : String(error))
+        }
       } finally {
-        setSearching(false)
+        if (isCurrentScope(generation, root, apiPort)) {
+          operationInFlight.current = false
+          setSearching(false)
+        }
       }
     },
-    [query, searching]
+    [isCurrentScope, port, projectRoot, query]
   )
 
-  const add = useCallback(async (reference: OnlineReference) => {
-    setBusyId(reference.id)
-    setMessage('')
-    try {
-      await addReferenceAtCursor({ source: 'online', reference })
-      setMessage(`Added ${reference.title} and inserted its citation.`)
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : String(error))
-    } finally {
-      setBusyId(null)
-    }
-  }, [])
+  const add = useCallback(
+    async (reference: OnlineReference) => {
+      if (operationInFlight.current) return
+      const generation = scopeGeneration.current
+      const root = projectRoot
+      const apiPort = port
+      operationInFlight.current = true
+      setBusyId(reference.id)
+      setMessage('')
+      try {
+        const inserted = await addReferenceAtCursor({ source: 'online', reference })
+        if (isCurrentScope(generation, root, apiPort)) {
+          setMessage(
+            inserted
+              ? `Added ${reference.title} and inserted its citation.`
+              : `Added ${reference.title} to the project bibliography, but the editor changed before citation insertion.`
+          )
+        }
+      } catch (error) {
+        if (isCurrentScope(generation, root, apiPort)) {
+          setMessage(error instanceof Error ? error.message : String(error))
+        }
+      } finally {
+        if (isCurrentScope(generation, root, apiPort)) {
+          operationInFlight.current = false
+          setBusyId(null)
+        }
+      }
+    },
+    [isCurrentScope, port, projectRoot]
+  )
 
   const saveToLibrary = useCallback(
     async (reference: OnlineReference) => {
+      if (operationInFlight.current) return
+      const generation = scopeGeneration.current
+      const root = projectRoot
+      const apiPort = port
+      operationInFlight.current = true
       setSavingId(reference.id)
       setMessage('Waiting for Zotero authorization…')
       try {
         const result = await window.api.zoteroSaveOnline(reference, port)
+        if (!isCurrentScope(generation, root, apiPort)) return
         setMessage(
           result.duplicate
             ? `Already in Zotero${result.citekey ? ` as @${result.citekey}` : ''}.`
             : `Saved to Zotero${result.citekey ? ` as @${result.citekey}` : ''}.`
         )
       } catch (error) {
-        setMessage(error instanceof Error ? error.message : String(error))
+        if (isCurrentScope(generation, root, apiPort)) {
+          setMessage(error instanceof Error ? error.message : String(error))
+        }
       } finally {
-        setSavingId(null)
+        if (isCurrentScope(generation, root, apiPort)) {
+          operationInFlight.current = false
+          setSavingId(null)
+        }
       }
     },
-    [port]
+    [isCurrentScope, port, projectRoot]
   )
+
+  const busy = searching || busyId !== null || savingId !== null
 
   return (
     <section className="research-reference-view" aria-label="Online references">
@@ -81,7 +155,7 @@ export function OnlineReferences() {
           placeholder="Search Crossref and arXiv"
           aria-label="Search Crossref and arXiv"
         />
-        <button type="submit" disabled={query.trim().length < 2 || searching} aria-label="Search">
+        <button type="submit" disabled={query.trim().length < 2 || busy} aria-label="Search">
           {searching ? <Loader className="spin" size={15} /> : <Search size={15} />}
         </button>
       </form>
@@ -106,16 +180,24 @@ export function OnlineReferences() {
             </span>
             {reference.abstract && <p>{reference.abstract}</p>}
             <div className="reference-card-actions">
+              {onAddToChat && (
+                <button
+                  type="button"
+                  onClick={() => onAddToChat({ source: 'online', reference })}
+                  aria-label={`Add ${reference.title} to Chat`}
+                >
+                  <MessageSquarePlus size={13} /> Add to Chat
+                </button>
+              )}
               {reference.url && (
-                <button type="button" onClick={() => void window.api.openExternal(reference.url!)}>
+                <button
+                  type="button"
+                  onClick={() => reference.url && void window.api.openExternal(reference.url)}
+                >
                   <ExternalLink size={13} /> Source
                 </button>
               )}
-              <button
-                type="button"
-                onClick={() => void saveToLibrary(reference)}
-                disabled={savingId !== null || busyId !== null}
-              >
+              <button type="button" onClick={() => void saveToLibrary(reference)} disabled={busy}>
                 {savingId === reference.id ? (
                   <Loader className="spin" size={13} />
                 ) : (
@@ -123,11 +205,7 @@ export function OnlineReferences() {
                 )}
                 Save to library
               </button>
-              <button
-                type="button"
-                onClick={() => void add(reference)}
-                disabled={busyId !== null || savingId !== null}
-              >
+              <button type="button" onClick={() => void add(reference)} disabled={busy}>
                 {busyId === reference.id ? (
                   <Loader className="spin" size={13} />
                 ) : (

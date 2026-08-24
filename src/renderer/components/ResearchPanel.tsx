@@ -1,6 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { BookOpen, MessageSquare, PanelRightClose, Settings2 } from 'lucide-react'
+import {
+  BookOpen,
+  MessageSquare,
+  PanelRightClose,
+  ScrollText,
+  Settings2,
+  SquareTerminal
+} from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { useCompileStore } from '../store/useCompileStore'
 import { useProjectStore } from '../store/useProjectStore'
+import { useNotificationStore } from '../store/useNotificationStore'
+import { useUiStore } from '../store/useUiStore'
+import { getDesktopCapabilities } from '../platform/capabilities'
 import {
   clearResearchProfileDraft,
   confirmResearchProfileDraftDiscard
@@ -8,17 +20,45 @@ import {
 import { ResearchChatPanel } from './research/ResearchChatPanel'
 import { ReferencesPanel } from './research/ReferencesPanel'
 import { ResearchProfilePanel } from './research/ResearchProfilePanel'
+import {
+  parseReferenceDragData,
+  TEXTEX_REFERENCE_MIME,
+  type ReferenceDragPayload
+} from './research/referenceActions'
 
 interface ResearchPanelProps {
   onAiDraft: () => void
 }
 
+export interface PendingChatReference {
+  token: number
+  projectRoot: string
+  payload: ReferenceDragPayload
+}
+
 export function ResearchPanel({ onAiDraft }: ResearchPanelProps) {
+  const { t } = useTranslation()
   const open = useProjectStore((state) => state.isResearchPanelOpen)
   const tab = useProjectStore((state) => state.researchPanelTab)
   const width = useProjectStore((state) => state.researchPanelWidth)
+  const projectRoot = useProjectStore((state) => state.projectRoot)
+  const diagnostics = useCompileStore((state) => state.diagnostics)
+  const isLogPanelOpen = useCompileStore((state) => state.isLogPanelOpen)
+  const isTerminalPaneOpen = useUiStore((state) => state.isTerminalPaneOpen)
+  const terminalAvailable = getDesktopCapabilities().pty
+  const problemCount = diagnostics.length
   const panelRef = useRef<HTMLDivElement>(null)
   const [isOverlay, setIsOverlay] = useState(() => window.innerWidth < 1200)
+  const [chatDropActive, setChatDropActive] = useState(false)
+  const [pendingChatReference, setPendingChatReference] = useState<PendingChatReference | null>(
+    null
+  )
+  const nextChatReferenceToken = useRef(0)
+
+  useEffect(() => {
+    setChatDropActive(false)
+    setPendingChatReference(null)
+  }, [projectRoot])
 
   const leaveProfile = useCallback(() => {
     if (tab !== 'profile') return true
@@ -26,6 +66,44 @@ export function ResearchPanel({ onAiDraft }: ResearchPanelProps) {
     clearResearchProfileDraft()
     return true
   }, [tab])
+
+  const queueChatReference = useCallback(
+    (payload: ReferenceDragPayload) => {
+      if (!projectRoot) {
+        useNotificationStore.getState().pushNotification({
+          tone: 'warning',
+          message: t('researchPanel.openProjectForChatReference')
+        })
+        return
+      }
+      if (!leaveProfile()) return
+      nextChatReferenceToken.current += 1
+      setPendingChatReference({
+        token: nextChatReferenceToken.current,
+        projectRoot,
+        payload
+      })
+      useProjectStore.getState().setResearchPanelTab('chat')
+    },
+    [leaveProfile, projectRoot, t]
+  )
+
+  const dropReferenceOnChat = useCallback(
+    (event: React.DragEvent<HTMLButtonElement>) => {
+      event.preventDefault()
+      setChatDropActive(false)
+      const payload = parseReferenceDragData(event.dataTransfer.getData(TEXTEX_REFERENCE_MIME))
+      if (!payload) {
+        useNotificationStore.getState().pushNotification({
+          tone: 'error',
+          message: t('researchPanel.invalidReferenceDrop')
+        })
+        return
+      }
+      queueChatReference(payload)
+    },
+    [queueChatReference, t]
+  )
 
   const closePanel = useCallback(() => {
     if (leaveProfile()) useProjectStore.getState().closeResearchPanel()
@@ -40,10 +118,11 @@ export function ResearchPanel({ onAiDraft }: ResearchPanelProps) {
   )
 
   useEffect(() => {
+    if (!open) return
     const onResize = () => setIsOverlay(window.innerWidth < 1200)
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
-  }, [])
+  }, [open])
 
   useEffect(() => {
     if (!open || !isOverlay) return
@@ -96,8 +175,29 @@ export function ResearchPanel({ onAiDraft }: ResearchPanelProps) {
             id="research-tab-chat"
             aria-controls="research-tabpanel"
             aria-selected={tab === 'chat'}
-            className={tab === 'chat' ? 'active' : ''}
+            className={`${tab === 'chat' ? 'active' : ''}${chatDropActive ? ' drop-active' : ''}`}
             onClick={() => selectTab('chat')}
+            onDragEnter={(event) => {
+              if (event.dataTransfer.types.includes(TEXTEX_REFERENCE_MIME)) {
+                event.preventDefault()
+                setChatDropActive(true)
+              }
+            }}
+            onDragOver={(event) => {
+              if (event.dataTransfer.types.includes(TEXTEX_REFERENCE_MIME)) {
+                event.preventDefault()
+                event.dataTransfer.dropEffect = 'copy'
+              }
+            }}
+            onDragLeave={(event) => {
+              if (
+                !(event.relatedTarget instanceof Node) ||
+                !event.currentTarget.contains(event.relatedTarget)
+              ) {
+                setChatDropActive(false)
+              }
+            }}
+            onDrop={dropReferenceOnChat}
           >
             <MessageSquare size={14} /> Chat
           </button>
@@ -121,6 +221,34 @@ export function ResearchPanel({ onAiDraft }: ResearchPanelProps) {
           >
             <Settings2 size={14} /> Profile
           </button>
+          <span className="research-panel-tool-separator" aria-hidden="true" />
+          {terminalAvailable && (
+            <button
+              type="button"
+              className={`research-panel-tool-btn${isTerminalPaneOpen ? ' active' : ''}`}
+              onClick={() => useUiStore.getState().toggleTerminalPane()}
+              title={t('toolbar.terminalPane')}
+              aria-label={t('toolbar.terminalPane')}
+              aria-pressed={isTerminalPaneOpen}
+            >
+              <SquareTerminal size={14} />
+            </button>
+          )}
+          <button
+            type="button"
+            className={`research-panel-tool-btn${isLogPanelOpen ? ' active' : ''}`}
+            onClick={() => useCompileStore.getState().toggleLogPanel()}
+            title={t('toolbar.toggleLog')}
+            aria-label={t('toolbar.toggleLog')}
+            aria-pressed={isLogPanelOpen}
+          >
+            <ScrollText size={14} />
+            {problemCount > 0 && (
+              <span className="research-panel-tool-badge" aria-hidden="true">
+                {problemCount > 99 ? '99+' : problemCount}
+              </span>
+            )}
+          </button>
           <button
             className="research-panel-close"
             onClick={closePanel}
@@ -137,9 +265,17 @@ export function ResearchPanel({ onAiDraft }: ResearchPanelProps) {
           aria-labelledby={`research-tab-${tab}`}
         >
           {tab === 'chat' ? (
-            <ResearchChatPanel onAiDraft={onAiDraft} />
+            <ResearchChatPanel
+              onAiDraft={onAiDraft}
+              incomingReference={
+                pendingChatReference?.projectRoot === projectRoot ? pendingChatReference : null
+              }
+              onIncomingReferenceConsumed={(token) => {
+                setPendingChatReference((current) => (current?.token === token ? null : current))
+              }}
+            />
           ) : tab === 'references' ? (
-            <ReferencesPanel />
+            <ReferencesPanel onAddToChat={queueChatReference} />
           ) : (
             <ResearchProfilePanel />
           )}

@@ -4,7 +4,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: var(--modal-backdrop, rgba(0, 0, 0, 0.5));
   display: flex;
   justify-content: center;
   align-items: center;
@@ -12,19 +12,20 @@
 }
 
 .table-editor-modal {
-  background-color: var(--bg-primary, #ffffff);
+  background-color: var(--ui-surface-raised, var(--bg-primary, #ffffff));
   color: var(--text-primary, #000000);
   width: 80%;
   height: 80%;
-  border-radius: 8px;
+  border: 1px solid var(--ui-border-strong, var(--border-color, #e0e0e0));
+  border-radius: var(--ui-radius-panel, 6px);
   display: flex;
   flex-direction: column;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--ui-shadow-modal, 0 8px 28px rgba(0, 0, 0, 0.2));
 }
 
 .table-editor-header {
   padding: 16px;
-  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  border-bottom: 1px solid var(--ui-border, var(--border-color, #e0e0e0));
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -50,7 +51,7 @@
 
 .table-editor-footer {
   padding: 16px;
-  border-top: 1px solid var(--border-color, #e0e0e0);
+  border-top: 1px solid var(--ui-border, var(--border-color, #e0e0e0));
   display: flex;
   justify-content: flex-end;
   gap: 12px;
@@ -59,25 +60,25 @@
 .cancel-btn,
 .apply-btn {
   padding: 8px 16px;
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control, 4px);
   cursor: pointer;
   border: none;
   font-weight: 500;
 }
 
 .cancel-btn {
-  background-color: var(--bg-secondary, #f5f5f5);
+  background-color: var(--ui-surface-panel, var(--bg-secondary, #f5f5f5));
   color: var(--text-primary, #333);
 }
 
 .apply-btn {
-  background-color: var(--accent-color, #007bff);
-  color: white;
+  background-color: var(--accent, var(--accent-color, #007bff));
+  color: var(--accent-contrast, white);
 }
 
 /* React Data Grid Overrides if needed */
 .rdg {
   block-size: 100%;
   /* Fill container */
-  border: 1px solid var(--border-color, #ddd);
+  border: 1px solid var(--ui-border, var(--border-color, #ddd));
 }

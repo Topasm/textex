@@ -19,9 +19,12 @@ describe('TabBar dirty close guard', () => {
 
   it('keeps a dirty tab when its close button is cancelled', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(false)
-    render(<TabBar />)
+    const { container } = render(<TabBar />)
+    const closeControl = container.querySelector('.tab-close')!
 
-    fireEvent.click(screen.getByText('\u00D7'))
+    expect(closeControl.querySelector('.lucide-x')).toHaveAttribute('aria-hidden', 'true')
+    expect(closeControl).not.toHaveTextContent('\u00D7')
+    fireEvent.click(closeControl)
 
     expect(window.confirm).toHaveBeenCalledOnce()
     expect(useEditorStore.getState().openFiles[filePath]?.isDirty).toBe(true)
@@ -39,9 +42,9 @@ describe('TabBar dirty close guard', () => {
 
   it('closes a dirty tab after explicit confirmation', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
-    render(<TabBar />)
+    const { container } = render(<TabBar />)
 
-    fireEvent.click(screen.getByText('\u00D7'))
+    fireEvent.click(container.querySelector('.tab-close')!)
 
     expect(useEditorStore.getState().openFiles).toEqual({})
   })

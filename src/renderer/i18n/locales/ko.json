@@ -116,7 +116,12 @@
     "retry": "다시 시도",
     "sessionRestoreFailed": "{{path}} 세션을 복원하지 못했습니다: {{reason}}",
     "chooseReplacement": "대체 폴더 선택",
-    "replacementOpenFailed": "대체 폴더 {{path}}을(를) 열지 못했습니다: {{reason}}"
+    "replacementOpenFailed": "대체 폴더 {{path}}을(를) 열지 못했습니다: {{reason}}",
+    "referenceDropInvalid": "참고문헌 데이터가 올바르지 않아 놓을 수 없습니다.",
+    "referenceDropPositionUnavailable": "편집기의 유효한 위치에 참고문헌을 다시 놓으세요.",
+    "referenceDropDocumentChanged": "인용을 삽입하기 전에 문서가 변경되었습니다. 다시 시도하세요.",
+    "referenceDropFailed": "참고문헌을 추가하지 못했습니다: {{reason}}",
+    "referenceInsertSkipped": "활성 문서나 커서 위치가 변경되어 인용을 삽입하지 않았습니다. 다시 시도하세요."
   },
   "settings": {
     "title": "설정",
@@ -276,7 +281,7 @@
     "automation": {
       "compilerTools": "컴파일러 및 도구",
       "autoCompile": "자동 컴파일",
-      "autoCompileDesc": "단축키로 저장할 때 자동으로 컴파일",
+      "autoCompileDesc": "편집 후 잠시 기다리면 자동으로 저장하고 컴파일",
       "watchOpenFiles": "열린 파일 감시",
       "watchOpenFilesDesc": "외부 에디터에서 변경된 파일을 자동으로 다시 불러옵니다",
       "spellCheck": "맞춤법 검사",
@@ -346,7 +351,12 @@
     "noFile": "열린 파일 없음",
     "loading": "타임라인 로딩 중\u2026",
     "noHistory": "이 파일의 기록이 없습니다",
-    "localSave": "로컬 저장"
+    "localSave": "로컬 저장",
+    "restoreConfirm": "이 스냅샷을 편집기로 복원할까요? 직접 저장하기 전까지 저장되지 않은 변경으로 유지됩니다.",
+    "restoreDirtyConfirm": "현재 저장되지 않은 변경을 이 스냅샷으로 바꿀까요? 복원된 내용은 직접 저장하기 전까지 저장되지 않습니다.",
+    "restoreSuccess": "히스토리 스냅샷을 저장되지 않은 변경으로 복원했습니다.",
+    "restoreStale": "스냅샷을 불러오는 동안 문서가 변경되어 복원하지 않았습니다.",
+    "restoreFailed": "히스토리 스냅샷을 복원하지 못했습니다: {{reason}}"
   },
   "draftModal": {
     "title": "AI 초안",
@@ -412,7 +422,14 @@
     "noMatches": "일치 항목 없음",
     "prevMatch": "이전",
     "nextMatch": "다음",
-    "goToLine": "{{line}}번 줄로 이동"
+    "goToLine": "{{line}}번 줄로 이동",
+    "home": "홈",
+    "searchLabel": "{{mode}} 검색",
+    "modeSelector": "검색 모드: {{mode}}",
+    "modeMenuLabel": "검색 모드 선택",
+    "resultsLabel": "{{mode}} 검색 결과",
+    "resultCount": "검색 결과 {{count}}개",
+    "clearSearch": "검색 지우기"
   },
   "errorBoundary": {
     "title": "문제가 발생했습니다",
@@ -428,6 +445,17 @@
     "recent": "최근",
     "template": "템플릿",
     "command": "명령"
+  },
+  "projectSwitcher": {
+    "switchProject": "프로젝트 전환",
+    "currentProject": "현재 프로젝트: {{name}}",
+    "menuLabel": "최근 프로젝트로 전환",
+    "current": "현재",
+    "currentItem": "{{name}}, 현재 프로젝트",
+    "loading": "최근 프로젝트 불러오는 중…",
+    "switching": "전환 중…",
+    "loadFailed": "최근 프로젝트를 불러오지 못했습니다.",
+    "openFailed": "{{name}}을(를) 열지 못했습니다: {{reason}} 홈 화면에서 복구할 수 있도록 최근 프로젝트 항목을 유지했습니다."
   },
   "recentProjects": {
     "title": "최근 프로젝트",
@@ -511,5 +539,9 @@
       "window_close": "창 닫기",
       "app_quit": "TextEx 종료"
     }
+  },
+  "researchPanel": {
+    "invalidReferenceDrop": "유효한 TextEx 참고문헌이 아닙니다.",
+    "openProjectForChatReference": "Chat에 참고문헌을 추가하려면 프로젝트를 여세요."
   }
 }

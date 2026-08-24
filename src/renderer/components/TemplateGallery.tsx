@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Trash2, X } from 'lucide-react'
 import { useUiStore } from '../store/useUiStore'
 import { useSettingsStore } from '../store/useSettingsStore'
 import { openProject } from '../utils/openProject'
 import type { Template } from '../data/templates'
+import { ICON_SIZE } from './ui/IconSystem'
 
 function TemplateGallery() {
   const { t } = useTranslation()
@@ -119,8 +121,13 @@ function TemplateGallery() {
       onClick={handleBackdropClick}
     >
       <div className="modal">
-        <button className="modal-close" onClick={() => setOpen(false)}>
-          {'\u00D7'}
+        <button
+          type="button"
+          className="modal-close"
+          onClick={() => setOpen(false)}
+          aria-label={t('logPanel.close')}
+        >
+          <X size={ICON_SIZE.control} />
         </button>
         <h2>{t('templateGallery.title')}</h2>
         <p>{t('templateGallery.description')}</p>
@@ -128,7 +135,13 @@ function TemplateGallery() {
         {error && (
           <div className="template-error">
             {error}
-            <button onClick={() => setError(null)}>{'\u00D7'}</button>
+            <button
+              type="button"
+              onClick={() => setError(null)}
+              aria-label={t('notifications.dismiss')}
+            >
+              <X size={ICON_SIZE.compact} />
+            </button>
           </div>
         )}
 
@@ -190,11 +203,13 @@ function TemplateGallery() {
                   <h3>{tmpl.name}</h3>
                   <p>{tmpl.description}</p>
                   <button
+                    type="button"
                     className="template-card-delete"
                     onClick={(e) => handleRemove(tmpl.id, e)}
                     title={t('templateGallery.removeTemplate')}
+                    aria-label={t('templateGallery.removeTemplate')}
                   >
-                    {'\u2715'}
+                    <Trash2 size={ICON_SIZE.compact} />
                   </button>
                 </div>
               ))}

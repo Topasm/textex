@@ -18,6 +18,7 @@ import { projectPathKey } from '../services/projectIndex'
 
 interface OpenProjectOptions {
   autoOpenFirstTex?: boolean
+  deferProjectEnrichment?: boolean
 }
 
 export interface ProjectTransitionSnapshot {
@@ -25,7 +26,8 @@ export interface ProjectTransitionSnapshot {
   projectPath: string
 }
 
-let projectTransitionGeneration = 0
+let projectTransitionRequestGeneration = 0
+let activeProjectGeneration = 0
 let nativeProjectTransition: Promise<void> = Promise.resolve()
 
 /**
@@ -48,7 +50,7 @@ export function confirmProjectTransition(): boolean {
 }
 
 function isCurrentProjectTransition(generation: number, projectPath?: string): boolean {
-  if (generation !== projectTransitionGeneration) return false
+  if (generation !== activeProjectGeneration) return false
   return projectPath === undefined || useProjectStore.getState().projectRoot === projectPath
 }
 
@@ -121,8 +123,64 @@ async function runNativeProjectTransition<T>(operation: () => Promise<T>): Promi
   }
 }
 
-async function reconcileFailedNativeActivation(generation: number): Promise<void> {
-  if (generation !== projectTransitionGeneration) return
+async function enrichOpenedProject(snapshot: ProjectTransitionSnapshot): Promise<void> {
+  const { generation, projectPath } = snapshot
+  const isCurrent = (): boolean => isCurrentProjectTransition(generation, projectPath)
+
+  await Promise.all([
+    (async () => {
+      try {
+        const isRepo = await window.api.gitIsRepo(projectPath)
+        if (!isCurrent()) return
+        if (!isRepo) {
+          useProjectStore.getState().setIsGitRepo(false)
+          return
+        }
+
+        const status = await window.api.gitStatus(projectPath)
+        if (!isCurrent()) return
+        const projectStore = useProjectStore.getState()
+        projectStore.setIsGitRepo(true)
+        projectStore.setGitStatus(status)
+        projectStore.setGitBranch(status.branch)
+      } catch {
+        if (isCurrent()) useProjectStore.getState().setIsGitRepo(false)
+      }
+    })(),
+    (async () => {
+      try {
+        const entries = await window.api.findBibInProject(projectPath)
+        if (isCurrent()) useProjectStore.getState().setBibEntries(entries)
+      } catch {
+        // Bibliography discovery is optional project enrichment.
+      }
+    })(),
+    (async () => {
+      try {
+        const labels = await window.api.scanLabels(projectPath)
+        if (isCurrent()) useProjectStore.getState().setLabels(labels)
+      } catch {
+        // Label discovery is optional project enrichment.
+      }
+    })(),
+    (async () => {
+      try {
+        await window.api.addRecentProject(projectPath)
+      } catch {
+        // Recent-project persistence must not block opening the workspace.
+      }
+    })()
+  ])
+}
+
+/**
+ * Reconciles renderer state after a native project transition rejects. Native
+ * activation and deactivation intentionally clear project authority before
+ * cleaning up every dependent service, so an error does not imply that the
+ * previous native project is still active.
+ */
+async function reconcileFailedNativeTransition(requestGeneration: number): Promise<void> {
+  if (requestGeneration !== projectTransitionRequestGeneration) return
   const renderedRoot = useProjectStore.getState().projectRoot
   let nativeRoot: string | null = null
   try {
@@ -133,11 +191,12 @@ async function reconcileFailedNativeActivation(generation: number): Promise<void
   }
   // The authority lookup runs after the native transition queue is released.
   // A newer open/close can therefore win while this command is in flight.
-  if (generation !== projectTransitionGeneration) return
+  if (requestGeneration !== projectTransitionRequestGeneration) return
   if (renderedRoot && nativeRoot && projectPathKey(renderedRoot) === projectPathKey(nativeRoot)) {
     return
   }
 
+  activeProjectGeneration += 1
   invalidateResearchProjectOpenSync()
   window.api.removeDirectoryChangedListener()
   clearProjectScopedRendererState()
@@ -145,21 +204,31 @@ async function reconcileFailedNativeActivation(generation: number): Promise<void
 }
 
 /**
- * Invalidates renderer work from an earlier project and closes the native
- * project session in the same transition queue used by `openProject`.
+ * Closes the native project through the shared transition queue. Existing
+ * renderer work remains valid until native deactivation actually commits.
  */
 export async function deactivateProject(): Promise<boolean> {
   if (!confirmProjectTransition()) return false
 
-  const generation = ++projectTransitionGeneration
-  invalidateResearchProjectOpenSync()
-  const deactivated = await runNativeProjectTransition(async () => {
-    if (generation !== projectTransitionGeneration) return false
-    await window.api.deactivateProject()
-    return generation === projectTransitionGeneration
-  })
-  if (!deactivated || generation !== projectTransitionGeneration) return false
+  const requestGeneration = ++projectTransitionRequestGeneration
+  let deactivated: boolean
+  try {
+    deactivated = await runNativeProjectTransition(async () => {
+      if (requestGeneration !== projectTransitionRequestGeneration) return false
+      await window.api.deactivateProject()
+      return requestGeneration === projectTransitionRequestGeneration
+    })
+  } catch (error) {
+    if (requestGeneration === projectTransitionRequestGeneration) {
+      await reconcileFailedNativeTransition(requestGeneration)
+    }
+    throw error
+  }
+  if (!deactivated || requestGeneration !== projectTransitionRequestGeneration) return false
 
+  activeProjectGeneration += 1
+  invalidateResearchProjectOpenSync()
+  window.api.removeDirectoryChangedListener()
   clearProjectScopedRendererState()
   useProjectStore.getState().setProjectRoot(null)
   return true
@@ -171,15 +240,14 @@ export async function openProject(
 ): Promise<ProjectTransitionSnapshot | null> {
   if (!confirmProjectTransition()) return null
 
-  const { autoOpenFirstTex = true } = options
-  const generation = ++projectTransitionGeneration
-  invalidateResearchProjectOpenSync()
+  const { autoOpenFirstTex = true, deferProjectEnrichment = false } = options
+  const requestGeneration = ++projectTransitionRequestGeneration
   let projectPath: string | null
   try {
     projectPath = await runNativeProjectTransition(async () => {
-      if (generation !== projectTransitionGeneration) return null
+      if (requestGeneration !== projectTransitionRequestGeneration) return null
       const activatedPath = await window.api.activateProject(dirPath)
-      if (generation !== projectTransitionGeneration) return null
+      if (requestGeneration !== projectTransitionRequestGeneration) return null
 
       // Activating the project advances the native project epoch. Remove the
       // previous watcher before publishing the new renderer root.
@@ -201,14 +269,16 @@ export async function openProject(
         // The project remains usable when native watching is unavailable. The
         // authoritative index read still supplies the initial project state.
       }
-      return generation === projectTransitionGeneration ? activatedPath : null
+      return requestGeneration === projectTransitionRequestGeneration ? activatedPath : null
     })
   } catch (error) {
-    if (generation === projectTransitionGeneration)
-      await reconcileFailedNativeActivation(generation)
+    if (requestGeneration === projectTransitionRequestGeneration)
+      await reconcileFailedNativeTransition(requestGeneration)
     throw error
   }
-  if (!projectPath || generation !== projectTransitionGeneration) return null
+  if (!projectPath || requestGeneration !== projectTransitionRequestGeneration) return null
+  const generation = ++activeProjectGeneration
+  invalidateResearchProjectOpenSync()
   clearProjectScopedRendererState()
   useProjectStore.getState().setProjectRoot(projectPath)
   void syncResearchOnProjectOpen(projectPath).catch(() => {
@@ -246,47 +316,13 @@ export async function openProject(
 
   if (!isCurrentProjectTransition(generation, projectPath)) return null
 
-  try {
-    const isRepo = await window.api.gitIsRepo(projectPath)
-    if (!isCurrentProjectTransition(generation, projectPath)) return null
-    const s = useProjectStore.getState()
-    s.setIsGitRepo(isRepo)
-    if (isRepo) {
-      const status = await window.api.gitStatus(projectPath)
-      if (!isCurrentProjectTransition(generation, projectPath)) return null
-      s.setGitStatus(status)
-      s.setGitBranch(status.branch)
-    }
-  } catch {
-    if (isCurrentProjectTransition(generation, projectPath)) {
-      useProjectStore.getState().setIsGitRepo(false)
-    }
+  const snapshot = { generation, projectPath }
+  const enrichment = enrichOpenedProject(snapshot)
+  if (deferProjectEnrichment) {
+    void enrichment
+    return snapshot
   }
 
-  if (!isCurrentProjectTransition(generation, projectPath)) return null
-  try {
-    const entries = await window.api.findBibInProject(projectPath)
-    if (!isCurrentProjectTransition(generation, projectPath)) return null
-    useProjectStore.getState().setBibEntries(entries)
-  } catch {
-    // ignore
-  }
-
-  if (!isCurrentProjectTransition(generation, projectPath)) return null
-  try {
-    const labels = await window.api.scanLabels(projectPath)
-    if (!isCurrentProjectTransition(generation, projectPath)) return null
-    useProjectStore.getState().setLabels(labels)
-  } catch {
-    // ignore
-  }
-
-  if (!isCurrentProjectTransition(generation, projectPath)) return null
-  try {
-    await window.api.addRecentProject(projectPath)
-  } catch {
-    // ignore
-  }
-  if (!isCurrentProjectTransition(generation, projectPath)) return null
-  return { generation, projectPath }
+  await enrichment
+  return isCurrentProjectTransitionSnapshot(snapshot) ? snapshot : null
 }

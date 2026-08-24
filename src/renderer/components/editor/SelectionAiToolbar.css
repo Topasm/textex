@@ -8,14 +8,10 @@
   padding: 6px;
   min-width: 440px;
   max-width: min(560px, calc(100% - 16px));
-  border-radius: 16px;
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--bg-secondary) 94%, transparent);
-  box-shadow:
-    0 12px 32px var(--shadow-color),
-    0 2px 8px color-mix(in srgb, var(--shadow-color) 50%, transparent);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  border-radius: var(--ui-radius-panel, 6px);
+  border: 1px solid var(--ui-border-strong, var(--border));
+  background: var(--ui-surface-raised, var(--bg-secondary));
+  box-shadow: var(--ui-shadow-popover, 0 4px 14px var(--shadow-color));
   animation: selection-ai-toolbar-fade-in 0.16s ease-out;
   white-space: nowrap;
 }
@@ -32,9 +28,9 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--ui-border, var(--border));
   border-radius: 999px;
-  background: color-mix(in srgb, var(--bg-primary) 65%, transparent);
+  background: var(--ui-surface-panel, var(--bg-primary));
   color: var(--text-primary);
   padding: 7px 12px;
   font-size: 12px;
@@ -75,9 +71,9 @@
 .selection-ai-toolbar-command-input {
   flex: 1;
   min-width: 0;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg-input);
+  border: 1px solid var(--ui-border, var(--border));
+  border-radius: var(--ui-radius-control, 4px);
+  background: var(--ui-surface-input, var(--bg-input));
   color: var(--text-primary);
   padding: 9px 12px;
   font-size: 12px;
@@ -90,14 +86,16 @@
 
 .selection-ai-toolbar-command-input:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent);
+  box-shadow: none;
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
 }
 
 .selection-ai-toolbar-submit {
   border: none;
-  border-radius: 10px;
+  border-radius: var(--ui-radius-control, 4px);
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-contrast, #fff);
   padding: 9px 12px;
   font-size: 12px;
   font-weight: 700;
@@ -178,7 +176,7 @@
 
 .selection-ai-toolbar-btn.is-primary {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-contrast, #fff);
 }
 
 .selection-ai-toolbar-btn.is-primary:hover {
@@ -187,7 +185,11 @@
 
 [data-theme='light'] .selection-ai-toolbar,
 [data-theme='glass'] .selection-ai-toolbar {
-  box-shadow:
-    0 12px 28px rgba(60, 50, 40, 0.14),
-    0 2px 8px rgba(60, 50, 40, 0.08);
+  box-shadow: var(--ui-shadow-popover, 0 4px 14px rgba(60, 50, 40, 0.14));
+}
+
+[data-theme='glass'] .selection-ai-toolbar {
+  background: color-mix(in srgb, var(--ui-surface-raised, var(--bg-secondary)) 92%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }

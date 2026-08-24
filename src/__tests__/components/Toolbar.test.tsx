@@ -14,14 +14,11 @@ vi.mock('../../renderer/components/OmniSearch', () => ({
 const defaultProps = {
   onSave: vi.fn(),
   onCompile: vi.fn(),
-  onToggleLog: vi.fn(),
   onOpenFolder: vi.fn(),
   onReturnHome: vi.fn(),
   onNewFromTemplate: vi.fn(),
   onAiDraft: vi.fn(),
   onAiAssistant: vi.fn(),
-  onToggleTerminalPane: vi.fn(),
-  isTerminalPaneOpen: false,
   onOpenSettings: vi.fn()
 }
 
@@ -55,13 +52,32 @@ beforeEach(() => {
 
 describe('Toolbar', () => {
   it('renders the slim document toolbar actions', () => {
-    render(<Toolbar {...defaultProps} />)
+    const { container } = render(<Toolbar {...defaultProps} />)
     expect(screen.getByTitle(/Quick Save/)).toBeInTheDocument()
     expect(screen.getByTitle(/Compile LaTeX/)).toBeInTheDocument()
-    expect(screen.getByTitle(/Toggle log/)).toBeInTheDocument()
+    expect(screen.queryByTitle(/Toggle log/)).not.toBeInTheDocument()
     expect(screen.getByTitle(/Sync PDF to Code/)).toBeInTheDocument()
     expect(screen.getByTitle(/Sync Code to PDF/)).toBeInTheDocument()
     expect(screen.getByTitle(/Zoom level/)).toBeInTheDocument()
+    expect(container.querySelector('.toolbar-center')).toHaveAttribute(
+      'data-responsive-priority',
+      'secondary'
+    )
+    expect(container.querySelector('.toolbar-pdf-controls')).toHaveAttribute(
+      'data-responsive-priority',
+      'compact'
+    )
+    expect(container.querySelector('.file-name')).toHaveAttribute(
+      'data-responsive-priority',
+      'tertiary'
+    )
+
+    const pdfToCode = screen.getByRole('button', { name: /Sync PDF to Code/ })
+    const codeToPdf = screen.getByRole('button', { name: /Sync Code to PDF/ })
+    expect(pdfToCode.querySelector('.lucide-arrow-left')).toHaveAttribute('aria-hidden', 'true')
+    expect(codeToPdf.querySelector('.lucide-arrow-right')).toHaveAttribute('aria-hidden', 'true')
+    expect(pdfToCode).not.toHaveTextContent('\u2190')
+    expect(codeToPdf).not.toHaveTextContent('\u2192')
   })
 
   it('does not render the old file operations dropdown', () => {
@@ -86,7 +102,7 @@ describe('Toolbar', () => {
     expect(defaultProps.onCompile).toHaveBeenCalledOnce()
   })
 
-  it('shows the Tauri AI and terminal actions', () => {
+  it('keeps AI access but moves workspace tools out of the document toolbar', () => {
     useSettingsStore.setState({
       settings: {
         ...useSettingsStore.getState().settings,
@@ -97,8 +113,12 @@ describe('Toolbar', () => {
 
     render(<Toolbar {...defaultProps} />)
 
-    expect(screen.queryByTitle(/AI Assistant/)).toBeInTheDocument()
-    expect(screen.queryByTitle(/Terminal pane/)).toBeInTheDocument()
+    expect(screen.getByTitle(/AI Assistant/)).toHaveAttribute(
+      'data-responsive-priority',
+      'secondary'
+    )
+    expect(screen.queryByTitle(/Terminal pane/)).not.toBeInTheDocument()
+    expect(screen.queryByTitle(/Toggle log/)).not.toBeInTheDocument()
   })
 
   it('shows OmniSearch with default citations mode', () => {

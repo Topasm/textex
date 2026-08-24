@@ -133,6 +133,7 @@ Object.defineProperty(window, 'api', {
     aiProcess: vi.fn(),
     aiProcessCustom: vi.fn(),
     aiResearchChat: vi.fn(),
+    aiPlanZotero: vi.fn(),
     aiUpdateContext: vi.fn(),
     aiCheckCli: vi.fn(),
     aiCheckCodexCli: vi.fn(),
@@ -177,6 +178,7 @@ Object.defineProperty(window, 'api', {
     zoteroCollections: vi.fn().mockResolvedValue([]),
     zoteroAddToProject: vi.fn(),
     zoteroSaveOnline: vi.fn(),
+    zoteroApplyMutationPlan: vi.fn(),
     researchSearchOnline: vi.fn().mockResolvedValue([]),
     researchAddOnline: vi.fn(),
     researchLoadConfig: vi.fn().mockResolvedValue({
@@ -194,6 +196,22 @@ Object.defineProperty(window, 'api', {
       instructions: []
     }),
     researchProfileSave: vi.fn(),
+    researchChatSessionLoad: vi.fn().mockResolvedValue({
+      projectRoot: '/project',
+      projectEpoch: '1',
+      revision: '0',
+      session: { version: 1, messages: [], selectedContexts: [] }
+    }),
+    researchChatSessionSave: vi.fn().mockImplementation(async (scope, session) => ({
+      ...scope,
+      revision: String(Number(scope.revision) + 1),
+      session
+    })),
+    researchChatSessionClear: vi.fn().mockImplementation(async (scope) => ({
+      ...scope,
+      revision: String(Number(scope.revision) + 1),
+      session: { version: 1, messages: [], selectedContexts: [] }
+    })),
     researchResourceSnapshot: vi.fn(),
     researchSourceIndex: vi.fn(),
     researchSourceSearch: vi.fn().mockResolvedValue([]),

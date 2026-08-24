@@ -2,11 +2,11 @@ import React, { useState, useCallback } from 'react'
 import {
   Play,
   Loader,
-  ScrollText,
   Sparkles,
   House,
   Save as SaveIcon,
-  SquareTerminal
+  ArrowLeft,
+  ArrowRight
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useEditorStore } from '../store/useEditorStore'
@@ -15,35 +15,30 @@ import { useProjectStore } from '../store/useProjectStore'
 import { usePdfStore } from '../store/usePdfStore'
 import { useSettingsStore } from '../store/useSettingsStore'
 import { OmniSearch } from './OmniSearch'
+import { RecentProjectSwitcher } from './RecentProjectSwitcher'
 import PdfZoomDropdown from './PdfZoomDropdown'
 import { isFeatureEnabled } from '../utils/featureFlags'
-import { getDesktopCapabilities } from '../platform/capabilities'
+import { ICON_SIZE } from './ui/IconSystem'
 
 interface ToolbarProps {
   onSave: () => void
   onCompile: () => void
-  onToggleLog: () => void
   onOpenFolder: () => void
   onReturnHome: () => void
   onNewFromTemplate: () => void
   onAiDraft: (prefill?: string) => void
   onAiAssistant: () => void
-  onToggleTerminalPane: () => void
-  isTerminalPaneOpen: boolean
   onOpenSettings: () => void
 }
 
 const Toolbar = React.memo(function Toolbar({
   onSave,
   onCompile,
-  onToggleLog,
   onOpenFolder,
   onReturnHome,
   onNewFromTemplate,
   onAiDraft,
   onAiAssistant,
-  onToggleTerminalPane,
-  isTerminalPaneOpen,
   onOpenSettings
 }: ToolbarProps) {
   const { t } = useTranslation()
@@ -51,7 +46,6 @@ const Toolbar = React.memo(function Toolbar({
   const isDirty = useEditorStore((s) => s.isDirty)
   const compileStatus = useCompileStore((s) => s.compileStatus)
   const settings = useSettingsStore((s) => s.settings)
-  const capabilities = getDesktopCapabilities()
   const aiEnabled = isFeatureEnabled(settings, 'ai')
   const currentPage = usePdfStore((s) => s.currentPage)
   const numPages = usePdfStore((s) => s.numPages)
@@ -118,14 +112,17 @@ const Toolbar = React.memo(function Toolbar({
     <div className="toolbar">
       <div className="toolbar-left">
         {projectRoot && (
-          <button
-            className="toolbar-btn"
-            onClick={onReturnHome}
-            title={t('toolbar.returnHome')}
-            aria-label={t('toolbar.returnHome')}
-          >
-            <House size={16} strokeWidth={1.9} />
-          </button>
+          <>
+            <button
+              className="toolbar-btn"
+              onClick={onReturnHome}
+              title={t('toolbar.returnHome')}
+              aria-label={t('toolbar.returnHome')}
+            >
+              <House size={ICON_SIZE.control} />
+            </button>
+            <RecentProjectSwitcher />
+          </>
         )}
 
         <button
@@ -134,7 +131,7 @@ const Toolbar = React.memo(function Toolbar({
           title={t('toolbar.quickSave')}
           aria-label={t('toolbar.quickSave')}
         >
-          <SaveIcon size={16} strokeWidth={1.9} />
+          <SaveIcon size={ICON_SIZE.control} />
         </button>
 
         <button
@@ -145,33 +142,23 @@ const Toolbar = React.memo(function Toolbar({
           aria-label={t('toolbar.compileLaTeX')}
         >
           {compileStatus === 'compiling' ? (
-            <Loader size={16} className="spin" />
+            <Loader size={ICON_SIZE.control} className="spin" />
           ) : (
-            <Play size={16} />
+            <Play size={ICON_SIZE.control} />
           )}
         </button>
 
         {aiEnabled && (
           <button
             className="toolbar-btn"
+            data-responsive-priority="secondary"
             onClick={onAiAssistant}
             title={t('toolbar.aiAssistant')}
             aria-label={t('toolbar.aiAssistant')}
           >
-            <Sparkles size={16} />
+            <Sparkles size={ICON_SIZE.control} />
           </button>
         )}
-        {capabilities.pty && (
-          <button
-            className={`toolbar-btn${isTerminalPaneOpen ? ' active' : ''}`}
-            onClick={onToggleTerminalPane}
-            title={t('toolbar.terminalPane')}
-            aria-label={t('toolbar.terminalPane')}
-          >
-            <SquareTerminal size={16} />
-          </button>
-        )}
-
         <div className="toolbar-search-slot">
           <OmniSearch
             onOpenFolder={onOpenFolder}
@@ -182,7 +169,7 @@ const Toolbar = React.memo(function Toolbar({
         </div>
       </div>
 
-      <div className="toolbar-center">
+      <div className="toolbar-center" data-responsive-priority="secondary">
         {settings.showPdfToolbarControls !== false && (
           <div className="toolbar-sync-controls">
             <button
@@ -191,7 +178,7 @@ const Toolbar = React.memo(function Toolbar({
               title={t('toolbar.syncPdfToCode')}
               aria-label={t('toolbar.syncPdfToCode')}
             >
-              {'\u2190'}
+              <ArrowLeft size={ICON_SIZE.compact} />
             </button>
             <button
               className="toolbar-btn toolbar-compact-btn"
@@ -199,7 +186,7 @@ const Toolbar = React.memo(function Toolbar({
               title={t('toolbar.syncCodeToPdf')}
               aria-label={t('toolbar.syncCodeToPdf')}
             >
-              {'\u2192'}
+              <ArrowRight size={ICON_SIZE.compact} />
             </button>
           </div>
         )}
@@ -207,7 +194,7 @@ const Toolbar = React.memo(function Toolbar({
 
       <div className="toolbar-right">
         {settings.showPdfToolbarControls !== false && (
-          <div className="toolbar-pdf-controls">
+          <div className="toolbar-pdf-controls" data-responsive-priority="compact">
             {numPages > 0 && (
               <>
                 <span className="toolbar-page-nav">
@@ -235,19 +222,10 @@ const Toolbar = React.memo(function Toolbar({
           </div>
         )}
 
-        <span className="file-name" title={fileName}>
+        <span className="file-name" data-responsive-priority="tertiary" title={fileName}>
           {isDirty && <span className="dirty-dot" />}
           {fileName}
         </span>
-
-        <button
-          className="toolbar-btn"
-          onClick={onToggleLog}
-          title={t('toolbar.toggleLog')}
-          aria-label={t('toolbar.toggleLog')}
-        >
-          <ScrollText size={16} />
-        </button>
       </div>
     </div>
   )

@@ -10,8 +10,13 @@ import { BibEntryCard } from './bib/BibEntryCard'
 import { useCitationGroupOps, groupEntries } from '../hooks/useCitationGroups'
 import type { BibGroupMode } from '../hooks/useCitationGroups'
 import { getDesktopCapabilities } from '../platform/capabilities'
+import type { ReferenceDragPayload } from './research/referenceActions'
 
-function BibPanel() {
+interface BibPanelProps {
+  onAddToChat?: (payload: ReferenceDragPayload) => void
+}
+
+function BibPanel({ onAddToChat }: BibPanelProps) {
   const { t } = useTranslation()
   const bibEntries = useProjectStore((s) => s.bibEntries)
   const configuredGroupMode = useSettingsStore((s) => s.settings.bibGroupMode) as BibGroupMode
@@ -115,6 +120,7 @@ function BibPanel() {
                       entry={entry}
                       onInsert={handleInsert}
                       onRemove={() => removeFromGroup(group.id, entry.key)}
+                      onAddToChat={onAddToChat}
                     />
                   ))}
               </div>
@@ -137,6 +143,7 @@ function BibPanel() {
                     onInsert={handleInsert}
                     onAdd={lastGroupId ? () => addToGroup(lastGroupId, entry.key) : undefined}
                     addTitle={`Add to "${citationGroups[citationGroups.length - 1]?.name}"`}
+                    onAddToChat={onAddToChat}
                   />
                 ))}
             </div>
@@ -170,7 +177,12 @@ function BibPanel() {
             )}
             {!collapsed[group.label] &&
               group.entries.map((entry) => (
-                <BibEntryCard key={entry.key} entry={entry} onInsert={handleInsert} />
+                <BibEntryCard
+                  key={entry.key}
+                  entry={entry}
+                  onInsert={handleInsert}
+                  onAddToChat={onAddToChat}
+                />
               ))}
           </div>
         ))}

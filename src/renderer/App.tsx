@@ -1,12 +1,20 @@
 import { useCallback, useEffect, useMemo, useState, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FolderTree, ListTree, StickyNote, Clock, GitBranch, PanelRightOpen } from 'lucide-react'
+import {
+  FolderTree,
+  ListTree,
+  StickyNote,
+  Clock,
+  GitBranch,
+  PanelRightOpen,
+  Pin,
+  PinOff
+} from 'lucide-react'
 import Toolbar from './components/Toolbar'
 import LogPanel from './components/LogPanel'
 import StatusBar from './components/StatusBar'
 import FileTree from './components/FileTree'
 import TabBar from './components/TabBar'
-import { ResearchPanel } from './components/ResearchPanel'
 import { BibliographyRegistrationDialog } from './components/research/BibliographyRegistrationDialog'
 import OutlinePanel from './components/OutlinePanel'
 import GitPanel from './components/GitPanel'
@@ -56,11 +64,13 @@ import { documentRegistry } from './models/documentRegistry'
 import { getDesktopCapabilities } from './platform/capabilities'
 import {
   beginCompileTicket,
+  cancelPendingAutoCompile,
   canPublishCompileResponse,
   canPublishCompileTicket,
   isLatestCompileTicket,
   toCompileRequest
 } from './services/compileCoordinator'
+import { ICON_SIZE } from './components/ui/IconSystem'
 
 // Lazy-load heavy modals and panels that are rarely shown
 const SettingsModal = lazy(() =>
@@ -78,6 +88,9 @@ const EditorPane = lazy(async () => {
   return import('./components/EditorPane')
 })
 const PreviewPane = lazy(() => import('./components/PreviewPane'))
+const ResearchPanel = lazy(() =>
+  import('./components/ResearchPanel').then((module) => ({ default: module.ResearchPanel }))
+)
 
 function App() {
   const { t } = useTranslation()
@@ -163,6 +176,7 @@ function App() {
     if (!editorState.filePath.toLowerCase().endsWith('.tex')) return
     const snapshot = documentRegistry.snapshot(editorState.filePath)
     if (!snapshot) return
+    cancelPendingAutoCompile()
     try {
       await window.api.saveFile(snapshot.text, editorState.filePath)
       useEditorStore.getState().markDocumentSaved(editorState.filePath, snapshot.revision)
@@ -344,13 +358,12 @@ function App() {
   )
 
   // ---- Sidebar tab definitions ----
-  const iconSize = 14
   const allSidebarTabs: { key: SidebarView; label: string; icon: React.ReactNode }[] = [
-    { key: 'files', label: t('sidebar.files'), icon: <FolderTree size={iconSize} /> },
-    { key: 'outline', label: t('sidebar.outline'), icon: <ListTree size={iconSize} /> },
-    { key: 'todo', label: t('sidebar.notes'), icon: <StickyNote size={iconSize} /> },
-    { key: 'timeline', label: t('sidebar.timeline'), icon: <Clock size={iconSize} /> },
-    { key: 'git', label: t('sidebar.git'), icon: <GitBranch size={iconSize} /> }
+    { key: 'files', label: t('sidebar.files'), icon: <FolderTree size={ICON_SIZE.compact} /> },
+    { key: 'outline', label: t('sidebar.outline'), icon: <ListTree size={ICON_SIZE.compact} /> },
+    { key: 'todo', label: t('sidebar.notes'), icon: <StickyNote size={ICON_SIZE.compact} /> },
+    { key: 'timeline', label: t('sidebar.timeline'), icon: <Clock size={ICON_SIZE.compact} /> },
+    { key: 'git', label: t('sidebar.git'), icon: <GitBranch size={ICON_SIZE.compact} /> }
   ]
   const sidebarTabs = gitEnabled ? allSidebarTabs : allSidebarTabs.filter((t) => t.key !== 'git')
 
@@ -454,6 +467,8 @@ function App() {
               className={`sidebar-tab${sidebarView === tab.key ? ' active' : ''}`}
               onClick={() => useProjectStore.getState().setSidebarView(tab.key)}
               title={tab.label}
+              aria-label={tab.label}
+              aria-pressed={sidebarView === tab.key}
             >
               {tab.icon}
               <span className="sidebar-tab-label">{tab.label}</span>
@@ -462,6 +477,7 @@ function App() {
           <button
             className="sidebar-pin-btn"
             title={autoHideSidebar ? t('sidebar.pinSidebar') : t('sidebar.unpinSidebar')}
+            aria-label={autoHideSidebar ? t('sidebar.pinSidebar') : t('sidebar.unpinSidebar')}
             onClick={() => {
               if (autoHideSidebar) {
                 useSettingsStore.getState().updateSetting('autoHideSidebar', false)
@@ -473,16 +489,11 @@ function App() {
               }
             }}
           >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-              {autoHideSidebar ? (
-                <path
-                  d="M9.828.722a.5.5 0 0 1 .354.146l4.95 4.95a.5.5 0 0 1 0 .707c-.48.48-1.072.588-1.503.588-.177 0-.335-.018-.46-.039l-3.134 3.134a6 6 0 0 1 .16 1.013c.046.702-.032 1.687-.72 2.375a.5.5 0 0 1-.707 0l-2.829-2.828-3.182 3.182a.5.5 0 0 1-.707-.708l3.182-3.181L2.4 7.328a.5.5 0 0 1 0-.707c.688-.688 1.673-.767 2.375-.72a6 6 0 0 1 1.013.16l3.134-3.133a3 3 0 0 1-.04-.461c0-.43.109-1.022.589-1.503a.5.5 0 0 1 .353-.146z"
-                  transform="rotate(45, 8, 8)"
-                />
-              ) : (
-                <path d="M9.828.722a.5.5 0 0 1 .354.146l4.95 4.95a.5.5 0 0 1 0 .707c-.48.48-1.072.588-1.503.588-.177 0-.335-.018-.46-.039l-3.134 3.134a6 6 0 0 1 .16 1.013c.046.702-.032 1.687-.72 2.375a.5.5 0 0 1-.707 0l-2.829-2.828-3.182 3.182a.5.5 0 0 1-.707-.708l3.182-3.181L2.4 7.328a.5.5 0 0 1 0-.707c.688-.688 1.673-.767 2.375-.72a6 6 0 0 1 1.013.16l3.134-3.133a3 3 0 0 1-.04-.461c0-.43.109-1.022.589-1.503a.5.5 0 0 1 .353-.146z" />
-              )}
-            </svg>
+            {autoHideSidebar ? (
+              <Pin size={ICON_SIZE.compact} />
+            ) : (
+              <PinOff size={ICON_SIZE.compact} />
+            )}
           </button>
         </div>
         <div className={`sidebar-content${slideAnim ? ` sidebar-${slideAnim}` : ''}`}>
@@ -507,7 +518,6 @@ function App() {
       <Toolbar
         onSave={handleSave}
         onCompile={handleCompile}
-        onToggleLog={toggleLogPanel}
         onOpenFolder={handleOpenFolder}
         onReturnHome={handleCloseProject}
         onNewFromTemplate={handleOpenTemplateGallery}
@@ -515,8 +525,6 @@ function App() {
         onAiAssistant={() => {
           useProjectStore.getState().openResearchPanel('chat')
         }}
-        onToggleTerminalPane={handleToggleTerminalPane}
-        isTerminalPaneOpen={terminalPaneOpen}
         onOpenSettings={handleOpenSettings}
       />
       {isSettingsOpen && (
@@ -571,7 +579,10 @@ function App() {
         <div className="workspace">
           {(isSidebarOpen || autoHideSidebar) && sidebarElement}
           <div className="editor-area">
-            <div className="editor-main-content" ref={mainContentRef}>
+            <div
+              className={`editor-main-content${terminalPaneOpen ? ' has-terminal-pane' : ''}`}
+              ref={mainContentRef}
+            >
               <div
                 className="editor-pane"
                 style={{
@@ -627,10 +638,14 @@ function App() {
               title="Open research panel"
               aria-label="Open research panel"
             >
-              <PanelRightOpen size={16} />
+              <PanelRightOpen size={ICON_SIZE.control} />
             </button>
           )}
-          <ResearchPanel onAiDraft={() => handleAiDraft()} />
+          {isResearchPanelOpen && (
+            <Suspense fallback={<LoadingFallback variant="panel" label={t('loading.workspace')} />}>
+              <ResearchPanel onAiDraft={() => handleAiDraft()} />
+            </Suspense>
+          )}
         </div>
       )}
       <LogPanel />

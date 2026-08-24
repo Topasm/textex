@@ -13,12 +13,26 @@ interface OpenFileData {
   cursorColumn: number
 }
 
+interface RestoredFileData {
+  filePath: string
+  content: string
+  cursorLine: number
+  cursorColumn: number
+}
+
+interface RestoreFilesInTabsOptions {
+  orderedFilePaths: string[]
+  activeFilePath?: string
+  expectedTabMutationEpoch: number
+}
+
 interface EditorState {
   filePath: string | null
   activeFilePath: string | null
   isDirty: boolean
   revision: number
   openFiles: Record<string, OpenFileData>
+  tabMutationEpoch: number
 
   cursorLine: number
   cursorColumn: number
@@ -27,11 +41,13 @@ interface EditorState {
 
   _sessionOpenPaths: string[]
   _sessionActiveFile: string | null
+  _sessionCursors: Record<string, { cursorLine: number; cursorColumn: number }>
 
   updateActiveDocument: (text: string, source?: DocumentChangeSource) => DocumentSnapshot | null
   recordEditorChange: (filePath: string) => DocumentRevisionSnapshot | null
   markDocumentSaved: (filePath: string, revision?: number) => boolean
   openFileInTab: (filePath: string, content: string) => void
+  restoreFilesInTabs: (files: RestoredFileData[], options: RestoreFilesInTabsOptions) => boolean
   closeTab: (filePath: string) => void
   setActiveTab: (filePath: string) => void
   setCursorPosition: (line: number, column: number) => void
@@ -43,7 +59,7 @@ interface EditorState {
   resetEditor: () => void
 }
 
-export type { OpenFileData }
+export type { OpenFileData, RestoredFileData, RestoreFilesInTabsOptions }
 
 function withDirtyState(
   openFiles: Record<string, OpenFileData>,
@@ -55,18 +71,45 @@ function withDirtyState(
   return { ...openFiles, [filePath]: { ...current, isDirty } }
 }
 
+function nextTabMutationEpoch(current: number): number {
+  return current === Number.MAX_SAFE_INTEGER ? 0 : current + 1
+}
+
+function validCursorCoordinate(value: number): number {
+  return Number.isSafeInteger(value) && value >= 1 ? value : 1
+}
+
+function orderOpenFiles(
+  openFiles: Record<string, OpenFileData>,
+  orderedFilePaths: string[]
+): Record<string, OpenFileData> {
+  const remaining = new Set(Object.keys(openFiles))
+  const ordered: Record<string, OpenFileData> = {}
+
+  for (const requestedPath of orderedFilePaths) {
+    const filePath = documentRegistry.getFilePath(requestedPath) ?? requestedPath
+    const data = openFiles[filePath]
+    if (!data || !remaining.delete(filePath)) continue
+    ordered[filePath] = data
+  }
+  for (const filePath of remaining) ordered[filePath] = openFiles[filePath]
+  return ordered
+}
+
 const emptyEditorState = {
   filePath: null,
   activeFilePath: null,
   isDirty: false,
   revision: 0,
   openFiles: {},
+  tabMutationEpoch: 0,
   cursorLine: 1,
   cursorColumn: 1,
   pendingJump: null,
   pendingInsertText: null,
   _sessionOpenPaths: [] as string[],
-  _sessionActiveFile: null
+  _sessionActiveFile: null,
+  _sessionCursors: {} as Record<string, { cursorLine: number; cursorColumn: number }>
 }
 
 export const useEditorStore = create<EditorState>()(
@@ -156,8 +199,52 @@ export const useEditorStore = create<EditorState>()(
           revision: snapshot.revision,
           isDirty: model.isDirty,
           cursorLine: fileData.cursorLine,
-          cursorColumn: fileData.cursorColumn
+          cursorColumn: fileData.cursorColumn,
+          tabMutationEpoch: nextTabMutationEpoch(state.tabMutationEpoch)
         })
+      },
+
+      restoreFilesInTabs: (files, options) => {
+        let restored = false
+        set((state) => {
+          if (state.tabMutationEpoch !== options.expectedTabMutationEpoch) return state
+
+          const openFiles = { ...state.openFiles }
+          for (const file of files) {
+            documentRegistry.open(file.filePath, file.content)
+            const filePath = documentRegistry.getFilePath(file.filePath) ?? file.filePath
+            const model = documentRegistry.getModel(filePath)
+            if (!model) continue
+            openFiles[filePath] = {
+              isDirty: model.isDirty,
+              cursorLine: validCursorCoordinate(file.cursorLine),
+              cursorColumn: validCursorCoordinate(file.cursorColumn)
+            }
+          }
+
+          const orderedOpenFiles = orderOpenFiles(openFiles, options.orderedFilePaths)
+          const requestedActivePath = options.activeFilePath
+          const activeFilePath = requestedActivePath
+            ? (documentRegistry.getFilePath(requestedActivePath) ?? requestedActivePath)
+            : state.activeFilePath
+          const activeFile = activeFilePath ? orderedOpenFiles[activeFilePath] : undefined
+          const activeModel = activeFilePath ? documentRegistry.getModel(activeFilePath) : null
+
+          restored = true
+          if (!requestedActivePath || !activeFile || !activeModel) {
+            return { openFiles: orderedOpenFiles }
+          }
+          return {
+            openFiles: orderedOpenFiles,
+            activeFilePath,
+            filePath: activeFilePath,
+            revision: activeModel.revision,
+            isDirty: activeModel.isDirty,
+            cursorLine: activeFile.cursorLine,
+            cursorColumn: activeFile.cursorColumn
+          }
+        })
+        return restored
       },
 
       closeTab: (filePath) => {
@@ -167,7 +254,10 @@ export const useEditorStore = create<EditorState>()(
         documentRegistry.close(filePath)
 
         if (state.activeFilePath !== filePath) {
-          set({ openFiles })
+          set({
+            openFiles,
+            tabMutationEpoch: nextTabMutationEpoch(state.tabMutationEpoch)
+          })
           return
         }
 
@@ -181,7 +271,8 @@ export const useEditorStore = create<EditorState>()(
             revision: 0,
             isDirty: false,
             cursorLine: 1,
-            cursorColumn: 1
+            cursorColumn: 1,
+            tabMutationEpoch: nextTabMutationEpoch(state.tabMutationEpoch)
           })
           return
         }
@@ -195,7 +286,8 @@ export const useEditorStore = create<EditorState>()(
           revision: nextModel?.revision ?? 0,
           isDirty: nextModel?.isDirty ?? false,
           cursorLine: nextData.cursorLine,
-          cursorColumn: nextData.cursorColumn
+          cursorColumn: nextData.cursorColumn,
+          tabMutationEpoch: nextTabMutationEpoch(state.tabMutationEpoch)
         })
       },
 
@@ -224,7 +316,8 @@ export const useEditorStore = create<EditorState>()(
           revision: model.revision,
           isDirty: model.isDirty,
           cursorLine: target.cursorLine,
-          cursorColumn: target.cursorColumn
+          cursorColumn: target.cursorColumn,
+          tabMutationEpoch: nextTabMutationEpoch(state.tabMutationEpoch)
         })
       },
 
@@ -259,7 +352,10 @@ export const useEditorStore = create<EditorState>()(
 
       resetEditor: () => {
         documentRegistry.clear()
-        set({ ...emptyEditorState })
+        set((state) => ({
+          ...emptyEditorState,
+          tabMutationEpoch: nextTabMutationEpoch(state.tabMutationEpoch)
+        }))
       }
     })),
     {
@@ -270,7 +366,9 @@ export const useEditorStore = create<EditorState>()(
         _sessionCursors: Object.fromEntries(
           Object.entries(state.openFiles).map(([path, data]) => [
             path,
-            { cursorLine: data.cursorLine, cursorColumn: data.cursorColumn }
+            state.activeFilePath === path
+              ? { cursorLine: state.cursorLine, cursorColumn: state.cursorColumn }
+              : { cursorLine: data.cursorLine, cursorColumn: data.cursorColumn }
           ])
         )
       })

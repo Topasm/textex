@@ -241,33 +241,45 @@ fn scan_files(files: Vec<(String, Option<u64>)>) -> ReferenceIndex {
 }
 
 pub(crate) fn parse_bib_content(content: &str, file: Option<&str>) -> Vec<BibEntry> {
-    bib_entry_regex()
-        .captures_iter(content)
-        .filter_map(|captures| {
-            let entry_match = captures.get(0)?;
-            let entry_type = captures.get(1)?.as_str().to_ascii_lowercase();
-            if matches!(entry_type.as_str(), "comment" | "string" | "preamble") {
-                return None;
-            }
-            let block = captures.get(3)?.as_str();
-            Some(BibEntry {
-                key: captures.get(2)?.as_str().trim().to_owned(),
-                entry_type,
-                title: extract_field(block, "title"),
-                author: extract_field(block, "author"),
-                year: extract_field(block, "year"),
-                journal: nonempty(extract_field(block, "journal")),
-                file: file.map(str::to_owned),
-                line: Some(
-                    content[..entry_match.start()]
-                        .bytes()
-                        .filter(|byte| *byte == b'\n')
-                        .count() as u32
-                        + 1,
-                ),
-            })
-        })
-        .collect()
+    let mut entries = Vec::new();
+    let mut scanned_offset = 0;
+    let mut source_line = 1;
+
+    for captures in bib_entry_regex().captures_iter(content) {
+        let Some(entry_match) = captures.get(0) else {
+            continue;
+        };
+        source_line += content[scanned_offset..entry_match.start()]
+            .bytes()
+            .filter(|byte| *byte == b'\n')
+            .count() as u32;
+        scanned_offset = entry_match.start();
+
+        let Some(entry_type) = captures
+            .get(1)
+            .map(|value| value.as_str().to_ascii_lowercase())
+        else {
+            continue;
+        };
+        if matches!(entry_type.as_str(), "comment" | "string" | "preamble") {
+            continue;
+        }
+        let (Some(key), Some(block)) = (captures.get(2), captures.get(3)) else {
+            continue;
+        };
+        entries.push(BibEntry {
+            key: key.as_str().trim().to_owned(),
+            entry_type,
+            title: extract_field(block.as_str(), title_field_regex()),
+            author: extract_field(block.as_str(), author_field_regex()),
+            year: extract_field(block.as_str(), year_field_regex()),
+            journal: nonempty(extract_field(block.as_str(), journal_field_regex())),
+            file: file.map(str::to_owned),
+            line: Some(source_line),
+        });
+    }
+
+    entries
 }
 
 fn parse_labels(content: &str, file: &str) -> Vec<LabelInfo> {
@@ -289,14 +301,9 @@ fn parse_labels(content: &str, file: &str) -> Vec<LabelInfo> {
         .collect()
 }
 
-fn extract_field(block: &str, field: &str) -> String {
-    let pattern = format!(
-        r#"(?i){}\s*=\s*[{{\"]([^}}\"]*)[}}\"]"#,
-        regex::escape(field)
-    );
-    Regex::new(&pattern)
-        .ok()
-        .and_then(|regex| regex.captures(block))
+fn extract_field(block: &str, regex: &Regex) -> String {
+    regex
+        .captures(block)
         .and_then(|captures| captures.get(1))
         .map_or_else(String::new, |value| value.as_str().trim().to_owned())
 }
@@ -308,6 +315,26 @@ fn nonempty(value: String) -> Option<String> {
 fn bib_entry_regex() -> &'static Regex {
     static REGEX: OnceLock<Regex> = OnceLock::new();
     REGEX.get_or_init(|| Regex::new(r"(?s)@(\w+)\s*\{\s*([^,\s]+)\s*,([^@]*)").unwrap())
+}
+
+fn title_field_regex() -> &'static Regex {
+    static REGEX: OnceLock<Regex> = OnceLock::new();
+    REGEX.get_or_init(|| Regex::new(r#"(?i)title\s*=\s*[{\"]([^}\"]*)[}\"]"#).unwrap())
+}
+
+fn author_field_regex() -> &'static Regex {
+    static REGEX: OnceLock<Regex> = OnceLock::new();
+    REGEX.get_or_init(|| Regex::new(r#"(?i)author\s*=\s*[{\"]([^}\"]*)[}\"]"#).unwrap())
+}
+
+fn year_field_regex() -> &'static Regex {
+    static REGEX: OnceLock<Regex> = OnceLock::new();
+    REGEX.get_or_init(|| Regex::new(r#"(?i)year\s*=\s*[{\"]([^}\"]*)[}\"]"#).unwrap())
+}
+
+fn journal_field_regex() -> &'static Regex {
+    static REGEX: OnceLock<Regex> = OnceLock::new();
+    REGEX.get_or_init(|| Regex::new(r#"(?i)journal\s*=\s*[{\"]([^}\"]*)[}\"]"#).unwrap())
 }
 
 fn label_regex() -> &'static Regex {
@@ -376,6 +403,59 @@ mod tests {
         assert_eq!(entries[0].key, "smith2026");
         assert_eq!(entries[0].title, "A Paper");
         assert_eq!(entries[0].line, Some(2));
+    }
+
+    #[test]
+    fn preserves_nested_and_multiline_field_parsing() {
+        let entries = parse_bib_content(
+            r#"@article{nested,
+ title={An {Existing} Title},
+ author="Ada
+ Lovelace",
+ year={2026},
+ journal={Journal
+ of Tests}
+}"#,
+            None,
+        );
+
+        assert_eq!(entries.len(), 1);
+        // Keep the established parser semantics: braced fields end at the
+        // first closing brace, while quoted and braced values may span lines.
+        assert_eq!(entries[0].title, "An {Existing");
+        assert_eq!(entries[0].author, "Ada\n Lovelace");
+        assert_eq!(entries[0].journal.as_deref(), Some("Journal\n of Tests"));
+    }
+
+    #[test]
+    fn tracks_source_lines_across_a_large_bibliography() {
+        const ENTRY_COUNT: usize = 10_000;
+        let mut content = String::with_capacity(ENTRY_COUNT * 120);
+        let mut expected_lines = Vec::with_capacity(ENTRY_COUNT);
+        let mut next_line = 1_u32;
+
+        for index in 0..ENTRY_COUNT {
+            let padding = "\n".repeat(index % 4);
+            next_line += padding.len() as u32;
+            content.push_str(&padding);
+            expected_lines.push(next_line);
+
+            let entry = format!(
+                "@article{{key{index},\n title={{Title {index}}},\n author={{Author}},\n year={{2026}},\n journal={{Journal}}\n}}\n"
+            );
+            next_line += entry.bytes().filter(|byte| *byte == b'\n').count() as u32;
+            content.push_str(&entry);
+        }
+
+        // This fixture is intentionally large: prefix rescanning would make
+        // its work grow quadratically, without relying on a fragile timer.
+        let entries = parse_bib_content(&content, Some("/project/large.bib"));
+
+        assert_eq!(entries.len(), ENTRY_COUNT);
+        for (index, entry) in entries.iter().enumerate() {
+            assert_eq!(entry.key, format!("key{index}"));
+            assert_eq!(entry.line, Some(expected_lines[index]));
+        }
     }
 
     #[test]

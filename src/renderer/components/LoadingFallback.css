@@ -22,8 +22,8 @@
 .loading-fallback--panel {
   width: min(280px, 35vw);
   height: 100%;
-  border-left: 1px solid var(--border);
-  background: var(--bg-secondary);
+  border-left: 1px solid var(--ui-border, var(--border));
+  background: var(--ui-surface-panel, var(--bg-secondary));
 }
 
 .loading-fallback--modal {
@@ -39,10 +39,10 @@
   top: 16px;
   right: 16px;
   min-height: auto;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg-secondary);
-  box-shadow: 0 8px 28px var(--shadow-color);
+  border: 1px solid var(--ui-border-strong, var(--border));
+  border-radius: var(--ui-radius-panel, 6px);
+  background: var(--ui-surface-raised, var(--bg-secondary));
+  box-shadow: var(--ui-shadow-popover, 0 4px 14px var(--shadow-color));
 }
 
 .loading-fallback__card {
@@ -51,14 +51,14 @@
   justify-items: center;
   gap: 12px;
   padding: 20px;
-  border-radius: 10px;
+  border-radius: var(--ui-radius-panel, 6px);
 }
 
 .loading-fallback--modal .loading-fallback__card {
   padding: 28px 36px;
-  border: 1px solid var(--border);
-  background: var(--modal-bg, var(--bg-secondary));
-  box-shadow: 0 16px 48px var(--shadow-color);
+  border: 1px solid var(--ui-border-strong, var(--border));
+  background: var(--ui-surface-raised, var(--modal-bg, var(--bg-secondary)));
+  box-shadow: var(--ui-shadow-modal, 0 8px 28px var(--shadow-color));
 }
 
 .loading-fallback--floating .loading-fallback__card {

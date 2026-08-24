@@ -72,11 +72,17 @@ ErrorBoundary
 - Uses an overlay with backdrop and Escape dismissal below 1200 px.
 - **Chat** contains AI Draft and Claude/Codex CLI entry points.
 - **References** switches among Project (`BibPanel` reuse), Zotero, and Online sources.
+- Icon-only Terminal and compilation-log controls live beside the Research tabs, including active
+  state and a problem-count badge. Their full-width workspace surfaces remain unchanged.
 - Zotero collections may sync on project open or manually to `zotero.bib`; individual additions
   and Crossref/arXiv results merge into `references.bib` before citation insertion.
+- Explicit Zotero collection/tag requests in Chat open a bounded change preview with Cancel and
+  Approve actions. Planning is read-only; approval invokes the native Local API write path.
 
 ### `Toolbar.tsx`
 - Acts as the primary document command surface at the top of the application.
+- Keeps Terminal and compilation-log controls in the Research panel so the title bar remains
+  focused on document and preview actions.
 - Left group:
   - `Home` closes the current project and returns to the home screen.
   - `Save` calls `window.api.saveFile(...)` / `saveFileAs(...)` through shared app commands.

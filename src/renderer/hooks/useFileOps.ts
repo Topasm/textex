@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useRef } from 'react'
 import { useEditorStore } from '../store/useEditorStore'
 import { useCompileStore } from '../store/useCompileStore'
 import { useSettingsStore } from '../store/useSettingsStore'
@@ -14,6 +14,8 @@ interface FileOps {
 }
 
 export function useFileOps(): FileOps {
+  const saveRequestIdRef = useRef(0)
+
   const handleOpen = useCallback(async () => {
     const result = await window.api.openFile()
     if (result) {
@@ -28,28 +30,48 @@ export function useFileOps(): FileOps {
   }, [])
 
   const handleSave = useCallback(async () => {
+    const saveRequestId = ++saveRequestIdRef.current
     const editorState = useEditorStore.getState()
-    const { filePath, updateActiveDocument, markDocumentSaved } = editorState
+    const { filePath } = editorState
     const { appendLog, setLogPanelOpen } = useCompileStore.getState()
     const { settings } = useSettingsStore.getState()
 
     if (!filePath) return
-    const initialSnapshot = documentRegistry.snapshot(filePath)
+    const initialModel = documentRegistry.getModel(filePath)
+    const initialSnapshot = initialModel?.snapshot()
     if (!initialSnapshot) return
     let snapshotToSave = initialSnapshot
 
     if (settings.formatOnSave) {
       try {
         const formatted = await formatLatex(snapshotToSave.text)
-        snapshotToSave = updateActiveDocument(formatted, 'format') ?? snapshotToSave
+        if (saveRequestId !== saveRequestIdRef.current) return
+
+        const currentModel = documentRegistry.getModel(filePath)
+        if (!currentModel || currentModel !== initialModel) return
+
+        const currentEditorState = useEditorStore.getState()
+        if (
+          currentEditorState.activeFilePath === filePath &&
+          initialModel.isCurrent(initialSnapshot)
+        ) {
+          snapshotToSave =
+            currentEditorState.updateActiveDocument(formatted, 'format') ?? initialSnapshot
+        } else {
+          // Formatting raced with an edit or tab switch. Save the current text,
+          // but never apply the stale formatted result to a document buffer.
+          snapshotToSave = currentModel.snapshot()
+        }
       } catch (e) {
         console.warn('Format on save failed:', e)
       }
     }
 
+    if (saveRequestId !== saveRequestIdRef.current) return
+
     try {
       await window.api.saveFile(snapshotToSave.text, filePath)
-      markDocumentSaved(filePath, snapshotToSave.revision)
+      useEditorStore.getState().markDocumentSaved(filePath, snapshotToSave.revision)
     } catch (err: unknown) {
       appendLog(`Save failed: ${errorMessage(err)}`)
       setLogPanelOpen(true)

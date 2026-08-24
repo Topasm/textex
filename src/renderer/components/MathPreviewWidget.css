@@ -3,15 +3,12 @@
   z-index: 1000;
   min-width: 280px;
   max-width: 560px;
-  border-radius: 12px;
+  border-radius: var(--ui-radius-panel, 6px);
   overflow: hidden;
   animation: math-preview-fade-in 0.18s ease-out;
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.18),
-    0 2px 8px rgba(0, 0, 0, 0.1);
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
-  background: var(--bg-elevated, #1e1e2e);
-  backdrop-filter: blur(16px);
+  box-shadow: var(--ui-shadow-popover, 0 4px 14px rgba(0, 0, 0, 0.18));
+  border: 1px solid var(--ui-border-strong, var(--border-color, rgba(255, 255, 255, 0.08)));
+  background: var(--ui-surface-raised, var(--bg-elevated, #1e1e2e));
 
   /* Ensure the MathLive virtual keyboard can overflow */
   overflow: visible;
@@ -34,8 +31,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 6px 12px;
-  background: var(--bg-surface, rgba(255, 255, 255, 0.04));
-  border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.06));
+  background: var(--ui-surface-panel, var(--bg-surface, rgba(255, 255, 255, 0.04)));
+  border-bottom: 1px solid var(--ui-border, var(--border-color, rgba(255, 255, 255, 0.06)));
 }
 
 .math-preview-label {
@@ -65,7 +62,7 @@
   color: var(--text-secondary, #888);
   cursor: pointer;
   padding: 4px 8px;
-  border-radius: 6px;
+  border-radius: var(--ui-radius-control, 4px);
   font-size: 11px;
   font-weight: 500;
   transition: all 0.15s ease;
@@ -80,13 +77,13 @@
 }
 
 .math-preview-btn-apply {
-  background: var(--accent-color, #4d8cf5);
-  color: #fff;
+  background: var(--accent, var(--accent-color, #4d8cf5));
+  color: var(--accent-contrast, #fff);
 }
 
 .math-preview-btn-apply:hover {
   background: var(--accent-hover, #3b7de6);
-  color: #fff;
+  color: var(--accent-contrast, #fff);
 }
 
 .math-preview-body {
@@ -98,37 +95,37 @@
   width: 100%;
   font-size: 18px;
   min-height: 40px;
-  border-radius: 8px;
+  border-radius: var(--ui-radius-control, 4px);
   padding: 8px 12px;
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
-  background: var(--bg-input, rgba(0, 0, 0, 0.2));
+  border: 1px solid var(--ui-border, var(--border-color, rgba(255, 255, 255, 0.1)));
+  background: var(--ui-surface-input, var(--bg-input, rgba(0, 0, 0, 0.2)));
   color: var(--text-primary, #e0e0e0);
   outline: none;
   transition: border-color 0.15s ease;
 }
 
 .math-preview-body math-field:focus-within {
-  border-color: var(--accent-color, #4d8cf5);
-  box-shadow: 0 0 0 2px rgba(77, 140, 245, 0.2);
+  border-color: var(--accent, var(--accent-color, #4d8cf5));
+  box-shadow: none;
+  outline: 1px solid var(--accent, var(--accent-color, #4d8cf5));
+  outline-offset: -1px;
 }
 
 /* Light theme overrides */
 [data-theme='light'] .math-preview-widget {
-  background: #ffffff;
-  border-color: rgba(0, 0, 0, 0.12);
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.12),
-    0 2px 8px rgba(0, 0, 0, 0.06);
+  background: var(--ui-surface-raised, #ffffff);
+  border-color: var(--ui-border-strong, rgba(0, 0, 0, 0.12));
+  box-shadow: var(--ui-shadow-popover, 0 4px 14px rgba(0, 0, 0, 0.12));
 }
 
 [data-theme='light'] .math-preview-header {
-  background: #f8f8f8;
-  border-bottom-color: rgba(0, 0, 0, 0.08);
+  background: var(--ui-surface-panel, #f8f8f8);
+  border-bottom-color: var(--ui-border, rgba(0, 0, 0, 0.08));
 }
 
 [data-theme='light'] .math-preview-body math-field {
-  background: #f5f5f5;
-  border-color: rgba(0, 0, 0, 0.15);
+  background: var(--ui-surface-input, #f5f5f5);
+  border-color: var(--ui-border, rgba(0, 0, 0, 0.15));
   color: #1e1e1e;
 }
 
@@ -156,9 +153,14 @@
 .math-preview-hint kbd {
   display: inline-block;
   padding: 1px 4px;
-  border-radius: 3px;
+  border-radius: var(--ui-radius-control, 4px);
   font-size: 10px;
   font-family: inherit;
-  background: var(--bg-surface, rgba(255, 255, 255, 0.06));
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  background: var(--ui-surface-panel, var(--bg-surface, rgba(255, 255, 255, 0.06)));
+  border: 1px solid var(--ui-border, var(--border-color, rgba(255, 255, 255, 0.1)));
+}
+
+[data-theme='glass'] .math-preview-widget {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }

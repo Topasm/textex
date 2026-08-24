@@ -13,7 +13,6 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-use reqwest::Url;
 use tokio::{
     io::{AsyncRead, AsyncReadExt},
     process::{Child, Command},
@@ -196,6 +195,7 @@ fn create_private_directory(path: &Path) -> io::Result<()> {
 #[derive(Clone, Default)]
 pub struct ResearchSourceState {
     indexes: Arc<RwLock<HashMap<String, CachedSourceIndex>>>,
+    cache_sequence: Arc<AtomicU64>,
     git_lock: Arc<Mutex<()>>,
 }
 
@@ -204,6 +204,7 @@ struct CachedSourceIndex {
     project_epoch: u64,
     source_root: PathBuf,
     contents: Arc<Vec<IndexedSourceContent>>,
+    last_used: u64,
 }
 
 struct IndexedSourceContent {
@@ -263,10 +264,11 @@ impl ResearchSourceState {
                 && filesystem::paths_equal(&cached.project_root, &project_root)
         });
         if !indexes.contains_key(&resource_id) && indexes.len() >= MAX_CACHED_INDEXES {
-            if let Some(evicted) = indexes.keys().next().cloned() {
+            if let Some(evicted) = least_recently_used_index(&indexes) {
                 indexes.remove(&evicted);
             }
         }
+        let last_used = self.cache_sequence.fetch_add(1, Ordering::Relaxed);
         indexes.insert(
             resource_id,
             CachedSourceIndex {
@@ -274,6 +276,7 @@ impl ResearchSourceState {
                 project_epoch,
                 source_root: root,
                 contents: Arc::new(built.contents),
+                last_used,
             },
         );
         Ok(response)
@@ -302,8 +305,8 @@ impl ResearchSourceState {
         let source_root =
             configured_source_root(&project_root, &profile, resource_id, None).await?;
         let contents = {
-            let indexes = self.indexes.read().map_err(|_| AppError::StatePoisoned)?;
-            let cached = indexes.get(resource_id).ok_or_else(|| {
+            let mut indexes = self.indexes.write().map_err(|_| AppError::StatePoisoned)?;
+            let cached = indexes.get_mut(resource_id).ok_or_else(|| {
                 AppError::ResearchSource(format!(
                     "source resource '{resource_id}' has not been indexed"
                 ))
@@ -317,6 +320,7 @@ impl ResearchSourceState {
                         .to_owned(),
                 ));
             }
+            cached.last_used = self.cache_sequence.fetch_add(1, Ordering::Relaxed);
             Arc::clone(&cached.contents)
         };
         drop(project_guard);
@@ -581,6 +585,17 @@ impl ResearchSourceState {
     }
 }
 
+fn least_recently_used_index(indexes: &HashMap<String, CachedSourceIndex>) -> Option<String> {
+    indexes
+        .iter()
+        .min_by(|(left_id, left), (right_id, right)| {
+            left.last_used
+                .cmp(&right.last_used)
+                .then_with(|| left_id.cmp(right_id))
+        })
+        .map(|(resource_id, _)| resource_id.clone())
+}
+
 fn configured_git_resource<'a>(
     profile: &'a ResearchProfile,
     resource_id: &str,
@@ -694,18 +709,7 @@ fn configured_remote(resource: &ResearchResource) -> AppResult<&str> {
 }
 
 fn validate_https_remote(value: &str) -> AppResult<()> {
-    reject_remote_controls(value)?;
-    let url = Url::parse(value)
-        .map_err(|_| AppError::ResearchSource("invalid git HTTPS URL".to_owned()))?;
-    if url.scheme() != "https"
-        || !url.username().is_empty()
-        || url.password().is_some()
-        || url.host_str().is_none()
-        || url.query().is_some()
-        || url.fragment().is_some()
-        || url.path().is_empty()
-        || url.path() == "/"
-    {
+    if !research_profile::is_valid_git_https_remote(value) {
         return Err(AppError::ResearchSource(
             "git URL must be credential-free HTTPS without a query or fragment".to_owned(),
         ));
@@ -714,33 +718,7 @@ fn validate_https_remote(value: &str) -> AppResult<()> {
 }
 
 fn validate_standard_ssh_remote(value: &str) -> AppResult<()> {
-    reject_remote_controls(value)?;
-    let Some(remainder) = value.strip_prefix("git@") else {
-        return Err(AppError::ResearchSource(
-            "SSH git URL must use the standard git@host:path form".to_owned(),
-        ));
-    };
-    let Some((host, path)) = remainder.split_once(':') else {
-        return Err(AppError::ResearchSource(
-            "SSH git URL must use the standard git@host:path form".to_owned(),
-        ));
-    };
-    let valid_host = !host.is_empty()
-        && !host.starts_with('.')
-        && !host.ends_with('.')
-        && host
-            .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'-'));
-    let valid_path = !path.is_empty()
-        && !path.starts_with('/')
-        && !path.starts_with('-')
-        && path
-            .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'/' | b'.' | b'_' | b'-'))
-        && path
-            .split('/')
-            .all(|component| !component.is_empty() && component != "." && component != "..");
-    if !valid_host || !valid_path || remainder.matches('@').count() > 0 {
+    if !research_profile::is_valid_standard_git_ssh_remote(value) {
         return Err(AppError::ResearchSource(
             "SSH git URL must use the standard credential-free git@host:path form".to_owned(),
         ));
@@ -748,34 +726,8 @@ fn validate_standard_ssh_remote(value: &str) -> AppResult<()> {
     Ok(())
 }
 
-fn reject_remote_controls(value: &str) -> AppResult<()> {
-    if value.is_empty()
-        || value.len() > 16 * 1024
-        || value.chars().any(|character| {
-            character.is_control() || character.is_whitespace() || character == '\0'
-        })
-    {
-        return Err(AppError::ResearchSource(
-            "git remote contains invalid control or whitespace characters".to_owned(),
-        ));
-    }
-    Ok(())
-}
-
 fn validate_branch(branch: &str) -> AppResult<()> {
-    let valid = !branch.is_empty()
-        && branch.len() <= 1_024
-        && !branch.starts_with('-')
-        && !branch.starts_with('/')
-        && !branch.ends_with('/')
-        && !branch.ends_with('.')
-        && !branch.contains("..")
-        && !branch.contains("@{")
-        && !branch.contains("//")
-        && branch
-            .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'/' | b'.' | b'_' | b'-'));
-    if !valid {
+    if !research_profile::is_valid_git_branch(branch) {
         return Err(AppError::ResearchSource(
             "git branch contains unsafe characters".to_owned(),
         ));
@@ -820,6 +772,7 @@ async fn clone_error_after_cleanup(
 }
 
 async fn cleanup_failed_clone(project_root: &Path, destination: &Path) -> AppResult<()> {
+    validate_clone_cleanup_parent(project_root, destination).await?;
     let metadata = match tokio::fs::symlink_metadata(destination).await {
         Ok(metadata) => metadata,
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
@@ -864,6 +817,38 @@ async fn cleanup_failed_clone(project_root: &Path, destination: &Path) -> AppRes
             canonical.to_string_lossy()
         )));
     }
+
+    // A clone normally creates its .git directory before populating the work
+    // tree. If the exact destination was replaced with an unrelated non-empty
+    // directory, leave it untouched instead of recursively deleting data that
+    // Git did not demonstrably create. Empty partial destinations are safe to
+    // remove directly.
+    let git_directory = canonical.join(".git");
+    match tokio::fs::symlink_metadata(&git_directory).await {
+        Ok(metadata) if metadata.is_dir() && !metadata.file_type().is_symlink() => {}
+        Ok(_) => {
+            return Err(AppError::ResearchSource(format!(
+                "refusing to remove partial clone with an invalid .git entry: {}",
+                canonical.to_string_lossy()
+            )))
+        }
+        Err(error) if error.kind() == io::ErrorKind::NotFound => {
+            return tokio::fs::remove_dir(&canonical).await.map_err(|source| {
+                AppError::io(
+                    "remove empty partial research clone",
+                    canonical.to_string_lossy().into_owned(),
+                    source,
+                )
+            });
+        }
+        Err(source) => {
+            return Err(AppError::io(
+                "inspect partial research clone metadata",
+                git_directory.to_string_lossy().into_owned(),
+                source,
+            ))
+        }
+    }
     tokio::fs::remove_dir_all(&canonical)
         .await
         .map_err(|source| {
@@ -873,6 +858,46 @@ async fn cleanup_failed_clone(project_root: &Path, destination: &Path) -> AppRes
                 source,
             )
         })
+}
+
+async fn validate_clone_cleanup_parent(project_root: &Path, destination: &Path) -> AppResult<()> {
+    let parent = destination.parent().ok_or_else(|| {
+        AppError::InvalidPath(format!(
+            "partial clone destination has no parent: {}",
+            destination.to_string_lossy()
+        ))
+    })?;
+    let canonical_parent = dunce::canonicalize(parent).map_err(|source| {
+        AppError::io(
+            "resolve partial research clone parent",
+            parent.to_string_lossy().into_owned(),
+            source,
+        )
+    })?;
+    if !path_is_within(project_root, &canonical_parent)
+        || !filesystem::paths_equal(parent, &canonical_parent)
+    {
+        return Err(AppError::ResearchSource(format!(
+            "refusing to clean a partial clone through a changed parent path: {}",
+            parent.to_string_lossy()
+        )));
+    }
+    let metadata = tokio::fs::symlink_metadata(parent)
+        .await
+        .map_err(|source| {
+            AppError::io(
+                "inspect partial research clone parent",
+                parent.to_string_lossy().into_owned(),
+                source,
+            )
+        })?;
+    if metadata.file_type().is_symlink() || !metadata.is_dir() {
+        return Err(AppError::ResearchSource(format!(
+            "refusing to clean a partial clone through a non-directory parent: {}",
+            parent.to_string_lossy()
+        )));
+    }
+    Ok(())
 }
 
 async fn existing_fetch_repository(state: &AppState, local_path: &str) -> AppResult<PathBuf> {
@@ -2254,6 +2279,28 @@ mod tests {
             .expect("save research profile");
     }
 
+    #[test]
+    fn cache_eviction_is_lru_with_a_deterministic_tie_breaker() {
+        let project_root = PathBuf::from("/project");
+        let cached = |last_used| CachedSourceIndex {
+            project_root: project_root.clone(),
+            project_epoch: 1,
+            source_root: project_root.join("source"),
+            contents: Arc::new(Vec::new()),
+            last_used,
+        };
+        let indexes = HashMap::from([
+            ("z-resource".to_owned(), cached(3)),
+            ("b-resource".to_owned(), cached(1)),
+            ("a-resource".to_owned(), cached(1)),
+        ]);
+
+        assert_eq!(
+            least_recently_used_index(&indexes).as_deref(),
+            Some("a-resource")
+        );
+    }
+
     #[tokio::test]
     async fn indexes_source_files_and_returns_exact_search_lines() {
         let project = tempdir().expect("project tempdir");
@@ -2892,6 +2939,24 @@ mod tests {
         );
     }
 
+    #[tokio::test]
+    async fn failed_clone_cleanup_preserves_an_unrelated_nonempty_directory() {
+        let project = tempdir().expect("project tempdir");
+        let project_root = dunce::canonicalize(project.path()).expect("canonical project");
+        let destination = project_root.join("sources/project");
+        let unrelated = destination.join("keep.txt");
+        fs::create_dir_all(&destination).expect("replacement directory");
+        fs::write(&unrelated, "preserve\n").expect("replacement content");
+
+        assert!(cleanup_failed_clone(&project_root, &destination)
+            .await
+            .is_err());
+        assert_eq!(
+            fs::read_to_string(unrelated).expect("replacement content preserved"),
+            "preserve\n"
+        );
+    }
+
     #[cfg(unix)]
     #[tokio::test]
     async fn failed_clone_cleanup_unlinks_a_replacement_symlink_without_following_it() {
@@ -2910,6 +2975,28 @@ mod tests {
         assert!(!destination.exists());
         assert_eq!(
             fs::read_to_string(outside_file).expect("outside target preserved"),
+            "preserve\n"
+        );
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn failed_clone_cleanup_rejects_a_replaced_parent_symlink() {
+        let project = tempdir().expect("project tempdir");
+        let outside = tempdir().expect("outside tempdir");
+        let project_root = dunce::canonicalize(project.path()).expect("canonical project");
+        let linked_parent = project_root.join("sources");
+        std::os::unix::fs::symlink(outside.path(), &linked_parent).expect("replacement parent");
+        let destination = linked_parent.join("project");
+        fs::create_dir_all(outside.path().join("project/.git")).expect("outside repository");
+        let outside_file = outside.path().join("project/preserved.txt");
+        fs::write(&outside_file, "preserve\n").expect("outside content");
+
+        assert!(cleanup_failed_clone(&project_root, &destination)
+            .await
+            .is_err());
+        assert_eq!(
+            fs::read_to_string(outside_file).expect("outside content preserved"),
             "preserve\n"
         );
     }

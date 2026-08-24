@@ -1,0 +1,357 @@
+/*
+ * Compact desktop layout
+ *
+ * The Tauri window has an 800px minimum width. The first breakpoints keep that
+ * supported size useful; the narrower rules also make embedded/test viewports
+ * degrade without horizontal page overflow.
+ */
+
+@media (max-width: 1020px) {
+  .toolbar {
+    gap: 5px;
+    padding-inline: 8px;
+  }
+
+  .toolbar .file-name {
+    display: none;
+  }
+
+  .toolbar-search-slot {
+    margin-left: 2px;
+  }
+
+  .toolbar-search-slot .omni-search-wrapper {
+    width: 100%;
+  }
+
+  .toolbar-search-slot .omni-search-input,
+  .toolbar-search-slot .omni-search-input:focus {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 96px;
+  }
+
+  .toolbar .omni-search-dropdown {
+    width: min(400px, calc(100vw - 16px));
+  }
+
+  .status-bar,
+  .status-bar .status-left,
+  .status-bar .status-right {
+    min-width: 0;
+  }
+
+  .status-bar .status-left,
+  .status-bar .status-right {
+    gap: 7px;
+  }
+
+  .status-bar span {
+    white-space: nowrap;
+  }
+
+  .status-git-branch {
+    max-width: 32vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+@media (max-width: 900px) {
+  .sidebar-wrapper .sidebar {
+    width: clamp(168px, 23vw, 200px) !important;
+  }
+
+  .sidebar-wrapper.sidebar-auto-hide .sidebar-resize-handle {
+    left: clamp(168px, 23vw, 200px) !important;
+  }
+
+  /* Width is intentionally responsive in this range, so do not let a drag
+     mutate the stored desktop width while the visual width is overridden. */
+  .sidebar-wrapper .sidebar-resize-handle {
+    display: none;
+  }
+
+  /* Keep editor and preview useful when the terminal would create three
+     narrow columns. The terminal becomes a full-width lower workbench. */
+  .editor-main-content.has-terminal-pane {
+    flex-wrap: wrap;
+    align-content: stretch;
+  }
+
+  .editor-main-content.has-terminal-pane > .editor-pane {
+    width: 50% !important;
+    height: 64%;
+  }
+
+  .editor-main-content.has-terminal-pane > .preview-pane {
+    width: 50% !important;
+    height: 64%;
+  }
+
+  /* Both stored split ratios are restored on wider windows; hiding their
+     handles prevents invisible ratio changes in the forced compact layout. */
+  .editor-main-content.has-terminal-pane > .split-divider {
+    display: none;
+  }
+
+  .editor-main-content.has-terminal-pane > .terminal-pane {
+    width: 100% !important;
+    min-width: 0;
+    height: 36%;
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+}
+
+@media (max-width: 840px) {
+  .toolbar {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .toolbar-page-label,
+  .toolbar-page-nav + .toolbar-separator {
+    display: none;
+  }
+
+  .status-bar [data-responsive-priority='secondary'] {
+    display: none;
+  }
+
+  .settings-modal {
+    max-width: calc(100vw - 24px);
+  }
+
+  .settings-sidebar {
+    width: 176px;
+    padding-inline: 7px;
+  }
+
+  .settings-content {
+    padding: 18px;
+  }
+}
+
+@media (max-width: 760px) {
+  .toolbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .toolbar-center {
+    display: none;
+  }
+
+  .toolbar-right {
+    grid-column: 2;
+  }
+}
+
+@media (max-width: 720px) {
+  /* A pinned sidebar becomes a drawer instead of consuming half of a narrow
+     workspace. Existing sidebar commands still open and close it. */
+  .workspace > .sidebar-wrapper:not(.sidebar-auto-hide) {
+    position: absolute;
+    inset: 0 auto 0 0;
+    z-index: 30;
+    height: 100%;
+    box-shadow: 8px 0 24px var(--shadow-color);
+  }
+
+  .workspace > .sidebar-wrapper:not(.sidebar-auto-hide) .sidebar {
+    width: min(72vw, 220px) !important;
+  }
+
+  .editor-main-content:not(.has-terminal-pane) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .editor-main-content:not(.has-terminal-pane) > .editor-pane,
+  .editor-main-content:not(.has-terminal-pane) > .preview-pane {
+    width: 100% !important;
+    height: auto;
+    min-height: 0;
+  }
+
+  .editor-main-content:not(.has-terminal-pane) > .split-divider {
+    display: none;
+  }
+
+  .modal-overlay {
+    padding: 12px;
+  }
+
+  .settings-modal {
+    width: 100%;
+    height: calc(100vh - 24px);
+    max-width: none;
+    max-height: none;
+  }
+
+  .settings-layout {
+    flex-direction: column;
+  }
+
+  .settings-sidebar {
+    width: 100%;
+    flex: 0 0 auto;
+    flex-direction: row;
+    gap: 4px;
+    padding: 7px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    scrollbar-width: thin;
+  }
+
+  .settings-tab {
+    width: auto;
+    flex: 0 0 auto;
+    padding: 7px 10px;
+    white-space: nowrap;
+  }
+
+  .settings-content {
+    min-height: 0;
+    padding: 16px;
+  }
+
+  .settings-tab-content {
+    gap: 16px;
+  }
+
+  .settings-section {
+    padding: 14px;
+  }
+
+  .settings-field-group {
+    max-width: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .toolbar [data-responsive-priority='secondary'],
+  .toolbar [data-responsive-priority='compact'] {
+    display: none;
+  }
+
+  .toolbar-left {
+    gap: 2px;
+  }
+
+  .toolbar-btn,
+  .toolbar button {
+    padding-inline: 5px;
+  }
+
+  .status-bar [data-responsive-priority='tertiary'] {
+    display: none;
+  }
+
+  .editor-main-content.has-terminal-pane {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) minmax(140px, 0.8fr);
+  }
+
+  .editor-main-content.has-terminal-pane > .editor-pane,
+  .editor-main-content.has-terminal-pane > .preview-pane,
+  .editor-main-content.has-terminal-pane > .terminal-pane {
+    width: 100% !important;
+    height: auto;
+    min-height: 0;
+  }
+
+  .editor-main-content.has-terminal-pane > .split-divider {
+    display: none;
+  }
+
+  .modal-overlay {
+    padding: 8px;
+  }
+
+  .settings-modal {
+    height: calc(100vh - 16px);
+  }
+
+  .settings-modal .modal-header,
+  .settings-modal .modal-footer {
+    padding: 10px 12px;
+  }
+
+  .settings-content {
+    padding: 12px;
+  }
+
+  .settings-section {
+    padding: 12px;
+  }
+
+  .settings-row,
+  .settings-inline-row,
+  .settings-flex-row,
+  .settings-flex-row-between,
+  .settings-thinking-budget-row,
+  .settings-key-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .settings-theme-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+}
+
+@media (max-width: 360px) {
+  .settings-theme-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toolbar button,
+  .toolbar .spin,
+  .split-divider,
+  .sidebar-wrapper,
+  .sidebar-wrapper .sidebar,
+  .sidebar-wrapper .sidebar-resize-handle,
+  .sidebar-exit-left,
+  .sidebar-exit-right,
+  .sidebar-enter-left,
+  .sidebar-enter-right,
+  .settings-tab,
+  .settings-animate-in,
+  .settings-toggle-track,
+  .settings-toggle-knob {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .toolbar,
+  .status-bar,
+  .settings-modal,
+  .terminal-pane {
+    border-color: CanvasText;
+  }
+
+  .split-divider,
+  .sidebar-resize-handle {
+    background: CanvasText;
+  }
+
+  .settings-tab.active {
+    color: HighlightText;
+    background: Highlight;
+    outline: 1px solid Highlight;
+  }
+
+  .status-dot {
+    background: CanvasText !important;
+    forced-color-adjust: none;
+  }
+}

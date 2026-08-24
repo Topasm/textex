@@ -47,8 +47,9 @@ pub(crate) async fn load_unlocked(state: &AppState) -> AppResult<ResearchProfile
     if bytes.len() as u64 > MAX_PROFILE_BYTES {
         return Err(profile_error("research profile exceeds 256 KiB"));
     }
-    let profile: ResearchProfile = serde_json::from_slice(&bytes)
+    let mut profile: ResearchProfile = serde_json::from_slice(&bytes)
         .map_err(|error| profile_error(format!("invalid research profile: {error}")))?;
+    normalize_git_ssh_remotes(&mut profile);
     validate(&profile)?;
     Ok(profile)
 }
@@ -224,6 +225,35 @@ fn validate_resource(resource: &ResearchResource) -> AppResult<()> {
         resource.branch.as_deref(),
         MAX_SHORT_TEXT_BYTES,
     )?;
+    if resource.kind == crate::models::ResearchResourceKind::Git {
+        if resource
+            .url
+            .as_deref()
+            .is_some_and(|value| !is_valid_git_https_remote(value))
+        {
+            return Err(profile_error(
+                "Git resource URL must be credential-free HTTPS without a query or fragment",
+            ));
+        }
+        if resource
+            .ssh_url
+            .as_deref()
+            .is_some_and(|value| !is_valid_standard_git_ssh_remote(value))
+        {
+            return Err(profile_error(
+                "Git resource SSH URL must use the standard git@host:path form",
+            ));
+        }
+        if resource
+            .branch
+            .as_deref()
+            .is_some_and(|value| !is_valid_git_branch(value))
+        {
+            return Err(profile_error(
+                "Git resource branch contains unsafe characters",
+            ));
+        }
+    }
     let valid_access = match resource.kind {
         crate::models::ResearchResourceKind::Git => matches!(
             resource.chat_access,
@@ -304,6 +334,7 @@ fn normalize_optional_fields(profile: &mut ResearchProfile) {
         normalize_optional(&mut resource.local_path);
         normalize_optional(&mut resource.branch);
     }
+    normalize_git_ssh_remotes(profile);
     for instruction in &mut profile.instructions {
         *instruction = instruction.trim().to_owned();
     }
@@ -321,6 +352,40 @@ fn normalize_optional(value: &mut Option<String>) {
             *current = trimmed;
         }
     }
+}
+
+fn normalize_git_ssh_remotes(profile: &mut ResearchProfile) {
+    for resource in &mut profile.resources {
+        if resource.kind == crate::models::ResearchResourceKind::Git {
+            if let Some(normalized) = resource
+                .ssh_url
+                .as_deref()
+                .and_then(canonical_standard_git_ssh_remote)
+            {
+                resource.ssh_url = Some(normalized);
+            }
+        }
+    }
+}
+
+fn canonical_standard_git_ssh_remote(value: &str) -> Option<String> {
+    if is_valid_standard_git_ssh_remote(value) {
+        return Some(value.to_owned());
+    }
+    let url = Url::parse(value).ok()?;
+    if url.scheme() != "ssh"
+        || url.username() != "git"
+        || url.password().is_some()
+        || url.port().is_some()
+        || url.query().is_some()
+        || url.fragment().is_some()
+    {
+        return None;
+    }
+    let host = url.host_str()?;
+    let path = url.path().strip_prefix('/')?;
+    let canonical = format!("git@{host}:{path}");
+    is_valid_standard_git_ssh_remote(&canonical).then_some(canonical)
 }
 
 fn validate_text(label: &str, value: &str, max_bytes: usize, allow_empty: bool) -> AppResult<()> {
@@ -375,6 +440,77 @@ fn validate_optional_ssh_url(value: Option<&str>) -> AppResult<()> {
         }
     }
     Ok(())
+}
+
+/// These predicates are shared with the Git execution service so a profile
+/// accepted at save/load time cannot later fail solely because the native Git
+/// boundary applies a different URL or ref syntax policy.
+pub(crate) fn is_valid_git_https_remote(value: &str) -> bool {
+    if !is_valid_git_remote_text(value) {
+        return false;
+    }
+    let Ok(url) = Url::parse(value) else {
+        return false;
+    };
+    url.scheme() == "https"
+        && url.username().is_empty()
+        && url.password().is_none()
+        && url.host_str().is_some()
+        && url.query().is_none()
+        && url.fragment().is_none()
+        && !url.path().is_empty()
+        && url.path() != "/"
+}
+
+pub(crate) fn is_valid_standard_git_ssh_remote(value: &str) -> bool {
+    if !is_valid_git_remote_text(value) {
+        return false;
+    }
+    let Some(remainder) = value.strip_prefix("git@") else {
+        return false;
+    };
+    let Some((host, path)) = remainder.split_once(':') else {
+        return false;
+    };
+    let valid_host = !host.is_empty()
+        && !host.starts_with('.')
+        && !host.ends_with('.')
+        && host
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'-'));
+    let valid_path = !path.is_empty()
+        && !path.starts_with('/')
+        && !path.starts_with('-')
+        && path
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'/' | b'.' | b'_' | b'-'))
+        && path
+            .split('/')
+            .all(|component| !component.is_empty() && component != "." && component != "..");
+    valid_host && valid_path && !remainder.contains('@')
+}
+
+pub(crate) fn is_valid_git_branch(branch: &str) -> bool {
+    !branch.is_empty()
+        && branch.len() <= 1_024
+        && !branch.starts_with('-')
+        && !branch.starts_with('/')
+        && !branch.ends_with('/')
+        && !branch.ends_with('.')
+        && !branch.contains("..")
+        && !branch.contains("@{")
+        && !branch.contains("//")
+        && branch
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'/' | b'.' | b'_' | b'-'))
+}
+
+fn is_valid_git_remote_text(value: &str) -> bool {
+    !value.is_empty()
+        && value.len() <= MAX_SHORT_TEXT_BYTES
+        && !value.chars().any(|character| {
+            character.is_control() || character.is_whitespace() || character == '\0'
+        })
 }
 
 fn profile_error(message: impl Into<String>) -> AppError {
@@ -460,6 +596,94 @@ mod tests {
         let mut credential_url = profile();
         credential_url.resources[0].url = Some("https://token@example.test/private.git".to_owned());
         assert!(validate(&credential_url).is_err());
+    }
+
+    #[test]
+    fn persisted_git_coordinates_match_the_execution_boundary() {
+        let accepted = profile();
+        assert!(validate(&accepted).is_ok());
+
+        for url in [
+            "http://github.com/example/project.git",
+            "https://token@github.com/example/project.git",
+            "https://github.com/example/project.git?token=x",
+        ] {
+            let mut invalid = profile();
+            invalid.resources[0].url = Some(url.to_owned());
+            let error = validate(&invalid).expect_err("invalid Git URL must be rejected");
+            assert!(
+                error.to_string().contains("credential-free HTTPS"),
+                "non-actionable Git URL error: {error}"
+            );
+        }
+        for ssh_url in [
+            "ssh://git@github.com/example/project.git",
+            "user@github.com:example/project.git",
+            "git@github.com:../private.git",
+        ] {
+            let mut invalid = profile();
+            invalid.resources[0].ssh_url = Some(ssh_url.to_owned());
+            let error = validate(&invalid).expect_err("invalid Git SSH URL must be rejected");
+            assert!(
+                error.to_string().contains("git@host:path"),
+                "non-actionable Git SSH URL error: {error}"
+            );
+        }
+        for branch in ["-upload-pack=x", "../private", "main@{upstream}"] {
+            let mut invalid = profile();
+            invalid.resources[0].branch = Some(branch.to_owned());
+            let error = validate(&invalid).expect_err("invalid Git branch must be rejected");
+            assert!(
+                error.to_string().contains("unsafe characters"),
+                "non-actionable Git branch error: {error}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn loaded_profiles_normalize_safe_legacy_ssh_urls_before_validation() {
+        let project = tempfile::tempdir().expect("project tempdir");
+        let root = dunce::canonicalize(project.path()).expect("canonical project");
+        std::fs::create_dir(root.join(".textex")).expect("profile directory");
+        let mut legacy = profile();
+        legacy.resources[0].ssh_url = Some("ssh://git@github.com/example/project.git".to_owned());
+        std::fs::write(
+            root.join(".textex").join(PROFILE_FILE),
+            serde_json::to_vec_pretty(&legacy).expect("serialize legacy profile"),
+        )
+        .expect("write legacy profile");
+        let state = AppState::default();
+        state.set_project_root(root).expect("activate project");
+
+        let loaded = load(&state).await.expect("load migrated legacy profile");
+        assert_eq!(
+            loaded.resources[0].ssh_url.as_deref(),
+            Some("git@github.com:example/project.git")
+        );
+    }
+
+    #[tokio::test]
+    async fn loaded_profiles_reject_unsafe_legacy_git_coordinates_actionably() {
+        let project = tempfile::tempdir().expect("project tempdir");
+        let root = dunce::canonicalize(project.path()).expect("canonical project");
+        std::fs::create_dir(root.join(".textex")).expect("profile directory");
+        let mut legacy = profile();
+        legacy.resources[0].ssh_url = Some("user@github.com:example/project.git".to_owned());
+        std::fs::write(
+            root.join(".textex").join(PROFILE_FILE),
+            serde_json::to_vec_pretty(&legacy).expect("serialize legacy profile"),
+        )
+        .expect("write legacy profile");
+        let state = AppState::default();
+        state.set_project_root(root).expect("activate project");
+
+        let error = load(&state)
+            .await
+            .expect_err("unsafe legacy coordinates must be rejected");
+        assert!(
+            error.to_string().contains("git@host:path"),
+            "non-actionable legacy profile error: {error}"
+        );
     }
 
     #[test]

@@ -146,6 +146,19 @@ Phase 1은 다음 순서의 작은 변경으로 진행한다.
 save-race test가 통과하며, 지속 입력 시 React/Zustand에 전체 문서 문자열을 publish하지 않는
 것이다. CodeMirror package 추가는 이 gate에 포함하지 않는다.
 
+## Startup and Session Restore
+
+Renderer bootstrap은 typed Tauri API 설치 후 native settings를 한 번만 읽는다. 같은 snapshot을
+settings hydration과 editor/project/PDF session hydration에 병렬 전달하되, 두 작업이 끝나기
+전에는 React를 mount하지 않는다. native read가 실패하면 local default나 오래된 renderer
+profile을 native settings에 다시 쓰지 않는다.
+
+저장된 프로젝트를 복원할 때는 활성 파일 하나를 먼저 읽어 workspace를 usable 상태로 만든다.
+나머지 탭은 최대 3개씩 background에서 읽고, 저장된 탭 순서와 cursor를 유지한 채 비활성으로
+추가한다. project transition/root, restore epoch와 tab-mutation epoch 중 하나라도 바뀌면 늦게
+도착한 결과를 폐기한다. Git, bibliography, label, recent-project enrichment는 서로 병렬이며
+session restore에서는 active file을 막지 않도록 background에서 완료된다.
+
 ## Performance Baseline
 
 renderer build 크기는 Node.js 내장 모듈만 사용하는 다음 command로 반복 측정한다.
@@ -161,20 +174,31 @@ npm run measure:renderer
 npm run --silent measure:renderer -- --json > renderer-bundle.json
 ```
 
+현재 production build가 검토된 상한 안에 있는지는 다음 command로 확인한다. Linux package
+CI도 같은 검사를 실행하고, metric 누락이나 schema 오류를 포함해 fail-closed로 처리한다.
+
+```bash
+npm run check:renderer-budget
+```
+
+기준값과 상한은 `.renderer-performance-thresholds.json`에서 관리한다. 의도적인 기능 증가로
+상한을 조정할 때는 먼저 production build를 다시 측정하고, 원인을 검토한 뒤 기준값과 상한을
+함께 갱신한다.
+
 `Initial HTML JavaScript`는 생성된 `index.html`의 module entry와 `modulepreload` 대상만
 합산한다. gzip 값은 각 HTTP asset을 level 9로 개별 압축한 크기의 합이다. `All renderer
 files`는 native shell, source tree와 sidecar를 제외한 `out/tauri-renderer/` 전체다. 따라서
 installer 크기와 비교하면 안 된다.
 
-2026-08-20, Node.js 22.22.0의 clean `npm run build:web` 결과는 다음과 같다. hash가 붙은
+2026-08-24, Node.js 22의 clean `npm run build:web` 결과는 다음과 같다. hash가 붙은
 파일명 대신 byte 지표를 비교한다.
 
 | 지표 | 기준값 |
 | --- | ---: |
-| Initial HTML JavaScript raw | 869,067 bytes |
-| Initial HTML JavaScript gzip | 256,168 bytes |
-| All JavaScript raw | 8,715,401 bytes |
-| All renderer files raw | 9,128,111 bytes |
+| Initial HTML JavaScript raw | 634,392 bytes |
+| Initial HTML JavaScript gzip | 197,837 bytes |
+| All JavaScript raw | 8,868,630 bytes |
+| All renderer files raw | 9,289,961 bytes |
 
 ### Runtime measurement
 

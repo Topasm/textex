@@ -35,3 +35,45 @@ The renderer loads and saves profiles and requests source indexing through the
 typed desktop API. It does not read the filesystem, invoke Git, or access SSH
 directly. Native commands validate the active project session, profile IDs,
 paths, limits, and serialized data before accessing project resources.
+
+## Research Chat sessions and references
+
+Research Chat history and selected context metadata are stored per project in
+`.textex/research-chat.json`. The file is written atomically and is bounded in
+message count and size. It stores reference identities and display metadata,
+not resolved project bibliography entries, Zotero records, repository file
+contents, or website snapshots.
+
+Session mutations carry the native project activation epoch and a monotonic
+file revision. The backend compares both while holding the project-operation
+lock, so a delayed save from a closed project—or from an earlier activation of
+the same path—cannot overwrite the active project's Chat history.
+
+References can be dragged from Project, Zotero, or Online results onto the Chat
+tab or into the Chat composer. Each reference card also exposes an **Add to
+Chat** action for keyboard and touch use. The panel switches tabs only after a
+valid drop, then attaches the reference after that project's saved Chat session
+has loaded. Project and Zotero references cross the renderer/native boundary as
+citekeys and are resolved again by the native backend. Online reference
+metadata is validated by the native backend before it becomes Chat context.
+Assistant cards describe the references attached to that request and can add a
+citation at the active editor cursor; online cards can also save the item to
+Zotero.
+
+## Zotero changes from Chat
+
+Research Chat recognizes explicit Zotero mutation requests and routes them to
+a separate approval workflow. Supported changes are collection creation,
+collection moves, collection renames, and item tag additions/removals. The AI
+provider produces only a draft; native code resolves collection paths and item
+queries against the current Local API library and returns a concrete preview.
+Nothing is written until the user selects **Approve in Zotero**.
+
+Approved plans are bounded to 25 objects, tied to the active project epoch and
+Zotero server ID, and revalidated against current object versions immediately
+before writing. Stale, ambiguous, cyclic, destructive, or unsupported plans
+are rejected. The Zotero Local API key is obtained by the Rust backend at
+runtime and is never returned to the renderer or sent to the AI provider.
+One-time and remembered authorization follow Zotero's own Allow/Always Allow
+choice. Collection and item-tag batches use separate Local API endpoints, so a
+mixed plan may require two one-time authorization prompts.

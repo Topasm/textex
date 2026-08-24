@@ -2,11 +2,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 import { useFileOps } from '../../renderer/hooks/useFileOps'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
+import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 import { documentRegistry } from '../../renderer/models/documentRegistry'
 
-const { isCurrentProjectTransitionSnapshotMock, openProjectMock } = vi.hoisted(() => ({
-  isCurrentProjectTransitionSnapshotMock: vi.fn(),
-  openProjectMock: vi.fn()
+const { formatLatexMock, isCurrentProjectTransitionSnapshotMock, openProjectMock } = vi.hoisted(
+  () => ({
+    formatLatexMock: vi.fn(),
+    isCurrentProjectTransitionSnapshotMock: vi.fn(),
+    openProjectMock: vi.fn()
+  })
+)
+
+vi.mock('../../renderer/utils/formatter', () => ({
+  formatLatex: (...args: unknown[]) => formatLatexMock(...args)
 }))
 
 vi.mock('../../renderer/utils/openProject', () => ({
@@ -19,7 +27,12 @@ describe('useFileOps', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useEditorStore.getState().resetEditor()
+    useSettingsStore.setState((state) => ({
+      settings: { ...state.settings, formatOnSave: true }
+    }))
+    formatLatexMock.mockImplementation(async (source: string) => source)
     isCurrentProjectTransitionSnapshotMock.mockReturnValue(true)
+    vi.mocked(window.api.saveFile).mockResolvedValue({ success: true })
   })
 
   it('opens the chosen file without auto-opening the first project tex file', async () => {
@@ -79,5 +92,112 @@ describe('useFileOps', () => {
 
     expect(isCurrentProjectTransitionSnapshotMock).toHaveBeenCalledWith(snapshot)
     expect(useEditorStore.getState().filePath).toBeNull()
+  })
+
+  it('formats and saves the current document revision', async () => {
+    const filePath = '/workspace/project/paper.tex'
+    useEditorStore.getState().openFileInTab(filePath, 'unformatted')
+    formatLatexMock.mockResolvedValue('formatted')
+    const { result } = renderHook(() => useFileOps())
+
+    await act(async () => {
+      await result.current.handleSave()
+    })
+
+    expect(documentRegistry.snapshot(filePath)?.text).toBe('formatted')
+    expect(window.api.saveFile).toHaveBeenCalledWith('formatted', filePath)
+    expect(useEditorStore.getState().isDirty).toBe(false)
+  })
+
+  it('does not apply a stale format-on-save result after the document changes', async () => {
+    let resolveFormat: ((formatted: string) => void) | undefined
+    formatLatexMock.mockImplementation(
+      () =>
+        new Promise<string>((resolve) => {
+          resolveFormat = resolve
+        })
+    )
+    const filePath = '/workspace/project/paper.tex'
+    useEditorStore.getState().openFileInTab(filePath, 'initial')
+    const { result } = renderHook(() => useFileOps())
+
+    let savePromise: Promise<void> | undefined
+    act(() => {
+      savePromise = result.current.handleSave()
+    })
+    await vi.waitFor(() => expect(formatLatexMock).toHaveBeenCalledOnce())
+    act(() => {
+      useEditorStore.getState().updateActiveDocument('edited while formatting', 'editor')
+    })
+    resolveFormat?.('stale formatted text')
+    await act(async () => {
+      await savePromise
+    })
+
+    expect(documentRegistry.snapshot(filePath)?.text).toBe('edited while formatting')
+    expect(window.api.saveFile).toHaveBeenCalledWith('edited while formatting', filePath)
+  })
+
+  it('does not apply a format result to a different active tab', async () => {
+    let resolveFormat: ((formatted: string) => void) | undefined
+    formatLatexMock.mockImplementation(
+      () =>
+        new Promise<string>((resolve) => {
+          resolveFormat = resolve
+        })
+    )
+    const firstPath = '/workspace/project/first.tex'
+    const secondPath = '/workspace/project/second.tex'
+    useEditorStore.getState().openFileInTab(firstPath, 'first source')
+    useEditorStore.getState().openFileInTab(secondPath, 'second source')
+    useEditorStore.getState().setActiveTab(firstPath)
+    const { result } = renderHook(() => useFileOps())
+
+    let savePromise: Promise<void> | undefined
+    act(() => {
+      savePromise = result.current.handleSave()
+    })
+    await vi.waitFor(() => expect(formatLatexMock).toHaveBeenCalledOnce())
+    act(() => useEditorStore.getState().setActiveTab(secondPath))
+    resolveFormat?.('formatted first')
+    await act(async () => {
+      await savePromise
+    })
+
+    expect(documentRegistry.snapshot(firstPath)?.text).toBe('first source')
+    expect(documentRegistry.snapshot(secondPath)?.text).toBe('second source')
+    expect(window.api.saveFile).toHaveBeenCalledWith('first source', firstPath)
+  })
+
+  it('lets only the latest overlapping format-on-save request write', async () => {
+    let resolveFirst: ((formatted: string) => void) | undefined
+    let resolveSecond: ((formatted: string) => void) | undefined
+    formatLatexMock
+      .mockImplementationOnce(
+        () =>
+          new Promise<string>((resolve) => {
+            resolveFirst = resolve
+          })
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise<string>((resolve) => {
+            resolveSecond = resolve
+          })
+      )
+    const filePath = '/workspace/project/paper.tex'
+    useEditorStore.getState().openFileInTab(filePath, 'source')
+    const { result } = renderHook(() => useFileOps())
+
+    const firstSave = result.current.handleSave()
+    const secondSave = result.current.handleSave()
+    resolveSecond?.('latest formatted')
+    await secondSave
+    resolveFirst?.('stale formatted')
+    await firstSave
+
+    expect(documentRegistry.snapshot(filePath)?.text).toBe('latest formatted')
+    expect(window.api.saveFile).toHaveBeenCalledTimes(1)
+    expect(window.api.saveFile).toHaveBeenCalledWith('latest formatted', filePath)
   })
 })

@@ -9,6 +9,9 @@ TextEx uses a "Zero-Friction" configuration system where settings are applied in
 - **Key**: `textex-settings-v2`
 - **Native mirror**: Settings other than recent-project and renderer-session data are
   mirrored through the typed Tauri settings API.
+- **Startup hydration**: The renderer loads the native settings snapshot once, then
+  hydrates the settings store and renderer-session stores in parallel before the first
+  React mount. A failed native read is not followed by a renderer-to-native write.
 - **AI credentials**: API keys are never persisted in `localStorage` or the general
   settings mirror. Rust stores them separately with owner-only permissions on Unix.
 - **Scope**: Settings are global across the application.
@@ -29,7 +32,7 @@ TextEx uses a "Zero-Friction" configuration system where settings are applied in
 | `autoUpdateEnabled` | `boolean` | `true` | Check for updates on startup. |
 | `lspEnabled` | `boolean` | `true` | Enable the optional TexLab language server when its executable is available. |
 | `zoteroEnabled` | `boolean` | `false` | Enable Zotero/Better BibTeX integration. |
-| `zoteroPort` | `number` | `23119` | Better BibTeX JSON-RPC port. |
+| `zoteroPort` | `number` | `23119` | Zotero Local API and Better BibTeX port. |
 | `zoteroCollection` | `string` | `""` | Better BibTeX pull-export collection path used for project bibliography sync. |
 | `pdfInvertMode` | `boolean` | `false` | Invert PDF colors for dark environments. |
 | `autoHideSidebar` | `boolean` | `false` | Sidebar slides away and reappears on hover. |
@@ -60,7 +63,9 @@ TextEx integrates [Prettier](https://prettier.io/) for opinionated, consistent L
 ### Engine
 - **Library**: `prettier/standalone`
 - **Plugin**: `prettier-plugin-latex`
-- **Execution**: Runs in the renderer process (async).
+- **Execution**: Prettier and the LaTeX plugin are lazy-loaded in a singleton module
+  Worker. A direct lazy formatter is used only when the Worker is unavailable or fails;
+  both paths return the original source if formatting cannot be completed.
 
 ### Usage
 - **Manual**: Press `Shift+Alt+F` (or `Shift+Option+F` on macOS) to format the current document.

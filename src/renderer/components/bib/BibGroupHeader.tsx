@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { X } from 'lucide-react'
+import { ICON_SIZE } from '../ui/IconSystem'
 
 interface BibGroupHeaderProps {
   label: string
@@ -85,8 +87,9 @@ export function BibGroupHeader({
             onDelete()
           }}
           title="Delete group"
+          aria-label="Delete group"
         >
-          ×
+          <X size={ICON_SIZE.micro} />
         </button>
       )}
     </div>

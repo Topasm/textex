@@ -103,6 +103,43 @@ describe('Tauri DesktopApi adapter', () => {
     expect(invokeMock).toHaveBeenCalledWith('ai_research_chat', { request })
   })
 
+  it('keeps Zotero planning and approved writes on separate native commands', async () => {
+    const request = { message: 'Create a Zotero collection.', history: [] }
+    const plan = {
+      summary: 'Create Writing Projects.',
+      serverId: 'server',
+      port: 23_119,
+      projectRoot: '/project',
+      projectEpoch: '3',
+      operations: [
+        {
+          kind: 'createCollection' as const,
+          key: 'ABCD2345',
+          name: 'Writing Projects',
+          path: 'Writing Projects',
+          parentKey: null,
+          parentLabel: 'Library root'
+        }
+      ]
+    }
+    invokeMock.mockResolvedValueOnce(plan).mockResolvedValueOnce({
+      summary: 'Applied 1 approved Zotero change.',
+      applied: 1,
+      collectionChanges: 1,
+      itemChanges: 0
+    })
+
+    const api = createTauriApi()
+    await expect(api.aiPlanZotero(request, 23_119)).resolves.toEqual(plan)
+    await expect(api.zoteroApplyMutationPlan(plan)).resolves.toEqual(
+      expect.objectContaining({ applied: 1 })
+    )
+    expect(invokeMock.mock.calls).toEqual([
+      ['ai_plan_zotero', { request, port: 23_119 }],
+      ['zotero_apply_mutation_plan', { plan }]
+    ])
+  })
+
   it('maps filesystem methods to Tauri commands', async () => {
     invokeMock
       .mockResolvedValueOnce('/projects/paper')
@@ -911,6 +948,22 @@ describe('Tauri DesktopApi adapter', () => {
       content: 'Paper and code',
       truncated: false
     }
+    const chatSession = {
+      version: 1 as const,
+      messages: [{ role: 'user' as const, content: 'Compare the methods.' }],
+      selectedContexts: [{ id: 'paper', kind: 'paper' as const, label: 'Paper' }]
+    }
+    const chatScope = {
+      projectRoot: '/projects/paper',
+      projectEpoch: '7',
+      revision: '3'
+    }
+    const chatSnapshot = { ...chatScope, session: chatSession }
+    const nextChatSnapshot = {
+      ...chatSnapshot,
+      revision: '4'
+    }
+    const nextChatScope = { ...chatScope, revision: '4' }
     invokeMock
       .mockResolvedValueOnce([collection])
       .mockResolvedValueOnce(added)
@@ -921,6 +974,13 @@ describe('Tauri DesktopApi adapter', () => {
       .mockResolvedValueOnce(config)
       .mockResolvedValueOnce(profile)
       .mockResolvedValueOnce(profile)
+      .mockResolvedValueOnce(chatSnapshot)
+      .mockResolvedValueOnce(nextChatSnapshot)
+      .mockResolvedValueOnce({
+        ...nextChatSnapshot,
+        revision: '5',
+        session: { ...chatSession, messages: [] }
+      })
       .mockResolvedValueOnce(snapshot)
 
     const api = createTauriApi()
@@ -933,6 +993,15 @@ describe('Tauri DesktopApi adapter', () => {
     await expect(api.researchSaveConfig(config)).resolves.toEqual(config)
     await expect(api.researchProfileLoad()).resolves.toEqual(profile)
     await expect(api.researchProfileSave(profile)).resolves.toEqual(profile)
+    await expect(api.researchChatSessionLoad()).resolves.toEqual(chatSnapshot)
+    await expect(api.researchChatSessionSave(chatScope, chatSession)).resolves.toEqual(
+      nextChatSnapshot
+    )
+    await expect(api.researchChatSessionClear(nextChatScope)).resolves.toEqual({
+      ...nextChatSnapshot,
+      revision: '5',
+      session: { ...chatSession, messages: [] }
+    })
     await expect(api.researchResourceSnapshot('project-site')).resolves.toEqual(snapshot)
     expect(invokeMock.mock.calls).toEqual([
       ['zotero_collections', { port: 23119 }],
@@ -944,6 +1013,9 @@ describe('Tauri DesktopApi adapter', () => {
       ['research_save_config', { config }],
       ['research_profile_load'],
       ['research_profile_save', { profile }],
+      ['research_chat_session_load'],
+      ['research_chat_session_save', { scope: chatScope, session: chatSession }],
+      ['research_chat_session_clear', { scope: nextChatScope }],
       ['research_resource_snapshot', { resourceId: 'project-site' }]
     ])
   })

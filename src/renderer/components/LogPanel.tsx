@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { ChevronDown, ChevronRight, CircleX, Info, TriangleAlert } from 'lucide-react'
 import { useCompileStore } from '../store/useCompileStore'
 import { useEditorStore } from '../store/useEditorStore'
 import type { Diagnostic, DiagnosticSeverity } from '../../shared/types'
+import { ICON_SIZE } from './ui/IconSystem'
 
 type SeverityFilter = 'error' | 'warning' | 'info'
 
@@ -45,14 +47,14 @@ function LogPanel() {
     useEditorStore.getState().requestJumpToLine(line, column ?? 1)
   }
 
-  const severityIcon = (severity: DiagnosticSeverity): string => {
+  const severityIcon = (severity: DiagnosticSeverity): React.ReactNode => {
     switch (severity) {
       case 'error':
-        return '\u2716'
+        return <CircleX size={ICON_SIZE.compact} />
       case 'warning':
-        return '\u26A0'
+        return <TriangleAlert size={ICON_SIZE.compact} />
       default:
-        return '\u2139'
+        return <Info size={ICON_SIZE.compact} />
     }
   }
 
@@ -142,7 +144,7 @@ interface StructuredProblemsProps {
   onToggleFilter: (severity: SeverityFilter) => void
   onToggleFile: (file: string) => void
   onEntryClick: (line: number, column?: number) => void
-  severityIcon: (severity: DiagnosticSeverity) => string
+  severityIcon: (severity: DiagnosticSeverity) => React.ReactNode
   listRef: React.RefObject<HTMLDivElement | null>
 }
 
@@ -194,21 +196,21 @@ const StructuredProblems = React.memo(function StructuredProblems({
           onClick={() => onToggleFilter('error')}
           title={t('logPanel.toggleErrors')}
         >
-          {'\u2716'} {errorCount}
+          <CircleX size={ICON_SIZE.compact} /> {errorCount}
         </button>
         <button
           className={`log-filter-btn log-filter-warning ${activeFilters.has('warning') ? 'active' : ''}`}
           onClick={() => onToggleFilter('warning')}
           title={t('logPanel.toggleWarnings')}
         >
-          {'\u26A0'} {warningCount}
+          <TriangleAlert size={ICON_SIZE.compact} /> {warningCount}
         </button>
         <button
           className={`log-filter-btn log-filter-info ${activeFilters.has('info') ? 'active' : ''}`}
           onClick={() => onToggleFilter('info')}
           title={t('logPanel.toggleInfo')}
         >
-          {'\u2139'} {infoCount}
+          <Info size={ICON_SIZE.compact} /> {infoCount}
         </button>
       </div>
       {filtered.length === 0 ? (
@@ -223,17 +225,23 @@ const StructuredProblems = React.memo(function StructuredProblems({
           return (
             <div key={file} className="log-file-group">
               <div className="log-file-header" onClick={() => onToggleFile(file)}>
-                <span className="log-file-chevron">{isCollapsed ? '\u25B6' : '\u25BC'}</span>
+                <span className="log-file-chevron">
+                  {isCollapsed ? (
+                    <ChevronRight size={ICON_SIZE.micro} />
+                  ) : (
+                    <ChevronDown size={ICON_SIZE.micro} />
+                  )}
+                </span>
                 <span className="log-file-name">{fileName}</span>
                 <span className="log-file-counts">
                   {fileErrors > 0 && (
                     <span className="log-file-count-error">
-                      {'\u2716'} {fileErrors}
+                      <CircleX size={ICON_SIZE.micro} /> {fileErrors}
                     </span>
                   )}
                   {fileWarnings > 0 && (
                     <span className="log-file-count-warning">
-                      {'\u26A0'} {fileWarnings}
+                      <TriangleAlert size={ICON_SIZE.micro} /> {fileWarnings}
                     </span>
                   )}
                 </span>

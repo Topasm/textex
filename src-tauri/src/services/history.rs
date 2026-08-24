@@ -20,6 +20,10 @@ const MAX_SNAPSHOTS: usize = 50;
 const MAX_HISTORY_CONTENT_BYTES: usize = 50 * 1024 * 1024;
 const TIMESTAMP_ALLOCATION_ATTEMPTS: u64 = 1_000;
 
+pub(crate) fn accepts_snapshot_content(content: &str) -> bool {
+    content.len() <= MAX_HISTORY_CONTENT_BYTES
+}
+
 #[derive(Default)]
 pub struct HistoryState {
     operation_lock: Mutex<()>,
@@ -31,7 +35,7 @@ pub async fn save_snapshot(
     file_path: &str,
     content: String,
 ) -> AppResult<()> {
-    if content.len() > MAX_HISTORY_CONTENT_BYTES {
+    if !accepts_snapshot_content(&content) {
         return Err(AppError::History(
             "history snapshot exceeds 50 MiB".to_owned(),
         ));

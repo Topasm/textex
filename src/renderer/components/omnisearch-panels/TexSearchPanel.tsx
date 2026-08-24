@@ -1,4 +1,3 @@
-import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { TexSearchResult } from './types'
 
@@ -8,8 +7,7 @@ interface TexSearchPanelProps {
   highlightedIndex: number
   setHighlightedIndex: (index: number) => void
   jumpToLine: (line: number) => void
-  handleTexPrev: () => void
-  handleTexNext: () => void
+  getOptionId: (index: number) => string
 }
 
 export function TexSearchPanel({
@@ -18,8 +16,7 @@ export function TexSearchPanel({
   highlightedIndex,
   setHighlightedIndex,
   jumpToLine,
-  handleTexPrev,
-  handleTexNext
+  getOptionId
 }: TexSearchPanelProps) {
   const { t } = useTranslation()
 
@@ -29,30 +26,12 @@ export function TexSearchPanel({
 
   return (
     <>
-      <div className="omni-search-tex-nav">
-        <span className="omni-search-tex-count">
-          {texResults.length > 0
-            ? t('omniSearch.matches', { current: highlightedIndex + 1, total: texResults.length })
-            : ''}
-        </span>
-        <button
-          onClick={handleTexPrev}
-          disabled={texResults.length === 0}
-          title={t('omniSearch.prevMatch')}
-        >
-          <ChevronUp size={14} />
-        </button>
-        <button
-          onClick={handleTexNext}
-          disabled={texResults.length === 0}
-          title={t('omniSearch.nextMatch')}
-        >
-          <ChevronDown size={14} />
-        </button>
-      </div>
       {texResults.map((result, i) => (
         <div
           key={`${result.line}-${i}`}
+          id={getOptionId(i)}
+          role="option"
+          aria-selected={i === highlightedIndex}
           className={`omni-search-result omni-search-tex-result${i === highlightedIndex ? ' highlighted' : ''}`}
           onClick={() => {
             setHighlightedIndex(i)
@@ -64,7 +43,7 @@ export function TexSearchPanel({
           <span className="omni-search-line-text">{result.text.trim()}</span>
         </div>
       ))}
-      <div className="omni-search-footer">
+      <div className="omni-search-footer" role="presentation">
         Enter {t('omniSearch.nextMatch')} · Shift+Enter {t('omniSearch.prevMatch')}
       </div>
     </>

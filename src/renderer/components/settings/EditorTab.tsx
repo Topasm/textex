@@ -1,7 +1,9 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
+import { Plus, X } from 'lucide-react'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import { Toggle } from './Toggle'
+import { ICON_SIZE } from '../ui/IconSystem'
 
 const DEFAULT_RAINBOW: string[] = [
   '#e06c75',
@@ -67,17 +69,25 @@ const SectionColorPalette = () => {
             </label>
             {colors.length > 1 && (
               <button
+                type="button"
                 className="sh-swatch-remove"
                 onClick={() => removeColor(i)}
                 title={t('settings.editor.removeColor')}
+                aria-label={t('settings.editor.removeColor')}
               >
-                {'\u00d7'}
+                <X size={ICON_SIZE.micro} />
               </button>
             )}
           </div>
         ))}
-        <button className="sh-swatch-add" onClick={addColor} title={t('settings.editor.addColor')}>
-          +
+        <button
+          type="button"
+          className="sh-swatch-add"
+          onClick={addColor}
+          title={t('settings.editor.addColor')}
+          aria-label={t('settings.editor.addColor')}
+        >
+          <Plus size={ICON_SIZE.control} />
         </button>
       </div>
     </div>

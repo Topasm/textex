@@ -116,7 +116,12 @@
     "retry": "Réessayer",
     "sessionRestoreFailed": "Impossible de restaurer {{path}} : {{reason}}",
     "chooseReplacement": "Choisir un remplacement",
-    "replacementOpenFailed": "Impossible d’ouvrir le remplacement {{path}} : {{reason}}"
+    "replacementOpenFailed": "Impossible d’ouvrir le remplacement {{path}} : {{reason}}",
+    "referenceDropInvalid": "Cette référence ne peut pas être déposée car ses données ne sont pas valides.",
+    "referenceDropPositionUnavailable": "Choisissez une position valide dans l’éditeur et déposez à nouveau la référence.",
+    "referenceDropDocumentChanged": "Le document a changé avant l’insertion de la citation. Réessayez.",
+    "referenceDropFailed": "Impossible d’ajouter cette référence : {{reason}}",
+    "referenceInsertSkipped": "Le document actif ou le curseur a changé ; la citation n’a donc pas été insérée. Réessayez."
   },
   "settings": {
     "title": "Paramètres",
@@ -276,7 +281,7 @@
     "automation": {
       "compilerTools": "Compilateur et outils",
       "autoCompile": "Compilation automatique",
-      "autoCompileDesc": "Compiler automatiquement lors de l'enregistrement via les raccourcis",
+      "autoCompileDesc": "Enregistrer et compiler automatiquement peu après une modification",
       "watchOpenFiles": "Surveiller les fichiers ouverts",
       "watchOpenFilesDesc": "Recharger automatiquement les fichiers modifiés par des éditeurs externes",
       "spellCheck": "Vérification orthographique",
@@ -324,6 +329,12 @@
     "noFolder": "Aucun dossier ouvert",
     "newFile": "Nouveau fichier",
     "newFolder": "Nouveau dossier",
+    "rename": "Renommer",
+    "delete": "Supprimer",
+    "confirmDelete": "Supprimer {{name}} ? Cette action est irréversible.",
+    "invalidName": "Les noms ne peuvent pas contenir de séparateurs de chemin.",
+    "saveBeforeRename": "Enregistrez ou fermez les fichiers modifiés avant de les renommer.",
+    "saveBeforeDelete": "Enregistrez ou fermez les fichiers modifiés avant de les supprimer.",
     "expandFolder": "Développer le dossier",
     "collapseFolder": "Réduire le dossier"
   },
@@ -340,7 +351,12 @@
     "noFile": "Aucun fichier ouvert",
     "loading": "Chargement de la chronologie…",
     "noHistory": "Aucun historique disponible pour ce fichier",
-    "localSave": "Sauvegarde locale"
+    "localSave": "Sauvegarde locale",
+    "restoreConfirm": "Restaurer cet instantané dans l’éditeur ? Il restera non enregistré jusqu’à ce que vous l’enregistriez.",
+    "restoreDirtyConfirm": "Remplacer les modifications actuelles non enregistrées par cet instantané ? Le texte restauré restera non enregistré.",
+    "restoreSuccess": "Instantané de l’historique restauré comme modification non enregistrée.",
+    "restoreStale": "Le document a changé pendant le chargement ; rien n’a été restauré.",
+    "restoreFailed": "Impossible de restaurer l’instantané de l’historique : {{reason}}"
   },
   "draftModal": {
     "title": "Brouillon IA",
@@ -406,7 +422,14 @@
     "noMatches": "Aucune correspondance",
     "prevMatch": "Précédent",
     "nextMatch": "Suivant",
-    "goToLine": "Aller à la ligne {{line}}"
+    "goToLine": "Aller à la ligne {{line}}",
+    "home": "Accueil",
+    "searchLabel": "Rechercher dans {{mode}}",
+    "modeSelector": "Mode de recherche : {{mode}}",
+    "modeMenuLabel": "Choisir le mode de recherche",
+    "resultsLabel": "Résultats : {{mode}}",
+    "resultCount": "{{count}} résultats",
+    "clearSearch": "Effacer la recherche"
   },
   "errorBoundary": {
     "title": "Une erreur est survenue",
@@ -422,6 +445,17 @@
     "recent": "Récents",
     "template": "Modèle",
     "command": "Commande"
+  },
+  "projectSwitcher": {
+    "switchProject": "Changer de projet",
+    "currentProject": "Projet actuel : {{name}}",
+    "menuLabel": "Changer de projet récent",
+    "current": "Actuel",
+    "currentItem": "{{name}}, projet actuel",
+    "loading": "Chargement des projets récents…",
+    "switching": "Changement…",
+    "loadFailed": "Impossible de charger les projets récents.",
+    "openFailed": "Impossible d’ouvrir {{name}} : {{reason}} L’entrée récente a été conservée pour être récupérée depuis l’accueil."
   },
   "recentProjects": {
     "title": "Projets récents",
@@ -505,5 +539,9 @@
       "window_close": "Fermer la fenêtre",
       "app_quit": "Quitter TextEx"
     }
+  },
+  "researchPanel": {
+    "invalidReferenceDrop": "Cet élément n’est pas une référence TextEx valide.",
+    "openProjectForChatReference": "Ouvrez un projet avant d’ajouter une référence au chat."
   }
 }

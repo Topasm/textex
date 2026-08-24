@@ -33,6 +33,11 @@ export default defineConfig({
         }
       : undefined
   },
+  worker: {
+    // The formatter worker lazy-loads Prettier and its LaTeX plugin. ES module
+    // workers allow Vite to preserve that split instead of forcing an IIFE.
+    format: 'es'
+  },
   build: {
     outDir: resolve(__dirname, 'out/tauri-renderer'),
     emptyOutDir: true,

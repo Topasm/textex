@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { Sigma, X } from 'lucide-react'
 import type { MathPreviewData } from '../hooks/editor/useMathPreview'
 import type { editor as monacoEditor } from 'monaco-editor'
+import { ICON_SIZE } from './ui/IconSystem'
 import './MathPreviewWidget.css'
 
 // Import MathLive - it registers the <math-field> web component globally
@@ -110,7 +112,9 @@ export function MathPreviewWidget({ mathData, editorRef, onClose }: MathPreviewW
     >
       <div className="math-preview-header">
         <span className="math-preview-label">
-          <span className="math-preview-label-icon">∑</span>
+          <span className="math-preview-label-icon">
+            <Sigma size={ICON_SIZE.compact} />
+          </span>
           {mathData.isDisplay ? 'Display Math' : 'Inline Math'}
         </span>
         <div className="math-preview-actions">
@@ -123,8 +127,14 @@ export function MathPreviewWidget({ mathData, editorRef, onClose }: MathPreviewW
               Apply
             </button>
           )}
-          <button className="math-preview-btn" onClick={onClose} title="Close (Esc)">
-            ✕
+          <button
+            type="button"
+            className="math-preview-btn"
+            onClick={onClose}
+            title="Close (Esc)"
+            aria-label="Close (Esc)"
+          >
+            <X size={ICON_SIZE.compact} />
           </button>
         </div>
       </div>

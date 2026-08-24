@@ -21,10 +21,14 @@ describe('ProjectFileSearchPanel', () => {
         highlightedIndex={0}
         setHighlightedIndex={setHighlightedIndex}
         openFile={openFile}
+        getOptionId={(index) => `file-option-${index}`}
       />
     )
 
     const row = screen.getByText('intro.tex').closest('.omni-search-result')
+    expect(row).toHaveAttribute('id', 'file-option-0')
+    expect(row).toHaveAttribute('role', 'option')
+    expect(row).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByText('chapters/intro.tex')).toBeInTheDocument()
     fireEvent.mouseEnter(row!)
     expect(setHighlightedIndex).toHaveBeenCalledWith(0)

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { FileText, RotateCcw, Sparkles, Terminal } from 'lucide-react'
+import { FileText, RotateCcw, Sparkles, Terminal, X } from 'lucide-react'
 import { useEditorStore } from '../store/useEditorStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { errorMessage } from '../utils/errorMessage'
 import { dirname } from '../utils/path'
+import { ICON_SIZE } from './ui/IconSystem'
 
 interface AiAssistantModalProps {
   isOpen: boolean
@@ -118,8 +119,13 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
       <div className="modal-content ai-assistant-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>AI Assistant</h2>
-          <button className="close-button" onClick={onClose} aria-label="Close AI Assistant">
-            &times;
+          <button
+            type="button"
+            className="close-button"
+            onClick={onClose}
+            aria-label="Close AI Assistant"
+          >
+            <X size={ICON_SIZE.control} />
           </button>
         </div>
 

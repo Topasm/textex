@@ -19,8 +19,9 @@ describe('StatusBar', () => {
   it('renders cursor position', () => {
     useEditorStore.setState({ cursorLine: 5, cursorColumn: 10 })
     render(<StatusBar />)
-    expect(screen.getByText(/Ln 5/)).toBeInTheDocument()
-    expect(screen.getByText(/Col 10/)).toBeInTheDocument()
+    const cursor = screen.getByText(/Ln 5/)
+    expect(cursor).toHaveTextContent(/Col 10/)
+    expect(cursor).toHaveAttribute('data-responsive-priority', 'primary')
   })
 
   it('renders Ready label when idle', () => {
@@ -62,11 +63,28 @@ describe('StatusBar', () => {
     expect(errSpan!.textContent).toContain('2')
     expect(warnSpan).not.toBeNull()
     expect(warnSpan!.textContent).toContain('1')
+    expect(errSpan!.querySelector('.lucide-circle-x')).toHaveAttribute('aria-hidden', 'true')
+    expect(warnSpan!.querySelector('.lucide-triangle-alert')).toHaveAttribute('aria-hidden', 'true')
+    expect(errSpan).not.toHaveTextContent('\u2716')
+    expect(warnSpan).not.toHaveTextContent('\u26a0')
   })
 
   it('does not render diagnostic counts when there are none', () => {
     useCompileStore.setState({ diagnostics: [] })
     const { container } = render(<StatusBar />)
     expect(container.querySelector('.status-diagnostics')).toBeNull()
+  })
+
+  it('marks optional status controls as compact-layout secondary content', () => {
+    const { container } = render(<StatusBar />)
+
+    expect(container.querySelector('.status-compile-indicator')).toHaveAttribute(
+      'data-responsive-priority',
+      'primary'
+    )
+    expect(container.querySelector('.status-spellcheck')).toHaveAttribute(
+      'data-responsive-priority',
+      'secondary'
+    )
   })
 })

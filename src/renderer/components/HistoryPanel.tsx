@@ -1,6 +1,8 @@
 import React from 'react'
 import { formatDistanceToNow } from 'date-fns'
+import { X } from 'lucide-react'
 import { HistoryItem } from '../../shared/types'
+import { ICON_SIZE } from './ui/IconSystem'
 import './HistoryPanel.css' // We'll create this
 
 interface Props {
@@ -14,8 +16,8 @@ export const HistoryPanel: React.FC<Props> = ({ historyItems, onSelect, onClose 
     <div className="history-panel">
       <div className="history-header">
         <h3>Local History</h3>
-        <button onClick={onClose} className="close-btn">
-          ×
+        <button onClick={onClose} className="close-btn" aria-label="Close">
+          <X size={ICON_SIZE.control} />
         </button>
       </div>
       <div className="history-list">

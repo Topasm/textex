@@ -5,6 +5,7 @@ mod services;
 mod state;
 
 use services::ai::AiState;
+use services::filesystem::FileSaveState;
 use services::history::HistoryState;
 use services::lsp::LspState;
 use services::package_data::PackageDataState;
@@ -122,6 +123,7 @@ pub fn run() {
         .menu(services::menu::build)
         .on_menu_event(services::menu::handle_event)
         .manage(AppState::default())
+        .manage(FileSaveState::default())
         .manage(AiState::default())
         .manage(DirectoryWatcherState::default())
         .manage(SettingsState::default())
@@ -145,6 +147,7 @@ pub fn run() {
             commands::ai::ai_process,
             commands::ai::ai_process_custom,
             commands::ai::ai_research_chat,
+            commands::ai::ai_plan_zotero,
             commands::ai::ai_update_context,
             commands::ai::ai_save_api_key,
             commands::ai::ai_has_api_key,
@@ -220,12 +223,16 @@ pub fn run() {
             commands::zotero::zotero_collections,
             commands::zotero::zotero_add_to_project,
             commands::zotero::zotero_save_online,
+            commands::zotero::zotero_apply_mutation_plan,
             commands::research::research_search_online,
             commands::research::research_add_online,
             commands::research::research_load_config,
             commands::research::research_save_config,
             commands::research::research_profile_load,
             commands::research::research_profile_save,
+            commands::research::research_chat_session_load,
+            commands::research::research_chat_session_save,
+            commands::research::research_chat_session_clear,
             commands::research::research_resource_snapshot,
             commands::research_source::research_source_index,
             commands::research_source::research_source_search,

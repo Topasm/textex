@@ -1,9 +1,27 @@
 import React, { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import {
+  Box,
+  ChevronRight,
+  Diamond,
+  FileCog,
+  Hash,
+  Heading1,
+  Heading2,
+  Heading3,
+  Image,
+  List,
+  Rows3,
+  Sigma,
+  Table2,
+  Workflow,
+  type LucideIcon
+} from 'lucide-react'
 import { useEditorStore } from '../store/useEditorStore'
 import { useUiStore } from '../store/useUiStore'
 import { useSettingsStore } from '../store/useSettingsStore'
 import type { DocumentSymbolNode } from '../../shared/types'
+import { ICON_SIZE } from './ui/IconSystem'
 
 type SymbolCategory =
   | 'frontmatter'
@@ -57,35 +75,25 @@ function getSymbolCategory(node: DocumentSymbolNode, depth: number): SymbolCateg
   }
 }
 
-function getSymbolIcon(category: SymbolCategory): string {
-  switch (category) {
-    case 'frontmatter':
-      return '\u204B' // ⁋
-    case 'section':
-      return '\u00A7' // §
-    case 'subsection':
-      return '\u00B6' // ¶
-    case 'subsubsection':
-      return '\u22B3' // ⊳
-    case 'figure':
-      return '\u25A3' // ▣
-    case 'table':
-      return '\u25A6' // ▦
-    case 'list':
-      return '\u25A4' // ▤
-    case 'equation':
-      return '\u2211' // ∑
-    case 'algorithm':
-      return '\u25B7' // ▷
-    case 'env':
-      return '\u25A1' // □
-    case 'math':
-      return '\u2211' // ∑
-    case 'label':
-      return '#'
-    default:
-      return '\u25C7' // ◇
-  }
+const SYMBOL_ICONS: Record<SymbolCategory, LucideIcon> = {
+  frontmatter: FileCog,
+  section: Heading1,
+  subsection: Heading2,
+  subsubsection: Heading3,
+  figure: Image,
+  table: Table2,
+  list: List,
+  equation: Sigma,
+  algorithm: Workflow,
+  env: Box,
+  math: Sigma,
+  label: Hash,
+  default: Diamond
+}
+
+function SymbolIcon({ category }: { category: SymbolCategory }) {
+  const Icon = SYMBOL_ICONS[category]
+  return <Icon size={ICON_SIZE.compact} />
 }
 
 const DEFAULT_COLORS = ['#e06c75', '#e5c07b', '#98c379', '#61afef', '#c678dd', '#56b6c2', '#d19a66']
@@ -99,6 +107,7 @@ const OutlineNode = React.memo(function OutlineNode({
   depth: number
   bandColor?: string
 }) {
+  const { t } = useTranslation()
   const [expanded, setExpanded] = useState(true)
 
   const handleClick = useCallback(() => {
@@ -134,10 +143,14 @@ const OutlineNode = React.memo(function OutlineNode({
 
         {hasChildren ? (
           <button
+            type="button"
             className={`outline-toggle ${expanded ? 'outline-toggle-expanded' : ''}`}
             onClick={handleToggle}
+            title={expanded ? t('fileTree.collapseFolder') : t('fileTree.expandFolder')}
+            aria-label={expanded ? t('fileTree.collapseFolder') : t('fileTree.expandFolder')}
+            aria-expanded={expanded}
           >
-            &#x25B6;
+            <ChevronRight size={ICON_SIZE.micro} />
           </button>
         ) : (
           <span className="outline-toggle-spacer" />
@@ -146,7 +159,7 @@ const OutlineNode = React.memo(function OutlineNode({
           className={`outline-icon outline-icon-${category}`}
           style={bandColor ? { color: bandColor } : undefined}
         >
-          {getSymbolIcon(category)}
+          <SymbolIcon category={category} />
         </span>
         <span className="outline-name">{node.name}</span>
         {node.detail && <span className="outline-detail">{node.detail}</span>}
@@ -191,13 +204,14 @@ function OutlinePanel() {
       <div className="outline-panel">
         <div className="outline-panel-header">
           <button
+            type="button"
             className={`outline-highlight-toggle${sectionHighlightEnabled ? ' active' : ''}`}
             onClick={toggleHighlight}
             title={
               sectionHighlightEnabled ? t('outlinePanel.hideBands') : t('outlinePanel.showBands')
             }
           >
-            {'\u2261'} {t('outlinePanel.bands')}
+            <Rows3 size={ICON_SIZE.compact} /> {t('outlinePanel.bands')}
           </button>
         </div>
         <div className="git-empty">{t('outlinePanel.noOutline')}</div>
@@ -209,13 +223,14 @@ function OutlinePanel() {
     <div className="outline-panel">
       <div className="outline-panel-header">
         <button
+          type="button"
           className={`outline-highlight-toggle${sectionHighlightEnabled ? ' active' : ''}`}
           onClick={toggleHighlight}
           title={
             sectionHighlightEnabled ? t('outlinePanel.hideBands') : t('outlinePanel.showBands')
           }
         >
-          {'\u2261'} {t('outlinePanel.bands')}
+          <Rows3 size={ICON_SIZE.compact} /> {t('outlinePanel.bands')}
         </button>
       </div>
       {documentSymbols.map((sym, i) => {

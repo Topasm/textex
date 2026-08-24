@@ -3,12 +3,15 @@ import ReactDOM from 'react-dom/client'
 import './i18n'
 import App from './App'
 import ErrorBoundary from './components/ErrorBoundary'
+import { IconSystemProvider } from './components/ui/IconSystem'
 import { installDesktopApi } from './platform/desktopApi'
 import { installRuntimePerformance } from './services/runtimePerformance'
 import { installRendererSessionBridge } from './services/rendererSession'
 import { showStartupError } from './services/startupSurface'
-import { hydrateSettingsFromNative } from './store/useSettingsStore'
+import { hydrateSettingsFromNative, loadNativeSettingsSnapshot } from './store/useSettingsStore'
 import './styles/index.css'
+import './styles/flat.css'
+import './styles/responsive.css'
 
 // Set platform attribute for CSS-based platform targeting (e.g. title bar overlay padding)
 if (navigator.platform.startsWith('Win')) {
@@ -21,8 +24,11 @@ if (navigator.platform.startsWith('Win')) {
 
 async function bootstrap(): Promise<void> {
   await installDesktopApi()
-  await installRendererSessionBridge()
-  await hydrateSettingsFromNative()
+  const nativeSettings = await loadNativeSettingsSnapshot()
+  await Promise.all([
+    installRendererSessionBridge(nativeSettings),
+    hydrateSettingsFromNative(nativeSettings)
+  ])
   installRuntimePerformance()
 
   const root = document.getElementById('root')
@@ -32,9 +38,11 @@ async function bootstrap(): Promise<void> {
   // hydration. React replaces those static children during its first commit.
   ReactDOM.createRoot(root).render(
     <React.StrictMode>
-      <ErrorBoundary>
-        <App />
-      </ErrorBoundary>
+      <IconSystemProvider>
+        <ErrorBoundary>
+          <App />
+        </ErrorBoundary>
+      </IconSystemProvider>
     </React.StrictMode>
   )
 }

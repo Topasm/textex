@@ -16,7 +16,7 @@ use tokio::{fs, io::AsyncReadExt, sync::Mutex};
 use crate::{
     error::{AppError, AppResult},
     models::{OnlineReference, ReferenceAddResult, ResearchConfig},
-    services::{filesystem, references},
+    services::{filesystem, references, research_limits},
     state::AppState,
 };
 
@@ -179,7 +179,7 @@ pub async fn merge_exported_bibtex(
             "exported bibliography entry is empty or too large".to_owned(),
         ));
     }
-    if !valid_citekey(requested_key) {
+    if !research_limits::is_safe_citation_key(requested_key) {
         return Err(AppError::ReferenceIndex(
             "exported bibliography has an invalid citation key".to_owned(),
         ));
@@ -884,14 +884,6 @@ fn bib_entry_type(item_type: &str) -> &'static str {
         "posted-content" | "preprint" => "unpublished",
         _ => "article",
     }
-}
-
-fn valid_citekey(key: &str) -> bool {
-    !key.is_empty()
-        && key.len() <= 512
-        && key.chars().all(|character| {
-            character.is_ascii_alphanumeric() || matches!(character, ':' | '-' | '_')
-        })
 }
 
 fn ensure_project_epoch(
