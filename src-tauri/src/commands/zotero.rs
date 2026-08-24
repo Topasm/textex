@@ -1,7 +1,7 @@
 use tauri::{AppHandle, Manager, State};
 
 use crate::{
-    error::AppResult,
+    error::{AppError, AppResult},
     models::{
         OnlineReference, ReferenceAddResult, ZoteroCollection, ZoteroMutationPlan,
         ZoteroMutationResult, ZoteroSaveResult, ZoteroSearchResult, ZoteroSyncResult,
@@ -10,6 +10,7 @@ use crate::{
         project_index::ProjectIndexState,
         references::ReferenceIndexState,
         research::ResearchState,
+        settings::{self, SettingsState},
         zotero::{self, ZoteroSyncState},
     },
     state::AppState,
@@ -81,10 +82,29 @@ pub async fn zotero_save_online(
 
 #[tauri::command]
 pub async fn zotero_apply_mutation_plan(
+    app: AppHandle,
     project_state: State<'_, AppState>,
+    settings_state: State<'_, SettingsState>,
     sync_state: State<'_, ZoteroSyncState>,
     plan: ZoteroMutationPlan,
 ) -> AppResult<ZoteroMutationResult> {
+    let settings_path = settings::settings_path(&app)?;
+    let settings = settings::load_settings_with_legacy_import(
+        settings_state.inner(),
+        &settings_path,
+        &settings::legacy_settings_paths(&settings_path),
+    )
+    .await?;
+    if !settings.zotero_enabled {
+        return Err(AppError::Zotero(
+            "enable Zotero in Settings > Integrations before applying Chat actions".to_owned(),
+        ));
+    }
+    if settings.zotero_port != plan.port {
+        return Err(AppError::Zotero(
+            "the Zotero port changed after preview; create a fresh preview".to_owned(),
+        ));
+    }
     let _write_guard = sync_state.lock().await;
     zotero::apply_mutation_plan(sync_state.inner(), project_state.inner(), plan).await
 }

@@ -268,6 +268,17 @@ pub async fn ai_plan_zotero(
     ai::validate_zotero_plan_request(&request)?;
     let (project_root, project_epoch, _) = project_state.project_root_epoch()?;
     let settings = current_settings(&app, ai_state.inner(), settings_state.inner()).await?;
+    if !settings.zotero_enabled {
+        return Err(AppError::Zotero(
+            "enable Zotero in Settings > Integrations before using Chat actions".to_owned(),
+        ));
+    }
+    if port.is_some_and(|value| value != settings.zotero_port) {
+        return Err(AppError::Zotero(
+            "the Zotero port changed; retry with the current integration settings".to_owned(),
+        ));
+    }
+    let port = Some(settings.zotero_port);
     let cli_work_dir = ai::cli_work_dir(&app)?;
     let (server_id, inventory) = zotero::planning_inventory(port).await?;
     let inventory = serde_json::to_value(&inventory)

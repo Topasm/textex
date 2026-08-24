@@ -117,12 +117,16 @@ struct LocalCollectionData {
 #[derive(Clone, Deserialize)]
 struct LocalTag {
     tag: String,
+    #[serde(rename = "type", default)]
+    tag_type: Option<u8>,
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct LocalItemData {
     key: String,
+    #[serde(default)]
+    item_type: String,
     #[serde(default)]
     title: String,
     #[serde(rename = "DOI", default)]
@@ -575,6 +579,12 @@ pub async fn resolve_mutation_draft(
         }
     }
 
+    if operations.len() > MAX_MUTATION_OPERATIONS {
+        return Err(AppError::Zotero(
+            "the Zotero plan would change more than 25 objects; narrow the request".to_owned(),
+        ));
+    }
+
     Ok(ZoteroMutationPlan {
         summary: draft.summary,
         server_id,
@@ -713,21 +723,38 @@ pub async fn apply_mutation_plan(
                 ..
             } => {
                 let current = local_item_by_key(key, Some(plan.port)).await?;
-                if current.version != *version
-                    || normalized_tags(current.data.tags.into_iter().map(|tag| tag.tag).collect())
-                        != *current_tags
-                {
+                let current_tag_names = normalized_tags(
+                    current
+                        .data
+                        .tags
+                        .iter()
+                        .map(|tag| tag.tag.clone())
+                        .collect(),
+                );
+                if current.version != *version || current_tag_names != *current_tags {
                     return Err(stale_plan_error());
                 }
-                let mut next = current_tags.iter().cloned().collect::<BTreeSet<_>>();
-                for tag in remove_tags {
-                    next.remove(tag);
+                let removed = remove_tags
+                    .iter()
+                    .map(String::as_str)
+                    .collect::<HashSet<_>>();
+                let mut present = HashSet::new();
+                let mut tags = Vec::new();
+                for tag in current.data.tags {
+                    if removed.contains(tag.tag.as_str()) || !present.insert(tag.tag.clone()) {
+                        continue;
+                    }
+                    let mut value = serde_json::json!({ "tag": tag.tag });
+                    if let Some(tag_type) = tag.tag_type {
+                        value["type"] = serde_json::Value::from(tag_type);
+                    }
+                    tags.push(value);
                 }
-                next.extend(add_tags.iter().cloned());
-                let tags = next
-                    .into_iter()
-                    .map(|tag| serde_json::json!({ "tag": tag }))
-                    .collect::<Vec<_>>();
+                for tag in add_tags {
+                    if present.insert(tag.clone()) {
+                        tags.push(serde_json::json!({ "tag": tag }));
+                    }
+                }
                 item_payload.push(serde_json::json!({
                     "key": key,
                     "version": version,
@@ -750,7 +777,16 @@ pub async fn apply_mutation_plan(
         .await?;
     }
     if !item_payload.is_empty() {
-        write_local_batch(sync_state, "users/0/items", &item_payload, Some(plan.port)).await?;
+        if let Err(error) =
+            write_local_batch(sync_state, "users/0/items", &item_payload, Some(plan.port)).await
+        {
+            if collection_payload.is_empty() {
+                return Err(error);
+            }
+            return Err(AppError::Zotero(format!(
+                "the collection changes were applied, but item tag changes failed: {error}"
+            )));
+        }
     }
     let collection_changes = collection_payload.len();
     let item_changes = item_payload.len();
@@ -821,9 +857,27 @@ async fn search_local_items(query: &str, port: Option<u16>) -> AppResult<Vec<Loc
         .map_err(zotero_request_error)?
         .error_for_status()
         .map_err(zotero_request_error)?;
+    if response
+        .headers()
+        .get("Total-Results")
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.parse::<usize>().ok())
+        .is_some_and(|total| total > MAX_MUTATION_ITEM_MATCHES)
+    {
+        return Err(AppError::Zotero(
+            "the item query matches more than 25 objects; narrow the request".to_owned(),
+        ));
+    }
     let bytes = bounded_response(response, MAX_LOCAL_API_RESPONSE_BYTES).await?;
-    serde_json::from_slice(&bytes)
-        .map_err(|error| AppError::Zotero(format!("invalid local item response: {error}")))
+    let mut items: Vec<LocalItemEnvelope> = serde_json::from_slice(&bytes)
+        .map_err(|error| AppError::Zotero(format!("invalid local item response: {error}")))?;
+    items.retain(|item| {
+        !matches!(
+            item.data.item_type.as_str(),
+            "attachment" | "note" | "annotation"
+        )
+    });
+    Ok(items)
 }
 
 async fn local_item_by_key(key: &str, port: Option<u16>) -> AppResult<LocalItemEnvelope> {
@@ -902,6 +956,11 @@ fn build_collection_inventory(
     let mut memo = HashMap::new();
     let mut inventory = Vec::with_capacity(collections.len());
     for collection in collections {
+        validate_mutation_text(
+            &collection.data.name,
+            "Zotero collection name",
+            MAX_COLLECTION_NAME_BYTES,
+        )?;
         let path =
             collection_inventory_path(&collection.key, &by_key, &mut memo, &mut HashSet::new())?;
         inventory.push(ZoteroPlanningCollection {
