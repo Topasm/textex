@@ -130,6 +130,7 @@ test('tagged macOS builds support an all-or-none Developer ID notarization upgra
   assert.match(workflow, /APPLE_API_KEY_PATH=/)
   assert.match(workflow, /tar -xzf "\$updater"/)
   assert.match(workflow, /xcrun stapler validate "\$updater_app"/)
+  assert.match(workflow, /mac-\*\) bundles=app,dmg ;;/)
   assert.equal(tauriConfig.bundle.macOS.hardenedRuntime, true)
   assert.equal(tauriConfig.bundle.macOS.entitlements, 'Entitlements.plist')
 })
@@ -169,6 +170,10 @@ test('tagged builds decode the updater public key before Tauri embeds and valida
 test('macOS verification and cleanup use valid modern shell syntax', () => {
   assert.match(workflow, /codesign -d --entitlements - "\$executable"/)
   assert.doesNotMatch(workflow, /codesign -d --entitlements :-/)
+  assert.match(
+    workflow,
+    /if \[\[ "\$\{TEXTEX_MAC_NOTARIZATION:-false\}" == 'true' \]\]; then[\s\S]*codesign -d --entitlements - "\$executable"/
+  )
   assert.match(
     workflow,
     /if \[\[ -n "\$\{TEXTEX_MAC_KEYCHAIN:-\}" \]\]; then[\s\S]*security delete-keychain[\s\S]*\n\s+fi/

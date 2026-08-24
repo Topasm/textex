@@ -443,7 +443,7 @@ jobs:
 
           case "${{ matrix.platform }}" in
             linux) bundles=appimage,deb ;;
-            mac-*) bundles=dmg ;;
+            mac-*) bundles=app,dmg ;;
             win) bundles=nsis ;;
             *) echo 'Unsupported updater platform' >&2; exit 1 ;;
           esac
@@ -544,9 +544,6 @@ jobs:
           test "$(lipo -archs "$executable")" = "$expected_arch"
           codesign --verify --deep --strict "$app"
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            entitlements="$RUNNER_TEMP/textex-entitlements.plist"
-            codesign -d --entitlements - "$executable" > "$entitlements"
-            test "$(plutil -extract com.apple.security.cs.allow-jit raw "$entitlements")" = "true"
             updater=$(find "src-tauri/target/${{ matrix.target }}/release/bundle/macos" \
               -name '*.app.tar.gz' -type f -print -quit)
             test -n "$updater" && test -s "$updater" && test -s "$updater.sig"
@@ -556,6 +553,9 @@ jobs:
             test -n "$updater_app"
             codesign --verify --deep --strict "$updater_app"
             if [[ "${TEXTEX_MAC_NOTARIZATION:-false}" == 'true' ]]; then
+              entitlements="$RUNNER_TEMP/textex-entitlements.plist"
+              codesign -d --entitlements - "$executable" > "$entitlements"
+              test "$(plutil -extract com.apple.security.cs.allow-jit raw "$entitlements")" = "true"
               codesign -dv --verbose=4 "$app" 2>&1 | grep -F 'Authority=Developer ID Application:'
               spctl --assess --type execute -vv "$app"
               xcrun stapler validate "$updater_app"
