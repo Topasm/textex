@@ -114,6 +114,10 @@ test('tagged builds decode the updater public key before Tauri embeds and valida
   )
   assert.match(workflow, /node scripts\/prepare-tauri-updater-config\.js/)
   assert.match(workflow, /TEXTEX_UPDATER_PUBLIC_KEY=\$\(< "\$updater_public_key"\)/)
+  assert.equal(
+    (workflow.match(/base64 --decode \| base64 --decode > "\$public_key"/g) || []).length,
+    2
+  )
 })
 
 test('macOS verification and cleanup use valid modern shell syntax', () => {

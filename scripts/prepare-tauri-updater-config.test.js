@@ -12,11 +12,20 @@ function publicKeyFixture() {
   return `untrusted comment: TextEx updater\n${key.toString('base64')}\n`
 }
 
-test('decodes a bounded base64 Minisign public-key file without exposing the outer encoding', () => {
-  const publicKey = publicKeyFixture()
-  assert.equal(decodePublicKey(Buffer.from(publicKey).toString('base64')), publicKey.trimEnd())
+function tauriPublicKeyFixture() {
+  return Buffer.from(publicKeyFixture()).toString('base64')
+}
 
-  for (const invalid of ['', 'not-base64', Buffer.from('missing key line').toString('base64')]) {
+test('decodes the secret wrapper and validates the Tauri public key payload', () => {
+  const publicKey = tauriPublicKeyFixture()
+  assert.equal(decodePublicKey(Buffer.from(`${publicKey}\n`).toString('base64')), publicKey)
+
+  for (const invalid of [
+    '',
+    'not-base64',
+    Buffer.from('missing nested key').toString('base64'),
+    Buffer.from(Buffer.from('missing key line').toString('base64')).toString('base64')
+  ]) {
     assert.throws(() => decodePublicKey(invalid))
   }
 })
@@ -36,7 +45,7 @@ test('writes a Tauri updater overlay and preserves optional platform signing fie
   )
   const outputConfig = path.join(outputDir, 'updater.json')
   const outputPublicKey = path.join(outputDir, 'updater.pub')
-  const publicKey = publicKeyFixture().trimEnd()
+  const publicKey = tauriPublicKeyFixture()
 
   prepareUpdaterConfig({
     rootDir,

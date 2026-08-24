@@ -457,7 +457,7 @@ jobs:
         run: |
           command -v minisign
           public_key=$(mktemp)
-          printf '%s' "$TEXTEX_UPDATER_PUBLIC_KEY" | base64 --decode > "$public_key"
+          printf '%s' "$TEXTEX_UPDATER_PUBLIC_KEY" | base64 --decode | base64 --decode > "$public_key"
           verified=0
           while IFS= read -r -d '' signature; do
             artifact=${signature%.sig}
@@ -690,7 +690,7 @@ jobs:
         run: |
           test -n "$TEXTEX_UPDATER_PUBLIC_KEY"
           public_key=$(mktemp)
-          printf '%s' "$TEXTEX_UPDATER_PUBLIC_KEY" | base64 --decode > "$public_key"
+          printf '%s' "$TEXTEX_UPDATER_PUBLIC_KEY" | base64 --decode | base64 --decode > "$public_key"
           verified=0
           while IFS= read -r -d '' signature; do
             artifact=${signature%.sig}

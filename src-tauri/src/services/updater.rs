@@ -356,7 +356,13 @@ fn valid_signing_key(value: &str) -> bool {
     if value.is_empty() || value.trim() != value || value.len() > MAX_SIGNATURE_BYTES {
         return false;
     }
-    let mut lines = value.lines();
+    let Ok(public_key_file) = BASE64.decode(value) else {
+        return false;
+    };
+    let Ok(public_key_file) = std::str::from_utf8(&public_key_file) else {
+        return false;
+    };
+    let mut lines = public_key_file.lines();
     let Some(comment) = lines.next() else {
         return false;
     };
@@ -398,11 +404,14 @@ mod tests {
         key[..2].copy_from_slice(b"Ed");
         let encoded_key = BASE64.encode(key);
         let public_key_file = format!("untrusted comment: TextEx updater\n{encoded_key}\n");
+        let tauri_public_key = BASE64.encode(public_key_file);
 
-        assert!(valid_signing_key(public_key_file.trim_end()));
+        assert!(valid_signing_key(&tauri_public_key));
         assert!(!valid_signing_key(""));
         assert!(!valid_signing_key("missing key line"));
-        assert!(!valid_signing_key(&format!("{public_key_file}extra line")));
+        assert!(!valid_signing_key(
+            &BASE64.encode(format!("{public_key_file}extra line"))
+        ));
     }
 
     #[test]
