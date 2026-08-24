@@ -97,6 +97,49 @@ describe('ResearchChatPanel', () => {
     window.api.findBibInProject = vi.fn().mockResolvedValue([])
   })
 
+  it('offers an accessible empty state and fills a suggested question without sending it', async () => {
+    render(<ResearchChatPanel onAiDraft={vi.fn()} />)
+
+    const input = await screen.findByRole('textbox', { name: 'Research question' })
+    const messageLog = screen.getByRole('log', { name: 'Research Chat messages' })
+    expect(screen.getByRole('heading', { level: 2, name: 'Research Chat' })).toBeInTheDocument()
+    expect(messageLog).toHaveAttribute('aria-busy', 'false')
+    expect(screen.getByRole('button', { name: 'Clear chat history' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Summarize context' }))
+
+    expect(input).toHaveValue(
+      'Summarize the selected research context and highlight the main contribution.'
+    )
+    expect(input).toHaveFocus()
+    expect(window.api.aiResearchChat).not.toHaveBeenCalled()
+    expect(window.api.aiPlanZotero).not.toHaveBeenCalled()
+  })
+
+  it('exposes response progress on the message log and keeps draft actions locked', async () => {
+    const pendingAnswer = deferred<string>()
+    window.api.aiResearchChat = vi.fn().mockReturnValue(pendingAnswer.promise)
+    render(<ResearchChatPanel onAiDraft={vi.fn()} />)
+
+    const input = await screen.findByRole('textbox', { name: 'Research question' })
+    fireEvent.change(input, { target: { value: 'Check this argument.' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+
+    const messageLog = screen.getByRole('log', { name: 'Research Chat messages' })
+    await waitFor(() => expect(messageLog).toHaveAttribute('aria-busy', 'true'))
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Clear chat history' })).toBeDisabled()
+
+    await act(async () => {
+      pendingAnswer.resolve('The argument is supported.')
+      await pendingAnswer.promise
+    })
+
+    expect(await screen.findByText('The argument is supported.')).toBeInTheDocument()
+    await waitFor(() => expect(messageLog).toHaveAttribute('aria-busy', 'false'))
+  })
+
   it('sends selected paper, document, author, and repository contexts', async () => {
     render(<ResearchChatPanel onAiDraft={vi.fn()} />)
 

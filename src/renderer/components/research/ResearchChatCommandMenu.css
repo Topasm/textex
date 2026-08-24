@@ -47,6 +47,7 @@
 
 .research-chat-command-option.active {
   background: var(--sidebar-selected, var(--bg-hover));
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 .research-chat-command-icon {
@@ -117,6 +118,7 @@
   .research-chat-command-option.active {
     color: HighlightText;
     background: Highlight;
+    box-shadow: inset 2px 0 0 HighlightText;
     forced-color-adjust: none;
   }
 

@@ -1,5 +1,21 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
-import { FileText, Plus, RotateCcw, Send, ShieldCheck, Terminal, Trash2, X } from 'lucide-react'
+import {
+  FileText,
+  LoaderCircle,
+  Paperclip,
+  Plus,
+  Quote,
+  RotateCcw,
+  Send,
+  ShieldCheck,
+  Slash,
+  Sparkles,
+  Terminal,
+  TextCursorInput,
+  Trash2,
+  Wrench,
+  X
+} from 'lucide-react'
 import type {
   OnlineReference,
   ResearchChatContext,
@@ -76,6 +92,21 @@ const CHAT_SESSION_FILE_BUDGET_BYTES = 1000 * 1024
 const PERSISTED_LABEL_MAX_BYTES = 2 * 1024
 const PERSISTED_SOURCE_MAX_BYTES = 4 * 1024
 const REFERENCE_SEARCH_QUERY_LIMIT = 512
+
+const CHAT_STARTERS = [
+  {
+    label: 'Summarize context',
+    prompt: 'Summarize the selected research context and highlight the main contribution.'
+  },
+  {
+    label: 'Review the argument',
+    prompt: 'Review the current argument for gaps, weak evidence, and unclear claims.'
+  },
+  {
+    label: 'Plan the next section',
+    prompt: 'Suggest a focused outline for the next section based on the selected context.'
+  }
+] as const
 
 const utf8Encoder = new TextEncoder()
 const utf8Decoder = new TextDecoder()
@@ -428,10 +459,7 @@ export function ResearchChatPanel({
   }, [prompt])
 
   useEffect(() => {
-    if (
-      (messages.length === 0 && !busy && !pendingZoteroPlan) ||
-      !shouldAutoScrollRef.current
-    )
+    if ((messages.length === 0 && !busy && !pendingZoteroPlan) || !shouldAutoScrollRef.current)
       return
     const end = messageEndRef.current
     if (end && typeof end.scrollIntoView === 'function') {
@@ -510,6 +538,7 @@ export function ResearchChatPanel({
     requestGeneration.current += 1
     requestInFlight.current = false
     actionInFlight.current = false
+    shouldAutoScrollRef.current = true
     referenceContextsRef.current = []
     sessionScopeRef.current = null
     setProfile(null)
@@ -1078,6 +1107,7 @@ export function ResearchChatPanel({
         window.api.researchChatSessionClear(scope)
       )
       if (!cleared) return
+      shouldAutoScrollRef.current = true
       setMessages([])
       referenceContextsRef.current = []
       setReferenceContexts([])
@@ -1140,10 +1170,24 @@ export function ResearchChatPanel({
   if (!projectRoot)
     return <div className="research-empty">Open a project to use Research Chat.</div>
 
+  const headerStatus = !profile
+    ? 'Loading research context…'
+    : busy
+      ? 'Working with selected context…'
+      : `${selectedContextCount} of ${contextOptions.length} contexts selected`
+
   return (
     <div className="research-chat-panel">
-      <div className="research-chat-heading">
-        <h2 className="research-section-heading">Research Chat</h2>
+      <header className="research-chat-heading">
+        <div className="research-chat-heading-copy">
+          <span className="research-chat-brand-icon" aria-hidden="true">
+            <Sparkles size={15} />
+          </span>
+          <div>
+            <h2 className="research-section-heading">Research Chat</h2>
+            <span className="research-chat-subtitle">{headerStatus}</span>
+          </div>
+        </div>
         <button
           type="button"
           className="research-icon-button"
@@ -1154,80 +1198,149 @@ export function ResearchChatPanel({
         >
           <Trash2 size={14} />
         </button>
-      </div>
-      <div className="research-chat-messages" aria-live="polite" aria-busy={busy}>
+      </header>
+
+      <div
+        className="research-chat-messages"
+        role="log"
+        aria-label="Research Chat messages"
+        aria-live="polite"
+        aria-relevant="additions text"
+        aria-atomic="false"
+        aria-busy={busy}
+        onScroll={(event) => {
+          const element = event.currentTarget
+          shouldAutoScrollRef.current =
+            element.scrollHeight - element.scrollTop - element.clientHeight < 72
+        }}
+      >
         {messages.length === 0 ? (
-          <p className="research-empty">Ask about the paper, current document, or indexed code.</p>
+          profile ? (
+            <section className="research-chat-empty" aria-label="Start a Research Chat">
+              <span className="research-chat-empty-icon" aria-hidden="true">
+                <Sparkles size={22} />
+              </span>
+              <h3>Explore your research</h3>
+              <p>Ask about the paper, current document, attached references, or indexed code.</p>
+              <div className="research-chat-starters" aria-label="Suggested questions">
+                {CHAT_STARTERS.map((starter) => (
+                  <button
+                    type="button"
+                    key={starter.label}
+                    onClick={() => fillComposer(starter.prompt)}
+                  >
+                    {starter.label}
+                  </button>
+                ))}
+              </div>
+            </section>
+          ) : (
+            <section className="research-chat-empty" aria-label="Loading Research Chat">
+              <LoaderCircle className="spin" size={21} aria-hidden="true" />
+              <h3>Preparing research context</h3>
+              <p>Loading the project profile and saved conversation.</p>
+            </section>
+          )
         ) : (
           messages.map((message, index) => (
             <div
               className={`research-chat-message ${message.role}`}
               key={`${message.role}-${index}`}
+              role="group"
+              aria-label={message.role === 'user' ? 'Your message' : 'Research Chat message'}
             >
-              <strong>{message.role === 'user' ? 'You' : 'Research Chat'}</strong>
-              <p>{message.content}</p>
-              {message.sources && message.sources.length > 0 && (
-                <div className="research-chat-sources" aria-label="Attached references">
-                  <span>Attached references</span>
-                  {message.sources.map((source, sourceIndex) => {
-                    const citeKey = `${index}:${source.id}:cite`
-                    const saveKey = `${index}:${source.id}:save`
-                    return (
-                      <article
-                        className="research-chat-source-card"
-                        key={`${source.id}-${sourceIndex}`}
-                      >
-                        <div>
-                          <b>{source.label}</b>
-                          <small>{source.citekey ? `@${source.citekey}` : source.source}</small>
-                        </div>
-                        <div className="research-chat-source-actions">
-                          {source.referenceSource === 'online' && source.onlineReference && (
+              <div className="research-chat-message-content">
+                {message.role === 'assistant' && (
+                  <div className="research-chat-message-author">
+                    <Sparkles size={13} aria-hidden="true" />
+                    <strong>Research Chat</strong>
+                  </div>
+                )}
+                <p className="research-chat-message-text">{message.content}</p>
+                {message.sources && message.sources.length > 0 && (
+                  <div className="research-chat-sources" aria-label="Attached references">
+                    <span>
+                      <Paperclip size={11} aria-hidden="true" /> Attached references
+                    </span>
+                    {message.sources.map((source, sourceIndex) => {
+                      const citeKey = `${index}:${source.id}:cite`
+                      const saveKey = `${index}:${source.id}:save`
+                      return (
+                        <article
+                          className="research-chat-source-card"
+                          key={`${source.id}-${sourceIndex}`}
+                        >
+                          <div>
+                            <b>{source.label}</b>
+                            <small>{source.citekey ? `@${source.citekey}` : source.source}</small>
+                          </div>
+                          <div className="research-chat-source-actions">
+                            {source.referenceSource === 'online' && source.onlineReference && (
+                              <button
+                                type="button"
+                                disabled={Boolean(actionBusy)}
+                                onClick={() =>
+                                  void saveOnlineSource(source.onlineReference!, saveKey)
+                                }
+                              >
+                                <Plus size={12} />
+                                {actionBusy === saveKey ? 'Saving…' : 'Save to library'}
+                              </button>
+                            )}
                             <button
                               type="button"
-                              disabled={Boolean(actionBusy)}
-                              onClick={() =>
-                                void saveOnlineSource(source.onlineReference!, saveKey)
-                              }
+                              disabled={!filePath || Boolean(actionBusy)}
+                              onClick={() => void citeSource(source, citeKey)}
                             >
-                              <Plus size={12} />
-                              {actionBusy === saveKey ? 'Saving…' : 'Save to library'}
+                              <Quote size={11} aria-hidden="true" />
+                              {actionBusy === citeKey ? 'Citing…' : 'Cite'}
                             </button>
-                          )}
-                          <button
-                            type="button"
-                            disabled={!filePath || Boolean(actionBusy)}
-                            onClick={() => void citeSource(source, citeKey)}
-                          >
-                            {actionBusy === citeKey ? 'Citing…' : 'Cite'}
-                          </button>
-                        </div>
-                      </article>
-                    )
-                  })}
-                </div>
-              )}
-              {message.role === 'assistant' && (
-                <button
-                  className="research-chat-insert-answer"
-                  type="button"
-                  disabled={!filePath}
-                  onClick={() => insertAnswer(message.content)}
-                >
-                  Insert answer
-                </button>
-              )}
+                          </div>
+                        </article>
+                      )
+                    })}
+                  </div>
+                )}
+                {message.role === 'assistant' && (
+                  <div className="research-chat-message-actions">
+                    <button
+                      className="research-chat-insert-answer"
+                      type="button"
+                      disabled={!filePath}
+                      onClick={() => insertAnswer(message.content)}
+                    >
+                      <TextCursorInput size={12} aria-hidden="true" /> Insert answer
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           ))
         )}
+        {busy && messages.length > 0 && (
+          <div className="research-chat-thinking" aria-hidden="true">
+            <Sparkles size={13} />
+            <span>Working</span>
+            <span className="research-chat-thinking-dots">
+              <i />
+              <i />
+              <i />
+            </span>
+          </div>
+        )}
+        <div className="research-chat-message-end" ref={messageEndRef} aria-hidden="true" />
       </div>
 
       {pendingZoteroPlan && (
-        <section className="research-zotero-plan" aria-label="Zotero change preview">
+        <section
+          className="research-zotero-plan"
+          aria-labelledby={zoteroPlanHeadingId}
+          aria-describedby={zoteroPlanDescriptionId}
+        >
           <div className="research-zotero-plan-heading">
             <div>
-              <strong>Zotero change preview</strong>
-              <span>No changes occur until you approve.</span>
+              <strong id={zoteroPlanHeadingId}>Zotero change preview</strong>
+              <span id={zoteroPlanDescriptionId}>No changes occur until you approve.</span>
             </div>
             <ShieldCheck size={18} aria-hidden="true" />
           </div>
@@ -1277,7 +1390,12 @@ export function ResearchChatPanel({
         }}
         onDrop={dropReference}
       >
-        <div className="research-subheading">Context · drop a reference here</div>
+        <div className="research-chat-context-bar">
+          <span>
+            <Paperclip size={12} aria-hidden="true" /> Context
+          </span>
+          <small>{selectedContextCount} selected · drop a reference here</small>
+        </div>
         <div className="research-context-chips">
           {contextOptions.map((chip) => (
             <button
@@ -1292,118 +1410,173 @@ export function ResearchChatPanel({
             </button>
           ))}
         </div>
-        <div className="research-chat-command-input-wrapper">
-          {commandMenuOpen && (
-            <ResearchChatCommandMenu
-              commands={commandSuggestions}
-              activeIndex={activeCommandIndex}
-              listboxId={commandListboxId}
-              onActiveIndexChange={setActiveCommandIndex}
-              onSelect={selectCommandSuggestion}
-            />
-          )}
-          <textarea
-            aria-label="Research question"
-            aria-autocomplete="list"
-            aria-haspopup="listbox"
-            aria-expanded={commandMenuOpen}
-            aria-controls={commandMenuOpen ? commandListboxId : undefined}
-            aria-activedescendant={activeCommandId}
-            value={prompt}
-            placeholder="Ask about this paper or its source code… Type / for commands."
-            onChange={(event) => {
-              setPrompt(event.target.value)
-              setCommandMenuDismissed(false)
-              setActiveCommandIndex(0)
-            }}
-            onKeyDown={(event) => {
-              if (event.nativeEvent.isComposing) return
-              if (commandMenuOpen) {
-                if (event.key === 'ArrowDown') {
-                  event.preventDefault()
-                  setActiveCommandIndex((index) => (index + 1) % commandSuggestions.length)
-                  return
-                }
-                if (event.key === 'ArrowUp') {
-                  event.preventDefault()
-                  setActiveCommandIndex(
-                    (index) => (index - 1 + commandSuggestions.length) % commandSuggestions.length
-                  )
-                  return
-                }
-                if (event.key === 'Escape') {
-                  event.preventDefault()
-                  event.stopPropagation()
-                  setCommandMenuDismissed(true)
-                  return
-                }
-                if (event.key === 'Tab') {
-                  setCommandMenuDismissed(true)
-                  return
-                }
-                if (event.key === 'Enter') {
-                  event.preventDefault()
-                  if ((event.metaKey || event.ctrlKey) && exactPromptCommand) {
-                    setCommandMenuDismissed(true)
-                    void send()
+
+        <div className="research-chat-composer-shell">
+          <div className="research-chat-command-input-wrapper">
+            {commandMenuOpen && (
+              <ResearchChatCommandMenu
+                commands={commandSuggestions}
+                activeIndex={activeCommandIndex}
+                listboxId={commandListboxId}
+                onActiveIndexChange={setActiveCommandIndex}
+                onSelect={selectCommandSuggestion}
+              />
+            )}
+            <textarea
+              ref={composerInputRef}
+              rows={2}
+              aria-label="Research question"
+              aria-describedby={commandHintId}
+              aria-autocomplete="list"
+              aria-haspopup="listbox"
+              aria-expanded={commandMenuOpen}
+              aria-controls={commandMenuOpen ? commandListboxId : undefined}
+              aria-activedescendant={activeCommandId}
+              value={prompt}
+              placeholder="Ask about this paper or its source code…"
+              onChange={(event) => {
+                setPrompt(event.target.value)
+                setCommandMenuDismissed(false)
+                setActiveCommandIndex(0)
+              }}
+              onKeyDown={(event) => {
+                if (event.nativeEvent.isComposing) return
+                if (commandMenuOpen) {
+                  if (event.key === 'ArrowDown') {
+                    event.preventDefault()
+                    setActiveCommandIndex((index) => (index + 1) % commandSuggestions.length)
                     return
                   }
-                  const selectedCommand = commandSuggestions[activeCommandIndex]
-                  if (selectedCommand) selectCommandSuggestion(selectedCommand)
-                  return
+                  if (event.key === 'ArrowUp') {
+                    event.preventDefault()
+                    setActiveCommandIndex(
+                      (index) => (index - 1 + commandSuggestions.length) % commandSuggestions.length
+                    )
+                    return
+                  }
+                  if (event.key === 'Escape') {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    setCommandMenuDismissed(true)
+                    return
+                  }
+                  if (event.key === 'Tab') {
+                    setCommandMenuDismissed(true)
+                    return
+                  }
+                  if (event.key === 'Enter') {
+                    event.preventDefault()
+                    if ((event.metaKey || event.ctrlKey) && exactPromptCommand) {
+                      setCommandMenuDismissed(true)
+                      void send()
+                      return
+                    }
+                    const selectedCommand = commandSuggestions[activeCommandIndex]
+                    if (selectedCommand) selectCommandSuggestion(selectedCommand)
+                    return
+                  }
                 }
+                if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+                  event.preventDefault()
+                  void send()
+                }
+              }}
+            />
+            <span className="research-chat-command-status" id={commandHintId}>
+              {commandMenuOpen
+                ? `${commandSuggestions.length} commands available. Use arrow keys to choose.`
+                : 'Type slash for commands. Press Control or Command plus Enter to send.'}
+            </span>
+          </div>
+
+          <div className="research-chat-composer-footer">
+            <div className="research-chat-footer-actions">
+              <button
+                className="research-chat-footer-button"
+                type="button"
+                disabled={busy || Boolean(pendingZoteroPlan)}
+                onClick={openCommandMenu}
+              >
+                <Slash size={13} aria-hidden="true" /> Commands
+              </button>
+              <details className="research-chat-tools">
+                <summary>
+                  <Wrench size={13} aria-hidden="true" /> Tools
+                </summary>
+                <div className="research-chat-tools-popover">
+                  <strong>Draft and CLI tools</strong>
+                  <button className="research-primary-action" type="button" onClick={onAiDraft}>
+                    <FileText size={16} /> AI Draft
+                  </button>
+                  <div className="research-action-grid">
+                    <button
+                      type="button"
+                      disabled={!workDir || busy}
+                      onClick={() => launch('claude', false)}
+                    >
+                      <Terminal size={15} /> Claude Code
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!workDir || busy}
+                      onClick={() => launch('claude', true)}
+                    >
+                      <RotateCcw size={15} /> Resume Claude
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!workDir || busy}
+                      onClick={() => launch('codex', false)}
+                    >
+                      <Terminal size={15} /> Codex CLI
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!workDir || busy}
+                      onClick={() => launch('codex', true)}
+                    >
+                      <RotateCcw size={15} /> Resume Codex
+                    </button>
+                  </div>
+                </div>
+              </details>
+            </div>
+
+            <span className="research-chat-shortcut" aria-hidden="true">
+              Ctrl/⌘ Enter
+            </span>
+            <button
+              className="research-chat-send"
+              type="button"
+              aria-label="Send"
+              title={busy ? 'Working…' : 'Send · Ctrl/⌘ Enter'}
+              disabled={
+                !prompt.trim() ||
+                !profile ||
+                busy ||
+                Boolean(pendingZoteroPlan) ||
+                (commandMenuOpen && !exactPromptCommand)
               }
-              if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-                event.preventDefault()
-                void send()
-              }
-            }}
-          />
-          <span className="research-chat-command-status" aria-live="polite">
-            {commandMenuOpen ? `${commandSuggestions.length} Chat commands available.` : ''}
-          </span>
+              onClick={() => void send()}
+            >
+              {busy ? (
+                <LoaderCircle className="spin" size={14} aria-hidden="true" />
+              ) : (
+                <Send size={14} aria-hidden="true" />
+              )}
+            </button>
+          </div>
         </div>
-        <button
-          className="research-chat-send"
-          type="button"
-          disabled={
-            !prompt.trim() ||
-            !profile ||
-            busy ||
-            Boolean(pendingZoteroPlan) ||
-            (commandMenuOpen && !exactPromptCommand)
-          }
-          onClick={() => void send()}
-        >
-          <Send size={14} /> {busy ? 'Working…' : 'Send'}
-        </button>
+
         {status && (
-          <div className="research-status" role="status">
-            {status}
+          <div className="research-status research-chat-status" role="status">
+            {(busy || Boolean(actionBusy)) && (
+              <LoaderCircle className="spin" size={12} aria-hidden="true" />
+            )}
+            <span>{status}</span>
           </div>
         )}
       </div>
-
-      <details className="research-chat-tools">
-        <summary>Draft and CLI tools</summary>
-        <button className="research-primary-action" type="button" onClick={onAiDraft}>
-          <FileText size={16} /> AI Draft
-        </button>
-        <div className="research-action-grid">
-          <button type="button" disabled={!workDir || busy} onClick={() => launch('claude', false)}>
-            <Terminal size={15} /> Claude Code
-          </button>
-          <button type="button" disabled={!workDir || busy} onClick={() => launch('claude', true)}>
-            <RotateCcw size={15} /> Resume Claude
-          </button>
-          <button type="button" disabled={!workDir || busy} onClick={() => launch('codex', false)}>
-            <Terminal size={15} /> Codex CLI
-          </button>
-          <button type="button" disabled={!workDir || busy} onClick={() => launch('codex', true)}>
-            <RotateCcw size={15} /> Resume Codex
-          </button>
-        </div>
-      </details>
     </div>
   )
 }

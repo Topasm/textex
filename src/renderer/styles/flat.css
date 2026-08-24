@@ -495,12 +495,17 @@ html .settings-select:focus-visible,
 html .research-profile-field input:focus-visible,
 html .research-profile-field select:focus-visible,
 html .research-profile-field textarea:focus-visible,
-html .research-chat-composer textarea:focus-visible,
 html .draft-input:focus-visible,
 html .git-commit-input:focus-visible,
 html .bib-search input:focus-visible,
 html .template-add-form input:focus-visible,
 html .template-add-form textarea:focus-visible {
+  border-color: var(--accent);
+  outline: 2px solid var(--ui-focus-ring);
+  outline-offset: 1px;
+}
+
+html .research-chat-composer-shell:focus-within {
   border-color: var(--accent);
   outline: 2px solid var(--ui-focus-ring);
   outline-offset: 1px;
