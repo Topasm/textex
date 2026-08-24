@@ -17,6 +17,11 @@ identity.
 - A missing, empty, invalid, or incomplete seed never blocks compilation. The
   compiler emits an explicit cache status log and lets Tectonic fetch uncached
   support files through its existing network fallback.
+- Typed cache-status and reset commands expose seed/cache paths, file counts,
+  byte totals, readiness, and integrity in Settings. Status verification hashes
+  packaged and installed seed files. Reset accepts no renderer path, atomically
+  backs up only TextEx's app-cache `tectonic` directory, rebuilds it, and restores
+  the backup if rebuilding fails.
 - Queue priority, latest-wins coalescing, cancellation, timeout, and bounded
   stdout/stderr prevent obsolete work from blocking current edits.
 - Log and diagnostic events retain request/document/revision identity.

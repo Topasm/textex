@@ -37,7 +37,11 @@ node scripts/prepare-tectonic-cache-seed.js \
 npm run check:tectonic-cache-seed
 ```
 
-Do not download cache content during CI or commit unreviewed large seed assets.
+Read the check output and inspect `manifest.json`: an `empty` result is allowed
+but means the release is not support-file-complete offline and must not be
+described otherwise. Do not download cache content during CI or commit
+unreviewed large seed assets. Record provenance and redistribution review for
+every non-empty seed.
 
 ## 3. Run local gates
 

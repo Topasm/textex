@@ -16,9 +16,10 @@ use tokio::sync::Mutex;
 use crate::{
     error::{AppError, AppResult},
     models::{
-        OnlineReference, ReferenceAddResult, ZoteroCollection, ZoteroMutationDraft,
-        ZoteroMutationDraftOperation, ZoteroMutationOperation, ZoteroMutationPlan,
-        ZoteroMutationResult, ZoteroSaveResult, ZoteroSearchResult, ZoteroSyncResult,
+        OnlineReference, ReferenceAddResult, ZoteroCollection, ZoteroMutationCollectionRef,
+        ZoteroMutationDraft, ZoteroMutationDraftOperation, ZoteroMutationOperation,
+        ZoteroMutationPlan, ZoteroMutationResult, ZoteroSaveResult, ZoteroSearchResult,
+        ZoteroSyncResult,
     },
     services::{
         filesystem, references,
@@ -135,6 +136,20 @@ struct LocalItemData {
     archive_location: String,
     #[serde(default)]
     tags: Vec<LocalTag>,
+    #[serde(default)]
+    collections: Vec<String>,
+}
+
+struct PendingItemMutation {
+    key: String,
+    version: u64,
+    title: String,
+    current_tags: Vec<String>,
+    current_collections: Vec<String>,
+    add_tags: BTreeSet<String>,
+    remove_tags: BTreeSet<String>,
+    add_collections: HashMap<String, ZoteroMutationCollectionRef>,
+    remove_collections: HashMap<String, ZoteroMutationCollectionRef>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -409,7 +424,8 @@ pub async fn resolve_mutation_draft(
         .map(|collection| (collection.key.clone(), collection.parent_key.clone()))
         .collect::<HashMap<_, _>>();
     let mut touched_collections = HashSet::new();
-    let mut touched_items = HashSet::new();
+    let mut pending_items = HashMap::<String, PendingItemMutation>::new();
+    let mut item_order = Vec::new();
     let mut operations = Vec::new();
 
     for operation in draft.operations {
@@ -547,43 +563,141 @@ pub async fn resolve_mutation_draft(
                         "no Zotero items matched ‘{query}’"
                     )));
                 }
-                if operations.len().saturating_add(items.len()) > MAX_MUTATION_ITEM_MATCHES {
+                for item in items {
+                    let pending = upsert_pending_item(&mut pending_items, &mut item_order, item)?;
+                    pending.add_tags.extend(add_tags.iter().cloned());
+                    pending.remove_tags.extend(remove_tags.iter().cloned());
+                }
+                ensure_mutation_object_limit(operations.len(), pending_items.len())?;
+            }
+            ZoteroMutationDraftOperation::UpdateItemCollections {
+                query,
+                add_collections,
+                remove_collections,
+            } => {
+                let query = validate_mutation_text(&query, "item query", MAX_SEARCH_LENGTH)?;
+                let add_collections = resolve_mutation_collection_refs(&targets, add_collections)?;
+                let remove_collections =
+                    resolve_mutation_collection_refs(&targets, remove_collections)?;
+                if add_collections.is_empty() && remove_collections.is_empty() {
                     return Err(AppError::Zotero(
-                        "the Zotero plan would change more than 25 objects; narrow the item query"
+                        "a collection membership operation must add or remove a collection"
                             .to_owned(),
                     ));
                 }
-                for item in items {
-                    if !touched_items.insert(item.key.clone()) {
-                        return Err(AppError::Zotero(format!(
-                            "item ‘{}’ is matched by more than one tag operation",
-                            item.data.title
-                        )));
-                    }
-                    let current_tags =
-                        normalized_tags(item.data.tags.into_iter().map(|tag| tag.tag).collect());
-                    operations.push(ZoteroMutationOperation::UpdateItemTags {
-                        key: item.key,
-                        version: item.version,
-                        title: if item.data.title.trim().is_empty() {
-                            "Untitled Zotero item".to_owned()
-                        } else {
-                            item.data.title
-                        },
-                        current_tags,
-                        add_tags: add_tags.clone(),
-                        remove_tags: remove_tags.clone(),
-                    });
+                if add_collections.iter().any(|collection| {
+                    remove_collections
+                        .iter()
+                        .any(|removed| removed.key == collection.key)
+                }) {
+                    return Err(AppError::Zotero(
+                        "the same collection cannot be added and removed in one operation"
+                            .to_owned(),
+                    ));
                 }
+                let items = search_local_items(query, Some(port)).await?;
+                if items.is_empty() {
+                    return Err(AppError::Zotero(format!(
+                        "no Zotero items matched ‘{query}’"
+                    )));
+                }
+                for item in items {
+                    let pending = upsert_pending_item(&mut pending_items, &mut item_order, item)?;
+                    for collection in &add_collections {
+                        pending
+                            .add_collections
+                            .insert(collection.key.clone(), collection.clone());
+                    }
+                    for collection in &remove_collections {
+                        pending
+                            .remove_collections
+                            .insert(collection.key.clone(), collection.clone());
+                    }
+                }
+                ensure_mutation_object_limit(operations.len(), pending_items.len())?;
             }
         }
     }
 
-    if operations.len() > MAX_MUTATION_OPERATIONS {
+    for key in item_order {
+        let pending = pending_items
+            .remove(&key)
+            .expect("pending item order and map stay synchronized");
+        if pending
+            .add_tags
+            .iter()
+            .any(|tag| pending.remove_tags.contains(tag))
+        {
+            return Err(AppError::Zotero(format!(
+                "item ‘{}’ would add and remove the same tag",
+                pending.title
+            )));
+        }
+        if pending
+            .add_collections
+            .keys()
+            .any(|key| pending.remove_collections.contains_key(key))
+        {
+            return Err(AppError::Zotero(format!(
+                "item ‘{}’ would be added to and removed from the same collection",
+                pending.title
+            )));
+        }
+        let current_tags = pending.current_tags.iter().cloned().collect::<HashSet<_>>();
+        let current_collections = pending
+            .current_collections
+            .iter()
+            .cloned()
+            .collect::<HashSet<_>>();
+        let add_tags = pending
+            .add_tags
+            .into_iter()
+            .filter(|tag| !current_tags.contains(tag))
+            .collect::<Vec<_>>();
+        let remove_tags = pending
+            .remove_tags
+            .into_iter()
+            .filter(|tag| current_tags.contains(tag))
+            .collect::<Vec<_>>();
+        let mut add_collections = pending
+            .add_collections
+            .into_values()
+            .filter(|collection| !current_collections.contains(&collection.key))
+            .collect::<Vec<_>>();
+        let mut remove_collections = pending
+            .remove_collections
+            .into_values()
+            .filter(|collection| current_collections.contains(&collection.key))
+            .collect::<Vec<_>>();
+        add_collections.sort_by(|left, right| left.path.cmp(&right.path));
+        remove_collections.sort_by(|left, right| left.path.cmp(&right.path));
+        if add_tags.is_empty()
+            && remove_tags.is_empty()
+            && add_collections.is_empty()
+            && remove_collections.is_empty()
+        {
+            continue;
+        }
+        operations.push(ZoteroMutationOperation::UpdateItem {
+            key: pending.key,
+            version: pending.version,
+            title: pending.title,
+            current_tags: pending.current_tags,
+            add_tags,
+            remove_tags,
+            current_collections: pending.current_collections,
+            add_collections,
+            remove_collections,
+        });
+    }
+
+    if operations.is_empty() {
         return Err(AppError::Zotero(
-            "the Zotero plan would change more than 25 objects; narrow the request".to_owned(),
+            "the requested Zotero items already have those tags and collection memberships"
+                .to_owned(),
         ));
     }
+    ensure_mutation_object_limit(operations.len(), 0)?;
 
     Ok(ZoteroMutationPlan {
         summary: draft.summary,
@@ -608,6 +722,10 @@ pub async fn apply_mutation_plan(
         ));
     }
     let current_collections = local_collections(Some(plan.port)).await?;
+    let mut known_collection_paths = build_collection_inventory(&current_collections)?
+        .into_iter()
+        .map(|collection| (collection.key, collection.path))
+        .collect::<HashMap<_, _>>();
     let current_collection_map = current_collections
         .into_iter()
         .map(|collection| (collection.key.clone(), collection))
@@ -622,6 +740,11 @@ pub async fn apply_mutation_plan(
             _ => None,
         })
         .collect::<HashSet<_>>();
+    for operation in &plan.operations {
+        if let ZoteroMutationOperation::CreateCollection { key, path, .. } = operation {
+            known_collection_paths.insert(key.clone(), path.clone());
+        }
+    }
     let mut effective_parents = current_collection_map
         .iter()
         .map(|(key, collection)| {
@@ -728,12 +851,15 @@ pub async fn apply_mutation_plan(
                     "name": new_name
                 }));
             }
-            ZoteroMutationOperation::UpdateItemTags {
+            ZoteroMutationOperation::UpdateItem {
                 key,
                 version,
                 current_tags,
                 add_tags,
                 remove_tags,
+                current_collections,
+                add_collections,
+                remove_collections,
                 ..
             } => {
                 let current = local_item_by_key(key, Some(plan.port)).await?;
@@ -745,11 +871,21 @@ pub async fn apply_mutation_plan(
                         .map(|tag| tag.tag.clone())
                         .collect(),
                 );
+                let current_collection_keys =
+                    normalized_collection_keys(current.data.collections.clone())?;
                 if current.version != *version
                     || current_tag_names.as_slice() != current_tags.as_slice()
+                    || current_collection_keys.as_slice() != current_collections.as_slice()
                 {
                     return Err(stale_plan_error());
                 }
+                for collection in add_collections.iter().chain(remove_collections) {
+                    validate_item_collection_ref(collection, &known_collection_paths)?;
+                }
+                let mut payload = serde_json::json!({
+                    "key": key,
+                    "version": version
+                });
                 let removed = remove_tags
                     .iter()
                     .map(String::as_str)
@@ -771,11 +907,22 @@ pub async fn apply_mutation_plan(
                         tags.push(serde_json::json!({ "tag": tag }));
                     }
                 }
-                item_payload.push(serde_json::json!({
-                    "key": key,
-                    "version": version,
-                    "tags": tags
-                }));
+                if !add_tags.is_empty() || !remove_tags.is_empty() {
+                    payload["tags"] = serde_json::Value::Array(tags);
+                }
+                if !add_collections.is_empty() || !remove_collections.is_empty() {
+                    payload["collections"] = serde_json::Value::Array(
+                        updated_collection_keys(
+                            current_collections,
+                            add_collections,
+                            remove_collections,
+                        )
+                        .into_iter()
+                        .map(serde_json::Value::String)
+                        .collect(),
+                    );
+                }
+                item_payload.push(payload);
             }
         }
     }
@@ -809,7 +956,7 @@ pub async fn apply_mutation_plan(
                 return Err(error);
             }
             return Err(AppError::Zotero(format!(
-                "the collection changes were applied, but item tag changes failed: {error}"
+                "the collection changes were applied, but item changes failed: {error}"
             )));
         }
     }
@@ -1100,6 +1247,111 @@ fn resolve_collection<'a>(
     }
 }
 
+fn resolve_mutation_collection_refs(
+    targets: &[ZoteroPlanningCollection],
+    references: Vec<String>,
+) -> AppResult<Vec<ZoteroMutationCollectionRef>> {
+    if references.len() > MAX_MUTATION_OPERATIONS {
+        return Err(AppError::Zotero(
+            "an item may reference at most 25 collections in one plan".to_owned(),
+        ));
+    }
+    let mut keys = HashSet::new();
+    let mut resolved = Vec::new();
+    for reference in references {
+        let target = resolve_collection(targets, &reference)?;
+        if keys.insert(target.key.clone()) {
+            resolved.push(ZoteroMutationCollectionRef {
+                key: target.key.clone(),
+                path: target.path.clone(),
+            });
+        }
+    }
+    resolved.sort_by(|left, right| left.path.cmp(&right.path));
+    Ok(resolved)
+}
+
+fn upsert_pending_item<'a>(
+    pending_items: &'a mut HashMap<String, PendingItemMutation>,
+    item_order: &mut Vec<String>,
+    item: LocalItemEnvelope,
+) -> AppResult<&'a mut PendingItemMutation> {
+    let key = item.key;
+    let current_tags = normalized_tags(item.data.tags.into_iter().map(|tag| tag.tag).collect());
+    let current_collections = normalized_collection_keys(item.data.collections)?;
+    let title = if item.data.title.trim().is_empty() {
+        "Untitled Zotero item".to_owned()
+    } else {
+        item.data.title
+    };
+    validate_mutation_text(&title, "item title", 4_096)?;
+    if let Some(existing) = pending_items.get(&key) {
+        if existing.version != item.version
+            || existing.title != title
+            || existing.current_tags != current_tags
+            || existing.current_collections != current_collections
+        {
+            return Err(AppError::Zotero(
+                "a Zotero item changed while the mutation preview was being assembled".to_owned(),
+            ));
+        }
+    } else {
+        item_order.push(key.clone());
+        pending_items.insert(
+            key.clone(),
+            PendingItemMutation {
+                key: key.clone(),
+                version: item.version,
+                title,
+                current_tags,
+                current_collections,
+                add_tags: BTreeSet::new(),
+                remove_tags: BTreeSet::new(),
+                add_collections: HashMap::new(),
+                remove_collections: HashMap::new(),
+            },
+        );
+    }
+    Ok(pending_items
+        .get_mut(&key)
+        .expect("pending Zotero item was inserted"))
+}
+
+fn normalized_collection_keys(collections: Vec<String>) -> AppResult<Vec<String>> {
+    let mut normalized = BTreeSet::new();
+    for key in collections {
+        if !valid_local_key(&key) {
+            return Err(AppError::Zotero(
+                "Zotero returned an invalid item collection key".to_owned(),
+            ));
+        }
+        normalized.insert(key);
+    }
+    Ok(normalized.into_iter().collect())
+}
+
+fn updated_collection_keys(
+    current: &[String],
+    added: &[ZoteroMutationCollectionRef],
+    removed: &[ZoteroMutationCollectionRef],
+) -> Vec<String> {
+    let mut collections = current.iter().cloned().collect::<BTreeSet<_>>();
+    for collection in removed {
+        collections.remove(&collection.key);
+    }
+    collections.extend(added.iter().map(|collection| collection.key.clone()));
+    collections.into_iter().collect()
+}
+
+fn ensure_mutation_object_limit(collections: usize, items: usize) -> AppResult<()> {
+    if collections.saturating_add(items) > MAX_MUTATION_OPERATIONS {
+        return Err(AppError::Zotero(
+            "the Zotero plan would change more than 25 objects; narrow the request".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
 fn collection_descends_from(
     candidate: &str,
     ancestor: &str,
@@ -1226,26 +1478,51 @@ fn validate_resolved_plan(state: &AppState, plan: &ZoteroMutationPlan) -> AppRes
                 validate_mutation_text(new_name, "new collection name", MAX_COLLECTION_NAME_BYTES)?;
                 key
             }
-            ZoteroMutationOperation::UpdateItemTags {
+            ZoteroMutationOperation::UpdateItem {
                 key,
                 title,
                 current_tags,
                 add_tags,
                 remove_tags,
+                current_collections,
+                add_collections,
+                remove_collections,
                 ..
             } => {
                 validate_mutation_text(title, "item title", 4_096)?;
                 validate_tags(current_tags.clone())?;
                 validate_tags(add_tags.clone())?;
                 validate_tags(remove_tags.clone())?;
-                if add_tags.is_empty() && remove_tags.is_empty() {
+                let normalized_current_collections =
+                    normalized_collection_keys(current_collections.clone())?;
+                if normalized_current_collections.as_slice() != current_collections.as_slice() {
                     return Err(AppError::Zotero(
-                        "a tag operation must add or remove at least one tag".to_owned(),
+                        "invalid current Zotero item collections".to_owned(),
+                    ));
+                }
+                let added_collection_keys = validate_collection_ref_list(add_collections)?;
+                let removed_collection_keys = validate_collection_ref_list(remove_collections)?;
+                if add_tags.is_empty()
+                    && remove_tags.is_empty()
+                    && add_collections.is_empty()
+                    && remove_collections.is_empty()
+                {
+                    return Err(AppError::Zotero(
+                        "an item operation must change tags or collection membership".to_owned(),
                     ));
                 }
                 if add_tags.iter().any(|tag| remove_tags.contains(tag)) {
                     return Err(AppError::Zotero(
                         "the same tag cannot be added and removed in one operation".to_owned(),
+                    ));
+                }
+                if added_collection_keys
+                    .iter()
+                    .any(|key| removed_collection_keys.contains(key))
+                {
+                    return Err(AppError::Zotero(
+                        "the same collection cannot be added and removed in one operation"
+                            .to_owned(),
                     ));
                 }
                 key
@@ -1269,6 +1546,38 @@ fn validate_parent_key(
         .as_ref()
         .is_some_and(|key| !current.contains_key(key) && !planned.contains(key))
     {
+        return Err(stale_plan_error());
+    }
+    Ok(())
+}
+
+fn validate_collection_ref_list(
+    collections: &[ZoteroMutationCollectionRef],
+) -> AppResult<HashSet<String>> {
+    if collections.len() > MAX_MUTATION_OPERATIONS {
+        return Err(AppError::Zotero(
+            "an item operation references too many collections".to_owned(),
+        ));
+    }
+    let mut keys = HashSet::new();
+    for collection in collections {
+        if !valid_local_key(&collection.key)
+            || !keys.insert(collection.key.clone())
+            || validate_mutation_text(&collection.path, "collection path", 2_048).is_err()
+        {
+            return Err(AppError::Zotero(
+                "an item operation contains an invalid collection reference".to_owned(),
+            ));
+        }
+    }
+    Ok(keys)
+}
+
+fn validate_item_collection_ref(
+    collection: &ZoteroMutationCollectionRef,
+    known_paths: &HashMap<String, String>,
+) -> AppResult<()> {
+    if known_paths.get(&collection.key) != Some(&collection.path) {
         return Err(stale_plan_error());
     }
     Ok(())
@@ -1973,6 +2282,42 @@ mod tests {
         ]);
         assert!(collection_descends_from("EFGH6789", "ABCD2345", &parents));
         assert!(!collection_descends_from("ABCD2345", "EFGH6789", &parents));
+    }
+
+    #[test]
+    fn item_collection_updates_preserve_unrelated_memberships() {
+        let current = vec!["ABCD2345".to_owned(), "EFGH6789".to_owned()];
+        let added = vec![ZoteroMutationCollectionRef {
+            key: "JKLM2345".to_owned(),
+            path: "Writing / VLA".to_owned(),
+        }];
+        let removed = vec![ZoteroMutationCollectionRef {
+            key: "EFGH6789".to_owned(),
+            path: "Reading Queue".to_owned(),
+        }];
+
+        assert_eq!(
+            updated_collection_keys(&current, &added, &removed),
+            vec!["ABCD2345".to_owned(), "JKLM2345".to_owned()]
+        );
+    }
+
+    #[test]
+    fn collection_reference_resolution_supports_nested_paths() {
+        let inventory = build_collection_inventory(&[
+            local_collection("ABCD2345", 1, "Writing", None),
+            local_collection("EFGH6789", 2, "VLA", Some("ABCD2345")),
+        ])
+        .unwrap();
+        let resolved = resolve_mutation_collection_refs(
+            &inventory,
+            vec!["Writing / VLA".to_owned(), "Writing / VLA".to_owned()],
+        )
+        .unwrap();
+
+        assert_eq!(resolved.len(), 1);
+        assert_eq!(resolved[0].key, "EFGH6789");
+        assert_eq!(resolved[0].path, "Writing / VLA");
     }
 
     #[test]

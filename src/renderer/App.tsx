@@ -32,6 +32,7 @@ import { useSessionRestore } from './hooks/useSessionRestore'
 import { useIpcListeners } from './hooks/useIpcListeners'
 import { useExternalFileReload } from './hooks/useExternalFileReload'
 import ExternalChangeBanner from './components/ExternalChangeBanner'
+import { CrashRecoveryDialog } from './components/CrashRecoveryDialog'
 import { useGitAutoRefresh } from './hooks/useGitAutoRefresh'
 import { useBibAutoLoad } from './hooks/useBibAutoLoad'
 import { useLspLifecycle } from './hooks/useLspLifecycle'
@@ -71,6 +72,7 @@ import {
   toCompileRequest
 } from './services/compileCoordinator'
 import { ICON_SIZE } from './components/ui/IconSystem'
+import { installCrashRecoveryAutosnapshot, syncRecoveryForFile } from './services/crashRecovery'
 
 // Lazy-load heavy modals and panels that are rarely shown
 const SettingsModal = lazy(() =>
@@ -104,6 +106,8 @@ function App() {
   useEffect(() => {
     runtimePerformance.recordShellInteractive()
   }, [])
+
+  useEffect(() => installCrashRecoveryAutosnapshot(), [])
 
   // Only subscribe to state needed for rendering
   const splitRatio = usePdfStore((s) => s.splitRatio)
@@ -180,6 +184,7 @@ function App() {
     try {
       await window.api.saveFile(snapshot.text, editorState.filePath)
       useEditorStore.getState().markDocumentSaved(editorState.filePath, snapshot.revision)
+      await syncRecoveryForFile(editorState.filePath).catch(() => undefined)
     } catch (err) {
       logError('App:preSave', err)
     }
@@ -650,6 +655,7 @@ function App() {
       )}
       <LogPanel />
       <BibliographyRegistrationDialog />
+      <CrashRecoveryDialog enabled={sessionRestored} />
       {showStatusBar && <StatusBar />}
       {capabilities.templates && isTemplateGalleryOpen && (
         <Suspense

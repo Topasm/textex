@@ -83,10 +83,14 @@ function zoteroOperationLabel(operation: ZoteroMutationOperation): string {
       return `Move “${operation.path}” to ${operation.parentLabel}`
     case 'renameCollection':
       return `Rename “${operation.path}” to “${operation.newName}”`
-    case 'updateItemTags': {
+    case 'updateItem': {
       const changes = [
         operation.addTags.length > 0 && `add ${operation.addTags.join(', ')}`,
-        operation.removeTags.length > 0 && `remove ${operation.removeTags.join(', ')}`
+        operation.removeTags.length > 0 && `remove ${operation.removeTags.join(', ')}`,
+        operation.addCollections.length > 0 &&
+          `add to ${operation.addCollections.map((collection) => collection.path).join(', ')}`,
+        operation.removeCollections.length > 0 &&
+          `remove from ${operation.removeCollections.map((collection) => collection.path).join(', ')}`
       ]
         .filter(Boolean)
         .join('; ')

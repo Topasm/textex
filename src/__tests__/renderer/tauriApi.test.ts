@@ -502,6 +502,38 @@ describe('Tauri DesktopApi adapter', () => {
     })
   })
 
+  it('maps Tectonic cache inspection and reset to pathless native commands', async () => {
+    const status = {
+      seed: {
+        path: '/resources/tectonic-cache',
+        fileCount: 0,
+        totalBytes: 0,
+        ready: false,
+        integrity: 'empty',
+        seedVersion: 'empty-v1',
+        detail: 'empty'
+      },
+      cache: {
+        path: '/cache/tectonic',
+        fileCount: 0,
+        totalBytes: 0,
+        ready: false,
+        integrity: 'empty',
+        installedSeedVersion: null,
+        detail: 'empty'
+      },
+      cacheUsable: false,
+      networkFallback: true
+    }
+    invokeMock.mockResolvedValue(status)
+
+    const api = createTauriApi()
+    await expect(api.tectonicCacheStatus()).resolves.toEqual(status)
+    await expect(api.tectonicCacheReset()).resolves.toEqual(status)
+
+    expect(invokeMock.mock.calls).toEqual([['tectonic_cache_status'], ['tectonic_cache_reset']])
+  })
+
   it('streams directory changes through one watcher channel', async () => {
     const listener = vi.fn()
     let watcherChannel: { onmessage(message: unknown): void } | undefined
@@ -1035,6 +1067,38 @@ describe('Tauri DesktopApi adapter', () => {
       ['save_history_snapshot', { filePath: '/project/main.tex', content: 'current' }],
       ['get_history_list', { filePath: '/project/main.tex' }],
       ['load_history_snapshot', { filePath: '/project/main.tex', snapshotPath: item.path }]
+    ])
+  })
+
+  it('maps crash recovery snapshots to the app-local native store', async () => {
+    const item = {
+      id: 'a'.repeat(64),
+      filePath: '/project/main.tex',
+      capturedAtEpochMs: 123,
+      size: 5,
+      diskState: 'modified' as const
+    }
+    const snapshot = { item, content: 'draft', diskContent: 'disk' }
+    invokeMock
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce([item])
+      .mockResolvedValueOnce(snapshot)
+      .mockResolvedValueOnce(undefined)
+      .mockResolvedValueOnce(undefined)
+
+    const api = createTauriApi()
+    await api.saveRecoverySnapshot(item.filePath, snapshot.content)
+    await expect(api.listRecoverySnapshots()).resolves.toEqual([item])
+    await expect(api.loadRecoverySnapshot(item.id)).resolves.toEqual(snapshot)
+    await api.discardRecoverySnapshot(item.id)
+    await api.clearRecoverySnapshot(item.filePath)
+
+    expect(invokeMock.mock.calls).toEqual([
+      ['save_recovery_snapshot', { filePath: item.filePath, content: snapshot.content }],
+      ['list_recovery_snapshots'],
+      ['load_recovery_snapshot', { id: item.id }],
+      ['discard_recovery_snapshot', { id: item.id }],
+      ['clear_recovery_snapshot', { filePath: item.filePath }]
     ])
   })
 

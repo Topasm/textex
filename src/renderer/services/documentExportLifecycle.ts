@@ -3,6 +3,7 @@ import { useEditorStore } from '../store/useEditorStore'
 import { useNotificationStore } from '../store/useNotificationStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { useUiStore } from '../store/useUiStore'
+import { syncRecoveryForFile } from './crashRecovery'
 import { errorMessage } from '../utils/errorMessage'
 import { documentRegistry, normalizeDocumentId } from '../models/documentRegistry'
 import type { DocumentSnapshot } from '../models/documentModel'
@@ -207,6 +208,7 @@ export function exportDocumentWithFeedback(
       useEditorStore
         .getState()
         .markDocumentSaved(exportRequest.inputPath, exportRequest.snapshot.revision)
+      await syncRecoveryForFile(exportRequest.inputPath).catch(() => undefined)
       if (!isRequestCurrent(exportRequest)) {
         clearStaleFeedback(exportRequest)
         return 'stale'

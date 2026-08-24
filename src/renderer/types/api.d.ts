@@ -41,6 +41,8 @@ import {
   ResearchSourceGitResult,
   ResearchSourceSearchResult,
   HistoryItem,
+  RecoveryItem,
+  RecoverySnapshot,
   SectionNode,
   ProjectDatabase,
   CompileDatabase,
@@ -49,7 +51,8 @@ import {
   ProjectBookmark,
   AppUpdateActionResult,
   AppUpdateCheckResult,
-  AppUpdateDownloadProgress
+  AppUpdateDownloadProgress,
+  TectonicCacheStatus
 } from '../../shared/types'
 import { Template } from '../../shared/templates'
 import type { PerformanceMemorySample, RuntimePerformanceReport } from '../../shared/performance'
@@ -122,6 +125,8 @@ export interface DesktopApi {
   // Compilation
   compile(request: CompileRequest): Promise<CompileResponse>
   cancelCompile(): Promise<boolean>
+  tectonicCacheStatus(): Promise<TectonicCacheStatus>
+  tectonicCacheReset(): Promise<TectonicCacheStatus>
   onCompileLog(cb: (event: CompileLogEvent) => void): void
   removeCompileLogListener(): void
   onDiagnostics(cb: (event: CompileDiagnosticsEvent) => void): void
@@ -284,6 +289,13 @@ export interface DesktopApi {
   saveHistorySnapshot(filePath: string, content: string): Promise<void>
   getHistoryList(filePath: string): Promise<HistoryItem[]>
   loadHistorySnapshot(filePath: string, snapshotPath: string): Promise<string>
+
+  // Unsaved document crash recovery (native app-local data)
+  saveRecoverySnapshot(filePath: string, content: string): Promise<void>
+  listRecoverySnapshots(): Promise<RecoveryItem[]>
+  loadRecoverySnapshot(id: string): Promise<RecoverySnapshot>
+  discardRecoverySnapshot(id: string): Promise<void>
+  clearRecoverySnapshot(filePath: string): Promise<void>
 
   // Templates
   listTemplates(): Promise<Template[]>

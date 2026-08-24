@@ -1,5 +1,6 @@
 import { documentRegistry } from '../models/documentRegistry'
 import { useEditorStore } from '../store/useEditorStore'
+import { clearRecoveryForFile } from './crashRecovery'
 
 function fileName(filePath: string): string {
   return filePath.split(/[\\/]/).pop() || filePath
@@ -18,6 +19,7 @@ export function closeEditorTab(filePath: string): boolean {
     return false
   }
 
+  void clearRecoveryForFile(filePath).catch(() => undefined)
   useEditorStore.getState().closeTab(filePath)
   return true
 }

@@ -82,6 +82,9 @@ pub enum AppError {
     #[error("History operation failed: {0}")]
     History(String),
 
+    #[error("Crash recovery operation failed: {0}")]
+    Recovery(String),
+
     #[error("Project metadata operation failed: {0}")]
     ProjectData(String),
 

@@ -87,6 +87,30 @@
     "localHistory": "Chargement de l’historique local…",
     "tableEditor": "Chargement de l’éditeur de tableaux…"
   },
+  "crashRecovery": {
+    "title": "Récupérer les documents non enregistrés",
+    "description": "TextEx a trouvé des copies différentes des fichiers sur disque. La récupération les ouvre comme modifications non enregistrées.",
+    "documents": "Documents récupérables",
+    "hint": "Comparez les versions, puis récupérez le texte ou supprimez la copie.",
+    "diskVersion": "Sur le disque",
+    "recoveredVersion": "Récupéré",
+    "diskUnavailable": "La version sur disque est absente ou illisible.",
+    "previewTruncated": "Aperçu de comparaison tronqué.",
+    "compare": "Comparer",
+    "hideComparison": "Masquer la comparaison",
+    "recover": "Récupérer",
+    "discard": "Supprimer",
+    "loading": "Chargement…",
+    "replaceDirty": "{{name}} contient d’autres modifications non enregistrées. Les remplacer ?",
+    "discardConfirm": "Supprimer définitivement la copie de récupération de {{name}} ?",
+    "applyFailed": "Le texte récupéré n’a pas pu être appliqué.",
+    "diskState": {
+      "modified": "Différent du disque",
+      "missing": "Fichier absent",
+      "unavailable": "Version disque indisponible",
+      "unchanged": "Déjà identique au disque"
+    }
+  },
   "updateNotification": {
     "regionLabel": "Mise à jour de l’application",
     "checking": "Recherche de mises à jour...",
@@ -288,7 +312,24 @@
       "spellCheckDesc": "Surligner les mots mal orthographiés pendant la saisie",
       "spellLanguage": "Langue",
       "languageServer": "Serveur de langage",
-      "languageServerDesc": "Activer les fonctionnalités avancées comme l'autocomplétion et les diagnostics"
+      "languageServerDesc": "Activer les fonctionnalités avancées comme l'autocomplétion et les diagnostics",
+      "offlineCache": "Cache de compilation hors ligne",
+      "offlineCacheDesc": "Inspecter l'amorce Tectonic fournie et le cache inscriptible des fichiers de support.",
+      "cacheLoading": "Vérification de l'intégrité du cache…",
+      "cacheResetting": "Réinitialisation et reconstruction du cache…",
+      "cacheError": "Échec de l'opération de cache : {{error}}",
+      "emptySeedWarning": "Cette version ne contient aucun fichier de support fourni. La première compilation peut nécessiter le réseau jusqu'à la mise en cache des fichiers requis.",
+      "packagedSeed": "Amorce fournie",
+      "writableCache": "Cache inscriptible",
+      "cacheStats": "{{files}} fichiers · {{bytes}}",
+      "cacheReady": "prêt",
+      "cacheNotReady": "non prêt",
+      "cacheFilesAvailable": "fichiers de support présents",
+      "cacheFilesUnavailable": "aucun fichier de support utilisable",
+      "networkFallback": "Le recours au réseau reste activé pour les fichiers de support absents du cache.",
+      "cacheRecheck": "Revérifier",
+      "cacheReset": "Réinitialiser et reconstruire",
+      "cacheResetConfirm": "Réinitialiser le cache Tectonic inscriptible ? Les fichiers de support téléchargés seront supprimés et une amorce fournie vérifiée sera réinstallée si elle est disponible."
     }
   },
   "gitPanel": {

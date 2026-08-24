@@ -5,7 +5,7 @@
 [![Build Status](https://github.com/Topasm/textex/actions/workflows/build.yml/badge.svg)](https://github.com/Topasm/textex/actions/workflows/build.yml)
 [![Release](https://img.shields.io/github/v/release/Topasm/textex?include_prereleases&label=latest)](https://github.com/Topasm/textex/releases/latest)
 
-**무료**, **로컬 우선** Tauri 데스크톱 LaTeX 에디터입니다. TextEx는 전적으로 사용자의 컴퓨터에서 실행되며 — 계정도, 클라우드도, 인터넷도 필요 없습니다. 왼쪽에는 Monaco 코드 에디터, 오른쪽에는 실시간 PDF 미리보기를 제공하는 분할 화면 인터페이스를 갖추고 있으며, [Tectonic](https://tectonic-typesetting.github.io/) 엔진이 내장되어 있어 TeX Live나 MiKTeX 같은 별도의 TeX 배포판을 설치할 필요가 **없습니다**.
+**무료**, **로컬 우선** Tauri 데스크톱 LaTeX 에디터입니다. TextEx는 계정이나 클라우드 서비스 없이 사용자의 컴퓨터에서 실행됩니다. 왼쪽에는 Monaco 코드 에디터, 오른쪽에는 실시간 PDF 미리보기를 제공하는 분할 화면 인터페이스를 갖추고 있으며, [Tectonic](https://tectonic-typesetting.github.io/) 엔진이 내장되어 있어 TeX Live나 MiKTeX 같은 별도의 TeX 배포판을 설치할 필요가 **없습니다**. 지원 파일 seed가 비어 있는 빌드는 첫 컴파일에 네트워크를 사용할 수 있으며, 필요한 파일이 캐시된 뒤에는 오프라인 컴파일이 가능합니다.
 
 <p align="center">
   <img src="docs/images/main-editor.png" alt="TextEx — 실시간 PDF 미리보기를 갖춘 분할 화면 LaTeX 에디터" width="900" />
@@ -15,7 +15,7 @@
 
 | 기능 | 설명 |
 |------|------|
-| **무료 & 로컬 우선** | 계정 불필요, 클라우드 불필요, 인터넷 불필요 — 문서는 사용자의 컴퓨터에 보관됩니다 |
+| **무료 & 로컬 우선** | 계정과 클라우드 없이 문서는 로컬에 보관되며, 최초 TeX 지원 파일은 다운로드될 수 있습니다 |
 | **설치 불필요** | Tectonic 엔진 내장 — TeX 설치 불필요 |
 | **실시간 PDF 미리보기** | 저장 시 자동 컴파일 및 분할 화면 미리보기 |
 | **스크롤 동기화** | 에디터와 PDF 간 양방향 스크롤 동기화 |

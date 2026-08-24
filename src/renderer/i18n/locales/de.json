@@ -87,6 +87,30 @@
     "localHistory": "Lokaler Verlauf wird geladen…",
     "tableEditor": "Tabelleneditor wird geladen…"
   },
+  "crashRecovery": {
+    "title": "Ungespeicherte Dokumente wiederherstellen",
+    "description": "TextEx hat Wiederherstellungen gefunden, die von den Dateien auf dem Datenträger abweichen. Sie werden als ungespeicherte Änderungen geöffnet.",
+    "documents": "Wiederherstellbare Dokumente",
+    "hint": "Vergleichen Sie beide Versionen und stellen Sie den Text wieder her oder verwerfen Sie ihn.",
+    "diskVersion": "Auf Datenträger",
+    "recoveredVersion": "Wiederhergestellt",
+    "diskUnavailable": "Die Datenträgerversion fehlt oder kann nicht gelesen werden.",
+    "previewTruncated": "Vergleichsvorschau gekürzt.",
+    "compare": "Vergleichen",
+    "hideComparison": "Vergleich ausblenden",
+    "recover": "Wiederherstellen",
+    "discard": "Verwerfen",
+    "loading": "Wird geladen…",
+    "replaceDirty": "{{name}} enthält andere ungespeicherte Änderungen. Durch die Wiederherstellung ersetzen?",
+    "discardConfirm": "Wiederherstellung für {{name}} dauerhaft verwerfen?",
+    "applyFailed": "Der wiederhergestellte Text konnte nicht angewendet werden.",
+    "diskState": {
+      "modified": "Abweichend vom Datenträger",
+      "missing": "Datei fehlt",
+      "unavailable": "Datenträger nicht verfügbar",
+      "unchanged": "Entspricht bereits dem Datenträger"
+    }
+  },
   "updateNotification": {
     "regionLabel": "Anwendungsupdate",
     "checking": "Updates werden gesucht...",
@@ -288,7 +312,24 @@
       "spellCheckDesc": "Falsch geschriebene Wörter beim Tippen hervorheben",
       "spellLanguage": "Sprache",
       "languageServer": "Sprachserver",
-      "languageServerDesc": "Erweiterte Funktionen wie Autovervollständigung und Diagnose aktivieren"
+      "languageServerDesc": "Erweiterte Funktionen wie Autovervollständigung und Diagnose aktivieren",
+      "offlineCache": "Offline-Kompilierungscache",
+      "offlineCacheDesc": "Den mitgelieferten Tectonic-Seed und den beschreibbaren Cache für Unterstützungsdateien prüfen.",
+      "cacheLoading": "Cache-Integrität wird geprüft…",
+      "cacheResetting": "Cache wird zurückgesetzt und neu aufgebaut…",
+      "cacheError": "Cache-Vorgang fehlgeschlagen: {{error}}",
+      "emptySeedWarning": "Dieser Build enthält keine mitgelieferten Unterstützungsdateien. Die erste Kompilierung benötigt möglicherweise das Netzwerk, bis die erforderlichen Dateien im Cache liegen.",
+      "packagedSeed": "Mitgelieferter Seed",
+      "writableCache": "Beschreibbarer Cache",
+      "cacheStats": "{{files}} Dateien · {{bytes}}",
+      "cacheReady": "bereit",
+      "cacheNotReady": "nicht bereit",
+      "cacheFilesAvailable": "Unterstützungsdateien vorhanden",
+      "cacheFilesUnavailable": "keine nutzbaren Unterstützungsdateien",
+      "networkFallback": "Der Netzwerk-Fallback bleibt für nicht zwischengespeicherte Unterstützungsdateien aktiviert.",
+      "cacheRecheck": "Erneut prüfen",
+      "cacheReset": "Zurücksetzen & neu aufbauen",
+      "cacheResetConfirm": "Den beschreibbaren Tectonic-Cache zurücksetzen? Heruntergeladene Unterstützungsdateien werden entfernt und ein verifizierter mitgelieferter Seed wird installiert, falls vorhanden."
     }
   },
   "gitPanel": {

@@ -227,6 +227,46 @@ describe('ResearchChatPanel', () => {
     expect(screen.getByText('Cancelled the Zotero changes. Nothing was modified.')).toBeVisible()
   })
 
+  it('previews combined item tags and collection membership changes', async () => {
+    window.api.aiPlanZotero = vi.fn().mockResolvedValue({
+      summary: 'Classify the matching paper.',
+      serverId: 'zotero-server',
+      port: 23_119,
+      projectRoot: '/project',
+      projectEpoch: '1',
+      operations: [
+        {
+          kind: 'updateItem',
+          key: 'ABCD2345',
+          version: 7,
+          title: 'Video Prediction Policy',
+          currentTags: [],
+          addTags: ['video-based'],
+          removeTags: [],
+          currentCollections: ['EFGH6789'],
+          addCollections: [{ key: 'JKLM2345', path: 'Writing / VLA' }],
+          removeCollections: [{ key: 'EFGH6789', path: 'Reading Queue' }]
+        }
+      ]
+    })
+    render(<ResearchChatPanel onAiDraft={vi.fn()} />)
+    fireEvent.change(await screen.findByRole('textbox', { name: 'Research question' }), {
+      target: {
+        value:
+          'Video Prediction Policy를 Writing / VLA 컬렉션에 추가하고 Reading Queue에서 빼고 video-based 태그를 추가해줘'
+      }
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+
+    const preview = await screen.findByLabelText('Zotero change preview')
+    expect(
+      within(preview).getByText(
+        'Video Prediction Policy: add video-based; add to Writing / VLA; remove from Reading Queue'
+      )
+    ).toBeVisible()
+    expect(window.api.zoteroApplyMutationPlan).not.toHaveBeenCalled()
+  })
+
   it('discards an unapproved Zotero preview when the active project changes', async () => {
     window.api.aiPlanZotero = vi.fn().mockResolvedValue({
       summary: 'Create a collection.',

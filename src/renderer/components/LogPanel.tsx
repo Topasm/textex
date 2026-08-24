@@ -2,8 +2,8 @@ import React, { useEffect, useRef, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronDown, ChevronRight, CircleX, Info, TriangleAlert } from 'lucide-react'
 import { useCompileStore } from '../store/useCompileStore'
-import { useEditorStore } from '../store/useEditorStore'
 import type { Diagnostic, DiagnosticSeverity } from '../../shared/types'
+import { navigateToDiagnostic } from '../services/diagnosticNavigation'
 import { ICON_SIZE } from './ui/IconSystem'
 
 type SeverityFilter = 'error' | 'warning' | 'info'
@@ -43,8 +43,8 @@ function LogPanel() {
 
   if (!isLogPanelOpen) return null
 
-  const handleEntryClick = (line: number, column?: number): void => {
-    useEditorStore.getState().requestJumpToLine(line, column ?? 1)
+  const handleEntryClick = (diagnostic: Diagnostic): void => {
+    void navigateToDiagnostic(diagnostic)
   }
 
   const severityIcon = (severity: DiagnosticSeverity): React.ReactNode => {
@@ -143,7 +143,7 @@ interface StructuredProblemsProps {
   infoCount: number
   onToggleFilter: (severity: SeverityFilter) => void
   onToggleFile: (file: string) => void
-  onEntryClick: (line: number, column?: number) => void
+  onEntryClick: (diagnostic: Diagnostic) => void
   severityIcon: (severity: DiagnosticSeverity) => React.ReactNode
   listRef: React.RefObject<HTMLDivElement | null>
 }
@@ -251,7 +251,7 @@ const StructuredProblems = React.memo(function StructuredProblems({
                   <div
                     key={i}
                     className={`log-entry log-entry-${d.severity}`}
-                    onClick={() => onEntryClick(d.line, d.column)}
+                    onClick={() => onEntryClick(d)}
                   >
                     <span className="log-entry-icon">{severityIcon(d.severity)}</span>
                     <span className="log-entry-location">

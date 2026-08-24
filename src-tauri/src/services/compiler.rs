@@ -62,8 +62,11 @@ pub async fn compile_latex(
     let tex_path = resolve_magic_root(state, &selected_tex_path).await?;
     let display_tex_path = path_to_string(&tex_path)?;
     let tectonic_path = resolve_tectonic_executable(app)?;
-    let prepared_cache = tectonic_cache::prepare(app).await?;
-    let cache_dir = prepared_cache.path;
+    let tectonic_cache::PreparedCache {
+        path: cache_dir,
+        status: cache_status,
+        lease: cache_lease,
+    } = tectonic_cache::prepare(app).await?;
     let mut lease = state.begin_compilation(&request, project_epoch).await?;
     if project_epoch_tracker.load(Ordering::Acquire) != project_epoch {
         return Err(AppError::CompilationCancelled);
@@ -71,7 +74,7 @@ pub async fn compile_latex(
 
     let _ = on_event.send(CompileEvent::Log {
         identity: identity.clone(),
-        text: prepared_cache.status,
+        text: cache_status,
     });
 
     send_progress(
@@ -129,6 +132,9 @@ pub async fn compile_latex(
         ),
     }
 
+    // The cache may be reset only after the child has exited and all compile
+    // result handling above has finished.
+    drop(cache_lease);
     result.map(|pdf_path| CompileResponse {
         identity,
         pdf_path,

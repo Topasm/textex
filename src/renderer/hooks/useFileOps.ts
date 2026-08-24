@@ -6,6 +6,7 @@ import { formatLatex } from '../utils/formatter'
 import { isCurrentProjectTransitionSnapshot, openProject } from '../utils/openProject'
 import { errorMessage } from '../utils/errorMessage'
 import { documentRegistry } from '../models/documentRegistry'
+import { clearRecoveryForFile, syncRecoveryForFile } from '../services/crashRecovery'
 
 interface FileOps {
   handleOpen: () => Promise<void>
@@ -72,6 +73,7 @@ export function useFileOps(): FileOps {
     try {
       await window.api.saveFile(snapshotToSave.text, filePath)
       useEditorStore.getState().markDocumentSaved(filePath, snapshotToSave.revision)
+      await syncRecoveryForFile(filePath).catch(() => undefined)
     } catch (err: unknown) {
       appendLog(`Save failed: ${errorMessage(err)}`)
       setLogPanelOpen(true)
@@ -88,8 +90,12 @@ export function useFileOps(): FileOps {
     const result = await window.api.saveFileAs(snapshot.text)
     if (result) {
       state.openFileInTab(result.filePath, snapshot.text)
-      if (result.filePath !== filePath) state.closeTab(filePath)
+      if (result.filePath !== filePath) {
+        await clearRecoveryForFile(filePath).catch(() => undefined)
+        state.closeTab(filePath)
+      }
       state.markDocumentSaved(result.filePath)
+      await syncRecoveryForFile(result.filePath).catch(() => undefined)
     }
   }, [])
 

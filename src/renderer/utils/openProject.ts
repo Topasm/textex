@@ -15,6 +15,7 @@ import {
 } from '../services/researchProfileDraft'
 import type { DirectoryEntry } from '../../shared/types'
 import { projectPathKey } from '../services/projectIndex'
+import { discardRecoveryForFiles } from '../services/crashRecovery'
 
 interface OpenProjectOptions {
   autoOpenFirstTex?: boolean
@@ -208,7 +209,12 @@ async function reconcileFailedNativeTransition(requestGeneration: number): Promi
  * renderer work remains valid until native deactivation actually commits.
  */
 export async function deactivateProject(): Promise<boolean> {
+  const discardedDocumentPaths = documentRegistry.dirtySnapshots().map(({ filePath }) => filePath)
   if (!confirmProjectTransition()) return false
+
+  // The user explicitly chose to discard these changes. Clear their durable
+  // recovery copies before native project authority is released.
+  await discardRecoveryForFiles(discardedDocumentPaths)
 
   const requestGeneration = ++projectTransitionRequestGeneration
   let deactivated: boolean
@@ -238,7 +244,9 @@ export async function openProject(
   dirPath: string,
   options: OpenProjectOptions = {}
 ): Promise<ProjectTransitionSnapshot | null> {
+  const discardedDocumentPaths = documentRegistry.dirtySnapshots().map(({ filePath }) => filePath)
   if (!confirmProjectTransition()) return null
+  await discardRecoveryForFiles(discardedDocumentPaths)
 
   const { autoOpenFirstTex = true, deferProjectEnrichment = false } = options
   const requestGeneration = ++projectTransitionRequestGeneration

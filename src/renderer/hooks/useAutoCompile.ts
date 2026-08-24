@@ -15,6 +15,7 @@ import {
   onPendingAutoCompileCancellation,
   toCompileRequest
 } from '../services/compileCoordinator'
+import { syncRecoveryForFiles } from '../services/crashRecovery'
 
 export function useAutoCompile(): void {
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -64,6 +65,7 @@ export function useAutoCompile(): void {
             for (const { filePath, snapshot } of dirtyDocuments) {
               useEditorStore.getState().markDocumentSaved(filePath, snapshot.revision)
             }
+            await syncRecoveryForFiles(dirtyDocuments.map(({ filePath }) => filePath))
           } catch (err: unknown) {
             if (!isCurrentRun()) return
             appendLog(`Save failed, skipping compile: ${errorMessage(err)}`)

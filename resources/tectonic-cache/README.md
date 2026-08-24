@@ -22,6 +22,10 @@ Verify the tracked staging area without network access with:
 npm run check:tectonic-cache-seed
 ```
 
+The checked-in manifest is currently empty. Settings reports that fact rather
+than claiming full offline readiness, and first compile may download required
+support files into the user's writable cache.
+
 Do not copy a developer's full cache into this directory. Review the generated
 manifest, package-size change, file licenses, and first-compile fixtures before
 committing an actual seed.

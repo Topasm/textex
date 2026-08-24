@@ -12,6 +12,7 @@ use services::package_data::PackageDataState;
 use services::project_data::ProjectDataState;
 use services::project_index::ProjectIndexState;
 use services::pty::PtyState;
+use services::recovery::RecoveryState;
 use services::references::ReferenceIndexState;
 use services::research::ResearchState;
 use services::research_source::ResearchSourceState;
@@ -129,6 +130,7 @@ pub fn run() {
         .manage(SettingsState::default())
         .manage(PackageDataState::default())
         .manage(HistoryState::default())
+        .manage(RecoveryState::default())
         .manage(LspState::default())
         .manage(ProjectIndexState::default())
         .manage(PtyState::default())
@@ -183,6 +185,11 @@ pub fn run() {
             commands::history::save_history_snapshot,
             commands::history::get_history_list,
             commands::history::load_history_snapshot,
+            commands::recovery::save_recovery_snapshot,
+            commands::recovery::list_recovery_snapshots,
+            commands::recovery::load_recovery_snapshot,
+            commands::recovery::discard_recovery_snapshot,
+            commands::recovery::clear_recovery_snapshot,
             commands::package_data::load_package_data,
             commands::project_index::get_project_index,
             commands::project_data::project_init,
@@ -258,6 +265,8 @@ pub fn run() {
             commands::settings::update_recent_project,
             commands::compiler::compile_latex,
             commands::compiler::cancel_compile,
+            commands::compiler::tectonic_cache_status,
+            commands::compiler::tectonic_cache_reset,
             commands::synctex::synctex_forward,
             commands::synctex::synctex_inverse,
             commands::synctex::synctex_build_line_map,

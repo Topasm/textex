@@ -87,6 +87,30 @@
     "localHistory": "正在加载本地历史记录…",
     "tableEditor": "正在加载表格编辑器…"
   },
+  "crashRecovery": {
+    "title": "恢复未保存的文档",
+    "description": "TextEx 找到了与磁盘文件不同的恢复副本。恢复只会作为未保存的更改打开，不会自动覆盖磁盘。",
+    "documents": "可恢复文档",
+    "hint": "比较恢复文本和当前磁盘版本，然后恢复到编辑器或丢弃副本。",
+    "diskVersion": "磁盘版本",
+    "recoveredVersion": "恢复版本",
+    "diskUnavailable": "磁盘文件不存在或无法读取。",
+    "previewTruncated": "比较预览已截断。",
+    "compare": "比较",
+    "hideComparison": "隐藏比较",
+    "recover": "恢复",
+    "discard": "丢弃",
+    "loading": "加载中…",
+    "replaceDirty": "{{name}} 还有其他未保存的更改。要用恢复文本替换吗？",
+    "discardConfirm": "永久丢弃 {{name}} 的恢复副本吗？",
+    "applyFailed": "无法将恢复文本应用到编辑器。",
+    "diskState": {
+      "modified": "与磁盘不同",
+      "missing": "磁盘文件不存在",
+      "unavailable": "磁盘版本不可用",
+      "unchanged": "已与磁盘一致"
+    }
+  },
   "updateNotification": {
     "regionLabel": "应用更新",
     "checking": "正在检查更新...",
@@ -288,7 +312,24 @@
       "spellCheckDesc": "输入时高亮显示拼写错误的单词",
       "spellLanguage": "语言",
       "languageServer": "语言服务器",
-      "languageServerDesc": "启用自动补全和诊断等高级功能"
+      "languageServerDesc": "启用自动补全和诊断等高级功能",
+      "offlineCache": "离线编译缓存",
+      "offlineCacheDesc": "检查随应用提供的 Tectonic 种子和可写的支持文件缓存。",
+      "cacheLoading": "正在检查缓存完整性…",
+      "cacheResetting": "正在重置并重建缓存…",
+      "cacheError": "缓存操作失败：{{error}}",
+      "emptySeedWarning": "此版本未包含随应用提供的支持文件。在所需文件缓存完成前，首次编译可能需要网络。",
+      "packagedSeed": "随应用提供的种子",
+      "writableCache": "可写缓存",
+      "cacheStats": "{{files}} 个文件 · {{bytes}}",
+      "cacheReady": "已就绪",
+      "cacheNotReady": "未就绪",
+      "cacheFilesAvailable": "存在支持文件",
+      "cacheFilesUnavailable": "没有可用的支持文件",
+      "networkFallback": "未缓存的支持文件仍可通过网络获取。",
+      "cacheRecheck": "重新检查",
+      "cacheReset": "重置并重建",
+      "cacheResetConfirm": "重置可写的 Tectonic 缓存吗？已下载的支持文件将被删除，并在有可用的已验证种子时重新安装。"
     }
   },
   "gitPanel": {

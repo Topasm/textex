@@ -87,6 +87,30 @@
     "localHistory": "Carregando histórico local…",
     "tableEditor": "Carregando editor de tabelas…"
   },
+  "crashRecovery": {
+    "title": "Recuperar documentos não salvos",
+    "description": "O TextEx encontrou cópias diferentes dos arquivos no disco. A recuperação as abre como alterações não salvas.",
+    "documents": "Documentos recuperáveis",
+    "hint": "Compare as versões e recupere o texto ou descarte a cópia.",
+    "diskVersion": "No disco",
+    "recoveredVersion": "Recuperado",
+    "diskUnavailable": "A versão no disco está ausente ou não pode ser lida.",
+    "previewTruncated": "Prévia de comparação truncada.",
+    "compare": "Comparar",
+    "hideComparison": "Ocultar comparação",
+    "recover": "Recuperar",
+    "discard": "Descartar",
+    "loading": "Carregando…",
+    "replaceDirty": "{{name}} tem outras alterações não salvas. Substituí-las pela recuperação?",
+    "discardConfirm": "Descartar permanentemente a recuperação de {{name}}?",
+    "applyFailed": "Não foi possível aplicar o texto recuperado.",
+    "diskState": {
+      "modified": "Diferente do disco",
+      "missing": "Arquivo ausente",
+      "unavailable": "Versão do disco indisponível",
+      "unchanged": "Já corresponde ao disco"
+    }
+  },
   "updateNotification": {
     "regionLabel": "Atualização do aplicativo",
     "checking": "Verificando atualizações...",
@@ -288,7 +312,24 @@
       "spellCheckDesc": "Destacar palavras com erros ortográficos ao digitar",
       "spellLanguage": "Idioma",
       "languageServer": "Servidor de linguagem",
-      "languageServerDesc": "Ativar recursos avançados como autocompletar e diagnósticos"
+      "languageServerDesc": "Ativar recursos avançados como autocompletar e diagnósticos",
+      "offlineCache": "Cache de compilação offline",
+      "offlineCacheDesc": "Inspecione a semente Tectonic incluída e o cache gravável de arquivos de suporte.",
+      "cacheLoading": "Verificando a integridade do cache…",
+      "cacheResetting": "Redefinindo e reconstruindo o cache…",
+      "cacheError": "Falha na operação de cache: {{error}}",
+      "emptySeedWarning": "Esta compilação não contém arquivos de suporte incluídos. A primeira compilação pode precisar da rede até que os arquivos necessários sejam armazenados.",
+      "packagedSeed": "Semente incluída",
+      "writableCache": "Cache gravável",
+      "cacheStats": "{{files}} arquivos · {{bytes}}",
+      "cacheReady": "pronto",
+      "cacheNotReady": "não pronto",
+      "cacheFilesAvailable": "arquivos de suporte presentes",
+      "cacheFilesUnavailable": "sem arquivos de suporte utilizáveis",
+      "networkFallback": "O acesso alternativo à rede permanece ativado para arquivos de suporte não armazenados.",
+      "cacheRecheck": "Verificar novamente",
+      "cacheReset": "Redefinir e reconstruir",
+      "cacheResetConfirm": "Redefinir o cache gravável do Tectonic? Os arquivos de suporte baixados serão removidos e uma semente incluída verificada será reinstalada quando disponível."
     }
   },
   "gitPanel": {

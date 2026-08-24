@@ -87,6 +87,30 @@
     "localHistory": "Cargando historial local…",
     "tableEditor": "Cargando editor de tablas…"
   },
+  "crashRecovery": {
+    "title": "Recuperar documentos sin guardar",
+    "description": "TextEx encontró copias distintas de los archivos del disco. La recuperación las abre como cambios sin guardar.",
+    "documents": "Documentos recuperables",
+    "hint": "Compara ambas versiones y recupera el texto o descarta la copia.",
+    "diskVersion": "En disco",
+    "recoveredVersion": "Recuperado",
+    "diskUnavailable": "La versión del disco no existe o no se puede leer.",
+    "previewTruncated": "Vista de comparación truncada.",
+    "compare": "Comparar",
+    "hideComparison": "Ocultar comparación",
+    "recover": "Recuperar",
+    "discard": "Descartar",
+    "loading": "Cargando…",
+    "replaceDirty": "{{name}} tiene otros cambios sin guardar. ¿Reemplazarlos con la recuperación?",
+    "discardConfirm": "¿Descartar permanentemente la recuperación de {{name}}?",
+    "applyFailed": "No se pudo aplicar el texto recuperado.",
+    "diskState": {
+      "modified": "Distinto del disco",
+      "missing": "Archivo ausente",
+      "unavailable": "Versión del disco no disponible",
+      "unchanged": "Ya coincide con el disco"
+    }
+  },
   "updateNotification": {
     "regionLabel": "Actualización de la aplicación",
     "checking": "Buscando actualizaciones...",
@@ -288,7 +312,24 @@
       "spellCheckDesc": "Resaltar palabras mal escritas al escribir",
       "spellLanguage": "Idioma",
       "languageServer": "Servidor de lenguaje",
-      "languageServerDesc": "Activar funciones avanzadas como autocompletado y diagnósticos"
+      "languageServerDesc": "Activar funciones avanzadas como autocompletado y diagnósticos",
+      "offlineCache": "Caché de compilación sin conexión",
+      "offlineCacheDesc": "Inspecciona la semilla de Tectonic incluida y la caché escribible de archivos de soporte.",
+      "cacheLoading": "Comprobando la integridad de la caché…",
+      "cacheResetting": "Restableciendo y reconstruyendo la caché…",
+      "cacheError": "La operación de caché falló: {{error}}",
+      "emptySeedWarning": "Esta compilación no contiene archivos de soporte incluidos. La primera compilación puede necesitar la red hasta que se guarden los archivos requeridos.",
+      "packagedSeed": "Semilla incluida",
+      "writableCache": "Caché escribible",
+      "cacheStats": "{{files}} archivos · {{bytes}}",
+      "cacheReady": "lista",
+      "cacheNotReady": "no lista",
+      "cacheFilesAvailable": "archivos de soporte presentes",
+      "cacheFilesUnavailable": "sin archivos de soporte utilizables",
+      "networkFallback": "El acceso alternativo a la red sigue habilitado para archivos de soporte no almacenados.",
+      "cacheRecheck": "Volver a comprobar",
+      "cacheReset": "Restablecer y reconstruir",
+      "cacheResetConfirm": "¿Restablecer la caché escribible de Tectonic? Se eliminarán los archivos de soporte descargados y se reinstalará una semilla incluida verificada cuando esté disponible."
     }
   },
   "gitPanel": {

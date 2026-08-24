@@ -159,6 +159,27 @@ profile을 native settings에 다시 쓰지 않는다.
 도착한 결과를 폐기한다. Git, bibliography, label, recent-project enrichment는 서로 병렬이며
 session restore에서는 active file을 막지 않도록 background에서 완료된다.
 
+## Unsaved Document Crash Recovery
+
+미저장 문서는 document registry의 최신 revision을 기준으로 2초 debounce 후 native recovery
+store에 snapshot한다. WebView가 숨겨질 때는 대기 중인 snapshot을 즉시 요청한다. 문서별 최신
+snapshot 하나만 유지하며, 정상 저장이 완료되고 registry의 saved revision이 갱신된 뒤 문서가
+clean이면 삭제하고 저장 중 더 최신 편집이 생겼다면 그 내용을 다시 snapshot한다. 정상적인 탭
+닫기와 프로젝트 전환에서 사용자가 변경 폐기를 명시한 경우에도 해당 snapshot을 삭제한다.
+복구를 선택하면 내용은 미저장 editor revision으로만 적용되며 source file을 자동으로 덮어쓰지
+않는다.
+
+Native store는 OS의 사용자별 `app_local_data_dir/recovery`에 두고 source document 자체가 아닌
+복구에 필요한 project root, file path, capture time과 content만 기록한다. 각 snapshot content는
+최대 4 MiB, store는 최대 32개 및 32 MiB이고 보존 기간은 30일이다. save/list 시 손상되었거나
+기한 또는 상한을 넘은 항목을 정리한다. Unix에서는 directory를 `0700`, record를 `0600`으로
+생성하고, Windows에서는 사용자별 app-data directory의 ACL을 상속한다.
+
+현재 recovery payload의 별도 at-rest encryption은 지원하지 않는다. 사용할 수 있는 기존
+keychain/DPAPI 기반 document encryption 계층이 없으므로 자체 키를 함께 보관하는 의미 없는
+암호화를 추가하지 않았고, 위의 앱 전용 위치·권한·크기 제한으로 노출과 보유 데이터를 줄인다.
+저장 장치 수준 보호가 필요하면 OS의 full-disk 또는 사용자 홈 encryption을 사용해야 한다.
+
 ## Performance Baseline
 
 renderer build 크기는 Node.js 내장 모듈만 사용하는 다음 command로 반복 측정한다.

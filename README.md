@@ -5,7 +5,7 @@
 [![Build Status](https://github.com/Topasm/textex/actions/workflows/build.yml/badge.svg)](https://github.com/Topasm/textex/actions/workflows/build.yml)
 [![Release](https://img.shields.io/github/v/release/Topasm/textex?include_prereleases&label=latest)](https://github.com/Topasm/textex/releases/latest)
 
-A **free**, **local-first** Tauri desktop LaTeX editor. TextEx runs entirely on your machine — no account, no cloud, no internet required. It provides a split-pane interface with a Monaco code editor on the left and live PDF preview on the right, with a bundled [Tectonic](https://tectonic-typesetting.github.io/) engine so you **do not** need to install TeX Live, MiKTeX, or any other TeX distribution.
+A **free**, **local-first** Tauri desktop LaTeX editor. TextEx runs on your machine with no account or cloud service. It provides a split-pane interface with a Monaco code editor on the left and live PDF preview on the right, with a bundled [Tectonic](https://tectonic-typesetting.github.io/) engine so you **do not** need to install TeX Live, MiKTeX, or any other TeX distribution. Builds that ship an empty support-file seed may use the network on first compile; cached projects can then compile offline.
 
 <p align="center">
   <img src="docs/images/main-editor.png" alt="TextEx — Split-pane LaTeX editor with live PDF preview" width="900" />
@@ -15,7 +15,7 @@ A **free**, **local-first** Tauri desktop LaTeX editor. TextEx runs entirely on 
 
 | Feature | Description |
 |---------|-------------|
-| **Free & Local-First** | No account, no cloud, no internet — your documents stay on your machine |
+| **Free & Local-First** | No account or cloud — your documents stay on your machine; first-time TeX support files may be downloaded |
 | **Zero Setup** | Bundled Tectonic engine — no TeX installation required |
 | **Live PDF Preview** | Auto-compile on save with instant split-pane preview |
 | **Scroll Sync** | Bidirectional scroll synchronization between editor and PDF |

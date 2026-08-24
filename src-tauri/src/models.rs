@@ -429,6 +429,33 @@ pub struct HistoryItem {
     pub path: String,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum RecoveryDiskState {
+    Modified,
+    Missing,
+    Unavailable,
+    Unchanged,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecoveryItem {
+    pub id: String,
+    pub file_path: String,
+    pub captured_at_epoch_ms: u64,
+    pub size: u64,
+    pub disk_state: RecoveryDiskState,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecoverySnapshot {
+    pub item: RecoveryItem,
+    pub content: String,
+    pub disk_content: Option<String>,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectDatabase {
@@ -951,6 +978,13 @@ pub enum ZoteroMutationDraftOperation {
         #[serde(default)]
         remove_tags: Vec<String>,
     },
+    UpdateItemCollections {
+        query: String,
+        #[serde(default)]
+        add_collections: Vec<String>,
+        #[serde(default)]
+        remove_collections: Vec<String>,
+    },
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
@@ -993,14 +1027,24 @@ pub enum ZoteroMutationOperation {
         path: String,
         new_name: String,
     },
-    UpdateItemTags {
+    UpdateItem {
         key: String,
         version: u64,
         title: String,
         current_tags: Vec<String>,
         add_tags: Vec<String>,
         remove_tags: Vec<String>,
+        current_collections: Vec<String>,
+        add_collections: Vec<ZoteroMutationCollectionRef>,
+        remove_collections: Vec<ZoteroMutationCollectionRef>,
     },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZoteroMutationCollectionRef {
+    pub key: String,
+    pub path: String,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]

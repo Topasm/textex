@@ -111,10 +111,15 @@ npm run check:tectonic-cache-seed
 The script rejects symlinks, path escapes, oversized files and caches, and
 source/output overlap. It sorts paths, records every byte count and SHA-256,
 and atomically replaces only generated `resources/tectonic-cache/files` and
-`manifest.json`. It never downloads support files. On first compile the Rust
-service verifies the same limits and hashes, installs into a staged sibling
-directory, and atomically activates it. A missing, empty, or rejected seed is
-reported in compile logs and leaves network fallback enabled.
+`manifest.json`. It never downloads support files. Record and review the local
+snapshot's provenance, redistribution terms, manifest, and package-size delta;
+do not use a developer's unreviewed full cache as release input. On first
+compile the Rust service verifies the same limits and hashes, installs into a
+staged sibling directory, and atomically activates it. A missing, empty, or rejected seed is
+reported in compile logs and leaves network fallback enabled. Settings also
+shows the packaged seed and writable cache paths, counts, sizes, readiness, and
+integrity, and explicitly warns when the packaged seed is empty. Its reset
+action removes only the writable app cache and reinstalls a verified seed.
 
 ## Release metadata
 

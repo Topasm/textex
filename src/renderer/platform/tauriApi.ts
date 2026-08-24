@@ -305,6 +305,21 @@ const getHistoryList: DesktopApi['getHistoryList'] = (filePath) =>
 const loadHistorySnapshot: DesktopApi['loadHistorySnapshot'] = (filePath, snapshotPath) =>
   invoke(TAURI_COMMANDS.loadHistorySnapshot, { filePath, snapshotPath })
 
+const saveRecoverySnapshot: DesktopApi['saveRecoverySnapshot'] = (filePath, content) =>
+  invoke(TAURI_COMMANDS.saveRecoverySnapshot, { filePath, content })
+
+const listRecoverySnapshots: DesktopApi['listRecoverySnapshots'] = () =>
+  invoke(TAURI_COMMANDS.listRecoverySnapshots)
+
+const loadRecoverySnapshot: DesktopApi['loadRecoverySnapshot'] = (id) =>
+  invoke(TAURI_COMMANDS.loadRecoverySnapshot, { id })
+
+const discardRecoverySnapshot: DesktopApi['discardRecoverySnapshot'] = (id) =>
+  invoke(TAURI_COMMANDS.discardRecoverySnapshot, { id })
+
+const clearRecoverySnapshot: DesktopApi['clearRecoverySnapshot'] = (filePath) =>
+  invoke(TAURI_COMMANDS.clearRecoverySnapshot, { filePath })
+
 const loadPackageData: DesktopApi['loadPackageData'] = (packageNames) =>
   invoke(TAURI_COMMANDS.loadPackageData, { packageNames })
 
@@ -512,6 +527,12 @@ const compile: DesktopApi['compile'] = (request: CompileRequest) => {
 
 const cancelCompile: DesktopApi['cancelCompile'] = () =>
   invoke<boolean>(TAURI_COMMANDS.cancelCompile)
+
+const tectonicCacheStatus: DesktopApi['tectonicCacheStatus'] = () =>
+  invoke(TAURI_COMMANDS.tectonicCacheStatus)
+
+const tectonicCacheReset: DesktopApi['tectonicCacheReset'] = () =>
+  invoke(TAURI_COMMANDS.tectonicCacheReset)
 
 const synctexForward: DesktopApi['synctexForward'] = (texFile, line) =>
   invoke<SyncTeXForwardResult | null>(TAURI_COMMANDS.synctexForward, { texFile, line })
@@ -826,6 +847,11 @@ const tauriDesktopApi = {
   saveHistorySnapshot,
   getHistoryList,
   loadHistorySnapshot,
+  saveRecoverySnapshot,
+  listRecoverySnapshots,
+  loadRecoverySnapshot,
+  discardRecoverySnapshot,
+  clearRecoverySnapshot,
   loadPackageData,
   getDocumentOutline,
   watchDirectory,
@@ -888,6 +914,8 @@ const tauriDesktopApi = {
   researchSourceFetch,
   compile,
   cancelCompile,
+  tectonicCacheStatus,
+  tectonicCacheReset,
   onCompileLog,
   removeCompileLogListener,
   onDiagnostics,

@@ -87,6 +87,30 @@
     "localHistory": "로컬 기록을 불러오는 중…",
     "tableEditor": "표 편집기를 불러오는 중…"
   },
+  "crashRecovery": {
+    "title": "미저장 문서 복구",
+    "description": "디스크 파일과 다른 편집기 복구본을 찾았습니다. 복구해도 디스크를 자동으로 덮어쓰지 않고 미저장 변경으로 엽니다.",
+    "documents": "복구 가능한 문서",
+    "hint": "현재 디스크 버전과 복구본을 비교한 뒤 편집기로 복구하거나 복구본을 버리세요.",
+    "diskVersion": "디스크 버전",
+    "recoveredVersion": "복구본",
+    "diskUnavailable": "디스크 파일이 없거나 읽을 수 없습니다.",
+    "previewTruncated": "비교 미리보기가 일부 생략되었습니다.",
+    "compare": "비교",
+    "hideComparison": "비교 닫기",
+    "recover": "복구",
+    "discard": "버리기",
+    "loading": "불러오는 중…",
+    "replaceDirty": "{{name}}에 다른 미저장 변경이 있습니다. 복구본으로 교체할까요?",
+    "discardConfirm": "{{name}}의 복구본을 영구적으로 버릴까요?",
+    "applyFailed": "복구본을 편집기에 적용하지 못했습니다.",
+    "diskState": {
+      "modified": "디스크와 다름",
+      "missing": "디스크 파일 없음",
+      "unavailable": "디스크 버전 확인 불가",
+      "unchanged": "이미 디스크와 같음"
+    }
+  },
   "updateNotification": {
     "regionLabel": "애플리케이션 업데이트",
     "checking": "업데이트를 확인하는 중...",
@@ -288,7 +312,24 @@
       "spellCheckDesc": "입력 중 맞춤법이 틀린 단어 강조",
       "spellLanguage": "언어",
       "languageServer": "언어 서버",
-      "languageServerDesc": "자동 완성 및 진단과 같은 고급 기능 활성화"
+      "languageServerDesc": "자동 완성 및 진단과 같은 고급 기능 활성화",
+      "offlineCache": "오프라인 컴파일 캐시",
+      "offlineCacheDesc": "배포된 Tectonic seed와 쓰기 가능한 지원 파일 캐시를 검사합니다.",
+      "cacheLoading": "캐시 무결성을 검사하는 중…",
+      "cacheResetting": "캐시를 초기화하고 다시 구성하는 중…",
+      "cacheError": "캐시 작업 실패: {{error}}",
+      "emptySeedWarning": "이 빌드에는 배포된 지원 파일이 없습니다. 필요한 파일이 캐시에 저장될 때까지 첫 컴파일에 네트워크가 필요할 수 있습니다.",
+      "packagedSeed": "배포 seed",
+      "writableCache": "사용 캐시",
+      "cacheStats": "파일 {{files}}개 · {{bytes}}",
+      "cacheReady": "준비됨",
+      "cacheNotReady": "준비되지 않음",
+      "cacheFilesAvailable": "지원 파일 있음",
+      "cacheFilesUnavailable": "사용 가능한 지원 파일 없음",
+      "networkFallback": "캐시에 없는 지원 파일에는 네트워크 대체 경로가 계속 사용됩니다.",
+      "cacheRecheck": "다시 검사",
+      "cacheReset": "초기화 및 재구성",
+      "cacheResetConfirm": "쓰기 가능한 Tectonic 캐시를 초기화할까요? 다운로드한 지원 파일이 제거되며, 검증된 배포 seed가 있으면 다시 설치됩니다."
     }
   },
   "gitPanel": {

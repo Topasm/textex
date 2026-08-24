@@ -200,4 +200,34 @@ describe('useFileOps', () => {
     expect(window.api.saveFile).toHaveBeenCalledTimes(1)
     expect(window.api.saveFile).toHaveBeenCalledWith('latest formatted', filePath)
   })
+
+  it('keeps a newer edit recoverable when it races with a completed save', async () => {
+    let resolveSave: ((result: { success: boolean }) => void) | undefined
+    vi.mocked(window.api.saveFile).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveSave = resolve
+        })
+    )
+    useSettingsStore.setState((state) => ({
+      settings: { ...state.settings, formatOnSave: false }
+    }))
+    const filePath = '/workspace/project/paper.tex'
+    useEditorStore.getState().openFileInTab(filePath, 'disk')
+    useEditorStore.getState().updateActiveDocument('first draft', 'editor')
+    const { result } = renderHook(() => useFileOps())
+
+    const save = result.current.handleSave()
+    await vi.waitFor(() =>
+      expect(window.api.saveFile).toHaveBeenCalledWith('first draft', filePath)
+    )
+    useEditorStore.getState().updateActiveDocument('newer draft', 'editor')
+    resolveSave?.({ success: true })
+    await save
+
+    expect(documentRegistry.snapshot(filePath)?.text).toBe('newer draft')
+    expect(documentRegistry.getModel(filePath)?.isDirty).toBe(true)
+    expect(window.api.saveRecoverySnapshot).toHaveBeenCalledWith(filePath, 'newer draft')
+    expect(window.api.clearRecoverySnapshot).not.toHaveBeenCalled()
+  })
 })

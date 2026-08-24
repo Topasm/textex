@@ -87,6 +87,30 @@
     "localHistory": "Loading local history…",
     "tableEditor": "Loading table editor…"
   },
+  "crashRecovery": {
+    "title": "Recover unsaved documents",
+    "description": "TextEx found editor snapshots that differ from the files on disk. Recovering opens them as unsaved changes and never overwrites disk automatically.",
+    "documents": "Recoverable documents",
+    "hint": "Compare the recovered text with the current disk version, then recover it into the editor or discard the snapshot.",
+    "diskVersion": "On disk",
+    "recoveredVersion": "Recovered",
+    "diskUnavailable": "The disk version is missing or could not be read.",
+    "previewTruncated": "Comparison preview truncated.",
+    "compare": "Compare",
+    "hideComparison": "Hide comparison",
+    "recover": "Recover",
+    "discard": "Discard",
+    "loading": "Loading…",
+    "replaceDirty": "{{name}} now has other unsaved changes. Replace them with the recovered text?",
+    "discardConfirm": "Permanently discard the recovery snapshot for {{name}}?",
+    "applyFailed": "The recovered text could not be applied to the editor.",
+    "diskState": {
+      "modified": "Different from disk",
+      "missing": "File missing on disk",
+      "unavailable": "Disk version unavailable",
+      "unchanged": "Already matches disk"
+    }
+  },
   "updateNotification": {
     "regionLabel": "Application update",
     "checking": "Checking for updates...",
@@ -288,7 +312,24 @@
       "spellCheckDesc": "Highlight misspelled words while typing",
       "spellLanguage": "Language",
       "languageServer": "Language Server",
-      "languageServerDesc": "Enable advanced features like autocompletion and diagnostics"
+      "languageServerDesc": "Enable advanced features like autocompletion and diagnostics",
+      "offlineCache": "Offline compile cache",
+      "offlineCacheDesc": "Inspect the packaged Tectonic seed and the writable support-file cache.",
+      "cacheLoading": "Checking cache integrity…",
+      "cacheResetting": "Resetting and rebuilding the cache…",
+      "cacheError": "Cache operation failed: {{error}}",
+      "emptySeedWarning": "This build contains no packaged support files. The first compile may need the network until required files are cached.",
+      "packagedSeed": "Packaged seed",
+      "writableCache": "Writable cache",
+      "cacheStats": "{{files}} files · {{bytes}}",
+      "cacheReady": "ready",
+      "cacheNotReady": "not ready",
+      "cacheFilesAvailable": "support files present",
+      "cacheFilesUnavailable": "no usable support files",
+      "networkFallback": "Network fallback remains enabled for support files that are not cached.",
+      "cacheRecheck": "Recheck",
+      "cacheReset": "Reset & rebuild",
+      "cacheResetConfirm": "Reset the writable Tectonic cache? Downloaded support files will be removed and a verified packaged seed will be reinstalled when available."
     }
   },
   "gitPanel": {

@@ -69,6 +69,14 @@ provider produces only a draft; native code resolves collection paths and item
 queries against the current Local API library and returns a concrete preview.
 Nothing is written until the user selects **Approve in Zotero**.
 
+Paper classification is handled separately from moving a collection in the
+hierarchy. An `updateItemCollections` draft adds or removes matching papers via
+their item `collections` membership. Tag and collection changes targeting the
+same paper are combined into one versioned item update, so unrelated tags and
+collection memberships are preserved and the operation cannot conflict with
+itself. Nested collection paths are resolved exactly; ambiguous short names
+are rejected.
+
 Approved plans are bounded to 25 objects, tied to the active project epoch and
 Zotero server ID, and revalidated against current object versions immediately
 before writing. Stale, ambiguous, cyclic, destructive, or unsupported plans

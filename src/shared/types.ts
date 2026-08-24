@@ -397,14 +397,22 @@ export type ZoteroMutationOperation =
       newName: string
     }
   | {
-      kind: 'updateItemTags'
+      kind: 'updateItem'
       key: string
       version: number
       title: string
       currentTags: string[]
       addTags: string[]
       removeTags: string[]
+      currentCollections: string[]
+      addCollections: ZoteroMutationCollectionRef[]
+      removeCollections: ZoteroMutationCollectionRef[]
     }
+
+export interface ZoteroMutationCollectionRef {
+  key: string
+  path: string
+}
 
 export interface ZoteroMutationPlan {
   summary: string
@@ -589,6 +597,22 @@ export interface HistoryItem {
   path: string
 }
 
+export type RecoveryDiskState = 'modified' | 'missing' | 'unavailable' | 'unchanged'
+
+export interface RecoveryItem {
+  id: string
+  filePath: string
+  capturedAtEpochMs: number
+  size: number
+  diskState: RecoveryDiskState
+}
+
+export interface RecoverySnapshot {
+  item: RecoveryItem
+  content: string
+  diskContent: string | null
+}
+
 // ---- .textex/ Project Data ----
 
 /** Per-project metadata stored in .textex/project.json */
@@ -641,4 +665,33 @@ export interface ProjectBookmark {
   column: number
   label: string
   created: string
+}
+
+export type TectonicCacheIntegrity = 'missing' | 'empty' | 'verified' | 'unverified' | 'corrupt'
+
+export interface TectonicSeedStatus {
+  path: string
+  fileCount: number
+  totalBytes: number
+  ready: boolean
+  integrity: TectonicCacheIntegrity
+  seedVersion: string | null
+  detail: string
+}
+
+export interface TectonicActiveCacheStatus {
+  path: string
+  fileCount: number
+  totalBytes: number
+  ready: boolean
+  integrity: TectonicCacheIntegrity
+  installedSeedVersion: string | null
+  detail: string
+}
+
+export interface TectonicCacheStatus {
+  seed: TectonicSeedStatus
+  cache: TectonicActiveCacheStatus
+  cacheUsable: boolean
+  networkFallback: boolean
 }

@@ -78,6 +78,8 @@ ErrorBoundary
   and Crossref/arXiv results merge into `references.bib` before citation insertion.
 - Explicit Zotero collection/tag requests in Chat open a bounded change preview with Cancel and
   Approve actions. Planning is read-only; approval invokes the native Local API write path.
+- Paper classification requests can add/remove matching Zotero items from nested collections.
+  A single preview row combines that paper's tag and collection-membership changes.
 
 ### `Toolbar.tsx`
 - Acts as the primary document command surface at the top of the application.

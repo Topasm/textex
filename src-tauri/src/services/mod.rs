@@ -11,6 +11,7 @@ pub mod project_data;
 pub mod project_index;
 pub mod project_session;
 pub mod pty;
+pub mod recovery;
 pub mod references;
 pub mod research;
 pub mod research_chat_session;

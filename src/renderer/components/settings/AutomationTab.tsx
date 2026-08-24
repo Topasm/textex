@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import { Toggle } from './Toggle'
 import { getDesktopCapabilities } from '../../platform/capabilities'
+import { TectonicCacheSettings } from './TectonicCacheSettings'
 
 export const AutomationTab = () => {
   const { t } = useTranslation()
@@ -88,6 +89,8 @@ export const AutomationTab = () => {
           )}
         </div>
       </div>
+      <hr className="settings-divider" />
+      <TectonicCacheSettings />
     </div>
   )
 }
