@@ -107,6 +107,24 @@ test('tagged Windows and Linux packages receive platform verification', () => {
   assert.match(workflow, /test "\$verified" -eq 2/)
 })
 
+test('tagged builds decode the updater public key before Tauri embeds and validates it', () => {
+  assert.match(
+    workflow,
+    /TEXTEX_UPDATER_PUBLIC_KEY_BASE64: \$\{\{ secrets\.TEXTEX_UPDATER_PUBLIC_KEY \}\}/
+  )
+  assert.match(workflow, /node scripts\/prepare-tauri-updater-config\.js/)
+  assert.match(workflow, /TEXTEX_UPDATER_PUBLIC_KEY=\$\(< "\$updater_public_key"\)/)
+})
+
+test('macOS verification and cleanup use valid modern shell syntax', () => {
+  assert.match(workflow, /codesign -d --entitlements - "\$executable"/)
+  assert.doesNotMatch(workflow, /codesign -d --entitlements :-/)
+  assert.match(
+    workflow,
+    /if \[\[ -n "\$\{TEXTEX_MAC_KEYCHAIN:-\}" \]\]; then[\s\S]*security delete-keychain[\s\S]*\n\s+fi/
+  )
+})
+
 test('Linux Minisign installation is version and digest pinned before extraction', () => {
   assert.match(minisignInstaller, /^set -euo pipefail$/m)
   assert.match(minisignInstaller, /^readonly MINISIGN_VERSION=0\.12$/m)
