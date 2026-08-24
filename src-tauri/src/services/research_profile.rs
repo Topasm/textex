@@ -246,16 +246,15 @@ fn validate_resource(resource: &ResearchResource) -> AppResult<()> {
         resource.branch.as_deref(),
         MAX_SHORT_TEXT_BYTES,
     )?;
-    if resource.kind == crate::models::ResearchResourceKind::Git {
-        if resource
+    if resource.kind == crate::models::ResearchResourceKind::Git
+        && resource
             .branch
             .as_deref()
             .is_some_and(|value| !is_valid_git_branch(value))
-        {
-            return Err(profile_error(
-                "Git resource branch contains unsafe characters",
-            ));
-        }
+    {
+        return Err(profile_error(
+            "Git resource branch contains unsafe characters",
+        ));
     }
     let valid_access = match resource.kind {
         crate::models::ResearchResourceKind::Git => matches!(

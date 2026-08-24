@@ -1149,7 +1149,7 @@ fn build_collection_inventory(
             version: collection.version,
         });
     }
-    inventory.sort_by(|left, right| left.path.to_lowercase().cmp(&right.path.to_lowercase()));
+    inventory.sort_by_key(|collection| collection.path.to_lowercase());
     Ok(inventory)
 }
 

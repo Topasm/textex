@@ -161,6 +161,8 @@ pub async fn ai_process_custom(
 }
 
 #[tauri::command]
+// Tauri injects each managed state independently into command handlers.
+#[allow(clippy::too_many_arguments)]
 pub async fn ai_research_chat(
     app: AppHandle,
     ai_state: State<'_, AiState>,
