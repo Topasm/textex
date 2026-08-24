@@ -227,6 +227,39 @@ describe('ResearchChatPanel', () => {
     expect(screen.getByText('Cancelled the Zotero changes. Nothing was modified.')).toBeVisible()
   })
 
+  it('discards an unapproved Zotero preview when the active project changes', async () => {
+    window.api.aiPlanZotero = vi.fn().mockResolvedValue({
+      summary: 'Create a collection.',
+      serverId: 'zotero-server',
+      port: 23_119,
+      projectRoot: '/project',
+      projectEpoch: '1',
+      operations: [
+        {
+          kind: 'createCollection',
+          key: 'ABCD2345',
+          name: 'Writing Projects',
+          path: 'Writing Projects',
+          parentKey: null,
+          parentLabel: 'Library root'
+        }
+      ]
+    })
+    render(<ResearchChatPanel onAiDraft={vi.fn()} />)
+    fireEvent.change(await screen.findByRole('textbox', { name: 'Research question' }), {
+      target: { value: 'Zotero collection을 만들어줘' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    expect(await screen.findByLabelText('Zotero change preview')).toBeVisible()
+
+    act(() => useProjectStore.getState().setProjectRoot('/project-b'))
+
+    await waitFor(() =>
+      expect(screen.queryByLabelText('Zotero change preview')).not.toBeInTheDocument()
+    )
+    expect(window.api.zoteroApplyMutationPlan).not.toHaveBeenCalled()
+  })
+
   it('routes only mutation-shaped Zotero requests to the planner', () => {
     expect(isLikelyZoteroMutation('Zotero 컬렉션을 만들어줘')).toBe(true)
     expect(isLikelyZoteroMutation('이 논문의 Zotero 태그를 추가해줘')).toBe(true)

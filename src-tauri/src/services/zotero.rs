@@ -640,6 +640,20 @@ pub async fn apply_mutation_plan(
         }
     }
     for operation in &plan.operations {
+        if let ZoteroMutationOperation::CreateCollection {
+            key,
+            parent_key: Some(parent_key),
+            ..
+        } = operation
+        {
+            if collection_descends_from(parent_key, key, &effective_parents) {
+                return Err(AppError::Zotero(
+                    "the planned collection hierarchy contains a cycle".to_owned(),
+                ));
+            }
+        }
+    }
+    for operation in &plan.operations {
         if let ZoteroMutationOperation::MoveCollection {
             key, parent_key, ..
         } = operation
@@ -731,7 +745,9 @@ pub async fn apply_mutation_plan(
                         .map(|tag| tag.tag.clone())
                         .collect(),
                 );
-                if current.version != *version || current_tag_names != *current_tags {
+                if current.version != *version
+                    || current_tag_names.as_slice() != current_tags.as_slice()
+                {
                     return Err(stale_plan_error());
                 }
                 let removed = remove_tags
@@ -770,6 +786,8 @@ pub async fn apply_mutation_plan(
     if !collection_payload.is_empty() {
         write_local_batch(
             sync_state,
+            state,
+            &plan,
             "users/0/collections",
             &collection_payload,
             Some(plan.port),
@@ -777,8 +795,15 @@ pub async fn apply_mutation_plan(
         .await?;
     }
     if !item_payload.is_empty() {
-        if let Err(error) =
-            write_local_batch(sync_state, "users/0/items", &item_payload, Some(plan.port)).await
+        if let Err(error) = write_local_batch(
+            sync_state,
+            state,
+            &plan,
+            "users/0/items",
+            &item_payload,
+            Some(plan.port),
+        )
+        .await
         {
             if collection_payload.is_empty() {
                 return Err(error);
@@ -898,12 +923,18 @@ async fn local_item_by_key(key: &str, port: Option<u16>) -> AppResult<LocalItemE
 
 async fn write_local_batch(
     sync_state: &ZoteroSyncState,
+    state: &AppState,
+    plan: &ZoteroMutationPlan,
     endpoint: &str,
     payload: &[serde_json::Value],
     port: Option<u16>,
 ) -> AppResult<()> {
     for attempt in 0..2 {
         let authorization = local_authorization(sync_state, port).await?;
+        // Authorization may wait on a Zotero dialog. Only after it resolves do
+        // we block project transitions for the bounded HTTP write itself.
+        let _project_operation = state.lock_project_operation().await;
+        validate_resolved_plan(state, plan)?;
         let response = client()
             .post(local_api_endpoint(port, endpoint)?)
             .header("Zotero-API-Version", "3")
@@ -1207,6 +1238,11 @@ fn validate_resolved_plan(state: &AppState, plan: &ZoteroMutationPlan) -> AppRes
                 validate_tags(current_tags.clone())?;
                 validate_tags(add_tags.clone())?;
                 validate_tags(remove_tags.clone())?;
+                if add_tags.is_empty() && remove_tags.is_empty() {
+                    return Err(AppError::Zotero(
+                        "a tag operation must add or remove at least one tag".to_owned(),
+                    ));
+                }
                 if add_tags.iter().any(|tag| remove_tags.contains(tag)) {
                     return Err(AppError::Zotero(
                         "the same tag cannot be added and removed in one operation".to_owned(),
