@@ -2,6 +2,7 @@ import { useCallback, useRef } from 'react'
 import { useEditorStore } from '../store/useEditorStore'
 import { useCompileStore } from '../store/useCompileStore'
 import { useSettingsStore } from '../store/useSettingsStore'
+import { useNotificationStore } from '../store/useNotificationStore'
 import { formatLatex } from '../utils/formatter'
 import { isCurrentProjectTransitionSnapshot, openProject } from '../utils/openProject'
 import { errorMessage } from '../utils/errorMessage'
@@ -34,7 +35,7 @@ export function useFileOps(): FileOps {
     const saveRequestId = ++saveRequestIdRef.current
     const editorState = useEditorStore.getState()
     const { filePath } = editorState
-    const { appendLog, setLogPanelOpen } = useCompileStore.getState()
+    const { appendLog } = useCompileStore.getState()
     const { settings } = useSettingsStore.getState()
 
     if (!filePath) return
@@ -75,8 +76,9 @@ export function useFileOps(): FileOps {
       useEditorStore.getState().markDocumentSaved(filePath, snapshotToSave.revision)
       await syncRecoveryForFile(filePath).catch(() => undefined)
     } catch (err: unknown) {
-      appendLog(`Save failed: ${errorMessage(err)}`)
-      setLogPanelOpen(true)
+      const message = `Save failed: ${errorMessage(err)}`
+      appendLog(message)
+      useNotificationStore.getState().pushNotification({ tone: 'error', message })
     }
   }, [])
 

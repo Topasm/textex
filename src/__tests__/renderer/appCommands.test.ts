@@ -1,9 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { executeAppCommand } from '../../renderer/services/appCommands'
-import { useCompileStore } from '../../renderer/store/useCompileStore'
+import { executeAppCommand, toggleLogPanel } from '../../renderer/services/appCommands'
 import { usePdfStore } from '../../renderer/store/usePdfStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { useUiStore } from '../../renderer/store/useUiStore'
+import {
+  clearResearchProfileDraft,
+  setResearchProfileDraftDirty
+} from '../../renderer/services/researchProfileDraft'
 
 const context = {
   checkForUpdates: vi.fn().mockResolvedValue(undefined),
@@ -30,8 +33,12 @@ describe('executeAppCommand', () => {
       omniSearchFocusMode: null,
       updateStatus: 'idle'
     })
-    useProjectStore.setState({ isSidebarOpen: false })
-    useCompileStore.setState({ isLogPanelOpen: false })
+    clearResearchProfileDraft()
+    useProjectStore.setState({
+      isSidebarOpen: false,
+      isResearchPanelOpen: false,
+      researchPanelTab: 'chat'
+    })
     usePdfStore.setState({ zoomLevel: 100, fitRequest: null })
   })
 
@@ -102,6 +109,34 @@ describe('executeAppCommand', () => {
 
     expect(context.compile).toHaveBeenCalledOnce()
     expect(context.toggleLog).toHaveBeenCalledOnce()
+  })
+
+  it('toggles the Problems tab in the right panel', () => {
+    toggleLogPanel()
+
+    expect(useProjectStore.getState()).toMatchObject({
+      isResearchPanelOpen: true,
+      researchPanelTab: 'problems'
+    })
+
+    toggleLogPanel()
+    expect(useProjectStore.getState().isResearchPanelOpen).toBe(false)
+  })
+
+  it('does not leave a dirty research profile when Problems navigation is cancelled', () => {
+    useProjectStore.setState({ isResearchPanelOpen: true, researchPanelTab: 'profile' })
+    setResearchProfileDraftDirty(true)
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+
+    toggleLogPanel()
+
+    expect(confirm).toHaveBeenCalledOnce()
+    expect(useProjectStore.getState()).toMatchObject({
+      isResearchPanelOpen: true,
+      researchPanelTab: 'profile'
+    })
+    confirm.mockRestore()
+    clearResearchProfileDraft()
   })
 
   it('routes available Tauri domains', async () => {

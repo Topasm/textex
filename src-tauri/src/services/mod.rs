@@ -5,6 +5,7 @@ pub mod filesystem;
 pub mod git;
 pub mod history;
 pub mod lsp;
+#[cfg(target_os = "macos")]
 pub mod menu;
 pub mod package_data;
 pub mod project_data;

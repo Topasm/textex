@@ -15,7 +15,6 @@ const initialCompileState = {
   pdfDocumentId: null,
   pdfDocumentRevision: null,
   logs: '',
-  isLogPanelOpen: false,
   diagnostics: [] as Diagnostic[],
   logViewMode: 'structured' as const
 }
@@ -73,7 +72,6 @@ describe('useAppStore', () => {
       expect(compile.compileStatus).toBe('idle')
       expect(compile.pdfPath).toBeNull()
       expect(compile.logs).toBe('')
-      expect(compile.isLogPanelOpen).toBe(false)
       expect(editor.cursorLine).toBe(1)
       expect(editor.cursorColumn).toBe(1)
       expect(compile.diagnostics).toEqual([])
@@ -200,32 +198,6 @@ describe('useAppStore', () => {
       useCompileStore.setState({ logs: 'some logs here' })
       useCompileStore.getState().clearLogs()
       expect(useCompileStore.getState().logs).toBe('')
-    })
-  })
-
-  describe('toggleLogPanel', () => {
-    it('flips isLogPanelOpen from false to true', () => {
-      useCompileStore.getState().toggleLogPanel()
-      expect(useCompileStore.getState().isLogPanelOpen).toBe(true)
-    })
-
-    it('flips isLogPanelOpen from true to false', () => {
-      useCompileStore.setState({ isLogPanelOpen: true })
-      useCompileStore.getState().toggleLogPanel()
-      expect(useCompileStore.getState().isLogPanelOpen).toBe(false)
-    })
-  })
-
-  describe('setLogPanelOpen', () => {
-    it('sets isLogPanelOpen directly', () => {
-      useCompileStore.getState().setLogPanelOpen(true)
-      expect(useCompileStore.getState().isLogPanelOpen).toBe(true)
-    })
-
-    it('can close log panel', () => {
-      useCompileStore.setState({ isLogPanelOpen: true })
-      useCompileStore.getState().setLogPanelOpen(false)
-      expect(useCompileStore.getState().isLogPanelOpen).toBe(false)
     })
   })
 

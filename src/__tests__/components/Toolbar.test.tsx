@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import Toolbar from '../../renderer/components/Toolbar'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
@@ -18,11 +18,12 @@ const defaultProps = {
   onReturnHome: vi.fn(),
   onNewFromTemplate: vi.fn(),
   onAiDraft: vi.fn(),
-  onAiAssistant: vi.fn(),
+  onOpenCommandPalette: vi.fn(),
   onOpenSettings: vi.fn()
 }
 
 beforeEach(() => {
+  document.documentElement.dataset.platform = 'linux'
   useEditorStore.setState({
     filePath: null,
     isDirty: false
@@ -48,6 +49,10 @@ beforeEach(() => {
     }
   })
   vi.clearAllMocks()
+})
+
+afterEach(() => {
+  delete document.documentElement.dataset.platform
 })
 
 describe('Toolbar', () => {
@@ -102,7 +107,69 @@ describe('Toolbar', () => {
     expect(defaultProps.onCompile).toHaveBeenCalledOnce()
   })
 
-  it('keeps AI access but moves workspace tools out of the document toolbar', () => {
+  it('opens the command palette from the custom app-menu affordance', () => {
+    render(<Toolbar {...defaultProps} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open app menu' }))
+
+    expect(defaultProps.onOpenCommandPalette).toHaveBeenCalledOnce()
+  })
+
+  it('routes custom window controls through the typed desktop boundary', () => {
+    render(<Toolbar {...defaultProps} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Minimize window' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Maximize or restore window' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Close window' }))
+
+    expect(window.api.minimizeWindow).toHaveBeenCalledOnce()
+    expect(window.api.toggleMaximizeWindow).toHaveBeenCalledOnce()
+    expect(window.api.requestWindowClose).toHaveBeenCalledOnce()
+  })
+
+  it('uses one typed drag path for structural space without hijacking interactive controls', () => {
+    const { container } = render(<Toolbar {...defaultProps} />)
+    const searchSlot = container.querySelector('.toolbar-search-slot')
+    const save = screen.getByRole('button', { name: /Quick Save/ })
+
+    expect(container.querySelector('[data-tauri-drag-region]')).not.toBeInTheDocument()
+
+    fireEvent.mouseDown(searchSlot!, { button: 0, detail: 1 })
+    expect(window.api.startWindowDragging).toHaveBeenCalledOnce()
+
+    fireEvent.mouseDown(save, { button: 0, detail: 1 })
+    expect(window.api.startWindowDragging).toHaveBeenCalledOnce()
+
+    fireEvent.mouseDown(searchSlot!, { button: 0, detail: 2 })
+    expect(window.api.toggleMaximizeWindow).toHaveBeenCalledOnce()
+  })
+
+  it('exposes all eight frameless resize directions', () => {
+    const { container } = render(<Toolbar {...defaultProps} />)
+
+    expect(container.querySelectorAll('.window-resize-handle')).toHaveLength(8)
+    fireEvent.mouseDown(container.querySelector('.window-resize-handle-south-east')!, {
+      button: 0
+    })
+
+    expect(window.api.startWindowResize).toHaveBeenCalledWith('SouthEast')
+  })
+
+  it('keeps native macOS traffic lights and omits custom window chrome', () => {
+    document.documentElement.dataset.platform = 'darwin'
+
+    const { container } = render(<Toolbar {...defaultProps} />)
+
+    expect(container.querySelector('.toolbar')).toHaveAttribute(
+      'data-custom-window-chrome',
+      'false'
+    )
+    expect(screen.queryByRole('button', { name: 'Open app menu' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Minimize window' })).not.toBeInTheDocument()
+    expect(container.querySelector('.window-resize-handles')).not.toBeInTheDocument()
+  })
+
+  it('keeps AI and workspace tools out of the document toolbar', () => {
     useSettingsStore.setState({
       settings: {
         ...useSettingsStore.getState().settings,
@@ -113,10 +180,7 @@ describe('Toolbar', () => {
 
     render(<Toolbar {...defaultProps} />)
 
-    expect(screen.getByTitle(/AI Assistant/)).toHaveAttribute(
-      'data-responsive-priority',
-      'secondary'
-    )
+    expect(screen.queryByTitle(/AI Assistant/)).not.toBeInTheDocument()
     expect(screen.queryByTitle(/Terminal pane/)).not.toBeInTheDocument()
     expect(screen.queryByTitle(/Toggle log/)).not.toBeInTheDocument()
   })

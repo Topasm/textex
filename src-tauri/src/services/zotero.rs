@@ -1625,16 +1625,7 @@ pub async fn sync_collection(
         .into_os_string()
         .into_string()
         .map_err(|path| AppError::NonUtf8Path(path.to_string_lossy().into_owned()))?;
-    let url = collection_endpoint(port, collection)?;
-
-    let mut response = client()
-        .get(url)
-        .timeout(Duration::from_secs(120))
-        .send()
-        .await
-        .map_err(zotero_request_error)?
-        .error_for_status()
-        .map_err(zotero_request_error)?;
+    let mut response = request_collection_export(port, collection).await?;
     if response
         .content_length()
         .is_some_and(|size| size > MAX_COLLECTION_EXPORT_BYTES as u64)
@@ -2036,6 +2027,73 @@ fn collection_endpoint(port: Option<u16>, collection: &str) -> AppResult<reqwest
     Ok(url)
 }
 
+fn collection_export_endpoints(
+    port: Option<u16>,
+    collection: &str,
+) -> AppResult<Vec<reqwest::Url>> {
+    let collection = validate_collection(collection)?;
+    let mut endpoints = Vec::new();
+    if let Some((library_id, key)) = collection_key_parts(collection) {
+        let mut modern = reqwest::Url::parse(&endpoint(port, "export")?)
+            .map_err(|error| AppError::Zotero(error.to_string()))?;
+        let library = if matches!(library_id, "0" | "1") {
+            String::new()
+        } else {
+            format!("library;id:{library_id}/")
+        };
+        modern.set_query(Some(&format!("{library}collection;key:{key}/{key}.bibtex")));
+        endpoints.push(modern);
+    }
+    endpoints.push(collection_endpoint(port, collection)?);
+    if let Some(("1", key)) = collection_key_parts(collection) {
+        endpoints.push(collection_endpoint(port, &format!("/0/{key}"))?);
+    }
+    endpoints.dedup_by(|left, right| left == right);
+    Ok(endpoints)
+}
+
+fn collection_key_parts(collection: &str) -> Option<(&str, &str)> {
+    let mut parts = collection.strip_prefix('/')?.split('/');
+    let library_id = parts.next()?;
+    let key = parts.next()?;
+    if parts.next().is_some()
+        || library_id.is_empty()
+        || !library_id.bytes().all(|byte| byte.is_ascii_digit())
+        || !valid_local_key(key)
+    {
+        return None;
+    }
+    Some((library_id, key))
+}
+
+async fn request_collection_export(
+    port: Option<u16>,
+    collection: &str,
+) -> AppResult<reqwest::Response> {
+    let endpoints = collection_export_endpoints(port, collection)?;
+    for (index, url) in endpoints.iter().enumerate() {
+        let response = client()
+            .get(url.clone())
+            .timeout(Duration::from_secs(120))
+            .send()
+            .await
+            .map_err(zotero_request_error)?;
+        if response.status() == reqwest::StatusCode::NOT_FOUND && index + 1 < endpoints.len() {
+            continue;
+        }
+        if response.status() == reqwest::StatusCode::NOT_FOUND {
+            return Err(AppError::Zotero(
+                "Better BibTeX could not find this collection. Refresh the Zotero collections in TextEx and try again."
+                    .to_owned(),
+            ));
+        }
+        return response.error_for_status().map_err(zotero_request_error);
+    }
+    Err(AppError::Zotero(
+        "Better BibTeX did not provide a collection export endpoint".to_owned(),
+    ))
+}
+
 fn client() -> &'static Client {
     static CLIENT: OnceLock<Client> = OnceLock::new();
     CLIENT.get_or_init(|| {
@@ -2368,6 +2426,24 @@ mod tests {
                 .unwrap()
                 .as_str(),
             "http://127.0.0.1:23119/better-bibtex/collection?/0/8CV58ZVD.bibtex"
+        );
+        assert_eq!(
+            collection_export_endpoints(Some(23_119), "/1/D9ZCPFJ2")
+                .unwrap()
+                .into_iter()
+                .map(|url| url.to_string())
+                .collect::<Vec<_>>(),
+            vec![
+                "http://127.0.0.1:23119/better-bibtex/export?collection;key:D9ZCPFJ2/D9ZCPFJ2.bibtex",
+                "http://127.0.0.1:23119/better-bibtex/collection?/1/D9ZCPFJ2.bibtex",
+                "http://127.0.0.1:23119/better-bibtex/collection?/0/D9ZCPFJ2.bibtex"
+            ]
+        );
+        assert_eq!(
+            collection_export_endpoints(Some(23_119), "/7/8CV58ZVD")
+                .unwrap()[0]
+                .as_str(),
+            "http://127.0.0.1:23119/better-bibtex/export?library;id:7/collection;key:8CV58ZVD/8CV58ZVD.bibtex"
         );
     }
 

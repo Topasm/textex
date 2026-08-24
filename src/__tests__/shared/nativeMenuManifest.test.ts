@@ -59,7 +59,11 @@ describe('native application menu', () => {
         'core:event:allow-listen',
         'core:event:allow-unlisten',
         'core:window:allow-close',
-        'core:window:allow-destroy'
+        'core:window:allow-destroy',
+        'core:window:allow-minimize',
+        'core:window:allow-toggle-maximize',
+        'core:window:allow-start-dragging',
+        'core:window:allow-start-resize-dragging'
       ])
     )
   })

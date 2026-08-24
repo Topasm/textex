@@ -85,6 +85,10 @@ export interface GitStatusResult {
   not_added: string[]
 }
 
+/** Directions accepted by Tauri when resizing a frameless desktop window. */
+export type WindowResizeDirection =
+  'East' | 'North' | 'NorthEast' | 'NorthWest' | 'South' | 'SouthEast' | 'SouthWest' | 'West'
+
 /** Typed renderer boundary implemented by the Tauri adapter. */
 export interface DesktopApi {
   // File System
@@ -186,6 +190,10 @@ export interface DesktopApi {
   updateInstall(): Promise<AppUpdateActionResult>
   onAppCommand(cb: (command: AppCommandId) => void): void
   removeAppCommandListener(): void
+  minimizeWindow(): Promise<void>
+  toggleMaximizeWindow(): Promise<void>
+  startWindowDragging(): Promise<void>
+  startWindowResize(direction: WindowResizeDirection): Promise<void>
   requestWindowClose(): Promise<void>
   exitApp(): Promise<{ success: boolean }>
   onWindowCloseRequested(cb: () => boolean | Promise<boolean>): void

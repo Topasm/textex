@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, renderHook } from '@testing-library/react'
 import { useFileOps } from '../../renderer/hooks/useFileOps'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
+import { useCompileStore } from '../../renderer/store/useCompileStore'
+import { useNotificationStore } from '../../renderer/store/useNotificationStore'
+import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 import { documentRegistry } from '../../renderer/models/documentRegistry'
 
@@ -27,6 +30,9 @@ describe('useFileOps', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useEditorStore.getState().resetEditor()
+    useCompileStore.setState({ logs: '' })
+    useNotificationStore.getState().clearNotifications()
+    useProjectStore.setState({ isResearchPanelOpen: false, researchPanelTab: 'chat' })
     useSettingsStore.setState((state) => ({
       settings: { ...state.settings, formatOnSave: true }
     }))
@@ -107,6 +113,28 @@ describe('useFileOps', () => {
     expect(documentRegistry.snapshot(filePath)?.text).toBe('formatted')
     expect(window.api.saveFile).toHaveBeenCalledWith('formatted', filePath)
     expect(useEditorStore.getState().isDirty).toBe(false)
+  })
+
+  it('reports a save failure without stealing the active right-panel tab', async () => {
+    const filePath = '/workspace/project/paper.tex'
+    useEditorStore.getState().openFileInTab(filePath, 'draft')
+    useProjectStore.setState({ isResearchPanelOpen: true, researchPanelTab: 'chat' })
+    vi.mocked(window.api.saveFile).mockRejectedValue(new Error('disk full'))
+    const { result } = renderHook(() => useFileOps())
+
+    await act(async () => {
+      await result.current.handleSave()
+    })
+
+    expect(useCompileStore.getState().logs).toContain('Save failed: disk full')
+    expect(useNotificationStore.getState().notifications.at(-1)).toMatchObject({
+      tone: 'error',
+      message: 'Save failed: disk full'
+    })
+    expect(useProjectStore.getState()).toMatchObject({
+      isResearchPanelOpen: true,
+      researchPanelTab: 'chat'
+    })
   })
 
   it('does not apply a stale format-on-save result after the document changes', async () => {

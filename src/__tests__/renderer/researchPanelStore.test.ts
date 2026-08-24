@@ -52,6 +52,19 @@ describe('research panel project state', () => {
     })
   })
 
+  it('persists the project problems tab like other right-panel tabs', () => {
+    useProjectStore.getState().setProjectRoot('/paper')
+    useProjectStore.getState().openResearchPanel('problems')
+
+    useProjectStore.getState().setProjectRoot('/other')
+    useProjectStore.getState().setProjectRoot('/paper')
+
+    expect(useProjectStore.getState()).toMatchObject({
+      isResearchPanelOpen: true,
+      researchPanelTab: 'problems'
+    })
+  })
+
   it('keeps editor selections transient and gives repeated requests unique tokens', () => {
     useProjectStore.getState().setProjectRoot('/paper')
     const request = {

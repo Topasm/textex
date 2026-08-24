@@ -494,7 +494,12 @@ export function ZoteroReferences({ onAddToChat }: ZoteroReferencesProps = {}) {
           {busy === 'search' ? <Loader className="spin" size={15} /> : <Search size={15} />}
         </button>
       </form>
-      <div className="reference-card-list">
+      <div
+        className="reference-card-list"
+        role="region"
+        aria-label="Zotero search results"
+        tabIndex={results.length > 0 ? 0 : -1}
+      >
         {results.map((item) => (
           <article
             className="reference-card"

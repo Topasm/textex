@@ -19,15 +19,12 @@ import GitPanel from './components/GitPanel'
 import { TodoPanel } from './components/TodoPanel'
 import { TimelinePanel } from './components/TimelinePanel'
 import PreviewErrorBoundary from './components/PreviewErrorBoundary'
-import HomeScreen from './components/HomeScreen'
 import { LoadingFallback } from './components/LoadingFallback'
-import NotificationCenter from './components/NotificationCenter'
 import { useAutoCompile } from './hooks/useAutoCompile'
 import { useFileOps } from './hooks/useFileOps'
 import { useSessionRestore } from './hooks/useSessionRestore'
 import { useIpcListeners } from './hooks/useIpcListeners'
 import { useExternalFileReload } from './hooks/useExternalFileReload'
-import ExternalChangeBanner from './components/ExternalChangeBanner'
 import { useGitAutoRefresh } from './hooks/useGitAutoRefresh'
 import { useBibAutoLoad } from './hooks/useBibAutoLoad'
 import { useLspLifecycle } from './hooks/useLspLifecycle'
@@ -41,6 +38,7 @@ import type { SidebarView } from './store/useProjectStore'
 import { usePdfStore } from './store/usePdfStore'
 import { useUiStore } from './store/useUiStore'
 import { useSettingsStore } from './store/useSettingsStore'
+import { useNotificationStore } from './store/useNotificationStore'
 import { deactivateProject, openProject } from './utils/openProject'
 import { errorMessage, logError } from './utils/errorMessage'
 import { isFeatureEnabled } from './utils/featureFlags'
@@ -88,7 +86,6 @@ const PreviewPane = lazy(() => import('./components/PreviewPane'))
 const ResearchPanel = lazy(() =>
   import('./components/ResearchPanel').then((module) => ({ default: module.ResearchPanel }))
 )
-const LogPanel = lazy(() => import('./components/LogPanel'))
 const CommandPalette = lazy(() =>
   import('./components/CommandPalette').then((module) => ({ default: module.CommandPalette }))
 )
@@ -98,6 +95,9 @@ const CrashRecoveryDialog = lazy(() =>
   }))
 )
 const UpdateNotification = lazy(() => import('./components/UpdateNotification'))
+const ExternalChangeBanner = lazy(() => import('./components/ExternalChangeBanner'))
+const NotificationCenter = lazy(() => import('./components/NotificationCenter'))
+const HomeScreen = lazy(() => import('./components/HomeScreen'))
 const BibliographyRegistrationDialog = lazy(() =>
   import('./components/research/BibliographyRegistrationDialog').then((module) => ({
     default: module.BibliographyRegistrationDialog
@@ -123,7 +123,6 @@ function App() {
   const splitRatio = usePdfStore((s) => s.splitRatio)
   const terminalRatio = usePdfStore((s) => s.terminalRatio)
   const pdfPath = useCompileStore((s) => s.pdfPath)
-  const isLogPanelOpen = useCompileStore((s) => s.isLogPanelOpen)
   const isSidebarOpen = useProjectStore((s) => s.isSidebarOpen)
   const sidebarView = useProjectStore((s) => s.sidebarView)
   const sidebarWidth = useProjectStore((s) => s.sidebarWidth)
@@ -141,6 +140,10 @@ function App() {
   const terminalPaneOpen = capabilities.pty && isTerminalPaneOpen
   const isTemplateGalleryOpen = useUiStore((s) => s.isTemplateGalleryOpen)
   const updateStatus = useUiStore((s) => s.updateStatus)
+  const hasNotifications = useNotificationStore((s) => s.notifications.length > 0)
+  const hasActiveExternalChange = useUiStore((s) =>
+    Boolean(filePath && s.externalChangeConflicts.includes(filePath))
+  )
   const toggleTerminalPane = useUiStore((s) => s.toggleTerminalPane)
 
   const [isDraftModalOpen, setIsDraftModalOpen] = useState(false)
@@ -540,9 +543,7 @@ function App() {
         onReturnHome={handleCloseProject}
         onNewFromTemplate={handleOpenTemplateGallery}
         onAiDraft={handleAiDraft}
-        onAiAssistant={() => {
-          useProjectStore.getState().openResearchPanel('chat')
-        }}
+        onOpenCommandPalette={openCommandPalette}
         onOpenSettings={handleOpenSettings}
       />
       {isSettingsOpen && (
@@ -580,8 +581,16 @@ function App() {
           <UpdateNotification />
         </Suspense>
       )}
-      {!suppressBackgroundSurfaces && <ExternalChangeBanner />}
-      <NotificationCenter suppressed={suppressBackgroundSurfaces} />
+      {!suppressBackgroundSurfaces && hasActiveExternalChange && (
+        <Suspense fallback={null}>
+          <ExternalChangeBanner />
+        </Suspense>
+      )}
+      {!suppressBackgroundSurfaces && hasNotifications && (
+        <Suspense fallback={null}>
+          <NotificationCenter />
+        </Suspense>
+      )}
       {commandPaletteVisible && (
         <Suspense fallback={null}>
           <CommandPalette
@@ -596,11 +605,13 @@ function App() {
       {!sessionRestored ? (
         <LoadingFallback variant="workspace" label={t('loading.workspace')} />
       ) : showHomeScreen ? (
-        <HomeScreen
-          onOpenFolder={handleOpenFolder}
-          onNewBlankProject={handleNewBlankProject}
-          onNewFromTemplate={handleOpenTemplateGallery}
-        />
+        <Suspense fallback={<LoadingFallback variant="workspace" label={t('loading.workspace')} />}>
+          <HomeScreen
+            onOpenFolder={handleOpenFolder}
+            onNewBlankProject={handleNewBlankProject}
+            onNewFromTemplate={handleOpenTemplateGallery}
+          />
+        </Suspense>
       ) : (
         <div className="workspace">
           {(isSidebarOpen || autoHideSidebar) && sidebarElement}
@@ -638,6 +649,23 @@ function App() {
                     <PreviewPane />
                   </Suspense>
                 </PreviewErrorBoundary>
+                {!isResearchPanelOpen && (
+                  <button
+                    className="research-panel-toggle"
+                    onClick={() => useProjectStore.getState().openResearchPanel('references')}
+                    title="Open research panel"
+                    aria-label="Open research panel"
+                  >
+                    <PanelRightOpen size={ICON_SIZE.control} />
+                  </button>
+                )}
+                {isResearchPanelOpen && (
+                  <Suspense
+                    fallback={<LoadingFallback variant="panel" label={t('loading.workspace')} />}
+                  >
+                    <ResearchPanel onAiDraft={() => handleAiDraft()} />
+                  </Suspense>
+                )}
               </div>
               {terminalPaneOpen && (
                 <>
@@ -657,27 +685,7 @@ function App() {
               )}
             </div>
           </div>
-          {!isResearchPanelOpen && (
-            <button
-              className="research-panel-toggle"
-              onClick={() => useProjectStore.getState().openResearchPanel('references')}
-              title="Open research panel"
-              aria-label="Open research panel"
-            >
-              <PanelRightOpen size={ICON_SIZE.control} />
-            </button>
-          )}
-          {isResearchPanelOpen && (
-            <Suspense fallback={<LoadingFallback variant="panel" label={t('loading.workspace')} />}>
-              <ResearchPanel onAiDraft={() => handleAiDraft()} />
-            </Suspense>
-          )}
         </div>
-      )}
-      {isLogPanelOpen && (
-        <Suspense fallback={null}>
-          <LogPanel />
-        </Suspense>
       )}
       {bibliographyRegistrationRequest && (
         <Suspense fallback={null}>

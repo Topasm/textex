@@ -3,6 +3,11 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const root = process.cwd()
+const baseStyles = readFileSync(resolve(root, 'src/renderer/styles/index.css'), 'utf8')
+const loadingStyles = readFileSync(
+  resolve(root, 'src/renderer/components/LoadingFallback.css'),
+  'utf8'
+)
 const responsiveStyles = readFileSync(resolve(root, 'src/renderer/styles/responsive.css'), 'utf8')
 const rendererEntry = readFileSync(resolve(root, 'src/renderer/main.tsx'), 'utf8')
 const tauriConfig = JSON.parse(
@@ -26,6 +31,35 @@ describe('responsive desktop layout contract', () => {
     expect(responsiveStyles).toContain('.editor-main-content.has-terminal-pane')
     expect(responsiveStyles).toContain('.editor-main-content:not(.has-terminal-pane)')
     expect(responsiveStyles).toContain('.settings-sidebar')
+  })
+
+  it('keeps the document toolbar as the single draggable desktop chrome row', () => {
+    expect(baseStyles).toContain(".toolbar[data-custom-window-chrome='true']")
+    expect(baseStyles).toContain('.toolbar-window-controls')
+    expect(baseStyles).toContain('.window-resize-handle-south-east')
+    expect(baseStyles).not.toContain('app-region:')
+  })
+
+  it('lets the right-side Problems view fill its panel instead of reopening below the workspace', () => {
+    expect(baseStyles).toMatch(/\.log-panel\s*\{[^}]*height:\s*100%/s)
+    expect(baseStyles).toMatch(/\.log-structured\s*\{[^}]*height:\s*100%/s)
+    expect(baseStyles).not.toMatch(/\.log-structured\s*\{[^}]*height:\s*200px/s)
+    expect(baseStyles).toContain('@container (max-width: 360px)')
+  })
+
+  it('positions the research panel over the PDF instead of participating in workspace layout', () => {
+    expect(baseStyles).toMatch(
+      /\.research-panel\.overlay\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0 0 0 auto;/s
+    )
+    expect(loadingStyles).toMatch(
+      /\.preview-pane > \.loading-fallback--panel\s*\{[^}]*position:\s*absolute;/s
+    )
+    expect(baseStyles).toMatch(
+      /\.preview-pane\s*\{[^}]*position:\s*relative;[^}]*overflow:\s*hidden;/s
+    )
+    expect(baseStyles).toMatch(
+      /@media \(max-width: 1199px\)[\s\S]*\.research-panel\.overlay \.research-resize-handle\s*\{[^}]*display:\s*none;/
+    )
   })
 
   it('disables resize handles while compact CSS overrides stored pane sizes', () => {

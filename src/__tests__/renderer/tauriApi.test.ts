@@ -11,6 +11,10 @@ const unlistenMock = vi.hoisted(() => vi.fn())
 const eventCallbacks = vi.hoisted(() => new Map<string, (event: { payload: unknown }) => void>())
 const setWindowThemeMock = vi.hoisted(() => vi.fn())
 const closeWindowMock = vi.hoisted(() => vi.fn())
+const minimizeWindowMock = vi.hoisted(() => vi.fn())
+const toggleMaximizeWindowMock = vi.hoisted(() => vi.fn())
+const startWindowDraggingMock = vi.hoisted(() => vi.fn())
+const startWindowResizeMock = vi.hoisted(() => vi.fn())
 const onCloseRequestedMock = vi.hoisted(() => vi.fn())
 const closeWindowUnlistenMock = vi.hoisted(() => vi.fn())
 const closeRequestedHandlers = vi.hoisted(
@@ -37,6 +41,10 @@ vi.mock('@tauri-apps/api/window', () => ({
   getCurrentWindow: () => ({
     setTheme: setWindowThemeMock,
     close: closeWindowMock,
+    minimize: minimizeWindowMock,
+    toggleMaximize: toggleMaximizeWindowMock,
+    startDragging: startWindowDraggingMock,
+    startResizeDragging: startWindowResizeMock,
     onCloseRequested: onCloseRequestedMock
   })
 }))
@@ -50,6 +58,10 @@ describe('Tauri DesktopApi adapter', () => {
     unlistenMock.mockReset()
     setWindowThemeMock.mockReset()
     closeWindowMock.mockReset()
+    minimizeWindowMock.mockReset()
+    toggleMaximizeWindowMock.mockReset()
+    startWindowDraggingMock.mockReset()
+    startWindowResizeMock.mockReset()
     onCloseRequestedMock.mockReset()
     closeWindowUnlistenMock.mockReset()
     closeRequestedHandlers.length = 0
@@ -360,6 +372,26 @@ describe('Tauri DesktopApi adapter', () => {
 
     api.removeWindowCloseRequestedListener()
     await vi.waitFor(() => expect(closeWindowUnlistenMock).toHaveBeenCalledOnce())
+  })
+
+  it('maps frameless window chrome actions to the current Tauri window', async () => {
+    minimizeWindowMock.mockResolvedValue(undefined)
+    toggleMaximizeWindowMock.mockResolvedValue(undefined)
+    startWindowDraggingMock.mockResolvedValue(undefined)
+    startWindowResizeMock.mockResolvedValue(undefined)
+    const api = createTauriApi()
+
+    await api.minimizeWindow()
+    await api.toggleMaximizeWindow()
+    await api.startWindowDragging()
+    await api.startWindowResize('SouthEast')
+
+    expect(minimizeWindowMock).toHaveBeenCalledOnce()
+    expect(toggleMaximizeWindowMock).toHaveBeenCalledOnce()
+    expect(startWindowDraggingMock).toHaveBeenCalledOnce()
+    expect(startWindowResizeMock).toHaveBeenCalledOnce()
+    expect(startWindowResizeMock).toHaveBeenCalledWith('SouthEast')
+    expect(invokeMock).not.toHaveBeenCalled()
   })
 
   it('maps an approved application exit to the typed Rust command', async () => {

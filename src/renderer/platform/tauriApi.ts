@@ -168,6 +168,17 @@ const removeWindowCloseRequestedListener: DesktopApi['removeWindowCloseRequested
   void pending?.then((unlisten) => unlisten()).catch(() => undefined)
 }
 
+const minimizeWindow: DesktopApi['minimizeWindow'] = () => getCurrentWindow().minimize()
+
+const toggleMaximizeWindow: DesktopApi['toggleMaximizeWindow'] = () =>
+  getCurrentWindow().toggleMaximize()
+
+const startWindowDragging: DesktopApi['startWindowDragging'] = () =>
+  getCurrentWindow().startDragging()
+
+const startWindowResize: DesktopApi['startWindowResize'] = (direction) =>
+  getCurrentWindow().startResizeDragging(direction)
+
 const requestWindowClose: DesktopApi['requestWindowClose'] = () => getCurrentWindow().close()
 
 const exitApp: DesktopApi['exitApp'] = () => invoke(TAURI_COMMANDS.exitApp)
@@ -953,6 +964,10 @@ const tauriDesktopApi = {
   updateInstall,
   onAppCommand,
   removeAppCommandListener,
+  minimizeWindow,
+  toggleMaximizeWindow,
+  startWindowDragging,
+  startWindowResize,
   requestWindowClose,
   onWindowCloseRequested,
   removeWindowCloseRequestedListener

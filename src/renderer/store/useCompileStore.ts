@@ -14,7 +14,6 @@ interface CompileState {
   pdfDocumentId: string | null
   pdfDocumentRevision: number | null
   logs: string
-  isLogPanelOpen: boolean
   diagnostics: Diagnostic[]
   logViewMode: 'raw' | 'structured'
 
@@ -22,8 +21,6 @@ interface CompileState {
   setPdfPath: (pdfPath: string | null, source?: { documentId: string; revision: number }) => void
   appendLog: (text: string) => void
   clearLogs: () => void
-  toggleLogPanel: () => void
-  setLogPanelOpen: (open: boolean) => void
   setDiagnostics: (diagnostics: Diagnostic[]) => void
   setLogViewMode: (mode: 'raw' | 'structured') => void
 }
@@ -36,7 +33,6 @@ export const useCompileStore = create<CompileState>()(
     pdfDocumentId: null,
     pdfDocumentRevision: null,
     logs: '',
-    isLogPanelOpen: false,
     diagnostics: [],
     logViewMode: 'structured',
 
@@ -56,8 +52,6 @@ export const useCompileStore = create<CompileState>()(
         }
       }),
     clearLogs: () => set({ logs: '' }),
-    toggleLogPanel: () => set((state) => ({ isLogPanelOpen: !state.isLogPanelOpen })),
-    setLogPanelOpen: (isLogPanelOpen) => set({ isLogPanelOpen }),
     setDiagnostics: (diagnostics) => set({ diagnostics }),
     setLogViewMode: (logViewMode) => set({ logViewMode })
   }))

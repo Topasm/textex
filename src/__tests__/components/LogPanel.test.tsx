@@ -13,7 +13,6 @@ describe('LogPanel diagnostic navigation', () => {
     useNotificationStore.getState().clearNotifications()
     useProjectStore.setState({ projectRoot: '/project' })
     useCompileStore.setState({
-      isLogPanelOpen: true,
       logViewMode: 'structured',
       diagnostics: [
         {
@@ -34,7 +33,7 @@ describe('LogPanel diagnostic navigation', () => {
     })
     render(<LogPanel />)
 
-    fireEvent.click(screen.getByText('Chapter error').closest('.log-entry')!)
+    fireEvent.click(screen.getByRole('button', { name: /Chapter error/ }))
 
     await waitFor(() => {
       expect(window.api.readFile).toHaveBeenCalledWith('/project/chapters/chapter2.tex')

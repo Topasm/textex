@@ -1,10 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import StatusBar from '../../renderer/components/StatusBar'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
 import { useCompileStore } from '../../renderer/store/useCompileStore'
+import { useProjectStore } from '../../renderer/store/useProjectStore'
+import { clearResearchProfileDraft } from '../../renderer/services/researchProfileDraft'
 
 beforeEach(() => {
+  clearResearchProfileDraft()
   useCompileStore.setState({
     compileStatus: 'idle',
     diagnostics: []
@@ -13,6 +16,7 @@ beforeEach(() => {
     cursorLine: 1,
     cursorColumn: 1
   })
+  useProjectStore.setState({ isResearchPanelOpen: false, researchPanelTab: 'chat' })
 })
 
 describe('StatusBar', () => {
@@ -86,5 +90,16 @@ describe('StatusBar', () => {
       'data-responsive-priority',
       'secondary'
     )
+  })
+
+  it('opens compilation Problems in the right panel', () => {
+    render(<StatusBar />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ready' }))
+
+    expect(useProjectStore.getState()).toMatchObject({
+      isResearchPanelOpen: true,
+      researchPanelTab: 'problems'
+    })
   })
 })

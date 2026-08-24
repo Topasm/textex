@@ -149,9 +149,9 @@ export const APP_COMMAND_MANIFEST = [
   },
   {
     id: 'view.toggleLog',
-    label: 'Toggle Log Panel',
+    label: 'Toggle Problems Panel',
     group: 'view',
-    keywords: ['compile', 'output', 'errors'],
+    keywords: ['compile', 'output', 'errors', 'problems'],
     shortcut: { key: 'l', mod: true }
   },
   {

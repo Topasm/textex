@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ResearchPanel } from '../../renderer/components/ResearchPanel'
 import { TEXTEX_REFERENCE_MIME } from '../../renderer/components/research/referenceActions'
@@ -18,7 +18,7 @@ describe('ResearchPanel tabs', () => {
       isResearchPanelOpen: true,
       researchPanelTab: 'chat'
     })
-    useCompileStore.setState({ diagnostics: [], isLogPanelOpen: false })
+    useCompileStore.setState({ diagnostics: [], logs: '', logViewMode: 'structured' })
     useUiStore.setState({ isTerminalPaneOpen: false })
     window.api.researchProfileLoad = vi.fn().mockResolvedValue({
       version: 1,
@@ -77,7 +77,63 @@ describe('ResearchPanel tabs', () => {
     expect(addEventListener.mock.calls.some(([event]) => event === 'keydown')).toBe(false)
   })
 
-  it('hosts terminal and compilation-log controls outside the top toolbar', () => {
+  it('cleans up an active resize gesture when the panel unmounts', () => {
+    const removeEventListener = vi.spyOn(window, 'removeEventListener')
+    document.body.style.cursor = 'crosshair'
+    document.body.style.userSelect = 'text'
+    const { container, unmount } = render(<ResearchPanel onAiDraft={vi.fn()} />)
+
+    fireEvent.mouseDown(container.querySelector('.research-resize-handle')!, { button: 0 })
+    expect(document.body.style.cursor).toBe('col-resize')
+    expect(document.body.style.userSelect).toBe('none')
+
+    unmount()
+
+    expect(document.body.style.cursor).toBe('crosshair')
+    expect(document.body.style.userSelect).toBe('text')
+    expect(removeEventListener.mock.calls.some(([event]) => event === 'mousemove')).toBe(true)
+    expect(removeEventListener.mock.calls.some(([event]) => event === 'mouseup')).toBe(true)
+    document.body.style.cursor = ''
+    document.body.style.userSelect = ''
+  })
+
+  it('always renders as a PDF overlay without adding a desktop backdrop', () => {
+    const originalInnerWidth = window.innerWidth
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1400 })
+
+    const { container, unmount } = render(<ResearchPanel onAiDraft={vi.fn()} />)
+
+    expect(container.querySelector('.research-panel')).toHaveClass('overlay')
+    expect(container.querySelector('.research-panel-backdrop')).not.toBeInTheDocument()
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(useProjectStore.getState().isResearchPanelOpen).toBe(true)
+
+    unmount()
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      value: originalInnerWidth
+    })
+  })
+
+  it('keeps the visible PDF interactive under a compact overlay and supports Escape', () => {
+    const originalInnerWidth = window.innerWidth
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1000 })
+
+    const { container, unmount } = render(<ResearchPanel onAiDraft={vi.fn()} />)
+
+    expect(container.querySelector('.research-panel')).toHaveClass('overlay')
+    expect(container.querySelector('.research-panel-backdrop')).not.toBeInTheDocument()
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(useProjectStore.getState().isResearchPanelOpen).toBe(false)
+
+    unmount()
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      value: originalInnerWidth
+    })
+  })
+
+  it('hosts terminal controls and compilation problems in the right panel', () => {
     useCompileStore.setState({
       diagnostics: [
         { severity: 'error', message: 'Missing brace', file: 'paper.tex', line: 3, column: 1 },
@@ -93,18 +149,77 @@ describe('ResearchPanel tabs', () => {
     render(<ResearchPanel onAiDraft={vi.fn()} />)
 
     const terminal = screen.getByRole('button', { name: 'Terminal pane' })
-    const log = screen.getByRole('button', { name: /Toggle log/ })
+    const problems = screen.getByRole('tab', { name: /Problems \(2\)/ })
     expect(terminal).toHaveAttribute('aria-pressed', 'false')
-    expect(log).toHaveAttribute('aria-pressed', 'false')
-    expect(log).toHaveTextContent('2')
+    expect(problems).toHaveAttribute('aria-selected', 'false')
+    expect(problems).toHaveTextContent('2')
 
     fireEvent.click(terminal)
-    fireEvent.click(log)
+    fireEvent.click(problems)
 
     expect(useUiStore.getState().isTerminalPaneOpen).toBe(true)
-    expect(useCompileStore.getState().isLogPanelOpen).toBe(true)
+    expect(useProjectStore.getState().researchPanelTab).toBe('problems')
     expect(terminal).toHaveAttribute('aria-pressed', 'true')
-    expect(log).toHaveAttribute('aria-pressed', 'true')
+    expect(problems).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByText('Compilation Log')).toBeInTheDocument()
+  })
+
+  it('exposes the project bibliography as the References scroll region', () => {
+    useProjectStore.setState({
+      researchPanelTab: 'references',
+      researchReferenceSource: 'project',
+      bibEntries: [
+        { key: 'one', type: 'article', title: 'First paper', author: 'Ada', year: '2024' },
+        { key: 'two', type: 'article', title: 'Second paper', author: 'Grace', year: '2025' }
+      ]
+    })
+    render(<ResearchPanel onAiDraft={vi.fn()} />)
+
+    const list = screen.getByRole('region', { name: 'Project references' })
+    expect(list).toHaveClass('bib-list')
+    expect(list).toHaveAttribute('tabindex', '0')
+    expect(within(list).getByText('First paper')).toBeInTheDocument()
+    expect(within(list).getByText('Second paper')).toBeInTheDocument()
+  })
+
+  it('keeps Zotero search results in a dedicated scroll region', async () => {
+    useProjectStore.setState({
+      researchPanelTab: 'references',
+      researchReferenceSource: 'zotero',
+      researchSearchQuery: 'robot'
+    })
+    window.api.researchLoadConfig = vi.fn().mockResolvedValue({
+      version: 1,
+      referencesFile: 'references.bib',
+      zoteroFile: 'zotero.bib',
+      zoteroCollection: null,
+      syncOnOpen: false
+    })
+    window.api.zoteroCollections = vi.fn().mockResolvedValue([])
+    window.api.zoteroSearch = vi.fn().mockResolvedValue([
+      {
+        citekey: 'robot2025',
+        title: 'Robot Paper',
+        author: 'Ada',
+        year: '2025',
+        type: 'article'
+      },
+      {
+        citekey: 'vision2026',
+        title: 'Vision Paper',
+        author: 'Grace',
+        year: '2026',
+        type: 'article'
+      }
+    ])
+    render(<ResearchPanel onAiDraft={vi.fn()} />)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Search' }))
+    await waitFor(() => expect(window.api.zoteroSearch).toHaveBeenCalledWith('robot', 23_119))
+    const list = screen.getByRole('region', { name: 'Zotero search results' })
+    expect(list).toHaveClass('reference-card-list')
+    expect(list).toHaveAttribute('tabindex', '0')
+    expect(within(list).getAllByRole('article')).toHaveLength(2)
   })
 
   it('accepts a reference on the Chat tab and switches only after drop', async () => {

@@ -94,8 +94,9 @@ Ports: Zotero = `23119`, Juris-M = `24119`, or user-defined.
 | `zotero_save_online` | Renderer -> Rust | `(reference, port)` | `ZoteroSaveResult` |
 | `research_search_online` | Renderer -> Rust | `(query)` | `OnlineReference[]` |
 
-`zotero_sync_collection` uses Better BibTeX's
-pull-export collection path (for example `/0/8CV58ZVD`), caps the response at
+`zotero_sync_collection` uses Better BibTeX's current explicit-key pull-export
+endpoint and retains compatibility fallbacks for legacy collection paths (for
+example `/0/8CV58ZVD`). It caps the response at
 50 MiB, and transactionally replaces `zotero.bib` or another project-local
 `.bib` target only after the complete UTF-8 export has arrived. Sync requests
 are serialized, their target is validated before download, and a successful

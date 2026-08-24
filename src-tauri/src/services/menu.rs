@@ -216,7 +216,7 @@ fn view_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<R>> {
         .item(&command_item(
             app,
             "view.toggleLog",
-            "Toggle Compile Log",
+            "Toggle Problems Panel",
             Some("CmdOrCtrl+L"),
         )?);
     if CAPABILITIES.pty {
@@ -282,12 +282,7 @@ fn compile_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<R>> {
             "Compile Document",
             Some("CmdOrCtrl+Enter"),
         )?)
-        .item(&command_item(
-            app,
-            "view.toggleLog",
-            "Show Compile Log",
-            None,
-        )?)
+        .item(&command_item(app, "view.toggleLog", "Show Problems", None)?)
         .build()
 }
 

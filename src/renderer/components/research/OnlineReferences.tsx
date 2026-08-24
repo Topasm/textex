@@ -162,7 +162,12 @@ export function OnlineReferences({ onAddToChat }: OnlineReferencesProps = {}) {
       <p className="research-muted">
         Results are added atomically to the managed project bibliography.
       </p>
-      <div className="reference-card-list">
+      <div
+        className="reference-card-list"
+        role="region"
+        aria-label="Online search results"
+        tabIndex={results.length > 0 ? 0 : -1}
+      >
         {results.map((reference) => (
           <article
             className="reference-card"

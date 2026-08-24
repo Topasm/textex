@@ -163,6 +163,24 @@ html .toolbar .file-name {
   border-radius: var(--ui-radius-control);
 }
 
+html .toolbar .toolbar-window-controls {
+  height: 38px;
+  margin-block: -3px;
+}
+
+html .toolbar .toolbar-window-control {
+  width: 42px;
+  min-width: 42px;
+  height: 38px;
+  padding: 0;
+  border-radius: 0;
+}
+
+html .toolbar .toolbar-window-close:hover {
+  color: #fff;
+  background: var(--error);
+}
+
 html .toolbar .menu-dropdown-content,
 html .recent-project-switcher-menu {
   margin-top: 3px;

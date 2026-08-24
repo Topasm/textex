@@ -5,6 +5,8 @@ import {
   ResearchChatPanel
 } from '../../renderer/components/research/ResearchChatPanel'
 import { TEXTEX_REFERENCE_MIME } from '../../renderer/components/research/referenceActions'
+import { setActiveEditorAdapter } from '../../renderer/editor/activeEditorAdapter'
+import { documentRegistry } from '../../renderer/models/documentRegistry'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
@@ -19,6 +21,7 @@ function deferred<T>() {
 
 describe('ResearchChatPanel', () => {
   beforeEach(() => {
+    setActiveEditorAdapter(null)
     useEditorStore.getState().resetEditor()
     useEditorStore.getState().openFileInTab('/project/paper.tex', '\\section{Method} Draft')
     useProjectStore.setState({ projectRoot: '/project' })
@@ -69,6 +72,7 @@ describe('ResearchChatPanel', () => {
       }
     ])
     window.api.aiResearchChat = vi.fn().mockResolvedValue('It is implemented in [Official code].')
+    window.api.aiProcessCustom = vi.fn().mockResolvedValue('\\section{Method} Revised draft')
     window.api.aiPlanZotero = vi.fn()
     window.api.zoteroApplyMutationPlan = vi.fn()
     window.api.researchResourceSnapshot = vi.fn().mockResolvedValue({
@@ -138,6 +142,124 @@ describe('ResearchChatPanel', () => {
 
     expect(await screen.findByText('The argument is supported.')).toBeInTheDocument()
     await waitFor(() => expect(messageLog).toHaveAttribute('aria-busy', 'false'))
+  })
+
+  it('sends with Enter, keeps Shift+Enter for a newline, and recalls prompt history', async () => {
+    render(<ResearchChatPanel onAiDraft={vi.fn()} />)
+    const input = await screen.findByRole('textbox', { name: 'Research question' })
+
+    fireEvent.change(input, { target: { value: 'First question' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    await waitFor(() => expect(window.api.aiResearchChat).toHaveBeenCalledTimes(1))
+
+    fireEvent.change(input, { target: { value: 'Second question' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    await waitFor(() => expect(window.api.aiResearchChat).toHaveBeenCalledTimes(2))
+
+    fireEvent.keyDown(input, { key: 'ArrowUp' })
+    expect(input).toHaveValue('Second question')
+    fireEvent.keyDown(input, { key: 'ArrowUp' })
+    expect(input).toHaveValue('First question')
+    fireEvent.keyDown(input, { key: 'ArrowDown' })
+    expect(input).toHaveValue('Second question')
+    fireEvent.keyDown(input, { key: 'ArrowDown' })
+    expect(input).toHaveValue('')
+
+    fireEvent.change(input, { target: { value: 'A multiline draft' } })
+    fireEvent.keyDown(input, { key: 'Enter', shiftKey: true })
+    expect(window.api.aiResearchChat).toHaveBeenCalledTimes(2)
+  })
+
+  it('queues Enter submissions while a response is running and sends them in order', async () => {
+    const firstAnswer = deferred<string>()
+    window.api.aiResearchChat = vi
+      .fn()
+      .mockReturnValueOnce(firstAnswer.promise)
+      .mockResolvedValueOnce('Second answer')
+    render(<ResearchChatPanel onAiDraft={vi.fn()} />)
+    const input = await screen.findByRole('textbox', { name: 'Research question' })
+
+    fireEvent.change(input, { target: { value: 'First queued test' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    await waitFor(() => expect(window.api.aiResearchChat).toHaveBeenCalledTimes(1))
+
+    fireEvent.change(input, { target: { value: 'Second queued test' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(await screen.findByLabelText('Queued Chat messages')).toHaveTextContent(
+      'Second queued test'
+    )
+    expect(input).toHaveValue('')
+
+    await act(async () => {
+      firstAnswer.resolve('First answer')
+      await firstAnswer.promise
+    })
+    await waitFor(() => expect(window.api.aiResearchChat).toHaveBeenCalledTimes(2))
+    expect(vi.mocked(window.api.aiResearchChat).mock.calls[1][0].message).toBe('Second queued test')
+    await waitFor(() =>
+      expect(screen.queryByLabelText('Queued Chat messages')).not.toBeInTheDocument()
+    )
+  })
+
+  it('prepares and explicitly applies a Chat recommendation to the active document', async () => {
+    window.api.aiResearchChat = vi
+      .fn()
+      .mockResolvedValue('Guard the pdfLaTeX-only primitives with ifPDFTeX.')
+    window.api.aiProcessCustom = vi
+      .fn()
+      .mockResolvedValue('\\usepackage{iftex}\n\\ifPDFTeX\nDraft\n\\fi')
+    render(<ResearchChatPanel onAiDraft={vi.fn()} />)
+    const input = await screen.findByRole('textbox', { name: 'Research question' })
+
+    fireEvent.change(input, { target: { value: 'Fix the XeLaTeX error.' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    await screen.findByText('Guard the pdfLaTeX-only primitives with ifPDFTeX.')
+    fireEvent.click(screen.getByRole('button', { name: 'Prepare document edit' }))
+
+    const preview = await screen.findByLabelText('Document change preview')
+    expect(window.api.aiProcessCustom).toHaveBeenCalledWith(
+      expect.objectContaining({
+        selectedText: '\\section{Method} Draft',
+        filePath: '/project/paper.tex',
+        command: expect.stringContaining('Guard the pdfLaTeX-only primitives')
+      })
+    )
+    expect(documentRegistry.snapshot('/project/paper.tex')?.text).toBe('\\section{Method} Draft')
+
+    fireEvent.click(within(preview).getByRole('button', { name: 'Apply changes' }))
+    expect(documentRegistry.snapshot('/project/paper.tex')?.text).toBe(
+      '\\usepackage{iftex}\n\\ifPDFTeX\nDraft\n\\fi'
+    )
+    expect(useEditorStore.getState().isDirty).toBe(true)
+    expect(screen.queryByLabelText('Document change preview')).not.toBeInTheDocument()
+  })
+
+  it('rejects a prepared document edit when the source changes during generation', async () => {
+    const pendingEdit = deferred<string>()
+    window.api.aiResearchChat = vi.fn().mockResolvedValue('Update the current LaTeX source.')
+    window.api.aiProcessCustom = vi.fn().mockReturnValue(pendingEdit.promise)
+    render(<ResearchChatPanel onAiDraft={vi.fn()} />)
+    const input = await screen.findByRole('textbox', { name: 'Research question' })
+
+    fireEvent.change(input, { target: { value: 'Fix the source.' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    await screen.findByText('Update the current LaTeX source.')
+    fireEvent.click(screen.getByRole('button', { name: 'Prepare document edit' }))
+    await waitFor(() => expect(window.api.aiProcessCustom).toHaveBeenCalledOnce())
+
+    act(() => {
+      useEditorStore.getState().updateActiveDocument('User changed the document.', 'editor')
+    })
+    await act(async () => {
+      pendingEdit.resolve('AI changed the document.')
+      await pendingEdit.promise
+    })
+
+    expect(screen.queryByLabelText('Document change preview')).not.toBeInTheDocument()
+    expect(documentRegistry.snapshot('/project/paper.tex')?.text).toBe('User changed the document.')
+    expect(
+      screen.getByText('The document changed while the edit was being prepared. Try again.')
+    ).toBeVisible()
   })
 
   it('sends selected paper, document, author, and repository contexts', async () => {
@@ -692,10 +814,7 @@ describe('ResearchChatPanel', () => {
     await waitFor(() => expect(window.api.researchAddOnline).toHaveBeenCalledWith(compactReference))
     expect(useEditorStore.getState().pendingInsertText).toBe('\\cite{lovelace2025dropped}')
 
-    fireEvent.click(screen.getByRole('button', { name: 'Insert answer' }))
-    expect(useEditorStore.getState().pendingInsertText).toBe(
-      'It is implemented in [Official code].'
-    )
+    expect(screen.getByRole('button', { name: 'Prepare document edit' })).toBeEnabled()
     await waitFor(() =>
       expect(window.api.researchChatSessionSave).toHaveBeenCalledWith(
         expect.objectContaining({ projectRoot: '/project' }),

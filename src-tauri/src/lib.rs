@@ -103,6 +103,21 @@ fn run_package_smoke() -> Result<(), String> {
     validate_packaged_sidecar()
 }
 
+#[cfg(any(target_os = "linux", target_os = "windows"))]
+fn setup_custom_window_chrome(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    use tauri::Manager;
+
+    if let Some(window) = app.get_webview_window("main") {
+        window.set_decorations(false)?;
+    }
+    Ok(())
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "windows")))]
+fn setup_custom_window_chrome(_app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     if package_smoke_requested() {
@@ -118,11 +133,18 @@ pub fn run() {
     let updater_plugin = tauri_plugin_updater::Builder::new()
         .pubkey(services::updater::updater_public_key())
         .build();
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .plugin(updater_plugin)
+        .plugin(updater_plugin);
+
+    // macOS keeps its native application menu and traffic-light controls. On
+    // Windows and Linux the renderer supplies one-row custom chrome instead.
+    #[cfg(target_os = "macos")]
+    let builder = builder
         .menu(services::menu::build)
-        .on_menu_event(services::menu::handle_event)
+        .on_menu_event(services::menu::handle_event);
+
+    builder
         .manage(AppState::default())
         .manage(FileSaveState::default())
         .manage(AiState::default())
@@ -279,6 +301,7 @@ pub fn run() {
             commands::updater::download_and_install_update,
             commands::updater::restart_app,
         ])
+        .setup(setup_custom_window_chrome)
         .run(tauri::generate_context!())
         .expect("failed to run TextEx Tauri application");
 }

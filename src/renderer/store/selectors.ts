@@ -40,7 +40,6 @@ export const useCompileStatus = () => useCompileStore((s) => s.compileStatus)
 export const usePdfPath = () => useCompileStore((s) => s.pdfPath)
 export const usePdfRevision = () => useCompileStore((s) => s.pdfRevision)
 export const useLogs = () => useCompileStore((s) => s.logs)
-export const useIsLogPanelOpen = () => useCompileStore((s) => s.isLogPanelOpen)
 export const useDiagnostics = () => useCompileStore((s) => s.diagnostics)
 export const useLogViewMode = () => useCompileStore((s) => s.logViewMode)
 

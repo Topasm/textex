@@ -465,7 +465,6 @@ function PreviewPane() {
     console.error('PDF load error:', msg, error)
     if (generationStateRef.current.displayed?.revision === generationRevision) setPdfError(msg)
     useCompileStore.getState().appendLog(`PDF viewer error: ${msg}\n`)
-    useCompileStore.getState().setLogPanelOpen(true)
   }, [])
 
   const capturePageViewport = useCallback(
@@ -618,7 +617,7 @@ function PreviewPane() {
     >
       {compileStatus === 'error' && !displayedGeneration ? (
         <div className="preview-center preview-error">
-          <p>Compilation failed. Check the log panel.</p>
+          <p>Compilation failed. Check the Problems tab.</p>
         </div>
       ) : !displayedGeneration ? (
         <div className="preview-center preview-empty">
@@ -694,7 +693,7 @@ function PreviewPane() {
               style={{ position: 'absolute', top: 40, left: 0, right: 0 }}
             >
               <p>Failed to load PDF: {pdfError}</p>
-              <p>Check the log panel for details.</p>
+              <p>Check the Problems tab for details.</p>
             </div>
           )}
           {highlights.lineStyle && (

@@ -11,7 +11,6 @@ import {
   Slash,
   Sparkles,
   Terminal,
-  TextCursorInput,
   Trash2,
   Wrench,
   X
@@ -20,7 +19,6 @@ import type {
   OnlineReference,
   ResearchChatContext,
   ResearchChatMessage,
-  ResearchChatSession,
   ResearchChatSessionContext,
   ResearchChatSessionScope,
   ResearchChatSessionSnapshot,
@@ -29,7 +27,8 @@ import type {
   ZoteroMutationOperation,
   ZoteroMutationPlan
 } from '../../../shared/types'
-import { documentRegistry } from '../../models/documentRegistry'
+import { getActiveEditorAdapter } from '../../editor/activeEditorAdapter'
+import { documentRegistry, normalizeDocumentId } from '../../models/documentRegistry'
 import {
   buildReferenceChatContext,
   mergeReferenceChatContexts,
@@ -40,6 +39,21 @@ import {
   parseResearchChatCommand,
   type ResearchChatCommandDefinition
 } from '../../services/researchChatCommands'
+import {
+  buildPendingResearchChatDocumentEdit,
+  buildResearchChatDocumentEditRequest,
+  isResearchChatDocumentWithinEditLimit,
+  unwrapResearchChatDocumentEdit,
+  type PendingResearchChatDocumentEdit
+} from '../../services/researchChatDocumentEdit'
+import {
+  appendResearchChatSessionMessages,
+  compactResearchChatMessageContent,
+  compactResearchChatOnlineReference,
+  compactResearchChatSession,
+  compactResearchChatSessionMessages,
+  researchChatSessionScope
+} from '../../services/researchChatSession'
 import { useEditorStore } from '../../store/useEditorStore'
 import { useProjectStore, type ResearchSelectionRequest } from '../../store/useProjectStore'
 import { useSettingsStore } from '../../store/useSettingsStore'
@@ -85,13 +99,8 @@ type SessionReferenceContextItem = ReferenceChatContextItem & {
 
 const DOCUMENT_CONTEXT_LIMIT = 24_000
 const HISTORY_LIMIT = 12
-const SESSION_MESSAGE_LIMIT = 40
-const CHAT_MESSAGE_MAX_BYTES = 64 * 1024
-const CHAT_HISTORY_MAX_BYTES = 512 * 1024
-const CHAT_SESSION_FILE_BUDGET_BYTES = 1000 * 1024
-const PERSISTED_LABEL_MAX_BYTES = 2 * 1024
-const PERSISTED_SOURCE_MAX_BYTES = 4 * 1024
 const REFERENCE_SEARCH_QUERY_LIMIT = 512
+const PROMPT_QUEUE_LIMIT = 8
 
 const CHAT_STARTERS = [
   {
@@ -107,9 +116,6 @@ const CHAT_STARTERS = [
     prompt: 'Suggest a focused outline for the next section based on the selected context.'
   }
 ] as const
-
-const utf8Encoder = new TextEncoder()
-const utf8Decoder = new TextDecoder()
 
 export function isLikelyZoteroMutation(value: string): boolean {
   const normalized = value.trim().toLowerCase()
@@ -144,97 +150,6 @@ function zoteroOperationLabel(operation: ZoteroMutationOperation): string {
       return `${operation.title}: ${changes}`
     }
   }
-}
-
-function utf8ByteLength(value: string): number {
-  return utf8Encoder.encode(value).byteLength
-}
-
-function truncateUtf8(value: string, maxBytes: number): string {
-  const bytes = utf8Encoder.encode(value)
-  if (bytes.byteLength <= maxBytes) return value
-  let end = maxBytes
-  while (end > 0 && (bytes[end] & 0xc0) === 0x80) end -= 1
-  return utf8Decoder.decode(bytes.subarray(0, end))
-}
-
-function compactMessageContent(content: string): string {
-  const safe = content.replaceAll('\0', '')
-  return truncateUtf8(safe, CHAT_MESSAGE_MAX_BYTES)
-}
-
-function compactOnlineReference(reference: OnlineReference): OnlineReference {
-  return {
-    source: reference.source,
-    id: truncateUtf8(reference.id, 2 * 1024),
-    title: truncateUtf8(reference.title, 2 * 1024),
-    authors: reference.authors.slice(0, 16).map((author) => truncateUtf8(author, 256)),
-    year: truncateUtf8(reference.year, 32),
-    type: truncateUtf8(reference.type, 128),
-    ...(reference.doi ? { doi: truncateUtf8(reference.doi, 2 * 1024) } : {}),
-    ...(reference.arxivId ? { arxivId: truncateUtf8(reference.arxivId, 2 * 1024) } : {}),
-    ...(reference.url ? { url: reference.url } : {})
-  }
-}
-
-function compactSessionContext(context: ResearchChatSessionContext): ResearchChatSessionContext {
-  return {
-    ...context,
-    label: truncateUtf8(context.label, PERSISTED_LABEL_MAX_BYTES),
-    ...(context.source ? { source: truncateUtf8(context.source, PERSISTED_SOURCE_MAX_BYTES) } : {}),
-    ...(context.onlineReference
-      ? { onlineReference: compactOnlineReference(context.onlineReference) }
-      : {})
-  }
-}
-
-function compactSessionMessages(messages: ResearchChatMessage[]): ResearchChatMessage[] {
-  const compacted = messages.slice(-SESSION_MESSAGE_LIMIT).map((message) => ({
-    role: message.role,
-    content: compactMessageContent(message.content),
-    ...(message.sources?.length
-      ? { sources: message.sources.slice(0, 12).map(compactSessionContext) }
-      : {})
-  }))
-  const newest: ResearchChatMessage[] = []
-  let historyBytes = 0
-  for (let index = compacted.length - 1; index >= 0; index -= 1) {
-    const messageBytes = utf8ByteLength(compacted[index].content)
-    if (historyBytes + messageBytes > CHAT_HISTORY_MAX_BYTES) break
-    newest.push(compacted[index])
-    historyBytes += messageBytes
-  }
-  return newest.reverse()
-}
-
-function compactSessionPayload(
-  messages: ResearchChatMessage[],
-  selectedContexts: ResearchChatSessionContext[]
-) {
-  const session = {
-    version: 1 as const,
-    messages: compactSessionMessages(messages),
-    selectedContexts: selectedContexts.map(compactSessionContext)
-  }
-  const serializedBytes = () => utf8ByteLength(JSON.stringify(session, null, 2))
-  while (serializedBytes() > CHAT_SESSION_FILE_BUDGET_BYTES) {
-    const sourceIndex = session.messages.findIndex((message) => message.sources?.length)
-    if (sourceIndex >= 0) {
-      const message = session.messages[sourceIndex]
-      session.messages[sourceIndex] = { role: message.role, content: message.content }
-      continue
-    }
-    if (session.messages.length > 0) {
-      session.messages.shift()
-      continue
-    }
-    if (session.selectedContexts.length > 0) {
-      session.selectedContexts.pop()
-      continue
-    }
-    break
-  }
-  return session
 }
 
 function paperContext(profile: ResearchProfile): ResearchChatContext | null {
@@ -301,7 +216,7 @@ function persistedReference(item: SessionReferenceContextItem): ResearchChatSess
       label: item.label,
       source: item.display.url,
       referenceSource: 'online',
-      onlineReference: compactOnlineReference(descriptor.reference)
+      onlineReference: compactResearchChatOnlineReference(descriptor.reference)
     }
   }
   const summary =
@@ -368,21 +283,6 @@ function sourcePayload(
     : { source: 'project', citekey: source.citekey }
 }
 
-function appendSessionMessages(
-  current: ResearchChatMessage[],
-  ...incoming: ResearchChatMessage[]
-): ResearchChatMessage[] {
-  return compactSessionMessages([...current, ...incoming])
-}
-
-function snapshotScope(snapshot: ResearchChatSessionSnapshot): ResearchChatSessionScope {
-  return {
-    projectRoot: snapshot.projectRoot,
-    projectEpoch: snapshot.projectEpoch,
-    revision: snapshot.revision
-  }
-}
-
 export function ResearchChatPanel({
   onAiDraft,
   incomingSelection = null,
@@ -399,18 +299,25 @@ export function ResearchChatPanel({
   const [selectionContext, setSelectionContext] = useState<SelectionChatContext | null>(null)
   const [messages, setMessages] = useState<ResearchChatMessage[]>([])
   const [prompt, setPrompt] = useState('')
+  const [queuedPrompts, setQueuedPrompts] = useState<string[]>([])
   const [commandMenuDismissed, setCommandMenuDismissed] = useState(false)
   const [activeCommandIndex, setActiveCommandIndex] = useState(0)
   const [status, setStatus] = useState('')
   const [busy, setBusy] = useState(false)
   const [actionBusy, setActionBusy] = useState('')
   const [pendingZoteroPlan, setPendingZoteroPlan] = useState<ZoteroMutationPlan | null>(null)
+  const [pendingDocumentEdit, setPendingDocumentEdit] =
+    useState<PendingResearchChatDocumentEdit | null>(null)
   const [dropActive, setDropActive] = useState(false)
   const [sessionReadyRoot, setSessionReadyRoot] = useState<string | null>(null)
   const loadGeneration = useRef(0)
   const requestGeneration = useRef(0)
   const requestInFlight = useRef(false)
   const actionInFlight = useRef(false)
+  const messagesRef = useRef<ResearchChatMessage[]>([])
+  const queuedPromptsRef = useRef<string[]>([])
+  const historyIndexRef = useRef<number | null>(null)
+  const historyDraftRef = useRef('')
   const referenceContextsRef = useRef<SessionReferenceContextItem[]>([])
   const sessionScopeRef = useRef<ResearchChatSessionScope | null>(null)
   const sessionMutationQueue = useRef<Promise<void>>(Promise.resolve())
@@ -435,8 +342,23 @@ export function ResearchChatPanel({
     ? `${commandListboxId}-option-${activeCommandIndex}`
     : undefined
 
+  const inputHistory = useMemo(
+    () => messages.filter((message) => message.role === 'user').map((message) => message.content),
+    [messages]
+  )
+
+  useEffect(() => {
+    messagesRef.current = messages
+  }, [messages])
+
+  useEffect(() => {
+    queuedPromptsRef.current = queuedPrompts
+  }, [queuedPrompts])
+
   const fillComposer = useCallback((value: string) => {
     setPrompt(value)
+    historyIndexRef.current = null
+    historyDraftRef.current = value
     setCommandMenuDismissed(false)
     setActiveCommandIndex(0)
     composerInputRef.current?.focus()
@@ -520,7 +442,7 @@ export function ResearchChatPanel({
         if (!scope || scope.projectRoot !== root) return null
         const snapshot = await mutate(scope)
         if (!isCurrentAction(generation, root)) return null
-        sessionScopeRef.current = snapshotScope(snapshot)
+        sessionScopeRef.current = researchChatSessionScope(snapshot)
         return snapshot
       })
       sessionMutationQueue.current = operation.then(
@@ -546,13 +468,19 @@ export function ResearchChatPanel({
     setReferenceContexts([])
     setSelectionContext(null)
     setMessages([])
+    messagesRef.current = []
     setPrompt('')
+    setQueuedPrompts([])
+    queuedPromptsRef.current = []
+    historyIndexRef.current = null
+    historyDraftRef.current = ''
     setCommandMenuDismissed(false)
     setActiveCommandIndex(0)
     setStatus('')
     setBusy(false)
     setActionBusy('')
     setPendingZoteroPlan(null)
+    setPendingDocumentEdit(null)
     setDropActive(false)
     setSessionReadyRoot(null)
     consumedIncomingToken.current = null
@@ -587,9 +515,9 @@ export function ResearchChatPanel({
       if (sessionResult.status === 'fulfilled') {
         const snapshot = sessionResult.value
         const session = snapshot.session
-        sessionScopeRef.current = snapshotScope(snapshot)
+        sessionScopeRef.current = researchChatSessionScope(snapshot)
         const hasSavedState = session.messages.length > 0 || session.selectedContexts.length > 0
-        setMessages(session.messages.slice(-SESSION_MESSAGE_LIMIT))
+        setMessages(compactResearchChatSessionMessages(session.messages))
         const restoredReferences = session.selectedContexts
           .map(restoredReference)
           .filter((item): item is SessionReferenceContextItem => item !== null)
@@ -661,6 +589,7 @@ export function ResearchChatPanel({
 
   useEffect(() => {
     const hadDocument = Boolean(previousFilePath.current)
+    if (previousFilePath.current !== filePath) setPendingDocumentEdit(null)
     previousFilePath.current = filePath
     setSelectedContexts((current) => {
       const hasDocument = current.has('document')
@@ -788,7 +717,7 @@ export function ResearchChatPanel({
     if (!projectRoot || sessionReadyRoot !== projectRoot || !profile) return
     const root = projectRoot
     const generation = loadGeneration.current
-    const session: ResearchChatSession = compactSessionPayload(messages, selectedSessionContexts)
+    const session = compactResearchChatSession(messages, selectedSessionContexts)
     void enqueueSessionMutation(generation, root, (scope) =>
       window.api.researchChatSessionSave(scope, session)
     ).catch((error: unknown) => {
@@ -893,85 +822,132 @@ export function ResearchChatPanel({
     [onAiDraft]
   )
 
-  const send = useCallback(async () => {
-    const question = compactMessageContent(prompt.trim())
-    if (!question || !projectRoot || requestInFlight.current || pendingZoteroPlan) return
-    const parsedCommand = parseResearchChatCommand(question)
-    if (parsedCommand && runLocalSlashCommand(parsedCommand.command, parsedCommand.argument)) return
-    if (!profile) return
-    const zoteroPlanRequest =
-      parsedCommand?.command.id === 'zotero-plan' ? parsedCommand.argument : null
-    if (parsedCommand?.command.id === 'zotero-plan' && !zoteroPlanRequest) {
-      setPrompt('/zotero-plan ')
-      setStatus('Describe the Zotero changes to preview before sending.')
-      return
+  const enqueuePrompt = useCallback((question: string) => {
+    const current = queuedPromptsRef.current
+    if (current.length >= PROMPT_QUEUE_LIMIT) {
+      setStatus(`Chat queue supports up to ${PROMPT_QUEUE_LIMIT} messages.`)
+      return false
     }
-    const root = projectRoot
-    const generation = ++requestGeneration.current
-    requestInFlight.current = true
-    setBusy(true)
-    setStatus('Gathering selected research context…')
-    try {
-      const contexts = await buildContexts(generation, root)
-      if (!contexts || !isCurrentRequest(generation, root)) return
-      const history = compactSessionMessages(messages.slice(-HISTORY_LIMIT)).map(
-        ({ role, content }) => ({ role, content })
-      )
-      const answerSources = selectedSessionContexts.filter(
-        (context) => context.kind === 'reference'
-      )
-      setMessages((current) => appendSessionMessages(current, { role: 'user', content: question }))
-      setPrompt('')
-      if (zoteroPlanRequest || isLikelyZoteroMutation(question)) {
-        setStatus('Preparing a read-only Zotero change preview…')
-        const port = useSettingsStore.getState().settings.zoteroPort
-        const plan = await window.api.aiPlanZotero(
-          { message: zoteroPlanRequest || question, history },
-          port
-        )
-        if (!isCurrentRequest(generation, root)) return
-        setPendingZoteroPlan(plan)
-        setStatus('Review the Zotero changes below. Nothing has been changed yet.')
+    const next = [...current, question]
+    queuedPromptsRef.current = next
+    setQueuedPrompts(next)
+    setPrompt('')
+    historyIndexRef.current = null
+    historyDraftRef.current = ''
+    setStatus(`${next.length} message${next.length === 1 ? '' : 's'} queued.`)
+    return true
+  }, [])
+
+  const send = useCallback(
+    async (queuedQuestion?: string) => {
+      const question = compactResearchChatMessageContent((queuedQuestion ?? prompt).trim())
+      if (!question || !projectRoot) return
+      if (requestInFlight.current || pendingZoteroPlan) {
+        enqueuePrompt(question)
         return
       }
-      setStatus('Thinking…')
-      const answer = await window.api.aiResearchChat({
-        message: question,
-        history,
-        contexts,
-        instructions: profile.instructions
-      })
-      if (!isCurrentRequest(generation, root)) return
-      const compactAnswer = compactMessageContent(answer)
+      const parsedCommand = parseResearchChatCommand(question)
+      if (parsedCommand && runLocalSlashCommand(parsedCommand.command, parsedCommand.argument))
+        return
+      if (!profile) return
+      const zoteroPlanRequest =
+        parsedCommand?.command.id === 'zotero-plan' ? parsedCommand.argument : null
+      if (parsedCommand?.command.id === 'zotero-plan' && !zoteroPlanRequest) {
+        setPrompt('/zotero-plan ')
+        setStatus('Describe the Zotero changes to preview before sending.')
+        return
+      }
+      if (queuedQuestion === undefined) setPrompt('')
+      historyIndexRef.current = null
+      historyDraftRef.current = ''
+      const root = projectRoot
+      const generation = ++requestGeneration.current
+      requestInFlight.current = true
+      setBusy(true)
+      setStatus('Gathering selected research context…')
+      const history = compactResearchChatSessionMessages(
+        messagesRef.current.slice(-HISTORY_LIMIT)
+      ).map(({ role, content }) => ({ role, content }))
       setMessages((current) =>
-        appendSessionMessages(current, {
-          role: 'assistant',
-          content: compactAnswer.trim() ? compactAnswer : 'The provider returned an empty answer.',
-          ...(answerSources.length > 0 ? { sources: answerSources } : {})
-        })
+        appendResearchChatSessionMessages(current, { role: 'user', content: question })
       )
-      setStatus('')
-    } catch (error) {
-      if (isCurrentRequest(generation, root)) {
-        setStatus(error instanceof Error ? error.message : String(error))
+      try {
+        const contexts = await buildContexts(generation, root)
+        if (!contexts || !isCurrentRequest(generation, root)) return
+        const answerSources = selectedSessionContexts.filter(
+          (context) => context.kind === 'reference'
+        )
+        if (zoteroPlanRequest || isLikelyZoteroMutation(question)) {
+          setStatus('Preparing a read-only Zotero change preview…')
+          const port = useSettingsStore.getState().settings.zoteroPort
+          const plan = await window.api.aiPlanZotero(
+            { message: zoteroPlanRequest || question, history },
+            port
+          )
+          if (!isCurrentRequest(generation, root)) return
+          setPendingZoteroPlan(plan)
+          setStatus('Review the Zotero changes below. Nothing has been changed yet.')
+          return
+        }
+        setStatus('Thinking…')
+        const answer = await window.api.aiResearchChat({
+          message: question,
+          history,
+          contexts,
+          instructions: profile.instructions
+        })
+        if (!isCurrentRequest(generation, root)) return
+        const compactAnswer = compactResearchChatMessageContent(answer)
+        setMessages((current) =>
+          appendResearchChatSessionMessages(current, {
+            role: 'assistant',
+            content: compactAnswer.trim()
+              ? compactAnswer
+              : 'The provider returned an empty answer.',
+            ...(answerSources.length > 0 ? { sources: answerSources } : {})
+          })
+        )
+        setStatus('')
+      } catch (error) {
+        if (isCurrentRequest(generation, root)) {
+          setStatus(error instanceof Error ? error.message : String(error))
+        }
+      } finally {
+        if (isCurrentRequest(generation, root)) {
+          requestInFlight.current = false
+          setBusy(false)
+        }
       }
-    } finally {
-      if (isCurrentRequest(generation, root)) {
-        requestInFlight.current = false
-        setBusy(false)
-      }
+    },
+    [
+      buildContexts,
+      enqueuePrompt,
+      isCurrentRequest,
+      pendingZoteroPlan,
+      profile,
+      projectRoot,
+      prompt,
+      runLocalSlashCommand,
+      selectedSessionContexts
+    ]
+  )
+
+  useEffect(() => {
+    if (
+      busy ||
+      requestInFlight.current ||
+      pendingZoteroPlan ||
+      !profile ||
+      !projectRoot ||
+      queuedPrompts.length === 0
+    ) {
+      return
     }
-  }, [
-    buildContexts,
-    isCurrentRequest,
-    messages,
-    profile,
-    projectRoot,
-    prompt,
-    selectedSessionContexts,
-    pendingZoteroPlan,
-    runLocalSlashCommand
-  ])
+    const [nextQuestion, ...remaining] = queuedPrompts
+    queuedPromptsRef.current = remaining
+    setQueuedPrompts(remaining)
+    void send(nextQuestion)
+  }, [busy, pendingZoteroPlan, profile, projectRoot, queuedPrompts, send])
 
   const applyZoteroPlan = useCallback(async () => {
     if (!pendingZoteroPlan || !projectRoot || actionInFlight.current) return
@@ -986,7 +962,7 @@ export function ResearchChatPanel({
       if (!isCurrentAction(generation, root)) return
       setPendingZoteroPlan(null)
       setMessages((current) =>
-        appendSessionMessages(current, {
+        appendResearchChatSessionMessages(current, {
           role: 'assistant',
           content: `${result.summary} ${result.collectionChanges} collection change(s), ${result.itemChanges} item change(s).`
         })
@@ -1008,7 +984,7 @@ export function ResearchChatPanel({
     if (!pendingZoteroPlan || actionInFlight.current) return
     setPendingZoteroPlan(null)
     setMessages((current) =>
-      appendSessionMessages(current, {
+      appendResearchChatSessionMessages(current, {
         role: 'assistant',
         content: 'Cancelled the Zotero changes. Nothing was modified.'
       })
@@ -1089,12 +1065,147 @@ export function ResearchChatPanel({
     [isCurrentAction, projectRoot]
   )
 
-  const insertAnswer = useCallback((content: string) => {
-    const editor = useEditorStore.getState()
-    if (!editor.activeFilePath) return
-    editor.requestInsertAtCursor(content)
-    setStatus('Inserted the answer at the editor cursor.')
+  const prepareDocumentEdit = useCallback(
+    async (content: string, key: string) => {
+      const editor = useEditorStore.getState()
+      const activePath = editor.activeFilePath
+      if (!activePath || !projectRoot || actionInFlight.current) return
+      const snapshot = documentRegistry.snapshot(activePath)
+      const model = documentRegistry.getModel(activePath)
+      if (!snapshot || !model) {
+        setStatus('The active document is not available for editing.')
+        return
+      }
+      if (!isResearchChatDocumentWithinEditLimit(snapshot.text)) {
+        setStatus('This document is too large for a Chat-generated edit.')
+        return
+      }
+
+      const root = projectRoot
+      const generation = loadGeneration.current
+      const request = buildResearchChatDocumentEditRequest(content, activePath, snapshot)
+
+      actionInFlight.current = true
+      setActionBusy(key)
+      setStatus('Preparing a document change preview…')
+      try {
+        const response = await window.api.aiProcessCustom(request)
+        if (!isCurrentAction(generation, root)) return
+        const currentEditor = useEditorStore.getState()
+        if (
+          currentEditor.activeFilePath !== activePath ||
+          !documentRegistry.getModel(activePath)?.isCurrent(snapshot)
+        ) {
+          setStatus('The document changed while the edit was being prepared. Try again.')
+          return
+        }
+        const proposedText = unwrapResearchChatDocumentEdit(response)
+        if (!proposedText.trim()) {
+          setStatus('The provider returned an empty document edit.')
+          return
+        }
+        if (proposedText === snapshot.text) {
+          setStatus('The recommendation does not require a source change.')
+          return
+        }
+        setPendingDocumentEdit(
+          buildPendingResearchChatDocumentEdit(activePath, snapshot, proposedText)
+        )
+        setStatus('Review the proposed source change before applying it.')
+      } catch (error) {
+        if (isCurrentAction(generation, root)) {
+          setStatus(error instanceof Error ? error.message : String(error))
+        }
+      } finally {
+        if (isCurrentAction(generation, root)) {
+          actionInFlight.current = false
+          setActionBusy('')
+        }
+      }
+    },
+    [isCurrentAction, projectRoot]
+  )
+
+  const discardDocumentEdit = useCallback(() => {
+    setPendingDocumentEdit(null)
+    setStatus('Document edit discarded. The source was not changed.')
   }, [])
+
+  const applyDocumentEdit = useCallback(() => {
+    if (!pendingDocumentEdit) return
+    const editor = useEditorStore.getState()
+    const model = documentRegistry.getModel(pendingDocumentEdit.filePath)
+    if (
+      editor.activeFilePath !== pendingDocumentEdit.filePath ||
+      !model?.isCurrent(pendingDocumentEdit.snapshot)
+    ) {
+      setPendingDocumentEdit(null)
+      setStatus('The document changed after this preview was created. Prepare the edit again.')
+      return
+    }
+
+    const adapter = getActiveEditorAdapter()
+    const adapterMatches =
+      adapter?.getDocumentId() != null &&
+      normalizeDocumentId(adapter.getDocumentId()!) ===
+        normalizeDocumentId(pendingDocumentEdit.filePath)
+    if (adapter && adapterMatches) {
+      const lastLine = Math.max(1, adapter.getLineCount())
+      const applied = adapter.applyEdits('research-chat-document-edit', [
+        {
+          range: {
+            start: { line: 1, column: 1 },
+            end: { line: lastLine, column: adapter.getLineMaxColumn(lastLine) }
+          },
+          text: pendingDocumentEdit.proposedText,
+          forceMoveMarkers: true
+        }
+      ])
+      if (!applied) {
+        setStatus('The editor could not apply this change. Prepare the edit again.')
+        return
+      }
+      adapter.focus()
+    } else {
+      const updated = editor.updateActiveDocument(pendingDocumentEdit.proposedText, 'programmatic')
+      if (!updated) {
+        setStatus('The editor could not apply this change. Prepare the edit again.')
+        return
+      }
+    }
+
+    const fileName = pendingDocumentEdit.filePath.split(/[\\/]/u).at(-1) || 'document'
+    setPendingDocumentEdit(null)
+    setStatus(`Applied the proposed change to ${fileName}. Review and compile before saving.`)
+  }, [pendingDocumentEdit])
+
+  const navigatePromptHistory = useCallback(
+    (direction: 'previous' | 'next'): boolean => {
+      if (inputHistory.length === 0) return false
+      const currentIndex = historyIndexRef.current
+      if (direction === 'previous') {
+        if (currentIndex === null) historyDraftRef.current = prompt
+        const nextIndex =
+          currentIndex === null ? inputHistory.length - 1 : Math.max(0, currentIndex - 1)
+        historyIndexRef.current = nextIndex
+        setPrompt(inputHistory[nextIndex])
+      } else {
+        if (currentIndex === null) return false
+        const nextIndex = currentIndex + 1
+        if (nextIndex >= inputHistory.length) {
+          historyIndexRef.current = null
+          setPrompt(historyDraftRef.current)
+        } else {
+          historyIndexRef.current = nextIndex
+          setPrompt(inputHistory[nextIndex])
+        }
+      }
+      setCommandMenuDismissed(true)
+      setActiveCommandIndex(0)
+      return true
+    },
+    [inputHistory, prompt]
+  )
 
   const clearChat = useCallback(async () => {
     if (!profile || !projectRoot || busy || actionInFlight.current) return
@@ -1109,6 +1220,12 @@ export function ResearchChatPanel({
       if (!cleared) return
       shouldAutoScrollRef.current = true
       setMessages([])
+      messagesRef.current = []
+      setQueuedPrompts([])
+      queuedPromptsRef.current = []
+      historyIndexRef.current = null
+      historyDraftRef.current = ''
+      setPendingDocumentEdit(null)
       referenceContextsRef.current = []
       setReferenceContexts([])
       setSelectedContexts(
@@ -1316,10 +1433,15 @@ export function ResearchChatPanel({
                     <button
                       className="research-chat-insert-answer"
                       type="button"
-                      disabled={!filePath}
-                      onClick={() => insertAnswer(message.content)}
+                      disabled={!filePath || Boolean(actionBusy)}
+                      onClick={() =>
+                        void prepareDocumentEdit(message.content, `document-edit:${index}`)
+                      }
                     >
-                      <TextCursorInput size={12} aria-hidden="true" /> Insert answer
+                      <FileText size={12} aria-hidden="true" />
+                      {actionBusy === `document-edit:${index}`
+                        ? 'Preparing edit…'
+                        : 'Prepare document edit'}
                     </button>
                   </div>
                 )}
@@ -1340,6 +1462,35 @@ export function ResearchChatPanel({
         )}
         <div className="research-chat-message-end" ref={messageEndRef} aria-hidden="true" />
       </div>
+
+      {pendingDocumentEdit && (
+        <section className="research-document-edit" aria-label="Document change preview">
+          <div className="research-document-edit-heading">
+            <div>
+              <strong>Document change preview</strong>
+              <span>
+                {pendingDocumentEdit.filePath.split(/[\\/]/u).at(-1)} · line{' '}
+                {pendingDocumentEdit.startLine} · −{pendingDocumentEdit.removedLines} +
+                {pendingDocumentEdit.addedLines}
+              </span>
+            </div>
+            <ShieldCheck size={18} aria-hidden="true" />
+          </div>
+          <p>The source stays unchanged until you approve this edit.</p>
+          <pre>
+            {pendingDocumentEdit.excerpt}
+            {pendingDocumentEdit.excerptTruncated ? '\n…' : ''}
+          </pre>
+          <div className="research-document-edit-actions">
+            <button type="button" onClick={discardDocumentEdit}>
+              <X size={13} /> Discard
+            </button>
+            <button className="primary" type="button" onClick={applyDocumentEdit}>
+              <ShieldCheck size={13} /> Apply changes
+            </button>
+          </div>
+        </section>
+      )}
 
       {pendingZoteroPlan && (
         <section
@@ -1421,6 +1572,29 @@ export function ResearchChatPanel({
           ))}
         </div>
 
+        {queuedPrompts.length > 0 && (
+          <div className="research-chat-queue" aria-label="Queued Chat messages">
+            <div>
+              <strong>
+                {queuedPrompts.length} queued message{queuedPrompts.length === 1 ? '' : 's'}
+              </strong>
+              <span>{queuedPrompts[0]}</span>
+            </div>
+            <button
+              type="button"
+              aria-label="Clear queued messages"
+              title="Clear queued messages"
+              onClick={() => {
+                queuedPromptsRef.current = []
+                setQueuedPrompts([])
+                setStatus('Queued messages cleared.')
+              }}
+            >
+              <X size={12} aria-hidden="true" />
+            </button>
+          </div>
+        )}
+
         <div className="research-chat-composer-shell">
           <div className="research-chat-command-input-wrapper">
             {commandMenuOpen && (
@@ -1446,6 +1620,8 @@ export function ResearchChatPanel({
               placeholder="Ask about this paper or its source code…"
               onChange={(event) => {
                 setPrompt(event.target.value)
+                historyIndexRef.current = null
+                historyDraftRef.current = event.target.value
                 setCommandMenuDismissed(false)
                 setActiveCommandIndex(0)
               }}
@@ -1474,9 +1650,9 @@ export function ResearchChatPanel({
                     setCommandMenuDismissed(true)
                     return
                   }
-                  if (event.key === 'Enter') {
+                  if (event.key === 'Enter' && !event.shiftKey) {
                     event.preventDefault()
-                    if ((event.metaKey || event.ctrlKey) && exactPromptCommand) {
+                    if (exactPromptCommand) {
                       setCommandMenuDismissed(true)
                       void send()
                       return
@@ -1486,7 +1662,27 @@ export function ResearchChatPanel({
                     return
                   }
                 }
-                if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+                if (
+                  event.key === 'ArrowUp' &&
+                  !event.altKey &&
+                  !event.ctrlKey &&
+                  !event.metaKey &&
+                  (historyIndexRef.current !== null || event.currentTarget.selectionStart === 0)
+                ) {
+                  if (navigatePromptHistory('previous')) event.preventDefault()
+                  return
+                }
+                if (
+                  event.key === 'ArrowDown' &&
+                  !event.altKey &&
+                  !event.ctrlKey &&
+                  !event.metaKey &&
+                  historyIndexRef.current !== null
+                ) {
+                  if (navigatePromptHistory('next')) event.preventDefault()
+                  return
+                }
+                if (event.key === 'Enter' && !event.shiftKey) {
                   event.preventDefault()
                   void send()
                 }
@@ -1495,7 +1691,7 @@ export function ResearchChatPanel({
             <span className="research-chat-command-status" id={commandHintId}>
               {commandMenuOpen
                 ? `${commandSuggestions.length} commands available. Use arrow keys to choose.`
-                : 'Type slash for commands. Press Control or Command plus Enter to send.'}
+                : 'Enter sends · Shift+Enter adds a line · Up/Down recalls prompts.'}
             </span>
           </div>
 
@@ -1553,27 +1749,17 @@ export function ResearchChatPanel({
             </div>
 
             <span className="research-chat-shortcut" aria-hidden="true">
-              Ctrl/⌘ Enter
+              Enter
             </span>
             <button
               className="research-chat-send"
               type="button"
               aria-label="Send"
-              title={busy ? 'Working…' : 'Send · Ctrl/⌘ Enter'}
-              disabled={
-                !prompt.trim() ||
-                !profile ||
-                busy ||
-                Boolean(pendingZoteroPlan) ||
-                (commandMenuOpen && !exactPromptCommand)
-              }
+              title={busy || pendingZoteroPlan ? 'Queue message · Enter' : 'Send · Enter'}
+              disabled={!prompt.trim() || !profile || (commandMenuOpen && !exactPromptCommand)}
               onClick={() => void send()}
             >
-              {busy ? (
-                <LoaderCircle className="spin" size={14} aria-hidden="true" />
-              ) : (
-                <Send size={14} aria-hidden="true" />
-              )}
+              <Send size={14} aria-hidden="true" />
             </button>
           </div>
         </div>

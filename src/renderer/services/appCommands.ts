@@ -1,9 +1,12 @@
 import type { AppCommandId } from '../../shared/types'
-import { useCompileStore } from '../store/useCompileStore'
 import { usePdfStore } from '../store/usePdfStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { useUiStore } from '../store/useUiStore'
 import { getDesktopCapabilities } from '../platform/capabilities'
+import {
+  clearResearchProfileDraft,
+  confirmResearchProfileDraftDiscard
+} from './researchProfileDraft'
 
 export interface AppCommandContext {
   checkForUpdates: () => Promise<void>
@@ -118,5 +121,22 @@ export async function executeAppCommand(
 }
 
 export function toggleLogPanel(): void {
-  useCompileStore.getState().toggleLogPanel()
+  const projectStore = useProjectStore.getState()
+  if (projectStore.isResearchPanelOpen && projectStore.researchPanelTab === 'problems') {
+    projectStore.closeResearchPanel()
+    return
+  }
+
+  if (
+    projectStore.isResearchPanelOpen &&
+    projectStore.researchPanelTab === 'profile' &&
+    !confirmResearchProfileDraftDiscard()
+  ) {
+    return
+  }
+
+  if (projectStore.isResearchPanelOpen && projectStore.researchPanelTab === 'profile') {
+    clearResearchProfileDraft()
+  }
+  projectStore.openResearchPanel('problems')
 }

@@ -1,8 +1,6 @@
 .recent-project-switcher {
   position: relative;
   min-width: 0;
-  -webkit-app-region: no-drag;
-  app-region: no-drag;
 }
 
 .toolbar .recent-project-switcher-trigger {

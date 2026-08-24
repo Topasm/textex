@@ -8,6 +8,7 @@ import { useSettingsStore } from '../store/useSettingsStore'
 import { useUiStore } from '../store/useUiStore'
 import { isFeatureEnabled } from '../utils/featureFlags'
 import { getDesktopCapabilities } from '../platform/capabilities'
+import { toggleLogPanel } from '../services/appCommands'
 import { ICON_SIZE } from './ui/IconSystem'
 
 const StatusBar = React.memo(function StatusBar() {
@@ -24,8 +25,6 @@ const StatusBar = React.memo(function StatusBar() {
   const sectionHighlightEnabled = useSettingsStore((s) => s.settings.sectionHighlightEnabled)
   const lspStatus = useUiStore((s) => s.lspStatus)
   const lspEnabled = isFeatureEnabled(settings, 'lsp')
-
-  const toggleLogPanel = useCompileStore((s) => s.toggleLogPanel)
 
   const STATUS_CONFIG = {
     idle: { dotClass: 'green', label: t('statusBar.ready') },

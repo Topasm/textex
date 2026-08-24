@@ -70,7 +70,6 @@ export function clearProjectScopedRendererState(): void {
     pdfDocumentId: null,
     pdfDocumentRevision: null,
     logs: '',
-    isLogPanelOpen: false,
     diagnostics: []
   })
   useProjectStore.setState({
