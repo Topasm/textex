@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { FileText, Plus, RotateCcw, Send, ShieldCheck, Terminal, Trash2, X } from 'lucide-react'
 import type {
   OnlineReference,
@@ -19,8 +19,13 @@ import {
   mergeReferenceChatContexts,
   type ReferenceChatContextItem
 } from '../../services/referenceChatContext'
+import {
+  matchResearchChatCommands,
+  parseResearchChatCommand,
+  type ResearchChatCommandDefinition
+} from '../../services/researchChatCommands'
 import { useEditorStore } from '../../store/useEditorStore'
-import { useProjectStore } from '../../store/useProjectStore'
+import { useProjectStore, type ResearchSelectionRequest } from '../../store/useProjectStore'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import { dirname } from '../../utils/path'
 import {
@@ -29,9 +34,12 @@ import {
   TEXTEX_REFERENCE_MIME,
   type ReferenceDragPayload
 } from './referenceActions'
+import { ResearchChatCommandMenu } from './ResearchChatCommandMenu'
 
 interface ResearchChatPanelProps {
   onAiDraft: () => void
+  incomingSelection?: ResearchSelectionRequest | null
+  onIncomingSelectionConsumed?: (token: number) => void
   incomingReference?: {
     token: number
     projectRoot: string
@@ -44,7 +52,14 @@ interface ContextOption {
   id: string
   label: string
   context?: ResearchChatContext
-  persisted: ResearchChatSessionContext
+  persisted?: ResearchChatSessionContext
+}
+
+interface SelectionChatContext {
+  id: string
+  label: string
+  source: string
+  content: string
 }
 
 type SessionReferenceContextItem = ReferenceChatContextItem & {
@@ -60,6 +75,7 @@ const CHAT_HISTORY_MAX_BYTES = 512 * 1024
 const CHAT_SESSION_FILE_BUDGET_BYTES = 1000 * 1024
 const PERSISTED_LABEL_MAX_BYTES = 2 * 1024
 const PERSISTED_SOURCE_MAX_BYTES = 4 * 1024
+const REFERENCE_SEARCH_QUERY_LIMIT = 512
 
 const utf8Encoder = new TextEncoder()
 const utf8Decoder = new TextDecoder()
@@ -338,6 +354,8 @@ function snapshotScope(snapshot: ResearchChatSessionSnapshot): ResearchChatSessi
 
 export function ResearchChatPanel({
   onAiDraft,
+  incomingSelection = null,
+  onIncomingSelectionConsumed,
   incomingReference = null,
   onIncomingReferenceConsumed
 }: ResearchChatPanelProps) {
@@ -347,8 +365,11 @@ export function ResearchChatPanel({
   const [profile, setProfile] = useState<ResearchProfile | null>(null)
   const [selectedContexts, setSelectedContexts] = useState<Set<string>>(new Set())
   const [referenceContexts, setReferenceContexts] = useState<SessionReferenceContextItem[]>([])
+  const [selectionContext, setSelectionContext] = useState<SelectionChatContext | null>(null)
   const [messages, setMessages] = useState<ResearchChatMessage[]>([])
   const [prompt, setPrompt] = useState('')
+  const [commandMenuDismissed, setCommandMenuDismissed] = useState(false)
+  const [activeCommandIndex, setActiveCommandIndex] = useState(0)
   const [status, setStatus] = useState('')
   const [busy, setBusy] = useState(false)
   const [actionBusy, setActionBusy] = useState('')
@@ -362,8 +383,72 @@ export function ResearchChatPanel({
   const referenceContextsRef = useRef<SessionReferenceContextItem[]>([])
   const sessionScopeRef = useRef<ResearchChatSessionScope | null>(null)
   const sessionMutationQueue = useRef<Promise<void>>(Promise.resolve())
+  const composerInputRef = useRef<HTMLTextAreaElement>(null)
+  const messageEndRef = useRef<HTMLDivElement>(null)
+  const shouldAutoScrollRef = useRef(true)
   const previousFilePath = useRef(filePath)
   const consumedIncomingToken = useRef<number | null>(null)
+  const consumedSelectionToken = useRef<number | null>(null)
+  const generatedCommandListboxId = useId().replace(/:/gu, '')
+  const commandListboxId = `research-chat-commands-${generatedCommandListboxId}`
+  const commandHintId = `research-chat-command-hint-${generatedCommandListboxId}`
+  const zoteroPlanHeadingId = `research-zotero-plan-heading-${generatedCommandListboxId}`
+  const zoteroPlanDescriptionId = `research-zotero-plan-description-${generatedCommandListboxId}`
+  const commandSuggestions = useMemo(
+    () => (commandMenuDismissed ? [] : [...matchResearchChatCommands(prompt)]),
+    [commandMenuDismissed, prompt]
+  )
+  const commandMenuOpen = commandSuggestions.length > 0
+  const exactPromptCommand = useMemo(() => parseResearchChatCommand(prompt.trim()), [prompt])
+  const activeCommandId = commandMenuOpen
+    ? `${commandListboxId}-option-${activeCommandIndex}`
+    : undefined
+
+  const fillComposer = useCallback((value: string) => {
+    setPrompt(value)
+    setCommandMenuDismissed(false)
+    setActiveCommandIndex(0)
+    composerInputRef.current?.focus()
+  }, [])
+
+  const openCommandMenu = useCallback(() => {
+    if (prompt.trim() && !prompt.trimStart().startsWith('/')) {
+      setStatus('Clear the current draft before choosing a slash command.')
+      composerInputRef.current?.focus()
+      return
+    }
+    fillComposer(prompt || '/')
+  }, [fillComposer, prompt])
+
+  useEffect(() => {
+    const input = composerInputRef.current
+    if (!input) return
+    input.style.height = '0px'
+    input.style.height = `${Math.min(Math.max(input.scrollHeight, 56), 120)}px`
+  }, [prompt])
+
+  useEffect(() => {
+    if (
+      (messages.length === 0 && !busy && !pendingZoteroPlan) ||
+      !shouldAutoScrollRef.current
+    )
+      return
+    const end = messageEndRef.current
+    if (end && typeof end.scrollIntoView === 'function') {
+      end.scrollIntoView({ block: 'end', behavior: 'smooth' })
+    }
+  }, [busy, messages.length, pendingZoteroPlan])
+
+  useEffect(() => {
+    if (activeCommandIndex < commandSuggestions.length) return
+    setActiveCommandIndex(Math.max(0, commandSuggestions.length - 1))
+  }, [activeCommandIndex, commandSuggestions.length])
+
+  const selectCommandSuggestion = useCallback((command: ResearchChatCommandDefinition) => {
+    setPrompt(`${command.command}${command.acceptsArguments ? ' ' : ''}`)
+    setCommandMenuDismissed(!command.acceptsArguments)
+    setActiveCommandIndex(0)
+  }, [])
 
   const attachReference = useCallback((payload: ReferenceDragPayload) => {
     const item: SessionReferenceContextItem = buildReferenceChatContext(payload)
@@ -430,8 +515,11 @@ export function ResearchChatPanel({
     setProfile(null)
     setSelectedContexts(new Set())
     setReferenceContexts([])
+    setSelectionContext(null)
     setMessages([])
     setPrompt('')
+    setCommandMenuDismissed(false)
+    setActiveCommandIndex(0)
     setStatus('')
     setBusy(false)
     setActionBusy('')
@@ -439,6 +527,7 @@ export function ResearchChatPanel({
     setDropActive(false)
     setSessionReadyRoot(null)
     consumedIncomingToken.current = null
+    consumedSelectionToken.current = null
     if (!root) return
 
     void Promise.allSettled([
@@ -496,6 +585,33 @@ export function ResearchChatPanel({
 
   useEffect(() => {
     if (
+      !incomingSelection ||
+      incomingSelection.projectRoot !== projectRoot ||
+      sessionReadyRoot !== projectRoot ||
+      consumedSelectionToken.current === incomingSelection.token
+    ) {
+      return
+    }
+    consumedSelectionToken.current = incomingSelection.token
+    const fileName = incomingSelection.filePath.split(/[\\/]/u).at(-1) || 'document'
+    const lineLabel =
+      incomingSelection.startLine === incomingSelection.endLine
+        ? `L${incomingSelection.startLine}`
+        : `L${incomingSelection.startLine}–${incomingSelection.endLine}`
+    const id = `selection:${incomingSelection.token}`
+    setSelectionContext({
+      id,
+      label: `Selection · ${fileName}:${lineLabel}`,
+      source: `${incomingSelection.filePath}#${lineLabel}`,
+      content: incomingSelection.content
+    })
+    setSelectedContexts((current) => new Set(current).add(id))
+    setStatus('Added the editor selection to Chat context.')
+    onIncomingSelectionConsumed?.(incomingSelection.token)
+  }, [incomingSelection, onIncomingSelectionConsumed, projectRoot, sessionReadyRoot])
+
+  useEffect(() => {
+    if (
       !incomingReference ||
       incomingReference.projectRoot !== projectRoot ||
       sessionReadyRoot !== projectRoot ||
@@ -534,6 +650,20 @@ export function ResearchChatPanel({
       context: referenceRequestContext(item),
       persisted: persistedReference(item)
     }))
+    const selectionOptions: ContextOption[] = selectionContext
+      ? [
+          {
+            id: selectionContext.id,
+            label: selectionContext.label,
+            context: {
+              kind: 'document',
+              label: selectionContext.label,
+              source: selectionContext.source,
+              content: selectionContext.content
+            }
+          }
+        ]
+      : []
     if (!profile) {
       return [
         ...(filePath
@@ -550,6 +680,7 @@ export function ResearchChatPanel({
               }
             ]
           : []),
+        ...selectionOptions,
         ...referenceOptions
       ]
     }
@@ -607,16 +738,21 @@ export function ResearchChatPanel({
             }
           }
         }),
+      ...selectionOptions,
       ...referenceOptions
     ]
-  }, [filePath, profile, referenceContexts])
+  }, [filePath, profile, referenceContexts, selectionContext])
 
   const selectedSessionContexts = useMemo(
     () =>
       contextOptions
         .filter((option) => selectedContexts.has(option.id))
-        .map((option) => option.persisted),
+        .flatMap((option) => (option.persisted ? [option.persisted] : [])),
     [contextOptions, selectedContexts]
+  )
+  const selectedContextCount = contextOptions.reduce(
+    (count, option) => count + (selectedContexts.has(option.id) ? 1 : 0),
+    0
   )
 
   useEffect(() => {
@@ -677,10 +813,70 @@ export function ResearchChatPanel({
     [contextOptions, filePath, isCurrentRequest, profile, selectedContexts]
   )
 
+  const runLocalSlashCommand = useCallback(
+    (command: ResearchChatCommandDefinition, argument: string): boolean => {
+      const projectStore = useProjectStore.getState()
+      const query = argument.replace(/\s+/gu, ' ').trim().slice(0, REFERENCE_SEARCH_QUERY_LIMIT)
+      switch (command.id) {
+        case 'help':
+          setPrompt('/')
+          setCommandMenuDismissed(false)
+          setActiveCommandIndex(0)
+          setStatus('Choose a command from the menu. App actions are not sent to the AI.')
+          return true
+        case 'references':
+          projectStore.setResearchSearchQuery(query)
+          projectStore.setResearchReferenceSource('project')
+          projectStore.openResearchPanel('references')
+          setPrompt('')
+          return true
+        case 'zotero':
+          projectStore.setResearchSearchQuery(query)
+          projectStore.setResearchReferenceSource('zotero')
+          projectStore.openResearchPanel('references')
+          setPrompt('')
+          return true
+        case 'online':
+          projectStore.setResearchSearchQuery(query)
+          projectStore.setResearchReferenceSource('online')
+          projectStore.openResearchPanel('references')
+          setPrompt('')
+          return true
+        case 'todo':
+        case 'outline':
+          projectStore.setSidebarView(command.id)
+          if (!projectStore.isSidebarOpen) projectStore.toggleSidebar()
+          setPrompt('')
+          setStatus(
+            command.id === 'todo'
+              ? 'Opened the project TODO panel.'
+              : 'Opened the current document outline.'
+          )
+          return true
+        case 'draft':
+          setPrompt('')
+          onAiDraft()
+          return true
+        case 'zotero-plan':
+          return false
+      }
+    },
+    [onAiDraft]
+  )
+
   const send = useCallback(async () => {
     const question = compactMessageContent(prompt.trim())
-    if (!question || !projectRoot || !profile || requestInFlight.current || pendingZoteroPlan)
+    if (!question || !projectRoot || requestInFlight.current || pendingZoteroPlan) return
+    const parsedCommand = parseResearchChatCommand(question)
+    if (parsedCommand && runLocalSlashCommand(parsedCommand.command, parsedCommand.argument)) return
+    if (!profile) return
+    const zoteroPlanRequest =
+      parsedCommand?.command.id === 'zotero-plan' ? parsedCommand.argument : null
+    if (parsedCommand?.command.id === 'zotero-plan' && !zoteroPlanRequest) {
+      setPrompt('/zotero-plan ')
+      setStatus('Describe the Zotero changes to preview before sending.')
       return
+    }
     const root = projectRoot
     const generation = ++requestGeneration.current
     requestInFlight.current = true
@@ -697,10 +893,13 @@ export function ResearchChatPanel({
       )
       setMessages((current) => appendSessionMessages(current, { role: 'user', content: question }))
       setPrompt('')
-      if (isLikelyZoteroMutation(question)) {
+      if (zoteroPlanRequest || isLikelyZoteroMutation(question)) {
         setStatus('Preparing a read-only Zotero change preview…')
         const port = useSettingsStore.getState().settings.zoteroPort
-        const plan = await window.api.aiPlanZotero({ message: question, history }, port)
+        const plan = await window.api.aiPlanZotero(
+          { message: zoteroPlanRequest || question, history },
+          port
+        )
         if (!isCurrentRequest(generation, root)) return
         setPendingZoteroPlan(plan)
         setStatus('Review the Zotero changes below. Nothing has been changed yet.')
@@ -741,7 +940,8 @@ export function ResearchChatPanel({
     projectRoot,
     prompt,
     selectedSessionContexts,
-    pendingZoteroPlan
+    pendingZoteroPlan,
+    runLocalSlashCommand
   ])
 
   const applyZoteroPlan = useCallback(async () => {
@@ -1086,28 +1286,93 @@ export function ResearchChatPanel({
               aria-pressed={selectedContexts.has(chip.id)}
               onClick={() => toggleContext(chip.id)}
               key={chip.id}
-              title={chip.persisted.kind === 'reference' ? 'Toggle reference context' : undefined}
+              title={chip.persisted?.kind === 'reference' ? 'Toggle reference context' : undefined}
             >
               {chip.label}
             </button>
           ))}
         </div>
-        <textarea
-          aria-label="Research question"
-          value={prompt}
-          placeholder="Ask about this paper or its source code…"
-          onChange={(event) => setPrompt(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-              event.preventDefault()
-              void send()
-            }
-          }}
-        />
+        <div className="research-chat-command-input-wrapper">
+          {commandMenuOpen && (
+            <ResearchChatCommandMenu
+              commands={commandSuggestions}
+              activeIndex={activeCommandIndex}
+              listboxId={commandListboxId}
+              onActiveIndexChange={setActiveCommandIndex}
+              onSelect={selectCommandSuggestion}
+            />
+          )}
+          <textarea
+            aria-label="Research question"
+            aria-autocomplete="list"
+            aria-haspopup="listbox"
+            aria-expanded={commandMenuOpen}
+            aria-controls={commandMenuOpen ? commandListboxId : undefined}
+            aria-activedescendant={activeCommandId}
+            value={prompt}
+            placeholder="Ask about this paper or its source code… Type / for commands."
+            onChange={(event) => {
+              setPrompt(event.target.value)
+              setCommandMenuDismissed(false)
+              setActiveCommandIndex(0)
+            }}
+            onKeyDown={(event) => {
+              if (event.nativeEvent.isComposing) return
+              if (commandMenuOpen) {
+                if (event.key === 'ArrowDown') {
+                  event.preventDefault()
+                  setActiveCommandIndex((index) => (index + 1) % commandSuggestions.length)
+                  return
+                }
+                if (event.key === 'ArrowUp') {
+                  event.preventDefault()
+                  setActiveCommandIndex(
+                    (index) => (index - 1 + commandSuggestions.length) % commandSuggestions.length
+                  )
+                  return
+                }
+                if (event.key === 'Escape') {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  setCommandMenuDismissed(true)
+                  return
+                }
+                if (event.key === 'Tab') {
+                  setCommandMenuDismissed(true)
+                  return
+                }
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  if ((event.metaKey || event.ctrlKey) && exactPromptCommand) {
+                    setCommandMenuDismissed(true)
+                    void send()
+                    return
+                  }
+                  const selectedCommand = commandSuggestions[activeCommandIndex]
+                  if (selectedCommand) selectCommandSuggestion(selectedCommand)
+                  return
+                }
+              }
+              if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+                event.preventDefault()
+                void send()
+              }
+            }}
+          />
+          <span className="research-chat-command-status" aria-live="polite">
+            {commandMenuOpen ? `${commandSuggestions.length} Chat commands available.` : ''}
+          </span>
+        </div>
         <button
           className="research-chat-send"
           type="button"
-          disabled={!prompt.trim() || !profile || busy || Boolean(pendingZoteroPlan)}
+          disabled={
+            !prompt.trim() ||
+            !profile ||
+            busy ||
+            Boolean(pendingZoteroPlan) ||
+            (commandMenuOpen && !exactPromptCommand)
+          }
           onClick={() => void send()}
         >
           <Send size={14} /> {busy ? 'Working…' : 'Send'}

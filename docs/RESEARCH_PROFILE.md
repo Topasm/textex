@@ -60,6 +60,27 @@ Assistant cards describe the references attached to that request and can add a
 citation at the active editor cursor; online cards can also save the item to
 Zotero.
 
+## Research Chat commands
+
+Type `/` at the start of an empty Chat composer to open the command menu. Use
+the arrow keys and Enter to choose a command, or Escape to dismiss the menu
+without changing the prompt.
+
+| Command | Result |
+| --- | --- |
+| `/help` | Reopens the command menu. |
+| `/refs [query]` | Opens project references and prefills the bibliography filter. `/cite` and `/bib` are aliases. |
+| `/zotero [query]` | Opens Zotero references and prefills the library search. |
+| `/online [query]` | Opens Crossref/arXiv search with the query prefilled. |
+| `/todo` | Opens the project TODO sidebar. It does not modify `TODO.md`. |
+| `/outline` | Opens the current document outline. |
+| `/draft` | Opens the existing AI Draft workflow. |
+| `/zotero-plan <request>` | Prepares a Zotero change preview; changes still require explicit approval. |
+
+Navigation commands execute locally and are not sent to the AI provider. TODO
+editing remains in the TODO panel so Chat cannot overwrite concurrent file
+changes through a read-modify-write shortcut.
+
 ## Zotero changes from Chat
 
 Research Chat recognizes explicit Zotero mutation requests and routes them to

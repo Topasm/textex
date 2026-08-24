@@ -100,7 +100,7 @@ describe('ResearchChatPanel', () => {
   it('sends selected paper, document, author, and repository contexts', async () => {
     render(<ResearchChatPanel onAiDraft={vi.fn()} />)
 
-    const input = await screen.findByPlaceholderText('Ask about this paper or its source code…')
+    const input = await screen.findByRole('textbox', { name: 'Research question' })
     expect(screen.getByRole('button', { name: 'Official code' })).toHaveAttribute(
       'aria-pressed',
       'true'
@@ -135,6 +135,160 @@ describe('ResearchChatPanel', () => {
       })
     )
     expect(await screen.findByText('It is implemented in [Official code].')).toBeInTheDocument()
+  })
+
+  it('offers accessible slash commands without sending partial input to the AI', async () => {
+    render(<ResearchChatPanel onAiDraft={vi.fn()} />)
+    const input = await screen.findByRole('textbox', { name: 'Research question' })
+
+    fireEvent.change(input, { target: { value: '/' } })
+    const menu = screen.getByRole('listbox', { name: 'Chat commands' })
+    const options = within(menu).getAllByRole('option')
+    expect(options).toHaveLength(8)
+    expect(input).toHaveAttribute('aria-controls', menu.id)
+    expect(input).toHaveAttribute('aria-activedescendant', options[0].id)
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' })
+    expect(input).toHaveAttribute('aria-activedescendant', options[1].id)
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(input).toHaveValue('/refs ')
+    expect(screen.queryByRole('listbox', { name: 'Chat commands' })).not.toBeInTheDocument()
+    expect(window.api.aiResearchChat).not.toHaveBeenCalled()
+  })
+
+  it('keeps slash command selection IME-safe and lets Escape dismiss only the menu', async () => {
+    useProjectStore.setState({ sidebarView: 'files' })
+    render(<ResearchChatPanel onAiDraft={vi.fn()} />)
+    const input = await screen.findByRole('textbox', { name: 'Research question' })
+
+    fireEvent.change(input, { target: { value: '/todo' } })
+    expect(screen.getByRole('listbox', { name: 'Chat commands' })).toBeInTheDocument()
+    fireEvent.keyDown(input, { key: 'Enter', ctrlKey: true, isComposing: true })
+    expect(input).toHaveValue('/todo')
+    expect(useProjectStore.getState().sidebarView).not.toBe('todo')
+
+    fireEvent.keyDown(input, { key: 'Escape' })
+    expect(input).toHaveValue('/todo')
+    expect(screen.queryByRole('listbox', { name: 'Chat commands' })).not.toBeInTheDocument()
+    expect(window.api.aiResearchChat).not.toHaveBeenCalled()
+  })
+
+  it('routes reference, TODO, outline, and draft commands to existing app surfaces', async () => {
+    const onAiDraft = vi.fn()
+    useProjectStore.setState({
+      isSidebarOpen: false,
+      sidebarView: 'files',
+      researchPanelTab: 'chat',
+      researchReferenceSource: 'project',
+      researchSearchQuery: ''
+    })
+    render(<ResearchChatPanel onAiDraft={onAiDraft} />)
+    const input = await screen.findByRole('textbox', { name: 'Research question' })
+    await screen.findByRole('button', { name: 'Official code' })
+
+    fireEvent.change(input, { target: { value: '/zotero diffusion policy' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    expect(useProjectStore.getState()).toMatchObject({
+      researchPanelTab: 'references',
+      researchReferenceSource: 'zotero',
+      researchSearchQuery: 'diffusion policy'
+    })
+    expect(window.api.aiResearchChat).not.toHaveBeenCalled()
+
+    fireEvent.change(input, { target: { value: '/todo' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    expect(useProjectStore.getState()).toMatchObject({ isSidebarOpen: true, sidebarView: 'todo' })
+
+    fireEvent.change(input, { target: { value: '/outline' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    expect(useProjectStore.getState().sidebarView).toBe('outline')
+
+    fireEvent.change(input, { target: { value: '/draft' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    expect(onAiDraft).toHaveBeenCalledOnce()
+    expect(window.api.aiResearchChat).not.toHaveBeenCalled()
+  })
+
+  it('uses an explicit slash command for the reviewable Zotero mutation plan', async () => {
+    window.api.aiPlanZotero = vi.fn().mockResolvedValue({
+      summary: 'Create a collection.',
+      serverId: 'zotero-server',
+      port: 23_119,
+      projectRoot: '/project',
+      projectEpoch: '1',
+      operations: [
+        {
+          kind: 'createCollection',
+          key: 'ABCD2345',
+          name: 'Writing Projects',
+          path: 'Writing Projects',
+          parentKey: null,
+          parentLabel: 'Library root'
+        }
+      ]
+    })
+    render(<ResearchChatPanel onAiDraft={vi.fn()} />)
+    const input = await screen.findByRole('textbox', { name: 'Research question' })
+    fireEvent.change(input, {
+      target: { value: '/zotero-plan Create a Writing Projects collection' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+
+    expect(await screen.findByLabelText('Zotero change preview')).toBeVisible()
+    expect(window.api.aiPlanZotero).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Create a Writing Projects collection' }),
+      23_119
+    )
+    expect(window.api.zoteroApplyMutationPlan).not.toHaveBeenCalled()
+    expect(window.api.aiResearchChat).not.toHaveBeenCalled()
+  })
+
+  it('uses an incoming editor selection as ephemeral Chat context', async () => {
+    const consumed = vi.fn()
+    render(
+      <ResearchChatPanel
+        onAiDraft={vi.fn()}
+        incomingSelection={{
+          token: 7,
+          projectRoot: '/project',
+          filePath: '/project/paper.tex',
+          content: 'A selected claim that needs supporting evidence.',
+          startLine: 12,
+          endLine: 13
+        }}
+        onIncomingSelectionConsumed={consumed}
+      />
+    )
+
+    expect(
+      await screen.findByRole('button', { name: 'Selection · paper.tex:L12–13' })
+    ).toHaveAttribute('aria-pressed', 'true')
+    expect(consumed).toHaveBeenCalledWith(7)
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Research question' }), {
+      target: { value: 'Find evidence for this claim.' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+
+    await waitFor(() => expect(window.api.aiResearchChat).toHaveBeenCalledOnce())
+    expect(vi.mocked(window.api.aiResearchChat).mock.calls[0][0].contexts).toEqual(
+      expect.arrayContaining([
+        {
+          kind: 'document',
+          label: 'Selection · paper.tex:L12–13',
+          source: '/project/paper.tex#L12–13',
+          content: 'A selected claim that needs supporting evidence.'
+        }
+      ])
+    )
+    expect(
+      vi
+        .mocked(window.api.researchChatSessionSave)
+        .mock.calls.flatMap(([, session]) => session.selectedContexts)
+        .some((context) => context.id.startsWith('selection:'))
+    ).toBe(false)
   })
 
   it('previews and explicitly approves Zotero mutations before writing', async () => {
@@ -406,7 +560,7 @@ describe('ResearchChatPanel', () => {
     const pendingAnswer = deferred<string>()
     window.api.aiResearchChat = vi.fn().mockReturnValue(pendingAnswer.promise)
     render(<ResearchChatPanel onAiDraft={vi.fn()} />)
-    const input = await screen.findByPlaceholderText('Ask about this paper or its source code…')
+    const input = await screen.findByRole('textbox', { name: 'Research question' })
     fireEvent.change(input, { target: { value: 'Old project question' } })
     fireEvent.click(screen.getByRole('button', { name: 'Send' }))
     await waitFor(() => expect(window.api.aiResearchChat).toHaveBeenCalledOnce())

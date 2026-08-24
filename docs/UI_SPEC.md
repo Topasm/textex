@@ -80,6 +80,15 @@ ErrorBoundary
   Approve actions. Planning is read-only; approval invokes the native Local API write path.
 - Paper classification requests can add/remove matching Zotero items from nested collections.
   A single preview row combines that paper's tag and collection-membership changes.
+- Typing `/` in the Chat composer opens a searchable, keyboard-accessible command menu. `/refs`,
+  `/zotero`, and `/online` open the corresponding reference source with an optional prefilled
+  query; `/todo`, `/outline`, and `/draft` reuse the existing workspace surfaces.
+- Zotero search and mutation intent are separate: `/zotero` navigates to library search, while
+  `/zotero-plan <request>` enters the existing review-and-approve change workflow.
+- The existing editor selection toolbar links selected `.tex` text to the workspace without a new
+  popup: **Ask Chat** attaches an in-memory selection context, while **Find Sources** opens the
+  Online reference search with a reviewable prefilled query. Selection bodies are not persisted in
+  the per-project Chat session.
 
 ### `Toolbar.tsx`
 - Acts as the primary document command surface at the top of the application.

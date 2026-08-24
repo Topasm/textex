@@ -47,6 +47,10 @@ import { documentRegistry } from '../models/documentRegistry'
 import { isFeatureEnabled } from '../utils/featureFlags'
 import { errorMessage, logError } from '../utils/errorMessage'
 import { LoadingFallback } from './LoadingFallback'
+import {
+  clearResearchProfileDraft,
+  confirmResearchProfileDraftDiscard
+} from '../services/researchProfileDraft'
 
 // Lazy-load heavy modals that are rarely shown
 const TableEditorModal = lazy(() =>
@@ -193,6 +197,49 @@ function EditorPane() {
       setIsUpdatingAiContext(false)
     }
   }, [])
+
+  const selectedResearchText = useCallback(() => {
+    const editor = editorRef.current
+    const selection = editor?.getSelection()
+    const model = editor?.getModel()
+    if (!editor || !selection || !model || selection.isEmpty()) return null
+    const content = model.getValueInRange(selection).trim()
+    if (!content) return null
+    return { selection, content }
+  }, [])
+
+  const canOpenResearchTool = useCallback(() => {
+    const store = useProjectStore.getState()
+    if (!store.isResearchPanelOpen || store.researchPanelTab !== 'profile') return true
+    if (!confirmResearchProfileDraftDiscard()) return false
+    clearResearchProfileDraft()
+    return true
+  }, [])
+
+  const handleSelectionAskChat = useCallback(() => {
+    const selected = selectedResearchText()
+    if (!selected || !projectRoot || !filePath || !canOpenResearchTool()) return
+    useProjectStore.getState().queueResearchSelection({
+      projectRoot,
+      filePath,
+      content: selected.content.slice(0, 12_000),
+      startLine: selected.selection.startLineNumber,
+      endLine: selected.selection.endLineNumber
+    })
+    useProjectStore.getState().openResearchPanel('chat')
+    hideSelectionAiToolbar()
+  }, [canOpenResearchTool, filePath, hideSelectionAiToolbar, projectRoot, selectedResearchText])
+
+  const handleSelectionFindSources = useCallback(() => {
+    const selected = selectedResearchText()
+    if (!selected || !projectRoot || !canOpenResearchTool()) return
+    const query = selected.content.replace(/\s+/gu, ' ').trim().slice(0, 512)
+    const store = useProjectStore.getState()
+    store.setResearchSearchQuery(query)
+    store.setResearchReferenceSource('online')
+    store.openResearchPanel('references')
+    hideSelectionAiToolbar()
+  }, [canOpenResearchTool, hideSelectionAiToolbar, projectRoot, selectedResearchText])
 
   // Track editor container width so we can auto-enable word wrap when it gets narrow
   // (e.g., when the terminal pane is open and shrinks the editor).
@@ -590,6 +637,9 @@ function EditorPane() {
               onAction={handleSelectionAiAction}
               onCommand={handleSelectionAiCommand}
               onUpdateContext={handleSelectionContextUpdate}
+              onAskChat={handleSelectionAskChat}
+              onFindSources={handleSelectionFindSources}
+              researchActionsDisabled={!projectRoot}
               contextStatus={cachedAiContext ? aiContextStatus : 'missing'}
               isUpdatingContext={isUpdatingAiContext}
               onClose={hideSelectionAiToolbar}

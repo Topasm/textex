@@ -42,6 +42,7 @@ export function ResearchPanel({ onAiDraft }: ResearchPanelProps) {
   const tab = useProjectStore((state) => state.researchPanelTab)
   const width = useProjectStore((state) => state.researchPanelWidth)
   const projectRoot = useProjectStore((state) => state.projectRoot)
+  const pendingResearchSelection = useProjectStore((state) => state.pendingResearchSelection)
   const diagnostics = useCompileStore((state) => state.diagnostics)
   const isLogPanelOpen = useCompileStore((state) => state.isLogPanelOpen)
   const isTerminalPaneOpen = useUiStore((state) => state.isTerminalPaneOpen)
@@ -267,6 +268,14 @@ export function ResearchPanel({ onAiDraft }: ResearchPanelProps) {
           {tab === 'chat' ? (
             <ResearchChatPanel
               onAiDraft={onAiDraft}
+              incomingSelection={
+                pendingResearchSelection?.projectRoot === projectRoot
+                  ? pendingResearchSelection
+                  : null
+              }
+              onIncomingSelectionConsumed={(token) =>
+                useProjectStore.getState().consumeResearchSelection(token)
+              }
               incomingReference={
                 pendingChatReference?.projectRoot === projectRoot ? pendingChatReference : null
               }

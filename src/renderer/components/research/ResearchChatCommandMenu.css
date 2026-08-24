@@ -1,0 +1,129 @@
+.research-chat-command-input-wrapper {
+  position: relative;
+}
+
+.research-chat-command-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.research-chat-command-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  box-sizing: border-box;
+  max-height: min(240px, 30dvh);
+  margin: 0;
+  padding: 4px;
+  overflow-y: auto;
+  color: var(--text-primary);
+  list-style: none;
+  background: var(--ui-surface-raised, var(--bg-secondary));
+  border: 1px solid var(--ui-border-strong, var(--border));
+  border-radius: var(--ui-radius-panel, 6px);
+  box-shadow: var(--ui-shadow-popover, 0 4px 14px var(--shadow-color));
+  overscroll-behavior: contain;
+}
+
+.research-chat-command-option {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 8px;
+  justify-content: center;
+  padding: 6px 8px;
+  border-radius: var(--ui-radius-control, 4px);
+  cursor: pointer;
+}
+
+.research-chat-command-option.active {
+  background: var(--sidebar-selected, var(--bg-hover));
+}
+
+.research-chat-command-icon {
+  flex: 0 0 auto;
+  color: var(--text-secondary);
+}
+
+.research-chat-command-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.research-chat-command-heading {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 7px;
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.research-chat-command-heading code {
+  flex-shrink: 0;
+  color: var(--accent);
+  font-size: inherit;
+  font-weight: 600;
+}
+
+.research-chat-command-heading > span,
+.research-chat-command-description,
+.research-chat-command-usage {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.research-chat-command-description,
+.research-chat-command-usage {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.research-chat-command-description {
+  margin-top: 1px;
+}
+
+.research-chat-command-usage {
+  margin-top: 2px;
+  font-size: 9px;
+}
+
+@media (max-width: 560px) {
+  .research-chat-command-option {
+    min-height: 44px;
+    padding: 7px 8px;
+  }
+}
+
+@media (forced-colors: active) {
+  .research-chat-command-menu {
+    border-color: CanvasText;
+  }
+
+  .research-chat-command-option.active {
+    color: HighlightText;
+    background: Highlight;
+    forced-color-adjust: none;
+  }
+
+  .research-chat-command-option.active .research-chat-command-heading code,
+  .research-chat-command-option.active .research-chat-command-icon,
+  .research-chat-command-option.active .research-chat-command-description,
+  .research-chat-command-option.active .research-chat-command-usage {
+    color: inherit;
+  }
+}

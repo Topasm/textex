@@ -24,7 +24,8 @@ function BibPanel({ onAddToChat }: BibPanelProps) {
   const bibGroupMode =
     configuredGroupMode === 'custom' && !citationGroupsSupported ? 'flat' : configuredGroupMode
   const updateSetting = useSettingsStore((s) => s.updateSetting)
-  const [filter, setFilter] = useState('')
+  const filter = useProjectStore((s) => s.researchSearchQuery)
+  const setFilter = useProjectStore((s) => s.setResearchSearchQuery)
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
 
   const {

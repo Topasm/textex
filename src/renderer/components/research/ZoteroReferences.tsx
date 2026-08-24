@@ -59,8 +59,9 @@ function buildZoteroReferencePayload(item: ZoteroSearchResult, port: number): Re
 
 export function ZoteroReferences({ onAddToChat }: ZoteroReferencesProps = {}) {
   const projectRoot = useProjectStore((state) => state.projectRoot)
+  const query = useProjectStore((state) => state.researchSearchQuery)
+  const setQuery = useProjectStore((state) => state.setResearchSearchQuery)
   const port = useSettingsStore((state) => state.settings.zoteroPort)
-  const [query, setQuery] = useState('')
   const [results, setResults] = useState<ZoteroSearchResult[]>([])
   const [collections, setCollections] = useState<ZoteroCollection[]>([])
   const [config, setConfig] = useState<ResearchConfig>(DEFAULT_CONFIG)

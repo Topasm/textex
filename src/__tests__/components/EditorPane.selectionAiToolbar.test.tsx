@@ -7,6 +7,7 @@ import { useAiContextStore } from '../../renderer/store/useAiContextStore'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 import { useUiStore } from '../../renderer/store/useUiStore'
+import { useProjectStore } from '../../renderer/store/useProjectStore'
 
 const editorListeners = {
   selection: [] as Array<
@@ -206,6 +207,15 @@ describe('EditorPane selection AI toolbar', () => {
       }
     }))
     useEditorStore.getState().resetEditor()
+    useProjectStore.setState({
+      projectRoot: '/tmp',
+      isResearchPanelOpen: false,
+      researchPanelTab: 'references',
+      researchReferenceSource: 'project',
+      researchSearchQuery: '',
+      pendingResearchSelection: null,
+      researchSelectionToken: 0
+    })
     useEditorStore
       .getState()
       .openFileInTab('/tmp/paper.tex', '\\section{Intro}\nselected text in context')
@@ -413,5 +423,59 @@ describe('EditorPane selection AI toolbar', () => {
     })
     expect(screen.getByTestId('selection-ai-toolbar')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Context Fresh' })).toBeInTheDocument()
+  })
+
+  it('routes a selection to Chat or the Online reference search', async () => {
+    const user = userEvent.setup()
+    const model = {
+      getValue: vi.fn(() => '\\section{Intro}\nsupporting claim with context'),
+      setValue: vi.fn(),
+      getValueInRange: vi.fn(() => 'supporting   claim\nwith context'),
+      getVersionId: vi.fn(() => 1)
+    }
+    mockEditor.getModel = vi.fn(() => model)
+    render(<EditorPane />)
+
+    const selectText = () => {
+      currentSelection = {
+        startLineNumber: 2,
+        startColumn: 1,
+        endLineNumber: 3,
+        endColumn: 13,
+        isEmpty: () => false
+      }
+      act(() => {
+        editorListeners.mouseDown[0]?.({
+          target: { type: mockMonaco.editor.MouseTargetType.CONTENT_TEXT }
+        })
+        editorListeners.selection[0]?.({ selection: currentSelection!, source: 'mouse' })
+        editorListeners.mouseUp[0]?.()
+      })
+    }
+
+    selectText()
+    await user.click(await screen.findByRole('button', { name: 'Ask Chat' }))
+
+    expect(useProjectStore.getState()).toMatchObject({
+      isResearchPanelOpen: true,
+      researchPanelTab: 'chat',
+      pendingResearchSelection: {
+        projectRoot: '/tmp',
+        filePath: '/tmp/paper.tex',
+        content: 'supporting   claim\nwith context',
+        startLine: 2,
+        endLine: 3
+      }
+    })
+
+    selectText()
+    await user.click(await screen.findByRole('button', { name: 'Find Sources' }))
+
+    expect(useProjectStore.getState()).toMatchObject({
+      isResearchPanelOpen: true,
+      researchPanelTab: 'references',
+      researchReferenceSource: 'online',
+      researchSearchQuery: 'supporting claim with context'
+    })
   })
 })

@@ -34,6 +34,15 @@ export interface BibliographyRegistrationRequest {
   mode: 'bibtex' | 'biblatex'
 }
 
+export interface ResearchSelectionRequest {
+  token: number
+  projectRoot: string
+  filePath: string
+  content: string
+  startLine: number
+  endLine: number
+}
+
 interface PersistedResearchPanelState {
   open: boolean
   tab: ResearchPanelTab
@@ -54,6 +63,8 @@ interface ProjectState {
   researchPanelWidth: number
   researchReferenceSource: ReferenceSource
   researchSearchQuery: string
+  pendingResearchSelection: ResearchSelectionRequest | null
+  researchSelectionToken: number
   bibliographyRegistrationRequest: BibliographyRegistrationRequest | null
   researchPanelStates: Record<string, PersistedResearchPanelState>
 
@@ -92,6 +103,8 @@ interface ProjectState {
   setResearchPanelWidth: (width: number) => void
   setResearchReferenceSource: (source: ReferenceSource) => void
   setResearchSearchQuery: (query: string) => void
+  queueResearchSelection: (request: Omit<ResearchSelectionRequest, 'token'>) => void
+  consumeResearchSelection: (token: number) => void
   setBibliographyRegistrationRequest: (request: BibliographyRegistrationRequest | null) => void
   setBibEntries: (entries: BibEntry[]) => void
   setCitationGroups: (groups: CitationGroup[]) => void
@@ -119,6 +132,8 @@ export const useProjectStore = create<ProjectState>()(
       researchPanelWidth: RESEARCH_PANEL_DEFAULT_WIDTH,
       researchReferenceSource: 'project',
       researchSearchQuery: '',
+      pendingResearchSelection: null,
+      researchSelectionToken: 0,
       bibliographyRegistrationRequest: null,
       researchPanelStates: {},
 
@@ -144,6 +159,7 @@ export const useProjectStore = create<ProjectState>()(
             researchPanelWidth: saved?.width ?? RESEARCH_PANEL_DEFAULT_WIDTH,
             researchReferenceSource: saved?.source ?? 'project',
             researchSearchQuery: '',
+            pendingResearchSelection: null,
             bibliographyRegistrationRequest: null
           }
         }),
@@ -194,6 +210,19 @@ export const useProjectStore = create<ProjectState>()(
       setResearchReferenceSource: (source) =>
         set((state) => persistResearchPanelState(state, { source })),
       setResearchSearchQuery: (researchSearchQuery) => set({ researchSearchQuery }),
+      queueResearchSelection: (request) =>
+        set((state) => {
+          const token = state.researchSelectionToken + 1
+          return {
+            researchSelectionToken: token,
+            pendingResearchSelection: { ...request, token }
+          }
+        }),
+      consumeResearchSelection: (token) =>
+        set((state) => ({
+          pendingResearchSelection:
+            state.pendingResearchSelection?.token === token ? null : state.pendingResearchSelection
+        })),
       setBibliographyRegistrationRequest: (bibliographyRegistrationRequest) =>
         set({ bibliographyRegistrationRequest }),
       setBibEntries: (bibEntries) => set({ bibEntries }),

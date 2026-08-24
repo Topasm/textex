@@ -10,6 +10,8 @@ describe('research panel project state', () => {
       researchPanelWidth: 380,
       researchReferenceSource: 'project',
       researchSearchQuery: '',
+      pendingResearchSelection: null,
+      researchSelectionToken: 0,
       researchPanelStates: {}
     })
   })
@@ -48,5 +50,25 @@ describe('research panel project state', () => {
       isResearchPanelOpen: true,
       researchPanelTab: 'profile'
     })
+  })
+
+  it('keeps editor selections transient and gives repeated requests unique tokens', () => {
+    useProjectStore.getState().setProjectRoot('/paper')
+    const request = {
+      projectRoot: '/paper',
+      filePath: '/paper/main.tex',
+      content: 'Selected claim',
+      startLine: 4,
+      endLine: 4
+    }
+
+    useProjectStore.getState().queueResearchSelection(request)
+    const firstToken = useProjectStore.getState().pendingResearchSelection?.token
+    useProjectStore.getState().consumeResearchSelection(firstToken!)
+    useProjectStore.getState().queueResearchSelection(request)
+
+    expect(useProjectStore.getState().pendingResearchSelection?.token).toBe((firstToken ?? 0) + 1)
+    useProjectStore.getState().setProjectRoot('/other')
+    expect(useProjectStore.getState().pendingResearchSelection).toBeNull()
   })
 })

@@ -197,4 +197,32 @@ describe('SelectionAiToolbar', () => {
 
     expect(screen.getByRole('button', { name: 'Updating Context...' })).toBeDisabled()
   })
+
+  it('forwards the minimal research actions', () => {
+    const editor = createEditor()
+    const onAskChat = vi.fn()
+    const onFindSources = vi.fn()
+
+    render(
+      <SelectionAiToolbar
+        editorRef={{ current: editor as never }}
+        selection={selection as never}
+        actions={AI_ACTIONS}
+        onAction={vi.fn()}
+        onCommand={vi.fn()}
+        onUpdateContext={vi.fn()}
+        onAskChat={onAskChat}
+        onFindSources={onFindSources}
+        contextStatus="fresh"
+        isUpdatingContext={false}
+        onClose={vi.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ask Chat' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Find Sources' }))
+
+    expect(onAskChat).toHaveBeenCalledOnce()
+    expect(onFindSources).toHaveBeenCalledOnce()
+  })
 })

@@ -172,6 +172,33 @@ describe('Research reference sources', () => {
     expect(window.api.zoteroSearch).toHaveBeenCalledOnce()
   })
 
+  it('uses the Chat command query in project and Zotero reference filters', async () => {
+    useProjectStore.setState({
+      researchSearchQuery: 'diffusion policy',
+      researchReferenceSource: 'project',
+      bibEntries: [
+        {
+          key: 'diffusion2026',
+          type: 'article',
+          title: 'Diffusion Policy',
+          author: 'Ada Lovelace',
+          year: '2026'
+        }
+      ]
+    })
+    const { unmount } = render(<ReferencesPanel />)
+    expect(screen.getByPlaceholderText('Filter citations...')).toHaveValue('diffusion policy')
+    unmount()
+
+    window.api.researchLoadConfig = vi.fn().mockResolvedValue(config)
+    window.api.zoteroCollections = vi.fn().mockResolvedValue([])
+    useProjectStore.getState().setResearchReferenceSource('zotero')
+    render(<ReferencesPanel />)
+    expect(await screen.findByRole('textbox', { name: 'Search Zotero library' })).toHaveValue(
+      'diffusion policy'
+    )
+  })
+
   it('renders only expanded collection branches and supports keyboard tree navigation', async () => {
     window.api.researchLoadConfig = vi.fn().mockResolvedValue(config)
     window.api.zoteroCollections = vi.fn().mockResolvedValue([

@@ -42,6 +42,31 @@
     color 0.15s ease;
 }
 
+.selection-ai-toolbar-research-btn {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-primary);
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.selection-ai-toolbar-research-btn:hover:not(:disabled) {
+  border-color: var(--ui-border, var(--border));
+  background: var(--bg-hover);
+}
+
+.selection-ai-toolbar-research-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.selection-ai-toolbar-context-row .selection-ai-toolbar-context-btn {
+  margin-left: auto;
+}
+
 .selection-ai-toolbar-context-btn:hover:not(:disabled) {
   background: var(--bg-hover);
 }

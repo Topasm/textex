@@ -15,6 +15,9 @@ interface SelectionAiToolbarProps {
   onAction: (action: AiActionDef) => void
   onCommand: (command: string) => void
   onUpdateContext: () => void
+  onAskChat?: () => void
+  onFindSources?: () => void
+  researchActionsDisabled?: boolean
   contextStatus: AiContextStatus
   isUpdatingContext: boolean
   onClose: () => void
@@ -75,6 +78,9 @@ export function SelectionAiToolbar({
   onAction,
   onCommand,
   onUpdateContext,
+  onAskChat,
+  onFindSources,
+  researchActionsDisabled = false,
   contextStatus,
   isUpdatingContext,
   onClose
@@ -121,6 +127,26 @@ export function SelectionAiToolbar({
       }}
     >
       <div className="selection-ai-toolbar-context-row">
+        {onAskChat && (
+          <button
+            type="button"
+            className="selection-ai-toolbar-research-btn"
+            onClick={onAskChat}
+            disabled={researchActionsDisabled}
+          >
+            Ask Chat
+          </button>
+        )}
+        {onFindSources && (
+          <button
+            type="button"
+            className="selection-ai-toolbar-research-btn"
+            onClick={onFindSources}
+            disabled={researchActionsDisabled}
+          >
+            Find Sources
+          </button>
+        )}
         <button
           type="button"
           className={`selection-ai-toolbar-context-btn status-${contextStatus}`}
