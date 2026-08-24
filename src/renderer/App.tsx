@@ -11,28 +11,23 @@ import {
   PinOff
 } from 'lucide-react'
 import Toolbar from './components/Toolbar'
-import LogPanel from './components/LogPanel'
 import StatusBar from './components/StatusBar'
 import FileTree from './components/FileTree'
 import TabBar from './components/TabBar'
-import { BibliographyRegistrationDialog } from './components/research/BibliographyRegistrationDialog'
 import OutlinePanel from './components/OutlinePanel'
 import GitPanel from './components/GitPanel'
 import { TodoPanel } from './components/TodoPanel'
 import { TimelinePanel } from './components/TimelinePanel'
-import UpdateNotification from './components/UpdateNotification'
 import PreviewErrorBoundary from './components/PreviewErrorBoundary'
 import HomeScreen from './components/HomeScreen'
 import { LoadingFallback } from './components/LoadingFallback'
 import NotificationCenter from './components/NotificationCenter'
-import { CommandPalette } from './components/CommandPalette'
 import { useAutoCompile } from './hooks/useAutoCompile'
 import { useFileOps } from './hooks/useFileOps'
 import { useSessionRestore } from './hooks/useSessionRestore'
 import { useIpcListeners } from './hooks/useIpcListeners'
 import { useExternalFileReload } from './hooks/useExternalFileReload'
 import ExternalChangeBanner from './components/ExternalChangeBanner'
-import { CrashRecoveryDialog } from './components/CrashRecoveryDialog'
 import { useGitAutoRefresh } from './hooks/useGitAutoRefresh'
 import { useBibAutoLoad } from './hooks/useBibAutoLoad'
 import { useLspLifecycle } from './hooks/useLspLifecycle'
@@ -93,6 +88,21 @@ const PreviewPane = lazy(() => import('./components/PreviewPane'))
 const ResearchPanel = lazy(() =>
   import('./components/ResearchPanel').then((module) => ({ default: module.ResearchPanel }))
 )
+const LogPanel = lazy(() => import('./components/LogPanel'))
+const CommandPalette = lazy(() =>
+  import('./components/CommandPalette').then((module) => ({ default: module.CommandPalette }))
+)
+const CrashRecoveryDialog = lazy(() =>
+  import('./components/CrashRecoveryDialog').then((module) => ({
+    default: module.CrashRecoveryDialog
+  }))
+)
+const UpdateNotification = lazy(() => import('./components/UpdateNotification'))
+const BibliographyRegistrationDialog = lazy(() =>
+  import('./components/research/BibliographyRegistrationDialog').then((module) => ({
+    default: module.BibliographyRegistrationDialog
+  }))
+)
 
 function App() {
   const { t } = useTranslation()
@@ -113,10 +123,12 @@ function App() {
   const splitRatio = usePdfStore((s) => s.splitRatio)
   const terminalRatio = usePdfStore((s) => s.terminalRatio)
   const pdfPath = useCompileStore((s) => s.pdfPath)
+  const isLogPanelOpen = useCompileStore((s) => s.isLogPanelOpen)
   const isSidebarOpen = useProjectStore((s) => s.isSidebarOpen)
   const sidebarView = useProjectStore((s) => s.sidebarView)
   const sidebarWidth = useProjectStore((s) => s.sidebarWidth)
   const isResearchPanelOpen = useProjectStore((s) => s.isResearchPanelOpen)
+  const bibliographyRegistrationRequest = useProjectStore((s) => s.bibliographyRegistrationRequest)
   const filePath = useEditorStore((s) => s.filePath)
   const projectRoot = useProjectStore((s) => s.projectRoot)
   const isGitRepo = useProjectStore((s) => s.isGitRepo)
@@ -128,6 +140,7 @@ function App() {
   const isTerminalPaneOpen = useUiStore((s) => s.isTerminalPaneOpen)
   const terminalPaneOpen = capabilities.pty && isTerminalPaneOpen
   const isTemplateGalleryOpen = useUiStore((s) => s.isTemplateGalleryOpen)
+  const updateStatus = useUiStore((s) => s.updateStatus)
   const toggleTerminalPane = useUiStore((s) => s.toggleTerminalPane)
 
   const [isDraftModalOpen, setIsDraftModalOpen] = useState(false)
@@ -562,16 +575,24 @@ function App() {
           />
         </Suspense>
       )}
-      {!suppressBackgroundSurfaces && <UpdateNotification />}
+      {!suppressBackgroundSurfaces && updateStatus !== 'idle' && (
+        <Suspense fallback={null}>
+          <UpdateNotification />
+        </Suspense>
+      )}
       {!suppressBackgroundSurfaces && <ExternalChangeBanner />}
       <NotificationCenter suppressed={suppressBackgroundSurfaces} />
-      <CommandPalette
-        isOpen={commandPaletteVisible}
-        onClose={() => setIsCommandPaletteOpen(false)}
-        onRunCommand={runAppCommand}
-        capabilities={capabilities}
-        context={{ document: Boolean(filePath), pdf: Boolean(pdfPath) }}
-      />
+      {commandPaletteVisible && (
+        <Suspense fallback={null}>
+          <CommandPalette
+            isOpen
+            onClose={() => setIsCommandPaletteOpen(false)}
+            onRunCommand={runAppCommand}
+            capabilities={capabilities}
+            context={{ document: Boolean(filePath), pdf: Boolean(pdfPath) }}
+          />
+        </Suspense>
+      )}
       {!sessionRestored ? (
         <LoadingFallback variant="workspace" label={t('loading.workspace')} />
       ) : showHomeScreen ? (
@@ -653,9 +674,19 @@ function App() {
           )}
         </div>
       )}
-      <LogPanel />
-      <BibliographyRegistrationDialog />
-      <CrashRecoveryDialog enabled={sessionRestored} />
+      {isLogPanelOpen && (
+        <Suspense fallback={null}>
+          <LogPanel />
+        </Suspense>
+      )}
+      {bibliographyRegistrationRequest && (
+        <Suspense fallback={null}>
+          <BibliographyRegistrationDialog />
+        </Suspense>
+      )}
+      <Suspense fallback={null}>
+        <CrashRecoveryDialog enabled={sessionRestored} />
+      </Suspense>
       {showStatusBar && <StatusBar />}
       {capabilities.templates && isTemplateGalleryOpen && (
         <Suspense
