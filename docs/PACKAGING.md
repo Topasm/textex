@@ -53,9 +53,11 @@ decoded value.
 ## Platform signing in CI
 
 Version-tag builds always require Tauri updater signing, but Apple platform
-credentials are optional. With no Apple credentials, CI applies an ad-hoc
-signature to macOS applications and verifies both the DMG and updater archive;
-users may need to allow the app manually in macOS Privacy & Security. If Apple
+credentials are optional. The macOS tag build explicitly requests both the
+`app` updater target and `dmg` installer target. With no Apple credentials, CI
+applies an ad-hoc signature and verifies both artifacts, but does not require
+Developer ID hardened-runtime entitlements; users may need to allow the app
+manually in macOS Privacy & Security. If Apple
 signing is enabled, all five secrets must be configured together:
 `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_NOTARY_API_KEY`,
 `APPLE_NOTARY_KEY_ID`, and `APPLE_NOTARY_ISSUER_ID`.
