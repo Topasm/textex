@@ -135,7 +135,6 @@ pub async fn compile_latex(
                 identity.clone(),
                 on_event.clone(),
                 lease.cancel_receiver(),
-                COMPILE_TIMEOUT,
             )
             .await
         }
@@ -147,7 +146,6 @@ pub async fn compile_latex(
                 identity.clone(),
                 on_event.clone(),
                 lease.cancel_receiver(),
-                COMPILE_TIMEOUT,
             )
             .await
         }
@@ -240,7 +238,6 @@ async fn run_tectonic(
     identity: CompileIdentity,
     on_event: Channel<CompileEvent>,
     cancel_receiver: &mut oneshot::Receiver<()>,
-    timeout: Duration,
 ) -> AppResult<CompilerOutput> {
     let working_directory = tex_path.parent().ok_or_else(|| {
         AppError::InvalidPath(format!(
@@ -272,7 +269,6 @@ async fn run_tectonic(
         identity,
         on_event,
         cancel_receiver,
-        timeout,
     )
     .await
 }
@@ -284,7 +280,6 @@ async fn run_latexmk(
     identity: CompileIdentity,
     on_event: Channel<CompileEvent>,
     cancel_receiver: &mut oneshot::Receiver<()>,
-    timeout: Duration,
 ) -> AppResult<CompilerOutput> {
     let working_directory = tex_path.parent().ok_or_else(|| {
         AppError::InvalidPath(format!(
@@ -311,7 +306,6 @@ async fn run_latexmk(
         identity,
         on_event,
         cancel_receiver,
-        timeout,
     )
     .await
 }
@@ -451,7 +445,6 @@ async fn run_configured_compiler(
     identity: CompileIdentity,
     on_event: Channel<CompileEvent>,
     cancel_receiver: &mut oneshot::Receiver<()>,
-    timeout: Duration,
 ) -> AppResult<CompilerOutput> {
     let display_compiler_path = compiler_path.to_string_lossy().into_owned();
     let child = command
@@ -460,7 +453,7 @@ async fn run_configured_compiler(
     let child_run = monitor_child(
         child,
         cancel_receiver,
-        timeout,
+        COMPILE_TIMEOUT,
         identity.clone(),
         on_event.clone(),
         &display_compiler_path,

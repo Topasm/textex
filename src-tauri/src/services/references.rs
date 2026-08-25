@@ -335,6 +335,7 @@ fn parse_labels(content: &str, file: &str) -> Vec<LabelInfo> {
         .collect()
 }
 
+#[cfg(test)]
 fn parse_citations(content: &str) -> Vec<CitationUsage> {
     parse_citations_with_source(content, None)
 }
