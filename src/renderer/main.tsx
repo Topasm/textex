@@ -12,6 +12,7 @@ import { hydrateSettingsFromNative, loadNativeSettingsSnapshot } from './store/u
 import './styles/index.css'
 import './styles/flat.css'
 import './styles/responsive.css'
+import './styles/research-panel-responsive.css'
 
 // Set platform attribute for CSS-based platform targeting (e.g. title bar overlay padding)
 if (navigator.platform.startsWith('Win')) {
