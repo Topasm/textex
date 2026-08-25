@@ -19,7 +19,6 @@
     "aiDraft": "AI 초안",
     "aiDraftShortcut": "AI 초안 (Ctrl+Shift+D)",
     "aiAssistant": "AI 어시스턴트",
-    "openProjectTerminal": "프로젝트를 터미널에서 열기",
     "settings": "설정",
     "syncPdfToCode": "PDF에서 코드로 동기화 (Ctrl+Click in PDF)",
     "syncCodeToPdf": "코드에서 PDF로 동기화",

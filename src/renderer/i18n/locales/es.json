@@ -19,7 +19,6 @@
     "aiDraft": "Borrador IA",
     "aiDraftShortcut": "Borrador IA (Ctrl+Shift+D)",
     "aiAssistant": "Asistente de IA",
-    "openProjectTerminal": "Abrir proyecto en la terminal",
     "settings": "Configuración",
     "syncPdfToCode": "Sincronizar PDF a código (Ctrl+Clic en PDF)",
     "syncCodeToPdf": "Sincronizar código a PDF",

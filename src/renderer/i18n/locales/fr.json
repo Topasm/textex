@@ -19,7 +19,6 @@
     "aiDraft": "Brouillon IA",
     "aiDraftShortcut": "Brouillon IA (Ctrl+Shift+D)",
     "aiAssistant": "Assistant IA",
-    "openProjectTerminal": "Ouvrir le projet dans le terminal",
     "settings": "Paramètres",
     "syncPdfToCode": "Synchroniser PDF vers code (Ctrl+Clic dans le PDF)",
     "syncCodeToPdf": "Synchroniser code vers PDF",

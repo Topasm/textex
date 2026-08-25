@@ -2871,34 +2871,6 @@ body,
   background: var(--border);
 }
 
-.research-panel-tabs > .research-panel-tool-btn {
-  position: relative;
-  flex: 0 0 32px;
-  padding: 0;
-}
-
-.research-panel-tabs > .research-panel-tool-btn.active {
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 9%, transparent);
-  border-bottom-color: var(--accent);
-}
-
-.research-panel-tool-badge {
-  position: absolute;
-  top: 2px;
-  right: 1px;
-  min-width: 12px;
-  height: 12px;
-  padding: 0 3px;
-  color: var(--text-on-accent, #fff);
-  background: var(--error);
-  border-radius: 6px;
-  font-size: 8px;
-  font-weight: 700;
-  line-height: 12px;
-  text-align: center;
-}
-
 .research-panel-tabs .research-panel-close {
   margin-left: auto;
   padding-inline: 10px;

@@ -162,10 +162,6 @@
     min-width: 34px;
   }
 
-  .research-panel-tabs > .research-panel-tool-btn {
-    flex-basis: 30px;
-  }
-
   .research-panel-tabs .research-panel-close {
     padding-inline: 7px;
   }
