@@ -1,0 +1,163 @@
+/* Reference manager density / narrow-panel fixes.
+ *
+ * The research panel is user-resizable and can be as narrow as 320px, so
+ * viewport breakpoints alone are not sufficient. Keep this file after the
+ * base/flat/responsive styles and scope adaptations to the panel container.
+ */
+
+.research-panel {
+  container-name: research-panel;
+}
+
+/* Reference cards should never force the panel wider than its container. */
+.research-reference-view,
+.reference-card-list,
+.reference-card,
+.reference-card > div,
+.zotero-inventory-card > div:first-child,
+.reference-health-heading > div {
+  min-width: 0;
+}
+
+.reference-card strong,
+.zotero-inventory-card strong {
+  overflow-wrap: anywhere;
+}
+
+/* Prefer natural wrapping over horizontal scrolling for the health controls. */
+.reference-health-filters {
+  flex-wrap: wrap;
+  overflow-x: visible;
+}
+
+/* Keep long Zotero citekeys from stealing the title column. */
+.zotero-inventory-card > div:first-child > span {
+  max-width: 42%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@container research-panel (max-width: 420px) {
+  .research-reference-view {
+    padding: 9px;
+  }
+
+  .research-config-row {
+    margin-bottom: 6px;
+  }
+
+  .reference-health {
+    gap: 6px;
+    margin-bottom: 7px;
+    padding: 8px;
+  }
+
+  .reference-health-heading {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .reference-health-heading small {
+    max-width: 100%;
+    text-align: left;
+  }
+
+  .reference-health-issues {
+    gap: 3px 8px;
+    line-height: 1.35;
+  }
+
+  .reference-health-filters {
+    gap: 3px;
+  }
+
+  .reference-health-filters > button {
+    padding: 3px 5px;
+  }
+
+  .zotero-collection-tree {
+    max-height: 136px;
+  }
+
+  .zotero-inventory-summary {
+    padding: 7px 8px;
+  }
+
+  .research-search {
+    margin-bottom: 8px;
+  }
+
+  .reference-card-list {
+    gap: 6px;
+  }
+
+  .reference-card {
+    gap: 5px;
+    padding: 8px;
+  }
+
+  .reference-card-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    width: 100%;
+  }
+
+  .reference-card-actions button,
+  .reference-card-actions button:last-child {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .zotero-inventory-card > div:first-child {
+    grid-template-columns: 14px minmax(0, 1fr);
+  }
+
+  .zotero-inventory-card > div:first-child > span {
+    grid-column: 2;
+    max-width: 100%;
+  }
+}
+
+@container research-panel (max-width: 360px) {
+  .research-panel-tabs > [role='tab'] {
+    flex-basis: 34px;
+    min-width: 34px;
+  }
+
+  .research-panel-tabs > .research-panel-tool-btn {
+    flex-basis: 30px;
+  }
+
+  .research-panel-tabs .research-panel-close {
+    padding-inline: 7px;
+  }
+
+  .research-reference-view {
+    padding: 7px;
+  }
+
+  .reference-health-filters > button {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .reference-health > .reference-submission-action {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .zotero-inventory-summary > div {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .reference-card-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .reference-card-actions button {
+    min-height: 30px;
+  }
+}
