@@ -24,6 +24,7 @@ desktop-runtime check.
 ```bash
 npm run check              # TypeScript, ESLint, Prettier, Rust format
 npm run test               # Vitest
+npm run test:workflow      # Focused cross-component paper/Git workflows
 npm run pre-commit         # Full local JavaScript/TypeScript gate
 cargo test --locked --manifest-path src-tauri/Cargo.toml
 cargo clippy --locked --manifest-path src-tauri/Cargo.toml -- -D warnings

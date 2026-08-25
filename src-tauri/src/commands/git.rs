@@ -2,7 +2,7 @@ use tauri::State;
 
 use crate::{
     error::AppResult,
-    models::{GitLogEntry, GitStatusResult, SuccessResult},
+    models::{GitLogEntry, GitRemoteStatus, GitStatusResult, SuccessResult},
     services::git,
     state::AppState,
 };
@@ -26,6 +26,33 @@ pub async fn git_status(
 ) -> AppResult<GitStatusResult> {
     let _project_operation = state.lock_project_operation().await;
     git::status(state.inner(), &work_dir).await
+}
+
+#[tauri::command]
+pub async fn git_remote_status(
+    state: State<'_, AppState>,
+    work_dir: String,
+) -> AppResult<GitRemoteStatus> {
+    let _project_operation = state.lock_project_operation().await;
+    git::remote_status(state.inner(), &work_dir).await
+}
+
+#[tauri::command]
+pub async fn git_fetch(state: State<'_, AppState>, work_dir: String) -> AppResult<GitRemoteStatus> {
+    let _project_operation = state.lock_project_operation().await;
+    git::fetch(state.inner(), &work_dir).await
+}
+
+#[tauri::command]
+pub async fn git_pull(state: State<'_, AppState>, work_dir: String) -> AppResult<GitRemoteStatus> {
+    let _project_operation = state.lock_project_operation().await;
+    git::pull(state.inner(), &work_dir).await
+}
+
+#[tauri::command]
+pub async fn git_push(state: State<'_, AppState>, work_dir: String) -> AppResult<GitRemoteStatus> {
+    let _project_operation = state.lock_project_operation().await;
+    git::push(state.inner(), &work_dir).await
 }
 
 #[tauri::command]

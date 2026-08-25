@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FolderOpen, FileText, FilePlus } from 'lucide-react'
+import { Compass, FolderOpen, FileText, FilePlus } from 'lucide-react'
 import type { RecentProject } from '../../shared/types'
 import { logError } from '../utils/errorMessage'
 import { RecentProjectList } from './home/RecentProjectList'
@@ -8,11 +8,17 @@ import { getDesktopCapabilities } from '../platform/capabilities'
 
 interface HomeScreenProps {
   onOpenFolder: () => void
+  onOpenGuidedDemo: () => void
   onNewBlankProject: () => void
   onNewFromTemplate: () => void
 }
 
-function HomeScreen({ onOpenFolder, onNewBlankProject, onNewFromTemplate }: HomeScreenProps) {
+function HomeScreen({
+  onOpenFolder,
+  onOpenGuidedDemo,
+  onNewBlankProject,
+  onNewFromTemplate
+}: HomeScreenProps) {
   const { t } = useTranslation()
   const capabilities = getDesktopCapabilities()
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([])
@@ -40,6 +46,14 @@ function HomeScreen({ onOpenFolder, onNewBlankProject, onNewFromTemplate }: Home
         </button>
         {capabilities.templates && (
           <>
+            <button
+              className="home-action-btn home-action-guided"
+              onClick={onOpenGuidedDemo}
+              data-testid="guided-demo-action"
+            >
+              <Compass size={18} />
+              {t('homeScreen.guidedDemo')}
+            </button>
             <button className="home-action-btn" onClick={onNewBlankProject}>
               <FilePlus size={18} />
               {t('homeScreen.newBlankProject')}

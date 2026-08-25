@@ -658,6 +658,12 @@ describe('Tauri DesktopApi adapter', () => {
       modified: ['main.tex'],
       not_added: []
     }
+    const remoteStatus = {
+      remote: 'origin',
+      upstream: 'origin/main',
+      ahead: 1,
+      behind: 0
+    }
     const log = [
       {
         hash: 'abc123',
@@ -670,6 +676,10 @@ describe('Tauri DesktopApi adapter', () => {
       .mockResolvedValueOnce(true)
       .mockResolvedValueOnce({ success: true })
       .mockResolvedValueOnce(status)
+      .mockResolvedValueOnce(remoteStatus)
+      .mockResolvedValueOnce(remoteStatus)
+      .mockResolvedValueOnce(remoteStatus)
+      .mockResolvedValueOnce(remoteStatus)
       .mockResolvedValueOnce({ success: true })
       .mockResolvedValueOnce({ success: true })
       .mockResolvedValueOnce({ success: true })
@@ -681,6 +691,10 @@ describe('Tauri DesktopApi adapter', () => {
     await expect(api.gitIsRepo('/project')).resolves.toBe(true)
     await expect(api.gitInit('/project')).resolves.toEqual({ success: true })
     await expect(api.gitStatus('/project')).resolves.toEqual(status)
+    await expect(api.gitRemoteStatus('/project')).resolves.toEqual(remoteStatus)
+    await expect(api.gitFetch('/project')).resolves.toEqual(remoteStatus)
+    await expect(api.gitPull('/project')).resolves.toEqual(remoteStatus)
+    await expect(api.gitPush('/project')).resolves.toEqual(remoteStatus)
     await expect(api.gitStage('/project', 'main.tex')).resolves.toEqual({ success: true })
     await expect(api.gitUnstage('/project', 'main.tex')).resolves.toEqual({ success: true })
     await expect(api.gitCommit('/project', 'Update paper')).resolves.toEqual({ success: true })
@@ -692,6 +706,10 @@ describe('Tauri DesktopApi adapter', () => {
       ['git_is_repo', { workDir: '/project' }],
       ['git_init', { workDir: '/project' }],
       ['git_status', { workDir: '/project' }],
+      ['git_remote_status', { workDir: '/project' }],
+      ['git_fetch', { workDir: '/project' }],
+      ['git_pull', { workDir: '/project' }],
+      ['git_push', { workDir: '/project' }],
       ['git_stage', { workDir: '/project', filePath: 'main.tex' }],
       ['git_unstage', { workDir: '/project', filePath: 'main.tex' }],
       ['git_commit', { workDir: '/project', message: 'Update paper' }],

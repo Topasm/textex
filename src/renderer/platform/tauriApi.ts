@@ -303,6 +303,15 @@ const gitInit: DesktopApi['gitInit'] = (workDir) => invoke(TAURI_COMMANDS.gitIni
 const gitStatus: DesktopApi['gitStatus'] = (workDir) =>
   invoke(TAURI_COMMANDS.gitStatus, { workDir })
 
+const gitRemoteStatus: DesktopApi['gitRemoteStatus'] = (workDir) =>
+  invoke(TAURI_COMMANDS.gitRemoteStatus, { workDir })
+
+const gitFetch: DesktopApi['gitFetch'] = (workDir) => invoke(TAURI_COMMANDS.gitFetch, { workDir })
+
+const gitPull: DesktopApi['gitPull'] = (workDir) => invoke(TAURI_COMMANDS.gitPull, { workDir })
+
+const gitPush: DesktopApi['gitPush'] = (workDir) => invoke(TAURI_COMMANDS.gitPush, { workDir })
+
 const gitStage: DesktopApi['gitStage'] = (workDir, filePath) =>
   invoke(TAURI_COMMANDS.gitStage, { workDir, filePath })
 
@@ -882,6 +891,10 @@ const tauriDesktopApi = {
   gitIsRepo,
   gitInit,
   gitStatus,
+  gitRemoteStatus,
+  gitFetch,
+  gitPull,
+  gitPush,
   gitStage,
   gitUnstage,
   gitCommit,

@@ -1,14 +1,10 @@
 use std::{
     collections::{BTreeSet, HashMap, HashSet},
     path::Path,
-    sync::{
-        atomic::{AtomicU64, Ordering},
-        OnceLock,
-    },
+    sync::atomic::{AtomicU64, Ordering},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-use reqwest::{redirect::Policy, Client};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tokio::sync::Mutex;
@@ -29,11 +25,16 @@ use crate::{
     state::AppState,
 };
 
-const DEFAULT_PORT: u16 = 23_119;
+mod transport;
+
+use transport::{
+    bounded_response, client, endpoint, json_rpc, local_api_endpoint, rpc_result, validated_port,
+    zotero_request_error, JsonRpcRequest, JsonRpcResponse,
+};
+
 const MAX_SEARCH_LENGTH: usize = 1_024;
 const MAX_CITEKEYS: usize = 10_000;
 const MAX_COLLECTION_EXPORT_BYTES: usize = 50 * 1024 * 1024;
-const MAX_RPC_RESPONSE_BYTES: usize = 8 * 1024 * 1024;
 const MAX_CAYW_RESPONSE_BYTES: usize = 64 * 1024;
 const MAX_COLLECTIONS: usize = 10_000;
 const MAX_COLLECTION_ITEMS_PAGE: u32 = 100;
@@ -156,25 +157,6 @@ struct PendingItemMutation {
     remove_tags: BTreeSet<String>,
     add_collections: HashMap<String, ZoteroMutationCollectionRef>,
     remove_collections: HashMap<String, ZoteroMutationCollectionRef>,
-}
-
-#[derive(Debug, Deserialize)]
-struct JsonRpcResponse<T> {
-    result: Option<T>,
-    error: Option<JsonRpcError>,
-}
-
-#[derive(Debug, Deserialize)]
-struct JsonRpcError {
-    code: i64,
-    message: String,
-}
-
-#[derive(Debug, Serialize)]
-struct JsonRpcRequest<P> {
-    jsonrpc: &'static str,
-    method: &'static str,
-    params: P,
 }
 
 #[derive(Debug, Deserialize)]
@@ -532,7 +514,7 @@ pub async fn resolve_mutation_draft(
     }
     validate_mutation_text(&draft.summary, "plan summary", 2_048)?;
     let (project_root, project_epoch, _) = state.project_root_epoch()?;
-    let port = port.unwrap_or(DEFAULT_PORT);
+    let port = validated_port(port)?;
     let collections = local_collections(Some(port)).await?;
     let mut targets = build_collection_inventory(&collections)?;
     let existing_keys = targets
@@ -2139,78 +2121,6 @@ fn local_write_item_key(value: &serde_json::Value) -> Option<String> {
         .or_else(|| value.get("data")?.get("key")?.as_str().map(str::to_owned))
 }
 
-async fn json_rpc<P, T>(
-    port: Option<u16>,
-    request: JsonRpcRequest<P>,
-    timeout: Duration,
-) -> AppResult<JsonRpcResponse<T>>
-where
-    P: Serialize,
-    T: for<'de> Deserialize<'de>,
-{
-    let response = client()
-        .post(endpoint(port, "json-rpc")?)
-        .timeout(timeout)
-        .json(&request)
-        .send()
-        .await
-        .map_err(zotero_request_error)?
-        .error_for_status()
-        .map_err(zotero_request_error)?;
-    let bytes = bounded_response(response, MAX_RPC_RESPONSE_BYTES).await?;
-    serde_json::from_slice(&bytes)
-        .map_err(|error| AppError::Zotero(format!("invalid JSON-RPC response: {error}")))
-}
-
-async fn bounded_response(mut response: reqwest::Response, limit: usize) -> AppResult<Vec<u8>> {
-    if response
-        .content_length()
-        .is_some_and(|length| length > limit as u64)
-    {
-        return Err(AppError::Zotero("Zotero response is too large".to_owned()));
-    }
-    let mut bytes = Vec::new();
-    while let Some(chunk) = response.chunk().await.map_err(zotero_request_error)? {
-        if bytes.len().saturating_add(chunk.len()) > limit {
-            return Err(AppError::Zotero("Zotero response is too large".to_owned()));
-        }
-        bytes.extend_from_slice(&chunk);
-    }
-    Ok(bytes)
-}
-
-fn rpc_result<T>(response: JsonRpcResponse<T>) -> AppResult<T> {
-    if let Some(error) = response.error {
-        return Err(AppError::Zotero(format!(
-            "JSON-RPC {}: {}",
-            error.code, error.message
-        )));
-    }
-    response
-        .result
-        .ok_or_else(|| AppError::Zotero("Zotero returned no result".to_owned()))
-}
-
-fn endpoint(port: Option<u16>, path: &str) -> AppResult<String> {
-    let port = port.unwrap_or(DEFAULT_PORT);
-    if port == 0 {
-        return Err(AppError::Zotero(
-            "port must be between 1 and 65535".to_owned(),
-        ));
-    }
-    Ok(format!("http://127.0.0.1:{port}/better-bibtex/{path}"))
-}
-
-fn local_api_endpoint(port: Option<u16>, path: &str) -> AppResult<String> {
-    let port = port.unwrap_or(DEFAULT_PORT);
-    if port == 0 {
-        return Err(AppError::Zotero(
-            "port must be between 1 and 65535".to_owned(),
-        ));
-    }
-    Ok(format!("http://127.0.0.1:{port}/api/{path}"))
-}
-
 fn collection_endpoint(port: Option<u16>, collection: &str) -> AppResult<reqwest::Url> {
     let mut url = reqwest::Url::parse(&endpoint(port, "collection")?)
         .map_err(|error| AppError::Zotero(error.to_string()))?;
@@ -2283,20 +2193,6 @@ async fn request_collection_export(
     Err(AppError::Zotero(
         "Better BibTeX did not provide a collection export endpoint".to_owned(),
     ))
-}
-
-fn client() -> &'static Client {
-    static CLIENT: OnceLock<Client> = OnceLock::new();
-    CLIENT.get_or_init(|| {
-        Client::builder()
-            .redirect(Policy::none())
-            .build()
-            .expect("valid Zotero HTTP client")
-    })
-}
-
-fn zotero_request_error(error: reqwest::Error) -> AppError {
-    AppError::Zotero(error.to_string())
 }
 
 fn search_result(item: ZoteroItem) -> ZoteroSearchResult {
@@ -2485,20 +2381,6 @@ mod tests {
         });
         assert_eq!(result.author, "Smith, Ada");
         assert_eq!(result.year, "2026");
-    }
-
-    #[test]
-    fn endpoint_is_always_loopback_and_rejects_zero_port() {
-        assert_eq!(
-            endpoint(Some(24_119), "json-rpc").unwrap(),
-            "http://127.0.0.1:24119/better-bibtex/json-rpc"
-        );
-        assert!(endpoint(Some(0), "json-rpc").is_err());
-        assert_eq!(
-            local_api_endpoint(Some(24_119), "users/0/items").unwrap(),
-            "http://127.0.0.1:24119/api/users/0/items"
-        );
-        assert!(local_api_endpoint(Some(0), "users/0/items").is_err());
     }
 
     #[test]

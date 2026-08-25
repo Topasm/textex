@@ -241,12 +241,24 @@ Displayed when no project is open.
 
 **Layout (top to bottom):**
 1. **Brand** — "TextEx" title + "LaTeX Editor" subtitle.
-2. **Action buttons** — "Open Folder" (primary), "New Blank Project", and
-   "New from Template".
+2. **Action buttons** — "Open Folder" (primary), "Guided Demo Paper", "New Blank Project", and
+   "New from Template". The guided action creates the same built-in demo available in the template
+   gallery, including a citation, tour checklist, and project research profile.
 3. **Recent projects list** — pinned and recent entries with open, rename/tag, pin,
    and remove actions.
 
-**Props:** `onOpenFolder`, `onNewBlankProject`, `onNewFromTemplate`.
+**Props:** `onOpenFolder`, `onOpenGuidedDemo`, `onNewBlankProject`, `onNewFromTemplate`.
+
+### `GitPanel.tsx`
+
+- Keeps local staging, unstaging, and commits inside the active-project Git boundary.
+- Shows the configured remote/upstream plus ahead/behind counts without exposing remote URLs or
+  embedded credentials.
+- Fetch updates remote references without confirmation. Pull and Push show explicit previews.
+- Native Pull refuses a dirty worktree and always uses `--ff-only`; Push requires an upstream and
+  never supplies a force flag.
+- Network commands use the user's existing credential helper or SSH agent with terminal prompting
+  disabled, and results are discarded if the active project changes while a command is running.
 
 ### Capability-gated UI
 

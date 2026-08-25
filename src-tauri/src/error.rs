@@ -64,6 +64,9 @@ pub enum AppError {
         limit_mb: usize,
     },
 
+    #[error("Git operation refused: {0}")]
+    GitSafety(String),
+
     #[error("LaTeX package metadata operation failed: {0}")]
     PackageData(String),
 

@@ -110,11 +110,16 @@ Object.defineProperty(window, 'api', {
     gitIsRepo: vi.fn(),
     gitInit: vi.fn(),
     gitStatus: vi.fn(),
+    gitRemoteStatus: vi.fn(),
+    gitFetch: vi.fn(),
+    gitPull: vi.fn(),
+    gitPush: vi.fn(),
     gitStage: vi.fn(),
     gitUnstage: vi.fn(),
     gitCommit: vi.fn(),
     gitDiff: vi.fn(),
     gitLog: vi.fn(),
+    gitFileLog: vi.fn(),
 
     // Auto-update
     updateCheck: vi.fn().mockResolvedValue({ success: true, update: null }),

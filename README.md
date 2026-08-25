@@ -27,7 +27,7 @@ A **free**, **local-first** Tauri desktop LaTeX editor. TextEx runs on your mach
 | **Paper Preflight** | Citation provenance, duplicate warnings, and a deterministic submission check |
 | **Research & AI** | Crossref/arXiv search plus native HTTP, Claude CLI, and Codex CLI assistants |
 | **Language & Terminal** | Optional TexLab language features and an embedded native PTY terminal |
-| **Git Integration** | Built-in staging, commits, diffs, and branch info |
+| **Git Integration** | Built-in staging, commits, branch status, and confirmed Fetch/Pull/Push |
 | **Export** | Create a clean Overleaf source ZIP or convert to DOCX, ODT, HTML, and EPUB via Pandoc |
 | **7 Languages** | EN, KO, ES, FR, DE, PT, ZH |
 
@@ -76,6 +76,7 @@ chmod +x TextEx_*.AppImage
 
 ### Creating a New Project
 - **Open Folder**: Use **Open Folder** on the home screen to select a project directory.
+- **Guided Demo Paper**: Create a disposable, compile-ready paper that walks through citations, Research Chat, submission checks, compiler switching, and Overleaf export.
 - **Use Templates**: Use **New from Template** to start quickly with a pre-configured LaTeX template (article, beamer, thesis, letter, and more).
 
 <p align="center">
@@ -152,7 +153,7 @@ Enable **Scroll Sync** in Settings > Appearance to keep the editor and PDF align
 - **Todo Panel**: Track writing tasks in the sidebar.
 - **Notes Panel**: Quick scratchpad for ideas.
 - **Timeline**: View local file history and revert to any previous save.
-- **Git Panel**: Stage, commit, and view diffs without leaving the editor.
+- **Git Panel**: Stage and commit locally, inspect upstream divergence, Fetch, or confirm safe Pull/Push operations. Pull requires a clean worktree and uses fast-forward only; TextEx never force-pushes.
 
 ---
 

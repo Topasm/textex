@@ -18,7 +18,7 @@ use tokio::{
 
 use crate::{
     error::{AppError, AppResult},
-    models::{GitFileStatus, GitLogEntry, GitStatusResult, SuccessResult},
+    models::{GitFileStatus, GitLogEntry, GitRemoteStatus, GitStatusResult, SuccessResult},
     state::AppState,
 };
 
@@ -27,6 +27,7 @@ const MAX_COMMIT_MESSAGE_BYTES: usize = 64 * 1024;
 const GIT_READ_TIMEOUT: Duration = Duration::from_secs(30);
 const GIT_MUTATION_TIMEOUT: Duration = Duration::from_secs(60);
 const GIT_COMMIT_TIMEOUT: Duration = Duration::from_secs(120);
+const GIT_NETWORK_TIMEOUT: Duration = Duration::from_secs(300);
 const GIT_REAP_TIMEOUT: Duration = Duration::from_secs(5);
 const GIT_OUTPUT_CHUNK_BYTES: usize = 8 * 1024;
 
@@ -67,6 +68,150 @@ pub async fn status(state: &AppState, work_dir: &str) -> AppResult<GitStatusResu
             &branch
         },
     )
+}
+
+pub async fn remote_status(state: &AppState, work_dir: &str) -> AppResult<GitRemoteStatus> {
+    let root = trusted_repository_root(state, work_dir).await?;
+    read_remote_status(&root).await
+}
+
+pub async fn fetch(state: &AppState, work_dir: &str) -> AppResult<GitRemoteStatus> {
+    let root = trusted_repository_root(state, work_dir).await?;
+    let status = read_remote_status(&root).await?;
+    let remote = require_remote(&status)?;
+    run_git_checked_os(
+        &root,
+        [
+            OsStr::new("fetch"),
+            OsStr::new("--prune"),
+            OsStr::new(remote),
+        ],
+        "fetch",
+    )
+    .await?;
+    read_remote_status(&root).await
+}
+
+pub async fn pull(state: &AppState, work_dir: &str) -> AppResult<GitRemoteStatus> {
+    let root = trusted_repository_root(state, work_dir).await?;
+    let remote = read_remote_status(&root).await?;
+    require_upstream(&remote)?;
+    require_clean_worktree(&root).await?;
+    run_git_checked(&root, ["pull", "--ff-only"], "pull").await?;
+    read_remote_status(&root).await
+}
+
+pub async fn push(state: &AppState, work_dir: &str) -> AppResult<GitRemoteStatus> {
+    let root = trusted_repository_root(state, work_dir).await?;
+    let remote = read_remote_status(&root).await?;
+    require_upstream(&remote)?;
+    run_git_checked(&root, ["push"], "push").await?;
+    read_remote_status(&root).await
+}
+
+async fn read_remote_status(root: &Path) -> AppResult<GitRemoteStatus> {
+    let remotes = run_git_checked(root, ["remote"], "read remotes").await?;
+    let first_remote = decode_git_text(&remotes.stdout, "remote")?
+        .lines()
+        .map(str::trim)
+        .find(|remote| !remote.is_empty())
+        .map(str::to_owned);
+
+    let upstream_output = run_git_output(
+        root,
+        [
+            "rev-parse",
+            "--abbrev-ref",
+            "--symbolic-full-name",
+            "@{upstream}",
+        ],
+        "read upstream",
+    )
+    .await?;
+    if !upstream_output.status.success() {
+        return Ok(GitRemoteStatus {
+            remote: first_remote,
+            upstream: None,
+            ahead: 0,
+            behind: 0,
+        });
+    }
+
+    let upstream = decode_git_text(&upstream_output.stdout, "upstream")?
+        .trim()
+        .to_owned();
+    if upstream.is_empty() {
+        return Ok(GitRemoteStatus {
+            remote: first_remote,
+            upstream: None,
+            ahead: 0,
+            behind: 0,
+        });
+    }
+    let remote = upstream
+        .split_once('/')
+        .map(|(remote, _)| remote.to_owned())
+        .or(first_remote);
+    let counts = run_git_checked(
+        root,
+        ["rev-list", "--left-right", "--count", "HEAD...@{upstream}"],
+        "read divergence",
+    )
+    .await?;
+    let counts = decode_git_text(&counts.stdout, "divergence")?;
+    let mut fields = counts.split_whitespace();
+    let ahead = parse_divergence_count(fields.next(), "ahead")?;
+    let behind = parse_divergence_count(fields.next(), "behind")?;
+    if fields.next().is_some() {
+        return Err(AppError::Worker(
+            "Git returned malformed divergence counts".to_owned(),
+        ));
+    }
+
+    Ok(GitRemoteStatus {
+        remote,
+        upstream: Some(upstream),
+        ahead,
+        behind,
+    })
+}
+
+fn parse_divergence_count(value: Option<&str>, label: &str) -> AppResult<u32> {
+    value
+        .ok_or_else(|| AppError::Worker("Git returned incomplete divergence counts".to_owned()))?
+        .parse::<u32>()
+        .map_err(|_| AppError::Worker(format!("Git returned an invalid {label} count")))
+}
+
+fn require_remote(status: &GitRemoteStatus) -> AppResult<&str> {
+    status.remote.as_deref().ok_or_else(|| {
+        AppError::GitSafety("no remote is configured for this repository".to_owned())
+    })
+}
+
+fn require_upstream(status: &GitRemoteStatus) -> AppResult<()> {
+    let _remote = require_remote(status)?;
+    if status.upstream.is_none() {
+        return Err(AppError::GitSafety(
+            "the current branch has no upstream; configure one in the terminal first".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+async fn require_clean_worktree(root: &Path) -> AppResult<()> {
+    let status = run_git_checked(
+        root,
+        ["status", "--porcelain=v1", "--untracked-files=normal"],
+        "check pull safety",
+    )
+    .await?;
+    if !status.stdout.is_empty() {
+        return Err(AppError::GitSafety(
+            "pull requires a clean worktree; commit or stash local changes first".to_owned(),
+        ));
+    }
+    Ok(())
 }
 
 pub async fn stage(state: &AppState, work_dir: &str, file_path: &str) -> AppResult<SuccessResult> {
@@ -288,6 +433,7 @@ where
         .args(args)
         .current_dir(root)
         .env("LC_ALL", "C")
+        .env("GIT_TERMINAL_PROMPT", "0")
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -402,6 +548,7 @@ where
 
 fn git_timeout(operation: &str) -> Duration {
     match operation {
+        "fetch" | "pull" | "push" => GIT_NETWORK_TIMEOUT,
         "commit" => GIT_COMMIT_TIMEOUT,
         "initialize" | "stage" | "unstage" => GIT_MUTATION_TIMEOUT,
         _ => GIT_READ_TIMEOUT,
@@ -565,12 +712,14 @@ fn paths_equal(left: &Path, right: &Path) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{
-        commit, diff, file_log, git_timeout, init_repository, log, parse_log, parse_status,
-        read_git_pipe, reject_unsafe_relative_path, run_git_checked, stage, status,
-        GIT_COMMIT_TIMEOUT, GIT_MUTATION_TIMEOUT, GIT_READ_TIMEOUT,
+        commit, diff, fetch, file_log, git_timeout, init_repository, log, parse_log, parse_status,
+        pull, push, read_git_pipe, reject_unsafe_relative_path, remote_status, run_git_checked,
+        run_git_checked_os, stage, status, GIT_COMMIT_TIMEOUT, GIT_MUTATION_TIMEOUT,
+        GIT_NETWORK_TIMEOUT, GIT_READ_TIMEOUT,
     };
     use crate::{error::AppError, state::AppState};
     use std::{
+        ffi::OsStr,
         fs,
         path::Path,
         sync::{atomic::AtomicUsize, Arc},
@@ -616,6 +765,9 @@ mod tests {
         assert_eq!(git_timeout("stage"), GIT_MUTATION_TIMEOUT);
         assert_eq!(git_timeout("unstage"), GIT_MUTATION_TIMEOUT);
         assert_eq!(git_timeout("commit"), GIT_COMMIT_TIMEOUT);
+        assert_eq!(git_timeout("fetch"), GIT_NETWORK_TIMEOUT);
+        assert_eq!(git_timeout("pull"), GIT_NETWORK_TIMEOUT);
+        assert_eq!(git_timeout("push"), GIT_NETWORK_TIMEOUT);
     }
 
     #[tokio::test(flavor = "current_thread")]
@@ -697,5 +849,166 @@ mod tests {
             .await
             .expect("read diff")
             .contains("second revision"));
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn performs_safe_remote_fetch_pull_and_push_against_a_local_remote() {
+        let temp = tempfile::tempdir().expect("temporary Git workspace");
+        let parent = dunce::canonicalize(temp.path()).expect("canonical workspace");
+        let root = parent.join("paper");
+        let remote = parent.join("paper.git");
+        let collaborator = parent.join("collaborator");
+        fs::create_dir(&root).expect("create paper repository");
+
+        run_git_checked_os(
+            &parent,
+            [OsStr::new("init"), OsStr::new("--bare"), remote.as_os_str()],
+            "initialize test remote",
+        )
+        .await
+        .expect("initialize bare remote");
+
+        let root_text = root.to_string_lossy().into_owned();
+        let state = AppState::default();
+        state
+            .set_project_root(root.clone())
+            .expect("trust repository root");
+        init_repository(&state, &root_text)
+            .await
+            .expect("initialize paper repository");
+        run_git_checked(&root, ["config", "user.name", "TextEx Test"], "configure")
+            .await
+            .expect("configure user name");
+        run_git_checked(
+            &root,
+            ["config", "user.email", "textex@example.invalid"],
+            "configure",
+        )
+        .await
+        .expect("configure user email");
+        run_git_checked(&root, ["config", "commit.gpgsign", "false"], "configure")
+            .await
+            .expect("disable signing");
+        fs::write(root.join("main.tex"), "initial\n").expect("write initial paper");
+        stage(&state, &root_text, "main.tex")
+            .await
+            .expect("stage initial paper");
+        commit(&state, &root_text, "initial paper")
+            .await
+            .expect("commit initial paper");
+        run_git_checked_os(
+            &root,
+            [
+                OsStr::new("remote"),
+                OsStr::new("add"),
+                OsStr::new("origin"),
+                remote.as_os_str(),
+            ],
+            "configure test remote",
+        )
+        .await
+        .expect("add test remote");
+        run_git_checked(
+            &root,
+            ["push", "--set-upstream", "origin", "HEAD:main"],
+            "seed test remote",
+        )
+        .await
+        .expect("seed test remote");
+        run_git_checked(
+            &remote,
+            ["symbolic-ref", "HEAD", "refs/heads/main"],
+            "configure remote head",
+        )
+        .await
+        .expect("configure remote head");
+
+        let initial_remote = remote_status(&state, &root_text)
+            .await
+            .expect("read initial remote status");
+        assert_eq!(initial_remote.remote.as_deref(), Some("origin"));
+        assert_eq!(initial_remote.upstream.as_deref(), Some("origin/main"));
+        assert_eq!((initial_remote.ahead, initial_remote.behind), (0, 0));
+
+        run_git_checked_os(
+            &parent,
+            [
+                OsStr::new("clone"),
+                remote.as_os_str(),
+                collaborator.as_os_str(),
+            ],
+            "clone collaborator",
+        )
+        .await
+        .expect("clone collaborator");
+        run_git_checked(
+            &collaborator,
+            ["config", "user.name", "Collaborator"],
+            "configure collaborator",
+        )
+        .await
+        .expect("configure collaborator name");
+        run_git_checked(
+            &collaborator,
+            ["config", "user.email", "collaborator@example.invalid"],
+            "configure collaborator",
+        )
+        .await
+        .expect("configure collaborator email");
+        run_git_checked(
+            &collaborator,
+            ["config", "commit.gpgsign", "false"],
+            "configure collaborator",
+        )
+        .await
+        .expect("disable collaborator signing");
+        fs::write(collaborator.join("main.tex"), "from remote\n")
+            .expect("write collaborator change");
+        run_git_checked(&collaborator, ["add", "main.tex"], "stage collaborator")
+            .await
+            .expect("stage collaborator change");
+        run_git_checked(
+            &collaborator,
+            ["commit", "-m", "remote revision"],
+            "commit collaborator",
+        )
+        .await
+        .expect("commit collaborator change");
+        run_git_checked(&collaborator, ["push"], "push collaborator")
+            .await
+            .expect("push collaborator change");
+
+        let fetched = fetch(&state, &root_text)
+            .await
+            .expect("fetch remote change");
+        assert_eq!((fetched.ahead, fetched.behind), (0, 1));
+        let pulled = pull(&state, &root_text)
+            .await
+            .expect("fast-forward remote change");
+        assert_eq!((pulled.ahead, pulled.behind), (0, 0));
+        assert_eq!(
+            fs::read_to_string(root.join("main.tex")).expect("read pulled paper"),
+            "from remote\n"
+        );
+
+        fs::write(root.join("main.tex"), "dirty\n").expect("write dirty paper");
+        let refused = pull(&state, &root_text)
+            .await
+            .expect_err("dirty worktree must be refused");
+        assert!(matches!(refused, AppError::GitSafety(_)));
+
+        fs::write(root.join("main.tex"), "local revision\n").expect("write local revision");
+        stage(&state, &root_text, "main.tex")
+            .await
+            .expect("stage local revision");
+        commit(&state, &root_text, "local revision")
+            .await
+            .expect("commit local revision");
+        let before_push = remote_status(&state, &root_text)
+            .await
+            .expect("read status before push");
+        assert_eq!((before_push.ahead, before_push.behind), (1, 0));
+        let pushed = push(&state, &root_text).await.expect("push local revision");
+        assert_eq!((pushed.ahead, pushed.behind), (0, 0));
     }
 }

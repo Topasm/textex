@@ -47,6 +47,7 @@ import { errorMessage, logError } from './utils/errorMessage'
 import { isFeatureEnabled } from './utils/featureFlags'
 import type { AppCommandId } from '../shared/types'
 import { parseAuxContent } from '../shared/auxparser'
+import { guidedDemoTemplate } from '../shared/templates'
 import { runtimePerformance } from './services/runtimePerformance'
 import { prepareForApplicationExit, quitApplication } from './services/applicationLifecycle'
 import { checkForAppUpdate } from './services/updateLifecycle'
@@ -332,6 +333,22 @@ function App() {
       }
     } catch {
       // user cancelled
+    }
+  }, [capabilities.templates])
+
+  const handleOpenGuidedDemo = useCallback(async () => {
+    if (!capabilities.templates) return
+    try {
+      const result = await window.api.createTemplateProject(
+        guidedDemoTemplate.name,
+        guidedDemoTemplate.content,
+        guidedDemoTemplate.files
+      )
+      if (result) {
+        await openProject(result.projectPath)
+      }
+    } catch (error) {
+      logError('App:createGuidedDemo', error)
     }
   }, [capabilities.templates])
 
@@ -641,6 +658,7 @@ function App() {
         <Suspense fallback={<LoadingFallback variant="workspace" label={t('loading.workspace')} />}>
           <HomeScreen
             onOpenFolder={handleOpenFolder}
+            onOpenGuidedDemo={handleOpenGuidedDemo}
             onNewBlankProject={handleNewBlankProject}
             onNewFromTemplate={handleOpenTemplateGallery}
           />

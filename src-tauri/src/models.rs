@@ -623,6 +623,15 @@ pub struct GitStatusResult {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GitRemoteStatus {
+    pub remote: Option<String>,
+    pub upstream: Option<String>,
+    pub ahead: u32,
+    pub behind: u32,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct GitLogEntry {
     pub hash: String,
     pub date: String,

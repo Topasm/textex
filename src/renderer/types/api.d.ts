@@ -90,6 +90,13 @@ export interface GitStatusResult {
   not_added: string[]
 }
 
+export interface GitRemoteStatus {
+  remote: string | null
+  upstream: string | null
+  ahead: number
+  behind: number
+}
+
 /** Directions accepted by Tauri when resizing a frameless desktop window. */
 export type WindowResizeDirection =
   'East' | 'North' | 'NorthEast' | 'NorthWest' | 'South' | 'SouthEast' | 'SouthWest' | 'West'
@@ -183,6 +190,10 @@ export interface DesktopApi {
   gitIsRepo(workDir: string): Promise<boolean>
   gitInit(workDir: string): Promise<{ success: boolean }>
   gitStatus(workDir: string): Promise<GitStatusResult>
+  gitRemoteStatus(workDir: string): Promise<GitRemoteStatus>
+  gitFetch(workDir: string): Promise<GitRemoteStatus>
+  gitPull(workDir: string): Promise<GitRemoteStatus>
+  gitPush(workDir: string): Promise<GitRemoteStatus>
   gitStage(workDir: string, filePath: string): Promise<{ success: boolean }>
   gitUnstage(workDir: string, filePath: string): Promise<{ success: boolean }>
   gitCommit(workDir: string, message: string): Promise<{ success: boolean }>

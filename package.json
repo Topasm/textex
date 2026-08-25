@@ -68,6 +68,7 @@
     "format:rust": "cargo fmt --manifest-path src-tauri/Cargo.toml",
     "format:rust:check": "cargo fmt --manifest-path src-tauri/Cargo.toml -- --check",
     "test": "vitest run && npm run test:scripts",
+    "test:workflow": "vitest run src/__tests__/workflows",
     "test:scripts": "node --test scripts/*.test.js",
     "test:watch": "vitest",
     "check": "node scripts/quick-check.js",

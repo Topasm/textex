@@ -2045,6 +2045,120 @@ body,
   padding: 8px 0;
 }
 
+.git-remote-section {
+  margin: 0 8px 10px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg-secondary);
+}
+
+.git-remote-header,
+.git-remote-summary,
+.git-remote-actions {
+  display: flex;
+  align-items: center;
+}
+
+.git-remote-header {
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.git-remote-summary {
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.git-remote-name {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.git-divergence,
+.git-remote-hint,
+.git-remote-message {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+
+.git-remote-hint {
+  margin: 6px 0 0;
+  line-height: 1.35;
+}
+
+.git-remote-icon-btn {
+  display: inline-flex;
+  padding: 4px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.git-remote-icon-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.git-remote-actions {
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.git-remote-actions button {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 5px 4px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.git-remote-actions button:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--bg-hover);
+}
+
+.git-remote-actions button:disabled,
+.git-remote-icon-btn:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.git-remote-message {
+  margin-top: 7px;
+  line-height: 1.35;
+}
+
+.git-remote-message.error {
+  color: var(--error);
+}
+
+.git-action-spinning {
+  animation: git-action-spin 0.8s linear infinite;
+}
+
+@keyframes git-action-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .git-section {
   margin-bottom: 8px;
 }
@@ -6837,8 +6951,13 @@ button.submission-check-finding:hover {
 
 .home-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 40px;
+}
+
+.home-action-guided {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
 }
 
 .home-action-btn {

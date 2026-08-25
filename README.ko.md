@@ -27,7 +27,7 @@
 | **논문 제출 점검** | 인용 위치, 중복 경고, 결정론적인 제출 전 검사 |
 | **연구 & AI** | Crossref/arXiv 검색 및 네이티브 HTTP, Claude CLI, Codex CLI 도우미 |
 | **언어 & 터미널** | 선택적 TexLab 언어 기능과 네이티브 PTY 내장 터미널 |
-| **Git 통합** | 내장 스테이징, 커밋, 디프, 브랜치 정보 |
+| **Git 통합** | 내장 스테이징, 커밋, 브랜치 상태 및 확인 기반 Fetch/Pull/Push |
 | **내보내기** | 깔끔한 Overleaf 소스 ZIP 생성 또는 Pandoc을 통한 DOCX, ODT, HTML, EPUB 변환 |
 | **7개 언어** | EN, KO, ES, FR, DE, PT, ZH |
 
@@ -76,6 +76,7 @@ chmod +x TextEx_*.AppImage
 
 ### 새 프로젝트 만들기
 - **폴더 열기**: 홈 화면의 **Open Folder**를 사용하여 프로젝트 디렉토리를 선택합니다.
+- **가이드 데모 논문**: 인용, Research Chat, 제출 점검, 컴파일러 전환, Overleaf 내보내기를 순서대로 체험할 수 있는 컴파일 가능한 프로젝트를 만듭니다.
 - **템플릿 사용**: **New from Template**을 사용하여 미리 구성된 LaTeX 템플릿(article, beamer, thesis, letter 등)으로 빠르게 시작하세요.
 
 <p align="center">
@@ -152,7 +153,7 @@ TextEx는 다음과 같은 기능을 갖춘 최신 Monaco 기반 에디터를 �
 - **할 일 패널**: 사이드바에서 집필 작업을 관리.
 - **메모 패널**: 아이디어를 위한 빠른 메모장.
 - **타임라인**: 로컬 파일 히스토리를 보고 이전 저장 상태로 복원.
-- **Git 패널**: 에디터를 떠나지 않고 스테이징, 커밋, 디프 확인.
+- **Git 패널**: 로컬 스테이징/커밋, upstream 차이 확인, Fetch 및 확인 기반 Pull/Push. Pull은 깨끗한 작업 트리에서 fast-forward만 허용하며 강제 Push는 사용하지 않습니다.
 
 ---
 

@@ -7,7 +7,100 @@ export interface Template {
   files?: Record<string, string> // relative path -> content (base64 or text)
 }
 
+export const guidedDemoTemplate: Template = {
+  id: 'guided-demo',
+  builtIn: true,
+  name: 'TextEx Guided Paper',
+  description:
+    'A small, compile-ready paper that introduces editing, citations, research context, submission checks, and Overleaf export.',
+  content: `\\documentclass[10pt,letterpaper]{article}
+
+\\usepackage{iftex}
+\\ifPDFTeX
+  \\usepackage[utf8]{inputenc}
+  \\usepackage[T1]{fontenc}
+\\fi
+\\usepackage{amsmath}
+\\usepackage[margin=1in]{geometry}
+\\usepackage[hidelinks]{hyperref}
+
+\\title{A Guided Paper in TextEx}
+\\author{TextEx User}
+\\date{\\today}
+
+\\begin{document}
+
+\\maketitle
+
+\\begin{abstract}
+This compact project is a safe place to try the complete TextEx paper workflow.
+Edit a sentence, compile the document, inspect its citation, and run a submission check.
+\\end{abstract}
+
+\\section{Introduction}
+% Guided step 1: edit the next sentence, then compile with Cmd/Ctrl+Enter.
+Good research tools should keep writing, evidence, validation, and submission in one loop.
+LaTeX provides a durable foundation for that workflow~\\cite{lamport1994latex}.
+
+\\section{A Small Result}
+% Guided step 2: change the equation and use forward/inverse PDF sync.
+For a normalized score vector $p$, a useful sanity check is
+\\begin{equation}
+  \\sum_{i=1}^{n} p_i = 1.
+  \\label{eq:normalization}
+\\end{equation}
+Equation~\\ref{eq:normalization} also demonstrates cross-reference diagnostics.
+
+\\section{Next Steps}
+Open \\texttt{GUIDED\\_TOUR.md} for a short checklist covering References, Research Chat,
+compiler switching, submission checks, and Overleaf ZIP export.
+
+\\bibliographystyle{plain}
+\\bibliography{references}
+
+\\end{document}
+`,
+  files: {
+    'references.bib': `@book{lamport1994latex,
+  author    = {Leslie Lamport},
+  title     = {LaTeX: A Document Preparation System},
+  publisher = {Addison-Wesley},
+  year      = {1994},
+  edition   = {2}
+}
+`,
+    'GUIDED_TOUR.md': `# TextEx guided tour
+
+This project is intentionally small and works with both Tectonic and pdfLaTeX.
+
+1. Edit the marked sentence in \`main.tex\`, then compile with Cmd/Ctrl+Enter.
+2. In Settings, switch between Tectonic and pdfLaTeX and compile again. TextEx keeps each engine's generated files in a separate cache.
+3. Open References and locate \`lamport1994latex\`. Jump from the citation to its source use.
+4. Open Research Chat. The included project profile supplies terminology and writing preferences without adding external services.
+5. Try source/PDF synchronization around Equation 1.
+6. Run Submission Check and inspect every finding before applying a change.
+7. Export an Overleaf ZIP. Generated build files stay out of the archive.
+
+You can delete this project at any time; it does not alter application settings.
+`,
+    '.textex/research-profile.json': `{
+  "version": 1,
+  "paper": {
+    "title": "A Guided Paper in TextEx",
+    "authors": []
+  },
+  "resources": [],
+  "instructions": [
+    "Use concise academic English.",
+    "Call the example quantity a normalized score vector."
+  ]
+}
+`
+  }
+}
+
 export const builtInTemplates: Template[] = [
+  guidedDemoTemplate,
   {
     id: 'article',
     builtIn: true,
