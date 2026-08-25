@@ -218,7 +218,7 @@ export function ResearchPanel({ onAiDraft, onCompile }: ResearchPanelProps) {
       ref={panelRef}
       className="research-panel overlay"
       style={{ width }}
-      aria-label="Research panel"
+      aria-label={t('researchPanel.label')}
       hidden={!open}
     >
       <div className="research-resize-handle" onMouseDown={startResize} />
@@ -227,9 +227,9 @@ export function ResearchPanel({ onAiDraft, onCompile }: ResearchPanelProps) {
           role="tab"
           id="research-tab-chat"
           aria-controls="research-tabpanel-chat"
-          aria-label="Chat"
+          aria-label={t('researchPanel.tabs.chat')}
           aria-selected={tab === 'chat'}
-          title="Chat"
+          title={t('researchPanel.tabs.chat')}
           className={`${tab === 'chat' ? 'active' : ''}${chatDropActive ? ' drop-active' : ''}`}
           onClick={() => selectTab('chat')}
           onDragEnter={(event) => {
@@ -255,33 +255,33 @@ export function ResearchPanel({ onAiDraft, onCompile }: ResearchPanelProps) {
           onDrop={dropReferenceOnChat}
         >
           <MessageSquare size={14} />
-          <span className="research-panel-tab-label">Chat</span>
+          <span className="research-panel-tab-label">{t('researchPanel.tabs.chat')}</span>
         </button>
         <button
           role="tab"
           id="research-tab-references"
           aria-controls="research-tabpanel-references"
-          aria-label="References"
+          aria-label={t('researchPanel.tabs.references')}
           aria-selected={tab === 'references'}
-          title="References"
+          title={t('researchPanel.tabs.references')}
           className={tab === 'references' ? 'active' : ''}
           onClick={() => selectTab('references')}
         >
           <BookOpen size={14} />
-          <span className="research-panel-tab-label">References</span>
+          <span className="research-panel-tab-label">{t('researchPanel.tabs.references')}</span>
         </button>
         <button
           role="tab"
           id="research-tab-profile"
           aria-controls="research-tabpanel-profile"
-          aria-label="Profile"
+          aria-label={t('researchPanel.tabs.profile')}
           aria-selected={tab === 'profile'}
-          title="Project profile"
+          title={t('researchPanel.tabs.projectProfile')}
           className={tab === 'profile' ? 'active' : ''}
           onClick={() => selectTab('profile')}
         >
           <Settings2 size={14} />
-          <span className="research-panel-tab-label">Profile</span>
+          <span className="research-panel-tab-label">{t('researchPanel.tabs.profile')}</span>
         </button>
         <button
           role="tab"
@@ -317,8 +317,8 @@ export function ResearchPanel({ onAiDraft, onCompile }: ResearchPanelProps) {
         <button
           className="research-panel-close"
           onClick={closePanel}
-          title="Close research panel"
-          aria-label="Close research panel"
+          title={t('researchPanel.close')}
+          aria-label={t('researchPanel.close')}
         >
           <PanelRightClose size={15} />
         </button>

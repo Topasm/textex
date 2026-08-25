@@ -39,7 +39,7 @@ describe('IconSystemProvider', () => {
       'LogPanel.tsx',
       'GitPanel.tsx',
       'MathPreviewWidget.tsx',
-      'AiAssistantModal.tsx',
+      'ui/ModalChrome.tsx',
       'DraftModal.tsx',
       'TemplateGallery.tsx',
       'HistoryPanel.tsx',

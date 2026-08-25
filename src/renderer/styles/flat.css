@@ -99,7 +99,7 @@ html .status-warnings {
 
 /* Application chrome */
 html .toolbar {
-  min-height: 38px;
+  min-height: var(--app-toolbar-height);
   gap: 5px;
   padding-block: 3px;
   background: var(--ui-surface-panel);
@@ -164,14 +164,14 @@ html .toolbar .file-name {
 }
 
 html .toolbar .toolbar-window-controls {
-  height: 38px;
+  height: var(--app-toolbar-height);
   margin-block: -3px;
 }
 
 html .toolbar .toolbar-window-control {
   width: 42px;
   min-width: 42px;
-  height: 38px;
+  height: var(--app-toolbar-height);
   padding: 0;
   border-radius: 0;
 }
@@ -406,10 +406,6 @@ html .settings-section-icon {
 }
 
 html .settings-theme-card,
-html .ai-assistant-summary,
-html .ai-assistant-action,
-html .ai-assistant-terminal,
-html .ai-assistant-terminal pre,
 html .ai-prompts-list {
   border-width: 1px;
   border-radius: var(--ui-radius-control);

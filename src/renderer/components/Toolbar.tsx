@@ -311,8 +311,8 @@ const Toolbar = React.memo(function Toolbar({
               type="button"
               className="toolbar-btn toolbar-research-toggle"
               onClick={() => useProjectStore.getState().openResearchPanel('references')}
-              title="Open research panel"
-              aria-label="Open research panel"
+              title={t('researchPanel.open')}
+              aria-label={t('researchPanel.open')}
             >
               <PanelRightOpen size={ICON_SIZE.control} />
             </button>

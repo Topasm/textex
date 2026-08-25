@@ -635,6 +635,20 @@
     "openFinding": "Abrir {{message}} en {{location}}"
   },
   "researchPanel": {
+    "label": "Panel de investigación",
+    "open": "Abrir el panel de investigación",
+    "close": "Cerrar el panel de investigación",
+    "tabs": {
+      "chat": "Chat",
+      "references": "Referencias",
+      "profile": "Perfil",
+      "projectProfile": "Perfil del proyecto"
+    },
+    "references": {
+      "backToLocal": "Volver a las referencias locales",
+      "onlineSources": "Crossref / arXiv",
+      "projectCitationGroups": "Grupos de citas del proyecto"
+    },
     "invalidReferenceDrop": "Este elemento no es una referencia válida de TextEx.",
     "openProjectForChatReference": "Abre un proyecto antes de añadir una referencia al chat."
   }

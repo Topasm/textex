@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { X, Palette, Type, Zap, Link, Settings as SettingsIcon, User, Bot } from 'lucide-react'
+import { Palette, Type, Zap, Link, Settings as SettingsIcon, User, Bot } from 'lucide-react'
 import { GeneralTab } from './settings/GeneralTab'
 import { AppearanceTab } from './settings/AppearanceTab'
 import { EditorTab } from './settings/EditorTab'
@@ -10,6 +10,7 @@ import { AutomationTab } from './settings/AutomationTab'
 import { getDesktopCapabilities } from '../platform/capabilities'
 import UpdateNotification from './UpdateNotification'
 import { ICON_SIZE } from './ui/IconSystem'
+import { ModalCloseButton, ModalFrame } from './ui/ModalChrome'
 
 type TabId = 'general' | 'appearance' | 'editor' | 'ai' | 'integrations' | 'automation'
 
@@ -112,81 +113,65 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
   }, [])
 
   return (
-    <div
-      className="modal-overlay"
-      role="presentation"
-      data-app-overlay-owner="settings"
-      onClick={onClose}
+    <ModalFrame
+      ref={dialogRef}
+      owner="settings"
+      titleId={titleId}
+      className="settings-modal"
+      onClose={onClose}
     >
-      <div
-        ref={dialogRef}
-        className="modal-content settings-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        tabIndex={-1}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="modal-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <SettingsIcon size={ICON_SIZE.feature} />
-            <h2 id={titleId}>{t('settings.title')}</h2>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="close-button"
-            aria-label={t('logPanel.close')}
-          >
-            <X size={ICON_SIZE.control} />
-          </button>
+      {/* Header */}
+      <div className="modal-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <SettingsIcon size={ICON_SIZE.feature} />
+          <h2 id={titleId}>{t('settings.title')}</h2>
         </div>
+        <ModalCloseButton onClick={onClose} />
+      </div>
 
-        <UpdateNotification />
+      <UpdateNotification />
 
-        <div className="settings-layout">
-          {/* Sidebar */}
-          <nav className="settings-sidebar" aria-label={t('settings.title')}>
-            {tabIds.map((id) => {
-              const Icon = TAB_ICONS[id]
-              return (
-                <button
-                  key={id}
-                  ref={id === 'general' ? initialFocusRef : undefined}
-                  type="button"
-                  onClick={() => setActiveTab(id)}
-                  className={`settings-tab${activeTab === id ? ' active' : ''}`}
-                  aria-current={activeTab === id ? 'page' : undefined}
-                >
-                  <Icon size={ICON_SIZE.control} />
-                  <span className="settings-tab-label">{t(`settings.tabs.${id}`)}</span>
-                </button>
-              )
-            })}
-          </nav>
+      <div className="settings-layout">
+        {/* Sidebar */}
+        <nav className="settings-sidebar" aria-label={t('settings.title')}>
+          {tabIds.map((id) => {
+            const Icon = TAB_ICONS[id]
+            return (
+              <button
+                key={id}
+                ref={id === 'general' ? initialFocusRef : undefined}
+                type="button"
+                onClick={() => setActiveTab(id)}
+                className={`settings-tab${activeTab === id ? ' active' : ''}`}
+                aria-current={activeTab === id ? 'page' : undefined}
+              >
+                <Icon size={ICON_SIZE.control} />
+                <span className="settings-tab-label">{t(`settings.tabs.${id}`)}</span>
+              </button>
+            )
+          })}
+        </nav>
 
-          {/* Content */}
-          <div className="settings-content">
-            <ActiveContent />
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="modal-footer">
-          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>TextEx v1.0.13</span>
-          <span
-            style={{
-              fontSize: 12,
-              fontFamily: 'monospace',
-              color: 'var(--text-secondary)',
-              opacity: 0.5
-            }}
-          >
-            Build 2026
-          </span>
+        {/* Content */}
+        <div className="settings-content">
+          <ActiveContent />
         </div>
       </div>
-    </div>
+
+      {/* Footer */}
+      <div className="modal-footer">
+        <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>TextEx v1.0.13</span>
+        <span
+          style={{
+            fontSize: 12,
+            fontFamily: 'monospace',
+            color: 'var(--text-secondary)',
+            opacity: 0.5
+          }}
+        >
+          Build 2026
+        </span>
+      </div>
+    </ModalFrame>
   )
 }

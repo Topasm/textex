@@ -635,6 +635,20 @@
     "openFinding": "{{location}}에서 {{message}} 열기"
   },
   "researchPanel": {
+    "label": "연구 패널",
+    "open": "연구 패널 열기",
+    "close": "연구 패널 닫기",
+    "tabs": {
+      "chat": "Chat",
+      "references": "참고문헌",
+      "profile": "프로필",
+      "projectProfile": "프로젝트 프로필"
+    },
+    "references": {
+      "backToLocal": "로컬 참고문헌으로 돌아가기",
+      "onlineSources": "Crossref / arXiv",
+      "projectCitationGroups": "프로젝트 인용 그룹"
+    },
     "invalidReferenceDrop": "유효한 TextEx 참고문헌이 아닙니다.",
     "openProjectForChatReference": "Chat에 참고문헌을 추가하려면 프로젝트를 여세요."
   }

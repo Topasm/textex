@@ -1,8 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useId } from 'react'
 import { useTranslation } from 'react-i18next'
-import { X } from 'lucide-react'
 import { useSettingsStore } from '../store/useSettingsStore'
-import { ICON_SIZE } from './ui/IconSystem'
+import { ModalCloseButton, ModalFrame } from './ui/ModalChrome'
 
 interface DraftModalProps {
   isOpen: boolean
@@ -25,6 +24,7 @@ export const DraftModal: React.FC<DraftModalProps> = ({
   const [generatedLatex, setGeneratedLatex] = useState('')
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const titleId = useId()
 
   const aiProvider = useSettingsStore((s) => s.settings.aiProvider)
   const aiModel = useSettingsStore((s) => s.settings.aiModel)
@@ -100,91 +100,83 @@ export const DraftModal: React.FC<DraftModalProps> = ({
     : t('draftModal.notConfigured')
 
   return (
-    <div
-      className="modal-overlay"
-      data-app-overlay-owner="aiDraft"
-      onClick={onClose}
+    <ModalFrame
+      owner="aiDraft"
+      titleId={titleId}
+      className="draft-modal"
+      onClose={onClose}
       onKeyDown={handleKeyDown}
     >
-      <div className="modal-content draft-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>{t('draftModal.title')}</h2>
-          <button
-            type="button"
-            className="close-button"
-            onClick={onClose}
-            aria-label={t('logPanel.close')}
-          >
-            <X size={ICON_SIZE.control} />
-          </button>
-        </div>
+      <div className="modal-header">
+        <h2 id={titleId}>{t('draftModal.title')}</h2>
+        <ModalCloseButton onClick={onClose} />
+      </div>
 
-        <div className="modal-body">
+      <div className="modal-body">
+        {phase === 'input' && (
+          <>
+            <p className="draft-hint">{t('draftModal.hint')}</p>
+            <textarea
+              ref={inputRef}
+              className="draft-input"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder={`Example:\n# Introduction\nThis paper explores the effects of...\n\n## Methods\n- Experiment 1: ...\n- Experiment 2: ...\n\n## Results\nWe found that...`}
+              onKeyDown={handleKeyDown}
+            />
+            {error && <div className="draft-error">{error}</div>}
+          </>
+        )}
+
+        {phase === 'generating' && (
+          <div className="draft-loading">
+            <div className="preview-spinner" />
+            <p>{t('draftModal.generating')}</p>
+          </div>
+        )}
+
+        {phase === 'preview' && (
+          <>
+            <p className="draft-hint">{t('draftModal.reviewHint')}</p>
+            <textarea
+              className="draft-preview"
+              value={generatedLatex}
+              onChange={(e) => setGeneratedLatex(e.target.value)}
+              onKeyDown={handleKeyDown}
+            />
+          </>
+        )}
+      </div>
+
+      <div className="modal-footer">
+        <span className="draft-provider-label">{providerLabel}</span>
+        <div className="modal-actions">
           {phase === 'input' && (
-            <>
-              <p className="draft-hint">{t('draftModal.hint')}</p>
-              <textarea
-                ref={inputRef}
-                className="draft-input"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={`Example:\n# Introduction\nThis paper explores the effects of...\n\n## Methods\n- Experiment 1: ...\n- Experiment 2: ...\n\n## Results\nWe found that...`}
-                onKeyDown={handleKeyDown}
-              />
-              {error && <div className="draft-error">{error}</div>}
-            </>
+            <button
+              className="primary-button"
+              onClick={handleGenerate}
+              disabled={!input.trim() || !aiProvider}
+            >
+              {t('draftModal.generate')}
+            </button>
           )}
-
-          {phase === 'generating' && (
-            <div className="draft-loading">
-              <div className="preview-spinner" />
-              <p>{t('draftModal.generating')}</p>
-            </div>
-          )}
-
           {phase === 'preview' && (
             <>
-              <p className="draft-hint">{t('draftModal.reviewHint')}</p>
-              <textarea
-                className="draft-preview"
-                value={generatedLatex}
-                onChange={(e) => setGeneratedLatex(e.target.value)}
-                onKeyDown={handleKeyDown}
-              />
+              <button
+                onClick={() => {
+                  setPhase('input')
+                  setError(null)
+                }}
+              >
+                {t('draftModal.backToEdit')}
+              </button>
+              <button className="primary-button" onClick={handleInsert}>
+                {t('draftModal.insertIntoEditor')}
+              </button>
             </>
           )}
         </div>
-
-        <div className="modal-footer">
-          <span className="draft-provider-label">{providerLabel}</span>
-          <div className="modal-actions">
-            {phase === 'input' && (
-              <button
-                className="primary-button"
-                onClick={handleGenerate}
-                disabled={!input.trim() || !aiProvider}
-              >
-                {t('draftModal.generate')}
-              </button>
-            )}
-            {phase === 'preview' && (
-              <>
-                <button
-                  onClick={() => {
-                    setPhase('input')
-                    setError(null)
-                  }}
-                >
-                  {t('draftModal.backToEdit')}
-                </button>
-                <button className="primary-button" onClick={handleInsert}>
-                  {t('draftModal.insertIntoEditor')}
-                </button>
-              </>
-            )}
-          </div>
-        </div>
       </div>
-    </div>
+    </ModalFrame>
   )
 }

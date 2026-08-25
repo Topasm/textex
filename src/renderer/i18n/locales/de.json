@@ -635,6 +635,20 @@
     "openFinding": "{{message}} bei {{location}} öffnen"
   },
   "researchPanel": {
+    "label": "Forschungsbereich",
+    "open": "Forschungsbereich öffnen",
+    "close": "Forschungsbereich schließen",
+    "tabs": {
+      "chat": "Chat",
+      "references": "Referenzen",
+      "profile": "Profil",
+      "projectProfile": "Projektprofil"
+    },
+    "references": {
+      "backToLocal": "Zurück zu lokalen Referenzen",
+      "onlineSources": "Crossref / arXiv",
+      "projectCitationGroups": "Projekt-Zitationsgruppen"
+    },
     "invalidReferenceDrop": "Dieses Element ist keine gültige TextEx-Referenz.",
     "openProjectForChatReference": "Öffnen Sie ein Projekt, bevor Sie eine Referenz zum Chat hinzufügen."
   }

@@ -635,6 +635,20 @@
     "openFinding": "在 {{location}} 打开 {{message}}"
   },
   "researchPanel": {
+    "label": "研究面板",
+    "open": "打开研究面板",
+    "close": "关闭研究面板",
+    "tabs": {
+      "chat": "聊天",
+      "references": "参考文献",
+      "profile": "配置",
+      "projectProfile": "项目配置"
+    },
+    "references": {
+      "backToLocal": "返回本地参考文献",
+      "onlineSources": "Crossref / arXiv",
+      "projectCitationGroups": "项目引用分组"
+    },
     "invalidReferenceDrop": "此项目不是有效的 TextEx 参考文献。",
     "openProjectForChatReference": "请先打开项目，再将参考文献添加到聊天。"
   }

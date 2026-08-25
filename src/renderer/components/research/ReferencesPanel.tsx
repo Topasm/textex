@@ -41,7 +41,9 @@ export function ReferencesPanel({ onAddToChat, onOpenProblems }: ReferencesPanel
             }}
           >
             <ArrowLeft size={ICON_SIZE.compact} aria-hidden="true" />
-            {submission ? t('submissionCheck.backToCurrentPaper') : 'Back to local references'}
+            {submission
+              ? t('submissionCheck.backToCurrentPaper')
+              : t('researchPanel.references.backToLocal')}
           </button>
           <span>
             {online ? (
@@ -52,10 +54,10 @@ export function ReferencesPanel({ onAddToChat, onOpenProblems }: ReferencesPanel
               <BookMarked size={ICON_SIZE.compact} aria-hidden="true" />
             )}
             {online
-              ? 'Crossref / arXiv'
+              ? t('researchPanel.references.onlineSources')
               : submission
                 ? t('submissionCheck.title')
-                : 'Project citation groups'}
+                : t('researchPanel.references.projectCitationGroups')}
           </span>
         </div>
         {online ? (

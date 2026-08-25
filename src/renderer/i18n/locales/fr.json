@@ -635,6 +635,20 @@
     "openFinding": "Ouvrir {{message}} à {{location}}"
   },
   "researchPanel": {
+    "label": "Panneau de recherche",
+    "open": "Ouvrir le panneau de recherche",
+    "close": "Fermer le panneau de recherche",
+    "tabs": {
+      "chat": "Discussion",
+      "references": "Références",
+      "profile": "Profil",
+      "projectProfile": "Profil du projet"
+    },
+    "references": {
+      "backToLocal": "Retour aux références locales",
+      "onlineSources": "Crossref / arXiv",
+      "projectCitationGroups": "Groupes de citations du projet"
+    },
     "invalidReferenceDrop": "Cet élément n’est pas une référence TextEx valide.",
     "openProjectForChatReference": "Ouvrez un projet avant d’ajouter une référence au chat."
   }

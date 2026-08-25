@@ -47,19 +47,12 @@ const StatusBar = React.memo(function StatusBar() {
   return (
     <div className="status-bar">
       <div className="status-left">
-        <span
-          className="status-compile-indicator"
+        <button
+          type="button"
+          className="status-action status-compile-indicator"
           data-responsive-priority="primary"
           onClick={toggleLogPanel}
-          role="button"
-          tabIndex={0}
           title={t('statusBar.toggleLog')}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault()
-              toggleLogPanel()
-            }
-          }}
         >
           <span className={`status-dot ${dotClass}`} />
           <span>{label}</span>
@@ -79,7 +72,7 @@ const StatusBar = React.memo(function StatusBar() {
               )}
             </span>
           )}
-        </span>
+        </button>
         {isGitRepo && gitBranch && (
           <span
             className="status-git-branch"
@@ -112,8 +105,9 @@ const StatusBar = React.memo(function StatusBar() {
                   : t('statusBar.lspOff')}
           </span>
         )}
-        <span
-          className="status-spellcheck"
+        <button
+          type="button"
+          className="status-action status-spellcheck"
           data-responsive-priority="secondary"
           onClick={() =>
             useSettingsStore
@@ -121,39 +115,22 @@ const StatusBar = React.memo(function StatusBar() {
               .updateSetting('sectionHighlightEnabled', !sectionHighlightEnabled)
           }
           title={t('statusBar.toggleSectionHighlight')}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault()
-              useSettingsStore
-                .getState()
-                .updateSetting('sectionHighlightEnabled', !sectionHighlightEnabled)
-            }
-          }}
         >
           {t('statusBar.sections')}:{' '}
           {sectionHighlightEnabled ? t('statusBar.on') : t('statusBar.off')}
-        </span>
+        </button>
         {capabilities.spellcheck && (
-          <span
-            className="status-spellcheck"
+          <button
+            type="button"
+            className="status-action status-spellcheck"
             data-responsive-priority="secondary"
             onClick={() =>
               useSettingsStore.getState().updateSetting('spellCheckEnabled', !spellCheckEnabled)
             }
             title={t('statusBar.toggleSpellCheck')}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault()
-                useSettingsStore.getState().updateSetting('spellCheckEnabled', !spellCheckEnabled)
-              }
-            }}
           >
             {t('statusBar.spell')}: {spellCheckEnabled ? t('statusBar.on') : t('statusBar.off')}
-          </span>
+          </button>
         )}
         <span className="status-cursor" data-responsive-priority="primary">
           {t('statusBar.ln')} {cursorLine}, {t('statusBar.col')} {cursorColumn}
