@@ -15,7 +15,7 @@ import {
   onPendingAutoCompileCancellation,
   toCompileRequest
 } from '../services/compileCoordinator'
-import { syncRecoveryForFiles } from '../services/crashRecovery'
+import { prepareDocumentsForCompile } from '../services/compilePersistenceCoordinator'
 
 export function useAutoCompile(): void {
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -51,31 +51,21 @@ export function useAutoCompile(): void {
         const sourceSnapshot = documentRegistry.snapshot(currentFilePath)
         if (!sourceSnapshot) return
 
-        const dirtyDocuments = documentRegistry
-          .dirtySnapshots()
-          .filter(({ filePath }) => !documentRegistry.getModel(filePath)?.requiresExplicitSave)
-        if (dirtyDocuments.length > 0) {
-          try {
-            await window.api.saveFileBatch(
-              dirtyDocuments.map(({ filePath, snapshot }) => ({
-                content: snapshot.text,
-                filePath
-              }))
-            )
-            for (const { filePath, snapshot } of dirtyDocuments) {
-              useEditorStore.getState().markDocumentSaved(filePath, snapshot.revision)
-            }
-            await syncRecoveryForFiles(dirtyDocuments.map(({ filePath }) => filePath))
-          } catch (err: unknown) {
-            if (!isCurrentRun()) return
-            appendLog(`Save failed, skipping compile: ${errorMessage(err)}`)
-            setCompileStatus('error')
-            return
-          }
+        try {
+          const preparation = await prepareDocumentsForCompile({
+            activeFilePath: currentFilePath,
+            activeSnapshot: sourceSnapshot,
+            mode: 'automatic'
+          })
+          if (preparation.status !== 'ready') return
+        } catch (err: unknown) {
+          if (!isCurrentRun()) return
+          appendLog(`Save failed, skipping compile: ${errorMessage(err)}`)
+          setCompileStatus('error')
+          return
         }
 
         if (!isCurrentRun()) return
-        if (!documentRegistry.getModel(currentFilePath)?.isCurrent(sourceSnapshot)) return
 
         const ticket = beginCompileTicket(currentFilePath, sourceSnapshot)
         setCompileStatus('compiling')

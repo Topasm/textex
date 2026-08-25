@@ -1,4 +1,4 @@
-import '@testing-library/jest-dom'
+import '@testing-library/jest-dom/vitest'
 
 // jsdom does not implement ResizeObserver — provide a minimal stub.
 if (typeof globalThis.ResizeObserver === 'undefined') {

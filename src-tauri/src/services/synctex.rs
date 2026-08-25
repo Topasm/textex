@@ -18,6 +18,7 @@ use crate::{
 };
 
 const SYNC_TEX_UNIT: f64 = 65_781.76;
+const MAX_REGISTERED_BUILD_DIRECTORIES: usize = 32;
 
 #[derive(Clone, Debug)]
 struct Block {
@@ -89,10 +90,57 @@ struct CachedSyncTex {
     loaded: LoadedSyncTex,
 }
 
+struct RegisteredBuildDirectory {
+    directory: PathBuf,
+    last_used: u64,
+}
+
+#[derive(Default)]
+struct BuildDirectoryCache {
+    entries: HashMap<PathBuf, RegisteredBuildDirectory>,
+    access_sequence: u64,
+}
+
+impl BuildDirectoryCache {
+    fn next_access(&mut self) -> u64 {
+        self.access_sequence = self.access_sequence.saturating_add(1);
+        self.access_sequence
+    }
+
+    fn insert(&mut self, root_file: PathBuf, directory: PathBuf) {
+        let last_used = self.next_access();
+        self.entries.insert(
+            root_file,
+            RegisteredBuildDirectory {
+                directory,
+                last_used,
+            },
+        );
+        if self.entries.len() <= MAX_REGISTERED_BUILD_DIRECTORIES {
+            return;
+        }
+        let least_recent = self
+            .entries
+            .iter()
+            .min_by_key(|(_, registration)| registration.last_used)
+            .map(|(root_file, _)| root_file.clone());
+        if let Some(root_file) = least_recent {
+            self.entries.remove(&root_file);
+        }
+    }
+
+    fn get(&mut self, root_file: &Path) -> Option<PathBuf> {
+        let last_used = self.next_access();
+        let registration = self.entries.get_mut(root_file)?;
+        registration.last_used = last_used;
+        Some(registration.directory.clone())
+    }
+}
+
 #[derive(Default)]
 pub struct SyncTexState {
     cache: Mutex<Option<CachedSyncTex>>,
-    build_directories: Mutex<HashMap<PathBuf, PathBuf>>,
+    build_directories: Mutex<BuildDirectoryCache>,
 }
 
 impl SyncTexState {
@@ -248,12 +296,7 @@ async fn load(
     selected: &Path,
 ) -> AppResult<Option<LoadedSyncTex>> {
     let root_file = resolve_magic_root(state, selected).await?;
-    let build_dir = sync_state
-        .build_directories
-        .lock()
-        .await
-        .get(&root_file)
-        .cloned();
+    let build_dir = sync_state.build_directories.lock().await.get(&root_file);
     let plain = build_dir
         .as_ref()
         .map(|directory| output_path(directory, &root_file, "synctex"))
@@ -526,6 +569,29 @@ mod tests {
             find_input(selected, root, &document),
             Some("chapters/chapter1")
         );
+    }
+
+    #[test]
+    fn bounds_registered_build_directories_and_keeps_recent_entries() {
+        let mut cache = BuildDirectoryCache::default();
+        for index in 0..MAX_REGISTERED_BUILD_DIRECTORIES {
+            cache.insert(
+                PathBuf::from(format!("/project-{index}/main.tex")),
+                PathBuf::from(format!("/cache/{index}")),
+            );
+        }
+        assert_eq!(cache.entries.len(), MAX_REGISTERED_BUILD_DIRECTORIES);
+
+        let recently_used = Path::new("/project-0/main.tex");
+        assert_eq!(cache.get(recently_used), Some(PathBuf::from("/cache/0")));
+        cache.insert(
+            PathBuf::from("/project-new/main.tex"),
+            PathBuf::from("/cache/new"),
+        );
+
+        assert_eq!(cache.entries.len(), MAX_REGISTERED_BUILD_DIRECTORIES);
+        assert!(cache.entries.contains_key(recently_used));
+        assert!(!cache.entries.contains_key(Path::new("/project-1/main.tex")));
     }
 
     #[tokio::test(flavor = "current_thread")]

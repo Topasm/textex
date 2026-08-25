@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { documentRegistry } from '../../renderer/models/documentRegistry'
-import { prepareDocumentsForManualCompile } from '../../renderer/services/manualCompilePreparation'
+import {
+  prepareDocumentsForCompile,
+  prepareDocumentsForManualCompile
+} from '../../renderer/services/compilePersistenceCoordinator'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
 
 const mainPath = '/project/main.tex'
@@ -57,5 +60,43 @@ describe('manual compile preparation', () => {
       'chapter.tex'
     )
     expect(saveFileBatchMock).not.toHaveBeenCalled()
+  })
+
+  it('automatically saves eligible documents while preserving inactive history restores', async () => {
+    useEditorStore.getState().setActiveTab(chapterPath)
+    useEditorStore.getState().updateActiveDocument('restored', 'history-restore')
+    useEditorStore.getState().setActiveTab(mainPath)
+    useEditorStore.getState().updateActiveDocument('main edited', 'editor')
+    const snapshot = documentRegistry.snapshot(mainPath)!
+
+    const result = await prepareDocumentsForCompile({
+      activeFilePath: mainPath,
+      activeSnapshot: snapshot,
+      mode: 'automatic'
+    })
+
+    expect(result).toEqual({ status: 'ready', savedFilePaths: [mainPath] })
+    expect(saveFileBatchMock).toHaveBeenCalledWith([{ filePath: mainPath, content: 'main edited' }])
+    expect(documentRegistry.getModel(chapterPath)?.isDirty).toBe(true)
+    expect(documentRegistry.getModel(chapterPath)?.requiresExplicitSave).toBe(true)
+  })
+
+  it('reports a stale preparation when a document changes during the batch save', async () => {
+    useEditorStore.getState().setActiveTab(mainPath)
+    useEditorStore.getState().updateActiveDocument('main edited', 'editor')
+    const snapshot = documentRegistry.snapshot(mainPath)!
+    saveFileBatchMock.mockImplementationOnce(async () => {
+      useEditorStore.getState().updateActiveDocument('changed while saving', 'editor')
+      return { success: true }
+    })
+
+    const result = await prepareDocumentsForCompile({
+      activeFilePath: mainPath,
+      activeSnapshot: snapshot,
+      mode: 'automatic'
+    })
+
+    expect(result.status).toBe('stale')
+    expect(documentRegistry.getModel(mainPath)?.isDirty).toBe(true)
   })
 })

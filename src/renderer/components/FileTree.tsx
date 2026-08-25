@@ -40,6 +40,7 @@ import {
   filterGeneratedProjectEntries
 } from '../services/generatedFiles'
 import { useNotificationStore } from '../store/useNotificationStore'
+import { deleteFileTreeEntry, renameFileTreeEntry } from '../services/fileTreeActions'
 
 function iconWrapper(kind: string, Icon: LucideIcon): ReactNode {
   return (
@@ -139,26 +140,8 @@ function InlineInput({ depth, icon, initialValue = '', onSubmit, onCancel }: Inl
   )
 }
 
-function pathIdentity(filePath: string): string {
-  const normalized = filePath.replace(/\\/g, '/')
-  return /^[a-zA-Z]:\//.test(normalized) || normalized.startsWith('//')
-    ? normalized.toLocaleLowerCase('en-US')
-    : normalized
-}
-
-function isPathInside(candidate: string, parent: string): boolean {
-  const candidateId = pathIdentity(candidate)
-  const parentId = pathIdentity(parent).replace(/\/$/, '')
-  return candidateId === parentId || candidateId.startsWith(`${parentId}/`)
-}
-
-function siblingPath(filePath: string, name: string): string {
-  const separatorIndex = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'))
-  return `${filePath.slice(0, separatorIndex + 1)}${name}`
-}
-
-function remapChildPath(filePath: string, source: string, destination: string): string {
-  return `${destination}${filePath.slice(source.length)}`
+function notifyFileTreeWarning(message: string): void {
+  useNotificationStore.getState().pushNotification({ message, tone: 'warning' })
 }
 
 function FileTreeNode({ entry, depth, gitFiles, onChanged, showGenerated }: FileTreeNodeProps) {
@@ -332,38 +315,12 @@ function FileTreeNode({ entry, depth, gitFiles, onChanged, showGenerated }: File
   const handleRename = useCallback(
     async (name: string) => {
       setRenaming(false)
-      if (name === entry.name) return
-      if (name === '.' || name === '..' || name.includes('/') || name.includes('\\')) {
-        window.alert(t('fileTree.invalidName'))
-        return
-      }
-
-      const editor = useEditorStore.getState()
-      const affected = Object.entries(editor.openFiles).filter(([filePath]) =>
-        isPathInside(filePath, entry.path)
-      )
-      if (affected.some(([, file]) => file.isDirty)) {
-        window.alert(t('fileTree.saveBeforeRename'))
-        return
-      }
-
-      const destination = siblingPath(entry.path, name)
       try {
-        await window.api.renamePath(entry.path, destination)
-        const activePath = editor.activeFilePath
-        const reopen = affected
-          .map(([filePath]) => ({
-            oldPath: filePath,
-            newPath: remapChildPath(filePath, entry.path, destination),
-            wasActive: filePath === activePath
-          }))
-          .sort((left, right) => Number(left.wasActive) - Number(right.wasActive))
-        for (const file of reopen) editor.closeTab(file.oldPath)
-        for (const file of reopen) {
-          const result = await window.api.readFile(file.newPath)
-          useEditorStore.getState().openFileInTab(result.filePath, result.content)
-        }
-        await onChanged?.()
+        const result = await renameFileTreeEntry(entry, name)
+        if (result.status === 'invalid-name') notifyFileTreeWarning(t('fileTree.invalidName'))
+        else if (result.status === 'dirty-documents')
+          notifyFileTreeWarning(t('fileTree.saveBeforeRename'))
+        else if (result.status === 'renamed') await onChanged?.()
       } catch (error) {
         logError('FileTree:rename', error)
       }
@@ -374,20 +331,13 @@ function FileTreeNode({ entry, depth, gitFiles, onChanged, showGenerated }: File
   const handleDelete = useCallback(
     async (event: React.MouseEvent) => {
       event.stopPropagation()
-      const editor = useEditorStore.getState()
-      const affected = Object.entries(editor.openFiles).filter(([filePath]) =>
-        isPathInside(filePath, entry.path)
-      )
-      if (affected.some(([, file]) => file.isDirty)) {
-        window.alert(t('fileTree.saveBeforeDelete'))
-        return
-      }
-      if (!window.confirm(t('fileTree.confirmDelete', { name: entry.name }))) return
-
       try {
-        await window.api.deletePath(entry.path)
-        for (const [filePath] of affected) useEditorStore.getState().closeTab(filePath)
-        await onChanged?.()
+        const result = await deleteFileTreeEntry(entry, () =>
+          window.confirm(t('fileTree.confirmDelete', { name: entry.name }))
+        )
+        if (result.status === 'dirty-documents')
+          notifyFileTreeWarning(t('fileTree.saveBeforeDelete'))
+        else if (result.status === 'deleted') await onChanged?.()
       } catch (error) {
         logError('FileTree:delete', error)
       }
@@ -578,38 +528,12 @@ const ProjectFileTreeRow = memo(function ProjectFileTreeRow({
   const handleRename = useCallback(
     async (name: string) => {
       setRenaming(false)
-      if (name === entry.name) return
-      if (name === '.' || name === '..' || name.includes('/') || name.includes('\\')) {
-        window.alert(t('fileTree.invalidName'))
-        return
-      }
-
-      const editor = useEditorStore.getState()
-      const affected = Object.entries(editor.openFiles).filter(([filePath]) =>
-        isPathInside(filePath, entry.path)
-      )
-      if (affected.some(([, file]) => file.isDirty)) {
-        window.alert(t('fileTree.saveBeforeRename'))
-        return
-      }
-
-      const destination = siblingPath(entry.path, name)
       try {
-        await window.api.renamePath(entry.path, destination)
-        const activePath = editor.activeFilePath
-        const reopen = affected
-          .map(([filePath]) => ({
-            oldPath: filePath,
-            newPath: remapChildPath(filePath, entry.path, destination),
-            wasActive: filePath === activePath
-          }))
-          .sort((left, right) => Number(left.wasActive) - Number(right.wasActive))
-        for (const file of reopen) editor.closeTab(file.oldPath)
-        for (const file of reopen) {
-          const result = await window.api.readFile(file.newPath)
-          useEditorStore.getState().openFileInTab(result.filePath, result.content)
-        }
-        onRenamed(entry, destination)
+        const result = await renameFileTreeEntry(entry, name)
+        if (result.status === 'invalid-name') notifyFileTreeWarning(t('fileTree.invalidName'))
+        else if (result.status === 'dirty-documents')
+          notifyFileTreeWarning(t('fileTree.saveBeforeRename'))
+        else if (result.status === 'renamed') onRenamed(entry, result.destination)
       } catch (error) {
         logError('FileTree:renameIndexedPath', error)
       }
@@ -620,20 +544,13 @@ const ProjectFileTreeRow = memo(function ProjectFileTreeRow({
   const handleDelete = useCallback(
     async (event: React.MouseEvent) => {
       event.stopPropagation()
-      const editor = useEditorStore.getState()
-      const affected = Object.entries(editor.openFiles).filter(([filePath]) =>
-        isPathInside(filePath, entry.path)
-      )
-      if (affected.some(([, file]) => file.isDirty)) {
-        window.alert(t('fileTree.saveBeforeDelete'))
-        return
-      }
-      if (!window.confirm(t('fileTree.confirmDelete', { name: entry.name }))) return
-
       try {
-        await window.api.deletePath(entry.path)
-        for (const [filePath] of affected) useEditorStore.getState().closeTab(filePath)
-        onDeleted(entry)
+        const result = await deleteFileTreeEntry(entry, () =>
+          window.confirm(t('fileTree.confirmDelete', { name: entry.name }))
+        )
+        if (result.status === 'dirty-documents')
+          notifyFileTreeWarning(t('fileTree.saveBeforeDelete'))
+        else if (result.status === 'deleted') onDeleted(entry)
       } catch (error) {
         logError('FileTree:deleteIndexedPath', error)
       }

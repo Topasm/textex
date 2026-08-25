@@ -70,7 +70,7 @@ import {
 } from './services/compileCoordinator'
 import { ICON_SIZE } from './components/ui/IconSystem'
 import { installCrashRecoveryAutosnapshot } from './services/crashRecovery'
-import { prepareDocumentsForManualCompile } from './services/manualCompilePreparation'
+import { prepareDocumentsForManualCompile } from './services/compilePersistenceCoordinator'
 
 // Lazy-load heavy modals and panels that are rarely shown
 const SettingsModal = lazy(() =>

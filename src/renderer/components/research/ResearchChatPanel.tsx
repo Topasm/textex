@@ -25,16 +25,13 @@ import type {
   ResearchChatSessionScope,
   ResearchChatSessionSnapshot,
   ResearchProfile,
-  ResearchResource,
-  ZoteroMutationOperation,
   ZoteroMutationPlan
 } from '../../../shared/types'
 import { getActiveEditorAdapter } from '../../editor/activeEditorAdapter'
 import { documentRegistry, normalizeDocumentId } from '../../models/documentRegistry'
 import {
   buildReferenceChatContext,
-  mergeReferenceChatContexts,
-  type ReferenceChatContextItem
+  mergeReferenceChatContexts
 } from '../../services/referenceChatContext'
 import {
   matchResearchChatCommands,
@@ -51,12 +48,24 @@ import {
 import {
   appendResearchChatSessionMessages,
   compactResearchChatMessageContent,
-  compactResearchChatOnlineReference,
   compactResearchChatSession,
   compactResearchChatSessionMessages,
   researchChatSessionScope
 } from '../../services/researchChatSession'
 import { invalidateZoteroInventory } from '../../services/zoteroInventoryCache'
+import {
+  authorContext,
+  paperContext,
+  persistedReference,
+  referenceRequestContext,
+  resourceMetadataContext,
+  restoredReference,
+  type SessionReferenceContextItem
+} from '../../services/researchChatContext'
+import {
+  isLikelyZoteroMutation,
+  zoteroOperationLabel
+} from '../../services/zoteroMutationPresentation'
 import { useEditorStore } from '../../store/useEditorStore'
 import { useCompileStore } from '../../store/useCompileStore'
 import { useProjectStore, type ResearchSelectionRequest } from '../../store/useProjectStore'
@@ -104,11 +113,6 @@ interface SelectionChatContext {
   content: string
 }
 
-type SessionReferenceContextItem = ReferenceChatContextItem & {
-  /** Preserve a restored project/Zotero card summary across subsequent saves. */
-  persistedSource?: string
-}
-
 const DOCUMENT_CONTEXT_LIMIT = 24_000
 const HISTORY_LIMIT = 12
 const REFERENCE_SEARCH_QUERY_LIMIT = 512
@@ -129,158 +133,6 @@ const CHAT_STARTERS = [
   }
 ] as const
 
-export function isLikelyZoteroMutation(value: string): boolean {
-  const normalized = value.trim().toLowerCase()
-  if (normalized.startsWith('/zotero ')) return true
-  const namesZoteroObject = /(zotero|collection|컬렉션|tag|태그)/iu.test(normalized)
-  const requestsMutation =
-    /(create|make|move|rename|add|remove|change|organize|생성|만들|옮|이동|이름|추가|제거|삭제|변경|정리)/iu.test(
-      normalized
-    )
-  return namesZoteroObject && requestsMutation
-}
-
-function zoteroOperationLabel(operation: ZoteroMutationOperation): string {
-  switch (operation.kind) {
-    case 'createCollection':
-      return `Create “${operation.name}” in ${operation.parentLabel}`
-    case 'moveCollection':
-      return `Move “${operation.path}” to ${operation.parentLabel}`
-    case 'renameCollection':
-      return `Rename “${operation.path}” to “${operation.newName}”`
-    case 'updateItem': {
-      const changes = [
-        operation.addTags.length > 0 && `add ${operation.addTags.join(', ')}`,
-        operation.removeTags.length > 0 && `remove ${operation.removeTags.join(', ')}`,
-        operation.addCollections.length > 0 &&
-          `add to ${operation.addCollections.map((collection) => collection.path).join(', ')}`,
-        operation.removeCollections.length > 0 &&
-          `remove from ${operation.removeCollections.map((collection) => collection.path).join(', ')}`
-      ]
-        .filter(Boolean)
-        .join('; ')
-      return `${operation.title}: ${changes}`
-    }
-  }
-}
-
-function paperContext(profile: ResearchProfile): ResearchChatContext | null {
-  const paper = profile.paper
-  const content = [
-    paper.title && `Title: ${paper.title}`,
-    paper.abstract && `Abstract: ${paper.abstract}`,
-    paper.doi && `DOI: ${paper.doi}`,
-    paper.arxiv && `arXiv: ${paper.arxiv}`,
-    paper.venue && `Venue: ${paper.venue}`,
-    paper.website && `Website: ${paper.website}`
-  ]
-    .filter(Boolean)
-    .join('\n')
-  return content ? { kind: 'paper', label: paper.title || 'Paper metadata', content } : null
-}
-
-function authorContext(profile: ResearchProfile): ResearchChatContext | null {
-  if (profile.paper.authors.length === 0) return null
-  return {
-    kind: 'author',
-    label: 'Paper authors',
-    content: profile.paper.authors
-      .map((author) =>
-        [
-          author.name,
-          author.role && `role=${author.role}`,
-          author.homepage && `homepage=${author.homepage}`,
-          author.github && `github=${author.github}`,
-          author.orcid && `orcid=${author.orcid}`
-        ]
-          .filter(Boolean)
-          .join('; ')
-      )
-      .join('\n')
-  }
-}
-
-function resourceMetadataContext(resource: ResearchResource): ResearchChatContext {
-  const source = resource.url || resource.sshUrl || resource.localPath
-  return {
-    kind: resource.kind === 'git' ? 'repository' : 'website',
-    resourceId: resource.id,
-    label: resource.label || resource.id,
-    source,
-    content: [
-      `Resource kind: ${resource.kind}`,
-      resource.url && `URL: ${resource.url}`,
-      resource.sshUrl && `SSH remote: ${resource.sshUrl}`,
-      resource.localPath && `Local path: ${resource.localPath}`,
-      resource.branch && `Branch: ${resource.branch}`
-    ]
-      .filter(Boolean)
-      .join('\n')
-  }
-}
-
-function persistedReference(item: SessionReferenceContextItem): ResearchChatSessionContext {
-  const descriptor = item.descriptor
-  if (descriptor.source === 'online') {
-    return {
-      id: item.id,
-      kind: 'reference',
-      label: item.label,
-      source: item.display.url,
-      referenceSource: 'online',
-      onlineReference: compactResearchChatOnlineReference(descriptor.reference)
-    }
-  }
-  const summary =
-    item.persistedSource ??
-    [item.display.authors?.join(', '), item.display.year].filter(Boolean).join(' · ')
-  return {
-    id: item.id,
-    kind: 'reference',
-    label: item.label,
-    ...(summary ? { source: summary } : {}),
-    citekey: descriptor.citekey,
-    referenceSource: descriptor.source
-  }
-}
-
-function restoredReference(
-  context: ResearchChatSessionContext
-): SessionReferenceContextItem | null {
-  if (context.kind !== 'reference' || !context.referenceSource) return null
-  if (context.referenceSource === 'online') {
-    if (!context.onlineReference) return null
-    const restored = buildReferenceChatContext({
-      source: 'online',
-      reference: context.onlineReference
-    })
-    return { ...restored, id: context.id, label: context.label }
-  }
-  if (!context.citekey) return null
-  return {
-    id: context.id,
-    label: context.label,
-    descriptor: { source: context.referenceSource, citekey: context.citekey },
-    display: {},
-    ...(context.source ? { persistedSource: context.source } : {})
-  }
-}
-
-function referenceRequestContext(item: ReferenceChatContextItem): ResearchChatContext {
-  if (item.descriptor.source === 'online') {
-    return {
-      kind: 'reference',
-      label: item.label,
-      reference: { source: 'online', onlineReference: item.descriptor.reference }
-    }
-  }
-  return {
-    kind: 'reference',
-    label: item.label,
-    reference: { source: item.descriptor.source, citekey: item.descriptor.citekey }
-  }
-}
-
 function sourcePayload(
   source: ResearchChatSessionContext,
   zoteroPort: number
@@ -294,6 +146,8 @@ function sourcePayload(
     ? { source: 'zotero', citekey: source.citekey, port: zoteroPort }
     : { source: 'project', citekey: source.citekey }
 }
+
+export { isLikelyZoteroMutation } from '../../services/zoteroMutationPresentation'
 
 export function ResearchChatPanel({
   onAiDraft,
