@@ -7,7 +7,15 @@ acceptance checks.
 
 ## Current Operational Baseline
 
-At the v1.0.8 handoff baseline:
+Resolve the current version from `package.json` at handoff time instead of
+copying a release number into this guide:
+
+```bash
+CURRENT_VERSION="$(node -p "require('./package.json').version")"
+printf 'TextEx v%s\n' "$CURRENT_VERSION"
+```
+
+The maintained operational baseline is:
 
 - The repository is public at `Topasm/textex`, with `main` as the default
   branch.
@@ -22,8 +30,9 @@ At the v1.0.8 handoff baseline:
 - Ordinary branch and pull-request builds need no custom Actions secret. A tagged
   updater release requires `TEXTEX_UPDATER_PUBLIC_KEY`,
   `TAURI_SIGNING_PRIVATE_KEY`, and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
-- `main` does not currently have branch protection. Enable a ruleset before
-  broadening write access if the repository will have multiple maintainers.
+- Branch protection and rulesets are live repository state. Inspect them before
+  broadening write access and enable the recommended rules below when multiple
+  maintainers can push.
 - Dependabot checks npm and GitHub Actions weekly. Review open dependency PRs
   rather than deleting their branches as ordinary cleanup.
 
@@ -131,7 +140,7 @@ gh auth login
 gh auth status
 gh repo view Topasm/textex
 gh workflow list --repo Topasm/textex
-gh release view v1.0.8 --repo Topasm/textex
+gh release view --repo Topasm/textex
 gh pr list --repo Topasm/textex --state open
 ```
 
@@ -203,7 +212,7 @@ successful historical run before publishing anything:
 
 ```bash
 gh run list --workflow "Build & Package" --limit 10
-gh release view v1.0.8 --json url,tagName,isDraft,isPrerelease,assets
+gh release view --json url,tagName,isDraft,isPrerelease,assets
 ```
 
 Key invariants:

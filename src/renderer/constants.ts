@@ -1,4 +1,6 @@
 // ── Timing ──────────────────────────────────────────────────
+import type { AiProvider } from '../shared/types'
+
 export const DEBOUNCE_ZOOM_MS = 150
 export const SYNCTEX_HIGHLIGHT_MS = 1500
 export const SETTINGS_SYNC_DELAY_MS = 500
@@ -36,6 +38,14 @@ export const EXPORT_FORMATS = [
 ] as const
 
 // ── AI Provider metadata ────────────────────────────────────
+export const AI_PROVIDER_ORDER: AiProvider[] = [
+  'anthropic',
+  'openai',
+  'gemini',
+  'claude-cli',
+  'codex-cli'
+]
+
 export const AI_MODEL_OPTIONS: Record<string, { value: string; label: string }[]> = {
   openai: [
     { value: 'gpt-5.4', label: 'GPT-5.4' },
@@ -82,26 +92,46 @@ export const AI_MODEL_OPTIONS: Record<string, { value: string; label: string }[]
   ]
 }
 
-export const AI_PROVIDER_INFO: Record<string, { label: string; keyHint: string; keyUrl: string }> =
-  {
-    openai: { label: 'OpenAI', keyHint: 'sk-...', keyUrl: 'https://platform.openai.com/api-keys' },
-    anthropic: {
-      label: 'Anthropic',
-      keyHint: 'sk-ant-...',
-      keyUrl: 'https://console.anthropic.com/settings/keys'
-    },
-    gemini: { label: 'Gemini', keyHint: 'AIza...', keyUrl: 'https://aistudio.google.com/apikey' },
-    'claude-cli': {
-      label: 'Claude CLI',
-      keyHint: '',
-      keyUrl: 'https://docs.anthropic.com/en/docs/claude-code'
-    },
-    'codex-cli': {
-      label: 'Codex CLI',
-      keyHint: '',
-      keyUrl: 'https://developers.openai.com/codex'
-    }
+export const AI_PROVIDER_INFO: Record<
+  AiProvider,
+  { label: string; shortLabel: string; kind: 'api' | 'cli'; keyHint: string; keyUrl: string }
+> = {
+  openai: {
+    label: 'OpenAI',
+    shortLabel: 'OpenAI',
+    kind: 'api',
+    keyHint: 'sk-...',
+    keyUrl: 'https://platform.openai.com/api-keys'
+  },
+  anthropic: {
+    label: 'Anthropic',
+    shortLabel: 'Anthropic',
+    kind: 'api',
+    keyHint: 'sk-ant-...',
+    keyUrl: 'https://console.anthropic.com/settings/keys'
+  },
+  gemini: {
+    label: 'Gemini',
+    shortLabel: 'Gemini',
+    kind: 'api',
+    keyHint: 'AIza...',
+    keyUrl: 'https://aistudio.google.com/apikey'
+  },
+  'claude-cli': {
+    label: 'Claude Code (CLI)',
+    shortLabel: 'Claude Code',
+    kind: 'cli',
+    keyHint: '',
+    keyUrl: 'https://docs.anthropic.com/en/docs/claude-code'
+  },
+  'codex-cli': {
+    label: 'Codex (CLI)',
+    shortLabel: 'Codex',
+    kind: 'cli',
+    keyHint: '',
+    keyUrl: 'https://developers.openai.com/codex'
   }
+}
 
 // ── Hidden editor actions ────────────────────────────────────
 /** Monaco editor actions hidden from the command palette (not relevant for LaTeX editing). */

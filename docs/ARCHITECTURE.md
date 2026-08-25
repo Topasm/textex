@@ -93,6 +93,12 @@ their own processes and reuse pure compiler, parser, and export modules from
 Filesystem, compilation, PDF delivery, SyncTeX, Git, templates, settings,
 history, bibliography/Zotero and online research, spellcheck, export, project
 metadata, updater, performance sampling, AI provider/CLI execution, TexLab
-process management, and the embedded PTY are implemented in Rust. TexLab is an
+process management, and safe system-terminal launch are implemented through the
+native backend. TextEx does not embed a PTY or terminal emulator. TexLab is an
 optional external executable discovered from `TEXTEX_TEXLAB_PATH` or `PATH`;
 it is not bundled with the application.
+
+On macOS a normal main-window close is a hide operation. The Dock reopen event
+restores the existing window and renderer state. Explicit Quit remains a
+separate lifecycle path that confirms dirty documents and closes the active
+native project before process exit. Windows and Linux close the window and exit.

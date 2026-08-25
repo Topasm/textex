@@ -9,6 +9,7 @@ import { useUiStore } from '../../renderer/store/useUiStore'
 describe('SettingsModal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(window.api.saveSettings).mockResolvedValue(createDefaultUserSettings())
     useSettingsStore.setState({ settings: createDefaultUserSettings() })
     useUiStore.setState({
       updateStatus: 'idle',
@@ -55,18 +56,27 @@ describe('SettingsModal', () => {
 
   it('renders and configures the native AI settings flow', async () => {
     vi.mocked(window.api.aiHasApiKey).mockResolvedValue(false)
+    vi.mocked(window.api.aiCheckCli).mockResolvedValue(false)
+    vi.mocked(window.api.aiCheckCodexCli).mockResolvedValue(false)
     render(<SettingsModal onClose={vi.fn()} />)
 
     fireEvent.click(screen.getByRole('button', { name: 'AI' }))
     expect(screen.getByRole('heading', { name: 'AI Assistant' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('switch'))
-    fireEvent.click(screen.getByRole('button', { name: 'OpenAI' }))
+    fireEvent.change(screen.getByRole('combobox', { name: 'Provider and model' }), {
+      target: { value: 'openai:gpt-5.4' }
+    })
 
     expect(useSettingsStore.getState().settings.aiEnabled).toBe(true)
     expect(useSettingsStore.getState().settings.aiProvider).toBe('openai')
+    expect(useSettingsStore.getState().settings.aiModel).toBe('gpt-5.4')
     await waitFor(() => expect(window.api.aiHasApiKey).toHaveBeenCalledWith('openai'))
-    expect(screen.getByText('API Key')).toBeInTheDocument()
+    const openAiConnection = await screen.findByRole('button', {
+      name: /OpenAI.*API key required/
+    })
+    fireEvent.click(openAiConnection)
+    expect(screen.getByPlaceholderText('sk-...')).toBeInTheDocument()
   })
 
   it('closes from the close button and overlay', () => {

@@ -25,14 +25,14 @@ A **free**, **local-first** Tauri desktop LaTeX editor. TextEx runs on your mach
 | **Multi-File Projects** | Sidebar file tree with generated outputs hidden, tab bar, `\input`/`\include` navigation |
 | **Citations** | BibTeX auto-complete + Zotero integration |
 | **Paper Preflight** | Citation provenance, duplicate warnings, and a deterministic submission check |
-| **Research & AI** | Crossref/arXiv search plus native HTTP, Claude CLI, and Codex CLI assistants |
+| **Research & AI** | Crossref/arXiv search plus native HTTP, Claude Code, and Codex CLI assistants |
 | **Language & Project Tools** | Optional TexLab language features plus one-click project launch in the system terminal |
 | **Git Integration** | Built-in staging, commits, branch status, and confirmed Fetch/Pull/Push |
 | **Export** | Create a clean Overleaf source ZIP or convert to DOCX, ODT, HTML, and EPUB via Pandoc |
 | **7 Languages** | EN, KO, ES, FR, DE, PT, ZH |
 
 > **Optional integrations:** AI API providers and online reference search require network
-> access. Claude/Codex CLI and TexLab features require the corresponding executable on
+> access. Claude Code, Codex CLI, and TexLab features require the corresponding executable on
 > `PATH`; the core editor and bundled Tectonic compiler remain local and work without them.
 
 ---
@@ -63,6 +63,10 @@ xattr -cr /Applications/TextEx.app
 ```
 Or right-click the app > **Open** > **Open** in Gatekeeper.
 
+Closing the main window hides it and preserves the active project, similar to
+other document apps on macOS. Click the Dock icon to restore it; use **TextEx >
+Quit TextEx** or `Cmd+Q` to exit the process.
+
 **Linux:**
 Make the AppImage executable:
 ```bash
@@ -86,6 +90,9 @@ chmod +x TextEx_*.AppImage
 ### Multi-File Projects
 
 Open any folder to get a full project view with sidebar file tree, tabs, and `\input`/`\include` navigation.
+When there is no restorable session, TextEx opens a TeX document automatically:
+root-level `main.tex`, root-level `root.tex`, then another `.tex` file in stable
+project order.
 Compiler outputs are kept in an engine-specific TextEx cache instead of beside
 your sources. Use the eye button to reveal legacy generated files, or the
 archive button to create a clean source ZIP for upload to Overleaf.
@@ -139,7 +146,7 @@ Enable **Scroll Sync** in Settings > Appearance to keep the editor and PDF align
 - **Citation Tooltips**: Hover over a citation in the PDF preview to see title, author, and year.
 - **Zotero Integration**:
   1. Ensure Zotero with Better BibTeX is running.
-  2. Open the right Research panel for Project, Zotero, and Crossref/arXiv references.
+  2. Open **References** in the right Research panel to search the project and Zotero together; Crossref/arXiv appears as an online fallback.
   3. Drag a paper into the editor, or use `/r`, `/z`, and `/o` in OmniSearch.
   4. Save online results to Zotero independently, or add them directly to the project bibliography.
 
@@ -151,9 +158,10 @@ Enable **Scroll Sync** in Settings > Appearance to keep the editor and PDF align
 
 - **OmniSearch**: Use the toolbar search field to search across files, citations, PDF text, and commands.
 - **Todo Panel**: Track writing tasks in the sidebar.
-- **Notes Panel**: Quick scratchpad for ideas.
+- **Notes Panel**: Track TODO items and keep project memos.
 - **Timeline**: View local file history and revert to any previous save.
 - **Git Panel**: Stage and commit locally, inspect upstream divergence, Fetch, or confirm safe Pull/Push operations. Pull requires a clean worktree and uses fast-forward only; TextEx never force-pushes.
+- **AI Settings**: Choose a global default provider/model independently from API-key and CLI connection setup. Research Chat can override that target for one conversation without changing the global default.
 
 ---
 
@@ -165,7 +173,7 @@ Enable **Scroll Sync** in Settings > Appearance to keep the editor and PDF align
 | `Ctrl/Cmd + Enter` | Compile |
 | `Ctrl/Cmd + L` | Toggle log panel |
 | `Ctrl/Cmd + B` | Toggle sidebar |
-| `Ctrl/Cmd + F` | Find in editor / PDF |
+| `Ctrl/Cmd + F` | Find in current document |
 | `Ctrl/Cmd + Shift + C` | Search citations |
 | `Ctrl/Cmd + Shift + F` | Search PDF text |
 | `Shift + Alt + F` | Format document |
@@ -185,6 +193,7 @@ Enable **Scroll Sync** in Settings > Appearance to keep the editor and PDF align
 - [Settings Reference](docs/SETTINGS.md)
 - [Packaging](docs/PACKAGING.md)
 - [Zotero Integration](docs/ZOTERO.md)
+- [Research Profile & Chat](docs/RESEARCH_PROFILE.md)
 - [CLI Reference](docs/CLI.md)
 - [MCP Server](docs/MCP.md)
 - [Licenses](docs/LICENSES.md)

@@ -6349,6 +6349,291 @@ button.submission-check-finding:hover {
   flex: 1;
 }
 
+/* ---- AI Settings ---- */
+.ai-settings-tab {
+  gap: 16px;
+}
+
+.ai-settings-block {
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card-bg);
+}
+
+.ai-settings-block-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.ai-settings-kicker {
+  flex: 0 0 auto;
+  padding: 3px 8px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ai-target-select {
+  width: 100%;
+  min-height: 38px;
+  margin-top: 6px;
+}
+
+.ai-custom-model-field {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.ai-settings-footnote {
+  margin: 10px 0 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.ai-connections-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(240px, 0.85fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.ai-connections-column,
+.ai-connections-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-connections-column {
+  gap: 14px;
+}
+
+.ai-connections-group-title {
+  padding: 0 2px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ai-connections-list {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.ai-connection-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px;
+  color: var(--text-primary);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.ai-connection-row:last-child {
+  border-bottom: 0;
+}
+
+.ai-connection-row:hover,
+.ai-connection-row.selected {
+  background: var(--bg-hover);
+}
+
+.ai-connection-row.selected {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.ai-connection-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border-radius: 7px;
+}
+
+.ai-connection-icon.large {
+  width: 34px;
+  height: 34px;
+  color: var(--accent);
+}
+
+.ai-connection-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ai-connection-name {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-connection-description {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-connection-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ai-connection-status.ready {
+  color: var(--success);
+}
+
+.ai-connection-status.ready .settings-status-dot {
+  background: var(--success);
+}
+
+.ai-connection-status.unavailable {
+  color: var(--text-secondary);
+}
+
+.ai-connection-status.unavailable .settings-status-dot {
+  background: var(--error);
+}
+
+.ai-connection-chevron {
+  color: var(--text-secondary);
+}
+
+.ai-connection-detail {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+}
+
+.ai-connection-detail-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.ai-connection-detail h4 {
+  margin: 1px 0 3px;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.ai-connection-detail p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.ai-settings-notice {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 12px;
+  padding: 8px 10px;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.ai-settings-notice.warning {
+  color: var(--warning, #a66b00);
+  background: color-mix(in srgb, var(--warning, #d99000) 8%, var(--bg-secondary));
+}
+
+.ai-settings-notice.success {
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 8%, var(--bg-secondary));
+}
+
+.ai-settings-notice button {
+  margin-left: auto;
+  padding: 0;
+  color: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.ai-refresh-button,
+.ai-external-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.ai-refresh-button {
+  flex: 0 0 auto;
+  padding: 5px 7px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.ai-refresh-button:hover,
+.ai-external-link:hover {
+  color: var(--text-primary);
+}
+
+.ai-refresh-button:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.ai-refresh-button .spinning {
+  animation: spin 0.8s linear infinite;
+}
+
+.ai-external-link {
+  margin-top: 10px;
+  padding: 2px 0;
+  color: var(--accent);
+  font-size: 11px;
+}
+
 @keyframes settingsFadeIn {
   from {
     opacity: 0;

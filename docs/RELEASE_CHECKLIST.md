@@ -66,16 +66,17 @@ The GitHub repository must contain all three updater secrets:
 - `TAURI_SIGNING_PRIVATE_KEY`
 - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
 
-Generate and back up this key pair on a trusted maintainer Mac using the exact
-commands in [PACKAGING.md](PACKAGING.md#tauri-packaging). Tauri updater
-signatures cannot be disabled; Apple platform signing is a separate optional
-layer.
+Generate and back up this key pair on a trusted private maintainer machine
+using the exact commands in [PACKAGING.md](PACKAGING.md#tauri-packaging).
+Updater key generation works on macOS, Linux, or Windows and is independent of
+Apple signing. Tauri updater signatures cannot be disabled; Apple platform
+signing is a separate optional layer.
 
 Platform code-signing/notarization credentials are separate from Tauri updater
 signing and must follow the platform owner policy.
 
-Tagged macOS jobs can use ad-hoc signing without Apple credentials, matching the
-legacy v1.0.8 distribution model. This path is not notarized, so users may need
+Tagged macOS jobs can use ad-hoc signing without Apple credentials. This path
+is not notarized, so users may need
 to allow TextEx manually in macOS Privacy & Security.
 
 For normal Gatekeeper installation, configure all five secrets below. They are

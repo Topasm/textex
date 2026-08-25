@@ -5,6 +5,7 @@ import { APP_COMMAND_MANIFEST } from '../../shared/appCommandManifest'
 import { getDesktopCapabilities } from '../../renderer/platform/capabilities'
 
 const menuSource = readFileSync(resolve(process.cwd(), 'src-tauri/src/services/menu.rs'), 'utf8')
+const tauriLibSource = readFileSync(resolve(process.cwd(), 'src-tauri/src/lib.rs'), 'utf8')
 const mainWindowCapability = JSON.parse(
   readFileSync(resolve(process.cwd(), 'src-tauri/capabilities/main-window.json'), 'utf8')
 ) as { permissions: string[] }
@@ -36,6 +37,17 @@ describe('native application menu', () => {
     expect(menuSource).toContain('window.is_maximized()')
     expect(menuSource).toContain('window.maximize()')
     expect(menuSource).toContain('window.unmaximize()')
+    expect(menuSource).not.toContain('.quit()')
+  })
+
+  it('keeps the macOS process alive and restores its hidden main window from the Dock', () => {
+    expect(mainWindowCapability.permissions).toContain('core:window:allow-hide')
+    expect(tauriLibSource).toContain('tauri::RunEvent::Reopen')
+    expect(tauriLibSource).toContain('tauri::RunEvent::ExitRequested')
+    expect(tauriLibSource).toContain('api.prevent_exit()')
+    expect(tauriLibSource).toContain('services::menu::APP_COMMAND_EVENT, "app.quit"')
+    expect(tauriLibSource).toContain('window.show()')
+    expect(tauriLibSource).toContain('window.set_focus()')
   })
 
   it('keeps native capability-gated menu groups aligned with the renderer', () => {
@@ -59,6 +71,7 @@ describe('native application menu', () => {
         'core:event:allow-unlisten',
         'core:window:allow-close',
         'core:window:allow-destroy',
+        'core:window:allow-hide',
         'core:window:allow-minimize',
         'core:window:allow-toggle-maximize',
         'core:window:allow-start-dragging',

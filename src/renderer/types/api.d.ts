@@ -213,6 +213,7 @@ export interface DesktopApi {
   toggleMaximizeWindow(): Promise<void>
   startWindowDragging(): Promise<void>
   startWindowResize(direction: WindowResizeDirection): Promise<void>
+  hideWindow(): Promise<void>
   requestWindowClose(): Promise<void>
   exitApp(): Promise<{ success: boolean }>
   onWindowCloseRequested(cb: () => boolean | Promise<boolean>): void

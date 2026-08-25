@@ -98,7 +98,12 @@ fn application_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<R>>
         .hide_others()
         .show_all()
         .separator()
-        .quit()
+        .item(&command_item(
+            app,
+            "app.quit",
+            "Quit TextEx",
+            Some("CmdOrCtrl+Q"),
+        )?)
         .build()
 }
 

@@ -25,6 +25,9 @@ use services::watcher::DirectoryWatcherState;
 use services::zotero::ZoteroSyncState;
 use state::AppState;
 
+#[cfg(target_os = "macos")]
+use tauri::{Emitter, Manager};
+
 const PACKAGE_SMOKE_ENV: &str = "TEXTEX_PACKAGE_SMOKE";
 const EMBEDDED_TAURI_CONFIG: &str = include_str!("../tauri.conf.json");
 
@@ -117,6 +120,35 @@ fn setup_custom_window_chrome(_app: &mut tauri::App) -> Result<(), Box<dyn std::
     Ok(())
 }
 
+fn handle_run_event(app: &tauri::AppHandle, event: tauri::RunEvent) {
+    #[cfg(target_os = "macos")]
+    match event {
+        tauri::RunEvent::Reopen {
+            has_visible_windows: false,
+            ..
+        } => restore_main_window(app),
+        tauri::RunEvent::ExitRequested {
+            code: None, api, ..
+        } => {
+            api.prevent_exit();
+            restore_main_window(app);
+            let _ = app.emit(services::menu::APP_COMMAND_EVENT, "app.quit");
+        }
+        _ => {}
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    let _ = (app, event);
+}
+
+#[cfg(target_os = "macos")]
+fn restore_main_window(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     if package_smoke_requested() {
@@ -143,7 +175,7 @@ pub fn run() {
         .menu(services::menu::build)
         .on_menu_event(services::menu::handle_event);
 
-    builder
+    let app = builder
         .manage(AppState::default())
         .manage(FileSaveState::default())
         .manage(AiState::default())
@@ -308,8 +340,9 @@ pub fn run() {
             commands::updater::restart_app,
         ])
         .setup(setup_custom_window_chrome)
-        .run(tauri::generate_context!())
+        .build(tauri::generate_context!())
         .expect("failed to run TextEx Tauri application");
+    app.run(handle_run_event);
 }
 
 #[cfg(test)]

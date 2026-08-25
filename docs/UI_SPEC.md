@@ -64,7 +64,11 @@ ErrorBoundary
 - Registers manifest-backed keyboard shortcuts through `useKeyboardShortcuts`.
 - Uses domain Zustand stores and fine-grained selectors rather than a monolithic app store.
 - Accesses native functionality only through the typed `window.api` Tauri adapter.
-- Routes AI Draft and Claude/Codex CLI entry points through the Research panel's Chat tab.
+- Routes AI Draft and Claude Code/Codex CLI entry points through the Research panel's Chat tab.
+- On macOS, closing the main window hides it without tearing down the active project or dirty
+  editor buffers. Clicking the Dock icon restores and focuses that same window. `Cmd+Q` and the
+  native Quit item remain explicit application-exit paths and run dirty-document confirmation plus
+  native project cleanup before terminating. Windows and Linux retain close-to-exit behavior.
 
 ### `ResearchPanel.tsx`
 
@@ -78,7 +82,7 @@ ErrorBoundary
 - Uses an overlay with backdrop and Escape dismissal below 1200 px.
 - Visited tabs remain mounted while the panel is open, so Chat requests, queued prompts, draft
   text, and the Zotero inventory survive tab switches without repeating native work.
-- **Chat** contains AI Draft and Claude/Codex CLI entry points. In-flight research requests expose
+- **Chat** contains AI Draft and Claude Code/Codex CLI entry points. In-flight research requests expose
   a Stop control backed by native cancellation, and approved source edits can apply and compile in
   one reviewable action.
 - **References** is a unified current-paper manager: it cross-checks citations in project `.tex`
@@ -199,7 +203,7 @@ ErrorBoundary
   - Severity filter buttons (errors/warnings/info) to toggle visibility.
   - Problem count shown in tab label: `Problems (5)`.
   - Click any diagnostic to jump editor to that line.
-- Header actions can prefill Research Chat or launch the configured Claude/Codex CLI with bounded,
+- Header actions can prefill Research Chat or launch the configured Claude Code/Codex CLI with bounded,
   shell-safe diagnostic and raw-log context.
 - "Clear" resets the bounded log content.
 
@@ -221,12 +225,14 @@ ErrorBoundary
 - Modal overlay (800×500) for application settings, using shared `.modal-overlay` /
   `.modal-content` / `.modal-header` / `.modal-footer` CSS classes.
 - Left sidebar with six visible icon tabs; right scrollable content area.
-- **General**: User information card (Name, Email, Affiliation) for templates/metadata.
+- **General**: User information, update policy, and interface language.
 - **Appearance**: Theme selector cards (Light/Dark/Glass/System), PDF Night Mode,
   PDF layout controls, and scroll sync.
 - **Editor**: Font Size range slider with monospace badge, behavior toggles (Word Wrap,
   Format on Save, Auto-hide Sidebar).
-- **AI**: Native HTTP/CLI provider, model, credential, and prompt controls.
+- **AI**: A default execution target, independent API/CLI connection cards,
+  model selection, reasoning, credential, and prompt controls. Research Chat
+  may keep a conversation-local provider/model override.
 - **Integrations**: Zotero and Git cards.
 - **Automation**: Tectonic/system pdfLaTeX engine selector, Auto Compile,
   external-file watching, Spell Check, and TexLab toggles. Tectonic cache controls
@@ -234,7 +240,9 @@ ErrorBoundary
 - All styling uses `settings-*` CSS classes referencing CSS custom properties
   (`--accent`, `--bg-input`, `--card-bg`, etc.) — fully themed across dark/light/high-contrast.
 - Toggle component uses `aria-checked` attribute with CSS-only animation (no JS class toggling).
-- Persistence: Updates `settings` slice in Zustand store, saved to `localStorage`.
+- Persistence: Updates the settings Zustand store, persists renderer settings
+  locally, and mirrors non-secret settings through the typed native API. AI
+  credentials are stored separately by Rust and never enter `localStorage`.
 
 ### `HomeScreen.tsx`
 Displayed when no project is open.
@@ -246,6 +254,10 @@ Displayed when no project is open.
    gallery, including a citation, tour checklist, and project research profile.
 3. **Recent projects list** — pinned and recent entries with open, rename/tag, pin,
    and remove actions.
+
+Opening a folder restores a valid saved TeX tab when possible. With no valid
+session it opens root-level `main.tex`, root-level `root.tex`, another
+root-level `.tex` file, then the first nested `.tex` file in stable tree order.
 
 **Props:** `onOpenFolder`, `onOpenGuidedDemo`, `onNewBlankProject`, `onNewFromTemplate`.
 

@@ -2,10 +2,7 @@ import { deactivateProject } from '../utils/openProject'
 
 let pendingExitPreparation: Promise<boolean> | null = null
 
-/**
- * Shared preflight for window close, application quit, and updater restart.
- * It confirms every dirty tab and waits for native project resources to stop.
- */
+/** Confirms every dirty tab and waits for native project resources to stop. */
 export function prepareForApplicationExit(): Promise<boolean> {
   if (pendingExitPreparation) return pendingExitPreparation
 
@@ -14,6 +11,18 @@ export function prepareForApplicationExit(): Promise<boolean> {
   })
   pendingExitPreparation = preparation
   return preparation
+}
+
+/**
+ * macOS convention keeps the application and its document state alive when the
+ * last window is closed. Other desktop platforms retain close-to-exit behavior.
+ */
+export async function handleWindowCloseRequest(): Promise<boolean> {
+  if (document.documentElement.dataset.platform === 'darwin') {
+    await window.api.hideWindow()
+    return false
+  }
+  return prepareForApplicationExit()
 }
 
 export async function quitApplication(): Promise<boolean> {

@@ -19,9 +19,12 @@ Updater builds use the corresponding `package:updater:*` command and require:
 
 Never place private signing material in repository files or command output.
 
-Generate the updater key pair once on a trusted maintainer Mac, not on a shared
-CI or development server. The command prompts for a password and writes the
-private key plus a `.pub` public-key file:
+Generate the updater key pair once on a trusted, private maintainer machine,
+not on a shared CI or development server. Key generation is platform
+independent: macOS, Linux, and Windows can use the repository-local Tauri CLI
+installed by `npm ci`; a globally installed Tauri command is not required. The
+command prompts for a password and writes the private key plus a `.pub`
+public-key file:
 
 ```bash
 umask 077

@@ -49,12 +49,19 @@ The `SettingsModal` component provides a tabbed interface (800×500) for modifyi
 - **General** — User information, updates, and language
 - **Appearance** — Theme, PDF Night Mode, PDF layout controls, and scroll sync
 - **Editor** — Typography, formatting, layout, and Monaco behavior
-- **AI** — Provider, model, credential, thinking, and prompt controls
+- **AI** — Default execution target, independent provider connections, reasoning, and prompt controls
 - **Integrations** — Zotero and Git
 - **Automation** — Auto Compile, external-file watching, Spell Check, and TexLab
 
-Claude CLI, Codex CLI, and TexLab controls require their corresponding executables;
-the editor reports discovery/startup errors without falling back to a Node backend.
+The AI tab follows a target-and-connections model: choosing a default provider/model does
+not modify credentials, and configuring a credential or inspecting a CLI does not silently
+change the default target. Cloud API and local CLI connections are checked together. Research
+Chat can override the default target for one conversation without modifying global settings.
+Custom model identifiers remain available through an explicit advanced choice.
+
+Claude Code, Codex CLI, and TexLab controls require their corresponding executables; the
+editor reports discovery/startup errors without falling back to a Node backend. Direct API
+reasoning controls do not claim to configure reasoning inside CLI agents.
 
 ## Code Formatting
 

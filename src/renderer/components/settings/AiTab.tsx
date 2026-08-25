@@ -1,22 +1,27 @@
-import { useState, useEffect } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSettingsStore } from '../../store/useSettingsStore'
-import type { UserSettings } from '../../../shared/types'
+import type { AiProvider, UserSettings } from '../../../shared/types'
 import {
+  AlertCircle,
   Bot,
   Check,
+  Cloud,
   Eye,
   EyeOff,
+  ExternalLink,
   Key,
   Brain,
   MessageSquare,
   ChevronDown,
   ChevronRight,
-  RotateCcw
+  RefreshCw,
+  RotateCcw,
+  Terminal
 } from 'lucide-react'
 import { Toggle } from './Toggle'
 
-import { AI_MODEL_OPTIONS, AI_PROVIDER_INFO } from '../../constants'
+import { AI_MODEL_OPTIONS, AI_PROVIDER_INFO, AI_PROVIDER_ORDER } from '../../constants'
 
 const DEFAULT_PROMPTS: Record<
   string,
@@ -130,89 +135,135 @@ const AiPromptsEditor = () => {
   )
 }
 
+type ProviderAvailability = Record<AiProvider, boolean | null>
+
+const INITIAL_AVAILABILITY: ProviderAvailability = {
+  anthropic: null,
+  openai: null,
+  gemini: null,
+  'claude-cli': null,
+  'codex-cli': null
+}
+
+const API_PROVIDERS = AI_PROVIDER_ORDER.filter(
+  (provider) => AI_PROVIDER_INFO[provider].kind === 'api'
+)
+const CLI_PROVIDERS = AI_PROVIDER_ORDER.filter(
+  (provider) => AI_PROVIDER_INFO[provider].kind === 'cli'
+)
+
+function targetValue(provider: AiProvider, model: string): string {
+  return `${provider}:${model || '__default__'}`
+}
+
 export const AiTab = () => {
   const { t } = useTranslation()
   const settings = useSettingsStore((state) => state.settings)
   const updateSetting = useSettingsStore((state) => state.updateSetting)
 
+  const provider = settings.aiProvider
+  const initialConnection = provider || 'anthropic'
+  const [selectedConnection, setSelectedConnection] = useState<AiProvider>(
+    initialConnection as AiProvider
+  )
+  const [availability, setAvailability] = useState<ProviderAvailability>(INITIAL_AVAILABILITY)
+  const [connectionErrors, setConnectionErrors] = useState<Partial<Record<AiProvider, boolean>>>({})
+  const [checkingConnections, setCheckingConnections] = useState(false)
+  const [customTargetProvider, setCustomTargetProvider] = useState<AiProvider | null>(null)
   const [apiKey, setApiKey] = useState('')
   const [showKey, setShowKey] = useState(false)
   const [keySaved, setKeySaved] = useState(false)
-  const [hasKey, setHasKey] = useState(false)
   const [keyError, setKeyError] = useState<string | null>(null)
-  const [cliAvailable, setCliAvailable] = useState<boolean | null>(null)
-  const [cliChecking, setCliChecking] = useState(false)
 
-  const provider = settings.aiProvider
-  const providerInfo = provider ? AI_PROVIDER_INFO[provider] : null
-  const currentModels = provider ? (AI_MODEL_OPTIONS[provider] ?? []) : []
-  const modelSuggestionsId = provider ? `ai-model-suggestions-${provider}` : undefined
-  const modelPlaceholder = currentModels[0]
-    ? `${t('settings.ai.default')} (${currentModels[0].label})`
-    : t('settings.ai.default')
+  const refreshConnections = useCallback(async () => {
+    setCheckingConnections(true)
+    setConnectionErrors({})
+    const results = await Promise.allSettled([
+      window.api.aiHasApiKey('anthropic'),
+      window.api.aiHasApiKey('openai'),
+      window.api.aiHasApiKey('gemini'),
+      window.api.aiCheckCli(),
+      window.api.aiCheckCodexCli()
+    ])
+    const nextAvailability = { ...INITIAL_AVAILABILITY }
+    const nextErrors: Partial<Record<AiProvider, boolean>> = {}
+    AI_PROVIDER_ORDER.forEach((currentProvider, index) => {
+      const result = results[index]
+      nextAvailability[currentProvider] = result.status === 'fulfilled' ? result.value : false
+      if (result.status === 'rejected') nextErrors[currentProvider] = true
+    })
+    setAvailability(nextAvailability)
+    setConnectionErrors(nextErrors)
+    setCheckingConnections(false)
+  }, [])
 
-  // Check if API key exists for current provider
   useEffect(() => {
-    let cancelled = false
+    void refreshConnections()
+  }, [refreshConnections])
 
-    if (provider) {
-      window.api
-        .aiHasApiKey(provider)
-        .then((value) => {
-          if (!cancelled) {
-            setHasKey(value)
-          }
-        })
-        .catch(() => {
-          if (!cancelled) {
-            setHasKey(false)
-            setKeyError('checkFailed')
-          }
-        })
-    } else {
-      setHasKey(false)
-    }
+  useEffect(() => {
     setApiKey('')
     setShowKey(false)
     setKeySaved(false)
     setKeyError(null)
+  }, [selectedConnection])
 
-    return () => {
-      cancelled = true
-    }
-  }, [provider])
+  const knownCurrentModel =
+    !!provider && AI_MODEL_OPTIONS[provider]?.some((model) => model.value === settings.aiModel)
+  const usesCustomModel =
+    !!provider && (customTargetProvider === provider || (!!settings.aiModel && !knownCurrentModel))
+  const selectedTarget = !provider
+    ? ''
+    : usesCustomModel
+      ? `${provider}:__custom__`
+      : targetValue(provider, settings.aiModel)
 
-  // Check CLI availability
-  useEffect(() => {
-    let cancelled = false
-    if (provider === 'claude-cli' || provider === 'codex-cli') {
-      setCliChecking(true)
-      const checkPromise =
-        provider === 'claude-cli' ? window.api.aiCheckCli() : window.api.aiCheckCodexCli()
-      checkPromise
-        .then((available) => {
-          if (!cancelled) setCliAvailable(available)
-        })
-        .catch(() => {
-          if (!cancelled) setCliAvailable(false)
-        })
-        .finally(() => {
-          if (!cancelled) setCliChecking(false)
-        })
-    } else {
-      setCliAvailable(null)
-      setCliChecking(false)
+  const targetChoices = useMemo(
+    () =>
+      new Map(
+        AI_PROVIDER_ORDER.flatMap((currentProvider) => [
+          [targetValue(currentProvider, ''), { provider: currentProvider, model: '' }] as const,
+          ...(AI_MODEL_OPTIONS[currentProvider] ?? []).map(
+            (model) =>
+              [
+                targetValue(currentProvider, model.value),
+                { provider: currentProvider, model: model.value }
+              ] as const
+          )
+        ])
+      ),
+    []
+  )
+
+  const handleTargetChange = (value: string) => {
+    if (!value) {
+      updateSetting('aiProvider', '')
+      updateSetting('aiModel', '')
+      setCustomTargetProvider(null)
+      return
     }
-    return () => {
-      cancelled = true
+    const separator = value.indexOf(':')
+    const nextProvider = value.slice(0, separator) as AiProvider
+    const model = value.slice(separator + 1)
+    if (model === '__custom__') {
+      updateSetting('aiProvider', nextProvider)
+      updateSetting('aiModel', '')
+      setCustomTargetProvider(nextProvider)
+      return
     }
-  }, [provider])
+    const target = targetChoices.get(value)
+    if (!target) return
+    updateSetting('aiProvider', target.provider)
+    updateSetting('aiModel', target.model)
+    setCustomTargetProvider(null)
+  }
 
   const handleSaveKey = async () => {
-    if (!provider || !apiKey.trim()) return
+    if (AI_PROVIDER_INFO[selectedConnection].kind !== 'api' || !apiKey.trim()) return
     try {
-      await window.api.aiSaveApiKey(provider, apiKey.trim())
-      setHasKey(true)
+      await window.api.aiSaveApiKey(selectedConnection, apiKey.trim())
+      setAvailability((current) => ({ ...current, [selectedConnection]: true }))
+      setConnectionErrors((current) => ({ ...current, [selectedConnection]: false }))
       setKeySaved(true)
       setKeyError(null)
       setApiKey('')
@@ -224,9 +275,63 @@ export const AiTab = () => {
     }
   }
 
+  const renderConnectionGroup = (title: string, providers: AiProvider[]) => (
+    <div className="ai-connections-group">
+      <div className="ai-connections-group-title">{title}</div>
+      <div className="ai-connections-list">
+        {providers.map((currentProvider) => {
+          const info = AI_PROVIDER_INFO[currentProvider]
+          const available = availability[currentProvider]
+          const hasError = connectionErrors[currentProvider]
+          const isSelected = selectedConnection === currentProvider
+          return (
+            <button
+              type="button"
+              className={`ai-connection-row${isSelected ? ' selected' : ''}`}
+              key={currentProvider}
+              onClick={() => setSelectedConnection(currentProvider)}
+              aria-pressed={isSelected}
+            >
+              <span className="ai-connection-icon" aria-hidden="true">
+                {info.kind === 'cli' ? <Terminal size={17} /> : <Cloud size={17} />}
+              </span>
+              <span className="ai-connection-copy">
+                <span className="ai-connection-name">{info.label}</span>
+                <span className="ai-connection-description">
+                  {info.kind === 'cli'
+                    ? t('settings.ai.localCliConnection')
+                    : t('settings.ai.cloudApiConnection')}
+                </span>
+              </span>
+              <span
+                className={`ai-connection-status${
+                  available === true ? ' ready' : available === false ? ' unavailable' : ''
+                }`}
+              >
+                <span className="settings-status-dot" />
+                {available === null
+                  ? t('settings.ai.checking')
+                  : hasError
+                    ? t('settings.ai.checkFailedShort')
+                    : available
+                      ? t('settings.ai.ready')
+                      : info.kind === 'cli'
+                        ? t('settings.ai.notInstalled')
+                        : t('settings.ai.keyRequired')}
+              </span>
+              <ChevronRight size={15} className="ai-connection-chevron" aria-hidden="true" />
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+
+  const selectedInfo = AI_PROVIDER_INFO[selectedConnection]
+  const selectedAvailable = availability[selectedConnection]
+
   return (
-    <div className="settings-tab-content settings-animate-in">
-      {/* Master toggle */}
+    <div className="settings-tab-content settings-animate-in ai-settings-tab">
       <div className="settings-section">
         <div className="settings-section-header">
           <div className="settings-section-icon">
@@ -247,136 +352,168 @@ export const AiTab = () => {
 
       {settings.aiEnabled && (
         <>
-          {/* Provider selection */}
-          <hr className="settings-divider" />
-          <div>
-            <h3 className="settings-heading">{t('settings.ai.provider')}</h3>
-            <p className="settings-subheading">{t('settings.ai.providerDesc')}</p>
-            <div className="settings-theme-grid settings-field-mt-sm">
-              {(['openai', 'anthropic', 'gemini', 'claude-cli', 'codex-cli'] as const).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => {
-                    updateSetting('aiProvider', p)
-                    updateSetting('aiModel', '')
-                  }}
-                  className={`settings-theme-card${provider === p ? ' selected' : ''}`}
-                >
-                  <span className="settings-theme-card-label">{AI_PROVIDER_INFO[p].label}</span>
-                  {provider === p && (
-                    <div className="settings-theme-card-check">
-                      <Check size={16} />
-                    </div>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Model + API Key -- only shown when provider is selected */}
-          {provider && providerInfo && (
-            <>
-              <hr className="settings-divider" />
-
-              {/* Model */}
+          <section className="ai-settings-block" aria-labelledby="ai-default-target-heading">
+            <div className="ai-settings-block-heading">
               <div>
-                <h3 className="settings-heading">{t('settings.ai.model')}</h3>
-                <p className="settings-subheading">{t('settings.ai.modelDesc')}</p>
-                <div className="settings-field-group settings-field-mt-sm">
-                  <input
-                    list={modelSuggestionsId}
-                    value={settings.aiModel}
-                    onChange={(e) => updateSetting('aiModel', e.target.value)}
-                    placeholder={modelPlaceholder}
-                    className="settings-input"
-                    spellCheck={false}
-                    autoCapitalize="off"
-                    autoCorrect="off"
-                  />
-                  <datalist id={modelSuggestionsId}>
-                    {currentModels.map((m) => (
-                      <option key={m.value} value={m.value}>
-                        {m.label}
+                <h3 id="ai-default-target-heading" className="settings-heading">
+                  {t('settings.ai.defaultTarget')}
+                </h3>
+                <p className="settings-subheading">{t('settings.ai.defaultTargetDesc')}</p>
+              </div>
+              <span className="ai-settings-kicker">{t('settings.ai.execution')}</span>
+            </div>
+            <label className="settings-label" htmlFor="ai-default-target">
+              {t('settings.ai.providerAndModel')}
+            </label>
+            <select
+              id="ai-default-target"
+              className="settings-select ai-target-select"
+              value={selectedTarget}
+              onChange={(event) => handleTargetChange(event.target.value)}
+            >
+              <option value="">{t('settings.ai.noDefaultTarget')}</option>
+              <optgroup label={t('settings.ai.localAgents')}>
+                {CLI_PROVIDERS.flatMap((currentProvider) => {
+                  const info = AI_PROVIDER_INFO[currentProvider]
+                  return [
+                    <option
+                      key={`${currentProvider}:default`}
+                      value={targetValue(currentProvider, '')}
+                    >
+                      {info.shortLabel} · {t('settings.ai.agentDefault')}
+                    </option>,
+                    ...(AI_MODEL_OPTIONS[currentProvider] ?? []).map((model) => (
+                      <option
+                        key={`${currentProvider}:${model.value}`}
+                        value={targetValue(currentProvider, model.value)}
+                      >
+                        {info.shortLabel} · {model.label}
                       </option>
-                    ))}
-                  </datalist>
-                </div>
+                    )),
+                    <option
+                      key={`${currentProvider}:custom`}
+                      value={`${currentProvider}:__custom__`}
+                    >
+                      {info.shortLabel} · {t('settings.ai.customModel')}
+                    </option>
+                  ]
+                })}
+              </optgroup>
+              <optgroup label={t('settings.ai.cloudModels')}>
+                {API_PROVIDERS.flatMap((currentProvider) => {
+                  const info = AI_PROVIDER_INFO[currentProvider]
+                  return [
+                    <option
+                      key={`${currentProvider}:default`}
+                      value={targetValue(currentProvider, '')}
+                    >
+                      {info.shortLabel} · {t('settings.ai.providerDefault')}
+                    </option>,
+                    ...(AI_MODEL_OPTIONS[currentProvider] ?? []).map((model) => (
+                      <option
+                        key={`${currentProvider}:${model.value}`}
+                        value={targetValue(currentProvider, model.value)}
+                      >
+                        {info.shortLabel} · {model.label}
+                      </option>
+                    )),
+                    <option
+                      key={`${currentProvider}:custom`}
+                      value={`${currentProvider}:__custom__`}
+                    >
+                      {info.shortLabel} · {t('settings.ai.customModel')}
+                    </option>
+                  ]
+                })}
+              </optgroup>
+            </select>
+            {usesCustomModel && provider && (
+              <div className="ai-custom-model-field">
+                <label className="settings-label" htmlFor="ai-custom-model">
+                  {t('settings.ai.customModelId')}
+                </label>
+                <input
+                  id="ai-custom-model"
+                  value={settings.aiModel}
+                  onChange={(event) => updateSetting('aiModel', event.target.value)}
+                  placeholder={t('settings.ai.customModelPlaceholder')}
+                  className="settings-input"
+                  spellCheck={false}
+                  autoCapitalize="off"
+                  autoCorrect="off"
+                />
+              </div>
+            )}
+            {provider && availability[provider] === false && (
+              <div className="ai-settings-notice warning">
+                <AlertCircle size={15} />
+                <span>{t('settings.ai.defaultTargetUnavailable')}</span>
+                <button type="button" onClick={() => setSelectedConnection(provider)}>
+                  {t('settings.ai.configure')}
+                </button>
+              </div>
+            )}
+            <p className="ai-settings-footnote">{t('settings.ai.sessionOverrideHint')}</p>
+          </section>
+
+          <section className="ai-settings-block" aria-labelledby="ai-connections-heading">
+            <div className="ai-settings-block-heading">
+              <div>
+                <h3 id="ai-connections-heading" className="settings-heading">
+                  {t('settings.ai.connections')}
+                </h3>
+                <p className="settings-subheading">{t('settings.ai.connectionsDesc')}</p>
+              </div>
+              <button
+                type="button"
+                className="ai-refresh-button"
+                onClick={() => void refreshConnections()}
+                disabled={checkingConnections}
+              >
+                <RefreshCw size={14} className={checkingConnections ? 'spinning' : ''} />
+                {t('settings.ai.refresh')}
+              </button>
+            </div>
+
+            <div className="ai-connections-layout">
+              <div className="ai-connections-column">
+                {renderConnectionGroup(t('settings.ai.cloudApi'), API_PROVIDERS)}
+                {renderConnectionGroup(t('settings.ai.localCli'), CLI_PROVIDERS)}
               </div>
 
-              {provider === 'claude-cli' || provider === 'codex-cli' ? (
-                <>
-                  <hr className="settings-divider" />
-                  {/* CLI Status */}
+              <div className="ai-connection-detail">
+                <div className="ai-connection-detail-header">
+                  <span className="ai-connection-icon large" aria-hidden="true">
+                    {selectedInfo.kind === 'cli' ? <Terminal size={18} /> : <Key size={18} />}
+                  </span>
                   <div>
-                    <h3 className="settings-heading">{t('settings.ai.cliStatus')}</h3>
-                    <p className="settings-subheading">
-                      {t('settings.ai.cliStatusDesc', { provider: providerInfo.label })}
+                    <h4>{selectedInfo.label}</h4>
+                    <p>
+                      {selectedInfo.kind === 'cli'
+                        ? t('settings.ai.cliStatusDesc', { provider: selectedInfo.shortLabel })
+                        : t('settings.ai.apiKeyDesc', { provider: selectedInfo.shortLabel })}
                     </p>
-                    <div className="settings-field-mt-sm">
-                      {cliChecking && (
-                        <span className="settings-status-text settings-status-inline">
-                          {t('settings.ai.cliChecking', { provider: providerInfo.label })}
-                        </span>
-                      )}
-                      {!cliChecking && cliAvailable === true && (
-                        <span className="settings-configured-tag">
-                          {t('settings.ai.cliFound', { provider: providerInfo.label })}
-                        </span>
-                      )}
-                      {!cliChecking && cliAvailable === false && (
-                        <span className="settings-status-text error settings-status-inline">
-                          <span className="settings-status-dot error" />
-                          {t('settings.ai.cliNotFound', { provider: providerInfo.label })}
-                        </span>
-                      )}
-                    </div>
                   </div>
-                </>
-              ) : (
-                <>
-                  <hr className="settings-divider" />
-                  {/* API Key */}
-                  <div>
-                    <div className="settings-flex-row-start">
-                      <Key size={16} className="settings-icon-secondary" />
-                      <h3 className="settings-heading settings-no-mb">{t('settings.ai.apiKey')}</h3>
-                      {hasKey && !keySaved && (
-                        <span className="settings-configured-tag">
-                          {t('settings.ai.configured')}
-                        </span>
-                      )}
-                      {keySaved && (
-                        <span className="settings-configured-tag settings-tag-saved">
-                          {t('settings.ai.saved')}
-                        </span>
-                      )}
-                    </div>
-                    <p className="settings-subheading">
-                      {t('settings.ai.apiKeyDesc', { provider: providerInfo.label })}{' '}
-                      <a
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          window.api.openExternal(providerInfo.keyUrl)
-                        }}
-                        className="settings-accent-link"
-                      >
-                        {t('settings.ai.getKey')}
-                      </a>
-                    </p>
+                </div>
+
+                {selectedInfo.kind === 'api' ? (
+                  <>
                     <div className="settings-key-row settings-field-mt-sm">
                       <div className="settings-key-input-wrapper">
                         <input
                           type={showKey ? 'text' : 'password'}
                           value={apiKey}
-                          onChange={(e) => setApiKey(e.target.value)}
-                          placeholder={hasKey ? t('settings.ai.enterNewKey') : providerInfo.keyHint}
+                          onChange={(event) => setApiKey(event.target.value)}
+                          placeholder={
+                            selectedAvailable ? t('settings.ai.enterNewKey') : selectedInfo.keyHint
+                          }
                           className="settings-input settings-input-pr"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleSaveKey()
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter') void handleSaveKey()
                           }}
                         />
                         <button
+                          type="button"
                           className="settings-key-toggle-btn"
                           onClick={() => setShowKey(!showKey)}
                           title={showKey ? t('settings.ai.hideKey') : t('settings.ai.showKey')}
@@ -386,10 +523,16 @@ export const AiTab = () => {
                       </div>
                       <button
                         className="primary-button settings-nowrap"
-                        onClick={handleSaveKey}
+                        onClick={() => void handleSaveKey()}
                         disabled={!apiKey.trim()}
                       >
-                        {t('settings.ai.saveKey')}
+                        {keySaved ? (
+                          <>
+                            <Check size={14} /> {t('settings.ai.saved')}
+                          </>
+                        ) : (
+                          t('settings.ai.saveKey')
+                        )}
                       </button>
                     </div>
                     {keyError && (
@@ -398,57 +541,96 @@ export const AiTab = () => {
                         {t(`settings.ai.${keyError}`)}
                       </span>
                     )}
+                  </>
+                ) : (
+                  <div
+                    className={`ai-settings-notice${selectedAvailable ? ' success' : ' warning'}`}
+                  >
+                    {selectedAvailable ? <Check size={15} /> : <AlertCircle size={15} />}
+                    <span>
+                      {selectedAvailable
+                        ? t('settings.ai.cliFound', { provider: selectedInfo.shortLabel })
+                        : t('settings.ai.cliNotFound', { provider: selectedInfo.shortLabel })}
+                    </span>
                   </div>
-                </>
-              )}
-            </>
-          )}
+                )}
 
-          {/* Thinking / Reasoning */}
-          <hr className="settings-divider" />
-          <div>
+                <button
+                  type="button"
+                  className="ai-external-link"
+                  onClick={() => void window.api.openExternal(selectedInfo.keyUrl)}
+                >
+                  {selectedInfo.kind === 'cli'
+                    ? t('settings.ai.openSetupGuide')
+                    : t('settings.ai.getKey')}
+                  <ExternalLink size={13} />
+                </button>
+                {connectionErrors[selectedConnection] && (
+                  <span className="settings-status-text error settings-status-inline">
+                    <span className="settings-status-dot error" />
+                    {t('settings.ai.checkFailed')}
+                  </span>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <section className="ai-settings-block" aria-labelledby="ai-reasoning-heading">
             <div className="settings-flex-row-start">
               <Brain size={16} className="settings-icon-secondary" />
-              <h3 className="settings-heading settings-no-mb">{t('settings.ai.thinking')}</h3>
+              <h3 id="ai-reasoning-heading" className="settings-heading settings-no-mb">
+                {t('settings.ai.thinking')}
+              </h3>
             </div>
-            <p className="settings-subheading">{t('settings.ai.thinkingDesc')}</p>
-            <div className="settings-column-group">
-              <div className="settings-row">
-                <div>
-                  <div className="settings-row-label">{t('settings.ai.enableThinking')}</div>
-                  <div className="settings-row-description">
-                    {t('settings.ai.enableThinkingDesc')}
-                  </div>
-                </div>
-                <Toggle
-                  checked={!!settings.aiThinkingEnabled}
-                  onChange={(checked) => updateSetting('aiThinkingEnabled', checked)}
-                />
+            {provider && AI_PROVIDER_INFO[provider].kind === 'cli' ? (
+              <div className="ai-settings-notice neutral">
+                <Terminal size={15} />
+                <span>{t('settings.ai.cliReasoningManaged')}</span>
               </div>
-              {settings.aiThinkingEnabled && (
-                <div className="settings-thinking-sub">
-                  <label className="settings-label">{t('settings.ai.thinkingBudget')}</label>
-                  <div className="settings-thinking-budget-row">
-                    <select
-                      value={settings.aiThinkingBudget || 0}
-                      onChange={(e) => updateSetting('aiThinkingBudget', parseInt(e.target.value))}
-                      className="settings-select settings-select-wide"
-                    >
-                      <option value={0}>{t('settings.ai.budgetDefault')}</option>
-                      <option value={4096}>{t('settings.ai.budgetLight')}</option>
-                      <option value={8192}>{t('settings.ai.budgetMedium')}</option>
-                      <option value={16384}>{t('settings.ai.budgetDeep')}</option>
-                      <option value={32768}>{t('settings.ai.budgetMaximum')}</option>
-                    </select>
+            ) : (
+              <>
+                <p className="settings-subheading">{t('settings.ai.thinkingDesc')}</p>
+                <div className="settings-column-group">
+                  <div className="settings-row">
+                    <div>
+                      <div className="settings-row-label">{t('settings.ai.enableThinking')}</div>
+                      <div className="settings-row-description">
+                        {t('settings.ai.enableThinkingDesc')}
+                      </div>
+                    </div>
+                    <Toggle
+                      checked={!!settings.aiThinkingEnabled}
+                      onChange={(checked) => updateSetting('aiThinkingEnabled', checked)}
+                    />
                   </div>
+                  {settings.aiThinkingEnabled && (
+                    <div className="settings-thinking-sub">
+                      <label className="settings-label">{t('settings.ai.thinkingBudget')}</label>
+                      <div className="settings-thinking-budget-row">
+                        <select
+                          value={settings.aiThinkingBudget || 0}
+                          onChange={(event) =>
+                            updateSetting('aiThinkingBudget', parseInt(event.target.value))
+                          }
+                          className="settings-select settings-select-wide"
+                        >
+                          <option value={0}>{t('settings.ai.budgetDefault')}</option>
+                          <option value={4096}>{t('settings.ai.budgetLight')}</option>
+                          <option value={8192}>{t('settings.ai.budgetMedium')}</option>
+                          <option value={16384}>{t('settings.ai.budgetDeep')}</option>
+                          <option value={32768}>{t('settings.ai.budgetMaximum')}</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
+              </>
+            )}
+          </section>
 
-          {/* Custom Prompts */}
-          <hr className="settings-divider" />
-          <AiPromptsEditor />
+          <section className="ai-settings-block">
+            <AiPromptsEditor />
+          </section>
         </>
       )}
     </div>

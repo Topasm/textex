@@ -40,7 +40,7 @@ import type { AppCommandId } from '../shared/types'
 import { parseAuxContent } from '../shared/auxparser'
 import { guidedDemoTemplate } from '../shared/templates'
 import { runtimePerformance } from './services/runtimePerformance'
-import { prepareForApplicationExit, quitApplication } from './services/applicationLifecycle'
+import { handleWindowCloseRequest, quitApplication } from './services/applicationLifecycle'
 import { checkForAppUpdate } from './services/updateLifecycle'
 import { exportDocumentWithFeedback } from './services/documentExportLifecycle'
 import {
@@ -468,7 +468,7 @@ function App() {
   }, [runAppCommand])
 
   useEffect(() => {
-    window.api.onWindowCloseRequested(prepareForApplicationExit)
+    window.api.onWindowCloseRequested(handleWindowCloseRequest)
     return () => {
       window.api.removeWindowCloseRequestedListener()
     }

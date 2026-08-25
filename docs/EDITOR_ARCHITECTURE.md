@@ -303,7 +303,7 @@ Phase 3  Rust ProjectManager + watcher
 Phase 4  revision-aware CompileManager + Tectonic
 Phase 5  PDF delivery + virtualization
 Phase 6  TexLab manager and bounded streaming (complete; executable optional)
-Phase 7  bounded native PTY (complete)
+Phase 7  safe system-terminal launch (complete; no embedded PTY)
 Phase 8  Monaco/CodeMirror A/B decision
 ```
 

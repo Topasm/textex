@@ -3,7 +3,8 @@
 ## Current priorities
 
 1. Add packaged-app end-to-end smoke tests for edit/save/compile/PDF/restart,
-   TexLab discovery, PTY teardown, and AI credential migration.
+   TexLab discovery, system-terminal launch, AI credential migration, and the
+   macOS close/hide/Dock-reopen/Quit lifecycle.
 2. Add macOS Developer ID/notarization and Windows Authenticode credentials to
    the protected release environment.
 3. Extend the renderer bundle CI budget into deterministic runtime startup,
@@ -19,5 +20,6 @@
 - Revision-aware documents and latest-wins compilation
 - Virtualized file tree and PDF generations
 - Tauri updater with signed multi-platform release metadata
-- Native AI HTTP/CLI, TexLab/LSP, research, and bounded PTY services
+- Native AI HTTP/CLI, TexLab/LSP, research, and safe system-terminal launch
+- macOS close-to-hide with explicit, dirty-aware application quit
 - Split Zustand stores with fine-grained selectors

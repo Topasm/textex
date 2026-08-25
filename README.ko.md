@@ -25,14 +25,14 @@
 | **멀티 파일 프로젝트** | 생성 파일을 기본으로 숨기는 사이드바 파일 트리, 탭 바, `\input`/`\include` 탐색 |
 | **인용 관리** | BibTeX 자동 완성 + Zotero 연동 |
 | **논문 제출 점검** | 인용 위치, 중복 경고, 결정론적인 제출 전 검사 |
-| **연구 & AI** | Crossref/arXiv 검색 및 네이티브 HTTP, Claude CLI, Codex CLI 도우미 |
-| **언어 & 터미널** | 선택적 TexLab 언어 기능과 네이티브 PTY 내장 터미널 |
+| **연구 & AI** | Crossref/arXiv 검색 및 네이티브 HTTP, Claude Code, Codex CLI 도우미 |
+| **언어 & 프로젝트 도구** | 선택적 TexLab 언어 기능과 시스템 터미널에서 프로젝트 열기 |
 | **Git 통합** | 내장 스테이징, 커밋, 브랜치 상태 및 확인 기반 Fetch/Pull/Push |
 | **내보내기** | 깔끔한 Overleaf 소스 ZIP 생성 또는 Pandoc을 통한 DOCX, ODT, HTML, EPUB 변환 |
 | **7개 언어** | EN, KO, ES, FR, DE, PT, ZH |
 
 > **선택적 연동:** AI API 제공자와 온라인 논문 검색에는 네트워크가 필요합니다.
-> Claude/Codex CLI 및 TexLab 기능은 해당 실행 파일이 `PATH`에 있어야 하며,
+> Claude Code, Codex CLI 및 TexLab 기능은 해당 실행 파일이 `PATH`에 있어야 하며,
 > 핵심 편집기와 내장 Tectonic 컴파일러는 이들 없이도 로컬에서 동작합니다.
 
 ---
@@ -63,6 +63,10 @@ xattr -cr /Applications/TextEx.app
 ```
 또는 앱을 우클릭 > **열기** > **열기**를 선택하세요.
 
+macOS에서 주 창을 닫으면 다른 문서 앱처럼 프로세스를 종료하지 않고 창을 숨겨
+현재 프로젝트를 유지합니다. Dock 아이콘을 누르면 다시 열리며, 앱을 완전히
+종료하려면 **TextEx > TextEx 종료** 또는 `Cmd+Q`를 사용하세요.
+
 **Linux:**
 AppImage를 실행 가능하게 만드세요:
 ```bash
@@ -86,6 +90,8 @@ chmod +x TextEx_*.AppImage
 ### 멀티 파일 프로젝트
 
 폴더를 열면 사이드바 파일 트리, 탭, `\input`/`\include` 탐색이 포함된 전체 프로젝트 뷰를 사용할 수 있습니다.
+복원할 세션이 없으면 TextEx는 루트의 `main.tex`, 루트의 `root.tex`, 그 밖의
+`.tex` 파일 순으로 안정적으로 기본 문서를 선택해 자동으로 엽니다.
 컴파일 산출물은 소스 옆이 아니라 TextEx의 엔진별 캐시에 저장됩니다. 눈 모양
 버튼으로 프로젝트에 남아 있는 기존 생성 파일을 표시하거나, 보관함 버튼으로
 Overleaf 업로드용 소스 ZIP을 만들 수 있습니다.
@@ -139,7 +145,7 @@ TextEx는 다음과 같은 기능을 갖춘 최신 Monaco 기반 에디터를 �
 - **인용 툴팁**: PDF 미리보기에서 인용 위에 마우스를 올리면 제목, 저자, 연도를 확인할 수 있습니다.
 - **Zotero 연동**:
   1. Better BibTeX가 설치된 Zotero가 실행 중인지 확인하세요.
-  2. 오른쪽 Research 패널에서 Project, Zotero, Crossref/arXiv 참고문헌을 사용합니다.
+  2. 오른쪽 Research 패널의 **References**에서 프로젝트와 Zotero를 함께 검색합니다. 결과가 없으면 Crossref/arXiv 온라인 검색을 사용할 수 있습니다.
   3. 논문을 에디터로 드래그하거나 OmniSearch의 `/r`, `/z`, `/o`를 사용합니다.
   4. 온라인 검색 결과는 Zotero에 영구 저장하거나 프로젝트 참고문헌에 바로 추가할 수 있습니다.
 
@@ -151,9 +157,10 @@ TextEx는 다음과 같은 기능을 갖춘 최신 Monaco 기반 에디터를 �
 
 - **OmniSearch**: 툴바 검색 필드에서 파일, 인용, PDF 텍스트, 명령어를 통합 검색.
 - **할 일 패널**: 사이드바에서 집필 작업을 관리.
-- **메모 패널**: 아이디어를 위한 빠른 메모장.
+- **노트 패널**: 프로젝트 할 일과 메모를 함께 관리.
 - **타임라인**: 로컬 파일 히스토리를 보고 이전 저장 상태로 복원.
 - **Git 패널**: 로컬 스테이징/커밋, upstream 차이 확인, Fetch 및 확인 기반 Pull/Push. Pull은 깨끗한 작업 트리에서 fast-forward만 허용하며 강제 Push는 사용하지 않습니다.
+- **AI 설정**: 전역 기본 provider/model과 API 키·CLI 연결 설정을 독립적으로 관리. Research Chat에서는 전역 기본값을 바꾸지 않고 대화별 실행 대상을 선택할 수 있습니다.
 
 ---
 
@@ -165,7 +172,7 @@ TextEx는 다음과 같은 기능을 갖춘 최신 Monaco 기반 에디터를 �
 | `Ctrl/Cmd + Enter` | 컴파일 |
 | `Ctrl/Cmd + L` | 로그 패널 토글 |
 | `Ctrl/Cmd + B` | 사이드바 토글 |
-| `Ctrl/Cmd + F` | 에디터 / PDF에서 찾기 |
+| `Ctrl/Cmd + F` | 현재 문서에서 찾기 |
 | `Ctrl/Cmd + Shift + C` | 인용 검색 |
 | `Ctrl/Cmd + Shift + F` | PDF 텍스트 검색 |
 | `Shift + Alt + F` | 문서 포맷팅 |
@@ -185,6 +192,7 @@ TextEx는 다음과 같은 기능을 갖춘 최신 Monaco 기반 에디터를 �
 - [설정 레퍼런스](docs/SETTINGS.md)
 - [패키징](docs/PACKAGING.md)
 - [Zotero 연동](docs/ZOTERO.md)
+- [Research Profile 및 Chat](docs/RESEARCH_PROFILE.md)
 - [CLI 레퍼런스](docs/CLI.md)
 - [MCP 서버](docs/MCP.md)
 - [라이선스](docs/LICENSES.md)

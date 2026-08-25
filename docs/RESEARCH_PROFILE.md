@@ -11,6 +11,11 @@ active project. The versioned profile is stored at
 - Per-resource Chat access (`none`, `metadata`, `indexed-read`, or `snapshot`)
 - User-authored project instructions
 
+The profile editor suggests title and authors from the active TeX source. It
+also recognizes DOI/arXiv identifiers when they are actually present in source
+metadata; those identifiers are optional and are never fabricated. Suggestions
+fill only eligible fields and do not overwrite metadata the user has edited.
+
 The profile may contain repository URLs and local paths, but it must never
 contain passwords, access tokens, SSH private keys, or other credentials. SSH
 operations use the user's existing SSH agent and are never initiated merely by

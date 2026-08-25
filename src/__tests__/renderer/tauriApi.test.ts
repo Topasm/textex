@@ -15,6 +15,7 @@ const minimizeWindowMock = vi.hoisted(() => vi.fn())
 const toggleMaximizeWindowMock = vi.hoisted(() => vi.fn())
 const startWindowDraggingMock = vi.hoisted(() => vi.fn())
 const startWindowResizeMock = vi.hoisted(() => vi.fn())
+const hideWindowMock = vi.hoisted(() => vi.fn())
 const onCloseRequestedMock = vi.hoisted(() => vi.fn())
 const closeWindowUnlistenMock = vi.hoisted(() => vi.fn())
 const closeRequestedHandlers = vi.hoisted(
@@ -45,6 +46,7 @@ vi.mock('@tauri-apps/api/window', () => ({
     toggleMaximize: toggleMaximizeWindowMock,
     startDragging: startWindowDraggingMock,
     startResizeDragging: startWindowResizeMock,
+    hide: hideWindowMock,
     onCloseRequested: onCloseRequestedMock
   })
 }))
@@ -62,6 +64,7 @@ describe('Tauri DesktopApi adapter', () => {
     toggleMaximizeWindowMock.mockReset()
     startWindowDraggingMock.mockReset()
     startWindowResizeMock.mockReset()
+    hideWindowMock.mockReset()
     onCloseRequestedMock.mockReset()
     closeWindowUnlistenMock.mockReset()
     closeRequestedHandlers.length = 0
@@ -387,18 +390,21 @@ describe('Tauri DesktopApi adapter', () => {
     toggleMaximizeWindowMock.mockResolvedValue(undefined)
     startWindowDraggingMock.mockResolvedValue(undefined)
     startWindowResizeMock.mockResolvedValue(undefined)
+    hideWindowMock.mockResolvedValue(undefined)
     const api = createTauriApi()
 
     await api.minimizeWindow()
     await api.toggleMaximizeWindow()
     await api.startWindowDragging()
     await api.startWindowResize('SouthEast')
+    await api.hideWindow()
 
     expect(minimizeWindowMock).toHaveBeenCalledOnce()
     expect(toggleMaximizeWindowMock).toHaveBeenCalledOnce()
     expect(startWindowDraggingMock).toHaveBeenCalledOnce()
     expect(startWindowResizeMock).toHaveBeenCalledOnce()
     expect(startWindowResizeMock).toHaveBeenCalledWith('SouthEast')
+    expect(hideWindowMock).toHaveBeenCalledOnce()
     expect(invokeMock).not.toHaveBeenCalled()
   })
 

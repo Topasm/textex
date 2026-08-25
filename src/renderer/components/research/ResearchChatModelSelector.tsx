@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { AiProvider, ResearchChatExecution } from '../../../shared/types'
-import { AI_MODEL_OPTIONS } from '../../constants'
+import { AI_MODEL_OPTIONS, AI_PROVIDER_INFO, AI_PROVIDER_ORDER } from '../../constants'
 
-const PROVIDERS: AiProvider[] = ['anthropic', 'openai', 'gemini', 'claude-cli', 'codex-cli']
+const PROVIDERS = AI_PROVIDER_ORDER
 
 const PROVIDER_LABELS: Record<AiProvider, string> = {
   anthropic: 'Anthropic API',
   openai: 'OpenAI API',
   gemini: 'Gemini API',
-  'claude-cli': 'Claude Code · CLI',
-  'codex-cli': 'Codex · CLI'
+  'claude-cli': AI_PROVIDER_INFO['claude-cli'].label,
+  'codex-cli': AI_PROVIDER_INFO['codex-cli'].label
 }
 
 type ProviderAvailability = Record<AiProvider, boolean | null>

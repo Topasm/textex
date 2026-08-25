@@ -131,6 +131,7 @@ Object.defineProperty(window, 'api', {
     toggleMaximizeWindow: vi.fn().mockResolvedValue(undefined),
     startWindowDragging: vi.fn().mockResolvedValue(undefined),
     startWindowResize: vi.fn().mockResolvedValue(undefined),
+    hideWindow: vi.fn().mockResolvedValue(undefined),
     requestWindowClose: vi.fn().mockResolvedValue(undefined),
     exitApp: vi.fn(),
     onWindowCloseRequested: vi.fn(),

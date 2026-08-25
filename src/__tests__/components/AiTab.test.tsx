@@ -6,6 +6,9 @@ import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 describe('AiTab', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    window.api.aiHasApiKey = vi.fn().mockResolvedValue(false)
+    window.api.aiCheckCli = vi.fn().mockResolvedValue(false)
+    window.api.aiCheckCodexCli = vi.fn().mockResolvedValue(false)
     useSettingsStore.setState((state) => ({
       settings: {
         ...state.settings,
@@ -43,5 +46,37 @@ describe('AiTab', () => {
       expect(screen.getByText('Failed to save API key. Try again.')).toBeInTheDocument()
     })
     expect(screen.queryByText('Saved')).not.toBeInTheDocument()
+  })
+
+  it('checks cloud and local connections together without changing the default target', async () => {
+    window.api.aiHasApiKey = vi
+      .fn()
+      .mockImplementation((provider: string) => Promise.resolve(provider === 'anthropic'))
+    window.api.aiCheckCli = vi.fn().mockResolvedValue(true)
+    window.api.aiCheckCodexCli = vi.fn().mockResolvedValue(false)
+
+    render(<AiTab />)
+
+    await waitFor(() => {
+      expect(window.api.aiHasApiKey).toHaveBeenCalledTimes(3)
+      expect(window.api.aiCheckCli).toHaveBeenCalledTimes(1)
+      expect(window.api.aiCheckCodexCli).toHaveBeenCalledTimes(1)
+    })
+
+    expect(useSettingsStore.getState().settings.aiProvider).toBe('openai')
+    expect(screen.getByRole('button', { name: /Claude Code \(CLI\).*Ready/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Codex \(CLI\).*Not installed/ })).toBeInTheDocument()
+  })
+
+  it('changes the default execution target independently from provider connections', async () => {
+    render(<AiTab />)
+
+    fireEvent.change(screen.getByLabelText('Provider and model'), {
+      target: { value: 'codex-cli:gpt-5.6-sol' }
+    })
+
+    expect(useSettingsStore.getState().settings.aiProvider).toBe('codex-cli')
+    expect(useSettingsStore.getState().settings.aiModel).toBe('gpt-5.6-sol')
+    expect(window.api.aiSaveApiKey).not.toHaveBeenCalled()
   })
 })

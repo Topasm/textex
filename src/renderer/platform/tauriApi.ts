@@ -169,6 +169,8 @@ const startWindowDragging: DesktopApi['startWindowDragging'] = () =>
 const startWindowResize: DesktopApi['startWindowResize'] = (direction) =>
   getCurrentWindow().startResizeDragging(direction)
 
+const hideWindow: DesktopApi['hideWindow'] = () => getCurrentWindow().hide()
+
 const requestWindowClose: DesktopApi['requestWindowClose'] = () => getCurrentWindow().close()
 
 const exitApp: DesktopApi['exitApp'] = () => invoke(TAURI_COMMANDS.exitApp)
@@ -919,6 +921,7 @@ const tauriDesktopApi = {
   toggleMaximizeWindow,
   startWindowDragging,
   startWindowResize,
+  hideWindow,
   requestWindowClose,
   onWindowCloseRequested,
   removeWindowCloseRequestedListener
