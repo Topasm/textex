@@ -213,9 +213,7 @@ function App() {
       await prepareDocumentsForManualCompile(editorState.filePath, snapshot)
     } catch (err) {
       logError('App:preSave', err)
-      useCompileStore
-        .getState()
-        .appendLog(`Save failed, compilation was not started: ${errorMessage(err)}\n`)
+      useCompileStore.getState().appendLog(`Compilation was not started: ${errorMessage(err)}\n`)
       useCompileStore.getState().setCompileStatus('error')
       return
     }
