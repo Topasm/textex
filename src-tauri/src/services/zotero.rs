@@ -240,30 +240,6 @@ pub async fn export_bibtex(citekeys: Vec<String>, port: Option<u16>) -> AppResul
     rpc_result(response)
 }
 
-pub async fn collections(port: Option<u16>) -> AppResult<Vec<ZoteroCollection>> {
-    let response: JsonRpcResponse<serde_json::Value> = json_rpc(
-        port,
-        JsonRpcRequest {
-            jsonrpc: "2.0",
-            method: "user.groups",
-            params: [true],
-        },
-        Duration::from_secs(15),
-    )
-    .await?;
-    let value = rpc_result(response)?;
-    let mut result = Vec::new();
-    collect_libraries(&value, &mut result);
-    if result.len() > MAX_COLLECTIONS {
-        return Err(AppError::Zotero(
-            "Zotero returned too many collections".to_owned(),
-        ));
-    }
-    result.sort_by_key(|item| item.name.to_lowercase());
-    result.dedup_by(|left, right| left.key == right.key);
-    Ok(result)
-}
-
 pub async fn library_tree(port: Option<u16>) -> AppResult<Vec<ZoteroLibrary>> {
     let (local_collections, item_count) = tokio::try_join!(
         local_collections(port),
@@ -2236,98 +2212,6 @@ fn default_item_type() -> String {
     "misc".to_owned()
 }
 
-fn collect_libraries(value: &serde_json::Value, result: &mut Vec<ZoteroCollection>) {
-    let Some(libraries) = value.as_array() else {
-        return;
-    };
-    for library in libraries {
-        let Some(object) = library.as_object() else {
-            continue;
-        };
-        let library_id = object
-            .get("id")
-            .or_else(|| object.get("libraryID"))
-            .and_then(value_identifier)
-            .unwrap_or_else(|| "0".to_owned());
-        if let Some(collections) = object.get("collections") {
-            collect_collections(collections, &library_id, None, result);
-        }
-    }
-}
-
-fn collect_collections(
-    value: &serde_json::Value,
-    library_id: &str,
-    inherited_parent: Option<&str>,
-    result: &mut Vec<ZoteroCollection>,
-) {
-    if result.len() > MAX_COLLECTIONS {
-        return;
-    }
-    match value {
-        serde_json::Value::Array(values) => {
-            for value in values {
-                collect_collections(value, library_id, inherited_parent, result);
-            }
-        }
-        serde_json::Value::Object(object) => {
-            let name = object
-                .get("name")
-                .or_else(|| object.get("title"))
-                .and_then(serde_json::Value::as_str);
-            let key = object
-                .get("key")
-                .or_else(|| object.get("id"))
-                .and_then(value_identifier);
-            let current_key = if let (Some(name), Some(key)) = (name, key) {
-                let export_path = if key.starts_with('/') {
-                    key
-                } else {
-                    format!("/{library_id}/{key}")
-                };
-                result.push(ZoteroCollection {
-                    key: export_path.clone(),
-                    name: name.to_owned(),
-                    parent_key: inherited_parent.map(str::to_owned),
-                    item_count: collection_item_count(object),
-                });
-                Some(export_path)
-            } else {
-                inherited_parent.map(str::to_owned)
-            };
-            for (field, child) in object {
-                if matches!(
-                    field.as_str(),
-                    "collections" | "children" | "subcollections"
-                ) {
-                    collect_collections(child, library_id, current_key.as_deref(), result);
-                }
-            }
-        }
-        _ => {}
-    }
-}
-
-fn collection_item_count(object: &serde_json::Map<String, serde_json::Value>) -> Option<u32> {
-    object
-        .get("itemCount")
-        .or_else(|| object.get("numItems"))
-        .or_else(|| object.get("items"))
-        .and_then(|value| {
-            value
-                .as_u64()
-                .or_else(|| value.as_array().map(|items| items.len() as u64))
-        })
-        .map(|count| count.min(u32::MAX as u64) as u32)
-}
-
-fn value_identifier(value: &serde_json::Value) -> Option<String> {
-    value
-        .as_str()
-        .map(str::to_owned)
-        .or_else(|| value.as_u64().map(|id| id.to_string()))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2505,32 +2389,6 @@ mod tests {
     }
 
     #[test]
-    fn maps_group_collections_to_pull_export_paths() {
-        let value = serde_json::json!([
-            {
-                "id": 0,
-                "name": "My Library",
-                "collections": [
-                    {
-                        "key": "ROOT1234",
-                        "name": "Research",
-                        "items": [1, 2],
-                        "collections": [
-                            { "key": "CHILD567", "name": "Papers", "itemCount": 3 }
-                        ]
-                    }
-                ]
-            }
-        ]);
-        let mut collections = Vec::new();
-        collect_libraries(&value, &mut collections);
-        assert_eq!(collections[0].key, "/0/ROOT1234");
-        assert_eq!(collections[0].item_count, Some(2));
-        assert_eq!(collections[1].key, "/0/CHILD567");
-        assert_eq!(collections[1].parent_key.as_deref(), Some("/0/ROOT1234"));
-    }
-
-    #[test]
     fn local_library_tree_keeps_unknown_counts_unknown() {
         let collections = library_collections(vec![
             local_collection("RQQT2234", 1, "Writing", None),
@@ -2541,7 +2399,6 @@ mod tests {
         assert_eq!(collections[0].key, "/0/RQQT2234");
         assert_eq!(collections[0].item_count, None);
         assert_eq!(collections[1].parent_key.as_deref(), Some("/0/RQQT2234"));
-        assert_eq!(collection_item_count(&serde_json::Map::new()), None);
     }
 
     #[tokio::test]

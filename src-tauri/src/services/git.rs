@@ -295,11 +295,6 @@ pub async fn commit(state: &AppState, work_dir: &str, message: &str) -> AppResul
     Ok(SuccessResult::ok())
 }
 
-pub async fn log(state: &AppState, work_dir: &str) -> AppResult<Vec<GitLogEntry>> {
-    let root = trusted_repository_root(state, work_dir).await?;
-    read_log(&root, None).await
-}
-
 pub async fn file_log(
     state: &AppState,
     work_dir: &str,
@@ -724,8 +719,8 @@ fn paths_equal(left: &Path, right: &Path) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{
-        commit, diff, fetch, file_log, git_timeout, init_repository, log, parse_log, parse_status,
-        pull, push, read_git_pipe, reject_unsafe_relative_path, remote_status, run_git_checked,
+        commit, fetch, file_log, git_timeout, init_repository, parse_log, parse_status, pull, push,
+        read_git_pipe, reject_unsafe_relative_path, remote_status, run_git_checked,
         run_git_checked_os, stage, status, GIT_COMMIT_TIMEOUT, GIT_MUTATION_TIMEOUT,
         GIT_NETWORK_TIMEOUT, GIT_READ_TIMEOUT,
     };
@@ -845,9 +840,6 @@ mod tests {
         commit(&state, &root_text, "initial | revision")
             .await
             .expect("commit source");
-        let entries = log(&state, &root_text).await.expect("read repository log");
-        assert_eq!(entries.len(), 1);
-        assert_eq!(entries[0].message, "initial | revision");
         assert_eq!(
             file_log(&state, &root_text, &file.to_string_lossy())
                 .await
@@ -857,10 +849,10 @@ mod tests {
         );
 
         fs::write(&file, "second revision\n").expect("modify source");
-        assert!(diff(&state, &root_text)
+        let modified = status(&state, &root_text)
             .await
-            .expect("read diff")
-            .contains("second revision"));
+            .expect("read modified status");
+        assert_eq!(modified.modified, ["main.tex"]);
     }
 
     #[tokio::test(flavor = "current_thread")]

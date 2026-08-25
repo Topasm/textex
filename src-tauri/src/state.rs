@@ -261,20 +261,6 @@ impl AppState {
         }
     }
 
-    pub(crate) fn cancel_compilation(&self) -> AppResult<bool> {
-        let mut compiler = self.lock_compiler()?;
-        let Some(compilation) = compiler.active.as_mut() else {
-            return Ok(false);
-        };
-        let Some(cancel) = compilation.cancel.take() else {
-            return Ok(false);
-        };
-
-        // The receiver owns the child and performs the actual kill and reap;
-        // no process handle is ever held while a shared mutex is locked.
-        Ok(cancel.send(()).is_ok())
-    }
-
     pub(crate) fn cancel_project_compilations(&self) -> AppResult<bool> {
         let cancel = {
             let mut compiler = self.lock_compiler()?;
@@ -493,20 +479,6 @@ mod tests {
             .await
             .expect("newer request should start")
             .expect("newer request lease");
-    }
-
-    #[tokio::test]
-    async fn cancellation_is_delivered_only_once() {
-        let state = AppState::default();
-        let compile_request = request(1, "document-a", CompilePriority::Normal);
-        let epoch = state.current_project_epoch();
-        let mut lease = state
-            .begin_compilation(&compile_request, epoch)
-            .await
-            .expect("lease");
-        assert!(state.cancel_compilation().expect("first cancellation"));
-        assert!(!state.cancel_compilation().expect("second cancellation"));
-        assert!(lease.cancel_receiver().try_recv().is_ok());
     }
 
     #[tokio::test]
