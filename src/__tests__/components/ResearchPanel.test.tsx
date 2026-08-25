@@ -37,6 +37,29 @@ describe('ResearchPanel tabs', () => {
     expect(await screen.findByLabelText('Title')).toBeInTheDocument()
   })
 
+  it('keeps the icon-only Research navigation explicitly named', () => {
+    const { container } = render(<ResearchPanel onAiDraft={vi.fn()} />)
+
+    expect(screen.getByRole('tab', { name: 'Chat' })).toHaveAttribute('title', 'Chat')
+    expect(screen.getByRole('tab', { name: 'References' })).toHaveAttribute('title', 'References')
+    expect(screen.getByRole('tab', { name: 'Profile' })).toHaveAttribute('title', 'Project profile')
+    expect(container.querySelectorAll('.research-panel-tab-label')).toHaveLength(4)
+  })
+
+  it('keeps the Chat composer mounted while switching through References', async () => {
+    render(<ResearchPanel onAiDraft={vi.fn()} />)
+    const input = await screen.findByRole('textbox', { name: 'Research question' })
+    fireEvent.change(input, { target: { value: 'Keep this draft across tabs.' } })
+
+    fireEvent.click(screen.getByRole('tab', { name: 'References' }))
+    await screen.findByRole('region', { name: 'Reference manager items' })
+    fireEvent.click(screen.getByRole('tab', { name: 'Chat' }))
+
+    expect(screen.getByRole('textbox', { name: 'Research question' })).toHaveValue(
+      'Keep this draft across tabs.'
+    )
+  })
+
   it('does not discard an edited profile when leaving its tab is cancelled', async () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
     render(<ResearchPanel onAiDraft={vi.fn()} />)

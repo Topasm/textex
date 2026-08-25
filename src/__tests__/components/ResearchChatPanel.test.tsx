@@ -7,6 +7,7 @@ import {
 import { TEXTEX_REFERENCE_MIME } from '../../renderer/components/research/referenceActions'
 import { setActiveEditorAdapter } from '../../renderer/editor/activeEditorAdapter'
 import { documentRegistry } from '../../renderer/models/documentRegistry'
+import { useCompileStore } from '../../renderer/store/useCompileStore'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
@@ -32,6 +33,7 @@ describe('ResearchChatPanel', () => {
     setActiveEditorAdapter(null)
     useEditorStore.getState().resetEditor()
     useEditorStore.getState().openFileInTab('/project/paper.tex', '\\section{Method} Draft')
+    useCompileStore.setState({ compileStatus: 'idle' })
     useProjectStore.setState({ projectRoot: '/project' })
     useSettingsStore.setState((state) => ({
       settings: {
@@ -203,6 +205,28 @@ describe('ResearchChatPanel', () => {
     await waitFor(() => expect(messageLog).toHaveAttribute('aria-busy', 'false'))
   })
 
+  it('cancels an in-flight native request from the Stop control', async () => {
+    const pendingAnswer = deferred<ResearchChatResponse>()
+    window.api.aiResearchChat = vi.fn().mockReturnValue(pendingAnswer.promise)
+    window.api.aiCancelResearchChat = vi.fn().mockResolvedValue(true)
+    render(<ResearchChatPanel onAiDraft={vi.fn()} />)
+
+    const input = await screen.findByRole('textbox', { name: 'Research question' })
+    fireEvent.change(input, { target: { value: 'Stop this request.' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    await waitFor(() => expect(window.api.aiResearchChat).toHaveBeenCalledOnce())
+    const requestId = vi.mocked(window.api.aiResearchChat).mock.calls[0][0].requestId
+
+    fireEvent.click(screen.getByRole('button', { name: 'Stop current Chat request' }))
+
+    await waitFor(() => expect(window.api.aiCancelResearchChat).toHaveBeenCalledWith(requestId))
+    expect(screen.getByRole('log', { name: 'Research Chat messages' })).toHaveAttribute(
+      'aria-busy',
+      'false'
+    )
+    expect(screen.getByText('Chat request stopped. Queued messages were preserved.')).toBeVisible()
+  })
+
   it('sends with Enter, keeps Shift+Enter for a newline, and recalls prompt history', async () => {
     render(<ResearchChatPanel onAiDraft={vi.fn()} />)
     const input = await screen.findByRole('textbox', { name: 'Research question' })
@@ -267,7 +291,10 @@ describe('ResearchChatPanel', () => {
     window.api.aiProcessCustom = vi
       .fn()
       .mockResolvedValue('\\usepackage{iftex}\n\\ifPDFTeX\nDraft\n\\fi')
-    render(<ResearchChatPanel onAiDraft={vi.fn()} />)
+    const onCompile = vi.fn().mockImplementation(async () => {
+      useCompileStore.getState().setCompileStatus('success')
+    })
+    render(<ResearchChatPanel onAiDraft={vi.fn()} onCompile={onCompile} />)
     const input = await screen.findByRole('textbox', { name: 'Research question' })
 
     fireEvent.change(input, { target: { value: 'Fix the XeLaTeX error.' } })
@@ -285,12 +312,14 @@ describe('ResearchChatPanel', () => {
     )
     expect(documentRegistry.snapshot('/project/paper.tex')?.text).toBe('\\section{Method} Draft')
 
-    fireEvent.click(within(preview).getByRole('button', { name: 'Apply changes' }))
+    fireEvent.click(within(preview).getByRole('button', { name: 'Apply & compile' }))
+    await waitFor(() => expect(onCompile).toHaveBeenCalledOnce())
     expect(documentRegistry.snapshot('/project/paper.tex')?.text).toBe(
       '\\usepackage{iftex}\n\\ifPDFTeX\nDraft\n\\fi'
     )
     expect(useEditorStore.getState().isDirty).toBe(true)
     expect(screen.queryByLabelText('Document change preview')).not.toBeInTheDocument()
+    expect(screen.getByText('Applied and compiled paper.tex successfully.')).toBeVisible()
   })
 
   it('rejects a prepared document edit when the source changes during generation', async () => {

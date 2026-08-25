@@ -49,7 +49,10 @@ describe('responsive desktop layout contract', () => {
 
   it('positions the research panel over the PDF instead of participating in workspace layout', () => {
     expect(baseStyles).toMatch(
-      /\.research-panel\.overlay\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0 0 0 auto;/s
+      /\.research-panel\.overlay\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0 0 var\(--research-panel-bottom, 0\) auto;/s
+    )
+    expect(baseStyles).toMatch(
+      /\.app-container\.has-research-panel > \.toolbar\s*\{[^}]*margin-right:\s*clamp\(320px, var\(--research-panel-width\), 520px\);/s
     )
     expect(loadingStyles).toMatch(
       /\.preview-pane > \.loading-fallback--panel\s*\{[^}]*position:\s*absolute;/s

@@ -214,7 +214,7 @@
 }
 
 [data-theme='glass'] .selection-ai-toolbar {
-  background: color-mix(in srgb, var(--ui-surface-raised, var(--bg-secondary)) 92%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: color-mix(in srgb, var(--ui-surface-raised, var(--bg-secondary)) 98%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }

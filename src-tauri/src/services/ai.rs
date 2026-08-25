@@ -4,6 +4,7 @@ use std::{
     path::{Path, PathBuf},
     process::Stdio,
     sync::atomic::{AtomicU64, Ordering},
+    sync::Mutex as StdMutex,
     time::Duration,
 };
 
@@ -20,7 +21,7 @@ use tokio::{
     fs,
     io::{AsyncReadExt, AsyncWriteExt},
     process::Command,
-    sync::Mutex,
+    sync::{watch, Mutex},
     time::timeout,
 };
 
@@ -54,6 +55,7 @@ const MAX_RESEARCH_REQUEST_BYTES: usize = 1536 * 1024;
 pub struct AiState {
     pub(crate) client: Client,
     credentials_lock: Mutex<()>,
+    cancellable_requests: StdMutex<HashMap<String, watch::Sender<bool>>>,
 }
 
 impl Default for AiState {
@@ -65,8 +67,83 @@ impl Default for AiState {
                 .build()
                 .expect("static AI HTTP client configuration must be valid"),
             credentials_lock: Mutex::new(()),
+            cancellable_requests: StdMutex::new(HashMap::new()),
         }
     }
+}
+
+pub struct ActiveAiRequest<'a> {
+    state: &'a AiState,
+    request_id: String,
+    cancellation: watch::Receiver<bool>,
+}
+
+impl ActiveAiRequest<'_> {
+    pub fn is_cancelled(&self) -> bool {
+        *self.cancellation.borrow()
+    }
+
+    pub async fn cancelled(&mut self) {
+        if self.is_cancelled() {
+            return;
+        }
+        let _ = self.cancellation.changed().await;
+    }
+}
+
+impl Drop for ActiveAiRequest<'_> {
+    fn drop(&mut self) {
+        if let Ok(mut requests) = self.state.cancellable_requests.lock() {
+            requests.remove(&self.request_id);
+        }
+    }
+}
+
+pub fn register_cancellable_request<'a>(
+    state: &'a AiState,
+    request_id: Option<&str>,
+) -> AppResult<Option<ActiveAiRequest<'a>>> {
+    let Some(request_id) = request_id else {
+        return Ok(None);
+    };
+    if request_id.is_empty()
+        || request_id.len() > 128
+        || !request_id
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.'))
+    {
+        return Err(AppError::Ai("invalid AI request identifier".to_owned()));
+    }
+    let (sender, cancellation) = watch::channel(false);
+    let mut requests = state
+        .cancellable_requests
+        .lock()
+        .map_err(|_| AppError::Ai("AI cancellation state is unavailable".to_owned()))?;
+    if requests.contains_key(request_id) {
+        return Err(AppError::Ai(
+            "AI request identifier is already active".to_owned(),
+        ));
+    }
+    requests.insert(request_id.to_owned(), sender);
+    Ok(Some(ActiveAiRequest {
+        state,
+        request_id: request_id.to_owned(),
+        cancellation,
+    }))
+}
+
+pub fn cancel_request(state: &AiState, request_id: &str) -> AppResult<bool> {
+    let requests = state
+        .cancellable_requests
+        .lock()
+        .map_err(|_| AppError::Ai("AI cancellation state is unavailable".to_owned()))?;
+    let Some(sender) = requests.get(request_id) else {
+        return Ok(false);
+    };
+    sender
+        .send(true)
+        .map_err(|_| AppError::Ai("AI request already finished".to_owned()))?;
+    Ok(true)
 }
 
 #[derive(Default, Deserialize, Serialize)]
@@ -1135,7 +1212,9 @@ pub async fn open_terminal(
     executable: &str,
     work_dir: &Path,
     resume: bool,
+    prompt: Option<&str>,
 ) -> AppResult<AiTerminalResult> {
+    let prompt = validate_terminal_prompt(prompt)?;
     if !check_cli(executable).await {
         return Err(AppError::Ai(format!(
             "{executable} CLI was not found or is unavailable"
@@ -1146,7 +1225,7 @@ pub async fn open_terminal(
         ("codex", true) => "codex resume",
         _ => executable,
     };
-    launch_terminal(executable, work_dir, resume).await?;
+    launch_terminal(executable, work_dir, resume, prompt).await?;
     Ok(AiTerminalResult {
         success: true,
         work_dir: work_dir.to_string_lossy().into_owned(),
@@ -1154,13 +1233,38 @@ pub async fn open_terminal(
     })
 }
 
-#[cfg(target_os = "linux")]
-async fn launch_terminal(executable: &str, work_dir: &Path, resume: bool) -> AppResult<()> {
-    let cli_args: Vec<&str> = match (executable, resume) {
-        ("claude", true) => vec!["--resume"],
-        ("codex", true) => vec!["resume"],
+const MAX_TERMINAL_PROMPT_BYTES: usize = 32 * 1024;
+
+fn validate_terminal_prompt(prompt: Option<&str>) -> AppResult<Option<&str>> {
+    let Some(prompt) = prompt.map(str::trim).filter(|value| !value.is_empty()) else {
+        return Ok(None);
+    };
+    if prompt.len() > MAX_TERMINAL_PROMPT_BYTES || prompt.contains('\0') {
+        return Err(AppError::Ai("invalid AI CLI prompt".to_owned()));
+    }
+    Ok(Some(prompt))
+}
+
+fn terminal_cli_args(executable: &str, resume: bool, prompt: Option<&str>) -> Vec<String> {
+    let mut args = match (executable, resume) {
+        ("claude", true) => vec!["--resume".to_owned()],
+        ("codex", true) => vec!["resume".to_owned()],
         _ => Vec::new(),
     };
+    if let Some(prompt) = prompt {
+        args.push(prompt.to_owned());
+    }
+    args
+}
+
+#[cfg(target_os = "linux")]
+async fn launch_terminal(
+    executable: &str,
+    work_dir: &Path,
+    resume: bool,
+    prompt: Option<&str>,
+) -> AppResult<()> {
+    let cli_args = terminal_cli_args(executable, resume, prompt);
     let candidates = [
         ("x-terminal-emulator", vec!["-e"]),
         ("gnome-terminal", vec!["--"]),
@@ -1187,12 +1291,22 @@ async fn launch_terminal(executable: &str, work_dir: &Path, resume: bool) -> App
 }
 
 #[cfg(target_os = "macos")]
-async fn launch_terminal(executable: &str, work_dir: &Path, resume: bool) -> AppResult<()> {
+async fn launch_terminal(
+    executable: &str,
+    work_dir: &Path,
+    resume: bool,
+    prompt: Option<&str>,
+) -> AppResult<()> {
     let directory = shell_quote(&work_dir.to_string_lossy());
-    let suffix = match (executable, resume) {
-        ("claude", true) => " --resume",
-        ("codex", true) => " resume",
-        _ => "",
+    let cli_args = terminal_cli_args(executable, resume, prompt)
+        .iter()
+        .map(|argument| shell_quote(argument))
+        .collect::<Vec<_>>()
+        .join(" ");
+    let suffix = if cli_args.is_empty() {
+        String::new()
+    } else {
+        format!(" {cli_args}")
     };
     let shell_command = format!("cd {directory} && {executable}{suffix}");
     let script = format!(
@@ -1213,18 +1327,19 @@ async fn launch_terminal(executable: &str, work_dir: &Path, resume: bool) -> App
 }
 
 #[cfg(target_os = "windows")]
-async fn launch_terminal(executable: &str, work_dir: &Path, resume: bool) -> AppResult<()> {
+async fn launch_terminal(
+    executable: &str,
+    work_dir: &Path,
+    resume: bool,
+    prompt: Option<&str>,
+) -> AppResult<()> {
     let mut args = vec![
         "new-tab".to_owned(),
         "-d".to_owned(),
         work_dir.to_string_lossy().into_owned(),
         executable.to_owned(),
     ];
-    match (executable, resume) {
-        ("claude", true) => args.push("--resume".to_owned()),
-        ("codex", true) => args.push("resume".to_owned()),
-        _ => {}
-    }
+    args.extend(terminal_cli_args(executable, resume, prompt));
     spawn_detached("wt.exe", &args, work_dir).await
 }
 
@@ -1569,6 +1684,7 @@ mod tests {
 
     fn research_chat_request() -> ResearchChatRequest {
         ResearchChatRequest {
+            request_id: None,
             message: "How does the implementation realize the paper's loss?".to_owned(),
             history: vec![ResearchChatMessage {
                 role: ResearchChatRole::User,
@@ -1740,6 +1856,37 @@ mod tests {
         );
         assert!(codex.iter().any(|arg| arg == "--ignore-user-config"));
         assert!(codex.iter().any(|arg| arg == "--ignore-rules"));
+    }
+
+    #[test]
+    fn terminal_repair_prompt_is_one_literal_argument_and_bounded() {
+        let prompt = "Fix line 5; $(touch /tmp/not-a-command)\nthen compile";
+        assert_eq!(
+            terminal_cli_args("codex", true, Some(prompt)),
+            ["resume".to_owned(), prompt.to_owned()]
+        );
+        assert_eq!(
+            validate_terminal_prompt(Some("  fix it  ")).unwrap(),
+            Some("fix it")
+        );
+        assert!(validate_terminal_prompt(Some("bad\0prompt")).is_err());
+        assert!(
+            validate_terminal_prompt(Some(&"x".repeat(MAX_TERMINAL_PROMPT_BYTES + 1))).is_err()
+        );
+    }
+
+    #[test]
+    fn cancellable_requests_are_unique_and_removed_when_finished() {
+        let state = AiState::default();
+        let active = register_cancellable_request(&state, Some("research-1"))
+            .unwrap()
+            .unwrap();
+        assert!(register_cancellable_request(&state, Some("research-1")).is_err());
+        assert!(cancel_request(&state, "research-1").unwrap());
+        assert!(active.is_cancelled());
+        drop(active);
+        assert!(!cancel_request(&state, "research-1").unwrap());
+        assert!(register_cancellable_request(&state, Some("bad id")).is_err());
     }
 
     #[tokio::test]

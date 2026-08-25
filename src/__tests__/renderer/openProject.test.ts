@@ -350,6 +350,29 @@ describe('openProject', () => {
     expect(useEditorStore.getState().filePath).toBe(`${projectRoot}/main.tex`)
   })
 
+  it('prefers a conventional root document and discovers nested tex files', async () => {
+    const nestedMain = `${projectRoot}/src/main.tex`
+    vi.mocked(window.api.readDirectory).mockResolvedValueOnce([
+      { name: 'appendix.tex', path: `${projectRoot}/appendix.tex`, type: 'file' },
+      {
+        name: 'src',
+        path: `${projectRoot}/src`,
+        type: 'directory',
+        children: [{ name: 'main.tex', path: nestedMain, type: 'file' }]
+      },
+      { name: 'root.tex', path: `${projectRoot}/root.tex`, type: 'file' }
+    ])
+    vi.mocked(window.api.readFile).mockImplementationOnce(async (filePath) => ({
+      filePath,
+      content: '\\documentclass{article}'
+    }))
+
+    await openProject(projectRoot)
+
+    expect(window.api.readFile).toHaveBeenCalledWith(`${projectRoot}/root.tex`)
+    expect(useEditorStore.getState().activeFilePath).toBe(`${projectRoot}/root.tex`)
+  })
+
   it('runs sync-on-open once from the project lifecycle without mounting research UI', async () => {
     vi.mocked(window.api.researchLoadConfig).mockResolvedValue({
       ...defaultResearchConfig,

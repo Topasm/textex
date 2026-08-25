@@ -309,6 +309,11 @@
     },
     "automation": {
       "compilerTools": "编译器和工具",
+      "compilerEngine": "编译引擎",
+      "tectonicOption": "Tectonic（内置）",
+      "pdfLatexOption": "pdfLaTeX（系统）",
+      "tectonicDesc": "使用内置 Tectonic 引擎，无需安装本地 TeX。",
+      "pdfLatexDesc": "使用系统 latexmk 的 pdfLaTeX 模式。自动检测 MacTeX，并忽略 latexmkrc 文件。",
       "autoCompile": "自动编译",
       "autoCompileDesc": "编辑后短暂延迟并自动保存和编译",
       "watchOpenFiles": "监视打开的文件",

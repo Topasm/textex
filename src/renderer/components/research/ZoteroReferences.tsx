@@ -24,6 +24,9 @@ import type {
 import { useProjectStore } from '../../store/useProjectStore'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import { useEditorStore } from '../../store/useEditorStore'
+import { documentRegistry } from '../../models/documentRegistry'
+import { overlayCitationUsages } from '../../services/citationUsageOverlay'
+import { cacheZoteroInventory, getCachedZoteroInventory } from '../../services/zoteroInventoryCache'
 import {
   addReferenceAtCursor,
   buildProjectReferenceDragPayload,
@@ -50,6 +53,7 @@ const ITEM_PAGE_SIZE = 50
 const COUNT_PREFETCH_LIMIT = 40
 const SYNC_PAGE_SIZE = 100
 const MAX_SYNC_PREVIEW_ITEMS = 10_000
+const CITATION_REFRESH_DELAY_MS = 500
 
 type CollectionRow = {
   collection: ZoteroCollection
@@ -144,6 +148,23 @@ async function loadAllZoteroItems(
     )
   }
   return items
+}
+
+async function scanCurrentCitationUsages(projectRoot: string): Promise<CitationUsage[]> {
+  const base = await window.api.scanCitations(projectRoot)
+  const dirtyDocuments = documentRegistry
+    .dirtySnapshots()
+    .filter(({ filePath }) => filePath.toLocaleLowerCase('en-US').endsWith('.tex'))
+  const overlays = await Promise.all(
+    dirtyDocuments.map(async ({ filePath, snapshot }) => {
+      const savedText = await window.api.readFile(filePath).then(
+        (result) => result.content,
+        () => ''
+      )
+      return { savedText, currentText: snapshot.text }
+    })
+  )
+  return overlayCitationUsages(base, overlays)
 }
 
 function ProjectReferenceCard({
@@ -292,7 +313,7 @@ export function ZoteroReferences({
         })
       ),
       root
-        ? window.api.scanCitations(root).then(
+        ? scanCurrentCitationUsages(root).then(
             (loadedCitations) => ({ loadedCitations, citationError: '' }),
             (error: unknown) => ({
               loadedCitations: [] as CitationUsage[],
@@ -355,6 +376,46 @@ export function ZoteroReferences({
       if (scopeGeneration.current === generation) scopeGeneration.current += 1
     }
   }, [isCurrentScope, port, projectRoot])
+
+  useEffect(() => {
+    if (!loaded || !projectRoot) return
+    const root = projectRoot
+    const apiPort = port
+    const generation = scopeGeneration.current
+    let refreshGeneration = 0
+    let timer: ReturnType<typeof setTimeout> | undefined
+
+    const scheduleRefresh = () => {
+      refreshGeneration += 1
+      const requestedRefresh = refreshGeneration
+      clearTimeout(timer)
+      timer = setTimeout(() => {
+        void scanCurrentCitationUsages(root).then(
+          (usages) => {
+            if (
+              requestedRefresh === refreshGeneration &&
+              isCurrentScope(generation, root, apiPort)
+            ) {
+              setCitationUsages(usages)
+            }
+          },
+          () => undefined
+        )
+      }, CITATION_REFRESH_DELAY_MS)
+    }
+
+    const unsubscribeRevision = useEditorStore.subscribe((state) => state.revision, scheduleRefresh)
+    const unsubscribeProjectIndex = useProjectStore.subscribe(
+      (state) => state.projectIndex?.generation ?? 0,
+      scheduleRefresh
+    )
+    return () => {
+      refreshGeneration += 1
+      clearTimeout(timer)
+      unsubscribeRevision()
+      unsubscribeProjectIndex()
+    }
+  }, [isCurrentScope, loaded, port, projectRoot])
 
   const targetFile = useMemo(() => {
     if (!projectRoot) return undefined
@@ -586,6 +647,13 @@ export function ZoteroReferences({
     const root = projectRoot
     const apiPort = port
     let cancelled = false
+    const cachedInventory = getCachedZoteroInventory(port, libraryKey)
+    if (cachedInventory) {
+      setLibraryInventory(cachedInventory)
+      setLibraryInventoryLoaded(true)
+      setLibraryInventoryError('')
+      return
+    }
     setLibraryInventory([])
     setLibraryInventoryLoaded(false)
     setLibraryInventoryError('')
@@ -593,6 +661,7 @@ export function ZoteroReferences({
       .then((items) => {
         if (cancelled || !isCurrentScope(generation, root, apiPort)) return
         setLibraryInventory(items)
+        cacheZoteroInventory(port, libraryKey, items)
         setLibraryInventoryLoaded(true)
         setLibraryInventoryError('')
       })
@@ -694,10 +763,9 @@ export function ZoteroReferences({
     [focusCollection, library, libraryExpanded, renderedCollectionRows]
   )
 
-  const search = useCallback(
-    async (event: FormEvent) => {
-      event.preventDefault()
-      const normalized = query.trim()
+  const runSearch = useCallback(
+    async (searchQuery: string) => {
+      const normalized = searchQuery.trim()
       if (!normalized || operationInFlight.current) return
       const generation = scopeGeneration.current
       const root = projectRoot
@@ -711,7 +779,13 @@ export function ZoteroReferences({
         if (!isCurrentScope(generation, root, apiPort)) return
         setResults(items)
         setLastLocalSearch(normalized.toLocaleLowerCase('en-US'))
-        if (items.length === 0 && projectSearchResults.length === 0) {
+        const normalizedLower = normalized.toLocaleLowerCase('en-US')
+        const hasProjectMatch = bibEntries.some((entry) =>
+          [entry.key, entry.title, entry.author, entry.year].some((value) =>
+            value.toLocaleLowerCase('en-US').includes(normalizedLower)
+          )
+        )
+        if (items.length === 0 && !hasProjectMatch) {
           setMessage('No matching project or Zotero references found.')
         }
       } catch (error) {
@@ -725,7 +799,15 @@ export function ZoteroReferences({
         }
       }
     },
-    [isCurrentScope, port, projectRoot, projectSearchResults.length, query, zoteroAvailable]
+    [bibEntries, isCurrentScope, port, projectRoot, zoteroAvailable]
+  )
+
+  const search = useCallback(
+    (event: FormEvent) => {
+      event.preventDefault()
+      void runSearch(query)
+    },
+    [query, runSearch]
   )
 
   const add = useCallback(
@@ -1214,6 +1296,18 @@ export function ZoteroReferences({
                 <span>Cited ×{usage.count}</span>
               </div>
               <span>Used in TeX but missing from every project bibliography.</span>
+              <div className="reference-card-actions">
+                <button
+                  type="button"
+                  disabled={busy !== null}
+                  onClick={() => {
+                    setQuery(usage.citekey)
+                    void runSearch(usage.citekey)
+                  }}
+                >
+                  <Search size={13} /> Find source
+                </button>
+              </div>
             </article>
           ))}
         {!normalizedQuery &&

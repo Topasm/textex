@@ -4,6 +4,7 @@ import PreviewPane from '../../renderer/components/PreviewPane'
 import { useCompileStore } from '../../renderer/store/useCompileStore'
 import { usePdfStore } from '../../renderer/store/usePdfStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
+import { useProjectStore } from '../../renderer/store/useProjectStore'
 
 vi.mock('../../renderer/hooks/preview/useContainerSize', () => ({
   useContainerSize: () => ({ containerWidth: 800, ctrlHeld: false })
@@ -109,7 +110,14 @@ describe('PreviewPane PDF generation swap', () => {
       pdfDocumentId: null,
       pdfDocumentRevision: null
     })
-    usePdfStore.setState({ currentPage: 1, numPages: 0 })
+    usePdfStore.setState({
+      currentPage: 1,
+      numPages: 0,
+      zoomLevel: 100,
+      savedScrollPositions: {},
+      savedViewPositions: {}
+    })
+    useProjectStore.getState().setProjectRoot(null)
     useSettingsStore.setState((state) => ({
       settings: { ...state.settings, pdfViewMode: 'continuous', pdfInvertMode: false }
     }))
@@ -159,5 +167,91 @@ describe('PreviewPane PDF generation swap', () => {
         'false'
       )
     })
+  })
+
+  it('keeps page, zoom, and scroll position across a generation swap', async () => {
+    vi.mocked(window.api.readFileBinary)
+      .mockResolvedValueOnce({ data: new Uint8Array([1]), mimeType: 'application/pdf' })
+      .mockResolvedValueOnce({ data: new Uint8Array([2]), mimeType: 'application/pdf' })
+    useProjectStore.getState().setProjectRoot('/project')
+
+    const { container } = render(<PreviewPane />)
+    act(() =>
+      useCompileStore.getState().setPdfPath('/project/main.pdf', {
+        documentId: '/project/main.tex',
+        revision: 1
+      })
+    )
+    await waitFor(() =>
+      expect(container.querySelector('[data-pdf-generation="1"]')).toBeInTheDocument()
+    )
+
+    const preview = container.querySelector('.preview-container') as HTMLDivElement
+    act(() => usePdfStore.getState().setZoomLevel(135))
+    preview.scrollTop = 6_400
+    fireEvent.scroll(preview)
+    await waitFor(() => expect(usePdfStore.getState().currentPage).toBe(5))
+
+    act(() =>
+      useCompileStore.getState().setPdfPath('/project/main.pdf', {
+        documentId: '/project/main.tex',
+        revision: 2
+      })
+    )
+    fireEvent.click(await screen.findByTestId('render-2-5'))
+
+    await waitFor(() =>
+      expect(container.querySelector('[data-pdf-generation="2"]')).toHaveAttribute(
+        'aria-hidden',
+        'false'
+      )
+    )
+    expect(usePdfStore.getState().currentPage).toBe(5)
+    expect(usePdfStore.getState().zoomLevel).toBe(135)
+    expect(preview.scrollTop).toBe(6_400)
+  })
+
+  it('restores independent page and scroll positions when compiled documents change', async () => {
+    vi.mocked(window.api.readFileBinary)
+      .mockResolvedValueOnce({ data: new Uint8Array([1]), mimeType: 'application/pdf' })
+      .mockResolvedValueOnce({ data: new Uint8Array([2]), mimeType: 'application/pdf' })
+      .mockResolvedValueOnce({ data: new Uint8Array([3]), mimeType: 'application/pdf' })
+    useProjectStore.getState().setProjectRoot('/project')
+    const { container } = render(<PreviewPane />)
+    const preview = container.querySelector('.preview-container') as HTMLDivElement
+
+    act(() =>
+      useCompileStore.getState().setPdfPath('/project/a.pdf', {
+        documentId: '/project/a.tex',
+        revision: 1
+      })
+    )
+    await screen.findByTestId('render-1-1')
+    preview.scrollTop = 4_600
+    fireEvent.scroll(preview)
+    await waitFor(() => expect(usePdfStore.getState().currentPage).toBe(5))
+
+    act(() =>
+      useCompileStore.getState().setPdfPath('/project/b.pdf', {
+        documentId: '/project/b.tex',
+        revision: 1
+      })
+    )
+    fireEvent.click(await screen.findByTestId('render-2-1'))
+    await waitFor(() => expect(usePdfStore.getState().currentPage).toBe(1))
+    preview.scrollTop = 1_200
+    fireEvent.scroll(preview)
+    await waitFor(() => expect(usePdfStore.getState().currentPage).toBe(2))
+
+    act(() =>
+      useCompileStore.getState().setPdfPath('/project/a.pdf', {
+        documentId: '/project/a.tex',
+        revision: 2
+      })
+    )
+    fireEvent.click(await screen.findByTestId('render-3-5'))
+
+    await waitFor(() => expect(usePdfStore.getState().currentPage).toBe(5))
+    await waitFor(() => expect(preview.scrollTop).toBe(4_600))
   })
 })

@@ -199,80 +199,78 @@
 }
 
 [data-theme='glass'] {
-  --bg-primary: #f0f0f0;
-  --bg-secondary: rgba(255, 255, 255, 0.55);
-  --bg-toolbar: rgba(255, 255, 255, 0.45);
-  --bg-hover: rgba(0, 0, 0, 0.06);
-  --bg-input: rgba(255, 255, 255, 0.65);
-  --text-primary: #1a1a1a;
-  --text-secondary: #555555;
-  --text-kbd: #999999;
-  --text-kbd-hover: #777777;
-  --accent: #007aff;
-  --accent-hover: #0060cc;
-  --border: rgba(0, 0, 0, 0.1);
-  --error: #ff3b30;
-  --warning: #ff9500;
-  --success: #34c759;
-  --info: #007aff;
-  --status-bar-bg: rgba(255, 255, 255, 0.45);
-  --status-bar-text: #1a1a1a;
-  --scrollbar-track: rgba(0, 0, 0, 0.03);
-  --scrollbar-thumb: rgba(0, 0, 0, 0.15);
-  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.25);
-  --preview-bg: rgba(255, 255, 255, 0.4);
-  --save-dirty-bg: rgba(255, 204, 0, 0.15);
-  --save-dirty-text: #665e20;
-  --save-dirty-hover: rgba(255, 204, 0, 0.25);
-  --overlay-bg: rgba(255, 255, 255, 0.5);
-  --zoom-bg: rgba(255, 255, 255, 0.7);
-  --log-entry-hover: rgba(0, 0, 0, 0.04);
-  --location-color: #007aff;
-  --shadow-color: rgba(0, 0, 0, 0.08);
-  --synctex-border: #007aff;
-  --synctex-bg: rgba(0, 122, 255, 0.12);
-  --synctex-line-bg: rgba(0, 122, 255, 0.06);
-  --synctex-flash-bg: rgba(0, 122, 255, 0.15);
-  --tab-active-bg: rgba(255, 255, 255, 0.65);
-  --tab-inactive-bg: rgba(255, 255, 255, 0.3);
-  --tab-hover-bg: rgba(255, 255, 255, 0.5);
-  --sidebar-bg: rgba(255, 255, 255, 0.45);
-  --sidebar-hover: rgba(0, 0, 0, 0.05);
-  --sidebar-selected: rgba(0, 122, 255, 0.1);
-  --file-tree-indent: rgba(0, 0, 0, 0.08);
-  --git-added: #34c759;
-  --git-modified: #ff9500;
-  --git-deleted: #ff3b30;
-  --git-untracked: #8e8e93;
-  --modal-backdrop: rgba(0, 0, 0, 0.25);
-  --modal-bg: rgba(255, 255, 255, 0.7);
-  --card-bg: rgba(255, 255, 255, 0.5);
-  --card-hover: rgba(255, 255, 255, 0.7);
-  --card-border: rgba(0, 0, 0, 0.08);
-  --update-banner-bg: rgba(255, 255, 255, 0.6);
-  --update-banner-border: #007aff;
-  --progress-bar-bg: rgba(0, 0, 0, 0.06);
-  --progress-bar-fill: #007aff;
-  --chrome-bg: rgba(255, 255, 255, 0.52);
-  --chrome-elevated-bg: rgba(255, 255, 255, 0.72);
-  --chrome-border: rgba(30, 41, 59, 0.1);
-  --chrome-muted: #667085;
-  --chrome-pill-bg: rgba(255, 255, 255, 0.46);
-  --chrome-pill-hover: rgba(255, 255, 255, 0.68);
-  --chrome-cta-bg: #007aff;
-  --chrome-cta-hover: #0060cc;
+  color-scheme: light;
+  --bg-primary: #f5f4f1;
+  --bg-secondary: #ffffff;
+  --bg-toolbar: rgba(247, 246, 243, 0.98);
+  --bg-hover: #ebeae7;
+  --bg-input: #ffffff;
+  --text-primary: #37352f;
+  --text-secondary: #787774;
+  --text-kbd: #9b9994;
+  --text-kbd-hover: #5f5d58;
+  --accent: #155dff;
+  --accent-hover: #0d4bd6;
+  --border: #deddd8;
+  --error: #d14343;
+  --warning: #a86108;
+  --success: #2f7d4a;
+  --info: #155dff;
+  --status-bar-bg: #f7f6f3;
+  --status-bar-text: #37352f;
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: rgba(55, 53, 47, 0.18);
+  --scrollbar-thumb-hover: rgba(55, 53, 47, 0.3);
+  --preview-bg: #ebe9e4;
+  --save-dirty-bg: #fff4ce;
+  --save-dirty-text: #6f5610;
+  --save-dirty-hover: #f8e9b3;
+  --overlay-bg: rgba(247, 246, 243, 0.96);
+  --zoom-bg: rgba(255, 255, 255, 0.98);
+  --log-entry-hover: #f0efec;
+  --location-color: #155dff;
+  --shadow-color: rgba(55, 53, 47, 0.16);
+  --synctex-border: #155dff;
+  --synctex-bg: rgba(21, 93, 255, 0.12);
+  --synctex-line-bg: rgba(21, 93, 255, 0.07);
+  --synctex-flash-bg: rgba(21, 93, 255, 0.16);
+  --tab-active-bg: #ffffff;
+  --tab-inactive-bg: #f7f6f3;
+  --tab-hover-bg: #ebeae7;
+  --sidebar-bg: #f7f6f3;
+  --sidebar-hover: #ebeae7;
+  --sidebar-selected: #e8f4fe;
+  --file-tree-indent: #e9e9e7;
+  --git-added: #2f7d4a;
+  --git-modified: #a86108;
+  --git-deleted: #d14343;
+  --git-untracked: #787774;
+  --modal-backdrop: rgba(55, 53, 47, 0.32);
+  --modal-bg: #ffffff;
+  --card-bg: #ffffff;
+  --card-hover: #f7f6f3;
+  --card-border: #deddd8;
+  --update-banner-bg: #f7f6f3;
+  --update-banner-border: #155dff;
+  --progress-bar-bg: #e9e9e7;
+  --progress-bar-fill: #155dff;
+  --chrome-bg: rgba(247, 246, 243, 0.98);
+  --chrome-elevated-bg: rgba(255, 255, 255, 0.98);
+  --chrome-border: #deddd8;
+  --chrome-muted: #787774;
+  --chrome-pill-bg: #ebeae7;
+  --chrome-pill-hover: #e1e0dc;
+  --chrome-cta-bg: #155dff;
+  --chrome-cta-hover: #0d4bd6;
 }
 
-/* Glass theme: macOS Tahoe-style frosted blur on key panels */
+/* Keep blur for floating glass only; workspace surfaces stay stable and legible. */
 [data-theme='glass'] .toolbar,
-[data-theme='glass'] .sidebar,
 [data-theme='glass'] .zoom-toolbar,
-[data-theme='glass'] .status-bar,
 [data-theme='glass'] .modal-bg,
-[data-theme='glass'] .menu-dropdown-content,
-[data-theme='glass'] .tab-bar {
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+[data-theme='glass'] .menu-dropdown-content {
+  backdrop-filter: blur(12px) saturate(110%);
+  -webkit-backdrop-filter: blur(12px) saturate(110%);
 }
 
 * {
@@ -312,10 +310,16 @@ body,
 
 /* Layout */
 .app-container {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100vh;
   background-color: var(--bg-primary);
+}
+
+/* The desktop Research navigation owns the right end of the title-bar row. */
+.app-container.has-research-panel > .toolbar {
+  margin-right: clamp(320px, var(--research-panel-width), 520px);
 }
 
 .main-content {
@@ -996,6 +1000,24 @@ body,
 
 .log-panel-header button:hover {
   color: var(--text-primary);
+}
+
+.log-panel-header button:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.log-panel-header .log-repair-action {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--ui-radius-control, 4px);
+}
+
+.log-panel-header .log-repair-action:hover:not(:disabled) {
+  background: var(--bg-hover);
 }
 
 .log-panel-body {
@@ -2803,15 +2825,23 @@ body,
 }
 
 .research-panel-tabs > [role='tab'] {
-  min-width: 0;
-  padding-inline: 8px;
+  flex: 0 0 38px;
+  min-width: 38px;
+  padding-inline: 0;
   font-size: 11px;
   white-space: nowrap;
 }
 
 .research-panel-tab-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
   overflow: hidden;
-  text-overflow: ellipsis;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .research-panel-tab-badge {
@@ -2895,13 +2925,19 @@ body,
   flex-direction: column;
 }
 
-@container (max-width: 360px) {
-  .research-panel-tabs > [role='tab'] {
-    flex: 1 1 32px;
-    padding-inline: 6px;
-  }
+.research-panel-view {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+}
 
-  .research-panel-tab-label,
+.research-panel-view[hidden] {
+  display: none;
+}
+
+@container (max-width: 360px) {
   .log-panel-header > #log-panel-title {
     display: none;
   }
@@ -4479,6 +4515,29 @@ body,
   margin-left: auto;
 }
 
+.research-chat-stop {
+  display: inline-flex;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  color: var(--error);
+  background: color-mix(in srgb, var(--error) 9%, transparent);
+  border: 1px solid color-mix(in srgb, var(--error) 42%, var(--border));
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.research-chat-stop:hover {
+  background: color-mix(in srgb, var(--error) 16%, transparent);
+}
+
+.research-chat-stop + .research-chat-send {
+  margin-left: 0;
+}
+
 .research-chat-composer-footer {
   display: flex;
   min-height: 34px;
@@ -4670,14 +4729,27 @@ body,
 
 .research-panel.overlay {
   position: absolute;
-  inset: 0 0 0 auto;
+  inset: 0 0 var(--research-panel-bottom, 0) auto;
   min-width: min(320px, 100%);
   max-width: min(520px, 100%);
+  height: auto;
   box-shadow: -8px 0 24px var(--shadow-color);
+  z-index: 41;
+}
+
+.research-panel.overlay .research-panel-tabs {
+  min-height: 40px;
+  background: var(--chrome-bg);
+  border-bottom-color: var(--chrome-border);
 }
 
 @media (max-width: 1199px) {
+  .app-container.has-research-panel > .toolbar {
+    margin-right: 0;
+  }
+
   .research-panel.overlay {
+    top: 40px;
     width: min(440px, 100%) !important;
   }
 

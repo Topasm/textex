@@ -211,6 +211,29 @@ describe('useSessionRestore', () => {
     expect(useEditorStore.getState()).toMatchObject({ cursorLine: 8, cursorColumn: 5 })
   })
 
+  it('opens the project default tex file when no saved session tex file survives', async () => {
+    const projectRoot = '/projects/paper'
+    const missingActive = `${projectRoot}/missing.tex`
+    const mainFile = `${projectRoot}/main.tex`
+    saveSession(projectRoot, [missingActive], missingActive)
+    useProjectStore.getState().setDirectoryTree([
+      { name: 'notes.txt', path: `${projectRoot}/notes.txt`, type: 'file' },
+      { name: 'main.tex', path: mainFile, type: 'file' }
+    ])
+    openProjectMock.mockResolvedValue({ generation: 1, projectPath: projectRoot })
+    vi.mocked(window.api.readFile).mockImplementation(async (path) => {
+      if (path === mainFile) return { filePath: mainFile, content: 'default content' }
+      throw new Error('File not found')
+    })
+
+    const { result } = renderHook(() => useSessionRestore())
+
+    await waitFor(() => expect(result.current).toBe(true))
+    await waitFor(() => expect(useEditorStore.getState().activeFilePath).toBe(mainFile))
+    expect(window.api.readFile).toHaveBeenCalledWith(missingActive)
+    expect(window.api.readFile).toHaveBeenCalledWith(mainFile)
+  })
+
   it('discards background reads after the user opens another tab', async () => {
     const projectRoot = '/projects/paper'
     const activeFile = `${projectRoot}/active.tex`

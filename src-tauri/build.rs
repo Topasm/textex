@@ -4,6 +4,7 @@ fn main() {
         "ai_process",
         "ai_process_custom",
         "ai_research_chat",
+        "ai_cancel_research_chat",
         "ai_plan_zotero",
         "ai_update_context",
         "ai_save_api_key",

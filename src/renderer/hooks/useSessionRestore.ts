@@ -14,6 +14,7 @@ import i18n from '../i18n'
 import { errorMessage, logError } from '../utils/errorMessage'
 import { normalizeDocumentId } from '../models/documentRegistry'
 import type { RestoredFileData } from '../store/useEditorStore'
+import { findDefaultTexFile, isTexFilePath } from '../services/defaultTexFile'
 
 const SESSION_RESTORE_NOTIFICATION_ID = 'session-restore-failed'
 const SESSION_RESTORE_CONCURRENCY = 3
@@ -231,7 +232,7 @@ export function useSessionRestore(): boolean {
         }
         const fallbackActiveFile = useEditorStore.getState().activeFilePath
           ? undefined
-          : restoredFiles[0]?.filePath
+          : restoredFiles.find((file) => isTexFilePath(file.filePath))?.filePath
         const restored = useEditorStore.getState().restoreFilesInTabs(restoredFiles, {
           orderedFilePaths: orderedRestoredPaths(),
           ...(fallbackActiveFile ? { activeFilePath: fallbackActiveFile } : {}),
@@ -239,6 +240,31 @@ export function useSessionRestore(): boolean {
         })
         if (!restored) return
       }
+
+      if (!isRestoreContextCurrent() || useEditorStore.getState().activeFilePath) return
+
+      // A valid TeX tab from the saved session always wins. If every saved TeX
+      // file disappeared (or there was no saved tab), fall back to the same
+      // conventional project document selection used for a manual open.
+      const restoredTexPath = orderedRestoredPaths().find(isTexFilePath)
+      if (restoredTexPath) {
+        useEditorStore.getState().restoreFilesInTabs([], {
+          orderedFilePaths: orderedRestoredPaths(),
+          activeFilePath: restoredTexPath,
+          expectedTabMutationEpoch
+        })
+        return
+      }
+
+      const defaultTexFile = findDefaultTexFile(useProjectStore.getState().directoryTree ?? [])
+      if (!defaultTexFile) return
+      const restoredDefaultFile = await readSessionFile(defaultTexFile.path)
+      if (!restoredDefaultFile || !isRestoreContextCurrent()) return
+      useEditorStore.getState().restoreFilesInTabs([restoredDefaultFile], {
+        orderedFilePaths: [...orderedRestoredPaths(), restoredDefaultFile.filePath],
+        activeFilePath: restoredDefaultFile.filePath,
+        expectedTabMutationEpoch
+      })
     }
 
     void restoreSession()

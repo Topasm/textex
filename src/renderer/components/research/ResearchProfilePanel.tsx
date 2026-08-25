@@ -9,8 +9,10 @@ import type {
 import { documentRegistry } from '../../models/documentRegistry'
 import {
   alternateGitRemote,
+  applicableResearchProfileSuggestionFields,
   applyResearchProfileSuggestion,
-  suggestResearchProfileFromLatex
+  suggestResearchProfileFromLatex,
+  type ResearchProfileSuggestionField
 } from '../../services/researchProfileSuggestions'
 import {
   clearResearchProfileDraft,
@@ -122,9 +124,20 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+function isLatexDocument(filePath: string | null): filePath is string {
+  return Boolean(filePath && /\.tex$/iu.test(filePath))
+}
+
+function suggestionFieldLabel(field: ResearchProfileSuggestionField): string {
+  if (field === 'doi') return 'DOI'
+  if (field === 'arxiv') return 'arXiv'
+  return field
+}
+
 export function ResearchProfilePanel() {
   const projectRoot = useProjectStore((state) => state.projectRoot)
   const activeFilePath = useEditorStore((state) => state.activeFilePath)
+  const activeRevision = useEditorStore((state) => state.revision)
   const [profile, setProfile] = useState<ResearchProfile | null>(null)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -137,6 +150,7 @@ export function ResearchProfilePanel() {
   const saveGeneration = useRef(0)
   const indexGeneration = useRef(0)
   const editRevision = useRef(0)
+  const manuallyEditedMetadata = useRef(new Set<ResearchProfileSuggestionField>())
   const saveInFlight = useRef(false)
   const sourceOperationInFlight = useRef(false)
 
@@ -153,6 +167,7 @@ export function ResearchProfilePanel() {
     saveGeneration.current += 1
     indexGeneration.current += 1
     editRevision.current = 0
+    manuallyEditedMetadata.current.clear()
     saveInFlight.current = false
     sourceOperationInFlight.current = false
     clearResearchProfileDraft()
@@ -207,10 +222,14 @@ export function ResearchProfilePanel() {
   }
 
   const updatePaper = (field: keyof ResearchProfile['paper'], value: string) => {
+    if (field === 'title' || field === 'doi' || field === 'arxiv') {
+      manuallyEditedMetadata.current.add(field)
+    }
     update((current) => ({ ...current, paper: { ...current.paper, [field]: value } }))
   }
 
   const updateAuthor = (id: string, field: keyof ResearchPerson, value: string) => {
+    manuallyEditedMetadata.current.add('authors')
     update((current) => ({
       ...current,
       paper: {
@@ -221,6 +240,27 @@ export function ResearchProfilePanel() {
       }
     }))
   }
+
+  useEffect(() => {
+    if (!profile || !isLatexDocument(activeFilePath)) return
+    const snapshot = documentRegistry.snapshot(activeFilePath)
+    if (!snapshot) return
+
+    const suggestion = suggestResearchProfileFromLatex(snapshot.text)
+    const fields = applicableResearchProfileSuggestionFields(
+      profile,
+      suggestion,
+      manuallyEditedMetadata.current
+    )
+    if (fields.length === 0) return
+
+    setProfile(applyResearchProfileSuggestion(profile, suggestion, manuallyEditedMetadata.current))
+    editRevision.current += 1
+    setResearchProfileDraftDirty(true)
+    setStatus(
+      `Filled from ${activeFilePath.split(/[\\/]/u).pop()}: ${fields.map(suggestionFieldLabel).join(', ')}.`
+    )
+  }, [activeFilePath, activeRevision, profile])
 
   const updateResource = <K extends keyof ResearchResource>(
     id: string,
@@ -247,8 +287,8 @@ export function ResearchProfilePanel() {
   }
 
   const suggestFromDocument = () => {
-    if (!activeFilePath) {
-      setStatus('Open a document before requesting profile suggestions.')
+    if (!isLatexDocument(activeFilePath)) {
+      setStatus('Open a .tex document before requesting profile suggestions.')
       return
     }
     const snapshot = documentRegistry.snapshot(activeFilePath)
@@ -258,18 +298,14 @@ export function ResearchProfilePanel() {
     }
 
     const suggestion = suggestResearchProfileFromLatex(snapshot.text)
-    const added: string[] = []
-    if (!profile?.paper.title && suggestion.title) added.push('title')
-    if (!profile?.paper.doi && suggestion.doi) added.push('DOI')
-    if (!profile?.paper.arxiv && suggestion.arxiv) added.push('arXiv')
-    if (profile?.paper.authors.length === 0 && suggestion.authors.length > 0) added.push('authors')
+    const added = profile ? applicableResearchProfileSuggestionFields(profile, suggestion) : []
     if (!profile || added.length === 0) {
       setStatus('No suggestions were found for empty profile fields.')
       return
     }
 
     update((current) => applyResearchProfileSuggestion(current, suggestion))
-    setStatus(`Added from the active document: ${added.join(', ')}.`)
+    setStatus(`Added from the active document: ${added.map(suggestionFieldLabel).join(', ')}.`)
   }
 
   const fillAlternateGitRemote = (resource: ResearchResource, field: 'url' | 'sshUrl') => {
@@ -467,6 +503,10 @@ export function ResearchProfilePanel() {
     )
   }
 
+  const hasPublicationIdentifiers = Boolean(
+    profile.paper.doi?.trim() || profile.paper.arxiv?.trim()
+  )
+
   return (
     <form
       className="research-profile-panel"
@@ -476,17 +516,18 @@ export function ResearchProfilePanel() {
       }}
     >
       <p className="research-muted">
-        Describe this paper and choose which supporting resources Chat may inspect.
+        Empty title, author, DOI, and arXiv fields are filled from explicit commands in the active
+        .tex document. Values you enter are never overwritten.
       </p>
 
       <ProfileSection title="Paper" open>
         <button
           className="research-profile-suggest"
           type="button"
-          disabled={!activeFilePath}
+          disabled={!isLatexDocument(activeFilePath)}
           onClick={suggestFromDocument}
         >
-          <Sparkles size={14} /> Suggest from document
+          <Sparkles size={14} /> Fill empty fields from document
         </button>
         <ProfileField
           label="Title"
@@ -501,16 +542,6 @@ export function ResearchProfilePanel() {
         />
         <div className="research-profile-field-grid">
           <ProfileField
-            label="DOI"
-            value={profile.paper.doi ?? ''}
-            onChange={(value) => updatePaper('doi', value)}
-          />
-          <ProfileField
-            label="arXiv"
-            value={profile.paper.arxiv ?? ''}
-            onChange={(value) => updatePaper('arxiv', value)}
-          />
-          <ProfileField
             label="Venue"
             value={profile.paper.venue ?? ''}
             onChange={(value) => updatePaper('venue', value)}
@@ -522,6 +553,26 @@ export function ResearchProfilePanel() {
             onChange={(value) => updatePaper('website', value)}
           />
         </div>
+        <ProfileSection
+          title={`Publication identifiers (${hasPublicationIdentifiers ? 'configured' : 'optional'})`}
+          open={hasPublicationIdentifiers}
+        >
+          <p className="research-muted">
+            Add these only when the paper has a published DOI or arXiv identifier.
+          </p>
+          <div className="research-profile-field-grid">
+            <ProfileField
+              label="DOI"
+              value={profile.paper.doi ?? ''}
+              onChange={(value) => updatePaper('doi', value)}
+            />
+            <ProfileField
+              label="arXiv"
+              value={profile.paper.arxiv ?? ''}
+              onChange={(value) => updatePaper('arxiv', value)}
+            />
+          </div>
+        </ProfileSection>
       </ProfileSection>
 
       <ProfileSection title={`Authors (${profile.paper.authors.length})`}>
@@ -534,7 +585,8 @@ export function ResearchProfilePanel() {
                   type="button"
                   aria-label={`Remove ${author.name || `author ${index + 1}`}`}
                   title="Remove author"
-                  onClick={() =>
+                  onClick={() => {
+                    manuallyEditedMetadata.current.add('authors')
                     update((current) => ({
                       ...current,
                       paper: {
@@ -542,7 +594,7 @@ export function ResearchProfilePanel() {
                         authors: current.paper.authors.filter((item) => item.id !== author.id)
                       }
                     }))
-                  }
+                  }}
                 >
                   <Trash2 size={14} />
                 </button>
@@ -589,6 +641,7 @@ export function ResearchProfilePanel() {
           className="research-profile-add"
           type="button"
           onClick={() => {
+            manuallyEditedMetadata.current.add('authors')
             const author: ResearchPerson = { id: createId('author'), name: '' }
             update((current) => ({
               ...current,
@@ -816,7 +869,7 @@ function ProfileSection({
   children: React.ReactNode
 }) {
   return (
-    <details className="research-profile-section" open={open}>
+    <details className="research-profile-section" {...(open ? { open: true } : {})}>
       <summary>{title}</summary>
       <div className="research-profile-section-content">{children}</div>
     </details>

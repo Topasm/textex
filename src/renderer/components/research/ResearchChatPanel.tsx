@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   Slash,
   Sparkles,
+  Square,
   Terminal,
   Trash2,
   Wrench,
@@ -55,7 +56,9 @@ import {
   compactResearchChatSessionMessages,
   researchChatSessionScope
 } from '../../services/researchChatSession'
+import { invalidateZoteroInventory } from '../../services/zoteroInventoryCache'
 import { useEditorStore } from '../../store/useEditorStore'
+import { useCompileStore } from '../../store/useCompileStore'
 import { useProjectStore, type ResearchSelectionRequest } from '../../store/useProjectStore'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import { dirname } from '../../utils/path'
@@ -70,6 +73,7 @@ import { ResearchChatModelSelector, researchChatExecutionLabel } from './Researc
 
 interface ResearchChatPanelProps {
   onAiDraft: () => void
+  onCompile?: () => Promise<void>
   incomingSelection?: ResearchSelectionRequest | null
   onIncomingSelectionConsumed?: (token: number) => void
   incomingReference?: {
@@ -78,6 +82,12 @@ interface ResearchChatPanelProps {
     payload: ReferenceDragPayload
   } | null
   onIncomingReferenceConsumed?: (token: number) => void
+  incomingPrompt?: {
+    token: number
+    projectRoot: string
+    prompt: string
+  } | null
+  onIncomingPromptConsumed?: (token: number) => void
 }
 
 interface ContextOption {
@@ -287,10 +297,13 @@ function sourcePayload(
 
 export function ResearchChatPanel({
   onAiDraft,
+  onCompile,
   incomingSelection = null,
   onIncomingSelectionConsumed,
   incomingReference = null,
-  onIncomingReferenceConsumed
+  onIncomingReferenceConsumed,
+  incomingPrompt = null,
+  onIncomingPromptConsumed
 }: ResearchChatPanelProps) {
   const projectRoot = useProjectStore((state) => state.projectRoot)
   const filePath = useEditorStore((state) => state.filePath)
@@ -317,7 +330,9 @@ export function ResearchChatPanel({
   const [sessionReadyRoot, setSessionReadyRoot] = useState<string | null>(null)
   const loadGeneration = useRef(0)
   const requestGeneration = useRef(0)
+  const requestSerial = useRef(0)
   const requestInFlight = useRef(false)
+  const activeRequestId = useRef<string | null>(null)
   const actionInFlight = useRef(false)
   const messagesRef = useRef<ResearchChatMessage[]>([])
   const queuedPromptsRef = useRef<string[]>([])
@@ -332,6 +347,7 @@ export function ResearchChatPanel({
   const previousFilePath = useRef(filePath)
   const consumedIncomingToken = useRef<number | null>(null)
   const consumedSelectionToken = useRef<number | null>(null)
+  const consumedPromptToken = useRef<number | null>(null)
   const generatedCommandListboxId = useId().replace(/:/gu, '')
   const commandListboxId = `research-chat-commands-${generatedCommandListboxId}`
   const commandHintId = `research-chat-command-hint-${generatedCommandListboxId}`
@@ -355,6 +371,19 @@ export function ResearchChatPanel({
   useEffect(() => {
     messagesRef.current = messages
   }, [messages])
+
+  useEffect(
+    () => () => {
+      const requestToCancel = activeRequestId.current
+      activeRequestId.current = null
+      requestGeneration.current += 1
+      requestInFlight.current = false
+      if (requestToCancel) {
+        void window.api.aiCancelResearchChat(requestToCancel).catch(() => false)
+      }
+    },
+    []
+  )
 
   useEffect(() => {
     queuedPromptsRef.current = queuedPrompts
@@ -460,6 +489,9 @@ export function ResearchChatPanel({
   )
 
   useEffect(() => {
+    const requestToCancel = activeRequestId.current
+    if (requestToCancel) void window.api.aiCancelResearchChat(requestToCancel).catch(() => false)
+    activeRequestId.current = null
     const generation = ++loadGeneration.current
     const root = projectRoot
     requestGeneration.current += 1
@@ -491,6 +523,7 @@ export function ResearchChatPanel({
     setSessionReadyRoot(null)
     consumedIncomingToken.current = null
     consumedSelectionToken.current = null
+    consumedPromptToken.current = null
     if (!root) return
 
     void Promise.allSettled([
@@ -593,6 +626,21 @@ export function ResearchChatPanel({
     projectRoot,
     sessionReadyRoot
   ])
+
+  useEffect(() => {
+    if (
+      !incomingPrompt ||
+      incomingPrompt.projectRoot !== projectRoot ||
+      sessionReadyRoot !== projectRoot ||
+      consumedPromptToken.current === incomingPrompt.token
+    ) {
+      return
+    }
+    consumedPromptToken.current = incomingPrompt.token
+    fillComposer(incomingPrompt.prompt)
+    setStatus('Added the compilation problems to the Chat composer. Review and send when ready.')
+    onIncomingPromptConsumed?.(incomingPrompt.token)
+  }, [fillComposer, incomingPrompt, onIncomingPromptConsumed, projectRoot, sessionReadyRoot])
 
   useEffect(() => {
     const hadDocument = Boolean(previousFilePath.current)
@@ -870,6 +918,9 @@ export function ResearchChatPanel({
       historyDraftRef.current = ''
       const root = projectRoot
       const generation = ++requestGeneration.current
+      requestSerial.current += 1
+      const requestId = `research-${Date.now()}-${requestSerial.current}`
+      activeRequestId.current = requestId
       requestInFlight.current = true
       setBusy(true)
       setStatus('Gathering selected research context…')
@@ -899,6 +950,7 @@ export function ResearchChatPanel({
         }
         setStatus('Thinking…')
         const answer = await window.api.aiResearchChat({
+          requestId,
           message: question,
           history,
           contexts,
@@ -924,6 +976,7 @@ export function ResearchChatPanel({
         }
       } finally {
         if (isCurrentRequest(generation, root)) {
+          if (activeRequestId.current === requestId) activeRequestId.current = null
           requestInFlight.current = false
           setBusy(false)
         }
@@ -942,6 +995,20 @@ export function ResearchChatPanel({
       selectedSessionContexts
     ]
   )
+
+  const stopRequest = useCallback(async () => {
+    if (!requestInFlight.current) return
+    const requestId = activeRequestId.current
+    activeRequestId.current = null
+    requestGeneration.current += 1
+    requestInFlight.current = false
+    setBusy(false)
+    setStatus('Stopping the current Chat request…')
+    if (requestId) {
+      await window.api.aiCancelResearchChat(requestId).catch(() => false)
+    }
+    setStatus('Chat request stopped. Queued messages were preserved.')
+  }, [])
 
   useEffect(() => {
     if (
@@ -971,6 +1038,7 @@ export function ResearchChatPanel({
     try {
       const result = await window.api.zoteroApplyMutationPlan(plan)
       if (!isCurrentAction(generation, root)) return
+      invalidateZoteroInventory(useSettingsStore.getState().settings.zoteroPort)
       setPendingZoteroPlan(null)
       setMessages((current) =>
         appendResearchChatSessionMessages(current, {
@@ -1060,6 +1128,7 @@ export function ResearchChatPanel({
         const port = useSettingsStore.getState().settings.zoteroPort
         const result = await window.api.zoteroSaveOnline(reference, port)
         if (isCurrentAction(generation, root)) {
+          invalidateZoteroInventory(port)
           setStatus(result.duplicate ? 'Already saved in Zotero.' : 'Saved to Zotero.')
         }
       } catch (error) {
@@ -1142,53 +1211,77 @@ export function ResearchChatPanel({
     setStatus('Document edit discarded. The source was not changed.')
   }, [])
 
-  const applyDocumentEdit = useCallback(() => {
-    if (!pendingDocumentEdit) return
-    const editor = useEditorStore.getState()
-    const model = documentRegistry.getModel(pendingDocumentEdit.filePath)
-    if (
-      editor.activeFilePath !== pendingDocumentEdit.filePath ||
-      !model?.isCurrent(pendingDocumentEdit.snapshot)
-    ) {
-      setPendingDocumentEdit(null)
-      setStatus('The document changed after this preview was created. Prepare the edit again.')
-      return
-    }
+  const applyDocumentEdit = useCallback(
+    async (compileAfterApply: boolean) => {
+      if (!pendingDocumentEdit) return
+      const editor = useEditorStore.getState()
+      const model = documentRegistry.getModel(pendingDocumentEdit.filePath)
+      if (
+        editor.activeFilePath !== pendingDocumentEdit.filePath ||
+        !model?.isCurrent(pendingDocumentEdit.snapshot)
+      ) {
+        setPendingDocumentEdit(null)
+        setStatus('The document changed after this preview was created. Prepare the edit again.')
+        return
+      }
 
-    const adapter = getActiveEditorAdapter()
-    const adapterMatches =
-      adapter?.getDocumentId() != null &&
-      normalizeDocumentId(adapter.getDocumentId()!) ===
-        normalizeDocumentId(pendingDocumentEdit.filePath)
-    if (adapter && adapterMatches) {
-      const lastLine = Math.max(1, adapter.getLineCount())
-      const applied = adapter.applyEdits('research-chat-document-edit', [
-        {
-          range: {
-            start: { line: 1, column: 1 },
-            end: { line: lastLine, column: adapter.getLineMaxColumn(lastLine) }
-          },
-          text: pendingDocumentEdit.proposedText,
-          forceMoveMarkers: true
+      const adapter = getActiveEditorAdapter()
+      const adapterMatches =
+        adapter?.getDocumentId() != null &&
+        normalizeDocumentId(adapter.getDocumentId()!) ===
+          normalizeDocumentId(pendingDocumentEdit.filePath)
+      if (adapter && adapterMatches) {
+        const lastLine = Math.max(1, adapter.getLineCount())
+        const applied = adapter.applyEdits('research-chat-document-edit', [
+          {
+            range: {
+              start: { line: 1, column: 1 },
+              end: { line: lastLine, column: adapter.getLineMaxColumn(lastLine) }
+            },
+            text: pendingDocumentEdit.proposedText,
+            forceMoveMarkers: true
+          }
+        ])
+        if (!applied) {
+          setStatus('The editor could not apply this change. Prepare the edit again.')
+          return
         }
-      ])
-      if (!applied) {
-        setStatus('The editor could not apply this change. Prepare the edit again.')
-        return
+        adapter.focus()
+      } else {
+        const updated = editor.updateActiveDocument(
+          pendingDocumentEdit.proposedText,
+          'programmatic'
+        )
+        if (!updated) {
+          setStatus('The editor could not apply this change. Prepare the edit again.')
+          return
+        }
       }
-      adapter.focus()
-    } else {
-      const updated = editor.updateActiveDocument(pendingDocumentEdit.proposedText, 'programmatic')
-      if (!updated) {
-        setStatus('The editor could not apply this change. Prepare the edit again.')
-        return
-      }
-    }
 
-    const fileName = pendingDocumentEdit.filePath.split(/[\\/]/u).at(-1) || 'document'
-    setPendingDocumentEdit(null)
-    setStatus(`Applied the proposed change to ${fileName}. Review and compile before saving.`)
-  }, [pendingDocumentEdit])
+      const fileName = pendingDocumentEdit.filePath.split(/[\\/]/u).at(-1) || 'document'
+      setPendingDocumentEdit(null)
+      if (compileAfterApply && onCompile) {
+        setActionBusy('document-compile')
+        setStatus(`Applied the proposed change to ${fileName}. Compiling…`)
+        try {
+          await onCompile()
+          const compileStatus = useCompileStore.getState().compileStatus
+          setStatus(
+            compileStatus === 'success'
+              ? `Applied and compiled ${fileName} successfully.`
+              : compileStatus === 'error'
+                ? `Applied ${fileName}, but compilation still reports problems. Review the Problems panel.`
+                : `Applied ${fileName}. Compilation did not produce a current result.`
+          )
+        } finally {
+          setActionBusy('')
+        }
+        return
+      }
+      setStatus(`Applied the proposed change to ${fileName}. Review and compile before saving.`)
+    },
+    [onCompile, pendingDocumentEdit]
+  )
 
   const navigatePromptHistory = useCallback(
     (direction: 'previous' | 'next'): boolean => {
@@ -1500,9 +1593,29 @@ export function ResearchChatPanel({
             <button type="button" onClick={discardDocumentEdit}>
               <X size={13} /> Discard
             </button>
-            <button className="primary" type="button" onClick={applyDocumentEdit}>
+            <button
+              className="primary"
+              type="button"
+              disabled={Boolean(actionBusy)}
+              onClick={() => void applyDocumentEdit(false)}
+            >
               <ShieldCheck size={13} /> Apply changes
             </button>
+            {onCompile && (
+              <button
+                className="primary"
+                type="button"
+                disabled={Boolean(actionBusy)}
+                onClick={() => void applyDocumentEdit(true)}
+              >
+                {actionBusy === 'document-compile' ? (
+                  <LoaderCircle className="spin" size={13} />
+                ) : (
+                  <FileText size={13} />
+                )}{' '}
+                Apply &amp; compile
+              </button>
+            )}
           </div>
         </section>
       )}
@@ -1721,6 +1834,17 @@ export function ResearchChatPanel({
             <span className="research-chat-mode" title="Answers without changing files">
               Ask
             </span>
+            {busy && (
+              <button
+                className="research-chat-stop"
+                type="button"
+                aria-label="Stop current Chat request"
+                title="Stop current Chat request"
+                onClick={() => void stopRequest()}
+              >
+                <Square size={12} aria-hidden="true" />
+              </button>
+            )}
             <button
               className="research-chat-send"
               type="button"

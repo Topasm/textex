@@ -136,10 +136,10 @@ pub enum AppError {
     #[error("LaTeX compilation timed out after {seconds}s")]
     CompilationTimedOut { seconds: u64 },
 
-    #[error("Tectonic executable was not found. Checked: {checked_paths}")]
+    #[error("LaTeX compiler executable was not found. Checked: {checked_paths}")]
     CompilerNotFound { checked_paths: String },
 
-    #[error("Failed to {operation} Tectonic at {path}: {source}")]
+    #[error("Failed to {operation} LaTeX compiler resource at {path}: {source}")]
     CompilerIo {
         operation: &'static str,
         path: String,
@@ -147,16 +147,16 @@ pub enum AppError {
         source: io::Error,
     },
 
-    #[error("Tectonic exited unsuccessfully ({status})")]
+    #[error("LaTeX compiler exited unsuccessfully ({status})")]
     CompilerFailed { status: String },
 
-    #[error("Tectonic completed successfully but did not create a PDF at {0}")]
+    #[error("LaTeX compiler completed successfully but did not create a PDF at {0}")]
     CompiledPdfMissing(String),
 
     #[error("Failed to resolve an application runtime path: {0}")]
     RuntimePath(String),
 
-    #[error("Tectonic output worker failed: {0}")]
+    #[error("LaTeX compiler output worker failed: {0}")]
     CompilerWorker(String),
 }
 

@@ -171,6 +171,7 @@ pub fn run() {
             commands::ai::ai_process,
             commands::ai::ai_process_custom,
             commands::ai::ai_research_chat,
+            commands::ai::ai_cancel_research_chat,
             commands::ai::ai_plan_zotero,
             commands::ai::ai_update_context,
             commands::ai::ai_save_api_key,

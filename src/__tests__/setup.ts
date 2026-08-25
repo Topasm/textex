@@ -139,6 +139,7 @@ Object.defineProperty(window, 'api', {
     aiProcess: vi.fn(),
     aiProcessCustom: vi.fn(),
     aiResearchChat: vi.fn(),
+    aiCancelResearchChat: vi.fn().mockResolvedValue(true),
     aiPlanZotero: vi.fn(),
     aiUpdateContext: vi.fn(),
     aiCheckCli: vi.fn(),

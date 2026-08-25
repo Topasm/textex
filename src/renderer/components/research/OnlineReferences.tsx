@@ -7,6 +7,7 @@ import {
   setReferenceDragData,
   type ReferenceDragPayload
 } from './referenceActions'
+import { invalidateZoteroInventory } from '../../services/zoteroInventoryCache'
 import { useProjectStore } from '../../store/useProjectStore'
 import { useSettingsStore } from '../../store/useSettingsStore'
 
@@ -122,6 +123,7 @@ export function OnlineReferences({ onAddToChat }: OnlineReferencesProps = {}) {
       try {
         const result = await window.api.zoteroSaveOnline(reference, port)
         if (!isCurrentScope(generation, root, apiPort)) return
+        invalidateZoteroInventory(port)
         setMessage(
           result.duplicate
             ? `Already in Zotero${result.citekey ? ` as @${result.citekey}` : ''}.`

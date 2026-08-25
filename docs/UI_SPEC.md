@@ -69,8 +69,18 @@ ErrorBoundary
 ### `ResearchPanel.tsx`
 
 - Resizable and collapsible right-side panel, persisted per project and closed by default.
+- On desktop its navigation rail occupies the right end of the 40 px title-bar row, while the
+  document page/zoom controls retain their existing toolbar group to the left. Below 1200 px the
+  panel returns below the title bar as a compact overlay so window controls remain reachable.
+- Left Navigator and right Research navigation are both icon-only. Every icon remains a named
+  button/tab through `aria-label` and `title`; active state uses the same accent underline rather
+  than mixing labelled and unlabelled top-level navigation.
 - Uses an overlay with backdrop and Escape dismissal below 1200 px.
-- **Chat** contains AI Draft and Claude/Codex CLI entry points.
+- Visited tabs remain mounted while the panel is open, so Chat requests, queued prompts, draft
+  text, and the Zotero inventory survive tab switches without repeating native work.
+- **Chat** contains AI Draft and Claude/Codex CLI entry points. In-flight research requests expose
+  a Stop control backed by native cancellation, and approved source edits can apply and compile in
+  one reviewable action.
 - **References** is a unified current-paper manager: it cross-checks citations in project `.tex`
   files, bibliography entries, and Zotero items instead of separating Project and Zotero into
   peer tabs. Cited, missing, unused, linked, and Zotero-only states share one filterable list.
@@ -80,6 +90,8 @@ ErrorBoundary
   a collection loads its papers progressively, and cards distinguish project citekeys from
   Zotero-only items. Manual `zotero.bib` sync requires a new/removed/unchanged preview; individual
   additions and Crossref/arXiv results merge into `references.bib` before citation insertion.
+- Reference health follows editor revisions and overlays unsaved `.tex` content on the native
+  project scan. Whole-library Zotero inventory is cached briefly and invalidated after writes.
 - Reference matching uses exact DOI, arXiv identifier, then Better BibTeX citekey. A normalized
   title-and-year match is shown only as a reviewable possibility and is never linked automatically.
   Crossref/arXiv is a secondary fallback shown after local Project + Zotero search has no result;
@@ -155,17 +167,18 @@ ErrorBoundary
 - Empty state: "No PDF to display" placeholder.
 
 ### `LogPanel.tsx`
-- Collapsible panel at the bottom (default: hidden).
-- Auto-opens when a compilation error occurs.
+- Embedded in the right Research panel's Problems tab.
 - Two tabs: **Problems** (structured) and **Output** (raw).
-- **Output tab:** stdout+stderr from Tectonic, streamed in real time, auto-scroll.
+- **Output tab:** stdout+stderr from the selected LaTeX compiler, streamed in real time,
+  auto-scroll.
 - **Problems tab:**
   - Diagnostics grouped by file with collapsible headers and per-file error/warning counts.
   - Severity filter buttons (errors/warnings/info) to toggle visibility.
   - Problem count shown in tab label: `Problems (5)`.
   - Click any diagnostic to jump editor to that line.
-- Monospace font, 200px height.
-- "Clear" button to reset log content. "Close" button to collapse.
+- Header actions can prefill Research Chat or launch the configured Claude/Codex CLI with bounded,
+  shell-safe diagnostic and raw-log context.
+- "Clear" resets the bounded log content.
 
 ### `StatusBar.tsx`
 - Fixed bar at the very bottom, styled with the VS Code blue accent color.
@@ -192,7 +205,9 @@ ErrorBoundary
   Format on Save, Auto-hide Sidebar).
 - **AI**: Native HTTP/CLI provider, model, credential, and prompt controls.
 - **Integrations**: Zotero and Git cards.
-- **Automation**: Auto Compile, external-file watching, Spell Check, and TexLab toggles.
+- **Automation**: Tectonic/system pdfLaTeX engine selector, Auto Compile,
+  external-file watching, Spell Check, and TexLab toggles. Tectonic cache controls
+  are shown while the bundled engine is selected.
 - All styling uses `settings-*` CSS classes referencing CSS custom properties
   (`--accent`, `--bg-input`, `--card-bg`, etc.) — fully themed across dark/light/high-contrast.
 - Toggle component uses `aria-checked` attribute with CSS-only animation (no JS class toggling).
@@ -281,6 +296,9 @@ Components subscribe with fine-grained selectors; there is no monolithic `useApp
 - Plain CSS (no Tailwind) in `src/renderer/styles/index.css`.
 - Themes use CSS custom properties; the settings UI exposes light, dark, glass,
   and system-following modes.
+- Glass uses warm neutral, nearly opaque workspace surfaces for legibility. Blur
+  is reserved for floating controls, while blue is limited to selection and
+  action accents.
 - Color palette (dark defaults shown):
   - Background: `#1e1e1e` (`--bg-primary`)
   - Editor gutter / sidebar: `#252526` (`--bg-secondary`)

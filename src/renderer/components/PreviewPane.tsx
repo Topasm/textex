@@ -13,6 +13,8 @@ import { useCitationTooltip } from '../hooks/preview/useCitationTooltip'
 import { useContainerSize } from '../hooks/preview/useContainerSize'
 import CitationTooltip from './CitationTooltip'
 import { runtimePerformance } from '../services/runtimePerformance'
+import { normalizeDocumentId } from '../models/documentRegistry'
+import { projectPathKey } from '../services/projectIndex'
 import {
   initialPdfGenerationState,
   reducePdfGeneration,
@@ -51,6 +53,7 @@ interface PageViewportInfo {
 function PreviewPane() {
   const pdfPath = useCompileStore((s) => s.pdfPath)
   const pdfRevision = useCompileStore((s) => s.pdfRevision)
+  const pdfDocumentId = useCompileStore((s) => s.pdfDocumentId)
   const compileStatus = useCompileStore((s) => s.compileStatus)
   const zoomLevel = usePdfStore((s) => s.zoomLevel)
   const fitRequest = usePdfStore((s) => s.fitRequest)
@@ -58,8 +61,16 @@ function PreviewPane() {
   const pdfViewMode = useSettingsStore((s) => s.settings.pdfViewMode ?? 'continuous')
   const currentPage = usePdfStore((s) => s.currentPage)
   const projectRoot = useProjectStore((s) => s.projectRoot)
+  const viewPositionKey = useMemo(() => {
+    if (pdfDocumentId) return `document:${normalizeDocumentId(pdfDocumentId)}`
+    if (projectRoot) return `project:${projectPathKey(projectRoot)}`
+    return pdfPath ? `pdf:${normalizeDocumentId(pdfPath)}` : null
+  }, [pdfDocumentId, pdfPath, projectRoot])
   const containerRef = useRef<HTMLDivElement>(null)
   const scrollPositionRef = useRef(0)
+  const currentPageRef = useRef(1)
+  const activeViewPositionKeyRef = useRef<string | null>(null)
+  const displayedViewPositionKeyRef = useRef<string | null>(null)
   const [pdfError, setPdfError] = useState<string | null>(null)
   const pageViewportsRef = useRef<Map<number, PageViewportInfo>>(new Map())
   const [generationState, dispatchGeneration] = useReducer(
@@ -224,11 +235,62 @@ function PreviewPane() {
     // Debounced persist of scroll position per project
     if (scrollPersistTimerRef.current) clearTimeout(scrollPersistTimerRef.current)
     scrollPersistTimerRef.current = setTimeout(() => {
-      if (projectRoot && containerRef.current) {
-        usePdfStore.getState().saveScrollPosition(projectRoot, containerRef.current.scrollTop)
+      if (!containerRef.current) return
+      const scrollTop = containerRef.current.scrollTop
+      const pdfStore = usePdfStore.getState()
+      if (projectRoot) pdfStore.saveScrollPosition(projectRoot, scrollTop)
+      if (viewPositionKey) {
+        pdfStore.saveViewPosition(viewPositionKey, currentPageRef.current, scrollTop)
       }
     }, SCROLL_PERSIST_DEBOUNCE_MS)
-  }, [computeVisiblePages, projectRoot, pdfViewMode])
+  }, [computeVisiblePages, projectRoot, pdfViewMode, viewPositionKey])
+
+  // Capture page changes in both continuous and single-page modes. The refs
+  // deliberately update in effects so a project-clear render cannot overwrite
+  // the previous document's cleanup snapshot with page 1.
+  useEffect(() => {
+    currentPageRef.current = currentPage
+    if (viewPositionKey && activeViewPositionKeyRef.current === viewPositionKey) {
+      usePdfStore
+        .getState()
+        .saveViewPosition(viewPositionKey, currentPage, scrollPositionRef.current)
+    }
+  }, [currentPage, viewPositionKey])
+
+  // Restore an independent view for each compiled source document. Saving in
+  // cleanup also covers a quick project/document switch before the debounced
+  // scroll persistence timer fires.
+  useEffect(() => {
+    if (!viewPositionKey) {
+      scrollPositionRef.current = 0
+      currentPageRef.current = 1
+      activeViewPositionKeyRef.current = null
+      return
+    }
+
+    const pdfStore = usePdfStore.getState()
+    const saved = pdfStore.getViewPosition(viewPositionKey)
+    const hasDocumentView = Object.keys(pdfStore.savedViewPositions).some((key) =>
+      key.startsWith('document:')
+    )
+    const restoredScroll =
+      saved?.scrollTop ??
+      (!hasDocumentView && projectRoot ? pdfStore.getScrollPosition(projectRoot) : 0)
+    const restoredPage = saved?.currentPage ?? 1
+    scrollPositionRef.current = restoredScroll
+    currentPageRef.current = restoredPage
+    activeViewPositionKeyRef.current = viewPositionKey
+    pdfStore.setCurrentPage(restoredPage)
+    const viewContainer = containerRef.current
+
+    return () => {
+      const scrollTop = viewContainer?.scrollTop ?? scrollPositionRef.current
+      pdfStore.saveViewPosition(viewPositionKey, currentPageRef.current, scrollTop)
+      if (activeViewPositionKeyRef.current === viewPositionKey) {
+        activeViewPositionKeyRef.current = null
+      }
+    }
+  }, [projectRoot, viewPositionKey])
 
   // Slide animation direction for single-page mode
   const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null)
@@ -238,6 +300,7 @@ function PreviewPane() {
   // In single-page mode: accumulate deltaX/deltaY for page navigation.
   const swipeAccumRef = useRef(0)
   const swipeCooldownRef = useRef(false)
+  const previousPdfViewModeRef = useRef(pdfViewMode)
 
   useEffect(() => {
     const el = containerRef.current
@@ -339,13 +402,15 @@ function PreviewPane() {
 
   // Handle view mode transitions
   useEffect(() => {
+    const previousViewMode = previousPdfViewModeRef.current
+    previousPdfViewModeRef.current = pdfViewMode
     if (numPages === 0) return
     if (pdfViewMode === 'single') {
       // Clamp currentPage to valid range
       const cp = usePdfStore.getState().currentPage
       const clamped = clampPage(cp, numPages)
       if (clamped !== cp) usePdfStore.getState().setCurrentPage(clamped)
-    } else {
+    } else if (previousViewMode === 'single') {
       // Switching to continuous — scroll to the current page position
       const cp = usePdfStore.getState().currentPage
       const container = containerRef.current
@@ -387,6 +452,7 @@ function PreviewPane() {
   useEffect(() => {
     if (!pdfPath) {
       dispatchGeneration({ type: 'clear' })
+      displayedViewPositionKeyRef.current = null
       setPdfError(null)
       return
     }
@@ -420,7 +486,10 @@ function PreviewPane() {
 
   const initializeDisplayedGeneration = useCallback(
     (loadedNumPages: number, restoreScroll: boolean) => {
-      const targetPage = clampPage(usePdfStore.getState().currentPage, loadedNumPages)
+      const requestedPage = restoreScroll
+        ? currentPageRef.current
+        : usePdfStore.getState().currentPage
+      const targetPage = clampPage(requestedPage, loadedNumPages)
       pageViewportsRef.current.clear()
       setPageAspectRatios(new Map())
       setVisibleRange(computeVisibleRange(targetPage, targetPage, loadedNumPages))
@@ -429,16 +498,11 @@ function PreviewPane() {
       if (!restoreScroll) return
       requestAnimationFrame(() => {
         if (!containerRef.current) return
-        const sessionScroll = scrollPositionRef.current
-        if (sessionScroll > 0) {
-          containerRef.current.scrollTop = sessionScroll
-        } else if (projectRoot) {
-          const saved = usePdfStore.getState().getScrollPosition(projectRoot)
-          if (saved > 0) containerRef.current.scrollTop = saved
-        }
+        containerRef.current.scrollTop = scrollPositionRef.current
+        usePdfStore.getState().setCurrentPage(targetPage)
       })
     },
-    [projectRoot]
+    []
   )
 
   const handleDocumentLoadSuccess = useCallback(
@@ -454,9 +518,10 @@ function PreviewPane() {
       if (isInitialDisplayedLoad) {
         setPdfError(null)
         initializeDisplayedGeneration(loadedNumPages, true)
+        displayedViewPositionKeyRef.current = viewPositionKey
       }
     },
-    [initializeDisplayedGeneration]
+    [initializeDisplayedGeneration, viewPositionKey]
   )
 
   const handleDocumentLoadError = useCallback((generationRevision: number, error: Error) => {
@@ -526,14 +591,16 @@ function PreviewPane() {
         const targetPage = clampPage(usePdfStore.getState().currentPage, pending.numPages)
         if (pageNumber !== targetPage) return
 
-        initializeDisplayedGeneration(pending.numPages, false)
+        const restoreDocumentView = displayedViewPositionKeyRef.current !== viewPositionKey
+        initializeDisplayedGeneration(pending.numPages, restoreDocumentView)
         capturePageViewport(generationRevision, pageNumber, page)
         runtimePerformance.recordPdfPageRendered(generationRevision)
         setPdfError(null)
         dispatchGeneration({ type: 'ready', revision: generationRevision })
+        displayedViewPositionKeyRef.current = viewPositionKey
       }
     },
-    [capturePageViewport, initializeDisplayedGeneration]
+    [capturePageViewport, initializeDisplayedGeneration, viewPositionKey]
   )
 
   const renderGenerationPages = (

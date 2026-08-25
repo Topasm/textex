@@ -178,6 +178,8 @@ pub async fn ai_research_chat(
     // The renderer is an IPC caller, so even fields that native code later
     // replaces must first fit the bounded request envelope.
     ai::validate_research_chat_request(&request)?;
+    let mut active_request =
+        ai::register_cancellable_request(ai_state.inner(), request.request_id.as_deref())?;
     let settings = current_settings(&app, ai_state.inner(), settings_state.inner()).await?;
     let cli_work_dir = ai::cli_work_dir(&app)?;
     let (project_root, project_epoch, starting_profile, expansions) = {
@@ -222,6 +224,15 @@ pub async fn ai_research_chat(
     .await
     .map_err(|_| AppError::Ai("native reference context assembly timed out".to_owned()))??;
 
+    if active_request
+        .as_ref()
+        .is_some_and(ai::ActiveAiRequest::is_cancelled)
+    {
+        return Err(AppError::Ai(
+            "Research Chat request was cancelled".to_owned(),
+        ));
+    }
+
     // Native metadata and source/snapshot enrichment can make the request
     // larger than the renderer-provided selection hints. Enforce the same
     // complete envelope again before any provider request is started.
@@ -238,14 +249,24 @@ pub async fn ai_research_chat(
         validate_document_context_sources(project_state.inner(), &request).await?;
     }
 
-    let response = ai::research_chat(
+    let credential_path = ai::credential_path(&app)?;
+    let provider_request = ai::research_chat(
         ai_state.inner(),
-        &ai::credential_path(&app)?,
+        &credential_path,
         &cli_work_dir,
         &settings,
         &request,
-    )
-    .await?;
+    );
+    let response = if let Some(active_request) = active_request.as_mut() {
+        tokio::select! {
+            response = provider_request => response?,
+            () = active_request.cancelled() => {
+                return Err(AppError::Ai("Research Chat request was cancelled".to_owned()));
+            }
+        }
+    } else {
+        provider_request.await?
+    };
 
     // The network call must not block project close or profile edits. Before
     // publishing its result, prove that its authorization snapshot is still
@@ -256,6 +277,14 @@ pub async fn ai_research_chat(
     ensure_research_profile_current(project_state.inner(), &starting_profile).await?;
     validate_document_context_sources(project_state.inner(), &request).await?;
     Ok(response)
+}
+
+#[tauri::command]
+pub fn ai_cancel_research_chat(
+    ai_state: State<'_, AiState>,
+    request_id: String,
+) -> AppResult<bool> {
+    ai::cancel_request(ai_state.inner(), &request_id)
 }
 
 #[tauri::command]
@@ -965,7 +994,13 @@ pub async fn ai_open_claude_terminal(
 ) -> AppResult<AiTerminalResult> {
     let work_dir =
         filesystem::resolve_project_directory(project_state.inner(), &request.work_dir).await?;
-    ai::open_terminal("claude", &work_dir, request.resume).await
+    ai::open_terminal(
+        "claude",
+        &work_dir,
+        request.resume,
+        request.prompt.as_deref(),
+    )
+    .await
 }
 
 #[tauri::command]
@@ -975,7 +1010,13 @@ pub async fn ai_open_codex_terminal(
 ) -> AppResult<AiTerminalResult> {
     let work_dir =
         filesystem::resolve_project_directory(project_state.inner(), &request.work_dir).await?;
-    ai::open_terminal("codex", &work_dir, request.resume).await
+    ai::open_terminal(
+        "codex",
+        &work_dir,
+        request.resume,
+        request.prompt.as_deref(),
+    )
+    .await
 }
 
 #[cfg(test)]
@@ -1002,6 +1043,7 @@ mod tests {
     fn resource_request(profile: &ResearchProfile) -> ResearchChatRequest {
         let resource = &profile.resources[0];
         ResearchChatRequest {
+            request_id: None,
             message: "Where is training implemented?".to_owned(),
             history: Vec::new(),
             contexts: vec![ResearchChatContext {
@@ -1129,6 +1171,7 @@ mod tests {
                 reference: None,
             };
             let mut request = ResearchChatRequest {
+                request_id: None,
                 message: "Question".to_owned(),
                 history: Vec::new(),
                 contexts: vec![context.clone(), context],
@@ -1200,6 +1243,7 @@ mod tests {
             r#abstract: Some("Validated abstract metadata.".to_owned()),
         };
         let mut request = ResearchChatRequest {
+            request_id: None,
             message: "Compare this reference.".to_owned(),
             history: Vec::new(),
             contexts: vec![ResearchChatContext {
@@ -1249,6 +1293,7 @@ mod tests {
             })
             .collect();
         let mut request = ResearchChatRequest {
+            request_id: None,
             message: "Compare references.".to_owned(),
             history: Vec::new(),
             contexts,

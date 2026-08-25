@@ -309,6 +309,11 @@
     },
     "automation": {
       "compilerTools": "컴파일러 및 도구",
+      "compilerEngine": "컴파일 엔진",
+      "tectonicOption": "Tectonic (내장)",
+      "pdfLatexOption": "pdfLaTeX (시스템)",
+      "tectonicDesc": "로컬 TeX 설치 없이 내장된 Tectonic 엔진을 사용합니다.",
+      "pdfLatexDesc": "시스템 latexmk를 pdfLaTeX 모드로 사용합니다. MacTeX를 자동 탐색하며 latexmkrc 설정은 무시합니다.",
       "autoCompile": "자동 컴파일",
       "autoCompileDesc": "편집 후 잠시 기다리면 자동으로 저장하고 컴파일",
       "watchOpenFiles": "열린 파일 감시",

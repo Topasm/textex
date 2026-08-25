@@ -46,8 +46,9 @@ describe('Tauri AI DesktopApi adapter', () => {
     await api.aiHasApiKey('openai')
     await api.aiCheckCli()
     await api.aiCheckCodexCli()
+    await api.aiCancelResearchChat('request-1')
     await api.aiOpenClaudeTerminal({ workDir: '/project', resume: true })
-    await api.aiOpenCodexTerminal({ workDir: '/project' })
+    await api.aiOpenCodexTerminal({ workDir: '/project', prompt: 'Fix the build.' })
 
     expect(invokeMock.mock.calls).toEqual([
       ['ai_generate', { input: 'outline', provider: 'openai', model: 'gpt-5.4' }],
@@ -58,8 +59,9 @@ describe('Tauri AI DesktopApi adapter', () => {
       ['ai_has_api_key', { provider: 'openai' }],
       ['ai_check_cli'],
       ['ai_check_codex_cli'],
+      ['ai_cancel_research_chat', { requestId: 'request-1' }],
       ['ai_open_claude_terminal', { request: { workDir: '/project', resume: true } }],
-      ['ai_open_codex_terminal', { request: { workDir: '/project' } }]
+      ['ai_open_codex_terminal', { request: { workDir: '/project', prompt: 'Fix the build.' } }]
     ])
   })
 })

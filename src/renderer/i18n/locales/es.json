@@ -309,6 +309,11 @@
     },
     "automation": {
       "compilerTools": "Compilador y herramientas",
+      "compilerEngine": "Motor de compilación",
+      "tectonicOption": "Tectonic (incluido)",
+      "pdfLatexOption": "pdfLaTeX (sistema)",
+      "tectonicDesc": "Usa el motor Tectonic incluido sin requerir una instalación local de TeX.",
+      "pdfLatexDesc": "Usa latexmk del sistema en modo pdfLaTeX. MacTeX se detecta automáticamente y se ignoran los archivos latexmkrc.",
       "autoCompile": "Compilación automática",
       "autoCompileDesc": "Guardar y compilar automáticamente poco después de editar",
       "watchOpenFiles": "Vigilar archivos abiertos",

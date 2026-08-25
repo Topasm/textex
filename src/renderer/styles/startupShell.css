@@ -23,6 +23,18 @@
   --startup-shimmer: rgba(59, 53, 48, 0.08);
 }
 
+[data-theme='glass'] {
+  --startup-bg: #f5f4f1;
+  --startup-surface: #f7f6f3;
+  --startup-elevated: #ebeae7;
+  --startup-border: #deddd8;
+  --startup-text: #37352f;
+  --startup-muted: #787774;
+  --startup-accent: #155dff;
+  --startup-page: #ffffff;
+  --startup-shimmer: rgba(55, 53, 47, 0.08);
+}
+
 [data-theme='high-contrast'] {
   --startup-bg: #000000;
   --startup-surface: #000000;

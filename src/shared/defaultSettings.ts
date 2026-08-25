@@ -16,6 +16,7 @@ export function createDefaultUserSettings(): UserSettings {
   return {
     theme: 'system',
     fontSize: 14,
+    latexEngine: 'tectonic',
     autoCompile: true,
     watchOpenFiles: true,
     spellCheckEnabled: false,

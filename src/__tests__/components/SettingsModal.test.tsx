@@ -44,6 +44,10 @@ describe('SettingsModal', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Automation' }))
     expect(screen.getByText('Auto Compile')).toBeInTheDocument()
+    const compilerEngine = screen.getByRole('combobox', { name: 'Compiler engine' })
+    fireEvent.change(compilerEngine, { target: { value: 'pdf-latex' } })
+    expect(useSettingsStore.getState().settings.latexEngine).toBe('pdf-latex')
+    expect(screen.getByText(/Use system latexmk in pdfLaTeX mode/)).toBeInTheDocument()
     const languageServer = screen.queryByText('Language Server')
     if (getDesktopCapabilities().lsp) expect(languageServer).toBeInTheDocument()
     else expect(languageServer).not.toBeInTheDocument()

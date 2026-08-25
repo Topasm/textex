@@ -275,6 +275,7 @@ export interface DesktopApi {
   aiProcess(request: AiProcessRequest): Promise<string>
   aiProcessCustom(request: AiCustomProcessRequest): Promise<string>
   aiResearchChat(request: ResearchChatRequest): Promise<ResearchChatResponse>
+  aiCancelResearchChat(requestId: string): Promise<boolean>
   aiPlanZotero(request: ZoteroPlanRequest, port?: number): Promise<ZoteroMutationPlan>
   aiUpdateContext(filePath: string, content: string): Promise<AiContextEntry>
   aiCheckCli(): Promise<boolean>

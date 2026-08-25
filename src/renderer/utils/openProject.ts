@@ -16,6 +16,7 @@ import {
 import type { DirectoryEntry } from '../../shared/types'
 import { projectPathKey } from '../services/projectIndex'
 import { discardRecoveryForFiles } from '../services/crashRecovery'
+import { findDefaultTexFile } from '../services/defaultTexFile'
 
 interface OpenProjectOptions {
   autoOpenFirstTex?: boolean
@@ -309,8 +310,9 @@ export async function openProject(
   }
   useProjectStore.getState().setSidebarView('files')
 
-  // Auto-open first .tex file
-  const texFile = tree.find((e) => e.type === 'file' && e.name.endsWith('.tex'))
+  // Prefer the conventional root document and support projects whose TeX
+  // sources live below the project root.
+  const texFile = findDefaultTexFile(tree)
   if (autoOpenFirstTex && texFile) {
     try {
       const result = await window.api.readFile(texFile.path)

@@ -1,5 +1,5 @@
 use std::{
-    ffi::OsStr,
+    ffi::{OsStr, OsString},
     io,
     path::{Path, PathBuf},
     process::{ExitStatus, Stdio},
@@ -20,7 +20,7 @@ use crate::{
     error::{AppError, AppResult},
     models::{
         CompileDiagnostic, CompileDiagnosticSeverity, CompileEvent, CompileIdentity,
-        CompileRequest, CompileResponse, CompileStage,
+        CompileRequest, CompileResponse, CompileStage, LatexEngine,
     },
     services::tectonic_cache,
     state::AppState,
@@ -49,9 +49,20 @@ struct ChildRun {
     output: String,
 }
 
+enum ResolvedCompiler {
+    Tectonic {
+        executable: PathBuf,
+        cache: tectonic_cache::PreparedCache,
+    },
+    PdfLatex {
+        executable: PathBuf,
+    },
+}
+
 pub async fn compile_latex(
     app: &AppHandle,
     state: &AppState,
+    latex_engine: LatexEngine,
     request: CompileRequest,
     on_event: Channel<CompileEvent>,
 ) -> AppResult<CompileResponse> {
@@ -61,21 +72,37 @@ pub async fn compile_latex(
     let selected_tex_path = validate_project_tex_file(state, &request.file_path).await?;
     let tex_path = resolve_magic_root(state, &selected_tex_path).await?;
     let display_tex_path = path_to_string(&tex_path)?;
-    let tectonic_path = resolve_tectonic_executable(app)?;
-    let tectonic_cache::PreparedCache {
-        path: cache_dir,
-        status: cache_status,
-        lease: cache_lease,
-    } = tectonic_cache::prepare(app).await?;
+    let compiler = match latex_engine {
+        LatexEngine::Tectonic => ResolvedCompiler::Tectonic {
+            executable: resolve_tectonic_executable(app)?,
+            cache: tectonic_cache::prepare(app).await?,
+        },
+        LatexEngine::PdfLatex => ResolvedCompiler::PdfLatex {
+            executable: resolve_latexmk_executable()?,
+        },
+    };
     let mut lease = state.begin_compilation(&request, project_epoch).await?;
     if project_epoch_tracker.load(Ordering::Acquire) != project_epoch {
         return Err(AppError::CompilationCancelled);
     }
 
-    let _ = on_event.send(CompileEvent::Log {
-        identity: identity.clone(),
-        text: cache_status,
-    });
+    match &compiler {
+        ResolvedCompiler::Tectonic { cache, .. } => {
+            let _ = on_event.send(CompileEvent::Log {
+                identity: identity.clone(),
+                text: cache.status.clone(),
+            });
+        }
+        ResolvedCompiler::PdfLatex { executable } => {
+            let _ = on_event.send(CompileEvent::Log {
+                identity: identity.clone(),
+                text: format!(
+                    "Using system pdfLaTeX through latexmk at {}. Project latexmkrc files are ignored.\n",
+                    executable.to_string_lossy()
+                ),
+            });
+        }
+    }
 
     send_progress(
         &on_event,
@@ -88,16 +115,33 @@ pub async fn compile_latex(
         diagnostics: Vec::new(),
     });
 
-    let result = run_tectonic(
-        &tectonic_path,
-        &tex_path,
-        &cache_dir,
-        identity.clone(),
-        on_event.clone(),
-        lease.cancel_receiver(),
-        COMPILE_TIMEOUT,
-    )
-    .await;
+    let result = match &compiler {
+        ResolvedCompiler::Tectonic {
+            executable, cache, ..
+        } => {
+            run_tectonic(
+                executable,
+                &tex_path,
+                &cache.path,
+                identity.clone(),
+                on_event.clone(),
+                lease.cancel_receiver(),
+                COMPILE_TIMEOUT,
+            )
+            .await
+        }
+        ResolvedCompiler::PdfLatex { executable } => {
+            run_latexmk(
+                executable,
+                &tex_path,
+                identity.clone(),
+                on_event.clone(),
+                lease.cancel_receiver(),
+                COMPILE_TIMEOUT,
+            )
+            .await
+        }
+    };
 
     // Serialize the final epoch check with project close/open transitions so
     // a completed child cannot publish Done or return a PDF for a project
@@ -132,9 +176,9 @@ pub async fn compile_latex(
         ),
     }
 
-    // The cache may be reset only after the child has exited and all compile
-    // result handling above has finished.
-    drop(cache_lease);
+    // Keep a prepared Tectonic cache lease (when selected) until the child has
+    // exited and all compile result handling above has finished.
+    drop(compiler);
     result.map(|pdf_path| CompileResponse {
         identity,
         pdf_path,
@@ -192,8 +236,6 @@ async fn run_tectonic(
             tex_path.to_string_lossy()
         ))
     })?;
-    let display_tectonic_path = tectonic_path.to_string_lossy().into_owned();
-
     let mut command = Command::new(tectonic_path);
     command
         .arg("-X")
@@ -208,16 +250,90 @@ async fn run_tectonic(
         .kill_on_drop(true);
     isolate_process_group(&mut command);
 
+    run_configured_compiler(
+        command,
+        tectonic_path,
+        tex_path,
+        identity,
+        on_event,
+        cancel_receiver,
+        timeout,
+    )
+    .await
+}
+
+async fn run_latexmk(
+    latexmk_path: &Path,
+    tex_path: &Path,
+    identity: CompileIdentity,
+    on_event: Channel<CompileEvent>,
+    cancel_receiver: &mut oneshot::Receiver<()>,
+    timeout: Duration,
+) -> AppResult<String> {
+    let working_directory = tex_path.parent().ok_or_else(|| {
+        AppError::InvalidPath(format!(
+            "compile input has no parent directory: {}",
+            tex_path.to_string_lossy()
+        ))
+    })?;
+
+    let mut command = Command::new(latexmk_path);
+    command
+        .args(latexmk_arguments(tex_path))
+        .current_dir(working_directory)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .kill_on_drop(true);
+    isolate_process_group(&mut command);
+
+    run_configured_compiler(
+        command,
+        latexmk_path,
+        tex_path,
+        identity,
+        on_event,
+        cancel_receiver,
+        timeout,
+    )
+    .await
+}
+
+fn latexmk_arguments(tex_path: &Path) -> Vec<OsString> {
+    // Ignore system, user, and project latexmkrc files so an existing
+    // XeLaTeX/LuaLaTeX override cannot change the selected engine.
+    [
+        OsString::from("-norc"),
+        OsString::from("-pdf"),
+        OsString::from("-synctex=1"),
+        OsString::from("-interaction=nonstopmode"),
+        OsString::from("-file-line-error"),
+        OsString::from("-halt-on-error"),
+        tex_path.as_os_str().to_owned(),
+    ]
+    .into()
+}
+
+async fn run_configured_compiler(
+    mut command: Command,
+    compiler_path: &Path,
+    tex_path: &Path,
+    identity: CompileIdentity,
+    on_event: Channel<CompileEvent>,
+    cancel_receiver: &mut oneshot::Receiver<()>,
+    timeout: Duration,
+) -> AppResult<String> {
+    let display_compiler_path = compiler_path.to_string_lossy().into_owned();
     let child = command
         .spawn()
-        .map_err(|source| AppError::compiler_io("start", display_tectonic_path.clone(), source))?;
+        .map_err(|source| AppError::compiler_io("start", display_compiler_path.clone(), source))?;
     let child_run = monitor_child(
         child,
         cancel_receiver,
         timeout,
         identity.clone(),
         on_event.clone(),
-        &display_tectonic_path,
+        &display_compiler_path,
     )
     .await?;
 
@@ -258,10 +374,10 @@ async fn monitor_child(
     display_tectonic_path: &str,
 ) -> AppResult<ChildRun> {
     let stdout = child.stdout.take().ok_or_else(|| {
-        AppError::CompilerWorker("Tectonic stdout pipe was not created".to_owned())
+        AppError::CompilerWorker("compiler stdout pipe was not created".to_owned())
     })?;
     let stderr = child.stderr.take().ok_or_else(|| {
-        AppError::CompilerWorker("Tectonic stderr pipe was not created".to_owned())
+        AppError::CompilerWorker("compiler stderr pipe was not created".to_owned())
     })?;
 
     let stdout_task = tokio::spawn(forward_output(stdout, identity.clone(), on_event.clone()));
@@ -457,6 +573,16 @@ fn parse_tectonic_diagnostics(output: &str, root_file: &Path) -> Vec<CompileDiag
                 index,
                 root_file,
             ))
+        } else if let Some((file, line, column, message)) = parse_location(line) {
+            // pdfTeX's -file-line-error format is emitted without an "error:"
+            // prefix (for example, "./main.tex:12: Undefined control sequence").
+            Some(CompileDiagnostic {
+                file: diagnostic_file(root_file, Some(file)),
+                line,
+                column,
+                severity: CompileDiagnosticSeverity::Error,
+                message: message.to_owned(),
+            })
         } else if let Some(message) = line.strip_prefix('!') {
             let line_number = lines
                 .iter()
@@ -601,6 +727,10 @@ fn diagnostic_file(root_file: &Path, reported_file: Option<&str>) -> String {
     let Some(reported_file) = reported_file.filter(|file| !file.is_empty()) else {
         return root_file.to_string_lossy().into_owned();
     };
+    let reported_file = reported_file
+        .strip_prefix("./")
+        .or_else(|| reported_file.strip_prefix(".\\"))
+        .unwrap_or(reported_file);
     let reported_path = Path::new(reported_file);
     let resolved = if reported_path.is_absolute() {
         reported_path.to_path_buf()
@@ -781,6 +911,63 @@ fn strip_ascii_keyword<'a>(value: &'a str, keyword: &str) -> Option<&'a str> {
     prefix
         .eq_ignore_ascii_case(keyword)
         .then(|| &value[keyword.len()..])
+}
+
+fn resolve_latexmk_executable() -> AppResult<PathBuf> {
+    let path = std::env::var_os("PATH");
+    let candidates = system_latexmk_candidates(std::env::consts::OS, path.as_deref());
+
+    candidates
+        .iter()
+        .find(|candidate| candidate.is_file())
+        .cloned()
+        .ok_or_else(|| AppError::CompilerNotFound {
+            checked_paths: candidates
+                .iter()
+                .map(|path| path.to_string_lossy())
+                .collect::<Vec<_>>()
+                .join(", "),
+        })
+}
+
+fn system_latexmk_candidates(os: &str, path: Option<&OsStr>) -> Vec<PathBuf> {
+    let executable_name = if os == "windows" {
+        "latexmk.exe"
+    } else {
+        "latexmk"
+    };
+    let mut candidates = Vec::new();
+
+    // Desktop apps launched from Finder do not inherit the interactive shell
+    // PATH. MacTeX maintains this stable symlink independently of CPU type.
+    if os == "macos" {
+        push_unique(
+            &mut candidates,
+            Path::new("/Library/TeX/texbin").join(executable_name),
+        );
+        push_unique(
+            &mut candidates,
+            Path::new("/opt/homebrew/bin").join(executable_name),
+        );
+        push_unique(
+            &mut candidates,
+            Path::new("/usr/local/bin").join(executable_name),
+        );
+    } else if os != "windows" {
+        push_unique(
+            &mut candidates,
+            Path::new("/usr/local/bin").join(executable_name),
+        );
+        push_unique(&mut candidates, Path::new("/usr/bin").join(executable_name));
+    }
+
+    if let Some(path) = path {
+        for directory in std::env::split_paths(path) {
+            push_unique(&mut candidates, directory.join(executable_name));
+        }
+    }
+
+    candidates
 }
 
 fn resolve_tectonic_executable(app: &AppHandle) -> AppResult<PathBuf> {
@@ -970,6 +1157,7 @@ fn format_exit_status(status: ExitStatus) -> String {
 #[cfg(test)]
 mod tests {
     use std::{
+        ffi::OsString,
         path::Path,
         sync::atomic::{AtomicU64, Ordering},
     };
@@ -979,8 +1167,9 @@ mod tests {
 
     use super::{
         development_candidates, extract_magic_root, finalize_compile_for_project,
-        packaged_candidates, parse_tectonic_diagnostics, resolve_magic_root,
-        sidecar_source_filename, validate_compile_request, validate_project_tex_file,
+        latexmk_arguments, packaged_candidates, parse_tectonic_diagnostics, resolve_magic_root,
+        sidecar_source_filename, system_latexmk_candidates, validate_compile_request,
+        validate_project_tex_file,
     };
     #[cfg(unix)]
     use super::{isolate_process_group, monitor_child};
@@ -1030,6 +1219,20 @@ mod tests {
         assert_eq!(diagnostics.len(), 1);
         assert_eq!(diagnostics[0].file, "/project/main.tex");
         assert_eq!(diagnostics[0].line, 1);
+    }
+
+    #[test]
+    fn parses_pdftex_file_line_error_output() {
+        let root = Path::new("/project/main.tex");
+        let diagnostics = parse_tectonic_diagnostics(
+            "./chapters/one.tex:23: Undefined control sequence.\n",
+            root,
+        );
+
+        assert_eq!(diagnostics.len(), 1);
+        assert_eq!(diagnostics[0].file, "/project/chapters/one.tex");
+        assert_eq!(diagnostics[0].line, 23);
+        assert_eq!(diagnostics[0].message, "Undefined control sequence.");
     }
 
     #[test]
@@ -1140,6 +1343,42 @@ mod tests {
             "x86_64",
         );
         assert_eq!(windows_candidates[0], Path::new("C:/TextEx/tectonic.exe"));
+    }
+
+    #[test]
+    fn system_latexmk_resolution_covers_mactex_and_process_path() {
+        let process_path =
+            std::env::join_paths(["/custom/tex/bin", "/usr/local/bin"]).expect("join test PATH");
+        let candidates = system_latexmk_candidates("macos", Some(process_path.as_os_str()));
+
+        assert_eq!(candidates[0], Path::new("/Library/TeX/texbin/latexmk"));
+        assert!(candidates.contains(&Path::new("/opt/homebrew/bin/latexmk").to_path_buf()));
+        assert!(candidates.contains(&Path::new("/custom/tex/bin/latexmk").to_path_buf()));
+        assert_eq!(
+            candidates
+                .iter()
+                .filter(|candidate| *candidate == Path::new("/usr/local/bin/latexmk"))
+                .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn pdf_latex_invocation_ignores_rc_and_requests_submission_compatible_mode() {
+        let arguments = latexmk_arguments(Path::new("/project/main.tex"));
+        assert_eq!(
+            arguments,
+            [
+                "-norc",
+                "-pdf",
+                "-synctex=1",
+                "-interaction=nonstopmode",
+                "-file-line-error",
+                "-halt-on-error",
+                "/project/main.tex",
+            ]
+            .map(OsString::from)
+        );
     }
 
     #[tokio::test]

@@ -32,6 +32,8 @@ const aiProcessCustom: DesktopApi['aiProcessCustom'] = (request) =>
   invoke(TAURI_COMMANDS.aiProcessCustom, { request })
 const aiResearchChat: DesktopApi['aiResearchChat'] = (request) =>
   invoke(TAURI_COMMANDS.aiResearchChat, { request })
+const aiCancelResearchChat: DesktopApi['aiCancelResearchChat'] = (requestId) =>
+  invoke(TAURI_COMMANDS.aiCancelResearchChat, { requestId })
 const aiPlanZotero: DesktopApi['aiPlanZotero'] = (request, port) =>
   invoke(TAURI_COMMANDS.aiPlanZotero, { request, port })
 const aiUpdateContext: DesktopApi['aiUpdateContext'] = (filePath, content) =>
@@ -832,6 +834,7 @@ const tauriDesktopApi = {
   aiProcess,
   aiProcessCustom,
   aiResearchChat,
+  aiCancelResearchChat,
   aiPlanZotero,
   aiUpdateContext,
   aiSaveApiKey,

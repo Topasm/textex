@@ -142,9 +142,9 @@ body:has(
 }
 
 [data-theme='glass'] .app-notification {
-  background: color-mix(in srgb, var(--ui-surface-raised, var(--bg-secondary)) 94%, transparent);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: color-mix(in srgb, var(--ui-surface-raised, var(--bg-secondary)) 98%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 @media (prefers-reduced-motion: reduce) {

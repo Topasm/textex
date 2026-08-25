@@ -1,14 +1,30 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ChevronDown, ChevronRight, CircleX, Info, TriangleAlert } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronRight,
+  CircleX,
+  Info,
+  LoaderCircle,
+  MessageSquareText,
+  SquareTerminal,
+  TriangleAlert
+} from 'lucide-react'
 import { useCompileStore } from '../store/useCompileStore'
 import type { Diagnostic, DiagnosticSeverity } from '../../shared/types'
 import { navigateToDiagnostic } from '../services/diagnosticNavigation'
 import { ICON_SIZE } from './ui/IconSystem'
+import { buildDiagnosticRepairPrompt } from '../services/diagnosticRepair'
 
 type SeverityFilter = 'error' | 'warning' | 'info'
 
-function LogPanel() {
+interface LogPanelProps {
+  onFixWithChat?: (prompt: string) => void
+  onFixWithCli?: (prompt: string) => Promise<void>
+  cliName?: string
+}
+
+function LogPanel({ onFixWithChat, onFixWithCli, cliName = 'Codex CLI' }: LogPanelProps) {
   const { t } = useTranslation()
   const logs = useCompileStore((s) => s.logs)
   const diagnostics = useCompileStore((s) => s.diagnostics)
@@ -19,6 +35,7 @@ function LogPanel() {
   const [activeFilters, setActiveFilters] = useState<Set<SeverityFilter>>(
     new Set(['error', 'warning', 'info'])
   )
+  const [cliBusy, setCliBusy] = useState(false)
 
   const errorCount = useMemo(
     () => diagnostics.filter((d) => d.severity === 'error').length,
@@ -83,6 +100,22 @@ function LogPanel() {
   const totalCount = diagnostics.length
   const problemsLabel =
     totalCount === 0 ? t('logPanel.problems') : t('logPanel.problemsCount', { count: totalCount })
+  const hasRepairContext =
+    diagnostics.some((item) => item.severity !== 'info') || Boolean(logs.trim())
+  const repairPrompt = useMemo(
+    () => buildDiagnosticRepairPrompt(diagnostics, logs),
+    [diagnostics, logs]
+  )
+
+  const fixWithCli = async (): Promise<void> => {
+    if (!onFixWithCli || cliBusy || !hasRepairContext) return
+    setCliBusy(true)
+    try {
+      await onFixWithCli(repairPrompt)
+    } finally {
+      setCliBusy(false)
+    }
+  }
 
   return (
     <section className="log-panel log-panel-embedded" aria-labelledby="log-panel-title">
@@ -113,6 +146,34 @@ function LogPanel() {
               {t('logPanel.output')}
             </button>
           </div>
+          {onFixWithChat && (
+            <button
+              type="button"
+              className="log-repair-action"
+              disabled={!hasRepairContext}
+              onClick={() => onFixWithChat(repairPrompt)}
+              title="Review problems in Research Chat"
+              aria-label="Review problems in Research Chat"
+            >
+              <MessageSquareText size={ICON_SIZE.compact} />
+            </button>
+          )}
+          {onFixWithCli && (
+            <button
+              type="button"
+              className="log-repair-action"
+              disabled={!hasRepairContext || cliBusy}
+              onClick={() => void fixWithCli()}
+              title={`Fix problems with ${cliName}`}
+              aria-label={`Fix problems with ${cliName}`}
+            >
+              {cliBusy ? (
+                <LoaderCircle className="spin" size={ICON_SIZE.compact} />
+              ) : (
+                <SquareTerminal size={ICON_SIZE.compact} />
+              )}
+            </button>
+          )}
           <button type="button" onClick={() => useCompileStore.getState().clearLogs()}>
             {t('logPanel.clear')}
           </button>

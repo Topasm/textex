@@ -212,6 +212,7 @@ export type AppUpdateActionResult = { success: true } | { success: false; error:
 export interface UserSettings {
   theme: 'system' | 'dark' | 'light' | 'high-contrast' | 'glass'
   fontSize: number
+  latexEngine: 'tectonic' | 'pdf-latex'
   autoCompile: boolean
   watchOpenFiles: boolean
   spellCheckEnabled: boolean
@@ -377,6 +378,8 @@ export type ResearchChatContext =
     })
 
 export interface ResearchChatRequest {
+  /** Renderer-generated identifier used only to cancel this in-flight request. */
+  requestId?: string
   message: string
   history: ResearchChatMessage[]
   contexts: ResearchChatContext[]
@@ -458,6 +461,8 @@ export interface ZoteroMutationResult {
 export interface ClaudeTerminalRequest {
   workDir: string
   resume?: boolean
+  /** Optional initial instruction passed as one literal CLI argument. */
+  prompt?: string
 }
 
 export interface ClaudeTerminalResult {

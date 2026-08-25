@@ -6,6 +6,7 @@ import { ZoteroReferences } from '../../renderer/components/research/ZoteroRefer
 import * as referenceActions from '../../renderer/components/research/referenceActions'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
+import { invalidateZoteroInventory } from '../../renderer/services/zoteroInventoryCache'
 
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -34,6 +35,7 @@ const libraryTree = (
 
 describe('Research reference sources', () => {
   beforeEach(() => {
+    invalidateZoteroInventory()
     vi.restoreAllMocks()
     useProjectStore.setState({
       projectRoot: '/project-a',
@@ -388,6 +390,10 @@ describe('Research reference sources', () => {
     expect(screen.getByText('Zotero-only paper').closest('article')).toHaveTextContent(
       'ZOTERO ONLY'
     )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Missing 1' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Find source' }))
+    await waitFor(() => expect(window.api.zoteroSearch).toHaveBeenCalledWith('missing2026', 23_119))
   })
 
   it('previews the exact managed bibliography diff before collection sync', async () => {

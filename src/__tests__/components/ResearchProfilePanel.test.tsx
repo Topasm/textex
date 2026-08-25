@@ -239,12 +239,12 @@ describe('ResearchProfilePanel', () => {
     expect(screen.getByLabelText('Title')).toHaveValue('Project B')
   })
 
-  it('suggests only empty metadata fields from the active document', async () => {
+  it('automatically fills only empty metadata fields from the active .tex document', async () => {
     useEditorStore
       .getState()
       .openFileInTab(
         '/project/paper.tex',
-        String.raw`\title{Suggested Title}\author{Ada Lovelace \and Grace Hopper}\doi{10.1234/example}\ arXiv:2401.12345`
+        String.raw`\title{Suggested Title}\author{Ada Lovelace \and Grace Hopper}\doi{10.1234/example}\arxiv{2401.12345}`
       )
     window.api.researchProfileLoad = vi.fn().mockResolvedValue({
       ...emptyProfile,
@@ -253,18 +253,40 @@ describe('ResearchProfilePanel', () => {
 
     render(<ResearchProfilePanel />)
     await screen.findByDisplayValue('Existing Title')
-    fireEvent.click(screen.getByRole('button', { name: 'Suggest from document' }))
 
     expect(screen.getByLabelText('Title')).toHaveValue('Existing Title')
-    expect(screen.getByLabelText('DOI')).toHaveValue('10.1234/example')
+    await waitFor(() => expect(screen.getByLabelText('DOI')).toHaveValue('10.1234/example'))
     expect(screen.getByLabelText('arXiv')).toHaveValue('2401.12345')
     expect(screen.getAllByLabelText('Name').map((input) => input.getAttribute('value'))).toEqual([
       'Ada Lovelace',
       'Grace Hopper'
     ])
-    expect(screen.getByText(/Added from the active document:/)).toHaveTextContent(
-      'DOI, arXiv, authors'
-    )
+    expect(screen.getByText(/Filled from paper\.tex:/)).toHaveTextContent('DOI, arXiv, authors')
+    expect(hasUnsavedResearchProfileDraft()).toBe(true)
+  })
+
+  it('does not restore an auto-filled field after the user explicitly clears it', async () => {
+    useEditorStore
+      .getState()
+      .openFileInTab('/project/paper.tex', String.raw`\title{Suggested Title}`)
+
+    render(<ResearchProfilePanel />)
+    const title = await screen.findByDisplayValue('Suggested Title')
+    fireEvent.change(title, { target: { value: '' } })
+
+    await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue(''))
+    expect(screen.getByRole('button', { name: 'Fill empty fields from document' })).toBeEnabled()
+  })
+
+  it('keeps DOI and arXiv in an optional publication identifiers section', async () => {
+    render(<ResearchProfilePanel />)
+    await screen.findByLabelText('Title')
+
+    const identifiers = screen.getByText('Publication identifiers (optional)').closest('details')
+    expect(identifiers).not.toHaveAttribute('open')
+    expect(
+      screen.getByText(/only when the paper has a published DOI or arXiv identifier/i)
+    ).toBeInTheDocument()
   })
 
   it('indexes an opted-in local Git source and displays its limits', async () => {

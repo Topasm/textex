@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useState, lazy, Suspense } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  lazy,
+  Suspense,
+  type CSSProperties
+} from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   FolderTree,
@@ -127,6 +135,7 @@ function App() {
   const sidebarView = useProjectStore((s) => s.sidebarView)
   const sidebarWidth = useProjectStore((s) => s.sidebarWidth)
   const isResearchPanelOpen = useProjectStore((s) => s.isResearchPanelOpen)
+  const researchPanelWidth = useProjectStore((s) => s.researchPanelWidth)
   const bibliographyRegistrationRequest = useProjectStore((s) => s.bibliographyRegistrationRequest)
   const filePath = useEditorStore((s) => s.filePath)
   const projectRoot = useProjectStore((s) => s.projectRoot)
@@ -534,8 +543,16 @@ function App() {
     </div>
   )
 
+  const appLayoutStyle = {
+    '--research-panel-width': `${researchPanelWidth}px`,
+    '--research-panel-bottom': showStatusBar ? '25px' : '0px'
+  } as CSSProperties
+
   return (
-    <div className="app-container">
+    <div
+      className={`app-container${isResearchPanelOpen ? ' has-research-panel' : ''}`}
+      style={appLayoutStyle}
+    >
       <Toolbar
         onSave={handleSave}
         onCompile={handleCompile}
@@ -546,6 +563,11 @@ function App() {
         onOpenCommandPalette={openCommandPalette}
         onOpenSettings={handleOpenSettings}
       />
+      {isResearchPanelOpen && (
+        <Suspense fallback={<LoadingFallback variant="panel" label={t('loading.workspace')} />}>
+          <ResearchPanel onAiDraft={() => handleAiDraft()} onCompile={handleCompile} />
+        </Suspense>
+      )}
       {isSettingsOpen && (
         <Suspense
           fallback={
@@ -658,13 +680,6 @@ function App() {
                   >
                     <PanelRightOpen size={ICON_SIZE.control} />
                   </button>
-                )}
-                {isResearchPanelOpen && (
-                  <Suspense
-                    fallback={<LoadingFallback variant="panel" label={t('loading.workspace')} />}
-                  >
-                    <ResearchPanel onAiDraft={() => handleAiDraft()} />
-                  </Suspense>
                 )}
               </div>
               {terminalPaneOpen && (

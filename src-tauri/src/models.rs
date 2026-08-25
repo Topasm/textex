@@ -626,6 +626,7 @@ pub struct GitLogEntry {
 pub struct UserSettings {
     pub theme: Theme,
     pub font_size: u16,
+    pub latex_engine: LatexEngine,
     pub auto_compile: bool,
     pub watch_open_files: bool,
     pub spell_check_enabled: bool,
@@ -683,6 +684,7 @@ impl Default for UserSettings {
         Self {
             theme: Theme::System,
             font_size: 14,
+            latex_engine: LatexEngine::Tectonic,
             auto_compile: true,
             watch_open_files: true,
             spell_check_enabled: false,
@@ -743,6 +745,14 @@ impl Default for UserSettings {
             renderer_session: None,
         }
     }
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum LatexEngine {
+    #[default]
+    Tectonic,
+    PdfLatex,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -986,6 +996,8 @@ pub struct ResearchChatContext {
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ResearchChatRequest {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub request_id: Option<String>,
     pub message: String,
     pub history: Vec<ResearchChatMessage>,
     pub contexts: Vec<ResearchChatContext>,
@@ -1127,6 +1139,8 @@ pub struct AiTerminalRequest {
     pub work_dir: String,
     #[serde(default)]
     pub resume: bool,
+    #[serde(default)]
+    pub prompt: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -1453,7 +1467,8 @@ mod tests {
     use super::{
         CompileDiagnostic, CompileDiagnosticSeverity, CompileEvent, CompileIdentity,
         CompilePriority, CompileRequest, CompileResponse, DirectoryChangeEvent,
-        DirectoryChangeType, DirectoryEntryType, ProjectIndexDelta, ProjectIndexEntry,
+        DirectoryChangeType, DirectoryEntryType, LatexEngine, ProjectIndexDelta, ProjectIndexEntry,
+        UserSettings,
     };
 
     #[test]
@@ -1470,6 +1485,18 @@ mod tests {
         assert_eq!(request.request_id, 14);
         assert_eq!(request.document_revision, 9);
         assert!(matches!(request.priority, CompilePriority::Normal));
+    }
+
+    #[test]
+    fn user_settings_default_to_the_bundled_compiler_and_accept_pdf_latex() {
+        let defaults = serde_json::to_value(UserSettings::default()).expect("serialize settings");
+        assert_eq!(defaults["latexEngine"], "tectonic");
+
+        let settings: UserSettings = serde_json::from_value(serde_json::json!({
+            "latexEngine": "pdf-latex"
+        }))
+        .expect("deserialize partial settings with defaults");
+        assert_eq!(settings.latex_engine, LatexEngine::PdfLatex);
     }
 
     #[test]

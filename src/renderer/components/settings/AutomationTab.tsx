@@ -20,6 +20,29 @@ export const AutomationTab = () => {
         <div className="settings-column-group">
           <div className="settings-row">
             <div>
+              <label className="settings-row-label" htmlFor="latex-engine-select">
+                {t('settings.automation.compilerEngine')}
+              </label>
+              <div className="settings-row-description">
+                {settings.latexEngine === 'pdf-latex'
+                  ? t('settings.automation.pdfLatexDesc')
+                  : t('settings.automation.tectonicDesc')}
+              </div>
+            </div>
+            <select
+              id="latex-engine-select"
+              value={settings.latexEngine}
+              onChange={(event) =>
+                updateSetting('latexEngine', event.target.value as typeof settings.latexEngine)
+              }
+              className="settings-select settings-select-medium"
+            >
+              <option value="tectonic">{t('settings.automation.tectonicOption')}</option>
+              <option value="pdf-latex">{t('settings.automation.pdfLatexOption')}</option>
+            </select>
+          </div>
+          <div className="settings-row">
+            <div>
               <div className="settings-row-label">{t('settings.automation.autoCompile')}</div>
               <div className="settings-row-description">
                 {t('settings.automation.autoCompileDesc')}
@@ -89,8 +112,12 @@ export const AutomationTab = () => {
           )}
         </div>
       </div>
-      <hr className="settings-divider" />
-      <TectonicCacheSettings />
+      {settings.latexEngine === 'tectonic' && (
+        <>
+          <hr className="settings-divider" />
+          <TectonicCacheSettings />
+        </>
+      )}
     </div>
   )
 }

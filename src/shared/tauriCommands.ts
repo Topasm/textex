@@ -8,6 +8,7 @@ export const TAURI_COMMANDS = {
   aiProcess: 'ai_process',
   aiProcessCustom: 'ai_process_custom',
   aiResearchChat: 'ai_research_chat',
+  aiCancelResearchChat: 'ai_cancel_research_chat',
   aiPlanZotero: 'ai_plan_zotero',
   aiUpdateContext: 'ai_update_context',
   aiSaveApiKey: 'ai_save_api_key',

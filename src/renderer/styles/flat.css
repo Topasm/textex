@@ -86,7 +86,7 @@ html .status-warnings {
 }
 
 [data-theme='glass'] {
-  --accent-contrast: #07111f;
+  --accent-contrast: #ffffff;
 }
 
 [data-theme='high-contrast'] {

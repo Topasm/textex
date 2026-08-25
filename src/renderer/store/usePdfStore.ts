@@ -37,6 +37,9 @@ interface PdfState {
 
   // Per-project scroll persistence
   savedScrollPositions: Record<string, number>
+  // Per-document page and scroll persistence. This keeps independent PDF
+  // positions when different root documents are compiled in one project.
+  savedViewPositions: Record<string, PdfViewPosition>
 
   // Actions
   setSplitRatio: (ratio: number) => void
@@ -60,6 +63,13 @@ interface PdfState {
   clearFitRequest: () => void
   saveScrollPosition: (projectRoot: string, scrollTop: number) => void
   getScrollPosition: (projectRoot: string) => number
+  saveViewPosition: (viewKey: string, currentPage: number, scrollTop: number) => void
+  getViewPosition: (viewKey: string) => PdfViewPosition | null
+}
+
+export interface PdfViewPosition {
+  currentPage: number
+  scrollTop: number
 }
 
 interface PersistedPdfLayoutState {
@@ -67,9 +77,17 @@ interface PersistedPdfLayoutState {
   splitRatio?: number
   terminalRatio?: number
   savedScrollPositions?: Record<string, number>
+  savedViewPositions?: Record<string, PdfViewPosition>
 }
 
-const PDF_LAYOUT_PERSIST_VERSION = 1
+const PDF_LAYOUT_PERSIST_VERSION = 2
+
+function normalizeViewPosition(currentPage: number, scrollTop: number): PdfViewPosition {
+  return {
+    currentPage: Number.isFinite(currentPage) && currentPage >= 1 ? Math.floor(currentPage) : 1,
+    scrollTop: Number.isFinite(scrollTop) && scrollTop > 0 ? scrollTop : 0
+  }
+}
 
 function normalizeZoomLevel(level: number): number {
   const roundedLevel = Number.isFinite(level) ? Math.round(level) : 100
@@ -95,6 +113,7 @@ export const usePdfStore = create<PdfState>()(
       scrollToPage: null,
       fitRequest: null,
       savedScrollPositions: {},
+      savedViewPositions: {},
 
       setSplitRatio: (splitRatio) =>
         set({ splitRatio: Math.max(SPLIT_RATIO_MIN, Math.min(SPLIT_RATIO_MAX, splitRatio)) }),
@@ -126,7 +145,15 @@ export const usePdfStore = create<PdfState>()(
         set((state) => ({
           savedScrollPositions: { ...state.savedScrollPositions, [projectRoot]: scrollTop }
         })),
-      getScrollPosition: (projectRoot) => get().savedScrollPositions[projectRoot] ?? 0
+      getScrollPosition: (projectRoot) => get().savedScrollPositions[projectRoot] ?? 0,
+      saveViewPosition: (viewKey, currentPage, scrollTop) =>
+        set((state) => ({
+          savedViewPositions: {
+            ...state.savedViewPositions,
+            [viewKey]: normalizeViewPosition(currentPage, scrollTop)
+          }
+        })),
+      getViewPosition: (viewKey) => get().savedViewPositions[viewKey] ?? null
     })),
     {
       name: 'textex-pdf-layout',
@@ -137,18 +164,20 @@ export const usePdfStore = create<PdfState>()(
         }
 
         const state = persistedState as PersistedPdfLayoutState
-        if (typeof state.zoomLevel !== 'number') return state
-
         return {
           ...state,
-          zoomLevel: normalizeZoomLevel(state.zoomLevel)
+          ...(typeof state.zoomLevel === 'number'
+            ? { zoomLevel: normalizeZoomLevel(state.zoomLevel) }
+            : {}),
+          savedViewPositions: state.savedViewPositions ?? {}
         }
       },
       partialize: (state) => ({
         zoomLevel: state.zoomLevel,
         splitRatio: state.splitRatio,
         terminalRatio: state.terminalRatio,
-        savedScrollPositions: state.savedScrollPositions
+        savedScrollPositions: state.savedScrollPositions,
+        savedViewPositions: state.savedViewPositions
       })
     }
   )

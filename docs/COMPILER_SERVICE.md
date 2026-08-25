@@ -3,7 +3,8 @@
 The desktop compiler is implemented in Rust under
 `src-tauri/src/services/compiler.rs`. The Tauri command adapter accepts a typed
 `CompileRequest` containing request, document, revision, file, and priority
-identity.
+identity. Native settings select either the bundled Tectonic engine (the
+default) or a system pdfLaTeX installation driven by `latexmk`.
 
 ## Invariants
 
@@ -11,6 +12,13 @@ identity.
 - Only `.tex` project files are accepted.
 - Tectonic is the target-qualified bundled sidecar verified by the setup
   manifest.
+- System pdfLaTeX mode resolves `latexmk` from standard installation paths and
+  `PATH`. On macOS it checks MacTeX's stable
+  `/Library/TeX/texbin/latexmk` path first so Finder-launched builds do not
+  depend on an interactive shell environment.
+- The pdfLaTeX invocation uses `latexmk -norc -pdf` with SyncTeX, nonstop,
+  file-line-error, and halt-on-error flags. Ignoring latexmkrc files prevents a
+  project XeLaTeX or LuaLaTeX override from defeating the selected engine.
 - The optional curated support cache is versioned for the bundled Tectonic,
   bounded by file/count/total limits, SHA-256 verified, and atomically installed
   only into the application cache on first use.

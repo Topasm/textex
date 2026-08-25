@@ -17,6 +17,7 @@
     "allow-ai-process",
     "allow-ai-process-custom",
     "allow-ai-research-chat",
+    "allow-ai-cancel-research-chat",
     "allow-ai-plan-zotero",
     "allow-ai-update-context",
     "allow-ai-save-api-key",
