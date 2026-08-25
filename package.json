@@ -97,7 +97,7 @@
     "commander": "^14.0.3",
     "date-fns": "^4.4.0",
     "i18next": "^26.4.0",
-    "katex": "^0.16.47",
+    "katex": "^0.18.4",
     "lucide-react": "^1.34.0",
     "mathlive": "^0.110.0",
     "monaco-editor": "^0.56.0",
@@ -115,7 +115,7 @@
   "devDependencies": {
     "@eslint/js": "^9.39.5",
     "@tauri-apps/cli": "^2.11.4",
-    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.6",
     "@types/node": "^22.20.1",
