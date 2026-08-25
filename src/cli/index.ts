@@ -13,7 +13,7 @@ const program = new commander.Command()
 
 program.name('textex')
 program.description('TextEx — LaTeX compilation and project management CLI')
-program.version('1.0.11')
+program.version('1.0.12')
 
 registerCompileCommand(program)
 registerInitCommand(program)
