@@ -327,7 +327,7 @@ describe('ResearchChatPanel', () => {
     render(<ResearchChatPanel onAiDraft={vi.fn()} />)
 
     const input = await screen.findByRole('textbox', { name: 'Research question' })
-    expect(screen.getByRole('button', { name: 'Official code' })).toHaveAttribute(
+    expect(await screen.findByRole('button', { name: 'Official code' })).toHaveAttribute(
       'aria-pressed',
       'true'
     )
