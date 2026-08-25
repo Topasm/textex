@@ -103,9 +103,28 @@ pub async fn pull(state: &AppState, work_dir: &str) -> AppResult<GitRemoteStatus
 
 pub async fn push(state: &AppState, work_dir: &str) -> AppResult<GitRemoteStatus> {
     let root = trusted_repository_root(state, work_dir).await?;
-    let remote = read_remote_status(&root).await?;
-    require_upstream(&remote)?;
-    run_git_checked(&root, ["push"], "push").await?;
+    let status = read_remote_status(&root).await?;
+    let remote = require_remote(&status)?;
+    let upstream = require_upstream(&status)?;
+    let branch = upstream
+        .strip_prefix(remote)
+        .and_then(|value| value.strip_prefix('/'))
+        .filter(|value| !value.is_empty())
+        .ok_or_else(|| {
+            AppError::GitSafety("the current branch has an invalid upstream".to_owned())
+        })?;
+    let refspec = format!("HEAD:refs/heads/{branch}");
+    run_git_checked_os(
+        &root,
+        [
+            OsStr::new("push"),
+            OsStr::new("--"),
+            OsStr::new(remote),
+            OsStr::new(refspec.as_str()),
+        ],
+        "push",
+    )
+    .await?;
     read_remote_status(&root).await
 }
 
@@ -189,14 +208,13 @@ fn require_remote(status: &GitRemoteStatus) -> AppResult<&str> {
     })
 }
 
-fn require_upstream(status: &GitRemoteStatus) -> AppResult<()> {
+fn require_upstream(status: &GitRemoteStatus) -> AppResult<&str> {
     let _remote = require_remote(status)?;
-    if status.upstream.is_none() {
-        return Err(AppError::GitSafety(
+    status.upstream.as_deref().ok_or_else(|| {
+        AppError::GitSafety(
             "the current branch has no upstream; configure one in the terminal first".to_owned(),
-        ));
-    }
-    Ok(())
+        )
+    })
 }
 
 async fn require_clean_worktree(root: &Path) -> AppResult<()> {
