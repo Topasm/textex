@@ -203,9 +203,10 @@ export function parseZoteroCollectionDragData(data: string): ZoteroCollectionDra
         value.collection.parentKey === null ||
         (typeof value.collection.parentKey === 'string' &&
           value.collection.parentKey.length <= 2_048)) &&
-      typeof value.collection.itemCount === 'number' &&
-      Number.isInteger(value.collection.itemCount) &&
-      value.collection.itemCount >= 0 &&
+      (value.collection.itemCount === null ||
+        (typeof value.collection.itemCount === 'number' &&
+          Number.isInteger(value.collection.itemCount) &&
+          value.collection.itemCount >= 0)) &&
       (value.port === undefined ||
         (typeof value.port === 'number' &&
           Number.isInteger(value.port) &&
@@ -218,7 +219,8 @@ export function parseZoteroCollectionDragData(data: string): ZoteroCollectionDra
           name: value.collection.name,
           parentKey:
             typeof value.collection.parentKey === 'string' ? value.collection.parentKey : null,
-          itemCount: value.collection.itemCount
+          itemCount:
+            typeof value.collection.itemCount === 'number' ? value.collection.itemCount : null
         },
         ...(typeof value.port === 'number' ? { port: value.port } : {})
       }

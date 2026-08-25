@@ -28,8 +28,8 @@ use crate::{
     error::{AppError, AppResult},
     models::{
         AiAction, AiContextEntry, AiCustomProcessRequest, AiLightContext, AiProcessRequest,
-        AiProvider, AiTerminalResult, ResearchChatRequest, UserSettings, ZoteroMutationDraft,
-        ZoteroPlanRequest,
+        AiProvider, AiTerminalResult, ResearchChatExecution, ResearchChatRequest,
+        ResearchChatResponse, UserSettings, ZoteroMutationDraft, ZoteroPlanRequest,
     },
     services::{research, research_limits},
 };
@@ -251,14 +251,27 @@ pub async fn research_chat(
     cli_work_dir: &Path,
     settings: &UserSettings,
     request: &ResearchChatRequest,
-) -> AppResult<String> {
+) -> AppResult<ResearchChatResponse> {
     validate_research_chat_request(request)?;
+    let mut effective_settings = settings.clone();
+    if let Some(execution) = &request.execution {
+        effective_settings.ai_provider = execution.provider;
+        effective_settings.ai_model.clone_from(&execution.model);
+    }
+    if effective_settings.ai_provider == AiProvider::None {
+        return Err(AppError::Ai("no AI provider configured".to_owned()));
+    }
+    let execution = ResearchChatExecution {
+        provider: effective_settings.ai_provider,
+        model: effective_model_name(effective_settings.ai_provider, &effective_settings.ai_model)
+            .to_owned(),
+    };
     let prompt = build_research_chat_prompt(request)?;
     let response = call_configured_provider(
         state,
         credential_path,
         cli_work_dir,
-        settings,
+        &effective_settings,
         &prompt,
         RESEARCH_CHAT_SYSTEM,
     )
@@ -269,7 +282,10 @@ pub async fn research_chat(
         research_limits::MAX_CHAT_MESSAGE_BYTES,
         true,
     )?;
-    Ok(response)
+    Ok(ResearchChatResponse {
+        content: response,
+        execution,
+    })
 }
 
 pub async fn plan_zotero_mutations(
@@ -346,6 +362,9 @@ pub(crate) fn validate_zotero_plan_request(request: &ZoteroPlanRequest) -> AppRe
 }
 
 pub(crate) fn validate_research_chat_request(request: &ResearchChatRequest) -> AppResult<()> {
+    if let Some(execution) = &request.execution {
+        validate_research_chat_execution(execution)?;
+    }
     validate_bounded_research_text(
         &request.message,
         "research chat message",
@@ -366,6 +385,14 @@ pub(crate) fn validate_research_chat_request(request: &ResearchChatRequest) -> A
             research_limits::MAX_CHAT_MESSAGE_BYTES,
             true,
         )?;
+        if let Some(execution) = &message.execution {
+            if message.role != crate::models::ResearchChatRole::Assistant {
+                return Err(AppError::Ai(
+                    "only assistant history may carry execution metadata".to_owned(),
+                ));
+            }
+            validate_research_chat_execution(execution)?;
+        }
         history_bytes = history_bytes.saturating_add(message.content.len());
     }
     if history_bytes > research_limits::MAX_CHAT_HISTORY_TOTAL_BYTES {
@@ -445,6 +472,23 @@ pub(crate) fn validate_research_chat_request(request: &ResearchChatRequest) -> A
     if encoded.len() > MAX_RESEARCH_REQUEST_BYTES {
         return Err(AppError::Ai(
             "research chat request exceeds the size limit".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+pub(crate) fn validate_research_chat_execution(execution: &ResearchChatExecution) -> AppResult<()> {
+    if execution.provider == AiProvider::None {
+        return Err(AppError::Ai(
+            "research Chat execution requires an AI provider".to_owned(),
+        ));
+    }
+    if execution.model.trim().is_empty()
+        || execution.model.trim() != execution.model
+        || !valid_model_identifier(&execution.model)
+    {
+        return Err(AppError::Ai(
+            "invalid research Chat model identifier".to_owned(),
         ));
     }
     Ok(())
@@ -1386,6 +1430,19 @@ fn valid_model_identifier(model: &str) -> bool {
         })
 }
 
+fn effective_model_name(provider: AiProvider, model: &str) -> &str {
+    if !model.is_empty() {
+        return model;
+    }
+    match provider {
+        AiProvider::OpenAi => "gpt-5.4",
+        AiProvider::Anthropic => "claude-sonnet-4-6",
+        AiProvider::Gemini => "gemini-3.1-pro-preview",
+        AiProvider::ClaudeCli | AiProvider::CodexCli => "default",
+        AiProvider::None => "",
+    }
+}
+
 fn validate_context(context: &AiLightContext) -> AppResult<()> {
     if context.outline.len() > 10_000 || context.section_path.len() > 1_000 {
         return Err(AppError::Ai("document context is too large".to_owned()));
@@ -1516,6 +1573,7 @@ mod tests {
             history: vec![ResearchChatMessage {
                 role: ResearchChatRole::User,
                 content: "Focus on the training code.".to_owned(),
+                execution: None,
                 sources: Vec::new(),
             }],
             contexts: vec![ResearchChatContext {
@@ -1527,6 +1585,7 @@ mod tests {
                 reference: None,
             }],
             instructions: vec!["Use concise technical language.".to_owned()],
+            execution: None,
         }
     }
 
@@ -1571,6 +1630,22 @@ mod tests {
     fn provider_validation_is_closed() {
         assert_eq!(parse_provider("openai").unwrap(), AiProvider::OpenAi);
         assert!(parse_provider("file://local").is_err());
+    }
+
+    #[test]
+    fn research_chat_execution_requires_a_provider_and_safe_model() {
+        let mut request = research_chat_request();
+        request.execution = Some(ResearchChatExecution {
+            provider: AiProvider::CodexCli,
+            model: "gpt-5.6-sol".to_owned(),
+        });
+        assert!(validate_research_chat_request(&request).is_ok());
+
+        request.execution.as_mut().unwrap().provider = AiProvider::None;
+        assert!(validate_research_chat_request(&request).is_err());
+        request.execution.as_mut().unwrap().provider = AiProvider::OpenAi;
+        request.execution.as_mut().unwrap().model = "model\n--unsafe".to_owned();
+        assert!(validate_research_chat_request(&request).is_err());
     }
 
     #[test]

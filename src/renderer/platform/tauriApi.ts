@@ -425,6 +425,9 @@ const findBibInProject: DesktopApi['findBibInProject'] = (projectRoot) =>
 const scanLabels: DesktopApi['scanLabels'] = (projectRoot) =>
   invoke(TAURI_COMMANDS.scanLabels, { projectRoot })
 
+const scanCitations: DesktopApi['scanCitations'] = (projectRoot) =>
+  invoke(TAURI_COMMANDS.scanCitations, { projectRoot })
+
 const spellInit: DesktopApi['spellInit'] = (language) =>
   invoke(TAURI_COMMANDS.spellInit, { language })
 
@@ -470,6 +473,16 @@ const zoteroSyncCollection: DesktopApi['zoteroSyncCollection'] = (collection, ta
 
 const zoteroCollections: DesktopApi['zoteroCollections'] = (port) =>
   invoke(TAURI_COMMANDS.zoteroCollections, { port })
+
+const zoteroLibraryTree: DesktopApi['zoteroLibraryTree'] = (port) =>
+  invoke(TAURI_COMMANDS.zoteroLibraryTree, { port })
+
+const zoteroCollectionItems: DesktopApi['zoteroCollectionItems'] = (
+  collection,
+  offset,
+  limit,
+  port
+) => invoke(TAURI_COMMANDS.zoteroCollectionItems, { collection, offset, limit, port })
 
 const zoteroAddToProject: DesktopApi['zoteroAddToProject'] = (citekey, port) =>
   invoke(TAURI_COMMANDS.zoteroAddToProject, { citekey, port })
@@ -891,6 +904,7 @@ const tauriDesktopApi = {
   parseBibFile,
   findBibInProject,
   scanLabels,
+  scanCitations,
   spellInit,
   spellCheck,
   spellSuggest,
@@ -906,6 +920,8 @@ const tauriDesktopApi = {
   zoteroExportBibtex,
   zoteroSyncCollection,
   zoteroCollections,
+  zoteroLibraryTree,
+  zoteroCollectionItems,
   zoteroAddToProject,
   zoteroSaveOnline,
   zoteroApplyMutationPlan,

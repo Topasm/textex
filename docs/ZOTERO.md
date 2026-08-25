@@ -28,18 +28,32 @@ To configure this:
 
 ### Research panel
 
-Open **References** in the right Research panel and choose a source:
+Open **References** in the right Research panel. Project and Zotero are intentionally combined into
+one current-paper manager:
 
-- **Project** searches every project `.bib` file and preserves citation-card drag and drop.
-- **Zotero** searches Better BibTeX, shows the collection hierarchy, and adds selected items to
-  `references.bib` before inserting `\cite{...}`.
-- **Online** searches Crossref and arXiv. **Add & cite** merges the item into `references.bib`;
-  **Save to library** requests Zotero write authorization and creates a permanent Zotero item.
+- The health summary compares citations used in project `.tex` files, every project `.bib` entry,
+  and the Zotero library. It reports cited, missing-bibliography, unused, and not-linked states.
+- **My Library** and its nested collection hierarchy use lazy authoritative counts. Selecting a
+  collection loads its papers and shows whether each item is cited, only in the project, or only in
+  Zotero.
+- The shared search checks the project and Zotero first. When both return no matches, **Search
+  Crossref / arXiv** opens Online as a secondary view. **Add & cite** merges an online result into
+  `references.bib`; **Save to library** requests Zotero write authorization and creates a permanent
+  Zotero item.
+
+Exact cross-check matching is DOI first, then arXiv identifier, then Better BibTeX citekey.
+Normalized title and year are displayed as a possible match for review, never linked
+automatically.
+Existing custom project citation groups remain available through the compact **Project citation
+groups** action above the health summary.
 
 Collection synchronization atomically replaces `zotero.bib`; individually selected and online
 items are atomically merged into `references.bib`. These separate managed files prevent a full
 collection refresh from deleting individually added references. A collection can be configured to
-sync when its project opens, and manual sync always shows the target and item count first.
+sync when its project opens. Manual sync first compares the selected collection with the managed
+target and shows new, removed, and unchanged citekeys; the file is not replaced until confirmation.
+Collection papers load 50 at a time, while visible tree counts are fetched lazily from Zotero's
+`Total-Results` header. Unknown counts are displayed as `…`, never as zero.
 
 ### Inserting Citations (Inline Search)
 1.  Press `Ctrl+Shift+C` (or `Cmd+Shift+C` on macOS) to focus the citation search bar in the toolbar, or click it directly.
@@ -89,9 +103,12 @@ Ports: Zotero = `23119`, Juris-M = `24119`, or user-defined.
 |---|---|---|---|
 | `zotero_search` | Renderer -> Rust | `(term, port)` | `ZoteroSearchResult[]` |
 | `zotero_collections` | Renderer -> Rust | `(port)` | `ZoteroCollection[]` |
+| `zotero_library_tree` | Renderer -> Rust | `(port)` | `ZoteroLibrary[]` |
+| `zotero_collection_items` | Renderer -> Rust | `(collection, offset, limit, port)` | `ZoteroCollectionItemsPage` |
 | `zotero_add_to_project` | Renderer -> Rust | `(citekey, port)` | `ReferenceAddResult` |
 | `zotero_sync_collection` | Renderer -> Rust | `(collection, target, port)` | `ZoteroSyncResult` |
 | `zotero_save_online` | Renderer -> Rust | `(reference, port)` | `ZoteroSaveResult` |
+| `scan_citations` | Renderer -> Rust | `(projectRoot)` | `CitationUsage[]` |
 | `research_search_online` | Renderer -> Rust | `(query)` | `OnlineReference[]` |
 
 `zotero_sync_collection` uses Better BibTeX's current explicit-key pull-export
@@ -101,6 +118,12 @@ example `/0/8CV58ZVD`). It caps the response at
 `.bib` target only after the complete UTF-8 export has arrived. Sync requests
 are serialized, their target is validated before download, and a successful
 write invalidates the generation-cached reference index immediately.
+
+Collection browsing uses only Zotero's loopback Local API. The Rust service validates collection
+keys, caps pages at 100 top-level bibliographic items, batches Better BibTeX citekey resolution,
+and requires `Total-Results` before reporting an authoritative collection count. The current
+browser exposes **My Library**; group-library roots can be added to the typed library array later
+without changing the renderer contract.
 
 ### Data Flow
 
@@ -137,7 +160,7 @@ Results shown in dropdown -> User selects -> \cite{key1,key2} inserted at cursor
 | `src-tauri/src/commands/zotero.rs` | Validated Zotero command boundary |
 | `src-tauri/src/commands/research.rs` | Validated research command boundary |
 | `src/renderer/components/ResearchPanel.tsx` | Independent right panel shell |
-| `src/renderer/components/research/` | Project, Zotero, Online, and Chat views |
+| `src/renderer/components/research/` | Unified local Reference Manager, Online fallback, and Chat views |
 | `src/renderer/types/api.d.ts` | `ZoteroSearchResult` type + API declarations |
 
 ---

@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import {
+  Check,
   ChevronRight,
+  Circle,
+  BookMarked,
+  FolderTree,
   Loader,
   MessageSquarePlus,
   Plus,
@@ -9,15 +13,29 @@ import {
   Save,
   Search
 } from 'lucide-react'
-import type { ResearchConfig, ZoteroCollection, ZoteroSearchResult } from '../../../shared/types'
+import type {
+  CitationUsage,
+  ResearchConfig,
+  ZoteroCollection,
+  ZoteroCollectionItem,
+  ZoteroLibrary,
+  ZoteroSearchResult
+} from '../../../shared/types'
 import { useProjectStore } from '../../store/useProjectStore'
 import { useSettingsStore } from '../../store/useSettingsStore'
+import { useEditorStore } from '../../store/useEditorStore'
 import {
   addReferenceAtCursor,
+  buildProjectReferenceDragPayload,
   setReferenceDragData,
   setZoteroCollectionDragData,
   type ReferenceDragPayload
 } from './referenceActions'
+import {
+  buildReferenceHealth,
+  type ProjectReferenceHealth,
+  type ZoteroReferenceHealth
+} from '../../services/referenceHealth'
 
 const DEFAULT_CONFIG: ResearchConfig = {
   version: 1,
@@ -28,6 +46,10 @@ const DEFAULT_CONFIG: ResearchConfig = {
 }
 
 const COLLECTION_PAGE_SIZE = 200
+const ITEM_PAGE_SIZE = 50
+const COUNT_PREFETCH_LIMIT = 40
+const SYNC_PAGE_SIZE = 100
+const MAX_SYNC_PREVIEW_ITEMS = 10_000
 
 type CollectionRow = {
   collection: ZoteroCollection
@@ -38,6 +60,41 @@ type CollectionRow = {
 
 interface ZoteroReferencesProps {
   onAddToChat?: (payload: ReferenceDragPayload) => void
+  onOpenProjectGroups?: () => void
+  onSearchOnline?: () => void
+}
+
+type CollectionInventory = {
+  items: ZoteroCollectionItem[]
+  totalResults: number
+}
+
+type SyncPreview = {
+  added: string[]
+  removed: string[]
+  unchanged: number
+  unresolved: number
+}
+
+type HealthFilter = 'all' | 'cited' | 'missing' | 'unused' | 'zotero'
+
+function matchesProjectFilter(
+  status: ProjectReferenceHealth,
+  filter: HealthFilter,
+  zoteroReady: boolean
+): boolean {
+  if (filter === 'cited') return status.citationCount > 0
+  if (filter === 'missing') return zoteroReady && status.zoteroItem === null
+  if (filter === 'unused') return status.citationCount === 0
+  if (filter === 'zotero') return status.zoteroItem !== null
+  return true
+}
+
+function matchesZoteroFilter(status: ZoteroReferenceHealth, filter: HealthFilter): boolean {
+  if (filter === 'cited') return status.citationCount > 0
+  if (filter === 'missing') return false
+  if (filter === 'unused') return status.projectEntry !== null && status.citationCount === 0
+  return true
 }
 
 function buildZoteroReferencePayload(item: ZoteroSearchResult, port: number): ReferenceDragPayload {
@@ -48,7 +105,7 @@ function buildZoteroReferencePayload(item: ZoteroSearchResult, port: number): Re
     metadata: {
       title: item.title,
       authors: item.author
-        .split(/\s+and\s+/u)
+        .split(/\s+and\s+|;\s*/u)
         .map((author) => author.trim())
         .filter(Boolean),
       year: item.year,
@@ -57,22 +114,137 @@ function buildZoteroReferencePayload(item: ZoteroSearchResult, port: number): Re
   }
 }
 
-export function ZoteroReferences({ onAddToChat }: ZoteroReferencesProps = {}) {
+async function loadAllZoteroItems(
+  collectionKey: string,
+  port: number
+): Promise<ZoteroCollectionItem[]> {
+  const items: ZoteroCollectionItem[] = []
+  const seenItemKeys = new Set<string>()
+  let total = 1
+  while (items.length < total && items.length < MAX_SYNC_PREVIEW_ITEMS) {
+    const previousLength = items.length
+    const page = await window.api.zoteroCollectionItems(
+      collectionKey,
+      items.length,
+      SYNC_PAGE_SIZE,
+      port
+    )
+    total = page.totalResults
+    if (page.items.length === 0) break
+    for (const item of page.items) {
+      if (seenItemKeys.has(item.itemKey)) continue
+      seenItemKeys.add(item.itemKey)
+      items.push(item)
+    }
+    if (items.length === previousLength) break
+  }
+  if (total > MAX_SYNC_PREVIEW_ITEMS) {
+    throw new Error(
+      `Reference cross-check is limited to ${MAX_SYNC_PREVIEW_ITEMS.toLocaleString()} Zotero items.`
+    )
+  }
+  return items
+}
+
+function ProjectReferenceCard({
+  status,
+  zoteroState,
+  onCite,
+  onAddToChat
+}: {
+  status: ProjectReferenceHealth
+  zoteroState: 'checking' | 'ready' | 'unavailable' | 'error'
+  onCite: (citekey: string) => void
+  onAddToChat?: (payload: ReferenceDragPayload) => void
+}) {
+  const payload = buildProjectReferenceDragPayload(status.entry)
+  return (
+    <article
+      className="reference-card reference-health-card"
+      draggable
+      onDragStart={(event) => setReferenceDragData(event, payload)}
+    >
+      <div>
+        {status.citationCount > 0 ? (
+          <Check className="zotero-project-state in-project" size={14} aria-hidden="true" />
+        ) : (
+          <Circle className="zotero-project-state" size={12} aria-hidden="true" />
+        )}
+        <strong>{status.entry.title || status.entry.key}</strong>
+        <span>@{status.entry.key}</span>
+      </div>
+      <span>
+        {status.entry.author || 'Unknown author'}
+        {status.entry.year ? ` · ${status.entry.year}` : ''}
+        {status.citationCount > 0 ? ` · CITED ×${status.citationCount}` : ' · UNUSED'}
+      </span>
+      <span className={status.zoteroItem ? 'reference-link-state linked' : 'reference-link-state'}>
+        {zoteroState === 'checking'
+          ? 'Cross-checking Zotero…'
+          : zoteroState === 'unavailable'
+            ? 'Zotero unavailable'
+            : zoteroState === 'error'
+              ? 'Zotero cross-check unavailable'
+              : status.zoteroItem
+                ? `✓ Zotero · matched by ${status.matchKind}`
+                : status.possibleMatch
+                  ? `Possible Zotero match: ${status.possibleMatch.title}`
+                  : '○ Not linked to Zotero'}
+      </span>
+      <div className="reference-card-actions">
+        {onAddToChat && (
+          <button
+            type="button"
+            onClick={() => onAddToChat(payload)}
+            aria-label={`Add ${status.entry.title || status.entry.key} to Chat`}
+          >
+            <MessageSquarePlus size={13} /> Add to Chat
+          </button>
+        )}
+        <button type="button" onClick={() => onCite(status.entry.key)}>
+          <Plus size={13} /> Cite
+        </button>
+      </div>
+    </article>
+  )
+}
+
+export function ZoteroReferences({
+  onAddToChat,
+  onOpenProjectGroups,
+  onSearchOnline
+}: ZoteroReferencesProps = {}) {
   const projectRoot = useProjectStore((state) => state.projectRoot)
   const query = useProjectStore((state) => state.researchSearchQuery)
   const setQuery = useProjectStore((state) => state.setResearchSearchQuery)
+  const bibEntries = useProjectStore((state) => state.bibEntries)
   const port = useSettingsStore((state) => state.settings.zoteroPort)
   const [results, setResults] = useState<ZoteroSearchResult[]>([])
-  const [collections, setCollections] = useState<ZoteroCollection[]>([])
+  const [libraries, setLibraries] = useState<ZoteroLibrary[]>([])
   const [config, setConfig] = useState<ResearchConfig>(DEFAULT_CONFIG)
+  const [libraryExpanded, setLibraryExpanded] = useState(true)
+  const [selectedCollectionKey, setSelectedCollectionKey] = useState<string | null>(null)
   const [expandedCollections, setExpandedCollections] = useState<Set<string>>(() => new Set())
   const [collectionLimit, setCollectionLimit] = useState(COLLECTION_PAGE_SIZE)
   const [focusedCollection, setFocusedCollection] = useState<string | null>(null)
+  const [inventory, setInventory] = useState<CollectionInventory | null>(null)
+  const [inventoryBusy, setInventoryBusy] = useState(false)
+  const [syncPreview, setSyncPreview] = useState<SyncPreview | null>(null)
+  const [syncPreviewBusy, setSyncPreviewBusy] = useState(false)
+  const [loaded, setLoaded] = useState(false)
+  const [citationUsages, setCitationUsages] = useState<CitationUsage[]>([])
+  const [libraryInventory, setLibraryInventory] = useState<ZoteroCollectionItem[]>([])
+  const [libraryInventoryLoaded, setLibraryInventoryLoaded] = useState(false)
+  const [libraryInventoryError, setLibraryInventoryError] = useState('')
+  const [zoteroAvailable, setZoteroAvailable] = useState<boolean | null>(null)
+  const [healthFilter, setHealthFilter] = useState<HealthFilter>('all')
+  const [lastLocalSearch, setLastLocalSearch] = useState('')
   const [busy, setBusy] = useState<'load' | 'search' | 'save' | 'sync' | string | null>('load')
   const [message, setMessage] = useState('')
   const scopeGeneration = useRef(0)
   const operationInFlight = useRef(false)
   const collectionRefs = useRef(new Map<string, HTMLButtonElement>())
+  const requestedCounts = useRef(new Set<string>())
 
   const isCurrentScope = useCallback((generation: number, root: string | null, apiPort: number) => {
     return (
@@ -90,21 +262,74 @@ export function ZoteroReferences({ onAddToChat }: ZoteroReferencesProps = {}) {
     setBusy('load')
     setMessage('')
     setResults([])
-    setCollections([])
+    setLibraries([])
     setConfig(DEFAULT_CONFIG)
+    setLibraryExpanded(true)
+    setSelectedCollectionKey(null)
     setExpandedCollections(new Set())
     setCollectionLimit(COLLECTION_PAGE_SIZE)
     setFocusedCollection(null)
-    Promise.all([window.api.researchLoadConfig(), window.api.zoteroCollections(port)])
-      .then(([loadedConfig, loadedCollections]) => {
+    setInventory(null)
+    setInventoryBusy(false)
+    setSyncPreview(null)
+    setSyncPreviewBusy(false)
+    setLoaded(false)
+    setCitationUsages([])
+    setLibraryInventory([])
+    setLibraryInventoryLoaded(false)
+    setLibraryInventoryError('')
+    setZoteroAvailable(null)
+    setHealthFilter('all')
+    setLastLocalSearch('')
+    requestedCounts.current.clear()
+    Promise.all([
+      window.api.researchLoadConfig(),
+      window.api.zoteroLibraryTree(port).then(
+        (loadedLibraries) => ({ loadedLibraries, zoteroError: '' }),
+        (error: unknown) => ({
+          loadedLibraries: [] as ZoteroLibrary[],
+          zoteroError: error instanceof Error ? error.message : String(error)
+        })
+      ),
+      root
+        ? window.api.scanCitations(root).then(
+            (loadedCitations) => ({ loadedCitations, citationError: '' }),
+            (error: unknown) => ({
+              loadedCitations: [] as CitationUsage[],
+              citationError: error instanceof Error ? error.message : String(error)
+            })
+          )
+        : Promise.resolve({ loadedCitations: [] as CitationUsage[], citationError: '' })
+    ])
+      .then(([loadedConfig, zoteroResult, citationResult]) => {
         if (!isCurrentScope(generation, root, apiPort)) return
-        setConfig(loadedConfig)
-        setCollections(loadedCollections)
+        setLibraries(zoteroResult.loadedLibraries)
+        setZoteroAvailable(!zoteroResult.zoteroError)
+        setMessage(
+          [zoteroResult.zoteroError, citationResult.citationError].filter(Boolean).join('\n')
+        )
+        setCitationUsages(citationResult.loadedCitations)
+        setLoaded(true)
+        const loadedLibraries = zoteroResult.loadedLibraries
+        const loadedCollections = loadedLibraries.flatMap((library) => library.collections)
+        const configuredCollectionExists = loadedCollections.some(
+          (collection) => collection.key === loadedConfig.zoteroCollection
+        )
+        const effectiveConfig =
+          !zoteroResult.zoteroError && !configuredCollectionExists
+            ? { ...loadedConfig, zoteroCollection: null, syncOnOpen: false }
+            : loadedConfig
+        setConfig(effectiveConfig)
+        setSelectedCollectionKey(
+          configuredCollectionExists
+            ? effectiveConfig.zoteroCollection
+            : (loadedLibraries[0]?.key ?? null)
+        )
         const rows = orderCollections(loadedCollections)
-        const expanded = expandedAncestors(rows, loadedConfig.zoteroCollection)
+        const expanded = expandedAncestors(rows, effectiveConfig.zoteroCollection)
         setExpandedCollections(expanded)
         const selectedIndex = filterExpandedCollections(rows, expanded).findIndex(
-          ({ collection }) => collection.key === loadedConfig.zoteroCollection
+          ({ collection }) => collection.key === effectiveConfig.zoteroCollection
         )
         setCollectionLimit(
           selectedIndex < 0
@@ -137,10 +362,16 @@ export function ZoteroReferences({ onAddToChat }: ZoteroReferencesProps = {}) {
     return `${projectRoot.replace(/[\\/]$/, '')}${separator}${config.zoteroFile}`
   }, [config.zoteroFile, projectRoot])
 
+  const library = libraries[0] ?? null
+  const libraryKey = library?.key ?? null
+  const collections = useMemo(
+    () => libraries.flatMap((candidate) => candidate.collections),
+    [libraries]
+  )
   const collectionRows = useMemo(() => orderCollections(collections), [collections])
   const visibleCollectionRows = useMemo(
-    () => filterExpandedCollections(collectionRows, expandedCollections),
-    [collectionRows, expandedCollections]
+    () => (libraryExpanded ? filterExpandedCollections(collectionRows, expandedCollections) : []),
+    [collectionRows, expandedCollections, libraryExpanded]
   )
   const renderedCollectionRows = useMemo(
     () => visibleCollectionRows.slice(0, collectionLimit),
@@ -148,12 +379,102 @@ export function ZoteroReferences({ onAddToChat }: ZoteroReferencesProps = {}) {
   )
   const activeCollectionKey =
     focusedCollection &&
-    renderedCollectionRows.some(({ collection }) => collection.key === focusedCollection)
+    (focusedCollection === library?.key ||
+      renderedCollectionRows.some(({ collection }) => collection.key === focusedCollection))
       ? focusedCollection
-      : (renderedCollectionRows.find(({ collection }) => collection.key === config.zoteroCollection)
+      : (renderedCollectionRows.find(({ collection }) => collection.key === selectedCollectionKey)
           ?.collection.key ??
-        renderedCollectionRows[0]?.collection.key ??
+        library?.key ??
         null)
+
+  const configuredCollection = useMemo(
+    () => collections.find((collection) => collection.key === config.zoteroCollection) ?? null,
+    [collections, config.zoteroCollection]
+  )
+  const viewedCollection = useMemo(() => {
+    if (library && selectedCollectionKey === library.key) {
+      return {
+        key: library.key,
+        name: library.name,
+        parentKey: null,
+        itemCount: library.itemCount
+      }
+    }
+    return collections.find((collection) => collection.key === selectedCollectionKey) ?? null
+  }, [collections, library, selectedCollectionKey])
+  const projectCitekeys = useMemo(() => new Set(bibEntries.map((entry) => entry.key)), [bibEntries])
+  const referenceHealth = useMemo(
+    () => buildReferenceHealth(bibEntries, citationUsages, libraryInventory),
+    [bibEntries, citationUsages, libraryInventory]
+  )
+  const zoteroHealthByItemKey = useMemo(
+    () => new Map(referenceHealth.zotero.map((status) => [status.item.itemKey, status])),
+    [referenceHealth.zotero]
+  )
+  const inventoryProjectCount = useMemo(
+    () =>
+      inventory?.items.filter((item) => {
+        const status = zoteroHealthByItemKey.get(item.itemKey)
+        if (status) return status.projectEntry !== null
+        return item.citekey ? projectCitekeys.has(item.citekey) : false
+      }).length ?? 0,
+    [inventory, projectCitekeys, zoteroHealthByItemKey]
+  )
+  const normalizedQuery = query.trim().toLocaleLowerCase('en-US')
+  const projectSearchResults = useMemo(
+    () =>
+      normalizedQuery
+        ? referenceHealth.project.filter(({ entry }) =>
+            [entry.key, entry.title, entry.author, entry.year].some((value) =>
+              value.toLocaleLowerCase('en-US').includes(normalizedQuery)
+            )
+          )
+        : [],
+    [normalizedQuery, referenceHealth.project]
+  )
+  const localSearchResultCount = projectSearchResults.length + results.length
+  const issueCount =
+    referenceHealth.missingCitations.length +
+    (zoteroAvailable && libraryInventoryLoaded && !libraryInventoryError
+      ? referenceHealth.projectOnlyCount
+      : 0)
+  const selectedInventoryKeys = useMemo(
+    () => new Set(inventory?.items.map((item) => item.itemKey) ?? []),
+    [inventory]
+  )
+  const visibleProjectReferences = useMemo(
+    () =>
+      referenceHealth.project.filter(
+        (status) =>
+          matchesProjectFilter(
+            status,
+            healthFilter,
+            zoteroAvailable === true && libraryInventoryLoaded && !libraryInventoryError
+          ) &&
+          (!status.zoteroItem || !selectedInventoryKeys.has(status.zoteroItem.itemKey))
+      ),
+    [
+      healthFilter,
+      libraryInventoryLoaded,
+      libraryInventoryError,
+      referenceHealth.project,
+      selectedInventoryKeys,
+      zoteroAvailable
+    ]
+  )
+  const visibleInventoryItems = useMemo(
+    () =>
+      inventory?.items.filter((item) => {
+        const status = zoteroHealthByItemKey.get(item.itemKey)
+        if (status) return matchesZoteroFilter(status, healthFilter)
+        const inProject = item.citekey ? projectCitekeys.has(item.citekey) : false
+        if (healthFilter === 'cited') return false
+        if (healthFilter === 'unused') return inProject
+        if (healthFilter === 'missing') return false
+        return true
+      }) ?? [],
+    [healthFilter, inventory, projectCitekeys, zoteroHealthByItemKey]
+  )
 
   const focusCollection = useCallback((key: string) => {
     setFocusedCollection(key)
@@ -168,6 +489,124 @@ export function ZoteroReferences({ onAddToChat }: ZoteroReferencesProps = {}) {
       return next
     })
   }, [])
+
+  const updateCollectionCount = useCallback((key: string, itemCount: number) => {
+    setLibraries((current) =>
+      current.map((candidate) => ({
+        ...candidate,
+        collections: candidate.collections.map((collection) =>
+          collection.key === key ? { ...collection, itemCount } : collection
+        )
+      }))
+    )
+  }, [])
+
+  useEffect(() => {
+    if (!loaded) return
+    const candidates = renderedCollectionRows
+      .slice(0, COUNT_PREFETCH_LIMIT)
+      .map(({ collection }) => collection)
+      .filter(
+        (collection) =>
+          collection.itemCount === null && !requestedCounts.current.has(collection.key)
+      )
+    if (candidates.length === 0) return
+    const generation = scopeGeneration.current
+    const root = projectRoot
+    const apiPort = port
+    let cancelled = false
+    void (async () => {
+      for (let index = 0; index < candidates.length; index += 4) {
+        const batch = candidates.slice(index, index + 4)
+        for (const collection of batch) requestedCounts.current.add(collection.key)
+        const pages = await Promise.all(
+          batch.map((collection) =>
+            window.api
+              .zoteroCollectionItems(collection.key, 0, 0, port)
+              .then((page) => ({ key: collection.key, count: page.totalResults }))
+              .catch(() => null)
+          )
+        )
+        if (cancelled || !isCurrentScope(generation, root, apiPort)) return
+        for (const page of pages) {
+          if (page) updateCollectionCount(page.key, page.count)
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [isCurrentScope, loaded, port, projectRoot, renderedCollectionRows, updateCollectionCount])
+
+  useEffect(() => {
+    const collectionKey = selectedCollectionKey
+    if (!collectionKey || !loaded) {
+      setInventory(null)
+      setInventoryBusy(false)
+      return
+    }
+    const generation = scopeGeneration.current
+    const root = projectRoot
+    const apiPort = port
+    let cancelled = false
+    setInventory(null)
+    setInventoryBusy(true)
+    setResults([])
+    setSyncPreview(null)
+    void window.api
+      .zoteroCollectionItems(collectionKey, 0, ITEM_PAGE_SIZE, port)
+      .then((page) => {
+        if (cancelled || !isCurrentScope(generation, root, apiPort)) return
+        setInventory({ items: page.items, totalResults: page.totalResults })
+        updateCollectionCount(collectionKey, page.totalResults)
+      })
+      .catch((error) => {
+        if (!cancelled && isCurrentScope(generation, root, apiPort)) {
+          setMessage(error instanceof Error ? error.message : String(error))
+        }
+      })
+      .finally(() => {
+        if (!cancelled && isCurrentScope(generation, root, apiPort)) setInventoryBusy(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [isCurrentScope, loaded, port, projectRoot, selectedCollectionKey, updateCollectionCount])
+
+  useEffect(() => {
+    if (!loaded) return
+    if (!libraryKey) {
+      setLibraryInventory([])
+      setLibraryInventoryLoaded(true)
+      setLibraryInventoryError('')
+      return
+    }
+    const generation = scopeGeneration.current
+    const root = projectRoot
+    const apiPort = port
+    let cancelled = false
+    setLibraryInventory([])
+    setLibraryInventoryLoaded(false)
+    setLibraryInventoryError('')
+    void loadAllZoteroItems(libraryKey, port)
+      .then((items) => {
+        if (cancelled || !isCurrentScope(generation, root, apiPort)) return
+        setLibraryInventory(items)
+        setLibraryInventoryLoaded(true)
+        setLibraryInventoryError('')
+      })
+      .catch((error) => {
+        if (!cancelled && isCurrentScope(generation, root, apiPort)) {
+          const detail = error instanceof Error ? error.message : String(error)
+          setLibraryInventoryError(detail)
+          setLibraryInventoryLoaded(true)
+          setMessage(detail)
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [isCurrentScope, libraryKey, loaded, port, projectRoot])
 
   const handleCollectionKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLButtonElement>, row: CollectionRow, index: number) => {
@@ -212,6 +651,10 @@ export function ZoteroReferences({ onAddToChat }: ZoteroReferencesProps = {}) {
             targetIndex = renderedCollectionRows.findIndex(
               ({ collection }) => collection.key === row.parentKey
             )
+          } else if (library) {
+            event.preventDefault()
+            focusCollection(library.key)
+            return
           }
           break
         default:
@@ -226,9 +669,28 @@ export function ZoteroReferences({ onAddToChat }: ZoteroReferencesProps = {}) {
       collectionLimit,
       expandedCollections,
       focusCollection,
+      library,
       renderedCollectionRows,
       toggleCollection
     ]
+  )
+
+  const handleLibraryKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (!library) return
+      if (event.key === 'ArrowLeft' && libraryExpanded) {
+        event.preventDefault()
+        setLibraryExpanded(false)
+      } else if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+        event.preventDefault()
+        if (!libraryExpanded) {
+          setLibraryExpanded(true)
+        } else if (renderedCollectionRows[0]) {
+          focusCollection(renderedCollectionRows[0].collection.key)
+        }
+      }
+    },
+    [focusCollection, library, libraryExpanded, renderedCollectionRows]
   )
 
   const search = useCallback(
@@ -243,10 +705,14 @@ export function ZoteroReferences({ onAddToChat }: ZoteroReferencesProps = {}) {
       setBusy('search')
       setMessage('')
       try {
-        const items = await window.api.zoteroSearch(normalized, port)
+        const items =
+          zoteroAvailable === false ? [] : await window.api.zoteroSearch(normalized, port)
         if (!isCurrentScope(generation, root, apiPort)) return
         setResults(items)
-        if (items.length === 0) setMessage('No matching Zotero items found.')
+        setLastLocalSearch(normalized.toLocaleLowerCase('en-US'))
+        if (items.length === 0 && projectSearchResults.length === 0) {
+          setMessage('No matching project or Zotero references found.')
+        }
       } catch (error) {
         if (isCurrentScope(generation, root, apiPort)) {
           setMessage(error instanceof Error ? error.message : String(error))
@@ -258,7 +724,7 @@ export function ZoteroReferences({ onAddToChat }: ZoteroReferencesProps = {}) {
         }
       }
     },
-    [isCurrentScope, port, projectRoot, query]
+    [isCurrentScope, port, projectRoot, projectSearchResults.length, query, zoteroAvailable]
   )
 
   const add = useCallback(
@@ -297,6 +763,100 @@ export function ZoteroReferences({ onAddToChat }: ZoteroReferencesProps = {}) {
     [isCurrentScope, port, projectRoot]
   )
 
+  const citeProjectReference = useCallback((citekey: string) => {
+    useEditorStore.getState().requestInsertAtCursor(`\\cite{${citekey}}`)
+  }, [])
+
+  const loadMoreInventory = useCallback(async () => {
+    if (
+      !selectedCollectionKey ||
+      !inventory ||
+      inventoryBusy ||
+      inventory.items.length >= inventory.totalResults
+    ) {
+      return
+    }
+    const generation = scopeGeneration.current
+    const root = projectRoot
+    const apiPort = port
+    setInventoryBusy(true)
+    try {
+      const page = await window.api.zoteroCollectionItems(
+        selectedCollectionKey,
+        inventory.items.length,
+        ITEM_PAGE_SIZE,
+        port
+      )
+      if (!isCurrentScope(generation, root, apiPort)) return
+      setInventory((current) =>
+        current
+          ? {
+              items: [
+                ...current.items,
+                ...page.items.filter(
+                  (item) =>
+                    !current.items.some((currentItem) => currentItem.itemKey === item.itemKey)
+                )
+              ],
+              totalResults: page.totalResults
+            }
+          : { items: page.items, totalResults: page.totalResults }
+      )
+    } catch (error) {
+      if (isCurrentScope(generation, root, apiPort)) {
+        setMessage(error instanceof Error ? error.message : String(error))
+      }
+    } finally {
+      if (isCurrentScope(generation, root, apiPort)) setInventoryBusy(false)
+    }
+  }, [inventory, inventoryBusy, isCurrentScope, port, projectRoot, selectedCollectionKey])
+
+  const loadAllCollectionItems = useCallback(
+    (collectionKey: string) => loadAllZoteroItems(collectionKey, port),
+    [port]
+  )
+
+  const prepareSyncPreview = useCallback(async () => {
+    if (!config.zoteroCollection || !targetFile || syncPreviewBusy || operationInFlight.current) {
+      return
+    }
+    const generation = scopeGeneration.current
+    const root = projectRoot
+    const apiPort = port
+    setSyncPreviewBusy(true)
+    setMessage('')
+    try {
+      const collectionItems = await loadAllCollectionItems(config.zoteroCollection)
+      if (!isCurrentScope(generation, root, apiPort)) return
+      const currentEntries = await window.api.parseBibFile(targetFile).catch(() => [])
+      if (!isCurrentScope(generation, root, apiPort)) return
+      const incoming = new Set(
+        collectionItems.flatMap((item) => (item.citekey ? [item.citekey] : []))
+      )
+      const current = new Set(currentEntries.map((entry) => entry.key))
+      setSyncPreview({
+        added: [...incoming].filter((citekey) => !current.has(citekey)),
+        removed: [...current].filter((citekey) => !incoming.has(citekey)),
+        unchanged: [...incoming].filter((citekey) => current.has(citekey)).length,
+        unresolved: collectionItems.filter((item) => !item.citekey).length
+      })
+    } catch (error) {
+      if (isCurrentScope(generation, root, apiPort)) {
+        setMessage(error instanceof Error ? error.message : String(error))
+      }
+    } finally {
+      if (isCurrentScope(generation, root, apiPort)) setSyncPreviewBusy(false)
+    }
+  }, [
+    config.zoteroCollection,
+    isCurrentScope,
+    loadAllCollectionItems,
+    port,
+    projectRoot,
+    syncPreviewBusy,
+    targetFile
+  ])
+
   const saveConfig = useCallback(async () => {
     if (operationInFlight.current) return
     const generation = scopeGeneration.current
@@ -322,60 +882,40 @@ export function ZoteroReferences({ onAddToChat }: ZoteroReferencesProps = {}) {
     }
   }, [config, isCurrentScope, port, projectRoot])
 
-  const syncCollection = useCallback(
-    async (confirmFirst = true) => {
-      if (!config.zoteroCollection || !targetFile || operationInFlight.current) return
-      const selected = collections.find((collection) => collection.key === config.zoteroCollection)
-      if (
-        confirmFirst &&
-        !window.confirm(
-          `Sync ${selected?.name ?? config.zoteroCollection}?\n\n` +
-            `${selected?.itemCount ?? 0} references\nTarget: ${config.zoteroFile}`
-        )
-      ) {
-        return
-      }
-      const generation = scopeGeneration.current
-      const root = projectRoot
-      const apiPort = port
-      operationInFlight.current = true
-      setBusy('sync')
-      setMessage('')
-      try {
-        const result = await window.api.zoteroSyncCollection(
-          config.zoteroCollection,
-          targetFile,
-          port
-        )
+  const syncCollection = useCallback(async () => {
+    if (!config.zoteroCollection || !targetFile || operationInFlight.current) return
+    const generation = scopeGeneration.current
+    const root = projectRoot
+    const apiPort = port
+    operationInFlight.current = true
+    setBusy('sync')
+    setMessage('')
+    try {
+      const result = await window.api.zoteroSyncCollection(
+        config.zoteroCollection,
+        targetFile,
+        port
+      )
+      if (!isCurrentScope(generation, root, apiPort)) return
+      if (root) {
+        const entries = await window.api.findBibInProject(root)
         if (!isCurrentScope(generation, root, apiPort)) return
-        if (root) {
-          const entries = await window.api.findBibInProject(root)
-          if (!isCurrentScope(generation, root, apiPort)) return
-          useProjectStore.getState().setBibEntries(entries)
-          useProjectStore.getState().invalidateDirectory(root)
-        }
-        setMessage(`Synchronized ${result.entryCount} entries to ${config.zoteroFile}.`)
-      } catch (error) {
-        if (isCurrentScope(generation, root, apiPort)) {
-          setMessage(error instanceof Error ? error.message : String(error))
-        }
-      } finally {
-        if (isCurrentScope(generation, root, apiPort)) {
-          operationInFlight.current = false
-          setBusy(null)
-        }
+        useProjectStore.getState().setBibEntries(entries)
+        useProjectStore.getState().invalidateDirectory(root)
       }
-    },
-    [
-      collections,
-      config.zoteroCollection,
-      config.zoteroFile,
-      isCurrentScope,
-      port,
-      projectRoot,
-      targetFile
-    ]
-  )
+      setMessage(`Synchronized ${result.entryCount} entries to ${config.zoteroFile}.`)
+      setSyncPreview(null)
+    } catch (error) {
+      if (isCurrentScope(generation, root, apiPort)) {
+        setMessage(error instanceof Error ? error.message : String(error))
+      }
+    } finally {
+      if (isCurrentScope(generation, root, apiPort)) {
+        operationInFlight.current = false
+        setBusy(null)
+      }
+    }
+  }, [config.zoteroCollection, config.zoteroFile, isCurrentScope, port, projectRoot, targetFile])
 
   if (busy === 'load') {
     return (
@@ -388,6 +928,16 @@ export function ZoteroReferences({ onAddToChat }: ZoteroReferencesProps = {}) {
   return (
     <section className="research-reference-view" aria-label="Zotero references">
       <div className="research-config-row">
+        {onOpenProjectGroups && (
+          <button
+            type="button"
+            onClick={onOpenProjectGroups}
+            title="Project citation groups"
+            aria-label="Project citation groups"
+          >
+            <BookMarked size={14} />
+          </button>
+        )}
         <button
           type="button"
           onClick={() => void saveConfig()}
@@ -399,68 +949,171 @@ export function ZoteroReferences({ onAddToChat }: ZoteroReferencesProps = {}) {
         </button>
         <button
           type="button"
-          onClick={() => void syncCollection(true)}
-          disabled={busy !== null || !config.zoteroCollection || !projectRoot}
+          onClick={() => void prepareSyncPreview()}
+          disabled={busy !== null || !configuredCollection || !projectRoot}
           title="Synchronize selected collection"
           aria-label="Synchronize selected collection"
         >
-          {busy === 'sync' ? <Loader className="spin" size={14} /> : <RefreshCw size={14} />}
+          {busy === 'sync' || syncPreviewBusy ? (
+            <Loader className="spin" size={14} />
+          ) : (
+            <RefreshCw size={14} />
+          )}
         </button>
       </div>
-      <div className="zotero-collection-tree" role="tree" aria-label="Zotero collections">
-        {collectionRows.length === 0 ? (
-          <div className="research-muted">No Zotero collections found.</div>
-        ) : (
-          renderedCollectionRows.map((row, index) => (
+      <section className="reference-health" aria-label="Current paper reference health">
+        <div className="reference-health-heading">
+          <div>
+            <strong>Current paper</strong>
+            <span>
+              {referenceHealth.citedCount} cited · {referenceHealth.bibliographyCount} bib ·{' '}
+              {issueCount} issue{issueCount === 1 ? '' : 's'}
+            </span>
+          </div>
+          <small>
+            {zoteroAvailable === false
+              ? 'Zotero unavailable'
+              : libraryInventoryError
+                ? 'Cross-check unavailable'
+                : libraryInventoryLoaded
+                  ? `${referenceHealth.linkedToZoteroCount} linked to Zotero`
+                  : 'Cross-checking Zotero…'}
+          </small>
+        </div>
+        {(referenceHealth.missingCitations.length > 0 ||
+          (zoteroAvailable &&
+            libraryInventoryLoaded &&
+            !libraryInventoryError &&
+            referenceHealth.projectOnlyCount > 0)) && (
+          <div className="reference-health-issues" role="status">
+            {referenceHealth.missingCitations.length > 0 && (
+              <span>⚠ {referenceHealth.missingCitations.length} missing bibliography</span>
+            )}
+            {zoteroAvailable &&
+              libraryInventoryLoaded &&
+              !libraryInventoryError &&
+              referenceHealth.projectOnlyCount > 0 && (
+                <span>○ {referenceHealth.projectOnlyCount} not linked to Zotero</span>
+              )}
+          </div>
+        )}
+        <div className="reference-health-filters" aria-label="Reference filters">
+          {(
+            [
+              ['all', 'All', referenceHealth.bibliographyCount + referenceHealth.zoteroOnlyCount],
+              ['cited', 'Cited', referenceHealth.citedCount],
+              ['missing', 'Missing', issueCount],
+              ['unused', 'Unused', referenceHealth.unusedCount],
+              ['zotero', 'Zotero', inventory?.totalResults ?? 0]
+            ] as const
+          ).map(([value, label, count]) => (
             <button
               type="button"
-              draggable
+              key={value}
+              className={healthFilter === value ? 'active' : ''}
+              aria-pressed={healthFilter === value}
+              onClick={() => setHealthFilter(value)}
+            >
+              {label} <span>{value === 'zotero' && !inventory ? '…' : count}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+      <div className="zotero-collection-tree" role="tree" aria-label="Zotero collections">
+        {!library ? (
+          <div className="research-muted">No Zotero collections found.</div>
+        ) : (
+          <>
+            <button
+              type="button"
               role="treeitem"
-              aria-level={row.depth + 1}
-              aria-expanded={
-                row.hasChildren ? expandedCollections.has(row.collection.key) : undefined
+              aria-level={1}
+              aria-expanded={libraryExpanded}
+              className={
+                selectedCollectionKey === library.key
+                  ? 'zotero-library-root active'
+                  : 'zotero-library-root'
               }
-              aria-selected={config.zoteroCollection === row.collection.key}
-              className={config.zoteroCollection === row.collection.key ? 'active' : ''}
-              style={{ paddingLeft: 8 + row.depth * 16 }}
-              tabIndex={activeCollectionKey === row.collection.key ? 0 : -1}
-              key={row.collection.key}
+              tabIndex={activeCollectionKey === library.key ? 0 : -1}
               ref={(element) => {
-                if (element) collectionRefs.current.set(row.collection.key, element)
-                else collectionRefs.current.delete(row.collection.key)
+                if (element) collectionRefs.current.set(library.key, element)
+                else collectionRefs.current.delete(library.key)
               }}
-              onFocus={() => setFocusedCollection(row.collection.key)}
-              onKeyDown={(event) => handleCollectionKeyDown(event, row, index)}
+              onFocus={() => setFocusedCollection(library.key)}
+              onKeyDown={handleLibraryKeyDown}
+              aria-selected={selectedCollectionKey === library.key}
               onClick={() => {
-                setConfig((current) => ({ ...current, zoteroCollection: row.collection.key }))
-                if (row.hasChildren) {
-                  if (
-                    !expandedCollections.has(row.collection.key) &&
-                    index === renderedCollectionRows.length - 1 &&
-                    renderedCollectionRows.length === collectionLimit
-                  ) {
-                    setCollectionLimit((current) => current + COLLECTION_PAGE_SIZE)
-                  }
-                  toggleCollection(row.collection.key)
+                setResults([])
+                if (selectedCollectionKey === library.key) {
+                  setLibraryExpanded((current) => !current)
+                } else {
+                  setSelectedCollectionKey(library.key)
+                  setLibraryExpanded(true)
                 }
               }}
-              onDragStart={(event) =>
-                setZoteroCollectionDragData(event, { collection: row.collection, port })
-              }
             >
               <ChevronRight
-                className={
-                  row.hasChildren && expandedCollections.has(row.collection.key)
-                    ? 'collection-chevron expanded'
-                    : 'collection-chevron'
-                }
+                className={libraryExpanded ? 'collection-chevron expanded' : 'collection-chevron'}
                 size={13}
                 aria-hidden="true"
               />
-              <span>{row.collection.name}</span>
-              <small>{row.collection.itemCount}</small>
+              <FolderTree size={13} aria-hidden="true" />
+              <span>{library.name}</span>
+              <small>{library.itemCount ?? '…'}</small>
             </button>
-          ))
+            {renderedCollectionRows.map((row, index) => (
+              <button
+                type="button"
+                draggable
+                role="treeitem"
+                aria-level={row.depth + 2}
+                aria-expanded={
+                  row.hasChildren ? expandedCollections.has(row.collection.key) : undefined
+                }
+                aria-selected={selectedCollectionKey === row.collection.key}
+                className={selectedCollectionKey === row.collection.key ? 'active' : ''}
+                style={{ paddingLeft: 24 + row.depth * 16 }}
+                tabIndex={activeCollectionKey === row.collection.key ? 0 : -1}
+                key={row.collection.key}
+                ref={(element) => {
+                  if (element) collectionRefs.current.set(row.collection.key, element)
+                  else collectionRefs.current.delete(row.collection.key)
+                }}
+                onFocus={() => setFocusedCollection(row.collection.key)}
+                onKeyDown={(event) => handleCollectionKeyDown(event, row, index)}
+                onClick={() => {
+                  setSelectedCollectionKey(row.collection.key)
+                  setConfig((current) => ({ ...current, zoteroCollection: row.collection.key }))
+                  setResults([])
+                  if (row.hasChildren) {
+                    if (
+                      !expandedCollections.has(row.collection.key) &&
+                      index === renderedCollectionRows.length - 1 &&
+                      renderedCollectionRows.length === collectionLimit
+                    ) {
+                      setCollectionLimit((current) => current + COLLECTION_PAGE_SIZE)
+                    }
+                    toggleCollection(row.collection.key)
+                  }
+                }}
+                onDragStart={(event) =>
+                  setZoteroCollectionDragData(event, { collection: row.collection, port })
+                }
+              >
+                <ChevronRight
+                  className={
+                    row.hasChildren && expandedCollections.has(row.collection.key)
+                      ? 'collection-chevron expanded'
+                      : 'collection-chevron'
+                  }
+                  size={13}
+                  aria-hidden="true"
+                />
+                <span>{row.collection.name}</span>
+                <small>{row.collection.itemCount ?? '…'}</small>
+              </button>
+            ))}
+          </>
         )}
       </div>
       {visibleCollectionRows.length > renderedCollectionRows.length && (
@@ -472,23 +1125,50 @@ export function ZoteroReferences({ onAddToChat }: ZoteroReferencesProps = {}) {
           Show more collections ({visibleCollectionRows.length - renderedCollectionRows.length})
         </button>
       )}
-      <label className="research-check-row">
-        <input
-          type="checkbox"
-          checked={config.syncOnOpen}
-          onChange={(event) =>
-            setConfig((current) => ({ ...current, syncOnOpen: event.target.checked }))
-          }
-        />
-        Keep synchronized when this project opens
-      </label>
+      {viewedCollection && (
+        <div className="zotero-inventory-summary" aria-live="polite">
+          <div>
+            <strong>{viewedCollection.name}</strong>
+            <span>{inventory?.totalResults ?? viewedCollection.itemCount ?? '…'} papers</span>
+          </div>
+          {inventoryBusy && !inventory ? (
+            <span className="research-muted">
+              <Loader className="spin" size={12} /> Loading papers…
+            </span>
+          ) : inventory ? (
+            <span className="research-muted">
+              {inventoryProjectCount} in project · {inventory.items.length - inventoryProjectCount}{' '}
+              Zotero only
+              {inventory.items.length < inventory.totalResults
+                ? ` · ${inventory.items.length} shown`
+                : ''}
+            </span>
+          ) : null}
+        </div>
+      )}
+      {configuredCollection && (
+        <label className="research-check-row">
+          <input
+            type="checkbox"
+            checked={config.syncOnOpen}
+            onChange={(event) =>
+              setConfig((current) => ({ ...current, syncOnOpen: event.target.checked }))
+            }
+          />
+          Keep synchronized when this project opens
+        </label>
+      )}
       <form className="research-search" onSubmit={search}>
         <input
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => {
+            setQuery(event.target.value)
+            setResults([])
+            setLastLocalSearch('')
+          }}
           maxLength={1_024}
-          placeholder="Search Zotero library"
-          aria-label="Search Zotero library"
+          placeholder="Search project & Zotero"
+          aria-label="Search project and Zotero"
         />
         <button type="submit" disabled={!query.trim() || busy !== null} aria-label="Search">
           {busy === 'search' ? <Loader className="spin" size={15} /> : <Search size={15} />}
@@ -497,44 +1177,248 @@ export function ZoteroReferences({ onAddToChat }: ZoteroReferencesProps = {}) {
       <div
         className="reference-card-list"
         role="region"
-        aria-label="Zotero search results"
-        tabIndex={results.length > 0 ? 0 : -1}
+        aria-label={normalizedQuery ? 'Local reference search results' : 'Reference manager items'}
+        tabIndex={
+          normalizedQuery || visibleInventoryItems.length > 0 || visibleProjectReferences.length > 0
+            ? 0
+            : -1
+        }
       >
-        {results.map((item) => (
-          <article
-            className="reference-card"
-            key={item.citekey}
-            draggable
-            onDragStart={(event) =>
-              setReferenceDragData(event, buildZoteroReferencePayload(item, port))
-            }
-          >
-            <div>
-              <strong>{item.title || item.citekey}</strong>
-              <span>@{item.citekey}</span>
-            </div>
-            <span>
-              {item.author || 'Unknown author'}
-              {item.year ? ` · ${item.year}` : ''}
-            </span>
-            <div className="reference-card-actions">
-              {onAddToChat && (
-                <button
-                  type="button"
-                  onClick={() => onAddToChat(buildZoteroReferencePayload(item, port))}
-                  aria-label={`Add ${item.title || item.citekey} to Chat`}
-                >
-                  <MessageSquarePlus size={13} /> Add to Chat
+        {normalizedQuery &&
+          projectSearchResults.map((status) => (
+            <ProjectReferenceCard
+              key={`project:${status.entry.key}`}
+              status={status}
+              zoteroState={
+                zoteroAvailable === false
+                  ? 'unavailable'
+                  : libraryInventoryError
+                    ? 'error'
+                    : libraryInventoryLoaded
+                      ? 'ready'
+                      : 'checking'
+              }
+              onCite={citeProjectReference}
+              onAddToChat={onAddToChat}
+            />
+          ))}
+        {!normalizedQuery &&
+          healthFilter === 'missing' &&
+          referenceHealth.missingCitations.map((usage) => (
+            <article className="reference-card reference-health-card broken" key={usage.citekey}>
+              <div>
+                <span className="reference-warning" aria-hidden="true">
+                  ⚠
+                </span>
+                <strong>@{usage.citekey}</strong>
+                <span>Cited ×{usage.count}</span>
+              </div>
+              <span>Used in TeX but missing from every project bibliography.</span>
+            </article>
+          ))}
+        {!normalizedQuery &&
+          visibleInventoryItems.map((item) => {
+            const healthStatus = zoteroHealthByItemKey.get(item.itemKey)
+            const inProject = healthStatus
+              ? healthStatus.projectEntry !== null
+              : item.citekey
+                ? projectCitekeys.has(item.citekey)
+                : false
+            const citationCount = healthStatus?.citationCount ?? 0
+            const searchableItem: ZoteroSearchResult | null = item.citekey
+              ? {
+                  citekey: item.citekey,
+                  title: item.title,
+                  author: item.author,
+                  year: item.year,
+                  type: item.type
+                }
+              : null
+            return (
+              <article
+                className="reference-card zotero-inventory-card"
+                key={item.itemKey}
+                draggable={searchableItem !== null}
+                onDragStart={(event) => {
+                  if (searchableItem) {
+                    setReferenceDragData(event, buildZoteroReferencePayload(searchableItem, port))
+                  }
+                }}
+              >
+                <div>
+                  {inProject ? (
+                    <Check
+                      className="zotero-project-state in-project"
+                      size={14}
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <Circle className="zotero-project-state" size={12} aria-hidden="true" />
+                  )}
+                  <strong>{item.title}</strong>
+                  <span>{item.citekey ? `@${item.citekey}` : 'Citekey unavailable'}</span>
+                </div>
+                <span>
+                  {item.author || 'Unknown author'}
+                  {item.year ? ` · ${item.year}` : ''}
+                  {citationCount > 0
+                    ? ` · CITED ×${citationCount}`
+                    : inProject
+                      ? ' · IN PROJECT, UNUSED'
+                      : item.citekey
+                        ? ' · ZOTERO ONLY'
+                        : ''}
+                </span>
+                {searchableItem && (
+                  <div className="reference-card-actions">
+                    {onAddToChat && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onAddToChat(buildZoteroReferencePayload(searchableItem, port))
+                        }
+                        aria-label={`Add ${item.title} to Chat`}
+                      >
+                        <MessageSquarePlus size={13} /> Add to Chat
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => void add(searchableItem)}
+                      disabled={busy !== null}
+                    >
+                      {busy === item.citekey ? (
+                        <Loader className="spin" size={13} />
+                      ) : inProject ? (
+                        <Check size={13} />
+                      ) : (
+                        <Plus size={13} />
+                      )}
+                      {inProject ? 'Cite' : 'Add & cite'}
+                    </button>
+                  </div>
+                )}
+              </article>
+            )
+          })}
+        {!normalizedQuery &&
+          visibleProjectReferences.map((status) => (
+            <ProjectReferenceCard
+              key={`project:${status.entry.key}`}
+              status={status}
+              zoteroState={
+                zoteroAvailable === false
+                  ? 'unavailable'
+                  : libraryInventoryError
+                    ? 'error'
+                    : libraryInventoryLoaded
+                      ? 'ready'
+                      : 'checking'
+              }
+              onCite={citeProjectReference}
+              onAddToChat={onAddToChat}
+            />
+          ))}
+        {normalizedQuery &&
+          results.map((item) => (
+            <article
+              className="reference-card"
+              key={item.citekey}
+              draggable
+              onDragStart={(event) =>
+                setReferenceDragData(event, buildZoteroReferencePayload(item, port))
+              }
+            >
+              <div>
+                <strong>{item.title || item.citekey}</strong>
+                <span>@{item.citekey}</span>
+              </div>
+              <span>
+                {item.author || 'Unknown author'}
+                {item.year ? ` · ${item.year}` : ''}
+              </span>
+              <div className="reference-card-actions">
+                {onAddToChat && (
+                  <button
+                    type="button"
+                    onClick={() => onAddToChat(buildZoteroReferencePayload(item, port))}
+                    aria-label={`Add ${item.title || item.citekey} to Chat`}
+                  >
+                    <MessageSquarePlus size={13} /> Add to Chat
+                  </button>
+                )}
+                <button type="button" onClick={() => void add(item)} disabled={busy !== null}>
+                  {busy === item.citekey ? (
+                    <Loader className="spin" size={13} />
+                  ) : (
+                    <Plus size={13} />
+                  )}
+                  Add &amp; cite
                 </button>
-              )}
-              <button type="button" onClick={() => void add(item)} disabled={busy !== null}>
-                {busy === item.citekey ? <Loader className="spin" size={13} /> : <Plus size={13} />}
-                Add &amp; cite
+              </div>
+            </article>
+          ))}
+        {!normalizedQuery && inventory && inventory.items.length < inventory.totalResults && (
+          <button
+            type="button"
+            className="zotero-load-more-items"
+            onClick={() => void loadMoreInventory()}
+            disabled={inventoryBusy}
+          >
+            {inventoryBusy ? <Loader className="spin" size={13} /> : null}
+            Load more papers ({inventory.totalResults - inventory.items.length})
+          </button>
+        )}
+        {normalizedQuery && lastLocalSearch === normalizedQuery && localSearchResultCount === 0 && (
+          <div className="reference-online-fallback">
+            <span>No project or Zotero matches.</span>
+            {onSearchOnline && (
+              <button type="button" onClick={onSearchOnline}>
+                Search Crossref / arXiv
               </button>
-            </div>
-          </article>
-        ))}
+            )}
+          </div>
+        )}
       </div>
+      {syncPreview && configuredCollection && (
+        <div className="zotero-sync-preview" role="dialog" aria-label="Zotero sync preview">
+          <strong>Sync preview</strong>
+          <span>{configuredCollection.name}</span>
+          <dl>
+            <div>
+              <dt>New</dt>
+              <dd>+{syncPreview.added.length}</dd>
+            </div>
+            <div>
+              <dt>Removed</dt>
+              <dd>−{syncPreview.removed.length}</dd>
+            </div>
+            <div>
+              <dt>Unchanged</dt>
+              <dd>{syncPreview.unchanged}</dd>
+            </div>
+          </dl>
+          {syncPreview.unresolved > 0 && (
+            <span className="research-muted">
+              {syncPreview.unresolved} item(s) are still waiting for a Better BibTeX citekey.
+            </span>
+          )}
+          <span className="research-muted">Target: {config.zoteroFile}</span>
+          <div className="zotero-sync-preview-actions">
+            <button type="button" onClick={() => setSyncPreview(null)} disabled={busy === 'sync'}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => void syncCollection()}
+              disabled={busy === 'sync' || syncPreview.unresolved > 0}
+            >
+              {busy === 'sync' ? <Loader className="spin" size={13} /> : <RefreshCw size={13} />}
+              Sync
+            </button>
+          </div>
+        </div>
+      )}
       {message && (
         <div className="research-status" aria-live="polite">
           {message}

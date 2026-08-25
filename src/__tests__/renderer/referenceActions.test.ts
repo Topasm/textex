@@ -102,6 +102,15 @@ describe('research reference actions', () => {
     })
     expect(
       parseZoteroCollectionDragData(
+        JSON.stringify({
+          collection: { key: '/0/ABC', name: 'Research', parentKey: null, itemCount: null }
+        })
+      )
+    ).toEqual({
+      collection: { key: '/0/ABC', name: 'Research', parentKey: null, itemCount: null }
+    })
+    expect(
+      parseZoteroCollectionDragData(
         JSON.stringify({ collection: { key: '../../outside', name: 'Bad', itemCount: 1 } })
       )
     ).toBeNull()

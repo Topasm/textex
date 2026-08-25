@@ -4,7 +4,6 @@ import { OnlineReferences } from '../../renderer/components/research/OnlineRefer
 import { ReferencesPanel } from '../../renderer/components/research/ReferencesPanel'
 import { ZoteroReferences } from '../../renderer/components/research/ZoteroReferences'
 import * as referenceActions from '../../renderer/components/research/referenceActions'
-import { TEXTEX_ZOTERO_COLLECTION_MIME } from '../../renderer/components/research/referenceActions'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 
@@ -24,11 +23,21 @@ const config = {
   syncOnOpen: false
 }
 
+const libraryTree = (
+  collections: Array<{
+    key: string
+    name: string
+    parentKey: string | null
+    itemCount: number | null
+  }>
+) => [{ key: '/0', name: 'My Library', itemCount: 438, collections }]
+
 describe('Research reference sources', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     useProjectStore.setState({
       projectRoot: '/project-a',
+      bibEntries: [],
       researchSearchQuery: '',
       researchReferenceSource: 'project'
     })
@@ -43,14 +52,14 @@ describe('Research reference sources', () => {
       .fn()
       .mockReturnValueOnce(firstConfig.promise)
       .mockResolvedValueOnce(config)
-    window.api.zoteroCollections = vi
+    window.api.zoteroLibraryTree = vi
       .fn()
-      .mockResolvedValueOnce([
-        { key: '/0/A', name: 'Project A papers', parentKey: null, itemCount: 1 }
-      ])
-      .mockResolvedValueOnce([
-        { key: '/0/B', name: 'Project B papers', parentKey: null, itemCount: 2 }
-      ])
+      .mockResolvedValueOnce(
+        libraryTree([{ key: '/0/A', name: 'Project A papers', parentKey: null, itemCount: 1 }])
+      )
+      .mockResolvedValueOnce(
+        libraryTree([{ key: '/0/B', name: 'Project B papers', parentKey: null, itemCount: 2 }])
+      )
 
     render(<ZoteroReferences />)
     await waitFor(() => expect(window.api.researchLoadConfig).toHaveBeenCalledOnce())
@@ -120,13 +129,39 @@ describe('Research reference sources', () => {
 
   it('keeps Zotero controls unavailable until project configuration is loaded', () => {
     window.api.researchLoadConfig = vi.fn().mockReturnValue(new Promise(() => undefined))
-    window.api.zoteroCollections = vi.fn().mockResolvedValue([])
+    window.api.zoteroLibraryTree = vi.fn().mockResolvedValue([])
 
     render(<ZoteroReferences />)
 
     expect(screen.getByText('Loading Zotero…')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Save research settings' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('textbox', { name: 'Search Zotero library' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('textbox', { name: 'Search project and Zotero' })
+    ).not.toBeInTheDocument()
+  })
+
+  it('keeps project health usable when Zotero is unavailable', async () => {
+    useProjectStore.setState({
+      bibEntries: [
+        {
+          key: 'local2026',
+          type: 'article',
+          title: 'Local paper',
+          author: 'Ada Lovelace',
+          year: '2026'
+        }
+      ]
+    })
+    window.api.researchLoadConfig = vi.fn().mockResolvedValue(config)
+    window.api.scanCitations = vi.fn().mockResolvedValue([{ citekey: 'local2026', count: 2 }])
+    window.api.zoteroLibraryTree = vi.fn().mockRejectedValue(new Error('Cannot connect to Zotero'))
+
+    render(<ZoteroReferences />)
+
+    const card = (await screen.findByText('Local paper')).closest('article')
+    expect(card).toHaveTextContent('CITED ×2')
+    expect(card).toHaveTextContent('Zotero unavailable')
+    expect(card).not.toHaveTextContent('Not linked to Zotero')
   })
 
   it('ignores a late Zotero load after the configured port changes', async () => {
@@ -135,10 +170,14 @@ describe('Research reference sources', () => {
       .fn()
       .mockReturnValueOnce(firstConfig.promise)
       .mockResolvedValueOnce(config)
-    window.api.zoteroCollections = vi
+    window.api.zoteroLibraryTree = vi
       .fn()
-      .mockResolvedValueOnce([{ key: '/0/A', name: 'Old port', parentKey: null, itemCount: 1 }])
-      .mockResolvedValueOnce([{ key: '/0/B', name: 'New port', parentKey: null, itemCount: 2 }])
+      .mockResolvedValueOnce(
+        libraryTree([{ key: '/0/A', name: 'Old port', parentKey: null, itemCount: 1 }])
+      )
+      .mockResolvedValueOnce(
+        libraryTree([{ key: '/0/B', name: 'New port', parentKey: null, itemCount: 2 }])
+      )
 
     render(<ZoteroReferences />)
     await waitFor(() => expect(window.api.researchLoadConfig).toHaveBeenCalledOnce())
@@ -158,10 +197,10 @@ describe('Research reference sources', () => {
 
   it('serializes Zotero search submissions before React can disable the form', async () => {
     window.api.researchLoadConfig = vi.fn().mockResolvedValue(config)
-    window.api.zoteroCollections = vi.fn().mockResolvedValue([])
+    window.api.zoteroLibraryTree = vi.fn().mockResolvedValue([])
     window.api.zoteroSearch = vi.fn().mockReturnValue(new Promise(() => undefined))
     render(<ZoteroReferences />)
-    const search = await screen.findByRole('textbox', { name: 'Search Zotero library' })
+    const search = await screen.findByRole('textbox', { name: 'Search project and Zotero' })
     fireEvent.change(search, { target: { value: 'robot paper' } })
     const form = search.closest('form')
     expect(form).not.toBeNull()
@@ -172,7 +211,7 @@ describe('Research reference sources', () => {
     expect(window.api.zoteroSearch).toHaveBeenCalledOnce()
   })
 
-  it('uses the Chat command query in project and Zotero reference filters', async () => {
+  it('uses the Chat command query in the unified project and Zotero filter', async () => {
     useProjectStore.setState({
       researchSearchQuery: 'diffusion policy',
       researchReferenceSource: 'project',
@@ -186,25 +225,22 @@ describe('Research reference sources', () => {
         }
       ]
     })
-    const { unmount } = render(<ReferencesPanel />)
-    expect(screen.getByPlaceholderText('Filter citations...')).toHaveValue('diffusion policy')
-    unmount()
-
     window.api.researchLoadConfig = vi.fn().mockResolvedValue(config)
-    window.api.zoteroCollections = vi.fn().mockResolvedValue([])
-    useProjectStore.getState().setResearchReferenceSource('zotero')
+    window.api.zoteroLibraryTree = vi.fn().mockResolvedValue([])
     render(<ReferencesPanel />)
-    expect(await screen.findByRole('textbox', { name: 'Search Zotero library' })).toHaveValue(
+    expect(await screen.findByRole('textbox', { name: 'Search project and Zotero' })).toHaveValue(
       'diffusion policy'
     )
   })
 
   it('renders only expanded collection branches and supports keyboard tree navigation', async () => {
     window.api.researchLoadConfig = vi.fn().mockResolvedValue(config)
-    window.api.zoteroCollections = vi.fn().mockResolvedValue([
-      { key: '/0/PARENT', name: 'Parent', parentKey: null, itemCount: 2 },
-      { key: '/0/CHILD', name: 'Child', parentKey: '/0/PARENT', itemCount: 1 }
-    ])
+    window.api.zoteroLibraryTree = vi.fn().mockResolvedValue(
+      libraryTree([
+        { key: '/0/PARENT', name: 'Parent', parentKey: null, itemCount: 2 },
+        { key: '/0/CHILD', name: 'Child', parentKey: '/0/PARENT', itemCount: 1 }
+      ])
+    )
 
     render(<ZoteroReferences />)
 
@@ -222,89 +258,265 @@ describe('Research reference sources', () => {
     expect(parent).toHaveFocus()
   })
 
+  it('does not offer sync for a collection that no longer exists in Zotero', async () => {
+    window.api.researchLoadConfig = vi.fn().mockResolvedValue({
+      ...config,
+      zoteroCollection: '/0/DELETED',
+      syncOnOpen: true
+    })
+    window.api.zoteroLibraryTree = vi
+      .fn()
+      .mockResolvedValue(
+        libraryTree([{ key: '/0/CURRENT', name: 'Current papers', parentKey: null, itemCount: 2 }])
+      )
+
+    render(<ZoteroReferences />)
+
+    const root = await screen.findByRole('treeitem', { name: /My Library/ })
+    expect(root).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('button', { name: 'Synchronize selected collection' })).toBeDisabled()
+    expect(
+      screen.queryByRole('checkbox', { name: 'Keep synchronized when this project opens' })
+    ).not.toBeInTheDocument()
+  })
+
   it('bounds large collection trees and progressively reveals more rows', async () => {
     window.api.researchLoadConfig = vi.fn().mockResolvedValue(config)
-    window.api.zoteroCollections = vi.fn().mockResolvedValue(
-      Array.from({ length: 250 }, (_, index) => ({
-        key: `/0/C${index}`,
-        name: `Collection ${String(index).padStart(3, '0')}`,
-        parentKey: null,
-        itemCount: index
-      }))
+    window.api.zoteroLibraryTree = vi.fn().mockResolvedValue(
+      libraryTree(
+        Array.from({ length: 250 }, (_, index) => ({
+          key: `/0/C${index}`,
+          name: `Collection ${String(index).padStart(3, '0')}`,
+          parentKey: null,
+          itemCount: index
+        }))
+      )
     )
 
     render(<ZoteroReferences />)
 
     await screen.findByRole('treeitem', { name: /Collection 000/ })
-    expect(screen.getAllByRole('treeitem')).toHaveLength(200)
+    expect(screen.getAllByRole('treeitem')).toHaveLength(201)
     fireEvent.click(screen.getByRole('button', { name: 'Show more collections (50)' }))
-    expect(screen.getAllByRole('treeitem')).toHaveLength(250)
+    expect(screen.getAllByRole('treeitem')).toHaveLength(251)
   })
 
   it('keeps malformed collection cycles finite and keyboard-accessible', async () => {
     window.api.researchLoadConfig = vi.fn().mockResolvedValue(config)
-    window.api.zoteroCollections = vi.fn().mockResolvedValue([
-      { key: '/0/A', name: 'Cycle A', parentKey: '/0/B', itemCount: 1 },
-      { key: '/0/B', name: 'Cycle B', parentKey: '/0/A', itemCount: 1 }
-    ])
+    window.api.zoteroLibraryTree = vi.fn().mockResolvedValue(
+      libraryTree([
+        { key: '/0/A', name: 'Cycle A', parentKey: '/0/B', itemCount: 1 },
+        { key: '/0/B', name: 'Cycle B', parentKey: '/0/A', itemCount: 1 }
+      ])
+    )
 
     render(<ZoteroReferences />)
 
     const first = await screen.findByRole('treeitem', { name: /Cycle A/ })
-    expect(screen.getAllByRole('treeitem')).toHaveLength(1)
-    fireEvent.keyDown(first, { key: 'ArrowRight' })
     expect(screen.getAllByRole('treeitem')).toHaveLength(2)
+    fireEvent.keyDown(first, { key: 'ArrowRight' })
+    expect(screen.getAllByRole('treeitem')).toHaveLength(3)
     expect(screen.getByRole('treeitem', { name: /Cycle B/ })).not.toHaveAttribute('aria-expanded')
   })
 
-  it('shows and uses the configured Zotero bibliography target for collection imports', async () => {
-    const customConfig = { ...config, zoteroFile: 'bibliography/zotero-managed.bib' }
-    window.api.researchLoadConfig = vi.fn().mockResolvedValue(customConfig)
-    window.api.zoteroSyncCollection = vi.fn().mockResolvedValue({ entryCount: 3 })
-    window.api.researchSaveConfig = vi.fn().mockResolvedValue(customConfig)
+  it('shows My Library and compares selected collection papers with the project', async () => {
+    const selectedConfig = { ...config, zoteroCollection: '/0/PAPERS' }
+    useProjectStore.setState({
+      bibEntries: [
+        {
+          key: 'project2026',
+          type: 'article',
+          title: 'Project paper',
+          author: 'Ada Lovelace',
+          year: '2026'
+        }
+      ]
+    })
+    window.api.researchLoadConfig = vi.fn().mockResolvedValue(selectedConfig)
+    window.api.scanCitations = vi.fn().mockResolvedValue([
+      { citekey: 'project2026', count: 2 },
+      { citekey: 'missing2026', count: 1 }
+    ])
+    window.api.zoteroLibraryTree = vi
+      .fn()
+      .mockResolvedValue(
+        libraryTree([
+          { key: '/0/PAPERS', name: 'Writing Papers', parentKey: null, itemCount: null }
+        ])
+      )
+    window.api.zoteroCollectionItems = vi
+      .fn()
+      .mockImplementation(async (_collection: string, _offset?: number, limit?: number) => ({
+        items:
+          limit === 0
+            ? []
+            : [
+                {
+                  itemKey: 'ITEM0001',
+                  citekey: 'project2026',
+                  title: 'Project paper',
+                  author: 'Ada Lovelace',
+                  year: '2026',
+                  type: 'journalArticle',
+                  doi: null,
+                  arxivId: null
+                },
+                {
+                  itemKey: 'ITEM0002',
+                  citekey: 'zotero2026',
+                  title: 'Zotero-only paper',
+                  author: 'Grace Hopper',
+                  year: '2026',
+                  type: 'conferencePaper',
+                  doi: null,
+                  arxivId: null
+                }
+              ],
+        totalResults: 2,
+        offset: 0,
+        limit: limit ?? 50
+      }))
+
+    render(<ZoteroReferences />)
+
+    expect(await screen.findByRole('treeitem', { name: /My Library.*438/ })).toBeInTheDocument()
+    expect(screen.getByText(/1 cited · 1 bib · 1 issue/)).toBeInTheDocument()
+    expect(screen.getByText(/1 missing bibliography/)).toBeInTheDocument()
+    expect(await screen.findByText('2 papers')).toBeInTheDocument()
+    expect(screen.getByText(/1 in project · 1 Zotero only/)).toBeInTheDocument()
+    expect(screen.getByText('Project paper').closest('article')).toHaveTextContent('CITED ×2')
+    expect(screen.getByText('Zotero-only paper').closest('article')).toHaveTextContent(
+      'ZOTERO ONLY'
+    )
+  })
+
+  it('previews the exact managed bibliography diff before collection sync', async () => {
+    const selectedConfig = { ...config, zoteroCollection: '/0/PAPERS' }
+    window.api.researchLoadConfig = vi.fn().mockResolvedValue(selectedConfig)
+    window.api.zoteroLibraryTree = vi
+      .fn()
+      .mockResolvedValue(
+        libraryTree([{ key: '/0/PAPERS', name: 'Writing Papers', parentKey: null, itemCount: 2 }])
+      )
+    window.api.zoteroCollectionItems = vi.fn().mockResolvedValue({
+      items: [
+        {
+          itemKey: 'ITEM0001',
+          citekey: 'same2026',
+          title: 'Unchanged paper',
+          author: 'Ada Lovelace',
+          year: '2026',
+          type: 'journalArticle',
+          doi: null,
+          arxivId: null
+        },
+        {
+          itemKey: 'ITEM0002',
+          citekey: 'new2026',
+          title: 'New paper',
+          author: 'Grace Hopper',
+          year: '2026',
+          type: 'conferencePaper',
+          doi: null,
+          arxivId: null
+        }
+      ],
+      totalResults: 2,
+      offset: 0,
+      limit: 100
+    })
+    window.api.parseBibFile = vi.fn().mockResolvedValue([
+      { key: 'same2026', type: 'article', title: '', author: '', year: '' },
+      { key: 'removed2025', type: 'article', title: '', author: '', year: '' }
+    ])
+    window.api.zoteroSyncCollection = vi.fn().mockResolvedValue({
+      filePath: '/project-a/zotero.bib',
+      bytesWritten: 100,
+      entryCount: 2
+    })
     window.api.findBibInProject = vi.fn().mockResolvedValue([])
-    render(<ReferencesPanel />)
 
-    const payload = JSON.stringify({
-      collection: { key: '/0/PAPERS', name: 'Papers', parentKey: null, itemCount: 3 },
-      port: 23_119
-    })
-    fireEvent.drop(screen.getByRole('tab', { name: 'Project' }), {
-      dataTransfer: {
-        getData: (type: string) => (type === TEXTEX_ZOTERO_COLLECTION_MIME ? payload : '')
-      }
-    })
+    render(<ZoteroReferences />)
+    const sync = await screen.findByRole('button', { name: 'Synchronize selected collection' })
+    fireEvent.click(sync)
 
-    expect(await screen.findByText('bibliography/zotero-managed.bib')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Import' }))
+    const preview = await screen.findByRole('dialog', { name: 'Zotero sync preview' })
+    expect(preview).toHaveTextContent('New+1')
+    expect(preview).toHaveTextContent('Removed−1')
+    expect(preview).toHaveTextContent('Unchanged1')
+    expect(preview).toHaveTextContent('Target: zotero.bib')
 
+    fireEvent.click(screen.getByRole('button', { name: 'Sync' }))
     await waitFor(() =>
       expect(window.api.zoteroSyncCollection).toHaveBeenCalledWith(
         '/0/PAPERS',
-        '/project-a/bibliography/zotero-managed.bib',
+        '/project-a/zotero.bib',
         23_119
       )
     )
+    expect(await screen.findByText('Synchronized 2 entries to zotero.bib.')).toBeInTheDocument()
   })
 
-  it('connects each reference source tab to the active tab panel', async () => {
+  it('keeps Online as a secondary view and returns to the unified local manager', async () => {
+    window.api.researchLoadConfig = vi.fn().mockResolvedValue(config)
+    window.api.zoteroLibraryTree = vi.fn().mockResolvedValue([])
     useProjectStore.setState({ researchReferenceSource: 'online' })
     render(<ReferencesPanel />)
 
-    for (const source of ['project', 'zotero', 'online'] as const) {
-      const tab = screen.getByRole('tab', {
-        name: `${source[0].toUpperCase()}${source.slice(1)}`
-      })
-      expect(tab).toHaveAttribute('id', `reference-source-tab-${source}`)
-      expect(tab).toHaveAttribute('aria-controls', `reference-source-panel-${source}`)
-    }
-    expect(screen.getByRole('tabpanel')).toHaveAttribute(
-      'aria-labelledby',
-      'reference-source-tab-online'
+    expect(screen.getByRole('textbox', { name: 'Search Crossref and arXiv' })).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'Online' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Back to local references' }))
+    expect(
+      await screen.findByRole('textbox', { name: 'Search project and Zotero' })
+    ).toBeInTheDocument()
+  })
+
+  it('offers Online only after a completed local search has no matches', async () => {
+    window.api.researchLoadConfig = vi.fn().mockResolvedValue(config)
+    window.api.zoteroLibraryTree = vi.fn().mockResolvedValue([])
+    window.api.zoteroSearch = vi.fn().mockResolvedValue([])
+    render(<ReferencesPanel />)
+
+    const search = await screen.findByRole('textbox', { name: 'Search project and Zotero' })
+    expect(
+      screen.queryByRole('button', { name: 'Search Crossref / arXiv' })
+    ).not.toBeInTheDocument()
+    fireEvent.change(search, { target: { value: 'unmatched paper' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Search' }))
+
+    const online = await screen.findByRole('button', { name: 'Search Crossref / arXiv' })
+    fireEvent.click(online)
+    expect(screen.getByRole('textbox', { name: 'Search Crossref and arXiv' })).toHaveValue(
+      'unmatched paper'
     )
   })
 
-  it('adds a Project reference to Chat without inserting a citation', () => {
+  it('keeps project citation groups available as a secondary local view', async () => {
+    useProjectStore.setState({
+      bibEntries: [
+        {
+          key: 'grouped2026',
+          type: 'article',
+          title: 'Grouped paper',
+          author: 'Ada Lovelace',
+          year: '2026'
+        }
+      ]
+    })
+    window.api.researchLoadConfig = vi.fn().mockResolvedValue(config)
+    window.api.zoteroLibraryTree = vi.fn().mockResolvedValue([])
+    render(<ReferencesPanel />)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Project citation groups' }))
+    expect(screen.getByText('Project citation groups')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Filter citations...')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Back to local references' }))
+    expect(
+      await screen.findByRole('textbox', { name: 'Search project and Zotero' })
+    ).toBeInTheDocument()
+  })
+
+  it('adds a Project reference to Chat without inserting a citation', async () => {
     const onAddToChat = vi.fn()
     useProjectStore.setState({
       researchReferenceSource: 'project',
@@ -318,9 +530,11 @@ describe('Research reference sources', () => {
         }
       ]
     })
+    window.api.researchLoadConfig = vi.fn().mockResolvedValue(config)
+    window.api.zoteroLibraryTree = vi.fn().mockResolvedValue([])
 
     render(<ReferencesPanel onAddToChat={onAddToChat} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Add Project Paper to Chat' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Add Project Paper to Chat' }))
 
     expect(onAddToChat).toHaveBeenCalledWith({
       source: 'project',
@@ -377,12 +591,12 @@ describe('Research reference sources', () => {
     }
     const onAddToChat = vi.fn()
     window.api.researchLoadConfig = vi.fn().mockResolvedValue(config)
-    window.api.zoteroCollections = vi.fn().mockResolvedValue([])
+    window.api.zoteroLibraryTree = vi.fn().mockResolvedValue([])
     window.api.zoteroSearch = vi.fn().mockResolvedValue([item])
     vi.spyOn(referenceActions, 'addReferenceAtCursor').mockResolvedValue(false)
     render(<ZoteroReferences onAddToChat={onAddToChat} />)
 
-    const search = await screen.findByRole('textbox', { name: 'Search Zotero library' })
+    const search = await screen.findByRole('textbox', { name: 'Search project and Zotero' })
     fireEvent.change(search, { target: { value: 'zotero paper' } })
     fireEvent.click(screen.getByRole('button', { name: 'Search' }))
     const addToChat = await screen.findByRole('button', { name: 'Add Zotero Paper to Chat' })

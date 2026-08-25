@@ -16,10 +16,10 @@ use tokio::sync::Mutex;
 use crate::{
     error::{AppError, AppResult},
     models::{
-        OnlineReference, ReferenceAddResult, ZoteroCollection, ZoteroMutationCollectionRef,
-        ZoteroMutationDraft, ZoteroMutationDraftOperation, ZoteroMutationOperation,
-        ZoteroMutationPlan, ZoteroMutationResult, ZoteroSaveResult, ZoteroSearchResult,
-        ZoteroSyncResult,
+        OnlineReference, ReferenceAddResult, ZoteroCollection, ZoteroCollectionItem,
+        ZoteroCollectionItemsPage, ZoteroLibrary, ZoteroMutationCollectionRef, ZoteroMutationDraft,
+        ZoteroMutationDraftOperation, ZoteroMutationOperation, ZoteroMutationPlan,
+        ZoteroMutationResult, ZoteroSaveResult, ZoteroSearchResult, ZoteroSyncResult,
     },
     services::{
         filesystem, references,
@@ -36,6 +36,8 @@ const MAX_COLLECTION_EXPORT_BYTES: usize = 50 * 1024 * 1024;
 const MAX_RPC_RESPONSE_BYTES: usize = 8 * 1024 * 1024;
 const MAX_CAYW_RESPONSE_BYTES: usize = 64 * 1024;
 const MAX_COLLECTIONS: usize = 10_000;
+const MAX_COLLECTION_ITEMS_PAGE: u32 = 100;
+const DEFAULT_COLLECTION_ITEMS_PAGE: u32 = 50;
 const MAX_LOCAL_API_RESPONSE_BYTES: usize = 2 * 1024 * 1024;
 const MAX_MUTATION_OPERATIONS: usize = 25;
 const MAX_MUTATION_ITEM_MATCHES: usize = 25;
@@ -130,6 +132,10 @@ struct LocalItemData {
     item_type: String,
     #[serde(default)]
     title: String,
+    #[serde(default)]
+    creators: Vec<ZoteroCreator>,
+    #[serde(default)]
+    date: String,
     #[serde(rename = "DOI", default)]
     doi: String,
     #[serde(default)]
@@ -185,7 +191,7 @@ struct ZoteroItem {
     item_type: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ZoteroCreator {
     creator_type: String,
@@ -289,6 +295,120 @@ pub async fn collections(port: Option<u16>) -> AppResult<Vec<ZoteroCollection>> 
     result.sort_by_key(|item| item.name.to_lowercase());
     result.dedup_by(|left, right| left.key == right.key);
     Ok(result)
+}
+
+pub async fn library_tree(port: Option<u16>) -> AppResult<Vec<ZoteroLibrary>> {
+    let (local_collections, item_count) = tokio::try_join!(
+        local_collections(port),
+        local_total_results(port, "users/0/items/top")
+    )?;
+    let collections = library_collections(local_collections)?;
+    Ok(vec![ZoteroLibrary {
+        key: "/0".to_owned(),
+        name: "My Library".to_owned(),
+        item_count,
+        collections,
+    }])
+}
+
+fn library_collections(
+    collections: Vec<LocalCollectionEnvelope>,
+) -> AppResult<Vec<ZoteroCollection>> {
+    Ok(build_collection_inventory(&collections)?
+        .into_iter()
+        .map(|collection| ZoteroCollection {
+            key: format!("/0/{}", collection.key),
+            name: collection.name,
+            parent_key: collection.parent_key.map(|parent| format!("/0/{parent}")),
+            item_count: None,
+        })
+        .collect())
+}
+
+pub async fn collection_items(
+    collection: &str,
+    offset: Option<u32>,
+    limit: Option<u32>,
+    port: Option<u16>,
+) -> AppResult<ZoteroCollectionItemsPage> {
+    let collection = validate_collection(collection)?;
+    let item_path = if matches!(collection, "/0" | "/1") {
+        "users/0/items/top".to_owned()
+    } else {
+        let Some((library_id, collection_key)) = collection_key_parts(collection) else {
+            return Err(AppError::Zotero("invalid Zotero collection key".to_owned()));
+        };
+        if !matches!(library_id, "0" | "1") {
+            return Err(AppError::Zotero(
+                "Local API collection browsing currently supports My Library only".to_owned(),
+            ));
+        }
+        format!("users/0/collections/{collection_key}/items/top")
+    };
+    let offset = offset.unwrap_or(0);
+    let requested_limit = limit.unwrap_or(DEFAULT_COLLECTION_ITEMS_PAGE);
+    if requested_limit > MAX_COLLECTION_ITEMS_PAGE {
+        return Err(AppError::Zotero(format!(
+            "collection item page size must not exceed {MAX_COLLECTION_ITEMS_PAGE}"
+        )));
+    }
+    let fetch_limit = requested_limit.max(1);
+    let mut url = reqwest::Url::parse(&local_api_endpoint(port, &item_path)?)
+        .map_err(|error| AppError::Zotero(error.to_string()))?;
+    url.query_pairs_mut()
+        .append_pair("format", "json")
+        .append_pair("start", &offset.to_string())
+        .append_pair("limit", &fetch_limit.to_string());
+    let response = client()
+        .get(url)
+        .header("Zotero-API-Version", "3")
+        .header("Zotero-Allowed-Request", "1")
+        .timeout(Duration::from_secs(15))
+        .send()
+        .await
+        .map_err(zotero_request_error)?
+        .error_for_status()
+        .map_err(zotero_request_error)?;
+    let total_results = response_total_results(&response).ok_or_else(|| {
+        AppError::Zotero("Zotero collection response omitted Total-Results".to_owned())
+    })?;
+    let bytes = bounded_response(response, MAX_LOCAL_API_RESPONSE_BYTES).await?;
+    let page: Vec<LocalItemEnvelope> = serde_json::from_slice(&bytes)
+        .map_err(|error| AppError::Zotero(format!("invalid local item response: {error}")))?;
+    let page_len = u32::try_from(page.len()).unwrap_or(u32::MAX);
+    let total_results = total_results.max(offset.saturating_add(page_len));
+    let items = if requested_limit == 0 {
+        Vec::new()
+    } else {
+        let item_keys = page.iter().map(|item| item.key.clone()).collect::<Vec<_>>();
+        let citekeys = citation_keys_for_items(&item_keys, port).await?;
+        page.into_iter()
+            .map(|item| {
+                let citekey = citekeys.get(&item.key).cloned().flatten();
+                ZoteroCollectionItem {
+                    item_key: item.key,
+                    citekey,
+                    title: if item.data.title.trim().is_empty() {
+                        "Untitled Zotero item".to_owned()
+                    } else {
+                        item.data.title
+                    },
+                    author: format_authors(&item.data.creators),
+                    year: extract_year(&item.data.date),
+                    item_type: item.data.item_type,
+                    doi: (!item.data.doi.trim().is_empty()).then_some(item.data.doi),
+                    arxiv_id: (!item.data.archive_location.trim().is_empty())
+                        .then_some(item.data.archive_location),
+                }
+            })
+            .collect()
+    };
+    Ok(ZoteroCollectionItemsPage {
+        items,
+        total_results,
+        offset,
+        limit: requested_limit,
+    })
 }
 
 pub async fn add_to_project(
@@ -1011,6 +1131,33 @@ async fn local_collections(port: Option<u16>) -> AppResult<Vec<LocalCollectionEn
     Ok(collections)
 }
 
+async fn local_total_results(port: Option<u16>, path: &str) -> AppResult<Option<u32>> {
+    let mut url = reqwest::Url::parse(&local_api_endpoint(port, path)?)
+        .map_err(|error| AppError::Zotero(error.to_string()))?;
+    url.query_pairs_mut()
+        .append_pair("format", "json")
+        .append_pair("limit", "1");
+    let response = client()
+        .get(url)
+        .header("Zotero-API-Version", "3")
+        .header("Zotero-Allowed-Request", "1")
+        .timeout(Duration::from_secs(15))
+        .send()
+        .await
+        .map_err(zotero_request_error)?
+        .error_for_status()
+        .map_err(zotero_request_error)?;
+    Ok(response_total_results(&response))
+}
+
+fn response_total_results(response: &reqwest::Response) -> Option<u32> {
+    response
+        .headers()
+        .get("Total-Results")
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.parse::<u32>().ok())
+}
+
 async fn search_local_items(query: &str, port: Option<u16>) -> AppResult<Vec<LocalItemEnvelope>> {
     let mut url = reqwest::Url::parse(&local_api_endpoint(port, "users/0/items")?)
         .map_err(|error| AppError::Zotero(error.to_string()))?;
@@ -1131,9 +1278,19 @@ fn build_collection_inventory(
         .iter()
         .map(|collection| (collection.key.as_str(), collection))
         .collect::<HashMap<_, _>>();
+    if by_key.len() != collections.len() {
+        return Err(AppError::Zotero(
+            "Zotero returned duplicate collection keys".to_owned(),
+        ));
+    }
     let mut memo = HashMap::new();
     let mut inventory = Vec::with_capacity(collections.len());
     for collection in collections {
+        if !valid_local_key(&collection.key) {
+            return Err(AppError::Zotero(
+                "Zotero returned an invalid collection key".to_owned(),
+            ));
+        }
         validate_mutation_text(
             &collection.data.name,
             "Zotero collection name",
@@ -1868,6 +2025,40 @@ async fn citation_key_for_item(item_key: &str, port: Option<u16>) -> AppResult<O
     Ok(None)
 }
 
+async fn citation_keys_for_items(
+    item_keys: &[String],
+    port: Option<u16>,
+) -> AppResult<HashMap<String, Option<String>>> {
+    if item_keys.is_empty() {
+        return Ok(HashMap::new());
+    }
+    if item_keys.len() > MAX_COLLECTION_ITEMS_PAGE as usize
+        || item_keys.iter().any(|key| !valid_local_key(key))
+    {
+        return Err(AppError::Zotero(
+            "Zotero returned invalid collection item keys".to_owned(),
+        ));
+    }
+    let response: JsonRpcResponse<HashMap<String, Option<String>>> = json_rpc(
+        port,
+        JsonRpcRequest {
+            jsonrpc: "2.0",
+            method: "item.citationkey",
+            params: serde_json::json!({ "item_keys": item_keys }),
+        },
+        Duration::from_secs(15),
+    )
+    .await?;
+    let mut keys = rpc_result(response)?;
+    keys.retain(|item_key, citekey| {
+        valid_local_key(item_key)
+            && citekey
+                .as_deref()
+                .map_or(true, research_limits::is_safe_citation_key)
+    });
+    Ok(keys)
+}
+
 fn local_item_payload(reference: &OnlineReference) -> serde_json::Value {
     let creators = reference
         .authors
@@ -2236,7 +2427,7 @@ fn collect_collections(
     }
 }
 
-fn collection_item_count(object: &serde_json::Map<String, serde_json::Value>) -> u32 {
+fn collection_item_count(object: &serde_json::Map<String, serde_json::Value>) -> Option<u32> {
     object
         .get("itemCount")
         .or_else(|| object.get("numItems"))
@@ -2246,8 +2437,7 @@ fn collection_item_count(object: &serde_json::Map<String, serde_json::Value>) ->
                 .as_u64()
                 .or_else(|| value.as_array().map(|items| items.len() as u64))
         })
-        .unwrap_or(0)
-        .min(u32::MAX as u64) as u32
+        .map(|count| count.min(u32::MAX as u64) as u32)
 }
 
 fn value_identifier(value: &serde_json::Value) -> Option<String> {
@@ -2468,9 +2658,23 @@ mod tests {
         let mut collections = Vec::new();
         collect_libraries(&value, &mut collections);
         assert_eq!(collections[0].key, "/0/ROOT1234");
-        assert_eq!(collections[0].item_count, 2);
+        assert_eq!(collections[0].item_count, Some(2));
         assert_eq!(collections[1].key, "/0/CHILD567");
         assert_eq!(collections[1].parent_key.as_deref(), Some("/0/ROOT1234"));
+    }
+
+    #[test]
+    fn local_library_tree_keeps_unknown_counts_unknown() {
+        let collections = library_collections(vec![
+            local_collection("RQQT1234", 1, "Writing", None),
+            local_collection("CHILD567", 2, "Thesis", Some("RQQT1234")),
+        ])
+        .unwrap();
+
+        assert_eq!(collections[0].key, "/0/RQQT1234");
+        assert_eq!(collections[0].item_count, None);
+        assert_eq!(collections[1].parent_key.as_deref(), Some("/0/RQQT1234"));
+        assert_eq!(collection_item_count(&serde_json::Map::new()), None);
     }
 
     #[tokio::test]

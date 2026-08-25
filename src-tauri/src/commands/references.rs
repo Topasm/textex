@@ -2,7 +2,7 @@ use tauri::State;
 
 use crate::{
     error::AppResult,
-    models::{BibEntry, LabelInfo},
+    models::{BibEntry, CitationUsage, LabelInfo},
     services::{
         project_index::ProjectIndexState,
         references::{self, ReferenceIndexState},
@@ -64,6 +64,28 @@ pub async fn scan_labels(
     )
     .await?
     .labels)
+}
+
+#[tauri::command]
+pub async fn scan_citations(
+    project_state: State<'_, AppState>,
+    project_index: State<'_, ProjectIndexState>,
+    reference_index: State<'_, ReferenceIndexState>,
+    project_root: String,
+) -> AppResult<Vec<CitationUsage>> {
+    let (project_epoch, project_epoch_tracker) =
+        ensure_active_root(project_state.inner(), &project_root).await?;
+    let reference_revision = reference_index.request_revision();
+    let snapshot = project_index.snapshot(project_state.inner()).await?;
+    Ok(references::project_index(
+        reference_index.inner(),
+        snapshot,
+        project_epoch,
+        project_epoch_tracker.as_ref(),
+        reference_revision,
+    )
+    .await?
+    .citations)
 }
 
 async fn ensure_active_root(

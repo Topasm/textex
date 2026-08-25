@@ -3,8 +3,9 @@ use tauri::{AppHandle, Manager, State};
 use crate::{
     error::{AppError, AppResult},
     models::{
-        OnlineReference, ReferenceAddResult, ZoteroCollection, ZoteroMutationPlan,
-        ZoteroMutationResult, ZoteroSaveResult, ZoteroSearchResult, ZoteroSyncResult,
+        OnlineReference, ReferenceAddResult, ZoteroCollection, ZoteroCollectionItemsPage,
+        ZoteroLibrary, ZoteroMutationPlan, ZoteroMutationResult, ZoteroSaveResult,
+        ZoteroSearchResult, ZoteroSyncResult,
     },
     services::{
         project_index::ProjectIndexState,
@@ -39,6 +40,21 @@ pub async fn zotero_export_bibtex(citekeys: Vec<String>, port: Option<u16>) -> A
 #[tauri::command]
 pub async fn zotero_collections(port: Option<u16>) -> AppResult<Vec<ZoteroCollection>> {
     zotero::collections(port).await
+}
+
+#[tauri::command]
+pub async fn zotero_library_tree(port: Option<u16>) -> AppResult<Vec<ZoteroLibrary>> {
+    zotero::library_tree(port).await
+}
+
+#[tauri::command]
+pub async fn zotero_collection_items(
+    collection: String,
+    offset: Option<u32>,
+    limit: Option<u32>,
+    port: Option<u16>,
+) -> AppResult<ZoteroCollectionItemsPage> {
+    zotero::collection_items(&collection, offset, limit, port).await
 }
 
 #[tauri::command]

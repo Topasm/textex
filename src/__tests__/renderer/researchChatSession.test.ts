@@ -34,18 +34,34 @@ describe('Research Chat session compaction', () => {
       })),
       { role: 'assistant', content: 'newest' }
     )
-    const session = compactResearchChatSession(messages, [
-      {
-        id: 'reference:online:paper',
-        kind: 'reference',
-        label: 'Paper',
-        referenceSource: 'online',
-        onlineReference
-      }
-    ])
+    const session = compactResearchChatSession(
+      [
+        ...messages,
+        {
+          role: 'assistant' as const,
+          content: 'model-tagged answer',
+          execution: { provider: 'codex-cli' as const, model: 'gpt-5.6-sol' }
+        }
+      ],
+      [
+        {
+          id: 'reference:online:paper',
+          kind: 'reference',
+          label: 'Paper',
+          referenceSource: 'online',
+          onlineReference
+        }
+      ],
+      { provider: 'codex-cli', model: 'gpt-5.6-sol' }
+    )
 
     expect(messages).toHaveLength(40)
     expect(messages.at(-1)?.content).toBe('newest')
+    expect(session.execution).toEqual({ provider: 'codex-cli', model: 'gpt-5.6-sol' })
+    expect(session.messages.at(-1)?.execution).toEqual({
+      provider: 'codex-cli',
+      model: 'gpt-5.6-sol'
+    })
     expect(session.selectedContexts[0].onlineReference).not.toHaveProperty('abstract')
     expect(new TextEncoder().encode(JSON.stringify(session, null, 2)).byteLength).toBeLessThan(
       1024 * 1024

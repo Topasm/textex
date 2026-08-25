@@ -176,6 +176,10 @@ pub struct BibEntry {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub journal: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub doi: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub arxiv_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub file: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub line: Option<u32>,
@@ -190,10 +194,18 @@ pub struct LabelInfo {
     pub context: String,
 }
 
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CitationUsage {
+    pub citekey: String,
+    pub count: u32,
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct ReferenceIndex {
     pub bib_entries: Vec<BibEntry>,
     pub labels: Vec<LabelInfo>,
+    pub citations: Vec<CitationUsage>,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
@@ -221,7 +233,39 @@ pub struct ZoteroCollection {
     pub key: String,
     pub name: String,
     pub parent_key: Option<String>,
-    pub item_count: u32,
+    pub item_count: Option<u32>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZoteroLibrary {
+    pub key: String,
+    pub name: String,
+    pub item_count: Option<u32>,
+    pub collections: Vec<ZoteroCollection>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZoteroCollectionItem {
+    pub item_key: String,
+    pub citekey: Option<String>,
+    pub title: String,
+    pub author: String,
+    pub year: String,
+    #[serde(rename = "type")]
+    pub item_type: String,
+    pub doi: Option<String>,
+    pub arxiv_id: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZoteroCollectionItemsPage {
+    pub items: Vec<ZoteroCollectionItem>,
+    pub total_results: u32,
+    pub offset: u32,
+    pub limit: u32,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
@@ -816,8 +860,17 @@ pub enum ResearchChatRole {
 pub struct ResearchChatMessage {
     pub role: ResearchChatRole,
     pub content: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub execution: Option<ResearchChatExecution>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub sources: Vec<ResearchChatSessionContext>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResearchChatExecution {
+    pub provider: AiProvider,
+    pub model: String,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Deserialize, Serialize)]
@@ -863,6 +916,8 @@ pub struct ResearchChatSession {
     pub version: u8,
     pub messages: Vec<ResearchChatMessage>,
     pub selected_contexts: Vec<ResearchChatSessionContext>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub execution: Option<ResearchChatExecution>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize)]
@@ -888,6 +943,7 @@ impl Default for ResearchChatSession {
             version: 1,
             messages: Vec::new(),
             selected_contexts: Vec::new(),
+            execution: None,
         }
     }
 }
@@ -934,6 +990,15 @@ pub struct ResearchChatRequest {
     pub history: Vec<ResearchChatMessage>,
     pub contexts: Vec<ResearchChatContext>,
     pub instructions: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub execution: Option<ResearchChatExecution>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResearchChatResponse {
+    pub content: String,
+    pub execution: ResearchChatExecution,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]

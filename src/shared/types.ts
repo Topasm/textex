@@ -73,8 +73,15 @@ export interface BibEntry {
   author: string
   year: string
   journal?: string
+  doi?: string
+  arxivId?: string
   file?: string
   line?: number
+}
+
+export interface CitationUsage {
+  citekey: string
+  count: number
 }
 
 export interface GitFileStatus {
@@ -290,9 +297,18 @@ export interface AiCustomProcessRequest {
   summaryContext: AiContextEntry | null
 }
 
+export type AiProvider = Exclude<UserSettings['aiProvider'], ''>
+
+export interface ResearchChatExecution {
+  provider: AiProvider
+  model: string
+}
+
 export interface ResearchChatMessage {
   role: 'user' | 'assistant'
   content: string
+  /** Provider and model that produced this assistant response. */
+  execution?: ResearchChatExecution
   /** Sources captured for this answer; ignored when the message is sent as provider history. */
   sources?: ResearchChatSessionContext[]
 }
@@ -317,6 +333,8 @@ export interface ResearchChatSession {
   version: 1
   messages: ResearchChatMessage[]
   selectedContexts: ResearchChatSessionContext[]
+  /** Conversation-local override. Omitted sessions inherit the global AI settings. */
+  execution?: ResearchChatExecution
 }
 
 /** Opaque native activation and compare-and-swap token for one project Chat session. */
@@ -363,6 +381,13 @@ export interface ResearchChatRequest {
   history: ResearchChatMessage[]
   contexts: ResearchChatContext[]
   instructions: string[]
+  /** Optional conversation-local provider/model override. */
+  execution?: ResearchChatExecution
+}
+
+export interface ResearchChatResponse {
+  content: string
+  execution: ResearchChatExecution
 }
 
 export interface ZoteroPlanRequest {
@@ -468,7 +493,32 @@ export interface ZoteroCollection {
   key: string
   name: string
   parentKey: string | null
-  itemCount: number
+  itemCount: number | null
+}
+
+export interface ZoteroLibrary {
+  key: string
+  name: string
+  itemCount: number | null
+  collections: ZoteroCollection[]
+}
+
+export interface ZoteroCollectionItem {
+  itemKey: string
+  citekey: string | null
+  title: string
+  author: string
+  year: string
+  type: string
+  doi: string | null
+  arxivId: string | null
+}
+
+export interface ZoteroCollectionItemsPage {
+  items: ZoteroCollectionItem[]
+  totalResults: number
+  offset: number
+  limit: number
 }
 
 export interface OnlineReference {

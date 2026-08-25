@@ -1,5 +1,6 @@
 import type {
   OnlineReference,
+  ResearchChatExecution,
   ResearchChatMessage,
   ResearchChatSession,
   ResearchChatSessionContext,
@@ -64,6 +65,7 @@ export function compactResearchChatSessionMessages(
   const compacted = messages.slice(-SESSION_MESSAGE_LIMIT).map((message) => ({
     role: message.role,
     content: compactResearchChatMessageContent(message.content),
+    ...(message.execution ? { execution: message.execution } : {}),
     ...(message.sources?.length
       ? { sources: message.sources.slice(0, 12).map(compactSessionContext) }
       : {})
@@ -81,19 +83,25 @@ export function compactResearchChatSessionMessages(
 
 export function compactResearchChatSession(
   messages: ResearchChatMessage[],
-  selectedContexts: ResearchChatSessionContext[]
+  selectedContexts: ResearchChatSessionContext[],
+  execution?: ResearchChatExecution | null
 ): ResearchChatSession {
   const session: ResearchChatSession = {
     version: 1,
     messages: compactResearchChatSessionMessages(messages),
-    selectedContexts: selectedContexts.map(compactSessionContext)
+    selectedContexts: selectedContexts.map(compactSessionContext),
+    ...(execution ? { execution } : {})
   }
   const serializedBytes = () => utf8ByteLength(JSON.stringify(session, null, 2))
   while (serializedBytes() > CHAT_SESSION_FILE_BUDGET_BYTES) {
     const sourceIndex = session.messages.findIndex((message) => message.sources?.length)
     if (sourceIndex >= 0) {
       const message = session.messages[sourceIndex]
-      session.messages[sourceIndex] = { role: message.role, content: message.content }
+      session.messages[sourceIndex] = {
+        role: message.role,
+        content: message.content,
+        ...(message.execution ? { execution: message.execution } : {})
+      }
       continue
     }
     if (session.messages.length > 0) {

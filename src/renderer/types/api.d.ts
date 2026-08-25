@@ -4,6 +4,7 @@ import {
   AiCustomProcessRequest,
   AiProcessRequest,
   ResearchChatRequest,
+  ResearchChatResponse,
   ZoteroPlanRequest,
   ZoteroMutationPlan,
   ZoteroMutationResult,
@@ -21,6 +22,7 @@ import {
   DirectoryChangeEvent,
   ProjectIndexSnapshot,
   BibEntry,
+  CitationUsage,
   GitFileStatus,
   GitLogEntry,
   UserSettings,
@@ -32,6 +34,8 @@ import {
   ZoteroSyncResult,
   ZoteroSaveResult,
   ZoteroCollection,
+  ZoteroLibrary,
+  ZoteroCollectionItemsPage,
   OnlineReference,
   ReferenceAddResult,
   ResearchConfig,
@@ -160,6 +164,7 @@ export interface DesktopApi {
 
   // Labels
   scanLabels(projectRoot: string): Promise<LabelInfo[]>
+  scanCitations(projectRoot: string): Promise<CitationUsage[]>
 
   // Package Data
   loadPackageData(packageNames: string[]): Promise<Record<string, PackageData>>
@@ -227,6 +232,13 @@ export interface DesktopApi {
     port?: number
   ): Promise<ZoteroSyncResult>
   zoteroCollections(port?: number): Promise<ZoteroCollection[]>
+  zoteroLibraryTree(port?: number): Promise<ZoteroLibrary[]>
+  zoteroCollectionItems(
+    collection: string,
+    offset?: number,
+    limit?: number,
+    port?: number
+  ): Promise<ZoteroCollectionItemsPage>
   zoteroAddToProject(citekey: string, port?: number): Promise<ReferenceAddResult>
   zoteroSaveOnline(reference: OnlineReference, port?: number): Promise<ZoteroSaveResult>
   zoteroApplyMutationPlan(plan: ZoteroMutationPlan): Promise<ZoteroMutationResult>
@@ -262,7 +274,7 @@ export interface DesktopApi {
   aiHasApiKey(provider: string): Promise<boolean>
   aiProcess(request: AiProcessRequest): Promise<string>
   aiProcessCustom(request: AiCustomProcessRequest): Promise<string>
-  aiResearchChat(request: ResearchChatRequest): Promise<string>
+  aiResearchChat(request: ResearchChatRequest): Promise<ResearchChatResponse>
   aiPlanZotero(request: ZoteroPlanRequest, port?: number): Promise<ZoteroMutationPlan>
   aiUpdateContext(filePath: string, content: string): Promise<AiContextEntry>
   aiCheckCli(): Promise<boolean>

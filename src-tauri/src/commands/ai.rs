@@ -9,9 +9,9 @@ use crate::{
     models::{
         AiContextEntry, AiCustomProcessRequest, AiGenerateResult, AiProcessRequest,
         AiTerminalRequest, AiTerminalResult, BibEntry, ResearchChatAccess, ResearchChatContext,
-        ResearchChatContextKind, ResearchChatRequest, ResearchProfile, ResearchReferenceSource,
-        ResearchResource, ResearchResourceKind, SuccessResult, UserSettings, ZoteroMutationPlan,
-        ZoteroPlanRequest, ZoteroSearchResult,
+        ResearchChatContextKind, ResearchChatRequest, ResearchChatResponse, ResearchProfile,
+        ResearchReferenceSource, ResearchResource, ResearchResourceKind, SuccessResult,
+        UserSettings, ZoteroMutationPlan, ZoteroPlanRequest, ZoteroSearchResult,
     },
     services::{
         ai::{self, AiState},
@@ -115,7 +115,7 @@ pub async fn ai_process(
     settings_state: State<'_, SettingsState>,
     project_state: State<'_, AppState>,
     request: AiProcessRequest,
-) -> AppResult<String> {
+) -> AppResult<ResearchChatResponse> {
     filesystem::validate_existing_project_file(project_state.inner(), &request.file_path).await?;
     filesystem::validate_existing_project_file(
         project_state.inner(),
@@ -1013,6 +1013,7 @@ mod tests {
                 reference: None,
             }],
             instructions: profile.instructions.clone(),
+            execution: None,
         }
     }
 
@@ -1132,6 +1133,7 @@ mod tests {
                 history: Vec::new(),
                 contexts: vec![context.clone(), context],
                 instructions: Vec::new(),
+                execution: None,
             };
             assert!(prepare_research_chat_contexts(&profile, &mut request).is_err());
         }
@@ -1213,6 +1215,7 @@ mod tests {
                 }),
             }],
             instructions: Vec::new(),
+            execution: None,
         };
 
         ai::validate_research_chat_request(&request).unwrap();
@@ -1250,6 +1253,7 @@ mod tests {
             history: Vec::new(),
             contexts,
             instructions: Vec::new(),
+            execution: None,
         };
 
         assert!(ai::validate_research_chat_request(&request).is_ok());

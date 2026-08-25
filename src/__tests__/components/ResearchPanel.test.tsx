@@ -164,7 +164,7 @@ describe('ResearchPanel tabs', () => {
     expect(screen.getByText('Compilation Log')).toBeInTheDocument()
   })
 
-  it('exposes the project bibliography as the References scroll region', () => {
+  it('exposes the unified reference manager as the References scroll region', async () => {
     useProjectStore.setState({
       researchPanelTab: 'references',
       researchReferenceSource: 'project',
@@ -173,10 +173,18 @@ describe('ResearchPanel tabs', () => {
         { key: 'two', type: 'article', title: 'Second paper', author: 'Grace', year: '2025' }
       ]
     })
+    window.api.researchLoadConfig = vi.fn().mockResolvedValue({
+      version: 1,
+      referencesFile: 'references.bib',
+      zoteroFile: 'zotero.bib',
+      zoteroCollection: null,
+      syncOnOpen: false
+    })
+    window.api.zoteroLibraryTree = vi.fn().mockResolvedValue([])
     render(<ResearchPanel onAiDraft={vi.fn()} />)
 
-    const list = screen.getByRole('region', { name: 'Project references' })
-    expect(list).toHaveClass('bib-list')
+    const list = await screen.findByRole('region', { name: 'Reference manager items' })
+    expect(list).toHaveClass('reference-card-list')
     expect(list).toHaveAttribute('tabindex', '0')
     expect(within(list).getByText('First paper')).toBeInTheDocument()
     expect(within(list).getByText('Second paper')).toBeInTheDocument()
@@ -195,7 +203,7 @@ describe('ResearchPanel tabs', () => {
       zoteroCollection: null,
       syncOnOpen: false
     })
-    window.api.zoteroCollections = vi.fn().mockResolvedValue([])
+    window.api.zoteroLibraryTree = vi.fn().mockResolvedValue([])
     window.api.zoteroSearch = vi.fn().mockResolvedValue([
       {
         citekey: 'robot2025',
@@ -216,7 +224,7 @@ describe('ResearchPanel tabs', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Search' }))
     await waitFor(() => expect(window.api.zoteroSearch).toHaveBeenCalledWith('robot', 23_119))
-    const list = screen.getByRole('region', { name: 'Zotero search results' })
+    const list = screen.getByRole('region', { name: 'Local reference search results' })
     expect(list).toHaveClass('reference-card-list')
     expect(list).toHaveAttribute('tabindex', '0')
     expect(within(list).getAllByRole('article')).toHaveLength(2)

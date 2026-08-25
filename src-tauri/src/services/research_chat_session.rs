@@ -9,7 +9,7 @@ use crate::{
         ResearchChatSession, ResearchChatSessionContext, ResearchChatSessionContextKind,
         ResearchChatSessionScope, ResearchChatSessionSnapshot, ResearchReferenceSource,
     },
-    services::{filesystem, research, research_limits},
+    services::{ai, filesystem, research, research_limits},
     state::AppState,
 };
 
@@ -223,6 +223,15 @@ fn validate(session: &ResearchChatSession) -> AppResult<()> {
             research_limits::MAX_CHAT_MESSAGE_BYTES,
         )?;
         history_bytes = history_bytes.saturating_add(message.content.len());
+        if let Some(execution) = &message.execution {
+            if message.role != crate::models::ResearchChatRole::Assistant {
+                return Err(session_error(
+                    "only assistant messages may carry execution metadata",
+                ));
+            }
+            ai::validate_research_chat_execution(execution)
+                .map_err(|_| session_error("invalid message execution metadata"))?;
+        }
         validate_contexts("message sources", &message.sources)?;
     }
     if history_bytes > research_limits::MAX_CHAT_HISTORY_TOTAL_BYTES {
@@ -230,7 +239,12 @@ fn validate(session: &ResearchChatSession) -> AppResult<()> {
             "Research Chat session history exceeds 512 KiB",
         ));
     }
-    validate_contexts("selected contexts", &session.selected_contexts)
+    validate_contexts("selected contexts", &session.selected_contexts)?;
+    if let Some(execution) = &session.execution {
+        ai::validate_research_chat_execution(execution)
+            .map_err(|_| session_error("invalid session execution override"))?;
+    }
+    Ok(())
 }
 
 fn validate_contexts(label: &str, contexts: &[ResearchChatSessionContext]) -> AppResult<()> {
@@ -373,7 +387,7 @@ fn display(path: &std::path::Path) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{ResearchChatMessage, ResearchChatRole};
+    use crate::models::{AiProvider, ResearchChatExecution, ResearchChatMessage, ResearchChatRole};
 
     fn session() -> ResearchChatSession {
         ResearchChatSession {
@@ -381,6 +395,7 @@ mod tests {
             messages: vec![ResearchChatMessage {
                 role: ResearchChatRole::User,
                 content: "Compare these papers.".to_owned(),
+                execution: None,
                 sources: Vec::new(),
             }],
             selected_contexts: vec![ResearchChatSessionContext {
@@ -393,6 +408,7 @@ mod tests {
                 reference_source: None,
                 online_reference: None,
             }],
+            execution: None,
         }
     }
 
@@ -477,6 +493,13 @@ mod tests {
             Some(ResearchReferenceSource::Project);
         unsafe_citekey.selected_contexts[0].citekey = Some("bad}\\input{secrets".to_owned());
         assert!(validate(&unsafe_citekey).is_err());
+
+        let mut invalid_execution = session();
+        invalid_execution.execution = Some(ResearchChatExecution {
+            provider: AiProvider::None,
+            model: "default".to_owned(),
+        });
+        assert!(validate(&invalid_execution).is_err());
     }
 
     #[cfg(unix)]

@@ -10,6 +10,7 @@ import { documentRegistry } from '../../renderer/models/documentRegistry'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
+import type { ResearchChatResponse } from '../../shared/types'
 
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -19,12 +20,29 @@ function deferred<T>() {
   return { promise, resolve }
 }
 
+function chatResponse(content: string): ResearchChatResponse {
+  return {
+    content,
+    execution: { provider: 'anthropic', model: 'claude-sonnet-4-6' }
+  }
+}
+
 describe('ResearchChatPanel', () => {
   beforeEach(() => {
     setActiveEditorAdapter(null)
     useEditorStore.getState().resetEditor()
     useEditorStore.getState().openFileInTab('/project/paper.tex', '\\section{Method} Draft')
     useProjectStore.setState({ projectRoot: '/project' })
+    useSettingsStore.setState((state) => ({
+      settings: {
+        ...state.settings,
+        aiProvider: 'anthropic',
+        aiModel: 'claude-sonnet-4-6'
+      }
+    }))
+    window.api.aiHasApiKey = vi.fn().mockResolvedValue(true)
+    window.api.aiCheckCli = vi.fn().mockResolvedValue(true)
+    window.api.aiCheckCodexCli = vi.fn().mockResolvedValue(true)
     window.api.researchProfileLoad = vi.fn().mockResolvedValue({
       version: 1,
       paper: {
@@ -71,7 +89,9 @@ describe('ResearchChatPanel', () => {
         score: 110
       }
     ])
-    window.api.aiResearchChat = vi.fn().mockResolvedValue('It is implemented in [Official code].')
+    window.api.aiResearchChat = vi
+      .fn()
+      .mockResolvedValue(chatResponse('It is implemented in [Official code].'))
     window.api.aiProcessCustom = vi.fn().mockResolvedValue('\\section{Method} Revised draft')
     window.api.aiPlanZotero = vi.fn()
     window.api.zoteroApplyMutationPlan = vi.fn()
@@ -121,8 +141,47 @@ describe('ResearchChatPanel', () => {
     expect(window.api.aiPlanZotero).not.toHaveBeenCalled()
   })
 
+  it('uses a conversation-local model override and records the responding model', async () => {
+    window.api.aiResearchChat = vi.fn().mockResolvedValue({
+      content: 'The CLI response is grounded in the selected context.',
+      execution: { provider: 'codex-cli', model: 'gpt-5.6-sol' }
+    })
+    render(<ResearchChatPanel onAiDraft={vi.fn()} />)
+
+    const selector = await screen.findByRole('combobox', { name: 'Research Chat model' })
+    await waitFor(() =>
+      expect(within(selector).getByRole('option', { name: 'GPT-5.6 Sol' })).not.toBeDisabled()
+    )
+    fireEvent.change(selector, { target: { value: 'codex-cli:gpt-5.6-sol' } })
+    const input = screen.getByRole('textbox', { name: 'Research question' })
+    fireEvent.change(input, { target: { value: 'Compare the implementation.' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+
+    await waitFor(() =>
+      expect(window.api.aiResearchChat).toHaveBeenCalledWith(
+        expect.objectContaining({
+          execution: { provider: 'codex-cli', model: 'gpt-5.6-sol' }
+        })
+      )
+    )
+    expect(useSettingsStore.getState().settings.aiProvider).toBe('anthropic')
+    expect(useSettingsStore.getState().settings.aiModel).toBe('claude-sonnet-4-6')
+    expect(await screen.findByText('Codex · GPT-5.6 Sol')).toBeInTheDocument()
+    await waitFor(() => {
+      const calls = vi.mocked(window.api.researchChatSessionSave).mock.calls
+      expect(calls.at(-1)?.[1].execution).toEqual({
+        provider: 'codex-cli',
+        model: 'gpt-5.6-sol'
+      })
+      expect(calls.at(-1)?.[1].messages.at(-1)?.execution).toEqual({
+        provider: 'codex-cli',
+        model: 'gpt-5.6-sol'
+      })
+    })
+  })
+
   it('exposes response progress on the message log and keeps draft actions locked', async () => {
-    const pendingAnswer = deferred<string>()
+    const pendingAnswer = deferred<ResearchChatResponse>()
     window.api.aiResearchChat = vi.fn().mockReturnValue(pendingAnswer.promise)
     render(<ResearchChatPanel onAiDraft={vi.fn()} />)
 
@@ -136,7 +195,7 @@ describe('ResearchChatPanel', () => {
     expect(screen.getByRole('button', { name: 'Clear chat history' })).toBeDisabled()
 
     await act(async () => {
-      pendingAnswer.resolve('The argument is supported.')
+      pendingAnswer.resolve(chatResponse('The argument is supported.'))
       await pendingAnswer.promise
     })
 
@@ -171,11 +230,11 @@ describe('ResearchChatPanel', () => {
   })
 
   it('queues Enter submissions while a response is running and sends them in order', async () => {
-    const firstAnswer = deferred<string>()
+    const firstAnswer = deferred<ResearchChatResponse>()
     window.api.aiResearchChat = vi
       .fn()
       .mockReturnValueOnce(firstAnswer.promise)
-      .mockResolvedValueOnce('Second answer')
+      .mockResolvedValueOnce(chatResponse('Second answer'))
     render(<ResearchChatPanel onAiDraft={vi.fn()} />)
     const input = await screen.findByRole('textbox', { name: 'Research question' })
 
@@ -191,7 +250,7 @@ describe('ResearchChatPanel', () => {
     expect(input).toHaveValue('')
 
     await act(async () => {
-      firstAnswer.resolve('First answer')
+      firstAnswer.resolve(chatResponse('First answer'))
       await firstAnswer.promise
     })
     await waitFor(() => expect(window.api.aiResearchChat).toHaveBeenCalledTimes(2))
@@ -204,7 +263,7 @@ describe('ResearchChatPanel', () => {
   it('prepares and explicitly applies a Chat recommendation to the active document', async () => {
     window.api.aiResearchChat = vi
       .fn()
-      .mockResolvedValue('Guard the pdfLaTeX-only primitives with ifPDFTeX.')
+      .mockResolvedValue(chatResponse('Guard the pdfLaTeX-only primitives with ifPDFTeX.'))
     window.api.aiProcessCustom = vi
       .fn()
       .mockResolvedValue('\\usepackage{iftex}\n\\ifPDFTeX\nDraft\n\\fi')
@@ -236,7 +295,9 @@ describe('ResearchChatPanel', () => {
 
   it('rejects a prepared document edit when the source changes during generation', async () => {
     const pendingEdit = deferred<string>()
-    window.api.aiResearchChat = vi.fn().mockResolvedValue('Update the current LaTeX source.')
+    window.api.aiResearchChat = vi
+      .fn()
+      .mockResolvedValue(chatResponse('Update the current LaTeX source.'))
     window.api.aiProcessCustom = vi.fn().mockReturnValue(pendingEdit.promise)
     render(<ResearchChatPanel onAiDraft={vi.fn()} />)
     const input = await screen.findByRole('textbox', { name: 'Research question' })
@@ -722,7 +783,7 @@ describe('ResearchChatPanel', () => {
   })
 
   it('does not append a late AI response to the next project', async () => {
-    const pendingAnswer = deferred<string>()
+    const pendingAnswer = deferred<ResearchChatResponse>()
     window.api.aiResearchChat = vi.fn().mockReturnValue(pendingAnswer.promise)
     render(<ResearchChatPanel onAiDraft={vi.fn()} />)
     const input = await screen.findByRole('textbox', { name: 'Research question' })
@@ -732,7 +793,7 @@ describe('ResearchChatPanel', () => {
 
     act(() => useProjectStore.getState().setProjectRoot('/project-b'))
     await act(async () => {
-      pendingAnswer.resolve('Old project answer')
+      pendingAnswer.resolve(chatResponse('Old project answer'))
       await pendingAnswer.promise
     })
 
@@ -1110,7 +1171,7 @@ describe('ResearchChatPanel', () => {
   })
 
   it('compacts multibyte messages and the persisted session within native byte limits', async () => {
-    window.api.aiResearchChat = vi.fn().mockResolvedValue('한'.repeat(30_000))
+    window.api.aiResearchChat = vi.fn().mockResolvedValue(chatResponse('한'.repeat(30_000)))
     render(<ResearchChatPanel onAiDraft={vi.fn()} />)
     const input = await screen.findByRole('textbox', { name: 'Research question' })
     fireEvent.change(input, { target: { value: '😀'.repeat(20_000) } })

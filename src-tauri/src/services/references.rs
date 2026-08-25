@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     path::{Path, PathBuf},
     sync::{
         atomic::{AtomicU64, Ordering},
@@ -11,7 +12,7 @@ use tokio::{fs, sync::Mutex};
 
 use crate::{
     error::{AppError, AppResult},
-    models::{BibEntry, LabelInfo, ProjectIndexSnapshot, ReferenceIndex},
+    models::{BibEntry, CitationUsage, LabelInfo, ProjectIndexSnapshot, ReferenceIndex},
     state::AppState,
 };
 
@@ -215,6 +216,7 @@ pub async fn parse_bib_file(state: &AppState, file_path: &str) -> AppResult<Vec<
 
 fn scan_files(files: Vec<(String, Option<u64>)>) -> ReferenceIndex {
     let mut index = ReferenceIndex::default();
+    let mut citation_counts = HashMap::<String, u32>::new();
     for (file, known_size) in files {
         if known_size.is_some_and(|size| size > MAX_REFERENCE_FILE_BYTES) {
             continue;
@@ -235,8 +237,19 @@ fn scan_files(files: Vec<(String, Option<u64>)>) -> ReferenceIndex {
                 .extend(parse_bib_content(&content, Some(&file)));
         } else if extension.eq_ignore_ascii_case("tex") {
             index.labels.extend(parse_labels(&content, &file));
+            for citation in parse_citations(&content) {
+                let count = citation_counts.entry(citation.citekey).or_default();
+                *count = count.saturating_add(citation.count);
+            }
         }
     }
+    index.citations = citation_counts
+        .into_iter()
+        .map(|(citekey, count)| CitationUsage { citekey, count })
+        .collect();
+    index
+        .citations
+        .sort_by(|left, right| left.citekey.cmp(&right.citekey));
     index
 }
 
@@ -274,6 +287,8 @@ pub(crate) fn parse_bib_content(content: &str, file: Option<&str>) -> Vec<BibEnt
             author: extract_field(block.as_str(), author_field_regex()),
             year: extract_field(block.as_str(), year_field_regex()),
             journal: nonempty(extract_field(block.as_str(), journal_field_regex())),
+            doi: nonempty(extract_field(block.as_str(), doi_field_regex())),
+            arxiv_id: nonempty(extract_field(block.as_str(), eprint_field_regex())),
             file: file.map(str::to_owned),
             line: Some(source_line),
         });
@@ -299,6 +314,51 @@ fn parse_labels(content: &str, file: &str) -> Vec<LabelInfo> {
                 })
         })
         .collect()
+}
+
+fn parse_citations(content: &str) -> Vec<CitationUsage> {
+    let uncommented = content
+        .lines()
+        .map(strip_latex_comment)
+        .collect::<Vec<_>>()
+        .join("\n");
+    let mut counts = HashMap::<String, u32>::new();
+    for captures in citation_regex().captures_iter(&uncommented) {
+        let Some(keys) = captures.get(1) else {
+            continue;
+        };
+        for key in keys.as_str().split(',').map(str::trim) {
+            if key.is_empty() || key == "*" || key.chars().any(char::is_control) {
+                continue;
+            }
+            let count = counts.entry(key.to_owned()).or_default();
+            *count = count.saturating_add(1);
+        }
+    }
+    let mut usages = counts
+        .into_iter()
+        .map(|(citekey, count)| CitationUsage { citekey, count })
+        .collect::<Vec<_>>();
+    usages.sort_by(|left, right| left.citekey.cmp(&right.citekey));
+    usages
+}
+
+fn strip_latex_comment(line: &str) -> &str {
+    let bytes = line.as_bytes();
+    for (index, byte) in bytes.iter().enumerate() {
+        if *byte != b'%' {
+            continue;
+        }
+        let backslashes = bytes[..index]
+            .iter()
+            .rev()
+            .take_while(|candidate| **candidate == b'\\')
+            .count();
+        if backslashes % 2 == 0 {
+            return &line[..index];
+        }
+    }
+    line
 }
 
 fn extract_field(block: &str, regex: &Regex) -> String {
@@ -337,9 +397,29 @@ fn journal_field_regex() -> &'static Regex {
     REGEX.get_or_init(|| Regex::new(r#"(?i)journal\s*=\s*[{\"]([^}\"]*)[}\"]"#).unwrap())
 }
 
+fn doi_field_regex() -> &'static Regex {
+    static REGEX: OnceLock<Regex> = OnceLock::new();
+    REGEX.get_or_init(|| Regex::new(r#"(?i)doi\s*=\s*[{\"]([^}\"]*)[}\"]"#).unwrap())
+}
+
+fn eprint_field_regex() -> &'static Regex {
+    static REGEX: OnceLock<Regex> = OnceLock::new();
+    REGEX.get_or_init(|| Regex::new(r#"(?i)eprint\s*=\s*[{\"]([^}\"]*)[}\"]"#).unwrap())
+}
+
 fn label_regex() -> &'static Regex {
     static REGEX: OnceLock<Regex> = OnceLock::new();
     REGEX.get_or_init(|| Regex::new(r"\\label\{([^}]+)\}").unwrap())
+}
+
+fn citation_regex() -> &'static Regex {
+    static REGEX: OnceLock<Regex> = OnceLock::new();
+    REGEX.get_or_init(|| {
+        Regex::new(
+            r"\\(?:cite|citep|citet|citealt|citealp|citeauthor|citeyear|citeyearpar|parencite|textcite|smartcite|autocite|footcite|supercite)\*?(?:\s*\[[^\]]*\]){0,2}\s*\{([^}]*)\}",
+        )
+        .unwrap()
+    })
 }
 
 async fn validate_bib_file(state: &AppState, file_path: &str) -> AppResult<PathBuf> {
@@ -396,12 +476,14 @@ mod tests {
     #[test]
     fn parses_bibliography_fields_and_source_lines() {
         let entries = parse_bib_content(
-            "@comment{skip}\n@article{smith2026,\n title={A Paper},\n author={A. Smith},\n year={2026},\n journal={J. Tests}\n}",
+            "@comment{skip}\n@article{smith2026,\n title={A Paper},\n author={A. Smith},\n year={2026},\n journal={J. Tests},\n doi={10.1000/test},\n eprint={2608.12345}\n}",
             Some("/project/references.bib"),
         );
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].key, "smith2026");
         assert_eq!(entries[0].title, "A Paper");
+        assert_eq!(entries[0].doi.as_deref(), Some("10.1000/test"));
+        assert_eq!(entries[0].arxiv_id.as_deref(), Some("2608.12345"));
         assert_eq!(entries[0].line, Some(2));
     }
 
@@ -469,6 +551,36 @@ mod tests {
         assert_eq!(labels[1].line, 1);
     }
 
+    #[test]
+    fn counts_citations_and_ignores_comments_and_escaped_percent_signs() {
+        let citations = parse_citations(
+            r#"\cite{alpha,beta} % \cite{ignored}
+\textcite[see][p. 2]{alpha}
+100\% supported \parencite{gamma}
+\citeauthor*{beta}
+\smartcite{gamma}
+\supercite{alpha}"#,
+        );
+
+        assert_eq!(
+            citations,
+            vec![
+                CitationUsage {
+                    citekey: "alpha".to_owned(),
+                    count: 3,
+                },
+                CitationUsage {
+                    citekey: "beta".to_owned(),
+                    count: 2,
+                },
+                CitationUsage {
+                    citekey: "gamma".to_owned(),
+                    count: 2,
+                },
+            ]
+        );
+    }
+
     #[tokio::test(flavor = "current_thread")]
     async fn activation_epoch_prevents_same_root_generation_cache_reuse() {
         let state = ReferenceIndexState::default();
@@ -489,6 +601,7 @@ mod tests {
                             line: 1,
                             context: "old".to_owned(),
                         }],
+                        citations: Vec::new(),
                     },
                 },
                 &epoch_tracker,

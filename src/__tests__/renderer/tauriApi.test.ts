@@ -104,14 +104,17 @@ describe('Tauri DesktopApi adapter', () => {
           content: 'loss = policy_loss(batch)'
         }
       ],
-      instructions: ['Use concise technical language.']
+      instructions: ['Use concise technical language.'],
+      execution: { provider: 'anthropic' as const, model: 'claude-sonnet-4-6' }
     }
-    invokeMock.mockResolvedValueOnce('The implementation uses policy_loss [Official code].')
+    const response = {
+      content: 'The implementation uses policy_loss [Official code].',
+      execution: { provider: 'anthropic', model: 'claude-sonnet-4-6' }
+    }
+    invokeMock.mockResolvedValueOnce(response)
 
     const api = createTauriApi()
-    await expect(api.aiResearchChat(request)).resolves.toBe(
-      'The implementation uses policy_loss [Official code].'
-    )
+    await expect(api.aiResearchChat(request)).resolves.toEqual(response)
     expect(invokeMock).toHaveBeenCalledWith('ai_research_chat', { request })
   })
 
@@ -909,19 +912,23 @@ describe('Tauri DesktopApi adapter', () => {
       line: 4,
       context: '\\section{Intro}\\label{sec:intro}'
     }
+    const citations = [{ citekey: 'smith2026', count: 2 }]
     invokeMock
       .mockResolvedValueOnce([bibEntry])
       .mockResolvedValueOnce([bibEntry])
       .mockResolvedValueOnce([label])
+      .mockResolvedValueOnce(citations)
 
     const api = createTauriApi()
     await expect(api.parseBibFile('/project/references.bib')).resolves.toEqual([bibEntry])
     await expect(api.findBibInProject('/project')).resolves.toEqual([bibEntry])
     await expect(api.scanLabels('/project')).resolves.toEqual([label])
+    await expect(api.scanCitations('/project')).resolves.toEqual(citations)
     expect(invokeMock.mock.calls).toEqual([
       ['parse_bib_file', { filePath: '/project/references.bib' }],
       ['find_bib_in_project', { projectRoot: '/project' }],
-      ['scan_labels', { projectRoot: '/project' }]
+      ['scan_labels', { projectRoot: '/project' }],
+      ['scan_citations', { projectRoot: '/project' }]
     ])
   })
 
@@ -965,6 +972,8 @@ describe('Tauri DesktopApi adapter', () => {
 
   it('maps research collection and online reference operations to Rust', async () => {
     const collection = { key: '/0/ABC', name: 'Papers', parentKey: null, itemCount: 2 }
+    const library = { key: '/0', name: 'My Library', itemCount: 20, collections: [collection] }
+    const collectionPage = { items: [], totalResults: 2, offset: 0, limit: 50 }
     const reference = {
       source: 'crossref' as const,
       id: '10.1000/example',
@@ -1030,6 +1039,8 @@ describe('Tauri DesktopApi adapter', () => {
     const nextChatScope = { ...chatScope, revision: '4' }
     invokeMock
       .mockResolvedValueOnce([collection])
+      .mockResolvedValueOnce([library])
+      .mockResolvedValueOnce(collectionPage)
       .mockResolvedValueOnce(added)
       .mockResolvedValueOnce(saved)
       .mockResolvedValueOnce([reference])
@@ -1049,6 +1060,8 @@ describe('Tauri DesktopApi adapter', () => {
 
     const api = createTauriApi()
     await expect(api.zoteroCollections(23119)).resolves.toEqual([collection])
+    await expect(api.zoteroLibraryTree(23119)).resolves.toEqual([library])
+    await expect(api.zoteroCollectionItems('/0/ABC', 0, 50, 23119)).resolves.toEqual(collectionPage)
     await expect(api.zoteroAddToProject('Smith2026Paper', 23119)).resolves.toEqual(added)
     await expect(api.zoteroSaveOnline(reference, 23119)).resolves.toEqual(saved)
     await expect(api.researchSearchOnline('paper')).resolves.toEqual([reference])
@@ -1069,6 +1082,8 @@ describe('Tauri DesktopApi adapter', () => {
     await expect(api.researchResourceSnapshot('project-site')).resolves.toEqual(snapshot)
     expect(invokeMock.mock.calls).toEqual([
       ['zotero_collections', { port: 23119 }],
+      ['zotero_library_tree', { port: 23119 }],
+      ['zotero_collection_items', { collection: '/0/ABC', offset: 0, limit: 50, port: 23119 }],
       ['zotero_add_to_project', { citekey: 'Smith2026Paper', port: 23119 }],
       ['zotero_save_online', { reference, port: 23119 }],
       ['research_search_online', { query: 'paper' }],

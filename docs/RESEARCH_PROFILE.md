@@ -49,6 +49,14 @@ file revision. The backend compares both while holding the project-operation
 lock, so a delayed save from a closed project—or from an earlier activation of
 the same path—cannot overwrite the active project's Chat history.
 
+The composer has one combined provider/model selector. A new conversation
+inherits `aiProvider` and `aiModel` from Settings; choosing another entry stores
+an override only in this project's Chat session and does not change AI Draft or
+selection-rewrite defaults. API providers without a saved key and unavailable
+CLI providers stay visible but disabled with a reason. Each assistant message
+records the provider and model returned by the native execution layer, so a
+conversation remains auditable when its model changes midway through.
+
 References can be dragged from Project, Zotero, or Online results onto the Chat
 tab or into the Chat composer. Each reference card also exposes an **Add to
 Chat** action for keyboard and touch use. The panel switches tabs only after a

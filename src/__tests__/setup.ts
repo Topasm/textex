@@ -156,6 +156,7 @@ Object.defineProperty(window, 'api', {
 
     // Labels / Packages / External
     scanLabels: vi.fn(),
+    scanCitations: vi.fn().mockResolvedValue([]),
     loadPackageData: vi.fn(),
     openExternal: vi.fn(),
     getPerformanceMemory: vi.fn().mockResolvedValue({
@@ -182,6 +183,13 @@ Object.defineProperty(window, 'api', {
     zoteroExportBibtex: vi.fn(),
     zoteroSyncCollection: vi.fn(),
     zoteroCollections: vi.fn().mockResolvedValue([]),
+    zoteroLibraryTree: vi.fn().mockResolvedValue([]),
+    zoteroCollectionItems: vi.fn().mockResolvedValue({
+      items: [],
+      totalResults: 0,
+      offset: 0,
+      limit: 50
+    }),
     zoteroAddToProject: vi.fn(),
     zoteroSaveOnline: vi.fn(),
     zoteroApplyMutationPlan: vi.fn(),

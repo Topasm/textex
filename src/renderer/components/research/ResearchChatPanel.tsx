@@ -16,6 +16,7 @@ import {
   X
 } from 'lucide-react'
 import type {
+  ResearchChatExecution,
   OnlineReference,
   ResearchChatContext,
   ResearchChatMessage,
@@ -65,6 +66,7 @@ import {
   type ReferenceDragPayload
 } from './referenceActions'
 import { ResearchChatCommandMenu } from './ResearchChatCommandMenu'
+import { ResearchChatModelSelector, researchChatExecutionLabel } from './ResearchChatModelSelector'
 
 interface ResearchChatPanelProps {
   onAiDraft: () => void
@@ -293,11 +295,14 @@ export function ResearchChatPanel({
   const projectRoot = useProjectStore((state) => state.projectRoot)
   const filePath = useEditorStore((state) => state.filePath)
   const workDir = projectRoot || (filePath ? dirname(filePath) : '')
+  const defaultAiProvider = useSettingsStore((state) => state.settings.aiProvider)
+  const defaultAiModel = useSettingsStore((state) => state.settings.aiModel)
   const [profile, setProfile] = useState<ResearchProfile | null>(null)
   const [selectedContexts, setSelectedContexts] = useState<Set<string>>(new Set())
   const [referenceContexts, setReferenceContexts] = useState<SessionReferenceContextItem[]>([])
   const [selectionContext, setSelectionContext] = useState<SelectionChatContext | null>(null)
   const [messages, setMessages] = useState<ResearchChatMessage[]>([])
+  const [executionOverride, setExecutionOverride] = useState<ResearchChatExecution | null>(null)
   const [prompt, setPrompt] = useState('')
   const [queuedPrompts, setQueuedPrompts] = useState<string[]>([])
   const [commandMenuDismissed, setCommandMenuDismissed] = useState(false)
@@ -469,6 +474,7 @@ export function ResearchChatPanel({
     setSelectionContext(null)
     setMessages([])
     messagesRef.current = []
+    setExecutionOverride(null)
     setPrompt('')
     setQueuedPrompts([])
     queuedPromptsRef.current = []
@@ -518,6 +524,7 @@ export function ResearchChatPanel({
         sessionScopeRef.current = researchChatSessionScope(snapshot)
         const hasSavedState = session.messages.length > 0 || session.selectedContexts.length > 0
         setMessages(compactResearchChatSessionMessages(session.messages))
+        setExecutionOverride(session.execution ?? null)
         const restoredReferences = session.selectedContexts
           .map(restoredReference)
           .filter((item): item is SessionReferenceContextItem => item !== null)
@@ -717,7 +724,7 @@ export function ResearchChatPanel({
     if (!projectRoot || sessionReadyRoot !== projectRoot || !profile) return
     const root = projectRoot
     const generation = loadGeneration.current
-    const session = compactResearchChatSession(messages, selectedSessionContexts)
+    const session = compactResearchChatSession(messages, selectedSessionContexts, executionOverride)
     void enqueueSessionMutation(generation, root, (scope) =>
       window.api.researchChatSessionSave(scope, session)
     ).catch((error: unknown) => {
@@ -729,6 +736,7 @@ export function ResearchChatPanel({
     enqueueSessionMutation,
     isCurrentAction,
     messages,
+    executionOverride,
     profile,
     projectRoot,
     selectedSessionContexts,
@@ -894,16 +902,18 @@ export function ResearchChatPanel({
           message: question,
           history,
           contexts,
-          instructions: profile.instructions
+          instructions: profile.instructions,
+          ...(executionOverride ? { execution: executionOverride } : {})
         })
         if (!isCurrentRequest(generation, root)) return
-        const compactAnswer = compactResearchChatMessageContent(answer)
+        const compactAnswer = compactResearchChatMessageContent(answer.content)
         setMessages((current) =>
           appendResearchChatSessionMessages(current, {
             role: 'assistant',
             content: compactAnswer.trim()
               ? compactAnswer
               : 'The provider returned an empty answer.',
+            execution: answer.execution,
             ...(answerSources.length > 0 ? { sources: answerSources } : {})
           })
         )
@@ -922,6 +932,7 @@ export function ResearchChatPanel({
     [
       buildContexts,
       enqueuePrompt,
+      executionOverride,
       isCurrentRequest,
       pendingZoteroPlan,
       profile,
@@ -1221,6 +1232,7 @@ export function ResearchChatPanel({
       shouldAutoScrollRef.current = true
       setMessages([])
       messagesRef.current = []
+      setExecutionOverride(null)
       setQueuedPrompts([])
       queuedPromptsRef.current = []
       historyIndexRef.current = null
@@ -1381,6 +1393,9 @@ export function ResearchChatPanel({
                   <div className="research-chat-message-author">
                     <Sparkles size={13} aria-hidden="true" />
                     <strong>Research Chat</strong>
+                    {message.execution && (
+                      <span>{researchChatExecutionLabel(message.execution)}</span>
+                    )}
                   </div>
                 )}
                 <p className="research-chat-message-text">{message.content}</p>
@@ -1695,6 +1710,29 @@ export function ResearchChatPanel({
             </span>
           </div>
 
+          <div className="research-chat-execution-bar">
+            <ResearchChatModelSelector
+              defaultProvider={defaultAiProvider}
+              defaultModel={defaultAiModel}
+              execution={executionOverride}
+              disabled={busy || Boolean(pendingZoteroPlan)}
+              onChange={setExecutionOverride}
+            />
+            <span className="research-chat-mode" title="Answers without changing files">
+              Ask
+            </span>
+            <button
+              className="research-chat-send"
+              type="button"
+              aria-label="Send"
+              title={busy || pendingZoteroPlan ? 'Queue message · Enter' : 'Send · Enter'}
+              disabled={!prompt.trim() || !profile || (commandMenuOpen && !exactPromptCommand)}
+              onClick={() => void send()}
+            >
+              <Send size={14} aria-hidden="true" />
+            </button>
+          </div>
+
           <div className="research-chat-composer-footer">
             <div className="research-chat-footer-actions">
               <button
@@ -1751,16 +1789,6 @@ export function ResearchChatPanel({
             <span className="research-chat-shortcut" aria-hidden="true">
               Enter
             </span>
-            <button
-              className="research-chat-send"
-              type="button"
-              aria-label="Send"
-              title={busy || pendingZoteroPlan ? 'Queue message · Enter' : 'Send · Enter'}
-              disabled={!prompt.trim() || !profile || (commandMenuOpen && !exactPromptCommand)}
-              onClick={() => void send()}
-            >
-              <Send size={14} aria-hidden="true" />
-            </button>
           </div>
         </div>
 
