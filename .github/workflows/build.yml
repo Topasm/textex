@@ -686,7 +686,10 @@ jobs:
 
   release:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: >-
+      always() &&
+      startsWith(github.ref, 'refs/tags/v') &&
+      needs.build.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write

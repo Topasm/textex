@@ -37,8 +37,21 @@ test('tag builds reuse validation from the exact successful main commit', () => 
   }
   assert.match(workflow, /build:[\s\S]*if: >-[\s\S]*always\(\)/)
   assert.match(workflow, /needs\.release-preflight\.result == 'success'/)
-  assert.match(workflow, /startsWith\(github\.ref, 'refs\/tags\/v'\)[\s\S]*needs\.lint\.result == 'skipped'[\s\S]*needs\.test\.result == 'skipped'[\s\S]*needs\.rust-test\.result == 'skipped'/)
-  assert.match(workflow, /!startsWith\(github\.ref, 'refs\/tags\/v'\)[\s\S]*needs\.lint\.result == 'success'[\s\S]*needs\.test\.result == 'success'[\s\S]*needs\.rust-test\.result == 'success'/)
+  assert.match(
+    workflow,
+    /startsWith\(github\.ref, 'refs\/tags\/v'\)[\s\S]*needs\.lint\.result == 'skipped'[\s\S]*needs\.test\.result == 'skipped'[\s\S]*needs\.rust-test\.result == 'skipped'/
+  )
+  assert.match(
+    workflow,
+    /!startsWith\(github\.ref, 'refs\/tags\/v'\)[\s\S]*needs\.lint\.result == 'success'[\s\S]*needs\.test\.result == 'success'[\s\S]*needs\.rust-test\.result == 'success'/
+  )
+})
+
+test('release runs after the intentionally skipped tag validation jobs', () => {
+  assert.match(
+    workflow,
+    /release:\n    needs: build\n    if: >-[\s\S]*always\(\)[\s\S]*startsWith\(github\.ref, 'refs\/tags\/v'\)[\s\S]*needs\.build\.result == 'success'/
+  )
 })
 
 test('tag preflight requires a successful main push workflow for the exact commit', () => {
