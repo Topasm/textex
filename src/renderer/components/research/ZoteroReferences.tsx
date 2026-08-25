@@ -18,7 +18,6 @@ import type {
   CitationLocation,
   CitationUsage,
   ResearchConfig,
-  ZoteroCollection,
   ZoteroCollectionItem,
   ZoteroLibrary,
   ZoteroSearchResult
@@ -27,13 +26,10 @@ import { useProjectStore } from '../../store/useProjectStore'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import { useEditorStore } from '../../store/useEditorStore'
 import { useCompileStore } from '../../store/useCompileStore'
-import { documentRegistry } from '../../models/documentRegistry'
-import { overlayCitationUsages } from '../../services/citationUsageOverlay'
 import { cacheZoteroInventory, getCachedZoteroInventory } from '../../services/zoteroInventoryCache'
 import { navigateToDiagnostic } from '../../services/diagnosticNavigation'
 import {
   addReferenceAtCursor,
-  buildProjectReferenceDragPayload,
   setReferenceDragData,
   setZoteroCollectionDragData,
   type ReferenceDragPayload
@@ -43,6 +39,17 @@ import {
   type ProjectReferenceHealth,
   type ZoteroReferenceHealth
 } from '../../services/referenceHealth'
+import {
+  expandedZoteroAncestors,
+  filterExpandedZoteroCollections,
+  orderZoteroCollections,
+  type ZoteroCollectionRow
+} from '../../services/zoteroCollectionTree'
+import {
+  loadAllZoteroCollectionItems,
+  scanCurrentCitationUsages
+} from '../../services/zoteroReferenceInventory'
+import { ProjectReferenceCard } from './ProjectReferenceCard'
 
 const DEFAULT_CONFIG: ResearchConfig = {
   version: 1,
@@ -55,16 +62,7 @@ const DEFAULT_CONFIG: ResearchConfig = {
 const COLLECTION_PAGE_SIZE = 200
 const ITEM_PAGE_SIZE = 50
 const COUNT_PREFETCH_LIMIT = 40
-const SYNC_PAGE_SIZE = 100
-const MAX_SYNC_PREVIEW_ITEMS = 10_000
 const CITATION_REFRESH_DELAY_MS = 500
-
-type CollectionRow = {
-  collection: ZoteroCollection
-  depth: number
-  parentKey: string | null
-  hasChildren: boolean
-}
 
 interface ZoteroReferencesProps {
   onAddToChat?: (payload: ReferenceDragPayload) => void
@@ -122,175 +120,6 @@ function buildZoteroReferencePayload(item: ZoteroSearchResult, port: number): Re
       type: item.type
     }
   }
-}
-
-async function loadAllZoteroItems(
-  collectionKey: string,
-  port: number
-): Promise<ZoteroCollectionItem[]> {
-  const items: ZoteroCollectionItem[] = []
-  const seenItemKeys = new Set<string>()
-  let total = 1
-  while (items.length < total && items.length < MAX_SYNC_PREVIEW_ITEMS) {
-    const previousLength = items.length
-    const page = await window.api.zoteroCollectionItems(
-      collectionKey,
-      items.length,
-      SYNC_PAGE_SIZE,
-      port
-    )
-    total = page.totalResults
-    if (page.items.length === 0) break
-    for (const item of page.items) {
-      if (seenItemKeys.has(item.itemKey)) continue
-      seenItemKeys.add(item.itemKey)
-      items.push(item)
-    }
-    if (items.length === previousLength) break
-  }
-  if (total > MAX_SYNC_PREVIEW_ITEMS) {
-    throw new Error(
-      `Reference cross-check is limited to ${MAX_SYNC_PREVIEW_ITEMS.toLocaleString()} Zotero items.`
-    )
-  }
-  return items
-}
-
-async function scanCurrentCitationUsages(projectRoot: string): Promise<CitationUsage[]> {
-  const base = await window.api.scanCitations(projectRoot)
-  const dirtyDocuments = documentRegistry
-    .dirtySnapshots()
-    .filter(({ filePath }) => filePath.toLocaleLowerCase('en-US').endsWith('.tex'))
-  const overlays = await Promise.all(
-    dirtyDocuments.map(async ({ filePath, snapshot }) => {
-      const savedText = await window.api.readFile(filePath).then(
-        (result) => result.content,
-        () => ''
-      )
-      return { filePath, savedText, currentText: snapshot.text }
-    })
-  )
-  return overlayCitationUsages(base, overlays)
-}
-
-function citationLocationLabel(file: string, projectRoot: string | null): string {
-  if (projectRoot) {
-    const root = projectRoot.replace(/[\\/]$/u, '')
-    if (file === root) return file.split(/[\\/]/u).at(-1) ?? file
-    if (file.startsWith(`${root}/`) || file.startsWith(`${root}\\`)) {
-      return file.slice(root.length + 1).replace(/\\/gu, '/')
-    }
-  }
-  return file.split(/[\\/]/u).at(-1) ?? file
-}
-
-function ProjectReferenceCard({
-  status,
-  projectRoot,
-  zoteroState,
-  onCite,
-  onOpenLocation,
-  onAddToChat
-}: {
-  status: ProjectReferenceHealth
-  projectRoot: string | null
-  zoteroState: 'checking' | 'ready' | 'unavailable' | 'error'
-  onCite: (citekey: string) => void
-  onOpenLocation: (location: CitationLocation) => void
-  onAddToChat?: (payload: ReferenceDragPayload) => void
-}) {
-  const [locationsExpanded, setLocationsExpanded] = useState(false)
-  const payload = buildProjectReferenceDragPayload(status.entry)
-  return (
-    <article
-      className="reference-card reference-health-card"
-      draggable
-      onDragStart={(event) => setReferenceDragData(event, payload)}
-    >
-      <div>
-        {status.citationCount > 0 ? (
-          <Check className="zotero-project-state in-project" size={14} aria-hidden="true" />
-        ) : (
-          <Circle className="zotero-project-state" size={12} aria-hidden="true" />
-        )}
-        <strong>{status.entry.title || status.entry.key}</strong>
-        <span>@{status.entry.key}</span>
-      </div>
-      <span>
-        {status.entry.author || 'Unknown author'}
-        {status.entry.year ? ` · ${status.entry.year}` : ''}
-        {status.citationCount === 0 ? ' · UNUSED' : ''}
-      </span>
-      {status.citationCount > 0 &&
-        (status.citationLocations.length > 0 ? (
-          <button
-            type="button"
-            className="reference-citation-count"
-            aria-expanded={locationsExpanded}
-            onClick={() => setLocationsExpanded((current) => !current)}
-          >
-            CITED ×{status.citationCount}
-          </button>
-        ) : (
-          <span>CITED ×{status.citationCount}</span>
-        ))}
-      {locationsExpanded && status.citationLocations.length > 0 && (
-        <div className="reference-citation-locations" aria-label="Citation locations">
-          {status.citationLocations.map((location, index) => (
-            <button
-              type="button"
-              key={`${location.file}:${location.line}:${index}`}
-              onClick={() => onOpenLocation(location)}
-            >
-              {citationLocationLabel(location.file, projectRoot)}:{location.line}
-            </button>
-          ))}
-          {status.citationLocations.length < status.citationCount && (
-            <small>
-              Showing the first {status.citationLocations.length} of {status.citationCount}
-            </small>
-          )}
-        </div>
-      )}
-      {status.possibleDuplicates.length > 0 && (
-        <div className="reference-duplicate-warning" role="status">
-          ⚠ Possible duplicate:{' '}
-          {status.possibleDuplicates.map(({ entry }) => `@${entry.key}`).join(', ')}
-          <small>
-            Matched by {status.possibleDuplicates.map(({ matchKind }) => matchKind).join(', ')}; no
-            entries were merged.
-          </small>
-        </div>
-      )}
-      <span className={status.zoteroItem ? 'reference-link-state linked' : 'reference-link-state'}>
-        {zoteroState === 'checking'
-          ? 'Cross-checking Zotero…'
-          : zoteroState === 'unavailable'
-            ? 'Zotero unavailable'
-            : zoteroState === 'error'
-              ? 'Zotero cross-check unavailable'
-              : status.zoteroItem
-                ? `✓ Zotero · matched by ${status.matchKind}`
-                : status.possibleMatch
-                  ? `Possible Zotero match: ${status.possibleMatch.title}`
-                  : '○ Not linked to Zotero'}
-      </span>
-      <div className="reference-card-actions">
-        {onAddToChat && (
-          <button
-            type="button"
-            onClick={() => onAddToChat(payload)}
-            aria-label={`Add ${status.entry.title || status.entry.key} to Chat`}
-          >
-            <MessageSquarePlus size={13} /> Add to Chat
-          </button>
-        )}
-        <button type="button" onClick={() => onCite(status.entry.key)}>
-          <Plus size={13} /> Cite
-        </button>
-      </div>
-    </article>
-  )
 }
 
 export function ZoteroReferences({
@@ -412,10 +241,10 @@ export function ZoteroReferences({
             ? effectiveConfig.zoteroCollection
             : (loadedLibraries[0]?.key ?? null)
         )
-        const rows = orderCollections(loadedCollections)
-        const expanded = expandedAncestors(rows, effectiveConfig.zoteroCollection)
+        const rows = orderZoteroCollections(loadedCollections)
+        const expanded = expandedZoteroAncestors(rows, effectiveConfig.zoteroCollection)
         setExpandedCollections(expanded)
-        const selectedIndex = filterExpandedCollections(rows, expanded).findIndex(
+        const selectedIndex = filterExpandedZoteroCollections(rows, expanded).findIndex(
           ({ collection }) => collection.key === effectiveConfig.zoteroCollection
         )
         setCollectionLimit(
@@ -495,9 +324,10 @@ export function ZoteroReferences({
     () => libraries.flatMap((candidate) => candidate.collections),
     [libraries]
   )
-  const collectionRows = useMemo(() => orderCollections(collections), [collections])
+  const collectionRows = useMemo(() => orderZoteroCollections(collections), [collections])
   const visibleCollectionRows = useMemo(
-    () => (libraryExpanded ? filterExpandedCollections(collectionRows, expandedCollections) : []),
+    () =>
+      libraryExpanded ? filterExpandedZoteroCollections(collectionRows, expandedCollections) : [],
     [collectionRows, expandedCollections, libraryExpanded]
   )
   const renderedCollectionRows = useMemo(
@@ -724,7 +554,7 @@ export function ZoteroReferences({
     setLibraryInventory([])
     setLibraryInventoryLoaded(false)
     setLibraryInventoryError('')
-    void loadAllZoteroItems(libraryKey, port)
+    void loadAllZoteroCollectionItems(libraryKey, port)
       .then((items) => {
         if (cancelled || !isCurrentScope(generation, root, apiPort)) return
         setLibraryInventory(items)
@@ -746,7 +576,7 @@ export function ZoteroReferences({
   }, [isCurrentScope, libraryKey, loaded, port, projectRoot])
 
   const handleCollectionKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLButtonElement>, row: CollectionRow, index: number) => {
+    (event: React.KeyboardEvent<HTMLButtonElement>, row: ZoteroCollectionRow, index: number) => {
       let targetIndex: number | null = null
       switch (event.key) {
         case 'ArrowDown':
@@ -972,7 +802,7 @@ export function ZoteroReferences({
   }, [inventory, inventoryBusy, isCurrentScope, port, projectRoot, selectedCollectionKey])
 
   const loadAllCollectionItems = useCallback(
-    (collectionKey: string) => loadAllZoteroItems(collectionKey, port),
+    (collectionKey: string) => loadAllZoteroCollectionItems(collectionKey, port),
     [port]
   )
 
@@ -988,7 +818,7 @@ export function ZoteroReferences({
     try {
       const collectionItems = await loadAllCollectionItems(config.zoteroCollection)
       if (!isCurrentScope(generation, root, apiPort)) return
-      const currentEntries = await window.api.parseBibFile(targetFile).catch(() => [])
+      const currentEntries = await window.api.parseBibFile(targetFile)
       if (!isCurrentScope(generation, root, apiPort)) return
       const incoming = new Set(
         collectionItems.flatMap((item) => (item.citekey ? [item.citekey] : []))
@@ -1623,76 +1453,4 @@ export function ZoteroReferences({
       )}
     </section>
   )
-}
-
-function orderCollections(collections: ZoteroCollection[]): CollectionRow[] {
-  const children = new Map<string | null, ZoteroCollection[]>()
-  const known = new Set(collections.map((collection) => collection.key))
-  for (const collection of collections) {
-    const parent =
-      collection.parentKey && known.has(collection.parentKey) ? collection.parentKey : null
-    const siblings = children.get(parent) ?? []
-    siblings.push(collection)
-    children.set(parent, siblings)
-  }
-  for (const siblings of children.values()) {
-    siblings.sort((left, right) => left.name.localeCompare(right.name))
-  }
-  const rows: CollectionRow[] = []
-  const visited = new Set<string>()
-  const append = (roots: ZoteroCollection[], depth: number, parentKey: string | null): void => {
-    const stack = roots
-      .slice()
-      .reverse()
-      .map((collection) => ({ collection, depth, parentKey }))
-    while (stack.length > 0) {
-      const next = stack.pop()
-      if (!next || visited.has(next.collection.key)) continue
-      visited.add(next.collection.key)
-      rows.push({ ...next, hasChildren: false })
-      const descendants = children.get(next.collection.key) ?? []
-      for (let index = descendants.length - 1; index >= 0; index -= 1) {
-        stack.push({
-          collection: descendants[index],
-          depth: next.depth + 1,
-          parentKey: next.collection.key
-        })
-      }
-    }
-  }
-  append(children.get(null) ?? [], 0, null)
-  // Malformed parent cycles should not hide the rest of the library or recurse forever.
-  for (const collection of collections) {
-    if (visited.has(collection.key)) continue
-    append([collection], 0, null)
-  }
-  const renderedParents = new Set(rows.flatMap((row) => (row.parentKey ? [row.parentKey] : [])))
-  for (const row of rows) row.hasChildren = renderedParents.has(row.collection.key)
-  return rows
-}
-
-function filterExpandedCollections(rows: CollectionRow[], expanded: Set<string>): CollectionRow[] {
-  const hiddenDepths: number[] = []
-  return rows.filter((row) => {
-    while (hiddenDepths.length > 0 && row.depth <= hiddenDepths[hiddenDepths.length - 1]) {
-      hiddenDepths.pop()
-    }
-    const hidden = hiddenDepths.length > 0
-    if (!expanded.has(row.collection.key)) hiddenDepths.push(row.depth)
-    return !hidden
-  })
-}
-
-function expandedAncestors(rows: CollectionRow[], selectedKey: string | null): Set<string> {
-  if (!selectedKey) return new Set()
-  const byKey = new Map(rows.map((row) => [row.collection.key, row]))
-  const expanded = new Set<string>()
-  const visited = new Set<string>()
-  let parent = byKey.get(selectedKey)?.parentKey ?? null
-  while (parent && !visited.has(parent)) {
-    visited.add(parent)
-    expanded.add(parent)
-    parent = byKey.get(parent)?.parentKey ?? null
-  }
-  return expanded
 }

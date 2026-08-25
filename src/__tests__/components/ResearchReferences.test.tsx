@@ -536,6 +536,42 @@ describe('Research reference sources', () => {
     expect(await screen.findByText('Synchronized 2 entries to zotero.bib.')).toBeInTheDocument()
   })
 
+  it('blocks collection sync when the managed bibliography cannot be parsed', async () => {
+    const selectedConfig = { ...config, zoteroCollection: '/0/PAPERS' }
+    window.api.researchLoadConfig = vi.fn().mockResolvedValue(selectedConfig)
+    window.api.zoteroLibraryTree = vi
+      .fn()
+      .mockResolvedValue(
+        libraryTree([{ key: '/0/PAPERS', name: 'Writing Papers', parentKey: null, itemCount: 1 }])
+      )
+    window.api.zoteroCollectionItems = vi.fn().mockResolvedValue({
+      items: [
+        {
+          itemKey: 'ITEM0001',
+          citekey: 'paper2026',
+          title: 'Paper',
+          author: 'Ada Lovelace',
+          year: '2026',
+          type: 'journalArticle',
+          doi: null,
+          arxivId: null
+        }
+      ],
+      totalResults: 1,
+      offset: 0,
+      limit: 100
+    })
+    window.api.parseBibFile = vi.fn().mockRejectedValue(new Error('Invalid BibTeX'))
+    window.api.zoteroSyncCollection = vi.fn()
+
+    render(<ZoteroReferences />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Synchronize selected collection' }))
+
+    expect(await screen.findByText('Invalid BibTeX')).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Zotero sync preview' })).not.toBeInTheDocument()
+    expect(window.api.zoteroSyncCollection).not.toHaveBeenCalled()
+  })
+
   it('keeps Online as a secondary view and returns to the unified local manager', async () => {
     window.api.researchLoadConfig = vi.fn().mockResolvedValue(config)
     window.api.zoteroLibraryTree = vi.fn().mockResolvedValue([])
