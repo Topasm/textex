@@ -22,12 +22,12 @@
 | **SyncTeX** | Ctrl+클릭으로 소스 코드와 PDF 위치 간 이동 |
 | **OmniSearch** | 인용, PDF 텍스트, 에디터 텍스트를 통합 검색 |
 | **Monaco 에디터** | 구문 강조, 자동 완성, 스니펫, Vim 모드 |
-| **멀티 파일 프로젝트** | 사이드바 파일 트리, 탭 바, `\input`/`\include` 탐색 |
+| **멀티 파일 프로젝트** | 생성 파일을 기본으로 숨기는 사이드바 파일 트리, 탭 바, `\input`/`\include` 탐색 |
 | **인용 관리** | BibTeX 자동 완성 + Zotero 연동 |
 | **연구 & AI** | Crossref/arXiv 검색 및 네이티브 HTTP, Claude CLI, Codex CLI 도우미 |
 | **언어 & 터미널** | 선택적 TexLab 언어 기능과 네이티브 PTY 내장 터미널 |
 | **Git 통합** | 내장 스테이징, 커밋, 디프, 브랜치 정보 |
-| **내보내기** | Pandoc을 통해 DOCX, ODT, HTML, EPUB으로 변환 |
+| **내보내기** | 깔끔한 Overleaf 소스 ZIP 생성 또는 Pandoc을 통한 DOCX, ODT, HTML, EPUB 변환 |
 | **7개 언어** | EN, KO, ES, FR, DE, PT, ZH |
 
 > **선택적 연동:** AI API 제공자와 온라인 논문 검색에는 네트워크가 필요합니다.
@@ -84,6 +84,9 @@ chmod +x TextEx_*.AppImage
 ### 멀티 파일 프로젝트
 
 폴더를 열면 사이드바 파일 트리, 탭, `\input`/`\include` 탐색이 포함된 전체 프로젝트 뷰를 사용할 수 있습니다.
+컴파일 산출물은 소스 옆이 아니라 TextEx의 엔진별 캐시에 저장됩니다. 눈 모양
+버튼으로 프로젝트에 남아 있는 기존 생성 파일을 표시하거나, 보관함 버튼으로
+Overleaf 업로드용 소스 ZIP을 만들 수 있습니다.
 
 <p align="center">
   <img src="docs/images/sidebar-files.png" alt="멀티 파일 LaTeX 프로젝트의 사이드바 파일 트리" width="900" />

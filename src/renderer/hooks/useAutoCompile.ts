@@ -96,16 +96,10 @@ export function useAutoCompile(): void {
           })
           useCompileStore.getState().setCompileStatus('success')
 
-          try {
-            const auxPath = currentFilePath.replace(/\.tex$/, '.aux')
-            const { content: auxContent } = await window.api.readFile(auxPath)
-            if (isCurrentRun() && canPublishCompileTicket(ticket)) {
-              useProjectStore.getState().setAuxCitationMap(parseAuxContent(auxContent))
-            }
-          } catch {
-            if (isCurrentRun() && canPublishCompileTicket(ticket)) {
-              useProjectStore.getState().setAuxCitationMap(null)
-            }
+          if (isCurrentRun() && canPublishCompileTicket(ticket)) {
+            useProjectStore
+              .getState()
+              .setAuxCitationMap(result.auxContent ? parseAuxContent(result.auxContent) : null)
           }
         } catch (err: unknown) {
           if (!isCurrentRun()) {

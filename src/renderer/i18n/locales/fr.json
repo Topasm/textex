@@ -387,7 +387,12 @@
     "saveBeforeRename": "Enregistrez ou fermez les fichiers modifiés avant de les renommer.",
     "saveBeforeDelete": "Enregistrez ou fermez les fichiers modifiés avant de les supprimer.",
     "expandFolder": "Développer le dossier",
-    "collapseFolder": "Réduire le dossier"
+    "collapseFolder": "Réduire le dossier",
+    "showGenerated": "Afficher les fichiers générés",
+    "hideGenerated": "Masquer les fichiers générés",
+    "exportOverleaf": "Exporter le ZIP source Overleaf",
+    "exportOverleafComplete": "ZIP Overleaf enregistré dans {{path}}",
+    "exportOverleafFailed": "Impossible de créer le ZIP Overleaf : {{reason}}"
   },
   "todoPanel": {
     "openProject": "Ouvrez un projet pour utiliser TODO",

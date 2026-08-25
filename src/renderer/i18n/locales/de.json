@@ -387,7 +387,12 @@
     "saveBeforeRename": "Speichern oder schließen Sie geänderte Dateien vor dem Umbenennen.",
     "saveBeforeDelete": "Speichern oder schließen Sie geänderte Dateien vor dem Löschen.",
     "expandFolder": "Ordner aufklappen",
-    "collapseFolder": "Ordner zuklappen"
+    "collapseFolder": "Ordner zuklappen",
+    "showGenerated": "Generierte Dateien anzeigen",
+    "hideGenerated": "Generierte Dateien ausblenden",
+    "exportOverleaf": "Overleaf-Quell-ZIP exportieren",
+    "exportOverleafComplete": "Overleaf-ZIP wurde unter {{path}} gespeichert",
+    "exportOverleafFailed": "Overleaf-ZIP konnte nicht erstellt werden: {{reason}}"
   },
   "todoPanel": {
     "openProject": "Öffnen Sie ein Projekt, um TODO zu nutzen",

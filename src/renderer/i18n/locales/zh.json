@@ -387,7 +387,12 @@
     "saveBeforeRename": "重命名前请保存或关闭已修改的文件。",
     "saveBeforeDelete": "删除前请保存或关闭已修改的文件。",
     "expandFolder": "展开文件夹",
-    "collapseFolder": "折叠文件夹"
+    "collapseFolder": "折叠文件夹",
+    "showGenerated": "显示生成文件",
+    "hideGenerated": "隐藏生成文件",
+    "exportOverleaf": "导出 Overleaf 源文件 ZIP",
+    "exportOverleafComplete": "Overleaf ZIP 已保存到 {{path}}",
+    "exportOverleafFailed": "无法创建 Overleaf ZIP：{{reason}}"
   },
   "todoPanel": {
     "openProject": "打开一个项目以使用 TODO",

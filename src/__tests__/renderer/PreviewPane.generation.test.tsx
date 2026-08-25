@@ -102,7 +102,7 @@ function deferred<T>(): {
 
 describe('PreviewPane PDF generation swap', () => {
   beforeEach(() => {
-    vi.mocked(window.api.readFileBinary).mockReset()
+    vi.mocked(window.api.readCompiledPdf).mockReset()
     useCompileStore.setState({
       compileStatus: 'idle',
       pdfPath: null,
@@ -126,7 +126,7 @@ describe('PreviewPane PDF generation swap', () => {
   it('keeps the previous layer visible until the pending current page renders', async () => {
     const firstRead = deferred<{ data: Uint8Array; mimeType: string }>()
     const secondRead = deferred<{ data: Uint8Array; mimeType: string }>()
-    vi.mocked(window.api.readFileBinary)
+    vi.mocked(window.api.readCompiledPdf)
       .mockReturnValueOnce(firstRead.promise)
       .mockReturnValueOnce(secondRead.promise)
 
@@ -170,7 +170,7 @@ describe('PreviewPane PDF generation swap', () => {
   })
 
   it('keeps page, zoom, and scroll position across a generation swap', async () => {
-    vi.mocked(window.api.readFileBinary)
+    vi.mocked(window.api.readCompiledPdf)
       .mockResolvedValueOnce({ data: new Uint8Array([1]), mimeType: 'application/pdf' })
       .mockResolvedValueOnce({ data: new Uint8Array([2]), mimeType: 'application/pdf' })
     useProjectStore.getState().setProjectRoot('/project')
@@ -212,7 +212,7 @@ describe('PreviewPane PDF generation swap', () => {
   })
 
   it('restores independent page and scroll positions when compiled documents change', async () => {
-    vi.mocked(window.api.readFileBinary)
+    vi.mocked(window.api.readCompiledPdf)
       .mockResolvedValueOnce({ data: new Uint8Array([1]), mimeType: 'application/pdf' })
       .mockResolvedValueOnce({ data: new Uint8Array([2]), mimeType: 'application/pdf' })
       .mockResolvedValueOnce({ data: new Uint8Array([3]), mimeType: 'application/pdf' })

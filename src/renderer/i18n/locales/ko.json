@@ -387,7 +387,12 @@
     "saveBeforeRename": "수정된 파일을 저장하거나 닫은 뒤 이름을 바꾸세요.",
     "saveBeforeDelete": "수정된 파일을 저장하거나 닫은 뒤 삭제하세요.",
     "expandFolder": "폴더 펼치기",
-    "collapseFolder": "폴더 접기"
+    "collapseFolder": "폴더 접기",
+    "showGenerated": "생성된 파일 보기",
+    "hideGenerated": "생성된 파일 숨기기",
+    "exportOverleaf": "Overleaf 소스 ZIP 내보내기",
+    "exportOverleafComplete": "Overleaf ZIP을 {{path}}에 저장했습니다.",
+    "exportOverleafFailed": "Overleaf ZIP을 만들지 못했습니다: {{reason}}"
   },
   "todoPanel": {
     "openProject": "TODO를 사용하려면 프로젝트를 여세요",

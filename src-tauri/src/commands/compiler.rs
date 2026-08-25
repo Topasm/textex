@@ -6,6 +6,7 @@ use crate::{
     services::{
         compiler,
         settings::{self, SettingsState},
+        synctex::SyncTexState,
         tectonic_cache,
     },
     state::AppState,
@@ -18,6 +19,7 @@ pub async fn compile_latex(
     app: AppHandle,
     state: State<'_, AppState>,
     settings_state: State<'_, SettingsState>,
+    synctex_state: State<'_, SyncTexState>,
     request: CompileRequest,
     on_event: Channel<CompileEvent>,
 ) -> AppResult<CompileResponse> {
@@ -28,14 +30,18 @@ pub async fn compile_latex(
         &settings::legacy_settings_paths(&settings_path),
     )
     .await?;
-    compiler::compile_latex(
+    let response = compiler::compile_latex(
         &app,
         state.inner(),
         user_settings.latex_engine,
         request,
         on_event,
     )
-    .await
+    .await?;
+    synctex_state
+        .register_build_output(&response.compiled_file_path, &response.pdf_path)
+        .await;
+    Ok(response)
 }
 
 /// Requests cancellation of the active compile. The compile owner responds by

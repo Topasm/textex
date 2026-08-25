@@ -7,6 +7,7 @@ use std::{
     time::Duration,
 };
 
+use sha2::{Digest, Sha256};
 use tauri::{ipc::Channel, AppHandle, Manager};
 use tokio::{
     fs,
@@ -31,6 +32,7 @@ const COMPILE_TIMEOUT: Duration = Duration::from_secs(120);
 const BUILD_TARGET_TRIPLE: &str = env!("TAURI_ENV_TARGET_TRIPLE");
 const MAX_JAVASCRIPT_SAFE_INTEGER: u64 = 9_007_199_254_740_991;
 const MAX_DIAGNOSTIC_LOG_BYTES: usize = 4 * 1024 * 1024;
+const MAX_AUX_BYTES: u64 = 4 * 1024 * 1024;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum RuntimeMode {
@@ -47,6 +49,11 @@ enum ChildOutcome {
 struct ChildRun {
     status: ExitStatus,
     output: String,
+}
+
+struct CompilerOutput {
+    pdf_path: String,
+    aux_content: Option<String>,
 }
 
 enum ResolvedCompiler {
@@ -67,11 +74,12 @@ pub async fn compile_latex(
     on_event: Channel<CompileEvent>,
 ) -> AppResult<CompileResponse> {
     validate_compile_request(&request)?;
-    let (_, project_epoch, project_epoch_tracker) = state.project_root_epoch()?;
+    let (project_root, project_epoch, project_epoch_tracker) = state.project_root_epoch()?;
     let identity = request.identity();
     let selected_tex_path = validate_project_tex_file(state, &request.file_path).await?;
     let tex_path = resolve_magic_root(state, &selected_tex_path).await?;
     let display_tex_path = path_to_string(&tex_path)?;
+    let build_dir = prepare_build_directory(app, &project_root, latex_engine).await?;
     let compiler = match latex_engine {
         LatexEngine::Tectonic => ResolvedCompiler::Tectonic {
             executable: resolve_tectonic_executable(app)?,
@@ -123,6 +131,7 @@ pub async fn compile_latex(
                 executable,
                 &tex_path,
                 &cache.path,
+                &build_dir,
                 identity.clone(),
                 on_event.clone(),
                 lease.cancel_receiver(),
@@ -134,6 +143,7 @@ pub async fn compile_latex(
             run_latexmk(
                 executable,
                 &tex_path,
+                &build_dir,
                 identity.clone(),
                 on_event.clone(),
                 lease.cancel_receiver(),
@@ -179,10 +189,11 @@ pub async fn compile_latex(
     // Keep a prepared Tectonic cache lease (when selected) until the child has
     // exited and all compile result handling above has finished.
     drop(compiler);
-    result.map(|pdf_path| CompileResponse {
+    result.map(|output| CompileResponse {
         identity,
-        pdf_path,
+        pdf_path: output.pdf_path,
         compiled_file_path: display_tex_path,
+        aux_content: output.aux_content,
     })
 }
 
@@ -225,11 +236,12 @@ async fn run_tectonic(
     tectonic_path: &Path,
     tex_path: &Path,
     cache_dir: &Path,
+    build_dir: &Path,
     identity: CompileIdentity,
     on_event: Channel<CompileEvent>,
     cancel_receiver: &mut oneshot::Receiver<()>,
     timeout: Duration,
-) -> AppResult<String> {
+) -> AppResult<CompilerOutput> {
     let working_directory = tex_path.parent().ok_or_else(|| {
         AppError::InvalidPath(format!(
             "compile input has no parent directory: {}",
@@ -241,6 +253,8 @@ async fn run_tectonic(
         .arg("-X")
         .arg("compile")
         .arg("--synctex")
+        .arg("--outdir")
+        .arg(build_dir)
         .arg(tex_path)
         .current_dir(working_directory)
         .env("TECTONIC_CACHE_DIR", cache_dir)
@@ -254,6 +268,7 @@ async fn run_tectonic(
         command,
         tectonic_path,
         tex_path,
+        expected_output_path(build_dir, tex_path, "pdf")?,
         identity,
         on_event,
         cancel_receiver,
@@ -265,11 +280,12 @@ async fn run_tectonic(
 async fn run_latexmk(
     latexmk_path: &Path,
     tex_path: &Path,
+    build_dir: &Path,
     identity: CompileIdentity,
     on_event: Channel<CompileEvent>,
     cancel_receiver: &mut oneshot::Receiver<()>,
     timeout: Duration,
-) -> AppResult<String> {
+) -> AppResult<CompilerOutput> {
     let working_directory = tex_path.parent().ok_or_else(|| {
         AppError::InvalidPath(format!(
             "compile input has no parent directory: {}",
@@ -279,7 +295,7 @@ async fn run_latexmk(
 
     let mut command = Command::new(latexmk_path);
     command
-        .args(latexmk_arguments(tex_path))
+        .args(latexmk_arguments(tex_path, build_dir))
         .current_dir(working_directory)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -291,6 +307,7 @@ async fn run_latexmk(
         command,
         latexmk_path,
         tex_path,
+        expected_output_path(build_dir, tex_path, "pdf")?,
         identity,
         on_event,
         cancel_receiver,
@@ -299,30 +316,129 @@ async fn run_latexmk(
     .await
 }
 
-fn latexmk_arguments(tex_path: &Path) -> Vec<OsString> {
+fn latexmk_arguments(tex_path: &Path, build_dir: &Path) -> Vec<OsString> {
     // Ignore system, user, and project latexmkrc files so an existing
     // XeLaTeX/LuaLaTeX override cannot change the selected engine.
+    let mut outdir = OsString::from("-outdir=");
+    outdir.push(build_dir);
     [
         OsString::from("-norc"),
+        // A PDF produced by Tectonic can otherwise look up-to-date to
+        // latexmk after an engine switch even though pdfLaTeX never ran.
+        OsString::from("-g"),
         OsString::from("-pdf"),
         OsString::from("-synctex=1"),
         OsString::from("-interaction=nonstopmode"),
         OsString::from("-file-line-error"),
         OsString::from("-halt-on-error"),
+        outdir,
         tex_path.as_os_str().to_owned(),
     ]
     .into()
+}
+
+fn expected_output_path(build_dir: &Path, tex_path: &Path, extension: &str) -> AppResult<PathBuf> {
+    let file_stem = tex_path
+        .file_stem()
+        .ok_or_else(|| AppError::InvalidPath(tex_path.to_string_lossy().into_owned()))?;
+    Ok(build_dir.join(file_stem).with_extension(extension))
+}
+
+async fn read_aux_content(aux_path: &Path) -> AppResult<Option<String>> {
+    let metadata = match fs::metadata(aux_path).await {
+        Ok(metadata) => metadata,
+        Err(source) if source.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(source) => {
+            return Err(AppError::compiler_io(
+                "inspect generated AUX",
+                aux_path.to_string_lossy(),
+                source,
+            ));
+        }
+    };
+    if !metadata.is_file() || metadata.len() > MAX_AUX_BYTES {
+        return Ok(None);
+    }
+    let bytes = fs::read(aux_path).await.map_err(|source| {
+        AppError::compiler_io("read generated AUX", aux_path.to_string_lossy(), source)
+    })?;
+    Ok(String::from_utf8(bytes).ok())
+}
+
+async fn prepare_build_directory(
+    app: &AppHandle,
+    project_root: &Path,
+    engine: LatexEngine,
+) -> AppResult<PathBuf> {
+    let app_cache = app
+        .path()
+        .app_cache_dir()
+        .map_err(|error| AppError::RuntimePath(error.to_string()))?;
+    let build_root = app_cache.join("build");
+    fs::create_dir_all(&build_root).await.map_err(|source| {
+        AppError::compiler_io("create build cache", build_root.to_string_lossy(), source)
+    })?;
+    let canonical_build_root = dunce::canonicalize(&build_root).map_err(|source| {
+        AppError::compiler_io("resolve build cache", build_root.to_string_lossy(), source)
+    })?;
+
+    let engine_name = match engine {
+        LatexEngine::Tectonic => "tectonic",
+        LatexEngine::PdfLatex => "pdflatex",
+    };
+    let build_dir = canonical_build_root
+        .join(project_cache_id(project_root))
+        .join(engine_name);
+    fs::create_dir_all(&build_dir).await.map_err(|source| {
+        AppError::compiler_io(
+            "create engine build cache",
+            build_dir.to_string_lossy(),
+            source,
+        )
+    })?;
+    let canonical_build_dir = dunce::canonicalize(&build_dir).map_err(|source| {
+        AppError::compiler_io(
+            "resolve engine build cache",
+            build_dir.to_string_lossy(),
+            source,
+        )
+    })?;
+    if !path_is_within(&canonical_build_root, &canonical_build_dir) {
+        return Err(AppError::RuntimePath(format!(
+            "engine build cache escaped application cache: {}",
+            canonical_build_dir.to_string_lossy()
+        )));
+    }
+    Ok(canonical_build_dir)
+}
+
+pub(crate) fn project_build_cache_root(app: &AppHandle, project_root: &Path) -> AppResult<PathBuf> {
+    let app_cache = app
+        .path()
+        .app_cache_dir()
+        .map_err(|error| AppError::RuntimePath(error.to_string()))?;
+    Ok(app_cache.join("build").join(project_cache_id(project_root)))
+}
+
+fn project_cache_id(project_root: &Path) -> String {
+    let identity = if cfg!(windows) {
+        project_root.to_string_lossy().to_lowercase()
+    } else {
+        project_root.to_string_lossy().into_owned()
+    };
+    format!("{:x}", Sha256::digest(identity.as_bytes()))
 }
 
 async fn run_configured_compiler(
     mut command: Command,
     compiler_path: &Path,
     tex_path: &Path,
+    pdf_path: PathBuf,
     identity: CompileIdentity,
     on_event: Channel<CompileEvent>,
     cancel_receiver: &mut oneshot::Receiver<()>,
     timeout: Duration,
-) -> AppResult<String> {
+) -> AppResult<CompilerOutput> {
     let display_compiler_path = compiler_path.to_string_lossy().into_owned();
     let child = command
         .spawn()
@@ -349,10 +465,12 @@ async fn run_configured_compiler(
         });
     }
 
-    let pdf_path = tex_path.with_extension("pdf");
     let display_pdf_path = path_to_string(&pdf_path)?;
     match fs::metadata(&pdf_path).await {
-        Ok(metadata) if metadata.is_file() => Ok(display_pdf_path),
+        Ok(metadata) if metadata.is_file() => Ok(CompilerOutput {
+            pdf_path: display_pdf_path,
+            aux_content: read_aux_content(&pdf_path.with_extension("aux")).await?,
+        }),
         Ok(_) => Err(AppError::CompiledPdfMissing(display_pdf_path)),
         Err(source) if source.kind() == io::ErrorKind::NotFound => {
             Err(AppError::CompiledPdfMissing(display_pdf_path))
@@ -1365,16 +1483,21 @@ mod tests {
 
     #[test]
     fn pdf_latex_invocation_ignores_rc_and_requests_submission_compatible_mode() {
-        let arguments = latexmk_arguments(Path::new("/project/main.tex"));
+        let arguments = latexmk_arguments(
+            Path::new("/project/main.tex"),
+            Path::new("/cache/build/project/pdflatex"),
+        );
         assert_eq!(
             arguments,
             [
                 "-norc",
+                "-g",
                 "-pdf",
                 "-synctex=1",
                 "-interaction=nonstopmode",
                 "-file-line-error",
                 "-halt-on-error",
+                "-outdir=/cache/build/project/pdflatex",
                 "/project/main.tex",
             ]
             .map(OsString::from)

@@ -231,6 +231,7 @@ describe('Tauri DesktopApi adapter', () => {
       .mockResolvedValueOnce({ success: true })
       .mockResolvedValueOnce({ data: 'data:image/png;base64,iVBORw==', mimeType: 'image/png' })
       .mockResolvedValueOnce(new Uint8Array([37, 80, 68, 70]).buffer)
+      .mockResolvedValueOnce(new Uint8Array([37, 80, 68, 70]).buffer)
 
     const api = createTauriApi()
 
@@ -259,6 +260,9 @@ describe('Tauri DesktopApi adapter', () => {
     expect(binary.mimeType).toBe('application/pdf')
     expect(binary.data).toBeInstanceOf(Uint8Array)
     expect([...binary.data]).toEqual([37, 80, 68, 70])
+    const compiled = await api.readCompiledPdf('/cache/build/project/tectonic/main.pdf')
+    expect(compiled.mimeType).toBe('application/pdf')
+    expect([...compiled.data]).toEqual([37, 80, 68, 70])
 
     expect(invokeMock.mock.calls).toEqual([
       ['open_file'],
@@ -269,7 +273,8 @@ describe('Tauri DesktopApi adapter', () => {
       ['rename_path', { source: '/project/draft.tex', destination: '/project/paper.tex' }],
       ['delete_path', { path: '/project/old.tex' }],
       ['read_file_base64', { filePath: '/project/source.png' }],
-      ['read_file_binary', { filePath: '/project/main.pdf' }]
+      ['read_file_binary', { filePath: '/project/main.pdf' }],
+      ['read_compiled_pdf', { filePath: '/cache/build/project/tectonic/main.pdf' }]
     ])
   })
 
@@ -795,6 +800,7 @@ describe('Tauri DesktopApi adapter', () => {
         { name: 'DOCX', ext: 'docx' }
       ])
       .mockResolvedValueOnce({ success: true, outputPath: '/project/paper.docx' })
+      .mockResolvedValueOnce({ success: true, outputPath: '/exports/paper-overleaf.zip' })
 
     const api = createTauriApi()
     await expect(api.getExportFormats()).resolves.toEqual([
@@ -805,9 +811,14 @@ describe('Tauri DesktopApi adapter', () => {
       success: true,
       outputPath: '/project/paper.docx'
     })
+    await expect(api.exportOverleafZip()).resolves.toEqual({
+      success: true,
+      outputPath: '/exports/paper-overleaf.zip'
+    })
     expect(invokeMock.mock.calls).toEqual([
       ['get_export_formats'],
-      ['export_document', { inputPath: '/project/paper.tex', format: 'docx' }]
+      ['export_document', { inputPath: '/project/paper.tex', format: 'docx' }],
+      ['export_overleaf_zip']
     ])
   })
 

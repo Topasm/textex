@@ -459,7 +459,7 @@ function PreviewPane() {
     dispatchGeneration({ type: 'request', revision: pdfRevision, path: pdfPath })
     let cancelled = false
     window.api
-      .readFileBinary(pdfPath)
+      .readCompiledPdf(pdfPath)
       .then((result: { data: Uint8Array }) => {
         if (cancelled) return
         dispatchGeneration({

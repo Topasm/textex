@@ -21,3 +21,11 @@ pub async fn export_document(
 pub fn get_export_formats() -> Vec<ExportFormat> {
     export::formats()
 }
+
+#[tauri::command]
+pub async fn export_overleaf_zip(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> AppResult<Option<ExportResult>> {
+    export::export_overleaf_zip(&app, state.inner()).await
+}

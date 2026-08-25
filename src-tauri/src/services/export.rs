@@ -1,4 +1,6 @@
 use std::{
+    fs::File,
+    io::{Read, Write},
     path::{Path, PathBuf},
     process::Stdio,
     time::Duration,
@@ -7,6 +9,7 @@ use std::{
 use tauri::{AppHandle, Manager};
 use tauri_plugin_dialog::DialogExt;
 use tokio::{io::AsyncReadExt, process::Command, time::timeout};
+use zip::{write::SimpleFileOptions, CompressionMethod, ZipWriter};
 
 use crate::{
     error::{AppError, AppResult},
@@ -18,6 +21,8 @@ use crate::{
 const EXPORT_TIMEOUT: Duration = Duration::from_secs(180);
 const MAX_STDERR_BYTES: u64 = 1024 * 1024;
 const MAX_OUTPUT_BYTES: u64 = 512 * 1024 * 1024;
+const MAX_OVERLEAF_FILES: usize = 20_000;
+const MAX_OVERLEAF_SOURCE_BYTES: u64 = 512 * 1024 * 1024;
 
 pub fn formats() -> Vec<ExportFormat> {
     vec![
@@ -93,6 +98,229 @@ pub async fn export_document(
         success: true,
         output_path: filesystem::path_to_string(&output)?,
     }))
+}
+
+pub async fn export_overleaf_zip(
+    app: &AppHandle,
+    state: &AppState,
+) -> AppResult<Option<ExportResult>> {
+    let _project_operation = state.lock_project_operation().await;
+    let project_root = state.project_root()?;
+    let project_name = project_root
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or("project");
+    let selected = app
+        .dialog()
+        .file()
+        .set_file_name(format!("{project_name}-overleaf.zip"))
+        .add_filter("ZIP Archives", &["zip"])
+        .blocking_save_file();
+    let Some(selected) = selected else {
+        return Ok(None);
+    };
+    let output = selected
+        .into_path()
+        .map_err(|error| AppError::InvalidPath(error.to_string()))?;
+    validate_output_target(&output).await?;
+    let staged = filesystem::reserve_external_output(&output, "overleaf").await?;
+    let archive_root = project_root.clone();
+    let archive_staged = staged.clone();
+    let archive_output = output.clone();
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        create_overleaf_zip_at(
+            &archive_root,
+            &archive_staged,
+            Some(archive_output.as_path()),
+        )
+    })
+    .await
+    .map_err(|error| AppError::Worker(error.to_string()))?;
+    if let Err(error) = result {
+        let _ = tokio::fs::remove_file(&staged).await;
+        return Err(error);
+    }
+    let metadata = tokio::fs::metadata(&staged)
+        .await
+        .map_err(|source| AppError::io("inspect Overleaf ZIP", display(&staged), source))?;
+    if !metadata.is_file() || metadata.len() > MAX_OUTPUT_BYTES {
+        let _ = tokio::fs::remove_file(&staged).await;
+        return Err(export_error("Overleaf ZIP is missing or exceeds 512 MiB"));
+    }
+    filesystem::commit_external_output(staged, output.clone()).await?;
+    Ok(Some(ExportResult {
+        success: true,
+        output_path: filesystem::path_to_string(&output)?,
+    }))
+}
+
+fn create_overleaf_zip_at(
+    project_root: &Path,
+    archive_path: &Path,
+    final_output: Option<&Path>,
+) -> AppResult<()> {
+    let mut files = Vec::new();
+    let mut total_bytes = 0_u64;
+    collect_overleaf_sources(
+        project_root,
+        project_root,
+        archive_path,
+        final_output,
+        &mut files,
+        &mut total_bytes,
+    )?;
+    files.sort();
+    let archive = File::create(archive_path)
+        .map_err(|source| AppError::io("create Overleaf ZIP", display(archive_path), source))?;
+    let mut zip = ZipWriter::new(archive);
+    let options = SimpleFileOptions::default()
+        .compression_method(CompressionMethod::Deflated)
+        .unix_permissions(0o644);
+    let mut buffer = [0_u8; 64 * 1024];
+
+    for source in files {
+        let relative = source
+            .strip_prefix(project_root)
+            .map_err(|_| export_error("Overleaf source escaped the project root"))?;
+        let archive_name = relative
+            .components()
+            .map(|component| component.as_os_str().to_str())
+            .collect::<Option<Vec<_>>>()
+            .ok_or_else(|| export_error("Overleaf source path is not valid UTF-8"))?
+            .join("/");
+        zip.start_file(archive_name, options)
+            .map_err(|error| export_error(format!("could not add ZIP entry: {error}")))?;
+        let mut input = File::open(&source).map_err(|source_error| {
+            AppError::io("open Overleaf source", display(&source), source_error)
+        })?;
+        loop {
+            let read = input.read(&mut buffer).map_err(|source_error| {
+                AppError::io("read Overleaf source", display(&source), source_error)
+            })?;
+            if read == 0 {
+                break;
+            }
+            zip.write_all(&buffer[..read])
+                .map_err(|error| export_error(format!("could not write ZIP entry: {error}")))?;
+        }
+    }
+    zip.finish()
+        .map_err(|error| export_error(format!("could not finish Overleaf ZIP: {error}")))?;
+    Ok(())
+}
+
+fn collect_overleaf_sources(
+    project_root: &Path,
+    directory: &Path,
+    archive_path: &Path,
+    final_output: Option<&Path>,
+    files: &mut Vec<PathBuf>,
+    total_bytes: &mut u64,
+) -> AppResult<()> {
+    let entries = std::fs::read_dir(directory).map_err(|source| {
+        AppError::io("read Overleaf source directory", display(directory), source)
+    })?;
+    for entry in entries {
+        let entry = entry.map_err(|source| {
+            AppError::io("read Overleaf source entry", display(directory), source)
+        })?;
+        let path = entry.path();
+        if path == archive_path || final_output.is_some_and(|output| path == output) {
+            continue;
+        }
+        let file_name = entry.file_name();
+        let Some(name) = file_name.to_str() else {
+            return Err(export_error("Overleaf source path is not valid UTF-8"));
+        };
+        let metadata = std::fs::symlink_metadata(&path)
+            .map_err(|source| AppError::io("inspect Overleaf source", display(&path), source))?;
+        if metadata.file_type().is_symlink() {
+            continue;
+        }
+        if metadata.is_dir() {
+            if is_excluded_overleaf_directory(name) {
+                continue;
+            }
+            collect_overleaf_sources(
+                project_root,
+                &path,
+                archive_path,
+                final_output,
+                files,
+                total_bytes,
+            )?;
+        } else if metadata.is_file() && !is_generated_latex_file(name, &path) {
+            if !path.starts_with(project_root) {
+                return Err(export_error("Overleaf source escaped the project root"));
+            }
+            *total_bytes = total_bytes
+                .checked_add(metadata.len())
+                .ok_or_else(|| export_error("Overleaf source size overflow"))?;
+            if *total_bytes > MAX_OVERLEAF_SOURCE_BYTES {
+                return Err(export_error("Overleaf sources exceed 512 MiB"));
+            }
+            if files.len() >= MAX_OVERLEAF_FILES {
+                return Err(export_error("Overleaf project exceeds 20,000 files"));
+            }
+            files.push(path);
+        }
+    }
+    Ok(())
+}
+
+fn is_excluded_overleaf_directory(name: &str) -> bool {
+    matches!(
+        name.to_ascii_lowercase().as_str(),
+        ".git"
+            | ".hg"
+            | ".svn"
+            | ".textex"
+            | ".tectonic"
+            | "node_modules"
+            | "target"
+            | "__pycache__"
+    )
+}
+
+fn is_generated_latex_file(name: &str, path: &Path) -> bool {
+    let lower = name.to_ascii_lowercase();
+    if matches!(lower.as_str(), ".ds_store" | ".latexmkrc") {
+        return true;
+    }
+    const GENERATED_SUFFIXES: &[&str] = &[
+        ".aux",
+        ".bbl",
+        ".bcf",
+        ".blg",
+        ".dvi",
+        ".fdb_latexmk",
+        ".fls",
+        ".idx",
+        ".ilg",
+        ".ind",
+        ".lof",
+        ".log",
+        ".lot",
+        ".nav",
+        ".out",
+        ".run.xml",
+        ".snm",
+        ".synctex",
+        ".synctex.gz",
+        ".toc",
+        ".vrb",
+        ".xdv",
+    ];
+    if GENERATED_SUFFIXES
+        .iter()
+        .any(|suffix| lower.ends_with(suffix))
+    {
+        return true;
+    }
+    if lower.ends_with(".pdf") {
+        return path.with_extension("tex").is_file();
+    }
+    false
 }
 
 async fn run_pandoc(pandoc: &Path, input: &Path, output: &Path, format: &str) -> AppResult<()> {
@@ -237,7 +465,10 @@ fn export_error(message: impl Into<String>) -> AppError {
 
 #[cfg(test)]
 mod tests {
-    use super::{formats, platform_directory, validate_format};
+    use std::{fs::File, io::Read};
+
+    use super::{create_overleaf_zip_at, formats, platform_directory, validate_format};
+    use zip::ZipArchive;
 
     #[test]
     fn exposes_only_supported_pandoc_formats() {
@@ -250,5 +481,44 @@ mod tests {
         );
         assert!(validate_format("pdf").is_err());
         assert!(!platform_directory().is_empty());
+    }
+
+    #[test]
+    fn overleaf_zip_contains_sources_but_excludes_build_outputs_and_private_metadata() {
+        let directory = tempfile::tempdir().expect("project tempdir");
+        let root = directory.path().join("paper");
+        std::fs::create_dir_all(root.join("figures")).expect("create source tree");
+        std::fs::create_dir_all(root.join(".git")).expect("create git metadata");
+        std::fs::write(root.join("main.tex"), "source").expect("write tex");
+        std::fs::write(root.join("references.bib"), "bib").expect("write bib");
+        std::fs::write(root.join("main.aux"), "generated").expect("write aux");
+        std::fs::write(root.join("main.pdf"), "generated pdf").expect("write output pdf");
+        std::fs::write(root.join(".latexmkrc"), "xelatex").expect("write latexmkrc");
+        std::fs::write(root.join(".git/config"), "private").expect("write git config");
+        std::fs::write(root.join("figures/result.pdf"), "source figure")
+            .expect("write source figure");
+        let archive_path = directory.path().join("paper-overleaf.zip");
+
+        create_overleaf_zip_at(&root, &archive_path, None).expect("create archive");
+        let mut archive = ZipArchive::new(File::open(archive_path).expect("open archive"))
+            .expect("parse archive");
+        let mut names = (0..archive.len())
+            .map(|index| {
+                archive
+                    .by_index(index)
+                    .expect("archive entry")
+                    .name()
+                    .to_owned()
+            })
+            .collect::<Vec<_>>();
+        names.sort();
+        assert_eq!(names, ["figures/result.pdf", "main.tex", "references.bib"]);
+        let mut source = String::new();
+        archive
+            .by_name("main.tex")
+            .expect("main source")
+            .read_to_string(&mut source)
+            .expect("read main source");
+        assert_eq!(source, "source");
     }
 }

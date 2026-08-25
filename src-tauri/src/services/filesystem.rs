@@ -6,7 +6,6 @@ use std::{
     sync::atomic::{AtomicU64, Ordering as AtomicOrdering},
 };
 
-#[cfg(windows)]
 use std::ffi::OsStr;
 
 use tauri::AppHandle;
@@ -21,7 +20,10 @@ use crate::{
         Base64FileResult, DirectoryEntry, DirectoryEntryType, OpenFileResult, SaveFileAsResult,
         SaveFileInput, SuccessResult,
     },
-    services::history::{self, HistoryState},
+    services::{
+        compiler,
+        history::{self, HistoryState},
+    },
     state::AppState,
 };
 
@@ -589,6 +591,34 @@ pub async fn read_file_binary(state: &AppState, file_path: &str) -> AppResult<Ve
     read_limited_binary(
         &canonical,
         "raw binary transfer",
+        RAW_BINARY_TRANSFER_LIMIT_BYTES,
+    )
+    .await
+}
+
+pub async fn read_compiled_pdf(
+    app: &AppHandle,
+    state: &AppState,
+    file_path: &str,
+) -> AppResult<Vec<u8>> {
+    let requested = require_absolute_str(file_path)?;
+    let canonical = canonicalize(requested, "read compiled PDF").await?;
+    if !canonical
+        .extension()
+        .and_then(OsStr::to_str)
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("pdf"))
+    {
+        return Err(AppError::InvalidPath(file_path.to_owned()));
+    }
+    let project_root = state.project_root()?;
+    let cache_root = compiler::project_build_cache_root(app, &project_root)?;
+    let canonical_cache_root = canonicalize(cache_root, "resolve project build cache").await?;
+    if !path_is_within(&canonical_cache_root, &canonical) {
+        return Err(AppError::OutsideProject(file_path.to_owned()));
+    }
+    read_limited_binary(
+        &canonical,
+        "compiled PDF transfer",
         RAW_BINARY_TRANSFER_LIMIT_BYTES,
     )
     .await

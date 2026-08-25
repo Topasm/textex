@@ -1,6 +1,7 @@
 import { memo, useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo } from 'react'
 import type { ReactNode } from 'react'
 import {
+  Archive,
   BookOpenText,
   ChevronRight,
   File,
@@ -12,6 +13,8 @@ import {
   Folder,
   FolderOpen,
   FolderPlus,
+  Eye,
+  EyeOff,
   PencilLine,
   Trash2,
   type LucideIcon
@@ -19,7 +22,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { useEditorStore } from '../store/useEditorStore'
 import { useProjectStore } from '../store/useProjectStore'
-import { logError } from '../utils/errorMessage'
+import { errorMessage, logError } from '../utils/errorMessage'
 import { isImageFile } from '../utils/imageExtensions'
 import { generateFigureSnippet } from '../utils/figureSnippet'
 import { ImagePreviewTooltip } from './ImagePreviewTooltip'
@@ -32,6 +35,11 @@ import {
 import type { ProjectTreeRow } from '../services/projectIndex'
 import type { DirectoryEntry, GitFileStatus, ProjectIndexEntry } from '../../shared/types'
 import { ICON_SIZE } from './ui/IconSystem'
+import {
+  filterGeneratedDirectoryEntries,
+  filterGeneratedProjectEntries
+} from '../services/generatedFiles'
+import { useNotificationStore } from '../store/useNotificationStore'
 
 function iconWrapper(kind: string, Icon: LucideIcon): ReactNode {
   return (
@@ -80,6 +88,7 @@ interface FileTreeNodeProps {
   depth: number
   gitFiles?: GitFileStatus[]
   onChanged?: () => void | Promise<void>
+  showGenerated: boolean
 }
 
 import { getGitFileDecoration } from '../utils/gitStatus'
@@ -152,7 +161,7 @@ function remapChildPath(filePath: string, source: string, destination: string): 
   return `${destination}${filePath.slice(source.length)}`
 }
 
-function FileTreeNode({ entry, depth, gitFiles, onChanged }: FileTreeNodeProps) {
+function FileTreeNode({ entry, depth, gitFiles, onChanged, showGenerated }: FileTreeNodeProps) {
   const { t } = useTranslation()
   const [expanded, setExpanded] = useState(depth < 1)
   const [children, setChildren] = useState<DirectoryEntry[] | null>(null)
@@ -170,6 +179,10 @@ function FileTreeNode({ entry, depth, gitFiles, onChanged }: FileTreeNodeProps) 
   )
 
   const isImage = entry.type === 'file' && isImageFile(entry.name)
+  const visibleChildren = useMemo(
+    () => (showGenerated && children ? children : filterGeneratedDirectoryEntries(children ?? [])),
+    [children, showGenerated]
+  )
 
   const loadChildren = useCallback(async () => {
     const requestId = ++loadRequestIdRef.current
@@ -491,13 +504,14 @@ function FileTreeNode({ entry, depth, gitFiles, onChanged }: FileTreeNodeProps) 
             />
           )}
           {children &&
-            children.map((child) => (
+            visibleChildren.map((child) => (
               <FileTreeNode
                 key={child.path}
                 entry={child}
                 depth={depth + 1}
                 gitFiles={gitFiles}
                 onChanged={loadChildren}
+                showGenerated={showGenerated}
               />
             ))}
         </div>
@@ -778,6 +792,10 @@ interface VirtualizedProjectFileTreeProps {
   rootCreatingType: 'file' | 'folder' | null
   setRootCreatingType: (type: 'file' | 'folder' | null) => void
   onRootCreate: (name: string) => void
+  showGenerated: boolean
+  onToggleGenerated: () => void
+  onExportOverleaf: () => void
+  exportingOverleaf: boolean
 }
 
 function VirtualizedProjectFileTree({
@@ -785,7 +803,11 @@ function VirtualizedProjectFileTree({
   gitFiles,
   rootCreatingType,
   setRootCreatingType,
-  onRootCreate
+  onRootCreate,
+  showGenerated,
+  onToggleGenerated,
+  onExportOverleaf,
+  exportingOverleaf
 }: VirtualizedProjectFileTreeProps) {
   const { t } = useTranslation()
   const viewportRef = useRef<HTMLDivElement>(null)
@@ -939,6 +961,24 @@ function VirtualizedProjectFileTree({
         >
           <FolderPlus size={ICON_SIZE.compact} />
         </button>
+        <button
+          className="file-tree-header-btn"
+          onClick={onToggleGenerated}
+          title={t(showGenerated ? 'fileTree.hideGenerated' : 'fileTree.showGenerated')}
+          aria-label={t(showGenerated ? 'fileTree.hideGenerated' : 'fileTree.showGenerated')}
+          aria-pressed={showGenerated}
+        >
+          {showGenerated ? <EyeOff size={ICON_SIZE.compact} /> : <Eye size={ICON_SIZE.compact} />}
+        </button>
+        <button
+          className="file-tree-header-btn"
+          onClick={onExportOverleaf}
+          disabled={exportingOverleaf}
+          title={t('fileTree.exportOverleaf')}
+          aria-label={t('fileTree.exportOverleaf')}
+        >
+          <Archive size={ICON_SIZE.compact} />
+        </button>
       </div>
       {rootCreatingType && (
         <InlineInput
@@ -1014,6 +1054,8 @@ function FileTree() {
   const projectIndexEntries = useProjectStore((s) => s.projectIndex?.entries ?? null)
   const setDirectoryTree = useProjectStore((s) => s.setDirectoryTree)
   const [creatingType, setCreatingType] = useState<'file' | 'folder' | null>(null)
+  const [showGenerated, setShowGenerated] = useState(false)
+  const [exportingOverleaf, setExportingOverleaf] = useState(false)
   const projectIndex = useMemo(
     () =>
       projectIndexRoot && projectIndexEntries
@@ -1021,6 +1063,44 @@ function FileTree() {
         : null,
     [projectIndexEntries, projectIndexRoot]
   )
+  const displayedProjectIndex = useMemo(
+    () =>
+      projectIndex
+        ? {
+            ...projectIndex,
+            entries: showGenerated
+              ? projectIndex.entries
+              : filterGeneratedProjectEntries(projectIndex.entries)
+          }
+        : null,
+    [projectIndex, showGenerated]
+  )
+  const visibleDirectoryTree = useMemo(
+    () =>
+      showGenerated ? (directoryTree ?? []) : filterGeneratedDirectoryEntries(directoryTree ?? []),
+    [directoryTree, showGenerated]
+  )
+
+  const handleExportOverleaf = useCallback(async () => {
+    if (!projectRoot || exportingOverleaf) return
+    setExportingOverleaf(true)
+    try {
+      const result = await window.api.exportOverleafZip()
+      if (result) {
+        useNotificationStore.getState().pushNotification({
+          message: t('fileTree.exportOverleafComplete', { path: result.outputPath }),
+          tone: 'success'
+        })
+      }
+    } catch (error) {
+      useNotificationStore.getState().pushNotification({
+        message: t('fileTree.exportOverleafFailed', { reason: errorMessage(error) }),
+        tone: 'error'
+      })
+    } finally {
+      setExportingOverleaf(false)
+    }
+  }, [exportingOverleaf, projectRoot, t])
 
   const refreshRoot = useCallback(async () => {
     if (!projectRoot) return
@@ -1049,14 +1129,18 @@ function FileTree() {
     [projectRoot, creatingType, refreshRoot]
   )
 
-  if (projectRoot && projectIndex) {
+  if (projectRoot && displayedProjectIndex) {
     return (
       <VirtualizedProjectFileTree
-        projectIndex={projectIndex}
+        projectIndex={displayedProjectIndex}
         gitFiles={gitStatus?.files}
         rootCreatingType={creatingType}
         setRootCreatingType={setCreatingType}
         onRootCreate={(name) => void handleRootCreate(name)}
+        showGenerated={showGenerated}
+        onToggleGenerated={() => setShowGenerated((current) => !current)}
+        onExportOverleaf={() => void handleExportOverleaf()}
+        exportingOverleaf={exportingOverleaf}
       />
     )
   }
@@ -1088,6 +1172,24 @@ function FileTree() {
         >
           <FolderPlus size={ICON_SIZE.compact} />
         </button>
+        <button
+          className="file-tree-header-btn"
+          onClick={() => setShowGenerated((current) => !current)}
+          title={t(showGenerated ? 'fileTree.hideGenerated' : 'fileTree.showGenerated')}
+          aria-label={t(showGenerated ? 'fileTree.hideGenerated' : 'fileTree.showGenerated')}
+          aria-pressed={showGenerated}
+        >
+          {showGenerated ? <EyeOff size={ICON_SIZE.compact} /> : <Eye size={ICON_SIZE.compact} />}
+        </button>
+        <button
+          className="file-tree-header-btn"
+          onClick={() => void handleExportOverleaf()}
+          disabled={exportingOverleaf}
+          title={t('fileTree.exportOverleaf')}
+          aria-label={t('fileTree.exportOverleaf')}
+        >
+          <Archive size={ICON_SIZE.compact} />
+        </button>
       </div>
       {creatingType && (
         <InlineInput
@@ -1100,13 +1202,14 @@ function FileTree() {
           onCancel={() => setCreatingType(null)}
         />
       )}
-      {directoryTree.map((entry) => (
+      {visibleDirectoryTree.map((entry) => (
         <FileTreeNode
           key={entry.path}
           entry={entry}
           depth={0}
           gitFiles={gitStatus?.files}
           onChanged={refreshRoot}
+          showGenerated={showGenerated}
         />
       ))}
     </div>

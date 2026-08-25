@@ -52,6 +52,7 @@ Object.defineProperty(window, 'api', {
     cancelCompile: vi.fn(),
     tectonicCacheStatus: vi.fn(),
     tectonicCacheReset: vi.fn(),
+    exportOverleafZip: vi.fn(),
     onCompileLog: vi.fn(),
     removeCompileLogListener: vi.fn(),
     onDiagnostics: vi.fn(),
@@ -62,6 +63,7 @@ Object.defineProperty(window, 'api', {
     // Multi-file / directory operations
     readFile: vi.fn(),
     readFileBinary: vi.fn(),
+    readCompiledPdf: vi.fn(),
     createDirectory: vi.fn(),
     openDirectory: vi.fn(),
     activateProject: vi.fn(async (projectPath: string) => projectPath),

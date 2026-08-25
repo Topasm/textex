@@ -387,7 +387,12 @@
     "saveBeforeRename": "Save or close modified files before renaming.",
     "saveBeforeDelete": "Save or close modified files before deleting.",
     "expandFolder": "Expand folder",
-    "collapseFolder": "Collapse folder"
+    "collapseFolder": "Collapse folder",
+    "showGenerated": "Show generated files",
+    "hideGenerated": "Hide generated files",
+    "exportOverleaf": "Export Overleaf source ZIP",
+    "exportOverleafComplete": "Overleaf ZIP saved to {{path}}",
+    "exportOverleafFailed": "Could not create Overleaf ZIP: {{reason}}"
   },
   "todoPanel": {
     "openProject": "Open a project to use TODO",

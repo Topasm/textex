@@ -1302,6 +1302,8 @@ pub struct CompileResponse {
     pub identity: CompileIdentity,
     pub pdf_path: String,
     pub compiled_file_path: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub aux_content: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -1510,6 +1512,7 @@ mod tests {
             identity: identity.clone(),
             pdf_path: "/project/paper.pdf".to_owned(),
             compiled_file_path: "/project/paper.tex".to_owned(),
+            aux_content: None,
         };
         assert_eq!(
             serde_json::to_value(response).expect("serialize compile response"),

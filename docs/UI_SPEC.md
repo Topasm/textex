@@ -151,10 +151,25 @@ ErrorBoundary
   - `automaticLayout: true`
   - `padding: { top: 8 }`
 
+### `FileTree.tsx`
+
+- Uses the native project index when available and falls back to lazy directory
+  reads, while keeping the same source-file filtering in both paths.
+- Hides LaTeX-generated files (`.aux`, `.log`, `.toc`, `.bbl`, SyncTeX,
+  latexmk state, and similar outputs) by default. A header eye control toggles
+  legacy generated files that already exist inside the project.
+- Keeps source PDF assets visible; a PDF is treated as generated only when a
+  same-directory, same-stem `.tex` source exists.
+- Provides an **Export for Overleaf** archive action. Native code prompts for a
+  destination and creates a bounded source-only ZIP without generated files,
+  VCS/application metadata, or `.latexmkrc`.
+
 ### `PreviewPane.tsx`
 - Wraps `react-pdf`'s `<Document>` and `<Page>` components.
-- Consumes a revision-qualified `pdfPath`, reads bytes through the typed Tauri API,
-  and stages each generation as `Uint8Array` data for PDF.js.
+- Consumes a revision-qualified `pdfPath` from the current project's
+  engine-specific application build cache, reads bytes through the dedicated
+  typed Tauri compiled-PDF API, and stages each generation as `Uint8Array` data
+  for PDF.js.
 - Features:
   - Scroll through pages continuously.
   - Multi-page support with dynamic page count via `onDocumentLoadSuccess`.

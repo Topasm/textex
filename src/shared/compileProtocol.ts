@@ -18,6 +18,8 @@ export interface CompileResponse extends CompileIdentity {
   pdfPath: string
   /** Actual root file after resolving `%! TeX root`. */
   compiledFilePath: string
+  /** Bounded UTF-8 citation metadata read from the engine-specific build cache. */
+  auxContent?: string
 }
 
 export interface CompileLogEvent extends CompileIdentity {

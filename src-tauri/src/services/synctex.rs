@@ -92,6 +92,20 @@ struct CachedSyncTex {
 #[derive(Default)]
 pub struct SyncTexState {
     cache: Mutex<Option<CachedSyncTex>>,
+    build_directories: Mutex<HashMap<PathBuf, PathBuf>>,
+}
+
+impl SyncTexState {
+    pub async fn register_build_output(&self, root_file: &str, pdf_path: &str) {
+        let Some(build_dir) = Path::new(pdf_path).parent() else {
+            return;
+        };
+        self.build_directories
+            .lock()
+            .await
+            .insert(PathBuf::from(root_file), build_dir.to_path_buf());
+        *self.cache.lock().await = None;
+    }
 }
 
 pub async fn forward(
@@ -234,8 +248,20 @@ async fn load(
     selected: &Path,
 ) -> AppResult<Option<LoadedSyncTex>> {
     let root_file = resolve_magic_root(state, selected).await?;
-    let plain = root_file.with_extension("synctex");
-    let compressed = root_file.with_extension("synctex.gz");
+    let build_dir = sync_state
+        .build_directories
+        .lock()
+        .await
+        .get(&root_file)
+        .cloned();
+    let plain = build_dir
+        .as_ref()
+        .map(|directory| output_path(directory, &root_file, "synctex"))
+        .unwrap_or_else(|| root_file.with_extension("synctex"));
+    let compressed = build_dir
+        .as_ref()
+        .map(|directory| output_path(directory, &root_file, "synctex.gz"))
+        .unwrap_or_else(|| root_file.with_extension("synctex.gz"));
 
     let source_file = if plain.is_file() {
         plain
@@ -298,6 +324,16 @@ async fn load(
         loaded: loaded.clone(),
     });
     Ok(Some(loaded))
+}
+
+fn output_path(directory: &Path, root_file: &Path, extension: &str) -> PathBuf {
+    directory
+        .join(
+            root_file
+                .file_stem()
+                .unwrap_or_else(|| OsStr::new("output")),
+        )
+        .with_extension(extension)
 }
 
 fn parse(content: &str) -> SyncTexDocument {

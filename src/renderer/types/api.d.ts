@@ -122,6 +122,7 @@ export interface DesktopApi {
   deletePath(path: string): Promise<{ success: boolean }>
   readFileBase64(filePath: string): Promise<{ data: string; mimeType: string }>
   readFileBinary(filePath: string): Promise<{ data: Uint8Array; mimeType: string }>
+  readCompiledPdf(filePath: string): Promise<{ data: Uint8Array; mimeType: string }>
   readDirectory(dirPath: string): Promise<DirectoryEntry[]>
   watchDirectory(dirPath: string): Promise<{ success: boolean }>
   unwatchDirectory(): Promise<{ success: boolean }>
@@ -210,6 +211,7 @@ export interface DesktopApi {
     format: string
   ): Promise<{ success: boolean; outputPath: string } | null>
   getExportFormats(): Promise<{ name: string; ext: string }[]>
+  exportOverleafZip(): Promise<{ success: boolean; outputPath: string } | null>
 
   // LSP (TexLab)
   lspStart(workspaceRoot: string): Promise<{ success: boolean }>

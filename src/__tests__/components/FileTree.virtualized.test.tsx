@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import FileTree from '../../renderer/components/FileTree'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
@@ -115,5 +115,60 @@ describe('virtualized FileTree', () => {
     expect(container.querySelector('[data-file-tree-path="file-00001.tex"]')).toHaveClass(
       'selected'
     )
+  })
+
+  it('hides generated outputs by default and exports an Overleaf source archive', async () => {
+    useProjectStore.getState().setProjectIndex({
+      root: projectRoot,
+      generation: 3,
+      entries: [
+        {
+          path: `${projectRoot}/main.tex`,
+          relativePath: 'main.tex',
+          parentRelativePath: '',
+          name: 'main.tex',
+          type: 'file'
+        },
+        {
+          path: `${projectRoot}/main.pdf`,
+          relativePath: 'main.pdf',
+          parentRelativePath: '',
+          name: 'main.pdf',
+          type: 'file'
+        },
+        {
+          path: `${projectRoot}/main.log`,
+          relativePath: 'main.log',
+          parentRelativePath: '',
+          name: 'main.log',
+          type: 'file'
+        },
+        {
+          path: `${projectRoot}/figure.pdf`,
+          relativePath: 'figure.pdf',
+          parentRelativePath: '',
+          name: 'figure.pdf',
+          type: 'file'
+        }
+      ]
+    })
+    vi.mocked(window.api.exportOverleafZip).mockResolvedValue({
+      success: true,
+      outputPath: '/exports/large-overleaf.zip'
+    })
+
+    render(<FileTree />)
+
+    expect(screen.getByText('main.tex')).toBeInTheDocument()
+    expect(screen.getByText('figure.pdf')).toBeInTheDocument()
+    expect(screen.queryByText('main.pdf')).not.toBeInTheDocument()
+    expect(screen.queryByText('main.log')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Show generated files' }))
+    expect(screen.getByText('main.pdf')).toBeInTheDocument()
+    expect(screen.getByText('main.log')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Export Overleaf source ZIP' }))
+    await waitFor(() => expect(window.api.exportOverleafZip).toHaveBeenCalledOnce())
   })
 })

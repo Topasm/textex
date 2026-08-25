@@ -51,6 +51,7 @@ import { deactivateProject, openProject } from './utils/openProject'
 import { errorMessage, logError } from './utils/errorMessage'
 import { isFeatureEnabled } from './utils/featureFlags'
 import type { AppCommandId } from '../shared/types'
+import { parseAuxContent } from '../shared/auxparser'
 import { runtimePerformance } from './services/runtimePerformance'
 import { prepareForApplicationExit, quitApplication } from './services/applicationLifecycle'
 import { checkForAppUpdate } from './services/updateLifecycle'
@@ -228,6 +229,9 @@ function App() {
         revision: snapshot.revision
       })
       useCompileStore.getState().setCompileStatus('success')
+      useProjectStore
+        .getState()
+        .setAuxCitationMap(result.auxContent ? parseAuxContent(result.auxContent) : null)
       const root = useProjectStore.getState().projectRoot
       if (root) {
         window.api

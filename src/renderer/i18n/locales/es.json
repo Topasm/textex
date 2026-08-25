@@ -387,7 +387,12 @@
     "saveBeforeRename": "Guarda o cierra los archivos modificados antes de cambiarles el nombre.",
     "saveBeforeDelete": "Guarda o cierra los archivos modificados antes de eliminarlos.",
     "expandFolder": "Expandir carpeta",
-    "collapseFolder": "Contraer carpeta"
+    "collapseFolder": "Contraer carpeta",
+    "showGenerated": "Mostrar archivos generados",
+    "hideGenerated": "Ocultar archivos generados",
+    "exportOverleaf": "Exportar ZIP fuente de Overleaf",
+    "exportOverleafComplete": "ZIP de Overleaf guardado en {{path}}",
+    "exportOverleafFailed": "No se pudo crear el ZIP de Overleaf: {{reason}}"
   },
   "todoPanel": {
     "openProject": "Abre un proyecto para usar TODO",

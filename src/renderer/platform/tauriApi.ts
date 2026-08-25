@@ -282,6 +282,16 @@ const readFileBinary: DesktopApi['readFileBinary'] = async (filePath) => {
   }
 }
 
+const readCompiledPdf: DesktopApi['readCompiledPdf'] = async (filePath) => {
+  const bytes = await invoke<ArrayBuffer | Uint8Array | number[]>(TAURI_COMMANDS.readCompiledPdf, {
+    filePath
+  })
+  return {
+    mimeType: 'application/pdf',
+    data: bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)
+  }
+}
+
 const createTemplateProject: DesktopApi['createTemplateProject'] = (templateName, content, files) =>
   invoke(TAURI_COMMANDS.createTemplateProject, { templateName, content, files })
 
@@ -580,6 +590,9 @@ const exportDocument: DesktopApi['exportDocument'] = (inputPath, format) =>
 const getExportFormats: DesktopApi['getExportFormats'] = () =>
   invoke(TAURI_COMMANDS.getExportFormats)
 
+const exportOverleafZip: DesktopApi['exportOverleafZip'] = () =>
+  invoke(TAURI_COMMANDS.exportOverleafZip)
+
 const openExternal: DesktopApi['openExternal'] = (url) =>
   invoke(TAURI_COMMANDS.openExternal, { url })
 
@@ -861,6 +874,7 @@ const tauriDesktopApi = {
   deletePath,
   readFileBase64,
   readFileBinary,
+  readCompiledPdf,
   createTemplateProject,
   gitIsRepo,
   gitInit,
@@ -955,6 +969,7 @@ const tauriDesktopApi = {
   synctexBuildLineMap,
   exportDocument,
   getExportFormats,
+  exportOverleafZip,
   openExternal,
   exitApp,
   getPerformanceMemory,

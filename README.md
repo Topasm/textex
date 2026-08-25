@@ -22,12 +22,12 @@ A **free**, **local-first** Tauri desktop LaTeX editor. TextEx runs on your mach
 | **SyncTeX** | Ctrl+Click to jump between source code and PDF positions |
 | **OmniSearch** | Unified search across citations, PDF content, and editor text |
 | **Monaco Editor** | Syntax highlighting, auto-completion, snippets, Vim mode |
-| **Multi-File Projects** | Sidebar file tree, tab bar, `\input`/`\include` navigation |
+| **Multi-File Projects** | Sidebar file tree with generated outputs hidden, tab bar, `\input`/`\include` navigation |
 | **Citations** | BibTeX auto-complete + Zotero integration |
 | **Research & AI** | Crossref/arXiv search plus native HTTP, Claude CLI, and Codex CLI assistants |
 | **Language & Terminal** | Optional TexLab language features and an embedded native PTY terminal |
 | **Git Integration** | Built-in staging, commits, diffs, and branch info |
-| **Export** | Convert to DOCX, ODT, HTML, and EPUB via Pandoc |
+| **Export** | Create a clean Overleaf source ZIP or convert to DOCX, ODT, HTML, and EPUB via Pandoc |
 | **7 Languages** | EN, KO, ES, FR, DE, PT, ZH |
 
 > **Optional integrations:** AI API providers and online reference search require network
@@ -84,6 +84,9 @@ chmod +x TextEx_*.AppImage
 ### Multi-File Projects
 
 Open any folder to get a full project view with sidebar file tree, tabs, and `\input`/`\include` navigation.
+Compiler outputs are kept in an engine-specific TextEx cache instead of beside
+your sources. Use the eye button to reveal legacy generated files, or the
+archive button to create a clean source ZIP for upload to Overleaf.
 
 <p align="center">
   <img src="docs/images/sidebar-files.png" alt="Sidebar file tree with a multi-file LaTeX project" width="900" />
