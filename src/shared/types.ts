@@ -242,9 +242,6 @@ export interface UserSettings {
   aiPromptSummarize?: string
   aiPromptLonger?: string
   aiPromptShorter?: string
-  name?: string
-  email?: string
-  affiliation?: string
   wordWrap?: boolean
   vimMode?: boolean
   formatOnSave?: boolean

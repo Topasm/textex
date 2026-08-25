@@ -40,9 +40,6 @@ export function createDefaultUserSettings(): UserSettings {
     aiPromptSummarize: '',
     aiPromptLonger: '',
     aiPromptShorter: '',
-    name: '',
-    email: '',
-    affiliation: '',
     wordWrap: true,
     vimMode: false,
     formatOnSave: true,
@@ -74,9 +71,15 @@ export function sanitizeUserSettings(input: unknown): Partial<UserSettings> {
   const settings = {
     ...(input as Partial<UserSettings> & {
       minimap?: unknown
+      name?: unknown
+      email?: unknown
+      affiliation?: unknown
     })
   }
   delete settings.minimap
+  delete settings.name
+  delete settings.email
+  delete settings.affiliation
   delete settings.aiApiKey
   if ('rendererSession' in settings) {
     const rendererSession = sanitizeRendererSessionSnapshot(settings.rendererSession)

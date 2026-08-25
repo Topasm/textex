@@ -162,14 +162,6 @@
       "automation": "자동화"
     },
     "general": {
-      "userInfo": "사용자 정보",
-      "userInfoDesc": "이 정보는 템플릿과 문서 메타데이터에 사용됩니다.",
-      "fullName": "이름",
-      "fullNamePlaceholder": "예: 홍길동",
-      "email": "이메일 주소",
-      "emailPlaceholder": "예: gildong@example.com",
-      "affiliation": "소속",
-      "affiliationPlaceholder": "예: 한국과학기술원",
       "application": "애플리케이션",
       "autoUpdates": "업데이트 자동 확인",
       "autoUpdatesDesc": "TextEx 시작 후 새 버전을 자동으로 확인",

@@ -162,14 +162,6 @@
       "automation": "自动化"
     },
     "general": {
-      "userInfo": "用户信息",
-      "userInfoDesc": "这些信息将用于模板和文档元数据。",
-      "fullName": "姓名",
-      "fullNamePlaceholder": "例如 张三",
-      "email": "电子邮箱",
-      "emailPlaceholder": "例如 zhangsan@example.com",
-      "affiliation": "所属机构",
-      "affiliationPlaceholder": "例如 科技大学",
       "application": "应用程序",
       "autoUpdates": "自动检查更新",
       "autoUpdatesDesc": "TextEx 启动后自动检查新版本",

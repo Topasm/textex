@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Trash2, X } from 'lucide-react'
 import { useUiStore } from '../store/useUiStore'
-import { useSettingsStore } from '../store/useSettingsStore'
 import { openProject } from '../utils/openProject'
 import type { Template } from '../data/templates'
 import { ICON_SIZE } from './ui/IconSystem'
@@ -42,11 +41,10 @@ function TemplateGallery() {
   const handleSelect = useCallback(
     async (template: Template) => {
       try {
-        const settings = useSettingsStore.getState().settings
         const finalContent = template.content
-          .replace(/{{AUTHOR}}/g, settings.name || 'Author Name')
-          .replace(/{{EMAIL}}/g, settings.email || 'your.email@example.com')
-          .replace(/{{AFFILIATION}}/g, settings.affiliation || 'Institution')
+          .replace(/{{AUTHOR}}/g, 'Author Name')
+          .replace(/{{EMAIL}}/g, 'your.email@example.com')
+          .replace(/{{AFFILIATION}}/g, 'Institution')
 
         const result = await window.api.createTemplateProject(
           template.name,

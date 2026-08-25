@@ -162,14 +162,6 @@
       "automation": "Automation"
     },
     "general": {
-      "userInfo": "User Information",
-      "userInfoDesc": "These details will be used in templates and document metadata.",
-      "fullName": "Full Name",
-      "fullNamePlaceholder": "e.g. Jane Doe",
-      "email": "Email Address",
-      "emailPlaceholder": "e.g. jane@example.com",
-      "affiliation": "Affiliation",
-      "affiliationPlaceholder": "e.g. University of Technology",
       "application": "Application",
       "autoUpdates": "Automatically check for updates",
       "autoUpdatesDesc": "Check for new TextEx versions after launch",

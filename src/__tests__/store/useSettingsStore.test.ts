@@ -25,7 +25,10 @@ describe('useSettingsStore minimap migration', () => {
         theme: 'dark',
         fontSize: 18,
         minimap: true,
-        aiApiKey: 'legacy-secret'
+        aiApiKey: 'legacy-secret',
+        name: 'Legacy Author',
+        email: 'legacy@example.com',
+        affiliation: 'Legacy University'
       })
     ).toEqual({
       theme: 'dark',
@@ -46,7 +49,10 @@ describe('useSettingsStore minimap migration', () => {
           theme: 'dark',
           fontSize: 16,
           minimap: true,
-          aiApiKey: 'legacy-secret'
+          aiApiKey: 'legacy-secret',
+          name: 'Legacy Author',
+          email: 'legacy@example.com',
+          affiliation: 'Legacy University'
         }
       },
       0
@@ -58,7 +64,10 @@ describe('useSettingsStore minimap migration', () => {
           theme: 'dark',
           fontSize: 16,
           minimap: true,
-          aiApiKey: 'legacy-secret'
+          aiApiKey: 'legacy-secret',
+          name: 'Legacy Author',
+          email: 'legacy@example.com',
+          affiliation: 'Legacy University'
         }
       })
     )

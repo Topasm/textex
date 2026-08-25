@@ -1,7 +1,6 @@
 import { useCallback, useRef } from 'react'
 import { usePdfStore } from '../../store/usePdfStore'
 import { useUiStore } from '../../store/useUiStore'
-import { useSettingsStore } from '../../store/useSettingsStore'
 import { formatLatex } from '../../utils/formatter'
 import { HIDDEN_EDITOR_ACTIONS } from '../../constants'
 import type { editor as monacoEditor } from 'monaco-editor'
@@ -71,33 +70,6 @@ export function useEditorCommands({
             forceMoveMarkers: true
           }
         ])
-      })
-
-      // Ctrl+Shift+I: Insert user info
-      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyI, () => {
-        const settings = useSettingsStore.getState().settings
-        const userInfo = `
-% User Information
-% Name: ${settings.name}
-% Email: ${settings.email}
-% Affiliation: ${settings.affiliation}
-\\author{${settings.name}${settings.affiliation ? ` \\\\ ${settings.affiliation}` : ''}${settings.email ? ` \\\\ \\texttt{${settings.email}}` : ''}}
-`
-        const position = editor.getPosition()
-        if (position) {
-          editor.executeEdits('insert-user-info', [
-            {
-              range: new monaco.Range(
-                position.lineNumber,
-                position.column,
-                position.lineNumber,
-                position.column
-              ),
-              text: userInfo,
-              forceMoveMarkers: true
-            }
-          ])
-        }
       })
 
       // Ctrl+Shift+H: Toggle history panel

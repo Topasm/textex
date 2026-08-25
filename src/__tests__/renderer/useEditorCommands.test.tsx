@@ -45,7 +45,7 @@ function createEditor() {
   }
   const monaco = {
     KeyMod: { CtrlCmd: 1, Shift: 2, Alt: 4 },
-    KeyCode: { KeyF: 8, KeyI: 16, KeyH: 32 },
+    KeyCode: { KeyF: 8, KeyH: 32 },
     Range: vi.fn()
   }
   return { editor, model, monaco }

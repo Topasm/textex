@@ -162,14 +162,6 @@
       "automation": "Automatisation"
     },
     "general": {
-      "userInfo": "Informations utilisateur",
-      "userInfoDesc": "Ces informations seront utilisées dans les modèles et les métadonnées du document.",
-      "fullName": "Nom complet",
-      "fullNamePlaceholder": "ex. Marie Dupont",
-      "email": "Adresse e-mail",
-      "emailPlaceholder": "ex. marie@exemple.com",
-      "affiliation": "Affiliation",
-      "affiliationPlaceholder": "ex. Université de Technologie",
       "application": "Application",
       "autoUpdates": "Rechercher automatiquement les mises à jour",
       "autoUpdatesDesc": "Rechercher les nouvelles versions de TextEx après le démarrage",

@@ -33,9 +33,6 @@ const initialSettings = {
   settings: {
     theme: 'system' as Theme,
     pdfInvertMode: false,
-    name: '',
-    email: '',
-    affiliation: '',
     fontSize: 14,
     wordWrap: true,
     vimMode: false,
@@ -619,17 +616,6 @@ describe('useAppStore', () => {
   })
 
   describe('updateSetting', () => {
-    it('updates user info settings', () => {
-      useSettingsStore.getState().updateSetting('name', 'John Doe')
-      useSettingsStore.getState().updateSetting('email', 'john@example.com')
-      useSettingsStore.getState().updateSetting('affiliation', 'OpenAI')
-
-      const settings = useSettingsStore.getState().settings
-      expect(settings.name).toBe('John Doe')
-      expect(settings.email).toBe('john@example.com')
-      expect(settings.affiliation).toBe('OpenAI')
-    })
-
     it('updates other settings', () => {
       useSettingsStore.getState().updateSetting('fontSize', 20)
       expect(useSettingsStore.getState().settings.fontSize).toBe(20)

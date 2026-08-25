@@ -632,9 +632,6 @@ pub struct UserSettings {
     pub ai_prompt_summarize: String,
     pub ai_prompt_longer: String,
     pub ai_prompt_shorter: String,
-    pub name: String,
-    pub email: String,
-    pub affiliation: String,
     pub word_wrap: bool,
     pub vim_mode: bool,
     pub format_on_save: bool,
@@ -690,9 +687,6 @@ impl Default for UserSettings {
             ai_prompt_summarize: String::new(),
             ai_prompt_longer: String::new(),
             ai_prompt_shorter: String::new(),
-            name: String::new(),
-            email: String::new(),
-            affiliation: String::new(),
             word_wrap: true,
             vim_mode: false,
             format_on_save: true,
@@ -1518,10 +1512,17 @@ mod tests {
         assert_eq!(defaults["latexEngine"], "tectonic");
 
         let settings: UserSettings = serde_json::from_value(serde_json::json!({
-            "latexEngine": "pdf-latex"
+            "latexEngine": "pdf-latex",
+            "name": "Legacy Author",
+            "email": "legacy@example.com",
+            "affiliation": "Legacy University"
         }))
         .expect("deserialize partial settings with defaults");
         assert_eq!(settings.latex_engine, LatexEngine::PdfLatex);
+        let serialized = serde_json::to_value(settings).expect("serialize migrated settings");
+        assert!(serialized.get("name").is_none());
+        assert!(serialized.get("email").is_none());
+        assert!(serialized.get("affiliation").is_none());
     }
 
     #[test]

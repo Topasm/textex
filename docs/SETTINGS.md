@@ -36,9 +36,6 @@ TextEx uses a "Zero-Friction" configuration system where settings are applied in
 | `zoteroCollection` | `string` | `""` | Better BibTeX pull-export collection path used for project bibliography sync. |
 | `pdfInvertMode` | `boolean` | `false` | Invert PDF colors for dark environments. |
 | `autoHideSidebar` | `boolean` | `false` | Sidebar slides away and reappears on hover. |
-| `name` | `string` | `''` | User's full name (for templates/metadata). |
-| `email` | `string` | `''` | User's email address (for templates/metadata). |
-| `affiliation` | `string` | `''` | User's institution (for templates/metadata). |
 | `aiProvider` | `'' \| 'openai' \| 'anthropic' \| 'gemini' \| 'claude-cli' \| 'codex-cli'` | `''` | Native HTTP or isolated CLI provider used by AI actions. |
 | `aiModel` | `string` | `''` | Model identifier for the selected AI provider. |
 
@@ -46,7 +43,7 @@ TextEx uses a "Zero-Friction" configuration system where settings are applied in
 The `SettingsModal` component provides a tabbed interface (800×500) for modifying these values. It is accessible via the gear icon in the Toolbar. The modal uses shared `.modal-*` CSS classes for chrome and `settings-*` CSS classes for layout/form elements, all themed via CSS custom properties.
 
 **Visible Tauri tabs:**
-- **General** — User information, updates, and language
+- **General** — Updates and language
 - **Appearance** — Theme, PDF Night Mode, PDF layout controls, and scroll sync
 - **Editor** — Typography, formatting, layout, and Monaco behavior
 - **AI** — Default execution target, independent provider connections, reasoning, and prompt controls

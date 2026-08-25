@@ -162,14 +162,6 @@
       "automation": "Automatisierung"
     },
     "general": {
-      "userInfo": "Benutzerinformationen",
-      "userInfoDesc": "Diese Angaben werden in Vorlagen und Dokumentmetadaten verwendet.",
-      "fullName": "Vollständiger Name",
-      "fullNamePlaceholder": "z.B. Max Mustermann",
-      "email": "E-Mail-Adresse",
-      "emailPlaceholder": "z.B. max@beispiel.de",
-      "affiliation": "Zugehörigkeit",
-      "affiliationPlaceholder": "z.B. Technische Universität",
       "application": "Anwendung",
       "autoUpdates": "Automatisch nach Updates suchen",
       "autoUpdatesDesc": "Nach dem Start von TextEx automatisch nach neuen Versionen suchen",

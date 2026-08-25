@@ -225,7 +225,7 @@ ErrorBoundary
 - Modal overlay (800×500) for application settings, using shared `.modal-overlay` /
   `.modal-content` / `.modal-header` / `.modal-footer` CSS classes.
 - Left sidebar with six visible icon tabs; right scrollable content area.
-- **General**: User information, update policy, and interface language.
+- **General**: Update policy and interface language.
 - **Appearance**: Theme selector cards (Light/Dark/Glass/System), PDF Night Mode,
   PDF layout controls, and scroll sync.
 - **Editor**: Font Size range slider with monospace badge, behavior toggles (Word Wrap,

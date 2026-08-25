@@ -19,6 +19,7 @@ describe('GeneralTab', () => {
   it('runs a visible manual check through the shared updater lifecycle', () => {
     render(<GeneralTab />)
 
+    expect(screen.queryByText('User Information')).not.toBeInTheDocument()
     expect(screen.getByText('Automatically check for updates')).toBeInTheDocument()
     expect(
       screen.getByText(/download and installation still require confirmation/i)
