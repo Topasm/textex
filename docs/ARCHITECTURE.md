@@ -79,7 +79,8 @@ and PDF pages virtualize their DOM output.
 - AI API keys are migrated out of renderer/local settings into a mode-0600
   native credential file. Transformation CLIs run in an app-cache workspace;
   Claude tools are disabled and Codex uses read-only/no-approval isolation.
-- Embedded terminal links return through the validated native URL opener.
+- System terminal launch receives the trusted active-project root from native state and
+  passes it as an OS argument without shell interpolation.
 
 ## CLI and MCP
 

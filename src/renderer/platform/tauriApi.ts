@@ -71,11 +71,6 @@ type TauriUpdateDownloadEvent =
     }
   | { event: 'finished' }
 
-type TauriPtyEvent =
-  | { event: 'data'; id: string; data: string }
-  | { event: 'exit'; id: string; exitCode: number; signal: number | null }
-  | { event: 'overflow'; id: string; droppedBytes: number }
-
 type TauriLspEvent =
   { event: 'message'; message: object } | { event: 'status'; status: string; error?: string }
 
@@ -83,17 +78,10 @@ let compileLogCallback: ((event: CompileLogEvent) => void) | null = null
 let diagnosticsCallback: ((event: CompileDiagnosticsEvent) => void) | null = null
 let directoryChangeCallback: ((change: DirectoryChangeEvent) => void) | null = null
 let directoryWatcherGeneration = 0
-const ptyDataCallbacks = new Map<string, Set<(data: string) => void>>()
-const ptyExitCallbacks = new Map<string, Set<(exitCode: number, signal: number | null) => void>>()
-const pendingPtyData = new Map<string, string>()
-const pendingPtyExit = new Map<string, { exitCode: number; signal: number | null }>()
-const ptyEventChannels = new Map<string, Channel<TauriPtyEvent>>()
 let lspMessageCallback: ((message: object) => void) | null = null
 let lspStatusCallback: ((status: string, error?: string) => void) | null = null
 let lspGeneration = 0
 let lspTransition: Promise<void> = Promise.resolve()
-const MAX_PENDING_PTY_DATA = 256 * 1024
-const PTY_OVERFLOW_NOTICE = '\r\n[TextEx terminal output truncated]\r\n'
 const APP_COMMAND_EVENT = 'app-command'
 const appCommandIds = new Set<string>(APP_COMMAND_MANIFEST.map(({ id }) => id))
 let appCommandCallback: ((command: AppCommandId) => void) | null = null
@@ -608,94 +596,11 @@ const runSubmissionCheck: DesktopApi['runSubmissionCheck'] = (request) =>
 const openExternal: DesktopApi['openExternal'] = (url) =>
   invoke(TAURI_COMMANDS.openExternal, { url })
 
+const openProjectTerminal: DesktopApi['openProjectTerminal'] = () =>
+  invoke(TAURI_COMMANDS.openProjectTerminal)
+
 const getPerformanceMemory: DesktopApi['getPerformanceMemory'] = () =>
   invoke(TAURI_COMMANDS.getPerformanceMemory)
-
-function emitPtyData(id: string, data: string): void {
-  const callbacks = ptyDataCallbacks.get(id)
-  if (callbacks?.size) {
-    callbacks.forEach((callback) => callback(data))
-    return
-  }
-  const buffered = `${pendingPtyData.get(id) ?? ''}${data}`
-  pendingPtyData.set(id, buffered.slice(-MAX_PENDING_PTY_DATA))
-}
-
-function clearPtySession(id: string): void {
-  ptyDataCallbacks.delete(id)
-  ptyExitCallbacks.delete(id)
-  pendingPtyData.delete(id)
-  pendingPtyExit.delete(id)
-}
-
-const ptyCreate: DesktopApi['ptyCreate'] = async (options) => {
-  const onEvent = new Channel<TauriPtyEvent>()
-  onEvent.onmessage = (event) => {
-    if (event.event === 'data') {
-      emitPtyData(event.id, event.data)
-      return
-    }
-    if (event.event === 'overflow') {
-      emitPtyData(event.id, PTY_OVERFLOW_NOTICE)
-      return
-    }
-    const callbacks = ptyExitCallbacks.get(event.id)
-    if (callbacks?.size) {
-      callbacks.forEach((callback) => callback(event.exitCode, event.signal))
-    } else {
-      pendingPtyExit.set(event.id, { exitCode: event.exitCode, signal: event.signal })
-    }
-  }
-  const result = await invoke<{ id: string }>(TAURI_COMMANDS.ptyCreate, { options, onEvent })
-  ptyEventChannels.set(result.id, onEvent)
-  return result
-}
-
-const ptyWrite: DesktopApi['ptyWrite'] = (id, data) => invoke(TAURI_COMMANDS.ptyWrite, { id, data })
-
-const ptyResize: DesktopApi['ptyResize'] = (id, cols, rows) =>
-  invoke(TAURI_COMMANDS.ptyResize, { id, cols: Math.floor(cols), rows: Math.floor(rows) })
-
-const ptyDispose: DesktopApi['ptyDispose'] = async (id) => {
-  try {
-    return await invoke<{ success: boolean }>(TAURI_COMMANDS.ptyDispose, { id })
-  } finally {
-    const channel = ptyEventChannels.get(id)
-    if (channel) channel.onmessage = () => {}
-    ptyEventChannels.delete(id)
-    clearPtySession(id)
-  }
-}
-
-const onPtyData: DesktopApi['onPtyData'] = (id, callback) => {
-  const callbacks = ptyDataCallbacks.get(id) ?? new Set()
-  callbacks.add(callback)
-  ptyDataCallbacks.set(id, callbacks)
-  const buffered = pendingPtyData.get(id)
-  if (buffered) {
-    pendingPtyData.delete(id)
-    callback(buffered)
-  }
-  return () => {
-    callbacks.delete(callback)
-    if (!callbacks.size) ptyDataCallbacks.delete(id)
-  }
-}
-
-const onPtyExit: DesktopApi['onPtyExit'] = (id, callback) => {
-  const callbacks = ptyExitCallbacks.get(id) ?? new Set()
-  callbacks.add(callback)
-  ptyExitCallbacks.set(id, callbacks)
-  const pending = pendingPtyExit.get(id)
-  if (pending) {
-    pendingPtyExit.delete(id)
-    callback(pending.exitCode, pending.signal)
-  }
-  return () => {
-    callbacks.delete(callback)
-    if (!callbacks.size) ptyExitCallbacks.delete(id)
-  }
-}
 
 const lspStart: DesktopApi['lspStart'] = (workspaceRoot) => {
   const generation = ++lspGeneration
@@ -988,14 +893,9 @@ const tauriDesktopApi = {
   exportOverleafZip,
   runSubmissionCheck,
   openExternal,
+  openProjectTerminal,
   exitApp,
   getPerformanceMemory,
-  ptyCreate,
-  ptyWrite,
-  ptyResize,
-  ptyDispose,
-  onPtyData,
-  onPtyExit,
   lspStart,
   lspStop,
   lspSend,

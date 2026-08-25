@@ -11,7 +11,6 @@ use services::lsp::LspState;
 use services::package_data::PackageDataState;
 use services::project_data::ProjectDataState;
 use services::project_index::ProjectIndexState;
-use services::pty::PtyState;
 use services::recovery::RecoveryState;
 use services::references::ReferenceIndexState;
 use services::research::ResearchState;
@@ -155,7 +154,6 @@ pub fn run() {
         .manage(RecoveryState::default())
         .manage(LspState::default())
         .manage(ProjectIndexState::default())
-        .manage(PtyState::default())
         .manage(ProjectDataState::default())
         .manage(ReferenceIndexState::default())
         .manage(ResearchState::default())
@@ -276,10 +274,6 @@ pub fn run() {
             commands::research_source::research_source_search,
             commands::research_source::research_source_clone,
             commands::research_source::research_source_fetch,
-            commands::pty::pty_create,
-            commands::pty::pty_write,
-            commands::pty::pty_resize,
-            commands::pty::pty_dispose,
             commands::lsp::lsp_start,
             commands::lsp::lsp_stop,
             commands::lsp::lsp_send,
@@ -306,6 +300,7 @@ pub fn run() {
             commands::export::export_overleaf_zip,
             commands::submission_check::run_submission_check,
             commands::runtime::open_external,
+            commands::runtime::open_project_terminal,
             commands::runtime::exit_app,
             commands::runtime::get_performance_memory,
             commands::updater::check_app_update,

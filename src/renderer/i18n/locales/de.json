@@ -19,7 +19,7 @@
     "aiDraft": "KI-Entwurf",
     "aiDraftShortcut": "KI-Entwurf (Ctrl+Shift+D)",
     "aiAssistant": "KI-Assistent",
-    "terminalPane": "Terminalbereich",
+    "openProjectTerminal": "Projekt im Terminal öffnen",
     "settings": "Einstellungen",
     "syncPdfToCode": "PDF zu Code synchronisieren (Ctrl+Klick im PDF)",
     "syncCodeToPdf": "Code zu PDF synchronisieren",
@@ -86,7 +86,6 @@
     "editor": "Editor wird geladen…",
     "preparingEditor": "Editor wird vorbereitet…",
     "preview": "Vorschau wird geladen…",
-    "terminal": "Terminal wird geladen…",
     "templates": "Vorlagen werden geladen…",
     "documentHistory": "Dokumentverlauf wird geladen…",
     "mathPreview": "Mathematikvorschau wird geladen…",
@@ -404,6 +403,7 @@
     "collapseFolder": "Ordner zuklappen",
     "showGenerated": "Generierte Dateien anzeigen",
     "hideGenerated": "Generierte Dateien ausblenden",
+    "openTerminal": "Projekt im Terminal öffnen",
     "exportOverleaf": "Overleaf-Quell-ZIP exportieren",
     "exportOverleafComplete": "Overleaf-ZIP wurde unter {{path}} gespeichert",
     "exportOverleafFailed": "Overleaf-ZIP konnte nicht erstellt werden: {{reason}}"
@@ -568,7 +568,8 @@
     "hint": "Enter zum Ausführen · Esc zum Schließen",
     "requires": {
       "document": "Zuerst ein Dokument öffnen",
-      "pdf": "Zuerst ein PDF kompilieren"
+      "pdf": "Zuerst ein PDF kompilieren",
+      "project": "Zuerst ein Projekt öffnen"
     },
     "groups": {
       "file": "Datei",
@@ -583,6 +584,7 @@
     "commands": {
       "file_open": "Datei öffnen",
       "file_openFolder": "Ordner öffnen",
+      "project_openTerminal": "Projekt im Terminal öffnen",
       "file_save": "Datei speichern",
       "file_saveAs": "Datei speichern unter",
       "file_newTemplate": "Neu aus Vorlage",
@@ -597,7 +599,6 @@
       "view_toggleSidebar": "Seitenleiste umschalten",
       "view_toggleResearchPanel": "Rechercheleiste umschalten",
       "view_toggleLog": "Problembereich umschalten",
-      "view_toggleTerminal": "Terminal umschalten",
       "view_search_citations": "Zitate suchen",
       "view_search_pdf": "PDF durchsuchen",
       "pdf_zoomIn": "PDF vergrößern",

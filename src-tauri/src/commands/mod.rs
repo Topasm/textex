@@ -8,7 +8,6 @@ pub mod lsp;
 pub mod package_data;
 pub mod project_data;
 pub mod project_index;
-pub mod pty;
 pub mod recovery;
 pub mod references;
 pub mod research;

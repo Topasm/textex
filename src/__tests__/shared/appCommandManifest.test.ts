@@ -8,6 +8,7 @@ import {
 const EXPECTED_APP_COMMAND_IDS = [
   'file.open',
   'file.openFolder',
+  'project.openTerminal',
   'file.save',
   'file.saveAs',
   'file.newTemplate',
@@ -22,7 +23,6 @@ const EXPECTED_APP_COMMAND_IDS = [
   'view.toggleSidebar',
   'view.toggleResearchPanel',
   'view.toggleLog',
-  'view.toggleTerminal',
   'view.search.citations',
   'view.search.pdf',
   'pdf.zoomIn',

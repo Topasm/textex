@@ -156,6 +156,7 @@ describe('virtualized FileTree', () => {
       success: true,
       outputPath: '/exports/large-overleaf.zip'
     })
+    vi.mocked(window.api.openProjectTerminal).mockResolvedValue({ success: true })
 
     render(<FileTree />)
 
@@ -170,5 +171,8 @@ describe('virtualized FileTree', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Export Overleaf source ZIP' }))
     await waitFor(() => expect(window.api.exportOverleafZip).toHaveBeenCalledOnce())
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open project in terminal' }))
+    await waitFor(() => expect(window.api.openProjectTerminal).toHaveBeenCalledOnce())
   })
 })

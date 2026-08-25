@@ -19,7 +19,7 @@
     "aiDraft": "AI 초안",
     "aiDraftShortcut": "AI 초안 (Ctrl+Shift+D)",
     "aiAssistant": "AI 어시스턴트",
-    "terminalPane": "터미널 패널",
+    "openProjectTerminal": "프로젝트를 터미널에서 열기",
     "settings": "설정",
     "syncPdfToCode": "PDF에서 코드로 동기화 (Ctrl+Click in PDF)",
     "syncCodeToPdf": "코드에서 PDF로 동기화",
@@ -86,7 +86,6 @@
     "editor": "편집기를 불러오는 중…",
     "preparingEditor": "편집기를 준비하는 중…",
     "preview": "미리보기를 불러오는 중…",
-    "terminal": "터미널을 불러오는 중…",
     "templates": "템플릿을 불러오는 중…",
     "documentHistory": "문서 기록을 불러오는 중…",
     "mathPreview": "수식 미리보기를 불러오는 중…",
@@ -404,6 +403,7 @@
     "collapseFolder": "폴더 접기",
     "showGenerated": "생성된 파일 보기",
     "hideGenerated": "생성된 파일 숨기기",
+    "openTerminal": "프로젝트를 터미널에서 열기",
     "exportOverleaf": "Overleaf 소스 ZIP 내보내기",
     "exportOverleafComplete": "Overleaf ZIP을 {{path}}에 저장했습니다.",
     "exportOverleafFailed": "Overleaf ZIP을 만들지 못했습니다: {{reason}}"
@@ -568,7 +568,8 @@
     "hint": "Enter로 실행 · Esc로 닫기",
     "requires": {
       "document": "먼저 문서를 여세요",
-      "pdf": "먼저 PDF를 컴파일하세요"
+      "pdf": "먼저 PDF를 컴파일하세요",
+      "project": "먼저 프로젝트를 여세요"
     },
     "groups": {
       "file": "파일",
@@ -583,6 +584,7 @@
     "commands": {
       "file_open": "파일 열기",
       "file_openFolder": "폴더 열기",
+      "project_openTerminal": "프로젝트를 터미널에서 열기",
       "file_save": "파일 저장",
       "file_saveAs": "다른 이름으로 파일 저장",
       "file_newTemplate": "템플릿으로 새로 만들기",
@@ -597,7 +599,6 @@
       "view_toggleSidebar": "사이드바 전환",
       "view_toggleResearchPanel": "연구 패널 전환",
       "view_toggleLog": "문제 패널 전환",
-      "view_toggleTerminal": "터미널 전환",
       "view_search_citations": "인용 검색",
       "view_search_pdf": "PDF 검색",
       "pdf_zoomIn": "PDF 확대",

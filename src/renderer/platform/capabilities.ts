@@ -10,7 +10,6 @@ export interface DesktopCapabilities {
   readonly openExternal: boolean
   readonly performanceMemory: boolean
   readonly projectMetadata: boolean
-  readonly pty: boolean
   readonly spellcheck: boolean
   readonly templates: boolean
 }
@@ -24,7 +23,6 @@ const TAURI_CAPABILITIES: DesktopCapabilities = Object.freeze({
   openExternal: true,
   performanceMemory: true,
   projectMetadata: true,
-  pty: true,
   spellcheck: true,
   templates: true
 })

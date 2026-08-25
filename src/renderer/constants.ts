@@ -19,8 +19,6 @@ export const FONT_SIZE_MAX = 32
 // ── Layout ──────────────────────────────────────────────────
 export const SPLIT_RATIO_MIN = 0.2
 export const SPLIT_RATIO_MAX = 0.8
-export const TERMINAL_RATIO_MIN = 0.18
-export const TERMINAL_RATIO_MAX = 0.45
 export const SIDEBAR_DEFAULT_WIDTH = 240
 export const SIDEBAR_WIDTH_MIN = 150
 export const SIDEBAR_WIDTH_MAX = 500

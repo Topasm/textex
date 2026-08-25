@@ -43,7 +43,6 @@ describe('native application menu', () => {
     const nativeNames = {
       ai: 'ai',
       documentExport: 'document_export',
-      pty: 'pty',
       templates: 'templates'
     } as const
 

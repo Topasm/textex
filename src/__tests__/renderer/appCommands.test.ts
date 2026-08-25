@@ -13,13 +13,13 @@ const context = {
   compile: vi.fn().mockResolvedValue(undefined),
   openFile: vi.fn().mockResolvedValue(undefined),
   openFolder: vi.fn().mockResolvedValue(undefined),
+  openProjectTerminal: vi.fn().mockResolvedValue(undefined),
   openSettings: vi.fn(),
   openTemplateGallery: vi.fn(),
   runAiDraft: vi.fn(),
   save: vi.fn().mockResolvedValue(undefined),
   saveAs: vi.fn().mockResolvedValue(undefined),
   toggleLog: vi.fn(),
-  toggleTerminal: vi.fn(),
   closeWindow: vi.fn().mockResolvedValue(undefined),
   quitApp: vi.fn().mockResolvedValue(undefined),
   exportDocument: vi.fn().mockResolvedValue(undefined)
@@ -48,12 +48,14 @@ describe('executeAppCommand', () => {
     await executeAppCommand('file.save', context)
     await executeAppCommand('file.saveAs', context)
     await executeAppCommand('file.newTemplate', context)
+    await executeAppCommand('project.openTerminal', context)
     await executeAppCommand('file.export.docx', context)
 
     expect(context.openFile).toHaveBeenCalledOnce()
     expect(context.save).toHaveBeenCalledOnce()
     expect(context.saveAs).toHaveBeenCalledOnce()
     expect(context.openTemplateGallery).toHaveBeenCalledOnce()
+    expect(context.openProjectTerminal).toHaveBeenCalledOnce()
     expect(context.exportDocument).toHaveBeenCalledWith('docx')
   })
 
@@ -154,11 +156,9 @@ describe('executeAppCommand', () => {
     await executeAppCommand('file.newTemplate', context)
     await executeAppCommand('file.export.docx', context)
     await executeAppCommand('ai.draft', context)
-    await executeAppCommand('view.toggleTerminal', context)
 
     expect(context.openTemplateGallery).toHaveBeenCalledOnce()
     expect(context.exportDocument).toHaveBeenCalledWith('docx')
     expect(context.runAiDraft).toHaveBeenCalledOnce()
-    expect(context.toggleTerminal).toHaveBeenCalledOnce()
   })
 })

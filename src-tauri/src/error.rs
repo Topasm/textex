@@ -109,8 +109,8 @@ pub enum AppError {
     #[error("Performance sampling failed: {0}")]
     Performance(String),
 
-    #[error("Terminal operation failed: {0}")]
-    Pty(String),
+    #[error("System terminal operation failed: {0}")]
+    SystemTerminal(String),
 
     #[error("Language server operation failed: {0}")]
     Lsp(String),

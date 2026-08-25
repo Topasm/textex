@@ -16,6 +16,7 @@ import {
   Eye,
   EyeOff,
   PencilLine,
+  SquareTerminal,
   Trash2,
   type LucideIcon
 } from 'lucide-react'
@@ -711,6 +712,7 @@ interface VirtualizedProjectFileTreeProps {
   onRootCreate: (name: string) => void
   showGenerated: boolean
   onToggleGenerated: () => void
+  onOpenTerminal: () => void
   onExportOverleaf: () => void
   exportingOverleaf: boolean
 }
@@ -723,6 +725,7 @@ function VirtualizedProjectFileTree({
   onRootCreate,
   showGenerated,
   onToggleGenerated,
+  onOpenTerminal,
   onExportOverleaf,
   exportingOverleaf
 }: VirtualizedProjectFileTreeProps) {
@@ -889,6 +892,14 @@ function VirtualizedProjectFileTree({
         </button>
         <button
           className="file-tree-header-btn"
+          onClick={onOpenTerminal}
+          title={t('fileTree.openTerminal')}
+          aria-label={t('fileTree.openTerminal')}
+        >
+          <SquareTerminal size={ICON_SIZE.compact} />
+        </button>
+        <button
+          className="file-tree-header-btn"
           onClick={onExportOverleaf}
           disabled={exportingOverleaf}
           title={t('fileTree.exportOverleaf')}
@@ -1019,6 +1030,18 @@ function FileTree() {
     }
   }, [exportingOverleaf, projectRoot, t])
 
+  const handleOpenTerminal = useCallback(async () => {
+    if (!projectRoot) return
+    try {
+      await window.api.openProjectTerminal()
+    } catch (error) {
+      useNotificationStore.getState().pushNotification({
+        message: errorMessage(error),
+        tone: 'error'
+      })
+    }
+  }, [projectRoot])
+
   const refreshRoot = useCallback(async () => {
     if (!projectRoot) return
     const entries = await window.api.readDirectory(projectRoot)
@@ -1056,6 +1079,7 @@ function FileTree() {
         onRootCreate={(name) => void handleRootCreate(name)}
         showGenerated={showGenerated}
         onToggleGenerated={() => setShowGenerated((current) => !current)}
+        onOpenTerminal={() => void handleOpenTerminal()}
         onExportOverleaf={() => void handleExportOverleaf()}
         exportingOverleaf={exportingOverleaf}
       />
@@ -1097,6 +1121,14 @@ function FileTree() {
           aria-pressed={showGenerated}
         >
           {showGenerated ? <EyeOff size={ICON_SIZE.compact} /> : <Eye size={ICON_SIZE.compact} />}
+        </button>
+        <button
+          className="file-tree-header-btn"
+          onClick={() => void handleOpenTerminal()}
+          title={t('fileTree.openTerminal')}
+          aria-label={t('fileTree.openTerminal')}
+        >
+          <SquareTerminal size={ICON_SIZE.compact} />
         </button>
         <button
           className="file-tree-header-btn"

@@ -71,37 +71,6 @@
   .sidebar-wrapper .sidebar-resize-handle {
     display: none;
   }
-
-  /* Keep editor and preview useful when the terminal would create three
-     narrow columns. The terminal becomes a full-width lower workbench. */
-  .editor-main-content.has-terminal-pane {
-    flex-wrap: wrap;
-    align-content: stretch;
-  }
-
-  .editor-main-content.has-terminal-pane > .editor-pane {
-    width: 50% !important;
-    height: 64%;
-  }
-
-  .editor-main-content.has-terminal-pane > .preview-pane {
-    width: 50% !important;
-    height: 64%;
-  }
-
-  /* Both stored split ratios are restored on wider windows; hiding their
-     handles prevents invisible ratio changes in the forced compact layout. */
-  .editor-main-content.has-terminal-pane > .split-divider {
-    display: none;
-  }
-
-  .editor-main-content.has-terminal-pane > .terminal-pane {
-    width: 100% !important;
-    min-width: 0;
-    height: 36%;
-    border-top: 1px solid var(--border);
-    border-left: 0;
-  }
 }
 
 @media (max-width: 840px) {
@@ -161,20 +130,20 @@
     width: min(72vw, 220px) !important;
   }
 
-  .editor-main-content:not(.has-terminal-pane) {
+  .editor-main-content {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
   }
 
-  .editor-main-content:not(.has-terminal-pane) > .editor-pane,
-  .editor-main-content:not(.has-terminal-pane) > .preview-pane {
+  .editor-main-content > .editor-pane,
+  .editor-main-content > .preview-pane {
     width: 100% !important;
     height: auto;
     min-height: 0;
   }
 
-  .editor-main-content:not(.has-terminal-pane) > .split-divider {
+  .editor-main-content > .split-divider {
     display: none;
   }
 
@@ -250,24 +219,6 @@
     display: none;
   }
 
-  .editor-main-content.has-terminal-pane {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) minmax(140px, 0.8fr);
-  }
-
-  .editor-main-content.has-terminal-pane > .editor-pane,
-  .editor-main-content.has-terminal-pane > .preview-pane,
-  .editor-main-content.has-terminal-pane > .terminal-pane {
-    width: 100% !important;
-    height: auto;
-    min-height: 0;
-  }
-
-  .editor-main-content.has-terminal-pane > .split-divider {
-    display: none;
-  }
-
   .modal-overlay {
     padding: 8px;
   }
@@ -334,8 +285,7 @@
 @media (forced-colors: active) {
   .toolbar,
   .status-bar,
-  .settings-modal,
-  .terminal-pane {
+  .settings-modal {
     border-color: CanvasText;
   }
 

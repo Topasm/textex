@@ -13,13 +13,13 @@ export interface AppCommandContext {
   compile: () => Promise<void>
   openFile: () => Promise<void>
   openFolder: () => Promise<void>
+  openProjectTerminal: () => Promise<void>
   openSettings: () => void
   openTemplateGallery: () => void
   runAiDraft: () => void
   save: () => Promise<void>
   saveAs: () => Promise<void>
   toggleLog: () => void
-  toggleTerminal: () => void
   closeWindow: () => Promise<void>
   quitApp: () => Promise<void>
   exportDocument: (format: 'html' | 'docx' | 'odt' | 'epub') => Promise<void>
@@ -46,6 +46,9 @@ export async function executeAppCommand(
       return
     case 'file.openFolder':
       await context.openFolder()
+      return
+    case 'project.openTerminal':
+      await context.openProjectTerminal()
       return
     case 'file.save':
       await context.save()
@@ -79,9 +82,6 @@ export async function executeAppCommand(
       return
     case 'view.toggleLog':
       context.toggleLog()
-      return
-    case 'view.toggleTerminal':
-      if (capabilities.pty) context.toggleTerminal()
       return
     case 'view.search.citations':
       useUiStore.getState().requestOmniSearchFocus('cite')

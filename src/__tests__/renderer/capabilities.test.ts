@@ -22,7 +22,6 @@ describe('desktop runtime capabilities', () => {
       openExternal: true,
       performanceMemory: true,
       projectMetadata: true,
-      pty: true,
       spellcheck: true,
       templates: true
     })

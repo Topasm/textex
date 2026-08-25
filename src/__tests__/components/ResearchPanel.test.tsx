@@ -6,7 +6,6 @@ import { clearResearchProfileDraft } from '../../renderer/services/researchProfi
 import { useNotificationStore } from '../../renderer/store/useNotificationStore'
 import { useCompileStore } from '../../renderer/store/useCompileStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
-import { useUiStore } from '../../renderer/store/useUiStore'
 
 describe('ResearchPanel tabs', () => {
   beforeEach(() => {
@@ -19,7 +18,6 @@ describe('ResearchPanel tabs', () => {
       researchPanelTab: 'chat'
     })
     useCompileStore.setState({ diagnostics: [], logs: '', logViewMode: 'structured' })
-    useUiStore.setState({ isTerminalPaneOpen: false })
     window.api.researchProfileLoad = vi.fn().mockResolvedValue({
       version: 1,
       paper: { title: '', authors: [] },
@@ -156,7 +154,7 @@ describe('ResearchPanel tabs', () => {
     })
   })
 
-  it('hosts terminal controls and compilation problems in the right panel', () => {
+  it('hosts compilation problems in the right panel without an embedded terminal', () => {
     useCompileStore.setState({
       diagnostics: [
         { severity: 'error', message: 'Missing brace', file: 'paper.tex', line: 3, column: 1 },
@@ -171,18 +169,14 @@ describe('ResearchPanel tabs', () => {
     })
     render(<ResearchPanel onAiDraft={vi.fn()} />)
 
-    const terminal = screen.getByRole('button', { name: 'Terminal pane' })
     const problems = screen.getByRole('tab', { name: /Problems \(2\)/ })
-    expect(terminal).toHaveAttribute('aria-pressed', 'false')
+    expect(screen.queryByRole('button', { name: /terminal/i })).not.toBeInTheDocument()
     expect(problems).toHaveAttribute('aria-selected', 'false')
     expect(problems).toHaveTextContent('2')
 
-    fireEvent.click(terminal)
     fireEvent.click(problems)
 
-    expect(useUiStore.getState().isTerminalPaneOpen).toBe(true)
     expect(useProjectStore.getState().researchPanelTab).toBe('problems')
-    expect(terminal).toHaveAttribute('aria-pressed', 'true')
     expect(problems).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByText('Compilation Log')).toBeInTheDocument()
   })

@@ -19,7 +19,7 @@
     "aiDraft": "Brouillon IA",
     "aiDraftShortcut": "Brouillon IA (Ctrl+Shift+D)",
     "aiAssistant": "Assistant IA",
-    "terminalPane": "Panneau terminal",
+    "openProjectTerminal": "Ouvrir le projet dans le terminal",
     "settings": "Paramètres",
     "syncPdfToCode": "Synchroniser PDF vers code (Ctrl+Clic dans le PDF)",
     "syncCodeToPdf": "Synchroniser code vers PDF",
@@ -86,7 +86,6 @@
     "editor": "Chargement de l’éditeur…",
     "preparingEditor": "Préparation de l’éditeur…",
     "preview": "Chargement de l’aperçu…",
-    "terminal": "Chargement du terminal…",
     "templates": "Chargement des modèles…",
     "documentHistory": "Chargement de l’historique du document…",
     "mathPreview": "Chargement de l’aperçu mathématique…",
@@ -404,6 +403,7 @@
     "collapseFolder": "Réduire le dossier",
     "showGenerated": "Afficher les fichiers générés",
     "hideGenerated": "Masquer les fichiers générés",
+    "openTerminal": "Ouvrir le projet dans le terminal",
     "exportOverleaf": "Exporter le ZIP source Overleaf",
     "exportOverleafComplete": "ZIP Overleaf enregistré dans {{path}}",
     "exportOverleafFailed": "Impossible de créer le ZIP Overleaf : {{reason}}"
@@ -568,7 +568,8 @@
     "hint": "Entrée pour exécuter · Échap pour fermer",
     "requires": {
       "document": "Ouvrez d’abord un document",
-      "pdf": "Compilez d’abord un PDF"
+      "pdf": "Compilez d’abord un PDF",
+      "project": "Ouvrez d’abord un projet"
     },
     "groups": {
       "file": "Fichier",
@@ -583,6 +584,7 @@
     "commands": {
       "file_open": "Ouvrir un fichier",
       "file_openFolder": "Ouvrir un dossier",
+      "project_openTerminal": "Ouvrir le projet dans le terminal",
       "file_save": "Enregistrer le fichier",
       "file_saveAs": "Enregistrer le fichier sous",
       "file_newTemplate": "Nouveau depuis un modèle",
@@ -597,7 +599,6 @@
       "view_toggleSidebar": "Afficher ou masquer la barre latérale",
       "view_toggleResearchPanel": "Afficher ou masquer le panneau de recherche",
       "view_toggleLog": "Afficher ou masquer le panneau Problèmes",
-      "view_toggleTerminal": "Afficher ou masquer le terminal",
       "view_search_citations": "Rechercher des citations",
       "view_search_pdf": "Rechercher dans le PDF",
       "pdf_zoomIn": "Agrandir le PDF",

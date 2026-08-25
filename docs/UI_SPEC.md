@@ -137,7 +137,7 @@ ErrorBoundary
   - `Log` toggle button
 - Other commands (`Open`, `Open Folder`, `Save As`, `New from Template`, `Export`,
   `Settings`) are reached through the home screen, OmniSearch, or keyboard shortcuts.
-- AI/Research and terminal controls are capability-gated and rendered by the Tauri runtime.
+- The file tree and command palette can open the trusted project root in the system terminal.
 
 ### `EditorPane.tsx`
 - Wraps `@monaco-editor/react`.
@@ -262,9 +262,10 @@ Displayed when no project is open.
 
 ### Capability-gated UI
 
-The Tauri runtime reports native AI, PTY, and LSP capabilities. `DraftModal`, Research
-chat, `TerminalPane`, and TexLab lifecycle surfaces remain gated through the capability
-map so a future target can omit a domain without bypassing `DesktopApi`.
+The Tauri runtime reports native AI and LSP capabilities. `DraftModal`, Research chat,
+and TexLab lifecycle surfaces remain gated through the capability map so a future target
+can omit a domain without bypassing `DesktopApi`. Opening the project in a system terminal
+uses the native active-project authority and never accepts a renderer-supplied path.
 
 ---
 

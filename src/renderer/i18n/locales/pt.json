@@ -19,7 +19,7 @@
     "aiDraft": "Rascunho IA",
     "aiDraftShortcut": "Rascunho IA (Ctrl+Shift+D)",
     "aiAssistant": "Assistente de IA",
-    "terminalPane": "Painel de terminal",
+    "openProjectTerminal": "Abrir projeto no terminal",
     "settings": "Configurações",
     "syncPdfToCode": "Sincronizar PDF para código (Ctrl+Clique no PDF)",
     "syncCodeToPdf": "Sincronizar código para PDF",
@@ -86,7 +86,6 @@
     "editor": "Carregando editor…",
     "preparingEditor": "Preparando o editor…",
     "preview": "Carregando visualização…",
-    "terminal": "Carregando terminal…",
     "templates": "Carregando modelos…",
     "documentHistory": "Carregando histórico do documento…",
     "mathPreview": "Carregando visualização de matemática…",
@@ -404,6 +403,7 @@
     "collapseFolder": "Recolher pasta",
     "showGenerated": "Mostrar arquivos gerados",
     "hideGenerated": "Ocultar arquivos gerados",
+    "openTerminal": "Abrir projeto no terminal",
     "exportOverleaf": "Exportar ZIP de fontes do Overleaf",
     "exportOverleafComplete": "ZIP do Overleaf salvo em {{path}}",
     "exportOverleafFailed": "Não foi possível criar o ZIP do Overleaf: {{reason}}"
@@ -568,7 +568,8 @@
     "hint": "Enter para executar · Esc para fechar",
     "requires": {
       "document": "Abra um documento primeiro",
-      "pdf": "Compile um PDF primeiro"
+      "pdf": "Compile um PDF primeiro",
+      "project": "Abra um projeto primeiro"
     },
     "groups": {
       "file": "Arquivo",
@@ -583,6 +584,7 @@
     "commands": {
       "file_open": "Abrir arquivo",
       "file_openFolder": "Abrir pasta",
+      "project_openTerminal": "Abrir projeto no terminal",
       "file_save": "Salvar arquivo",
       "file_saveAs": "Salvar arquivo como",
       "file_newTemplate": "Novo a partir de modelo",
@@ -597,7 +599,6 @@
       "view_toggleSidebar": "Alternar barra lateral",
       "view_toggleResearchPanel": "Alternar painel de pesquisa",
       "view_toggleLog": "Alternar painel de problemas",
-      "view_toggleTerminal": "Alternar terminal",
       "view_search_citations": "Pesquisar citações",
       "view_search_pdf": "Pesquisar no PDF",
       "pdf_zoomIn": "Ampliar PDF",

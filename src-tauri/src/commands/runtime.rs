@@ -4,11 +4,19 @@ use crate::{
     error::AppResult,
     models::{PerformanceMemorySample, SuccessResult},
     services::runtime::{self, PerformanceState},
+    state::AppState,
 };
 
 #[tauri::command]
 pub async fn open_external(url: String) -> AppResult<SuccessResult> {
     runtime::open_external(url.trim()).await
+}
+
+#[tauri::command]
+pub async fn open_project_terminal(state: State<'_, AppState>) -> AppResult<SuccessResult> {
+    let _project_operation = state.lock_project_operation().await;
+    let project_root = state.project_root()?;
+    runtime::open_project_terminal(&project_root)
 }
 
 #[tauri::command]

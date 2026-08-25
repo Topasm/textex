@@ -155,19 +155,12 @@ Object.defineProperty(window, 'api', {
     aiOpenClaudeTerminal: vi.fn(),
     aiOpenCodexTerminal: vi.fn(),
 
-    // PTY (embedded terminal)
-    ptyCreate: vi.fn().mockResolvedValue({ id: 'pty-test' }),
-    ptyWrite: vi.fn().mockResolvedValue({ success: true }),
-    ptyResize: vi.fn().mockResolvedValue({ success: true }),
-    ptyDispose: vi.fn().mockResolvedValue({ success: true }),
-    onPtyData: vi.fn().mockReturnValue(() => {}),
-    onPtyExit: vi.fn().mockReturnValue(() => {}),
-
     // Labels / Packages / External
     scanLabels: vi.fn(),
     scanCitations: vi.fn().mockResolvedValue([]),
     loadPackageData: vi.fn(),
     openExternal: vi.fn(),
+    openProjectTerminal: vi.fn().mockResolvedValue({ success: true }),
     getPerformanceMemory: vi.fn().mockResolvedValue({
       sampledAtEpochMs: 0,
       totalWorkingSetKiB: 0,

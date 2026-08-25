@@ -1,20 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  BookOpen,
-  MessageSquare,
-  PanelRightClose,
-  ScrollText,
-  Settings2,
-  SquareTerminal
-} from 'lucide-react'
+import { BookOpen, MessageSquare, PanelRightClose, ScrollText, Settings2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useCompileStore } from '../store/useCompileStore'
 import { useProjectStore, type ResearchPanelTab } from '../store/useProjectStore'
 import { useNotificationStore } from '../store/useNotificationStore'
-import { useUiStore } from '../store/useUiStore'
 import { useSettingsStore } from '../store/useSettingsStore'
 import { useResearchPanelResize } from '../hooks/useResearchPanelResize'
-import { getDesktopCapabilities } from '../platform/capabilities'
 import { errorMessage } from '../utils/errorMessage'
 import {
   clearResearchProfileDraft,
@@ -56,8 +47,6 @@ export function ResearchPanel({ onAiDraft, onCompile }: ResearchPanelProps) {
   const pendingResearchSelection = useProjectStore((state) => state.pendingResearchSelection)
   const diagnostics = useCompileStore((state) => state.diagnostics)
   const aiProvider = useSettingsStore((state) => state.settings.aiProvider)
-  const isTerminalPaneOpen = useUiStore((state) => state.isTerminalPaneOpen)
-  const terminalAvailable = getDesktopCapabilities().pty
   const problemCount = diagnostics.length
   const problemsLabel =
     problemCount === 0
@@ -302,18 +291,6 @@ export function ResearchPanel({ onAiDraft, onCompile }: ResearchPanelProps) {
           )}
         </button>
         <span className="research-panel-tool-separator" aria-hidden="true" />
-        {terminalAvailable && (
-          <button
-            type="button"
-            className={`research-panel-tool-btn${isTerminalPaneOpen ? ' active' : ''}`}
-            onClick={() => useUiStore.getState().toggleTerminalPane()}
-            title={t('toolbar.terminalPane')}
-            aria-label={t('toolbar.terminalPane')}
-            aria-pressed={isTerminalPaneOpen}
-          >
-            <SquareTerminal size={14} />
-          </button>
-        )}
         <button
           className="research-panel-close"
           onClick={closePanel}

@@ -18,7 +18,6 @@ export type LspStatus = 'stopped' | 'starting' | 'running' | 'error'
 interface UiState {
   // AI Draft modal
   isDraftModalOpen: boolean
-  isTerminalPaneOpen: boolean
 
   // Template gallery
   isTemplateGalleryOpen: boolean
@@ -50,8 +49,6 @@ interface UiState {
   // Actions
   setDraftModalOpen: (open: boolean) => void
   toggleDraftModal: () => void
-  setTerminalPaneOpen: (open: boolean) => void
-  toggleTerminalPane: () => void
   toggleTemplateGallery: () => void
   setTemplateGalleryOpen: (open: boolean) => void
   setUpdateStatus: (status: UpdateStatus) => void
@@ -71,7 +68,6 @@ interface UiState {
 export const useUiStore = create<UiState>()(
   subscribeWithSelector((set) => ({
     isDraftModalOpen: false,
-    isTerminalPaneOpen: false,
     isTemplateGalleryOpen: false,
     updateStatus: 'idle',
     updateMetadata: null,
@@ -88,8 +84,6 @@ export const useUiStore = create<UiState>()(
 
     setDraftModalOpen: (isDraftModalOpen) => set({ isDraftModalOpen }),
     toggleDraftModal: () => set((state) => ({ isDraftModalOpen: !state.isDraftModalOpen })),
-    setTerminalPaneOpen: (isTerminalPaneOpen) => set({ isTerminalPaneOpen }),
-    toggleTerminalPane: () => set((state) => ({ isTerminalPaneOpen: !state.isTerminalPaneOpen })),
     toggleTemplateGallery: () =>
       set((state) => ({ isTemplateGalleryOpen: !state.isTemplateGalleryOpen })),
     setTemplateGalleryOpen: (isTemplateGalleryOpen) => set({ isTemplateGalleryOpen }),

@@ -21,13 +21,11 @@ const initialCompileState = {
 
 const initialPdfState = {
   splitRatio: 0.5,
-  terminalRatio: 0.28,
   zoomLevel: 100,
   synctexHighlight: null
 }
 
 const initialUiState = {
-  isTerminalPaneOpen: false,
   documentSymbols: [] as DocumentSymbolNode[]
 }
 
@@ -282,19 +280,6 @@ describe('useAppStore', () => {
     it('updates splitRatio', () => {
       usePdfStore.getState().setSplitRatio(0.7)
       expect(usePdfStore.getState().splitRatio).toBe(0.7)
-    })
-  })
-
-  describe('setTerminalRatio', () => {
-    it('updates and clamps terminalRatio', () => {
-      usePdfStore.getState().setTerminalRatio(0.3)
-      expect(usePdfStore.getState().terminalRatio).toBe(0.3)
-
-      usePdfStore.getState().setTerminalRatio(0.9)
-      expect(usePdfStore.getState().terminalRatio).toBe(0.45)
-
-      usePdfStore.getState().setTerminalRatio(0.05)
-      expect(usePdfStore.getState().terminalRatio).toBe(0.18)
     })
   })
 

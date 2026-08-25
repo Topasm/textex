@@ -19,7 +19,7 @@
     "aiDraft": "AI Draft",
     "aiDraftShortcut": "AI Draft (Ctrl+Shift+D)",
     "aiAssistant": "AI Assistant",
-    "terminalPane": "Terminal pane",
+    "openProjectTerminal": "Open project in terminal",
     "settings": "Settings",
     "syncPdfToCode": "Sync PDF to Code (Ctrl+Click in PDF)",
     "syncCodeToPdf": "Sync Code to PDF",
@@ -86,7 +86,6 @@
     "editor": "Loading editor…",
     "preparingEditor": "Preparing the editor…",
     "preview": "Loading preview…",
-    "terminal": "Loading terminal…",
     "templates": "Loading templates…",
     "documentHistory": "Loading document history…",
     "mathPreview": "Loading math preview…",
@@ -404,6 +403,7 @@
     "collapseFolder": "Collapse folder",
     "showGenerated": "Show generated files",
     "hideGenerated": "Hide generated files",
+    "openTerminal": "Open project in terminal",
     "exportOverleaf": "Export Overleaf source ZIP",
     "exportOverleafComplete": "Overleaf ZIP saved to {{path}}",
     "exportOverleafFailed": "Could not create Overleaf ZIP: {{reason}}"
@@ -568,7 +568,8 @@
     "hint": "Enter to run · Esc to close",
     "requires": {
       "document": "Open a document first",
-      "pdf": "Compile a PDF first"
+      "pdf": "Compile a PDF first",
+      "project": "Open a project first"
     },
     "groups": {
       "file": "File",
@@ -583,6 +584,7 @@
     "commands": {
       "file_open": "Open File",
       "file_openFolder": "Open Folder",
+      "project_openTerminal": "Open Project in Terminal",
       "file_save": "Save File",
       "file_saveAs": "Save File As",
       "file_newTemplate": "New from Template",
@@ -597,7 +599,6 @@
       "view_toggleSidebar": "Toggle Sidebar",
       "view_toggleResearchPanel": "Toggle Research Panel",
       "view_toggleLog": "Toggle Problems Panel",
-      "view_toggleTerminal": "Toggle Terminal",
       "view_search_citations": "Search Citations",
       "view_search_pdf": "Search PDF",
       "pdf_zoomIn": "Zoom PDF In",

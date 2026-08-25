@@ -19,7 +19,7 @@
     "aiDraft": "Borrador IA",
     "aiDraftShortcut": "Borrador IA (Ctrl+Shift+D)",
     "aiAssistant": "Asistente de IA",
-    "terminalPane": "Panel de terminal",
+    "openProjectTerminal": "Abrir proyecto en la terminal",
     "settings": "Configuración",
     "syncPdfToCode": "Sincronizar PDF a código (Ctrl+Clic en PDF)",
     "syncCodeToPdf": "Sincronizar código a PDF",
@@ -86,7 +86,6 @@
     "editor": "Cargando editor…",
     "preparingEditor": "Preparando el editor…",
     "preview": "Cargando vista previa…",
-    "terminal": "Cargando terminal…",
     "templates": "Cargando plantillas…",
     "documentHistory": "Cargando historial del documento…",
     "mathPreview": "Cargando vista previa matemática…",
@@ -404,6 +403,7 @@
     "collapseFolder": "Contraer carpeta",
     "showGenerated": "Mostrar archivos generados",
     "hideGenerated": "Ocultar archivos generados",
+    "openTerminal": "Abrir proyecto en la terminal",
     "exportOverleaf": "Exportar ZIP fuente de Overleaf",
     "exportOverleafComplete": "ZIP de Overleaf guardado en {{path}}",
     "exportOverleafFailed": "No se pudo crear el ZIP de Overleaf: {{reason}}"
@@ -568,7 +568,8 @@
     "hint": "Enter para ejecutar · Esc para cerrar",
     "requires": {
       "document": "Abre primero un documento",
-      "pdf": "Compila primero un PDF"
+      "pdf": "Compila primero un PDF",
+      "project": "Abre primero un proyecto"
     },
     "groups": {
       "file": "Archivo",
@@ -583,6 +584,7 @@
     "commands": {
       "file_open": "Abrir archivo",
       "file_openFolder": "Abrir carpeta",
+      "project_openTerminal": "Abrir proyecto en la terminal",
       "file_save": "Guardar archivo",
       "file_saveAs": "Guardar archivo como",
       "file_newTemplate": "Nuevo desde plantilla",
@@ -597,7 +599,6 @@
       "view_toggleSidebar": "Alternar barra lateral",
       "view_toggleResearchPanel": "Alternar panel de investigación",
       "view_toggleLog": "Alternar panel de problemas",
-      "view_toggleTerminal": "Alternar terminal",
       "view_search_citations": "Buscar citas",
       "view_search_pdf": "Buscar en PDF",
       "pdf_zoomIn": "Ampliar PDF",

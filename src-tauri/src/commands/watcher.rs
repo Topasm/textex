@@ -6,7 +6,6 @@ use crate::{
     services::lsp::LspState,
     services::project_index::ProjectIndexState,
     services::project_session,
-    services::pty::PtyState,
     services::watcher::{self, DirectoryWatcherState},
     state::AppState,
 };
@@ -45,14 +44,12 @@ pub async fn deactivate_project(
     project_state: State<'_, AppState>,
     watcher_state: State<'_, DirectoryWatcherState>,
     index_state: State<'_, ProjectIndexState>,
-    pty_state: State<'_, PtyState>,
     lsp_state: State<'_, LspState>,
 ) -> AppResult<SuccessResult> {
     project_session::deactivate(
         project_state.inner(),
         watcher_state.inner(),
         index_state.inner(),
-        pty_state.inner(),
         lsp_state.inner(),
     )
     .await?;

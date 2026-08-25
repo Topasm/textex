@@ -14,6 +14,7 @@ const ISSUE_URL: &str = "https://github.com/Topasm/textex/issues/new";
 const RENDERER_COMMANDS: &[&str] = &[
     "file.open",
     "file.openFolder",
+    "project.openTerminal",
     "file.save",
     "file.saveAs",
     "file.newTemplate",
@@ -28,7 +29,6 @@ const RENDERER_COMMANDS: &[&str] = &[
     "view.toggleSidebar",
     "view.toggleResearchPanel",
     "view.toggleLog",
-    "view.toggleTerminal",
     "view.search.citations",
     "view.search.pdf",
     "pdf.zoomIn",
@@ -46,14 +46,12 @@ const RENDERER_COMMANDS: &[&str] = &[
 struct NativeMenuCapabilities {
     ai: bool,
     document_export: bool,
-    pty: bool,
     templates: bool,
 }
 
 const CAPABILITIES: NativeMenuCapabilities = NativeMenuCapabilities {
     ai: true,
     document_export: true,
-    pty: true,
     templates: true,
 };
 
@@ -117,6 +115,12 @@ fn file_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<R>> {
             "file.openFolder",
             "Open Folder…",
             Some("CmdOrCtrl+Shift+O"),
+        )?)
+        .item(&command_item(
+            app,
+            "project.openTerminal",
+            "Open Project in Terminal",
+            None,
         )?);
     if CAPABILITIES.templates {
         menu = menu.item(&command_item(
@@ -201,7 +205,7 @@ fn edit_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<R>> {
 }
 
 fn view_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<R>> {
-    let mut menu = SubmenuBuilder::new(app, "View")
+    let menu = SubmenuBuilder::new(app, "View")
         .item(&command_item(
             app,
             "view.toggleSidebar",
@@ -220,14 +224,6 @@ fn view_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<R>> {
             "Toggle Problems Panel",
             Some("CmdOrCtrl+L"),
         )?);
-    if CAPABILITIES.pty {
-        menu = menu.item(&command_item(
-            app,
-            "view.toggleTerminal",
-            "Toggle Terminal",
-            Some("CmdOrCtrl+`"),
-        )?);
-    }
     menu.separator()
         .item(&command_item(
             app,

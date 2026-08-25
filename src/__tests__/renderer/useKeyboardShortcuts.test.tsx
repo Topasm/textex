@@ -34,7 +34,7 @@ describe('useKeyboardShortcuts', () => {
     const registeredIds = register.mock.calls.map(([id]) => id)
     expect(registeredIds).toEqual(expectedIds)
     expect(registeredIds).toContain('ai.draft')
-    expect(registeredIds).toContain('view.toggleTerminal')
+    expect(registeredIds).not.toContain('project.openTerminal')
     expect(registeredIds).toContain('file.newTemplate')
 
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'o', ctrlKey: true }))

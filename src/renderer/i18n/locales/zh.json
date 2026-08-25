@@ -19,7 +19,7 @@
     "aiDraft": "AI 草稿",
     "aiDraftShortcut": "AI 草稿 (Ctrl+Shift+D)",
     "aiAssistant": "AI 助手",
-    "terminalPane": "终端面板",
+    "openProjectTerminal": "在终端中打开项目",
     "settings": "设置",
     "syncPdfToCode": "PDF 同步到代码 (Ctrl+在 PDF 中点击)",
     "syncCodeToPdf": "代码同步到 PDF",
@@ -86,7 +86,6 @@
     "editor": "正在加载编辑器…",
     "preparingEditor": "正在准备编辑器…",
     "preview": "正在加载预览…",
-    "terminal": "正在加载终端…",
     "templates": "正在加载模板…",
     "documentHistory": "正在加载文档历史记录…",
     "mathPreview": "正在加载公式预览…",
@@ -404,6 +403,7 @@
     "collapseFolder": "折叠文件夹",
     "showGenerated": "显示生成文件",
     "hideGenerated": "隐藏生成文件",
+    "openTerminal": "在终端中打开项目",
     "exportOverleaf": "导出 Overleaf 源文件 ZIP",
     "exportOverleafComplete": "Overleaf ZIP 已保存到 {{path}}",
     "exportOverleafFailed": "无法创建 Overleaf ZIP：{{reason}}"
@@ -568,7 +568,8 @@
     "hint": "Enter 执行 · Esc 关闭",
     "requires": {
       "document": "请先打开文档",
-      "pdf": "请先编译 PDF"
+      "pdf": "请先编译 PDF",
+      "project": "请先打开项目"
     },
     "groups": {
       "file": "文件",
@@ -583,6 +584,7 @@
     "commands": {
       "file_open": "打开文件",
       "file_openFolder": "打开文件夹",
+      "project_openTerminal": "在终端中打开项目",
       "file_save": "保存文件",
       "file_saveAs": "文件另存为",
       "file_newTemplate": "从模板新建",
@@ -597,7 +599,6 @@
       "view_toggleSidebar": "切换侧边栏",
       "view_toggleResearchPanel": "切换研究面板",
       "view_toggleLog": "切换问题面板",
-      "view_toggleTerminal": "切换终端",
       "view_search_citations": "搜索引文",
       "view_search_pdf": "搜索 PDF",
       "pdf_zoomIn": "放大 PDF",

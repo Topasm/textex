@@ -17,6 +17,7 @@ interface CommandPaletteProps {
 export interface CommandPaletteContext {
   document: boolean
   pdf: boolean
+  project: boolean
 }
 
 interface PaletteCommand {
@@ -28,7 +29,11 @@ interface PaletteCommand {
   unavailableLabel?: string
 }
 
-const DEFAULT_CONTEXT: CommandPaletteContext = Object.freeze({ document: true, pdf: true })
+const DEFAULT_CONTEXT: CommandPaletteContext = Object.freeze({
+  document: true,
+  pdf: true,
+  project: true
+})
 
 const FOCUSABLE_SELECTOR = [
   'button:not([disabled])',

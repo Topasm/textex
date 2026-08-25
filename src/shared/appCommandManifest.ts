@@ -16,10 +16,10 @@ export interface ShortcutBinding {
   readonly shift?: boolean
 }
 
-export type AppCommandCapability = 'ai' | 'documentExport' | 'pty' | 'templates'
+export type AppCommandCapability = 'ai' | 'documentExport' | 'templates'
 
 export type AppCommandGroup = 'file' | 'edit' | 'view' | 'compile' | 'pdf' | 'ai' | 'app' | 'window'
-export type AppCommandContextRequirement = 'document' | 'pdf'
+export type AppCommandContextRequirement = 'document' | 'pdf' | 'project'
 
 interface AppCommandDefinition {
   readonly id: string
@@ -52,6 +52,13 @@ export const APP_COMMAND_MANIFEST = [
     group: 'file',
     keywords: ['project', 'directory', 'workspace'],
     shortcut: { key: 'o', mod: true, shift: true }
+  },
+  {
+    id: 'project.openTerminal',
+    label: 'Open Project in Terminal',
+    group: 'file',
+    keywords: ['project', 'folder', 'shell', 'console'],
+    requiredContext: 'project'
   },
   {
     id: 'file.save',
@@ -160,14 +167,6 @@ export const APP_COMMAND_MANIFEST = [
     group: 'view',
     keywords: ['compile', 'output', 'errors', 'problems'],
     shortcut: { key: 'l', mod: true }
-  },
-  {
-    id: 'view.toggleTerminal',
-    label: 'Toggle Terminal',
-    group: 'view',
-    keywords: ['shell', 'console', 'panel'],
-    shortcut: { key: '`', mod: true },
-    requiredCapability: 'pty'
   },
   {
     id: 'view.search.citations',

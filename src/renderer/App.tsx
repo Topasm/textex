@@ -72,9 +72,6 @@ const DraftModal = lazy(() =>
   import('./components/DraftModal').then((m) => ({ default: m.DraftModal }))
 )
 const TemplateGallery = lazy(() => import('./components/TemplateGallery'))
-const TerminalPane = lazy(() =>
-  import('./components/TerminalPane').then((m) => ({ default: m.TerminalPane }))
-)
 const EditorPane = lazy(async () => {
   await import('./data/monacoSetup')
   return import('./components/EditorPane')
@@ -127,7 +124,6 @@ function App() {
 
   // Only subscribe to state needed for rendering
   const splitRatio = usePdfStore((s) => s.splitRatio)
-  const terminalRatio = usePdfStore((s) => s.terminalRatio)
   const pdfPath = useCompileStore((s) => s.pdfPath)
   const isSidebarOpen = useProjectStore((s) => s.isSidebarOpen)
   const sidebarView = useProjectStore((s) => s.sidebarView)
@@ -143,15 +139,12 @@ function App() {
   const gitEnabled = isFeatureEnabled(settings, 'git')
   const autoHideSidebar = useSettingsStore((s) => s.settings.autoHideSidebar)
   const showStatusBar = useSettingsStore((s) => s.settings.showStatusBar)
-  const isTerminalPaneOpen = useUiStore((s) => s.isTerminalPaneOpen)
-  const terminalPaneOpen = capabilities.pty && isTerminalPaneOpen
   const isTemplateGalleryOpen = useUiStore((s) => s.isTemplateGalleryOpen)
   const updateStatus = useUiStore((s) => s.updateStatus)
   const hasNotifications = useNotificationStore((s) => s.notifications.length > 0)
   const hasActiveExternalChange = useUiStore((s) =>
     Boolean(filePath && s.externalChangeConflicts.includes(filePath))
   )
-  const toggleTerminalPane = useUiStore((s) => s.toggleTerminalPane)
 
   const [isDraftModalOpen, setIsDraftModalOpen] = useState(false)
   const [draftPrefill, setDraftPrefill] = useState<string | undefined>(undefined)
@@ -187,10 +180,6 @@ function App() {
     },
     [capabilities.ai, overlaySnapshot]
   )
-
-  const handleToggleTerminalPane = useCallback(() => {
-    if (capabilities.pty) toggleTerminalPane()
-  }, [capabilities.pty, toggleTerminalPane])
 
   const handleDraftInsert = useCallback((latex: string) => {
     useEditorStore.getState().requestInsertAtCursor(latex)
@@ -375,13 +364,22 @@ function App() {
         compile: handleCompile,
         openFile: handleOpen,
         openFolder: handleOpenFolder,
+        openProjectTerminal: async () => {
+          try {
+            await window.api.openProjectTerminal()
+          } catch (error) {
+            useNotificationStore.getState().pushNotification({
+              tone: 'error',
+              message: errorMessage(error)
+            })
+          }
+        },
         openSettings: handleOpenSettings,
         openTemplateGallery: handleOpenTemplateGallery,
         runAiDraft: () => handleAiDraft(),
         save: handleSave,
         saveAs: handleSaveAs,
         toggleLog: toggleLogPanel,
-        toggleTerminal: handleToggleTerminalPane,
         closeWindow: handleRequestWindowClose,
         quitApp: handleQuitApplication,
         exportDocument: handleExport
@@ -399,8 +397,7 @@ function App() {
       handleQuitApplication,
       handleRequestWindowClose,
       handleSave,
-      handleSaveAs,
-      handleToggleTerminalPane
+      handleSaveAs
     ]
   )
 
@@ -481,17 +478,13 @@ function App() {
     sidebarRef,
     handleDividerMouseDown,
     handleDividerDoubleClick,
-    handleTerminalDividerMouseDown,
-    handleTerminalDividerDoubleClick,
     handleSidebarDividerMouseDown,
     handleSidebarDividerDoubleClick,
     handleSidebarWheel,
     slideAnim
   } = useDragResize({
     sidebarPosition: 'left',
-    sidebarTabs: sidebarTabs.map((tab) => tab.key),
-    terminalPaneOpen,
-    terminalRatio
+    sidebarTabs: sidebarTabs.map((tab) => tab.key)
   })
 
   const showHomeScreen = !projectRoot
@@ -639,7 +632,11 @@ function App() {
             onClose={() => setIsCommandPaletteOpen(false)}
             onRunCommand={runAppCommand}
             capabilities={capabilities}
-            context={{ document: Boolean(filePath), pdf: Boolean(pdfPath) }}
+            context={{
+              document: Boolean(filePath),
+              pdf: Boolean(pdfPath),
+              project: Boolean(projectRoot)
+            }}
           />
         </Suspense>
       )}
@@ -658,14 +655,11 @@ function App() {
         <div className="workspace">
           {(isSidebarOpen || autoHideSidebar) && sidebarElement}
           <div className="editor-area">
-            <div
-              className={`editor-main-content${terminalPaneOpen ? ' has-terminal-pane' : ''}`}
-              ref={mainContentRef}
-            >
+            <div className="editor-main-content" ref={mainContentRef}>
               <div
                 className="editor-pane"
                 style={{
-                  width: `${splitRatio * (terminalPaneOpen ? 1 - terminalRatio : 1) * 100}%`
+                  width: `${splitRatio * 100}%`
                 }}
               >
                 <TabBar />
@@ -681,7 +675,7 @@ function App() {
               <div
                 className="preview-pane"
                 style={{
-                  width: `${(1 - splitRatio) * (terminalPaneOpen ? 1 - terminalRatio : 1) * 100}%`
+                  width: `${(1 - splitRatio) * 100}%`
                 }}
               >
                 <PreviewErrorBoundary>
@@ -692,22 +686,6 @@ function App() {
                   </Suspense>
                 </PreviewErrorBoundary>
               </div>
-              {terminalPaneOpen && (
-                <>
-                  <div
-                    className="split-divider terminal-split-divider"
-                    onMouseDown={handleTerminalDividerMouseDown}
-                    onDoubleClick={handleTerminalDividerDoubleClick}
-                  />
-                  <div className="terminal-pane" style={{ width: `${terminalRatio * 100}%` }}>
-                    <Suspense
-                      fallback={<LoadingFallback variant="pane" label={t('loading.terminal')} />}
-                    >
-                      <TerminalPane />
-                    </Suspense>
-                  </div>
-                </>
-              )}
             </div>
           </div>
         </div>

@@ -1,5 +1,8 @@
 use std::{
     collections::HashSet,
+    ffi::OsString,
+    path::Path,
+    process::Command as ProcessCommand,
     process::Stdio,
     sync::{Arc, Mutex},
     time::{Duration, SystemTime, UNIX_EPOCH},
@@ -28,6 +31,12 @@ impl Default for PerformanceState {
 
 const OPEN_TIMEOUT: Duration = Duration::from_secs(15);
 
+struct TerminalCommandSpec {
+    program: &'static str,
+    args: Vec<OsString>,
+    env: Vec<(&'static str, OsString)>,
+}
+
 pub async fn open_external(url: &str) -> AppResult<SuccessResult> {
     let parsed = validate_external_url(url)?;
     let mut command = external_open_command(parsed.as_str());
@@ -48,6 +57,119 @@ pub async fn open_external(url: &str) -> AppResult<SuccessResult> {
         )));
     }
     Ok(SuccessResult::ok())
+}
+
+pub fn open_project_terminal(project_root: &Path) -> AppResult<SuccessResult> {
+    if !project_root.is_dir() {
+        return Err(AppError::NotADirectory(
+            project_root.to_string_lossy().into_owned(),
+        ));
+    }
+
+    let mut missing = Vec::new();
+    for spec in platform_terminal_commands(project_root) {
+        let mut command = ProcessCommand::new(spec.program);
+        command
+            .args(spec.args)
+            .envs(spec.env)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null());
+        match command.spawn() {
+            Ok(mut child) => {
+                let _reaper = std::thread::spawn(move || {
+                    let _ = child.wait();
+                });
+                return Ok(SuccessResult::ok());
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                missing.push(spec.program);
+            }
+            Err(error) => {
+                return Err(AppError::SystemTerminal(format!(
+                    "could not start {} for {}: {error}",
+                    spec.program,
+                    project_root.to_string_lossy()
+                )));
+            }
+        }
+    }
+
+    Err(AppError::SystemTerminal(format!(
+        "no supported terminal application was found (checked: {})",
+        missing.join(", ")
+    )))
+}
+
+#[cfg(target_os = "macos")]
+fn platform_terminal_commands(project_root: &Path) -> Vec<TerminalCommandSpec> {
+    vec![TerminalCommandSpec {
+        program: "open",
+        args: vec![
+            OsString::from("-a"),
+            OsString::from("Terminal"),
+            project_root.as_os_str().to_owned(),
+        ],
+        env: Vec::new(),
+    }]
+}
+
+#[cfg(target_os = "windows")]
+fn platform_terminal_commands(project_root: &Path) -> Vec<TerminalCommandSpec> {
+    vec![
+        TerminalCommandSpec {
+            program: "wt.exe",
+            args: vec![OsString::from("-d"), project_root.as_os_str().to_owned()],
+            env: Vec::new(),
+        },
+        TerminalCommandSpec {
+            program: "powershell.exe",
+            args: vec![
+                OsString::from("-NoExit"),
+                OsString::from("-NoProfile"),
+                OsString::from("-Command"),
+                OsString::from("Set-Location -LiteralPath $env:TEXTEX_PROJECT_ROOT"),
+            ],
+            env: vec![("TEXTEX_PROJECT_ROOT", project_root.as_os_str().to_owned())],
+        },
+    ]
+}
+
+#[cfg(all(unix, not(target_os = "macos")))]
+fn platform_terminal_commands(project_root: &Path) -> Vec<TerminalCommandSpec> {
+    let root = || project_root.as_os_str().to_owned();
+    vec![
+        TerminalCommandSpec {
+            program: "x-terminal-emulator",
+            args: vec![OsString::from("--working-directory"), root()],
+            env: Vec::new(),
+        },
+        TerminalCommandSpec {
+            program: "gnome-terminal",
+            args: vec![OsString::from("--working-directory"), root()],
+            env: Vec::new(),
+        },
+        TerminalCommandSpec {
+            program: "konsole",
+            args: vec![OsString::from("--workdir"), root()],
+            env: Vec::new(),
+        },
+        TerminalCommandSpec {
+            program: "xfce4-terminal",
+            args: vec![OsString::from("--working-directory"), root()],
+            env: Vec::new(),
+        },
+        TerminalCommandSpec {
+            program: "kitty",
+            args: vec![OsString::from("--directory"), root()],
+            env: Vec::new(),
+        },
+        TerminalCommandSpec {
+            program: "alacritty",
+            args: vec![OsString::from("--working-directory"), root()],
+            env: Vec::new(),
+        },
+    ]
 }
 
 fn external_open_command(url: &str) -> Command {
@@ -186,6 +308,23 @@ mod tests {
         assert!(validate_external_url("mailto:hello@example.com").is_ok());
         assert!(validate_external_url("file:///tmp/secret").is_err());
         assert!(validate_external_url("javascript:alert(1)").is_err());
+    }
+
+    #[test]
+    fn terminal_candidates_preserve_the_project_path_as_an_os_argument() {
+        let root = Path::new("/tmp/paper project_2027@lab");
+        let commands = platform_terminal_commands(root);
+        assert!(!commands.is_empty());
+        assert!(commands.iter().all(|command| {
+            command
+                .args
+                .iter()
+                .any(|argument| argument == root.as_os_str())
+                || command
+                    .env
+                    .iter()
+                    .any(|(_, value)| value == root.as_os_str())
+        }));
     }
 
     #[test]

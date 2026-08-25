@@ -15,7 +15,7 @@ describe('CommandPalette', () => {
         isOpen
         onClose={vi.fn()}
         onRunCommand={vi.fn()}
-        capabilities={{ ...getDesktopCapabilities(), ai: false, pty: false }}
+        capabilities={{ ...getDesktopCapabilities(), ai: false }}
       />
     )
 
@@ -29,7 +29,6 @@ describe('CommandPalette', () => {
     expect(input).toHaveAttribute('aria-activedescendant', options[0].id)
     expect(options[0]).toHaveAttribute('aria-selected', 'true')
     expect(screen.queryByRole('option', { name: /Create AI Draft/ })).not.toBeInTheDocument()
-    expect(screen.queryByRole('option', { name: /Toggle Terminal/ })).not.toBeInTheDocument()
   })
 
   it('searches metadata and runs the selected manifest command through its callback', () => {
@@ -56,15 +55,18 @@ describe('CommandPalette', () => {
         isOpen
         onClose={vi.fn()}
         onRunCommand={onRunCommand}
-        context={{ document: false, pdf: false }}
+        context={{ document: false, pdf: false, project: false }}
       />
     )
 
     const saveCommand = screen.getByRole('option', { name: 'Save File' })
     const openCommand = screen.getByRole('option', { name: 'Open File' })
+    const terminalCommand = screen.getByRole('option', { name: 'Open Project in Terminal' })
     expect(saveCommand).toHaveAttribute('aria-disabled', 'true')
     expect(saveCommand).toHaveTextContent('Open a document first')
     expect(openCommand).toHaveAttribute('aria-disabled', 'false')
+    expect(terminalCommand).toHaveAttribute('aria-disabled', 'true')
+    expect(terminalCommand).toHaveTextContent('Open a project first')
 
     fireEvent.click(saveCommand)
     expect(onRunCommand).not.toHaveBeenCalled()

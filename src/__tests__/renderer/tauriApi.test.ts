@@ -1304,15 +1304,11 @@ describe('Tauri DesktopApi adapter', () => {
 
   it('keeps mandatory listeners and LSP cleanup safe while their backends are pending', async () => {
     const api = createTauriApi()
-    const disposeData = api.onPtyData('pty-1', () => {})
-    const disposeExit = api.onPtyExit('pty-1', () => {})
 
     expect(() => api.onCompileLog(() => {})).not.toThrow()
     expect(() => api.onDiagnostics(() => {})).not.toThrow()
     expect(() => api.onAppCommand(() => {})).not.toThrow()
     api.removeAppCommandListener()
-    expect(() => disposeData()).not.toThrow()
-    expect(() => disposeExit()).not.toThrow()
     invokeMock.mockResolvedValueOnce({ success: true })
     await expect(api.lspStop()).resolves.toEqual({ success: true })
   })
@@ -1378,53 +1374,12 @@ describe('Tauri DesktopApi adapter', () => {
     ])
   })
 
-  it('maps PTY commands and buffers channel events until listeners attach', async () => {
-    invokeMock
-      .mockResolvedValueOnce({ id: 'pty-1' })
-      .mockResolvedValueOnce({ success: true })
-      .mockResolvedValueOnce({ success: true })
-      .mockResolvedValueOnce({ success: true })
+  it('opens the active project in a system terminal without renderer path input', async () => {
+    invokeMock.mockResolvedValueOnce({ success: true })
     const api = createTauriApi()
 
-    await expect(api.ptyCreate({ cwd: '/project', cols: 80, rows: 24 })).resolves.toEqual({
-      id: 'pty-1'
-    })
-    const ptyChannel = channelInstances.at(-1)
-    ptyChannel?.onmessage({ event: 'data', id: 'pty-1', data: 'ready' })
-    ptyChannel?.onmessage({ event: 'overflow', id: 'pty-1', droppedBytes: 8192 })
-    ptyChannel?.onmessage({ event: 'exit', id: 'pty-1', exitCode: 0, signal: null })
-
-    const data = vi.fn()
-    const exit = vi.fn()
-    const disposeData = api.onPtyData('pty-1', data)
-    const disposeExit = api.onPtyExit('pty-1', exit)
-    expect(data).toHaveBeenCalledWith('ready\r\n[TextEx terminal output truncated]\r\n')
-    expect(exit).toHaveBeenCalledWith(0, null)
-
-    await expect(api.ptyWrite('pty-1', 'pwd\r')).resolves.toEqual({ success: true })
-    await expect(api.ptyResize('pty-1', 90.8, 30.2)).resolves.toEqual({ success: true })
-    await expect(api.ptyDispose('pty-1')).resolves.toEqual({ success: true })
-    disposeData()
-    disposeExit()
-
-    const lateData = vi.fn()
-    const disposeLateData = api.onPtyData('pty-1', lateData)
-    ptyChannel?.onmessage({ event: 'data', id: 'pty-1', data: 'late' })
-    expect(lateData).not.toHaveBeenCalled()
-    disposeLateData()
-
-    expect(invokeMock.mock.calls).toEqual([
-      [
-        'pty_create',
-        {
-          options: { cwd: '/project', cols: 80, rows: 24 },
-          onEvent: ptyChannel
-        }
-      ],
-      ['pty_write', { id: 'pty-1', data: 'pwd\r' }],
-      ['pty_resize', { id: 'pty-1', cols: 90, rows: 30 }],
-      ['pty_dispose', { id: 'pty-1' }]
-    ])
+    await expect(api.openProjectTerminal()).resolves.toEqual({ success: true })
+    expect(invokeMock).toHaveBeenCalledWith('open_project_terminal')
   })
 
   it('replaces a pre-existing bridge with the Tauri adapter', async () => {

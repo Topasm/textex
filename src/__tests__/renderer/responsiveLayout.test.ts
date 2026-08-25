@@ -28,8 +28,8 @@ describe('responsive desktop layout contract', () => {
   it('compacts chrome at the Tauri minimum width and stacks constrained panes', () => {
     expect(tauriConfig.app.windows[0]?.minWidth).toBe(800)
     expect(responsiveStyles).toContain('@media (max-width: 840px)')
-    expect(responsiveStyles).toContain('.editor-main-content.has-terminal-pane')
-    expect(responsiveStyles).toContain('.editor-main-content:not(.has-terminal-pane)')
+    expect(responsiveStyles).toContain('.editor-main-content > .editor-pane')
+    expect(responsiveStyles).not.toContain('has-terminal-pane')
     expect(responsiveStyles).toContain('.settings-sidebar')
   })
 
@@ -70,7 +70,7 @@ describe('responsive desktop layout contract', () => {
       /\.sidebar-wrapper \.sidebar-resize-handle\s*\{\s*display: none;/
     )
     expect(responsiveStyles).toMatch(
-      /\.editor-main-content\.has-terminal-pane > \.split-divider\s*\{\s*display: none;/
+      /\.editor-main-content > \.split-divider\s*\{\s*display: none;/
     )
   })
 

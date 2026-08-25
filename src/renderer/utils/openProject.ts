@@ -105,7 +105,6 @@ export function clearProjectScopedRendererState(): void {
     lspStatus: 'stopped',
     lspError: null,
     documentSymbols: [],
-    isTerminalPaneOpen: false,
     externalChangeConflicts: []
   })
 }
