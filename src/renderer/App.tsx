@@ -20,12 +20,7 @@ import {
 } from 'lucide-react'
 import Toolbar from './components/Toolbar'
 import StatusBar from './components/StatusBar'
-import FileTree from './components/FileTree'
 import TabBar from './components/TabBar'
-import OutlinePanel from './components/OutlinePanel'
-import GitPanel from './components/GitPanel'
-import { TodoPanel } from './components/TodoPanel'
-import { TimelinePanel } from './components/TimelinePanel'
 import PreviewErrorBoundary from './components/PreviewErrorBoundary'
 import { LoadingFallback } from './components/LoadingFallback'
 import { useAutoCompile } from './hooks/useAutoCompile'
@@ -95,6 +90,15 @@ const EditorPane = lazy(async () => {
 const PreviewPane = lazy(() => import('./components/PreviewPane'))
 const ResearchPanel = lazy(() =>
   import('./components/ResearchPanel').then((module) => ({ default: module.ResearchPanel }))
+)
+const FileTree = lazy(() => import('./components/FileTree'))
+const OutlinePanel = lazy(() => import('./components/OutlinePanel'))
+const GitPanel = lazy(() => import('./components/GitPanel'))
+const TodoPanel = lazy(() =>
+  import('./components/TodoPanel').then((module) => ({ default: module.TodoPanel }))
+)
+const TimelinePanel = lazy(() =>
+  import('./components/TimelinePanel').then((module) => ({ default: module.TimelinePanel }))
 )
 const CommandPalette = lazy(() =>
   import('./components/CommandPalette').then((module) => ({ default: module.CommandPalette }))
@@ -532,11 +536,13 @@ function App() {
           </button>
         </div>
         <div className={`sidebar-content${slideAnim ? ` sidebar-${slideAnim}` : ''}`}>
-          {sidebarView === 'files' && <FileTree />}
-          {sidebarView === 'git' && <GitPanel />}
-          {sidebarView === 'outline' && <OutlinePanel />}
-          {sidebarView === 'todo' && <TodoPanel />}
-          {sidebarView === 'timeline' && <TimelinePanel />}
+          <Suspense fallback={<LoadingFallback variant="panel" label={t('loading.workspace')} />}>
+            {sidebarView === 'files' && <FileTree />}
+            {sidebarView === 'git' && <GitPanel />}
+            {sidebarView === 'outline' && <OutlinePanel />}
+            {sidebarView === 'todo' && <TodoPanel />}
+            {sidebarView === 'timeline' && <TimelinePanel />}
+          </Suspense>
         </div>
       </div>
       <div
