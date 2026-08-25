@@ -86,7 +86,7 @@ function matchesProjectFilter(
   if (filter === 'cited') return status.citationCount > 0
   if (filter === 'missing') return zoteroReady && status.zoteroItem === null
   if (filter === 'unused') return status.citationCount === 0
-  if (filter === 'zotero') return status.zoteroItem !== null
+  if (filter === 'zotero') return false
   return true
 }
 
@@ -420,6 +420,7 @@ export function ZoteroReferences({
       }).length ?? 0,
     [inventory, projectCitekeys, zoteroHealthByItemKey]
   )
+  const selectedZoteroOnlyCount = (inventory?.items.length ?? 0) - inventoryProjectCount
   const normalizedQuery = query.trim().toLocaleLowerCase('en-US')
   const projectSearchResults = useMemo(
     () =>
@@ -1000,7 +1001,7 @@ export function ZoteroReferences({
         <div className="reference-health-filters" aria-label="Reference filters">
           {(
             [
-              ['all', 'All', referenceHealth.bibliographyCount + referenceHealth.zoteroOnlyCount],
+              ['all', 'All', referenceHealth.bibliographyCount + selectedZoteroOnlyCount],
               ['cited', 'Cited', referenceHealth.citedCount],
               ['missing', 'Missing', issueCount],
               ['unused', 'Unused', referenceHealth.unusedCount],
@@ -1137,8 +1138,7 @@ export function ZoteroReferences({
             </span>
           ) : inventory ? (
             <span className="research-muted">
-              {inventoryProjectCount} in project · {inventory.items.length - inventoryProjectCount}{' '}
-              Zotero only
+              {inventoryProjectCount} in project · {selectedZoteroOnlyCount} Zotero only
               {inventory.items.length < inventory.totalResults
                 ? ` · ${inventory.items.length} shown`
                 : ''}
