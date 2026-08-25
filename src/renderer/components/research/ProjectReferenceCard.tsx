@@ -41,6 +41,7 @@ export function ProjectReferenceCard({
   return (
     <article
       className="reference-card reference-health-card"
+      tabIndex={0}
       draggable
       onDragStart={(event) => setReferenceDragData(event, payload)}
     >

@@ -174,6 +174,7 @@ export function OnlineReferences({ onAddToChat }: OnlineReferencesProps = {}) {
           <article
             className="reference-card"
             key={`${reference.source}:${reference.id}`}
+            tabIndex={0}
             draggable
             onDragStart={(event) => setReferenceDragData(event, { source: 'online', reference })}
           >

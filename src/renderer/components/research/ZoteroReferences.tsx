@@ -1218,7 +1218,11 @@ export function ZoteroReferences({
         {!normalizedQuery &&
           healthFilter === 'missing' &&
           referenceHealth.missingCitations.map((usage) => (
-            <article className="reference-card reference-health-card broken" key={usage.citekey}>
+            <article
+              className="reference-card reference-health-card broken"
+              key={usage.citekey}
+              tabIndex={0}
+            >
               <div>
                 <span className="reference-warning" aria-hidden="true">
                   ⚠
@@ -1263,6 +1267,7 @@ export function ZoteroReferences({
               <article
                 className="reference-card zotero-inventory-card"
                 key={item.itemKey}
+                tabIndex={0}
                 draggable={searchableItem !== null}
                 onDragStart={(event) => {
                   if (searchableItem) {
@@ -1351,6 +1356,7 @@ export function ZoteroReferences({
             <article
               className="reference-card"
               key={item.citekey}
+              tabIndex={0}
               draggable
               onDragStart={(event) =>
                 setReferenceDragData(event, buildZoteroReferencePayload(item, port))

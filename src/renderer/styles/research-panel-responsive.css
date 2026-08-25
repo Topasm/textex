@@ -30,12 +30,47 @@
   overflow-x: visible;
 }
 
-/* Keep long Zotero citekeys from stealing the title column. */
+/* Keep long citekeys from stealing the title column. */
+.reference-health-card > div:first-child > span,
 .zotero-inventory-card > div:first-child > span {
   max-width: 42%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/*
+ * Keep the default card surface focused on title, metadata, and status. Fine
+ * pointers can reveal secondary actions on hover; keyboard focus reveals them
+ * as soon as the card or one of its controls is reached. Touch users retain
+ * permanently visible actions because hover disclosure is not available.
+ */
+@media (hover: hover) and (pointer: fine) {
+  .reference-card .reference-card-actions {
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-2px);
+    transition:
+      max-height 140ms ease,
+      opacity 100ms ease,
+      transform 140ms ease;
+  }
+
+  .reference-card:hover .reference-card-actions,
+  .reference-card:focus .reference-card-actions,
+  .reference-card:focus-within .reference-card-actions {
+    max-height: 320px;
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+}
+
+.reference-card:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  outline-offset: -2px;
 }
 
 @container research-panel (max-width: 420px) {
@@ -109,10 +144,12 @@
     width: 100%;
   }
 
+  .reference-health-card > div:first-child,
   .zotero-inventory-card > div:first-child {
     grid-template-columns: 14px minmax(0, 1fr);
   }
 
+  .reference-health-card > div:first-child > span,
   .zotero-inventory-card > div:first-child > span {
     grid-column: 2;
     max-width: 100%;
@@ -159,5 +196,11 @@
 
   .reference-card-actions button {
     min-height: 30px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reference-card .reference-card-actions {
+    transition: none;
   }
 }
