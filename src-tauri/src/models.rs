@@ -31,42 +31,6 @@ pub struct PerformanceMemorySample {
     pub processes: Vec<ProcessMemoryMetric>,
 }
 
-#[derive(Clone, Debug, Default, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PtyCreateOptions {
-    pub cwd: String,
-    pub cols: Option<u16>,
-    pub rows: Option<u16>,
-    pub shell: Option<String>,
-    #[serde(default)]
-    pub env: HashMap<String, String>,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
-pub struct PtyCreateResult {
-    pub id: String,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
-#[serde(tag = "event", rename_all = "lowercase")]
-pub enum PtyEvent {
-    Data {
-        id: String,
-        data: String,
-    },
-    Exit {
-        id: String,
-        #[serde(rename = "exitCode")]
-        exit_code: u32,
-        signal: Option<i32>,
-    },
-    Overflow {
-        id: String,
-        #[serde(rename = "droppedBytes")]
-        dropped_bytes: u64,
-    },
-}
-
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum LspStatus {
