@@ -52,7 +52,6 @@ export default defineConfig({
         manualChunks: {
           'monaco-editor': ['@monaco-editor/react'],
           katex: ['katex'],
-          mathlive: ['mathlive'],
           'vendor-react': ['react', 'react-dom', 'zustand'],
           'vendor-i18n': ['i18next', 'react-i18next'],
           'vendor-ui': ['lucide-react']

@@ -96,12 +96,14 @@ describe('Toolbar', () => {
   })
 
   it('calls onSave when Quick Save button is clicked', () => {
+    useEditorStore.setState({ filePath: '/project/main.tex' })
     render(<Toolbar {...defaultProps} />)
     fireEvent.click(screen.getByTitle(/Quick Save/))
     expect(defaultProps.onSave).toHaveBeenCalledOnce()
   })
 
   it('calls onCompile when Compile button is clicked', () => {
+    useEditorStore.setState({ filePath: '/project/main.tex' })
     render(<Toolbar {...defaultProps} />)
     fireEvent.click(screen.getByTitle(/Compile LaTeX/))
     expect(defaultProps.onCompile).toHaveBeenCalledOnce()
@@ -195,6 +197,30 @@ describe('Toolbar', () => {
     useProjectStore.setState({ projectRoot: '/test' })
     render(<Toolbar {...defaultProps} />)
     expect(screen.getByTitle('Return to home screen')).toBeInTheDocument()
+  })
+
+  it('offers an accessible left-sidebar toggle for an open project', () => {
+    useProjectStore.setState({ projectRoot: '/test', isSidebarOpen: false })
+    render(<Toolbar {...defaultProps} />)
+
+    const toggle = screen.getByRole('button', { name: 'Toggle Sidebar' })
+    expect(toggle).toHaveAttribute('aria-controls', 'project-sidebar')
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+
+    fireEvent.click(toggle)
+
+    expect(useProjectStore.getState().isSidebarOpen).toBe(true)
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(toggle).toHaveClass('active')
+  })
+
+  it('disables document actions until their required document output exists', () => {
+    render(<Toolbar {...defaultProps} />)
+
+    expect(screen.getByRole('button', { name: /Quick Save/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Compile LaTeX/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Sync PDF to Code/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Sync Code to PDF/ })).toBeDisabled()
   })
 
   it('OmniSearch is always visible regardless of zoteroEnabled setting', () => {

@@ -26,13 +26,13 @@
 | **인용 관리** | BibTeX 자동 완성 + Zotero 연동 |
 | **논문 제출 점검** | 인용 위치, 중복 경고, 결정론적인 제출 전 검사 |
 | **연구 & AI** | Crossref/arXiv 검색 및 네이티브 HTTP, Claude Code, Codex CLI 도우미 |
-| **언어 & 프로젝트 도구** | 선택적 TexLab 언어 기능과 시스템 터미널에서 프로젝트 열기 |
+| **언어 & 프로젝트 도구** | 내장 LaTeX 개요·완성·진단과 시스템 터미널에서 프로젝트 열기 |
 | **Git 통합** | 내장 스테이징, 커밋, 브랜치 상태 및 확인 기반 Fetch/Pull/Push |
 | **내보내기** | 깔끔한 Overleaf 소스 ZIP 생성 또는 Pandoc을 통한 DOCX, ODT, HTML, EPUB 변환 |
 | **7개 언어** | EN, KO, ES, FR, DE, PT, ZH |
 
 > **선택적 연동:** AI API 제공자와 온라인 논문 검색에는 네트워크가 필요합니다.
-> Claude Code, Codex CLI 및 TexLab 기능은 해당 실행 파일이 `PATH`에 있어야 하며,
+> Claude Code 및 Codex CLI 기능은 해당 실행 파일이 `PATH`에 있어야 하며,
 > 핵심 편집기와 내장 Tectonic 컴파일러는 이들 없이도 로컬에서 동작합니다.
 
 ---

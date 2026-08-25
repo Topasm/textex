@@ -4,13 +4,13 @@ use crate::{
     error::AppResult,
     models::{
         OnlineReference, ReferenceAddResult, ResearchChatSession, ResearchChatSessionScope,
-        ResearchChatSessionSnapshot, ResearchConfig, ResearchProfile, ResearchResourceSnapshot,
+        ResearchChatSessionSnapshot, ResearchConfig, ResearchProfile,
     },
     services::{
         project_index::ProjectIndexState,
         references::ReferenceIndexState,
         research::{self, ResearchState},
-        research_chat_session, research_profile, research_snapshot,
+        research_chat_session, research_profile,
     },
     state::AppState,
 };
@@ -107,14 +107,4 @@ pub async fn research_chat_session_clear(
 ) -> AppResult<ResearchChatSessionSnapshot> {
     let _write_guard = research_state.lock().await;
     research_chat_session::clear(state.inner(), &scope).await
-}
-
-#[tauri::command]
-pub async fn research_resource_snapshot(
-    state: State<'_, AppState>,
-    research_state: State<'_, ResearchState>,
-    resource_id: String,
-) -> AppResult<ResearchResourceSnapshot> {
-    let _profile_guard = research_state.lock().await;
-    research_snapshot::snapshot(state.inner(), &resource_id).await
 }

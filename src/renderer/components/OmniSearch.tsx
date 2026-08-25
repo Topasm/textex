@@ -51,7 +51,6 @@ import type {
   ZoteroSearchResult
 } from '../../shared/types'
 import { searchProjectFiles } from '../services/projectIndex'
-import { getDesktopCapabilities } from '../platform/capabilities'
 import { addReferenceAtCursor } from './research/referenceActions'
 import './OmniSearch.css'
 
@@ -155,7 +154,6 @@ export function OmniSearch({
   onOpenSettings
 }: OmniSearchProps) {
   const { t } = useTranslation()
-  const capabilities = getDesktopCapabilities()
   const settings = useSettingsStore((s) => s.settings)
   const zoteroEnabled = isFeatureEnabled(settings, 'zotero')
   const zoteroPort = settings.zoteroPort
@@ -166,15 +164,7 @@ export function OmniSearch({
   const omniSearchFocusMode = useUiStore((s) => s.omniSearchFocusMode)
   const pdfMatchCount = usePdfStore((s) => s.pdfMatchCount)
   const pdfCurrentMatch = usePdfStore((s) => s.pdfCurrentMatch)
-  const availableHomeCommands = useMemo(
-    () =>
-      HOME_SLASH_COMMANDS.filter(
-        (command) =>
-          (command.command !== '/draft' || capabilities.ai) &&
-          (command.command !== '/template' || capabilities.templates)
-      ),
-    [capabilities.ai, capabilities.templates]
-  )
+  const availableHomeCommands = HOME_SLASH_COMMANDS
 
   const isHomeMode = !projectRoot
 
@@ -309,32 +299,23 @@ export function OmniSearch({
       }
     }
 
-    if (capabilities.templates) {
-      for (const tmpl of templates) {
-        if (
-          tmpl.name.toLowerCase().includes(lower) ||
-          tmpl.description.toLowerCase().includes(lower)
-        ) {
-          results.push({
-            kind: 'template',
-            label: tmpl.name,
-            detail: tmpl.description,
-            badgeKey: 'searchBar.template',
-            data: tmpl
-          })
-        }
+    for (const tmpl of templates) {
+      if (
+        tmpl.name.toLowerCase().includes(lower) ||
+        tmpl.description.toLowerCase().includes(lower)
+      ) {
+        results.push({
+          kind: 'template',
+          label: tmpl.name,
+          detail: tmpl.description,
+          badgeKey: 'searchBar.template',
+          data: tmpl
+        })
       }
     }
 
     return results
-  }, [
-    availableHomeCommands,
-    capabilities.templates,
-    deferredSearchTerm,
-    isHomeMode,
-    recentProjects,
-    t
-  ])
+  }, [availableHomeCommands, deferredSearchTerm, isHomeMode, recentProjects, t])
 
   // Update dropdown state when home results change
   useEffect(() => {

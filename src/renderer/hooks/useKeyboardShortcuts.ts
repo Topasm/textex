@@ -9,7 +9,6 @@ import { useEditorStore } from '../store/useEditorStore'
 import { useSettingsStore } from '../store/useSettingsStore'
 import { commandRegistry } from '../services/commandRegistry'
 import { closeEditorTab } from '../services/documentClose'
-import { getDesktopCapabilities } from '../platform/capabilities'
 
 interface KeyboardShortcutsOpts {
   runCommand: (command: AppCommandId) => void
@@ -24,14 +23,10 @@ export function useKeyboardShortcuts(opts: KeyboardShortcutsOpts): void {
   const { runCommand, openCommandPalette } = opts
 
   useEffect(() => {
-    const capabilities = getDesktopCapabilities()
     commandRegistry.clear()
 
     for (const command of APP_COMMAND_MANIFEST) {
       if (!('shortcut' in command)) continue
-      if ('requiredCapability' in command && !capabilities[command.requiredCapability]) {
-        continue
-      }
       commandRegistry.register(command.id, command.shortcut, () => runCommand(command.id))
     }
 

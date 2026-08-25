@@ -7,7 +7,6 @@ mod state;
 use services::ai::AiState;
 use services::filesystem::FileSaveState;
 use services::history::HistoryState;
-use services::lsp::LspState;
 use services::package_data::PackageDataState;
 use services::project_data::ProjectDataState;
 use services::project_index::ProjectIndexState;
@@ -184,7 +183,6 @@ pub fn run() {
         .manage(PackageDataState::default())
         .manage(HistoryState::default())
         .manage(RecoveryState::default())
-        .manage(LspState::default())
         .manage(ProjectIndexState::default())
         .manage(ProjectDataState::default())
         .manage(ReferenceIndexState::default())
@@ -224,7 +222,6 @@ pub fn run() {
             commands::filesystem::rename_path,
             commands::filesystem::delete_path,
             commands::filesystem::read_file_base64,
-            commands::filesystem::read_file_binary,
             commands::filesystem::read_compiled_pdf,
             commands::templates::create_template_project,
             commands::git::git_is_repo,
@@ -237,10 +234,7 @@ pub fn run() {
             commands::git::git_stage,
             commands::git::git_unstage,
             commands::git::git_commit,
-            commands::git::git_diff,
-            commands::git::git_log,
             commands::git::git_file_log,
-            commands::history::save_history_snapshot,
             commands::history::get_history_list,
             commands::history::load_history_snapshot,
             commands::recovery::save_recovery_snapshot,
@@ -250,22 +244,6 @@ pub fn run() {
             commands::recovery::clear_recovery_snapshot,
             commands::package_data::load_package_data,
             commands::project_index::get_project_index,
-            commands::project_data::project_init,
-            commands::project_data::project_exists,
-            commands::project_data::project_load,
-            commands::project_data::project_save,
-            commands::project_data::project_touch,
-            commands::project_data::project_compile_load,
-            commands::project_data::project_compile_save,
-            commands::project_data::project_compile_clear,
-            commands::project_data::project_compile_log_save,
-            commands::project_data::project_compile_log_load,
-            commands::project_data::project_snippets_load,
-            commands::project_data::project_snippets_add,
-            commands::project_data::project_snippets_remove,
-            commands::project_data::project_bookmarks_load,
-            commands::project_data::project_bookmarks_add,
-            commands::project_data::project_bookmarks_remove,
             commands::project_data::load_citation_groups,
             commands::project_data::save_citation_groups,
             commands::references::parse_bib_file,
@@ -283,10 +261,7 @@ pub fn run() {
             commands::templates::import_template_zip,
             commands::zotero::zotero_probe,
             commands::zotero::zotero_search,
-            commands::zotero::zotero_cite_cayw,
-            commands::zotero::zotero_export_bibtex,
             commands::zotero::zotero_sync_collection,
-            commands::zotero::zotero_collections,
             commands::zotero::zotero_library_tree,
             commands::zotero::zotero_collection_items,
             commands::zotero::zotero_add_to_project,
@@ -301,15 +276,9 @@ pub fn run() {
             commands::research::research_chat_session_load,
             commands::research::research_chat_session_save,
             commands::research::research_chat_session_clear,
-            commands::research::research_resource_snapshot,
             commands::research_source::research_source_index,
-            commands::research_source::research_source_search,
             commands::research_source::research_source_clone,
             commands::research_source::research_source_fetch,
-            commands::lsp::lsp_start,
-            commands::lsp::lsp_stop,
-            commands::lsp::lsp_send,
-            commands::lsp::lsp_status,
             commands::watcher::watch_directory,
             commands::watcher::unwatch_directory,
             commands::watcher::deactivate_project,
@@ -321,14 +290,12 @@ pub fn run() {
             commands::settings::remove_recent_project,
             commands::settings::update_recent_project,
             commands::compiler::compile_latex,
-            commands::compiler::cancel_compile,
             commands::compiler::tectonic_cache_status,
             commands::compiler::tectonic_cache_reset,
             commands::synctex::synctex_forward,
             commands::synctex::synctex_inverse,
             commands::synctex::synctex_build_line_map,
             commands::export::export_document,
-            commands::export::get_export_formats,
             commands::export::export_overleaf_zip,
             commands::submission_check::run_submission_check,
             commands::runtime::open_external,

@@ -8,7 +8,6 @@ describe('EditorTab', () => {
     useSettingsStore.setState((state) => ({
       settings: {
         ...state.settings,
-        sidebarPosition: 'left',
         autoHideSidebar: false
       }
     }))
@@ -20,6 +19,5 @@ describe('EditorTab', () => {
     expect(screen.queryByText('Minimap')).toBeInTheDocument()
 
     expect(screen.queryByText('Sidebar Position')).not.toBeInTheDocument()
-    expect(useSettingsStore.getState().settings.sidebarPosition).toBe('left')
   })
 })

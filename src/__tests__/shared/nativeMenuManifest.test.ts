@@ -2,7 +2,6 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { APP_COMMAND_MANIFEST } from '../../shared/appCommandManifest'
-import { getDesktopCapabilities } from '../../renderer/platform/capabilities'
 
 const menuSource = readFileSync(resolve(process.cwd(), 'src-tauri/src/services/menu.rs'), 'utf8')
 const tauriLibSource = readFileSync(resolve(process.cwd(), 'src-tauri/src/lib.rs'), 'utf8')
@@ -48,20 +47,6 @@ describe('native application menu', () => {
     expect(tauriLibSource).toContain('services::menu::APP_COMMAND_EVENT, "app.quit"')
     expect(tauriLibSource).toContain('window.show()')
     expect(tauriLibSource).toContain('window.set_focus()')
-  })
-
-  it('keeps native capability-gated menu groups aligned with the renderer', () => {
-    const capabilities = getDesktopCapabilities()
-    const nativeNames = {
-      ai: 'ai',
-      documentExport: 'document_export',
-      templates: 'templates'
-    } as const
-
-    for (const [rendererName, nativeName] of Object.entries(nativeNames)) {
-      const value = menuSource.match(new RegExp(`${nativeName}: (true|false)`))?.[1] === 'true'
-      expect(value, nativeName).toBe(capabilities[rendererName as keyof typeof nativeNames])
-    }
   })
 
   it('allows the renderer to subscribe to native app-command events', () => {

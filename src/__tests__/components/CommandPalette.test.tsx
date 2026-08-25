@@ -2,22 +2,14 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CommandPalette, formatCommandShortcut } from '../../renderer/components/CommandPalette'
 import i18n from '../../renderer/i18n'
-import { getDesktopCapabilities } from '../../renderer/platform/capabilities'
 
 describe('CommandPalette', () => {
   beforeEach(async () => {
     await i18n.changeLanguage('en')
   })
 
-  it('exposes an accessible combobox and filters unsupported capability commands', () => {
-    render(
-      <CommandPalette
-        isOpen
-        onClose={vi.fn()}
-        onRunCommand={vi.fn()}
-        capabilities={{ ...getDesktopCapabilities(), ai: false }}
-      />
-    )
+  it('exposes an accessible combobox with all Tauri commands', () => {
+    render(<CommandPalette isOpen onClose={vi.fn()} onRunCommand={vi.fn()} />)
 
     const dialog = screen.getByRole('dialog', { name: 'Command Palette' })
     const input = screen.getByRole('combobox', { name: 'Search commands' })
@@ -28,7 +20,7 @@ describe('CommandPalette', () => {
     expect(input).toHaveAttribute('aria-controls', screen.getByRole('listbox').id)
     expect(input).toHaveAttribute('aria-activedescendant', options[0].id)
     expect(options[0]).toHaveAttribute('aria-selected', 'true')
-    expect(screen.queryByRole('option', { name: /Create AI Draft/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('option', { name: /Create AI Draft/ })).toBeInTheDocument()
   })
 
   it('searches metadata and runs the selected manifest command through its callback', () => {

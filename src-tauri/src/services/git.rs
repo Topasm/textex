@@ -295,12 +295,6 @@ pub async fn commit(state: &AppState, work_dir: &str, message: &str) -> AppResul
     Ok(SuccessResult::ok())
 }
 
-pub async fn diff(state: &AppState, work_dir: &str) -> AppResult<String> {
-    let root = trusted_repository_root(state, work_dir).await?;
-    let output = run_git_checked(&root, ["diff"], "read diff").await?;
-    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
-}
-
 pub async fn log(state: &AppState, work_dir: &str) -> AppResult<Vec<GitLogEntry>> {
     let root = trusted_repository_root(state, work_dir).await?;
     read_log(&root, None).await

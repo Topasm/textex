@@ -62,7 +62,9 @@ describe('UpdateNotification', () => {
     setUpdateStatus('available')
     render(<UpdateNotification />)
 
-    expect(screen.getByRole('status', { name: /application update/i })).toHaveTextContent('1.0.10')
+    const notification = screen.getByRole('status', { name: /application update/i })
+    expect(notification).toHaveTextContent('1.0.10')
+    expect(notification).toHaveClass('app-update-notification')
     await user.click(screen.getByText(/release notes/i))
     expect(screen.getByText(/Faster editing/)).toBeInTheDocument()
 

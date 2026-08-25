@@ -13,7 +13,7 @@ use zip::{write::SimpleFileOptions, CompressionMethod, ZipWriter};
 
 use crate::{
     error::{AppError, AppResult},
-    models::{ExportFormat, ExportResult},
+    models::ExportResult,
     services::filesystem,
     state::AppState,
 };
@@ -23,27 +23,6 @@ const MAX_STDERR_BYTES: u64 = 1024 * 1024;
 const MAX_OUTPUT_BYTES: u64 = 512 * 1024 * 1024;
 const MAX_OVERLEAF_FILES: usize = 20_000;
 const MAX_OVERLEAF_SOURCE_BYTES: u64 = 512 * 1024 * 1024;
-
-pub fn formats() -> Vec<ExportFormat> {
-    vec![
-        ExportFormat {
-            name: "HTML",
-            ext: "html",
-        },
-        ExportFormat {
-            name: "DOCX",
-            ext: "docx",
-        },
-        ExportFormat {
-            name: "ODT",
-            ext: "odt",
-        },
-        ExportFormat {
-            name: "EPUB",
-            ext: "epub",
-        },
-    ]
-}
 
 pub async fn export_document(
     app: &AppHandle,
@@ -467,18 +446,14 @@ fn export_error(message: impl Into<String>) -> AppError {
 mod tests {
     use std::{fs::File, io::Read};
 
-    use super::{create_overleaf_zip_at, formats, platform_directory, validate_format};
+    use super::{create_overleaf_zip_at, platform_directory, validate_format};
     use zip::ZipArchive;
 
     #[test]
     fn exposes_only_supported_pandoc_formats() {
-        assert_eq!(
-            formats()
-                .into_iter()
-                .map(|format| format.ext)
-                .collect::<Vec<_>>(),
-            ["html", "docx", "odt", "epub"]
-        );
+        for format in ["html", "docx", "odt", "epub"] {
+            assert!(validate_format(format).is_ok());
+        }
         assert!(validate_format("pdf").is_err());
         assert!(!platform_directory().is_empty());
     }

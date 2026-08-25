@@ -66,13 +66,7 @@ describe('useEditorCommands formatting', () => {
     const deferred = deferredFormat()
     formatLatexMock.mockReturnValue(deferred.promise)
     const { editor, model, monaco } = createEditor()
-    const { result } = renderHook(() =>
-      useEditorCommands({
-        setShowHistory: vi.fn(),
-        showHistory: false,
-        setHistoryMode: vi.fn()
-      })
-    )
+    const { result } = renderHook(() => useEditorCommands())
     act(() => result.current(editor as never, monaco as never))
     const runFormat = formatCommand(editor)
 
@@ -89,13 +83,7 @@ describe('useEditorCommands formatting', () => {
     const deferred = deferredFormat()
     formatLatexMock.mockReturnValue(deferred.promise)
     const { editor, monaco } = createEditor()
-    const { result } = renderHook(() =>
-      useEditorCommands({
-        setShowHistory: vi.fn(),
-        showHistory: false,
-        setHistoryMode: vi.fn()
-      })
-    )
+    const { result } = renderHook(() => useEditorCommands())
     act(() => result.current(editor as never, monaco as never))
     const runFormat = formatCommand(editor)
 
@@ -113,13 +101,7 @@ describe('useEditorCommands formatting', () => {
     const second = deferredFormat()
     formatLatexMock.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
     const { editor, model, monaco } = createEditor()
-    const { result } = renderHook(() =>
-      useEditorCommands({
-        setShowHistory: vi.fn(),
-        showHistory: false,
-        setHistoryMode: vi.fn()
-      })
-    )
+    const { result } = renderHook(() => useEditorCommands())
     act(() => result.current(editor as never, monaco as never))
     const runFormat = formatCommand(editor)
 

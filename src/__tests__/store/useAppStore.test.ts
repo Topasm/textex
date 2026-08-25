@@ -39,7 +39,6 @@ const initialSettings = {
     formatOnSave: true,
     autoCompile: true,
     spellCheckEnabled: false,
-    lspEnabled: true,
     zoteroEnabled: false,
     zoteroPort: 23119,
     bibGroupMode: 'flat'

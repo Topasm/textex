@@ -4,7 +4,6 @@ import { Compass, FolderOpen, FileText, FilePlus } from 'lucide-react'
 import type { RecentProject } from '../../shared/types'
 import { logError } from '../utils/errorMessage'
 import { RecentProjectList } from './home/RecentProjectList'
-import { getDesktopCapabilities } from '../platform/capabilities'
 
 interface HomeScreenProps {
   onOpenFolder: () => void
@@ -20,7 +19,6 @@ function HomeScreen({
   onNewFromTemplate
 }: HomeScreenProps) {
   const { t } = useTranslation()
-  const capabilities = getDesktopCapabilities()
   const [recentProjects, setRecentProjects] = useState<RecentProject[]>([])
 
   useEffect(() => {
@@ -44,26 +42,24 @@ function HomeScreen({
           <FolderOpen size={18} />
           {t('homeScreen.openFolder')}
         </button>
-        {capabilities.templates && (
-          <>
-            <button
-              className="home-action-btn home-action-guided"
-              onClick={onOpenGuidedDemo}
-              data-testid="guided-demo-action"
-            >
-              <Compass size={18} />
-              {t('homeScreen.guidedDemo')}
-            </button>
-            <button className="home-action-btn" onClick={onNewBlankProject}>
-              <FilePlus size={18} />
-              {t('homeScreen.newBlankProject')}
-            </button>
-            <button className="home-action-btn" onClick={onNewFromTemplate}>
-              <FileText size={18} />
-              {t('homeScreen.newFromTemplate')}
-            </button>
-          </>
-        )}
+        <>
+          <button
+            className="home-action-btn home-action-guided"
+            onClick={onOpenGuidedDemo}
+            data-testid="guided-demo-action"
+          >
+            <Compass size={18} />
+            {t('homeScreen.guidedDemo')}
+          </button>
+          <button className="home-action-btn" onClick={onNewBlankProject}>
+            <FilePlus size={18} />
+            {t('homeScreen.newBlankProject')}
+          </button>
+          <button className="home-action-btn" onClick={onNewFromTemplate}>
+            <FileText size={18} />
+            {t('homeScreen.newFromTemplate')}
+          </button>
+        </>
       </div>
 
       <RecentProjectList recentProjects={recentProjects} setRecentProjects={setRecentProjects} />

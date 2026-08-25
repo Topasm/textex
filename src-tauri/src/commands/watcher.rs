@@ -3,7 +3,6 @@ use tauri::{ipc::Channel, State};
 use crate::{
     error::AppResult,
     models::{DirectoryChangeEvent, SuccessResult},
-    services::lsp::LspState,
     services::project_index::ProjectIndexState,
     services::project_session,
     services::watcher::{self, DirectoryWatcherState},
@@ -44,13 +43,11 @@ pub async fn deactivate_project(
     project_state: State<'_, AppState>,
     watcher_state: State<'_, DirectoryWatcherState>,
     index_state: State<'_, ProjectIndexState>,
-    lsp_state: State<'_, LspState>,
 ) -> AppResult<SuccessResult> {
     project_session::deactivate(
         project_state.inner(),
         watcher_state.inner(),
         index_state.inner(),
-        lsp_state.inner(),
     )
     .await?;
     Ok(SuccessResult::ok())

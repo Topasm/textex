@@ -21,10 +21,10 @@ import { useIpcListeners } from './hooks/useIpcListeners'
 import { useExternalFileReload } from './hooks/useExternalFileReload'
 import { useGitAutoRefresh } from './hooks/useGitAutoRefresh'
 import { useBibAutoLoad } from './hooks/useBibAutoLoad'
-import { useLspLifecycle } from './hooks/useLspLifecycle'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { useDragResize } from './hooks/useDragResize'
-import { executeAppCommand, toggleLogPanel } from './services/appCommands'
+import { useAnimatedPresence } from './hooks/useAnimatedPresence'
+import { executeAppCommand, toggleLogPanel, toggleProjectSidebar } from './services/appCommands'
 import { useEditorStore } from './store/useEditorStore'
 import { useCompileStore } from './store/useCompileStore'
 import { useProjectStore } from './store/useProjectStore'
@@ -51,7 +51,6 @@ import {
   type AppOverlaySnapshot
 } from './services/appOverlayPolicy'
 import { documentRegistry } from './models/documentRegistry'
-import { getDesktopCapabilities } from './platform/capabilities'
 import {
   beginCompileTicket,
   cancelPendingAutoCompile,
@@ -63,6 +62,7 @@ import {
 import { ICON_SIZE } from './components/ui/IconSystem'
 import { installCrashRecoveryAutosnapshot } from './services/crashRecovery'
 import { prepareDocumentsForManualCompile } from './services/compilePersistenceCoordinator'
+import { SIDEBAR_WIDTH_MAX, SIDEBAR_WIDTH_MIN, SPLIT_RATIO_MAX, SPLIT_RATIO_MIN } from './constants'
 
 // Lazy-load heavy modals and panels that are rarely shown
 const SettingsModal = lazy(() =>
@@ -109,7 +109,6 @@ const BibliographyRegistrationDialog = lazy(() =>
 
 function App() {
   const { t } = useTranslation()
-  const capabilities = getDesktopCapabilities()
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
   const [isFeatureModalOpen, setIsFeatureModalOpen] = useState(false)
@@ -135,7 +134,6 @@ function App() {
   const projectRoot = useProjectStore((s) => s.projectRoot)
   const isGitRepo = useProjectStore((s) => s.isGitRepo)
   const settings = useSettingsStore((s) => s.settings)
-  const lspEnabled = isFeatureEnabled(settings, 'lsp')
   const gitEnabled = isFeatureEnabled(settings, 'git')
   const autoHideSidebar = useSettingsStore((s) => s.settings.autoHideSidebar)
   const showStatusBar = useSettingsStore((s) => s.settings.showStatusBar)
@@ -148,6 +146,21 @@ function App() {
 
   const [isDraftModalOpen, setIsDraftModalOpen] = useState(false)
   const [draftPrefill, setDraftPrefill] = useState<string | undefined>(undefined)
+  const sidebarPresence = useAnimatedPresence(isSidebarOpen || Boolean(autoHideSidebar))
+  const researchPresence = useAnimatedPresence(isResearchPanelOpen)
+
+  useEffect(() => {
+    if (!projectRoot || !isSidebarOpen || autoHideSidebar) return
+
+    const closeNarrowDrawer = (event: KeyboardEvent): void => {
+      if (event.key !== 'Escape' || !window.matchMedia('(max-width: 720px)').matches) return
+      event.preventDefault()
+      toggleProjectSidebar()
+    }
+
+    window.addEventListener('keydown', closeNarrowDrawer)
+    return () => window.removeEventListener('keydown', closeNarrowDrawer)
+  }, [autoHideSidebar, isSidebarOpen, projectRoot])
 
   const overlaySnapshot = useMemo<AppOverlaySnapshot>(
     () => ({
@@ -171,14 +184,13 @@ function App() {
 
   const handleAiDraft = useCallback(
     (prefill?: string) => {
-      if (!capabilities.ai) return
       if (!canOpenExclusiveAppOverlay('aiDraft', overlaySnapshot)) return
       if (hasRenderedFeatureModal(document)) return
       setIsCommandPaletteOpen(false)
       setDraftPrefill(typeof prefill === 'string' ? prefill : undefined)
       setIsDraftModalOpen(true)
     },
-    [capabilities.ai, overlaySnapshot]
+    [overlaySnapshot]
   )
 
   const handleDraftInsert = useCallback((latex: string) => {
@@ -260,7 +272,6 @@ function App() {
 
   const handleExport = useCallback(
     async (format: string): Promise<void> => {
-      if (!capabilities.documentExport) return
       const fp = useEditorStore.getState().filePath
       if (!fp) return
       const formatLabel = format.toLocaleUpperCase()
@@ -272,19 +283,17 @@ function App() {
         retry: t('notifications.retry')
       })
     },
-    [capabilities.documentExport, t]
+    [t]
   )
 
   const handleOpenTemplateGallery = useCallback(() => {
-    if (!capabilities.templates) return
     if (!canOpenExclusiveAppOverlay('templateGallery', overlaySnapshot)) return
     if (hasRenderedFeatureModal(document)) return
     setIsCommandPaletteOpen(false)
     useUiStore.getState().setTemplateGalleryOpen(true)
-  }, [capabilities.templates, overlaySnapshot])
+  }, [overlaySnapshot])
 
   const handleNewBlankProject = useCallback(async () => {
-    if (!capabilities.templates) return
     const blankContent = `\\documentclass[12pt,a4paper]{article}
 
 \\usepackage[utf8]{inputenc}
@@ -314,10 +323,9 @@ function App() {
     } catch {
       // user cancelled
     }
-  }, [capabilities.templates])
+  }, [])
 
   const handleOpenGuidedDemo = useCallback(async () => {
-    if (!capabilities.templates) return
     try {
       const result = await window.api.createTemplateProject(
         guidedDemoTemplate.name,
@@ -330,7 +338,7 @@ function App() {
     } catch (error) {
       logError('App:createGuidedDemo', error)
     }
-  }, [capabilities.templates])
+  }, [])
 
   const handleCheckForUpdates = useCallback(async (): Promise<void> => {
     await checkForAppUpdate({ interactive: true })
@@ -417,7 +425,6 @@ function App() {
   useIpcListeners(projectRoot, handleExternalFileChange)
   useGitAutoRefresh(projectRoot, isGitRepo, gitEnabled)
   useBibAutoLoad(projectRoot)
-  useLspLifecycle(projectRoot, lspEnabled, filePath)
   useKeyboardShortcuts({ runCommand: runAppCommand, openCommandPalette })
 
   useEffect(() => {
@@ -478,12 +485,13 @@ function App() {
     sidebarRef,
     handleDividerMouseDown,
     handleDividerDoubleClick,
+    handleDividerKeyDown,
     handleSidebarDividerMouseDown,
     handleSidebarDividerDoubleClick,
+    handleSidebarDividerKeyDown,
     handleSidebarWheel,
     slideAnim
   } = useDragResize({
-    sidebarPosition: 'left',
     sidebarTabs: sidebarTabs.map((tab) => tab.key)
   })
 
@@ -491,9 +499,15 @@ function App() {
   const sidebarHandleStyle = autoHideSidebar
     ? { left: `${sidebarWidth}px`, right: 'auto' }
     : undefined
-  const sidebarWrapperClass = `sidebar-wrapper sidebar-left${autoHideSidebar ? ' sidebar-auto-hide' : ''}`
+  const sidebarWrapperClass = `sidebar-wrapper sidebar-left sidebar-shell-${sidebarPresence.phase}${autoHideSidebar ? ' sidebar-auto-hide' : ''}`
   const sidebarElement = (
-    <div className={sidebarWrapperClass}>
+    <div
+      className={sidebarWrapperClass}
+      id="project-sidebar"
+      style={{ '--sidebar-shell-width': `${sidebarWidth + 4}px` } as CSSProperties}
+      aria-hidden={sidebarPresence.phase === 'exiting' ? 'true' : undefined}
+      inert={sidebarPresence.phase === 'exiting' ? true : undefined}
+    >
       <div
         className="sidebar sidebar-left"
         ref={sidebarRef}
@@ -503,6 +517,7 @@ function App() {
         <div className="sidebar-tabs">
           {sidebarTabs.map((tab) => (
             <button
+              type="button"
               key={tab.key}
               className={`sidebar-tab${sidebarView === tab.key ? ' active' : ''}`}
               onClick={() => useProjectStore.getState().setSidebarView(tab.key)}
@@ -515,6 +530,7 @@ function App() {
             </button>
           ))}
           <button
+            type="button"
             className="sidebar-pin-btn"
             title={autoHideSidebar ? t('sidebar.pinSidebar') : t('sidebar.unpinSidebar')}
             aria-label={autoHideSidebar ? t('sidebar.pinSidebar') : t('sidebar.unpinSidebar')}
@@ -551,6 +567,14 @@ function App() {
         style={sidebarHandleStyle}
         onMouseDown={handleSidebarDividerMouseDown}
         onDoubleClick={handleSidebarDividerDoubleClick}
+        onKeyDown={handleSidebarDividerKeyDown}
+        role="separator"
+        tabIndex={0}
+        aria-label={t('sidebar.resize')}
+        aria-orientation="vertical"
+        aria-valuemin={SIDEBAR_WIDTH_MIN}
+        aria-valuemax={SIDEBAR_WIDTH_MAX}
+        aria-valuenow={Math.round(sidebarWidth)}
       />
     </div>
   )
@@ -575,9 +599,13 @@ function App() {
         onOpenCommandPalette={openCommandPalette}
         onOpenSettings={handleOpenSettings}
       />
-      {isResearchPanelOpen && (
+      {projectRoot && researchPresence.mounted && (
         <Suspense fallback={<LoadingFallback variant="panel" label={t('loading.workspace')} />}>
-          <ResearchPanel onAiDraft={() => handleAiDraft()} onCompile={handleCompile} />
+          <ResearchPanel
+            onAiDraft={() => handleAiDraft()}
+            onCompile={handleCompile}
+            presencePhase={researchPresence.phase}
+          />
         </Suspense>
       )}
       {isSettingsOpen && (
@@ -593,7 +621,7 @@ function App() {
           <SettingsModal onClose={() => setIsSettingsOpen(false)} />
         </Suspense>
       )}
-      {capabilities.ai && isDraftModalOpen && (
+      {isDraftModalOpen && (
         <Suspense
           fallback={
             <LoadingFallback variant="modal" label={t('loading.aiDraft')} overlayOwner="aiDraft" />
@@ -631,7 +659,6 @@ function App() {
             isOpen
             onClose={() => setIsCommandPaletteOpen(false)}
             onRunCommand={runAppCommand}
-            capabilities={capabilities}
             context={{
               document: Boolean(filePath),
               pdf: Boolean(pdfPath),
@@ -653,7 +680,16 @@ function App() {
         </Suspense>
       ) : (
         <div className="workspace">
-          {(isSidebarOpen || autoHideSidebar) && sidebarElement}
+          {sidebarPresence.mounted && sidebarElement}
+          {sidebarPresence.mounted && !autoHideSidebar && (
+            <button
+              type="button"
+              className={`sidebar-drawer-backdrop sidebar-drawer-backdrop-${sidebarPresence.phase}`}
+              onClick={toggleProjectSidebar}
+              tabIndex={-1}
+              aria-hidden="true"
+            />
+          )}
           <div className="editor-area">
             <div className="editor-main-content" ref={mainContentRef}>
               <div
@@ -671,6 +707,14 @@ function App() {
                 className="split-divider"
                 onMouseDown={handleDividerMouseDown}
                 onDoubleClick={handleDividerDoubleClick}
+                onKeyDown={handleDividerKeyDown}
+                role="separator"
+                tabIndex={0}
+                aria-label={t('toolbar.resizeEditorPreview')}
+                aria-orientation="vertical"
+                aria-valuemin={Math.round(SPLIT_RATIO_MIN * 100)}
+                aria-valuemax={Math.round(SPLIT_RATIO_MAX * 100)}
+                aria-valuenow={Math.round(splitRatio * 100)}
               />
               <div
                 className="preview-pane"
@@ -699,7 +743,7 @@ function App() {
         <CrashRecoveryDialog enabled={sessionRestored} />
       </Suspense>
       {showStatusBar && <StatusBar />}
-      {capabilities.templates && isTemplateGalleryOpen && (
+      {isTemplateGalleryOpen && (
         <Suspense
           fallback={
             <LoadingFallback

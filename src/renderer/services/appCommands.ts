@@ -1,8 +1,8 @@
 import type { AppCommandId } from '../../shared/types'
 import { usePdfStore } from '../store/usePdfStore'
 import { useProjectStore } from '../store/useProjectStore'
+import { useSettingsStore } from '../store/useSettingsStore'
 import { useUiStore } from '../store/useUiStore'
-import { getDesktopCapabilities } from '../platform/capabilities'
 import {
   clearResearchProfileDraft,
   confirmResearchProfileDraftDiscard
@@ -35,11 +35,23 @@ function getExportFormat(command: Extract<AppCommandId, `file.export.${string}`>
   return command.replace('file.export.', '') as 'html' | 'docx' | 'odt' | 'epub'
 }
 
+export function toggleProjectSidebar(): void {
+  const projectStore = useProjectStore.getState()
+  const settingsStore = useSettingsStore.getState()
+
+  if (settingsStore.settings.autoHideSidebar) {
+    settingsStore.updateSetting('autoHideSidebar', false)
+    if (!projectStore.isSidebarOpen) projectStore.toggleSidebar()
+    return
+  }
+
+  projectStore.toggleSidebar()
+}
+
 export async function executeAppCommand(
   command: AppCommandId,
   context: AppCommandContext
 ): Promise<void> {
-  const capabilities = getDesktopCapabilities()
   switch (command) {
     case 'file.open':
       await context.openFile()
@@ -57,7 +69,7 @@ export async function executeAppCommand(
       await context.saveAs()
       return
     case 'file.newTemplate':
-      if (capabilities.templates) context.openTemplateGallery()
+      context.openTemplateGallery()
       return
     case 'compile.run':
       await context.compile()
@@ -69,13 +81,13 @@ export async function executeAppCommand(
       return
     }
     case 'ai.draft':
-      if (capabilities.ai) context.runAiDraft()
+      context.runAiDraft()
       return
     case 'edit.find':
       useUiStore.getState().requestOmniSearchFocus('tex')
       return
     case 'view.toggleSidebar':
-      useProjectStore.getState().toggleSidebar()
+      toggleProjectSidebar()
       return
     case 'view.toggleResearchPanel':
       useProjectStore.getState().toggleResearchPanel()
@@ -119,9 +131,7 @@ export async function executeAppCommand(
       return
     default:
       if (isExportCommand(command)) {
-        if (capabilities.documentExport) {
-          await context.exportDocument(getExportFormat(command))
-        }
+        await context.exportDocument(getExportFormat(command))
       }
   }
 }

@@ -6,7 +6,6 @@ import { useAiContextStore } from '../store/useAiContextStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { useSettingsStore, resolveTheme } from '../store/useSettingsStore'
 import { useNotificationStore } from '../store/useNotificationStore'
-import { stopLspClient } from '../lsp/lspClient'
 import { useClickNavigation } from '../hooks/editor/useClickNavigation'
 import { useSpelling } from '../hooks/editor/useSpelling'
 import { useDocumentSymbols } from '../hooks/editor/useDocumentSymbols'
@@ -19,9 +18,7 @@ import { useMathPreview } from '../hooks/editor/useMathPreview'
 import { useSmartImageDrop } from '../hooks/editor/useSmartImageDrop'
 import { useSectionHighlight } from '../hooks/editor/useSectionHighlight'
 import { useEditorCommands } from '../hooks/editor/useEditorCommands'
-import { useHistoryPanel } from '../hooks/editor/useHistoryPanel'
 import { useTableEditor } from '../hooks/editor/useTableEditor'
-import { DiffEditor } from '@monaco-editor/react'
 import type { editor as monacoEditor, Selection } from 'monaco-editor'
 import {
   AI_ACTIONS,
@@ -56,7 +53,6 @@ import {
 const TableEditorModal = lazy(() =>
   import('./TableEditorModal').then((m) => ({ default: m.TableEditorModal }))
 )
-const HistoryPanel = lazy(() => import('./HistoryPanel').then((m) => ({ default: m.HistoryPanel })))
 const MathPreviewWidget = lazy(() =>
   import('./MathPreviewWidget').then((m) => ({ default: m.MathPreviewWidget }))
 )
@@ -134,21 +130,8 @@ function EditorPane() {
   const NARROW_WIDTH_PX = 600
   const effectiveWordWrap = settings.wordWrap || isNarrow ? 'on' : 'off'
 
-  // History panel hook
-  const {
-    showHistory,
-    setShowHistory,
-    historyItems,
-    snapshotContent,
-    historyMode,
-    setHistoryMode,
-    handleSelectHistoryItem,
-    closeHistory
-  } = useHistoryPanel()
   const materializedUiContent =
-    (historyMode || selectionAiToolbarSelection) && filePath
-      ? (documentRegistry.snapshot(filePath)?.text ?? '')
-      : ''
+    selectionAiToolbarSelection && filePath ? (documentRegistry.snapshot(filePath)?.text ?? '') : ''
   const aiContextStatus = selectionAiToolbarSelection
     ? getAiContextStatus(filePath, materializedUiContent)
     : 'missing'
@@ -159,7 +142,7 @@ function EditorPane() {
   const { tableModal, setTableModal, registerTableEditor, disposeTableEditor } = useTableEditor()
 
   // Editor commands hook
-  const registerEditorCommands = useEditorCommands({ setShowHistory, showHistory, setHistoryMode })
+  const registerEditorCommands = useEditorCommands()
 
   const hideSelectionAiToolbar = useCallback(() => {
     pendingMouseSelectionRef.current = null
@@ -427,7 +410,6 @@ function EditorPane() {
       documentChangeDisposableRef.current?.dispose()
       for (const d of completionDisposables.current) d.dispose()
       disposeTableEditor()
-      stopLspClient()
       setActiveEditorAdapter(null)
       editorAdapterRef.current?.dispose()
       editorAdapterRef.current = null
@@ -561,63 +543,46 @@ function EditorPane() {
         }}
       >
         <div ref={editorContainerRef} style={{ flex: 1, position: 'relative', minWidth: 0 }}>
-          {historyMode ? (
-            <DiffEditor
-              height="100%"
-              loading={<LoadingFallback variant="pane" label={t('loading.documentHistory')} />}
-              language="latex"
-              theme={getMonacoTheme(resolveTheme(theme))}
-              original={snapshotContent}
-              modified={materializedUiContent}
-              options={{
-                fontSize,
-                readOnly: true,
-                originalEditable: false,
-                wordWrap: effectiveWordWrap
-              }}
-            />
-          ) : (
-            <Editor
-              height="100%"
-              loading={<LoadingFallback variant="pane" label={t('loading.preparingEditor')} />}
-              defaultLanguage="latex"
-              theme={getMonacoTheme(resolveTheme(theme))}
-              path={filePath ?? undefined}
-              defaultValue={initialContent}
-              keepCurrentModel
-              beforeMount={handleEditorWillMount}
-              onMount={handleEditorDidMount}
-              options={{
-                fontSize,
-                lineNumbers: settings.lineNumbers !== false ? 'on' : 'off',
-                minimap: { enabled: settings.minimapEnabled ?? false },
-                tabSize: settings.tabSize ?? 4,
-                scrollBeyondLastLine: false,
-                automaticLayout: true,
-                quickSuggestions: true,
-                suggestOnTriggerCharacters: true,
-                padding: { top: 8 },
-                wordWrap: effectiveWordWrap,
-                dropIntoEditor: { enabled: false },
-                bracketPairColorization: {
-                  enabled: settings.bracketPairColorization !== false
-                },
-                guides: {
-                  bracketPairs: settings.bracketPairColorization !== false,
-                  indentation: true
-                },
-                stickyScroll: {
-                  enabled: settings.stickyScrollEnabled !== false
-                },
-                smoothScrolling: settings.smoothScrolling !== false,
-                cursorSmoothCaretAnimation: settings.smoothScrolling !== false ? 'on' : 'off',
-                cursorBlinking: settings.smoothScrolling !== false ? 'smooth' : 'blink',
-                fontLigatures: settings.fontLigatures ?? false,
-                renderWhitespace: 'selection',
-                foldingHighlight: true
-              }}
-            />
-          )}
+          <Editor
+            height="100%"
+            loading={<LoadingFallback variant="pane" label={t('loading.preparingEditor')} />}
+            defaultLanguage="latex"
+            theme={getMonacoTheme(resolveTheme(theme))}
+            path={filePath ?? undefined}
+            defaultValue={initialContent}
+            keepCurrentModel
+            beforeMount={handleEditorWillMount}
+            onMount={handleEditorDidMount}
+            options={{
+              fontSize,
+              lineNumbers: settings.lineNumbers !== false ? 'on' : 'off',
+              minimap: { enabled: settings.minimapEnabled ?? false },
+              tabSize: settings.tabSize ?? 4,
+              scrollBeyondLastLine: false,
+              automaticLayout: true,
+              quickSuggestions: true,
+              suggestOnTriggerCharacters: true,
+              padding: { top: 8 },
+              wordWrap: effectiveWordWrap,
+              dropIntoEditor: { enabled: false },
+              bracketPairColorization: {
+                enabled: settings.bracketPairColorization !== false
+              },
+              guides: {
+                bracketPairs: settings.bracketPairColorization !== false,
+                indentation: true
+              },
+              stickyScroll: {
+                enabled: settings.stickyScrollEnabled !== false
+              },
+              smoothScrolling: settings.smoothScrolling !== false,
+              cursorSmoothCaretAnimation: settings.smoothScrolling !== false ? 'on' : 'off',
+              cursorBlinking: settings.smoothScrolling !== false ? 'smooth' : 'blink',
+              fontLigatures: settings.fontLigatures ?? false,
+              renderWhitespace: 'selection',
+              foldingHighlight: true
+            }}
+          />
           {mathPreviewEnabled && mathData && showMathPreview && (
             <Suspense
               fallback={<LoadingFallback variant="floating" label={t('loading.mathPreview')} />}
@@ -646,18 +611,6 @@ function EditorPane() {
             />
           )}
         </div>
-
-        {showHistory && (
-          <Suspense
-            fallback={<LoadingFallback variant="panel" label={t('loading.localHistory')} />}
-          >
-            <HistoryPanel
-              historyItems={historyItems}
-              onSelect={handleSelectHistoryItem}
-              onClose={closeHistory}
-            />
-          </Suspense>
-        )}
       </div>
 
       {tableModal.isOpen && (

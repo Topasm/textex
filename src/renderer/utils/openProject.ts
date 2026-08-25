@@ -4,7 +4,6 @@ import { usePdfStore } from '../store/usePdfStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { useUiStore } from '../store/useUiStore'
 import { documentRegistry } from '../models/documentRegistry'
-import { stopLspClient } from '../lsp/lspClient'
 import {
   invalidateResearchProjectOpenSync,
   syncResearchOnProjectOpen
@@ -62,7 +61,6 @@ export function isCurrentProjectTransitionSnapshot(snapshot: ProjectTransitionSn
 
 export function clearProjectScopedRendererState(): void {
   clearResearchProfileDraft()
-  stopLspClient()
   useEditorStore.getState().resetEditor()
   useCompileStore.setState({
     compileStatus: 'idle',
@@ -102,8 +100,6 @@ export function clearProjectScopedRendererState(): void {
     fitRequest: null
   })
   useUiStore.setState({
-    lspStatus: 'stopped',
-    lspError: null,
     documentSymbols: [],
     externalChangeConflicts: []
   })

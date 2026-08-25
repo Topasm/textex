@@ -160,18 +160,6 @@ vi.mock('../../renderer/hooks/editor/useSectionHighlight', () => ({
 vi.mock('../../renderer/hooks/editor/useEditorCommands', () => ({
   useEditorCommands: () => vi.fn()
 }))
-vi.mock('../../renderer/hooks/editor/useHistoryPanel', () => ({
-  useHistoryPanel: () => ({
-    showHistory: false,
-    setShowHistory: vi.fn(),
-    historyItems: [],
-    snapshotContent: '',
-    historyMode: false,
-    setHistoryMode: vi.fn(),
-    handleSelectHistoryItem: vi.fn(),
-    closeHistory: vi.fn()
-  })
-}))
 vi.mock('../../renderer/hooks/editor/useTableEditor', () => ({
   useTableEditor: () => ({
     tableModal: { isOpen: false, latex: '', range: null },
@@ -179,9 +167,6 @@ vi.mock('../../renderer/hooks/editor/useTableEditor', () => ({
     registerTableEditor: vi.fn(),
     disposeTableEditor: vi.fn()
   })
-}))
-vi.mock('../../renderer/lsp/lspClient', () => ({
-  stopLspClient: vi.fn()
 }))
 vi.mock('../../renderer/data/monacoConfig', () => ({
   configureMonacoLanguages: vi.fn(),

@@ -37,6 +37,19 @@ body:has(
   border-radius: var(--ui-radius-panel, 6px);
   box-shadow: var(--ui-shadow-popover, 0 4px 14px var(--shadow-color));
   pointer-events: auto;
+  animation: app-notification-enter 140ms ease-out;
+}
+
+@keyframes app-notification-enter {
+  from {
+    opacity: 0;
+    transform: translateX(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .app-notification-progress {
@@ -148,6 +161,7 @@ body:has(
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .app-notification,
   .notification-spinner {
     animation: none;
   }

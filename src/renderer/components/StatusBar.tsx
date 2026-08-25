@@ -5,9 +5,7 @@ import { useCompileStore } from '../store/useCompileStore'
 import { useEditorStore } from '../store/useEditorStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { useSettingsStore } from '../store/useSettingsStore'
-import { useUiStore } from '../store/useUiStore'
 import { isFeatureEnabled } from '../utils/featureFlags'
-import { getDesktopCapabilities } from '../platform/capabilities'
 import { toggleLogPanel } from '../services/appCommands'
 import { ICON_SIZE } from './ui/IconSystem'
 
@@ -20,11 +18,8 @@ const StatusBar = React.memo(function StatusBar() {
   const isGitRepo = useProjectStore((s) => s.isGitRepo)
   const gitBranch = useProjectStore((s) => s.gitBranch)
   const settings = useSettingsStore((s) => s.settings)
-  const capabilities = getDesktopCapabilities()
   const spellCheckEnabled = isFeatureEnabled(settings, 'spellcheck')
   const sectionHighlightEnabled = useSettingsStore((s) => s.settings.sectionHighlightEnabled)
-  const lspStatus = useUiStore((s) => s.lspStatus)
-  const lspEnabled = isFeatureEnabled(settings, 'lsp')
 
   const STATUS_CONFIG = {
     idle: { dotClass: 'green', label: t('statusBar.ready') },
@@ -85,26 +80,6 @@ const StatusBar = React.memo(function StatusBar() {
         )}
       </div>
       <div className="status-right">
-        {lspEnabled && (
-          <span
-            className={`status-lsp${lspStatus === 'error' ? ' status-lsp-error' : ''}`}
-            data-responsive-priority="secondary"
-            title={
-              lspStatus === 'error'
-                ? t('statusBar.lspErrorTitle')
-                : t('statusBar.lspTitle', { status: lspStatus })
-            }
-          >
-            {t('statusBar.lsp')}:{' '}
-            {lspStatus === 'running'
-              ? t('statusBar.lspConnected')
-              : lspStatus === 'starting'
-                ? t('statusBar.lspStarting')
-                : lspStatus === 'error'
-                  ? t('statusBar.lspError')
-                  : t('statusBar.lspOff')}
-          </span>
-        )}
         <button
           type="button"
           className="status-action status-spellcheck"
@@ -119,19 +94,17 @@ const StatusBar = React.memo(function StatusBar() {
           {t('statusBar.sections')}:{' '}
           {sectionHighlightEnabled ? t('statusBar.on') : t('statusBar.off')}
         </button>
-        {capabilities.spellcheck && (
-          <button
-            type="button"
-            className="status-action status-spellcheck"
-            data-responsive-priority="secondary"
-            onClick={() =>
-              useSettingsStore.getState().updateSetting('spellCheckEnabled', !spellCheckEnabled)
-            }
-            title={t('statusBar.toggleSpellCheck')}
-          >
-            {t('statusBar.spell')}: {spellCheckEnabled ? t('statusBar.on') : t('statusBar.off')}
-          </button>
-        )}
+        <button
+          type="button"
+          className="status-action status-spellcheck"
+          data-responsive-priority="secondary"
+          onClick={() =>
+            useSettingsStore.getState().updateSetting('spellCheckEnabled', !spellCheckEnabled)
+          }
+          title={t('statusBar.toggleSpellCheck')}
+        >
+          {t('statusBar.spell')}: {spellCheckEnabled ? t('statusBar.on') : t('statusBar.off')}
+        </button>
         <span className="status-cursor" data-responsive-priority="primary">
           {t('statusBar.ln')} {cursorLine}, {t('statusBar.col')} {cursorColumn}
         </span>

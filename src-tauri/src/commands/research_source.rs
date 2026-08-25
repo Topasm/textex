@@ -2,7 +2,7 @@ use tauri::State;
 
 use crate::{
     error::AppResult,
-    models::{ResearchSourceGitResult, ResearchSourceIndex, ResearchSourceSearchResult},
+    models::{ResearchSourceGitResult, ResearchSourceIndex},
     services::{research::ResearchState, research_source::ResearchSourceState},
     state::AppState,
 };
@@ -18,21 +18,6 @@ pub async fn research_source_index(
     let _profile_guard = research_state.lock().await;
     source_state
         .index(project_state.inner(), &resource_id, &local_path)
-        .await
-}
-
-#[tauri::command]
-pub async fn research_source_search(
-    project_state: State<'_, AppState>,
-    research_state: State<'_, ResearchState>,
-    source_state: State<'_, ResearchSourceState>,
-    resource_id: String,
-    query: String,
-    limit: Option<usize>,
-) -> AppResult<Vec<ResearchSourceSearchResult>> {
-    let _profile_guard = research_state.lock().await;
-    source_state
-        .search(project_state.inner(), &resource_id, &query, limit)
         .await
 }
 

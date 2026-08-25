@@ -6,6 +6,8 @@ import {
   Loader,
   Menu,
   Minus,
+  PanelLeftClose,
+  PanelLeftOpen,
   PanelRightOpen,
   Play,
   Save as SaveIcon,
@@ -23,6 +25,8 @@ import { OmniSearch } from './OmniSearch'
 import { RecentProjectSwitcher } from './RecentProjectSwitcher'
 import PdfZoomDropdown from './PdfZoomDropdown'
 import { ICON_SIZE } from './ui/IconSystem'
+import { toggleProjectSidebar } from '../services/appCommands'
+import { logError } from '../utils/errorMessage'
 
 interface ToolbarProps {
   onSave: () => void
@@ -103,10 +107,12 @@ const Toolbar = React.memo(function Toolbar({
   const filePath = useEditorStore((s) => s.filePath)
   const isDirty = useEditorStore((s) => s.isDirty)
   const compileStatus = useCompileStore((s) => s.compileStatus)
+  const pdfPath = useCompileStore((s) => s.pdfPath)
   const settings = useSettingsStore((s) => s.settings)
   const currentPage = usePdfStore((s) => s.currentPage)
   const numPages = usePdfStore((s) => s.numPages)
   const projectRoot = useProjectStore((s) => s.projectRoot)
+  const isSidebarOpen = useProjectStore((s) => s.isSidebarOpen)
   const isResearchPanelOpen = useProjectStore((s) => s.isResearchPanelOpen)
 
   const [pageInputValue, setPageInputValue] = useState('')
@@ -123,23 +129,14 @@ const Toolbar = React.memo(function Toolbar({
   const handleSyncToPdf = useCallback(() => {
     const editorState = useEditorStore.getState()
     if (!editorState.filePath) return
-    if (import.meta.env.DEV)
-      // eslint-disable-next-line no-console
-      console.log(
-        `[SyncTeX UI] forward sync: cursorLine=${editorState.cursorLine}, file=${editorState.filePath}`
-      )
     window.api
       .synctexForward(editorState.filePath, editorState.cursorLine)
       .then((result) => {
-        // eslint-disable-next-line no-console
-        if (import.meta.env.DEV) console.log('[SyncTeX UI] forward sync result:', result)
         if (result) {
           usePdfStore.getState().setSynctexHighlight(result)
         }
       })
-      .catch((err) => {
-        console.warn('[SyncTeX UI] forward sync failed:', err)
-      })
+      .catch((error) => logError('SyncTeX:forward', error))
   }, [])
 
   const handlePageInputFocus = useCallback(() => {
@@ -213,12 +210,28 @@ const Toolbar = React.memo(function Toolbar({
                 <House size={ICON_SIZE.control} />
               </button>
               <RecentProjectSwitcher />
+              <button
+                type="button"
+                className={`toolbar-btn toolbar-sidebar-toggle${isSidebarOpen && !settings.autoHideSidebar ? ' active' : ''}`}
+                onClick={toggleProjectSidebar}
+                title={t('commandPalette.commands.view_toggleSidebar')}
+                aria-label={t('commandPalette.commands.view_toggleSidebar')}
+                aria-controls="project-sidebar"
+                aria-expanded={isSidebarOpen && !settings.autoHideSidebar}
+              >
+                {isSidebarOpen && !settings.autoHideSidebar ? (
+                  <PanelLeftClose size={ICON_SIZE.control} />
+                ) : (
+                  <PanelLeftOpen size={ICON_SIZE.control} />
+                )}
+              </button>
             </>
           )}
 
           <button
             className={`toolbar-btn${isDirty ? ' save-btn-dirty' : ''}`}
             onClick={onSave}
+            disabled={!filePath}
             title={t('toolbar.quickSave')}
             aria-label={t('toolbar.quickSave')}
           >
@@ -228,7 +241,7 @@ const Toolbar = React.memo(function Toolbar({
           <button
             className="toolbar-btn compile-btn"
             onClick={onCompile}
-            disabled={compileStatus === 'compiling'}
+            disabled={!filePath || compileStatus === 'compiling'}
             title={t('toolbar.compileLaTeX')}
             aria-label={t('toolbar.compileLaTeX')}
           >
@@ -255,6 +268,7 @@ const Toolbar = React.memo(function Toolbar({
               <button
                 className="toolbar-btn toolbar-compact-btn"
                 onClick={handleSyncToCode}
+                disabled={!pdfPath}
                 title={t('toolbar.syncPdfToCode')}
                 aria-label={t('toolbar.syncPdfToCode')}
               >
@@ -263,6 +277,7 @@ const Toolbar = React.memo(function Toolbar({
               <button
                 className="toolbar-btn toolbar-compact-btn"
                 onClick={handleSyncToPdf}
+                disabled={!filePath}
                 title={t('toolbar.syncCodeToPdf')}
                 aria-label={t('toolbar.syncCodeToPdf')}
               >
@@ -313,6 +328,9 @@ const Toolbar = React.memo(function Toolbar({
               onClick={() => useProjectStore.getState().openResearchPanel('references')}
               title={t('researchPanel.open')}
               aria-label={t('researchPanel.open')}
+              aria-controls="research-panel"
+              aria-expanded="false"
+              id="research-panel-toggle"
             >
               <PanelRightOpen size={ICON_SIZE.control} />
             </button>

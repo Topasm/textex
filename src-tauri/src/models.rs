@@ -31,45 +31,6 @@ pub struct PerformanceMemorySample {
     pub processes: Vec<ProcessMemoryMetric>,
 }
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum LspStatus {
-    #[default]
-    Stopped,
-    Starting,
-    Running,
-    Error,
-}
-
-impl LspStatus {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Stopped => "stopped",
-            Self::Starting => "starting",
-            Self::Running => "running",
-            Self::Error => "error",
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize)]
-#[serde(tag = "event", rename_all = "lowercase")]
-pub enum LspEvent {
-    Message {
-        message: serde_json::Value,
-    },
-    Status {
-        status: LspStatus,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        error: Option<String>,
-    },
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
-pub struct LspStatusResult {
-    pub status: &'static str,
-}
-
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Template {
@@ -87,12 +48,6 @@ pub struct Template {
 pub struct TemplateProjectResult {
     pub project_path: String,
     pub file_path: String,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
-pub struct ExportFormat {
-    pub name: &'static str,
-    pub ext: &'static str,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -473,77 +428,6 @@ pub struct RecoverySnapshot {
     pub disk_content: Option<String>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ProjectDatabase {
-    pub version: u32,
-    pub name: String,
-    pub main_file: String,
-    pub created: String,
-    pub last_opened: String,
-    pub document_class: String,
-    pub description: String,
-    pub tags: Vec<String>,
-    pub authors: Vec<String>,
-}
-
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CompileRecord {
-    pub file_path: String,
-    pub last_compiled: String,
-    pub duration: f64,
-    pub exit_code: i32,
-    pub pdf_path: String,
-    pub error_count: u32,
-    pub warning_count: u32,
-    pub hash: String,
-}
-
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CompileDatabase {
-    pub version: u32,
-    pub total_compiles: u64,
-    pub last_compiled: Option<String>,
-    pub records: HashMap<String, CompileRecord>,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
-pub struct ProjectSnippet {
-    pub id: String,
-    pub prefix: String,
-    pub label: String,
-    pub body: String,
-    pub description: String,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Deserialize)]
-pub struct NewProjectSnippet {
-    pub prefix: String,
-    pub label: String,
-    pub body: String,
-    pub description: String,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
-pub struct ProjectBookmark {
-    pub id: String,
-    pub file: String,
-    pub line: u32,
-    pub column: u32,
-    pub label: String,
-    pub created: String,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Deserialize)]
-pub struct NewProjectBookmark {
-    pub file: String,
-    pub line: u32,
-    pub column: u32,
-    pub label: String,
-}
-
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PackageData {
@@ -615,7 +499,6 @@ pub struct UserSettings {
     pub spell_check_language: String,
     pub git_enabled: bool,
     pub auto_update_enabled: bool,
-    pub lsp_enabled: bool,
     pub zotero_enabled: bool,
     pub zotero_port: u16,
     pub zotero_collection: String,
@@ -638,7 +521,6 @@ pub struct UserSettings {
     pub math_preview_enabled: bool,
     pub pdf_invert_mode: bool,
     pub auto_hide_sidebar: bool,
-    pub sidebar_position: SidebarPosition,
     pub show_status_bar: bool,
     pub section_highlight_enabled: bool,
     pub section_highlight_colors: Vec<String>,
@@ -670,7 +552,6 @@ impl Default for UserSettings {
             spell_check_language: "en-US".to_owned(),
             git_enabled: true,
             auto_update_enabled: true,
-            lsp_enabled: true,
             zotero_enabled: false,
             zotero_port: 23119,
             zotero_collection: String::new(),
@@ -693,7 +574,6 @@ impl Default for UserSettings {
             math_preview_enabled: true,
             pdf_invert_mode: false,
             auto_hide_sidebar: false,
-            sidebar_position: SidebarPosition::Left,
             show_status_bar: true,
             section_highlight_enabled: false,
             section_highlight_colors: vec![
@@ -1130,14 +1010,6 @@ pub struct AiTerminalResult {
 #[derive(Clone, Debug, Serialize)]
 pub struct AiGenerateResult {
     pub latex: String,
-}
-
-#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum SidebarPosition {
-    #[default]
-    Left,
-    Right,
 }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]

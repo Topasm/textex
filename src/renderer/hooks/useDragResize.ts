@@ -2,13 +2,20 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useProjectStore } from '../store/useProjectStore'
 import type { SidebarView } from '../store/useProjectStore'
 import { usePdfStore } from '../store/usePdfStore'
-import { SWIPE_LOCK_MS } from '../constants'
+import {
+  SIDEBAR_WIDTH_MAX,
+  SIDEBAR_WIDTH_MIN,
+  SPLIT_RATIO_MAX,
+  SPLIT_RATIO_MIN,
+  SWIPE_LOCK_MS
+} from '../constants'
+import { getKeyboardResizeValue } from '../utils/keyboardResize'
+import { useHorizontalResize } from './useHorizontalResize'
 
 /** Shorter lock for discrete mouse horizontal scroll (e.g. MX Master thumb wheel). */
 const MOUSE_SWIPE_LOCK_MS = 400
 
 export type SlideAnim = 'exit-left' | 'exit-right' | 'enter-left' | 'enter-right' | null
-export type SidebarPosition = 'left' | 'right'
 
 interface DragResizeHandlers {
   /** Ref to attach to the main content area for split ratio calculation. */
@@ -19,10 +26,14 @@ interface DragResizeHandlers {
   handleDividerMouseDown: (e: React.MouseEvent) => void
   /** onDoubleClick for the split divider (reset to 50%). */
   handleDividerDoubleClick: () => void
+  /** Keyboard resizing for the editor ↔ preview separator. */
+  handleDividerKeyDown: (e: React.KeyboardEvent) => void
   /** onMouseDown for the sidebar resize handle. */
   handleSidebarDividerMouseDown: (e: React.MouseEvent) => void
   /** onDoubleClick for the sidebar resize handle (reset to 240px). */
   handleSidebarDividerDoubleClick: () => void
+  /** Keyboard resizing for the project sidebar separator. */
+  handleSidebarDividerKeyDown: (e: React.KeyboardEvent) => void
   /** onWheel handler for sidebar trackpad swipe between tabs. */
   handleSidebarWheel: (e: React.WheelEvent) => void
   /** Current slide animation class for sidebar tab transitions. */
@@ -30,36 +41,21 @@ interface DragResizeHandlers {
 }
 
 interface DragResizeOptions {
-  sidebarPosition: SidebarPosition
   sidebarTabs: SidebarView[]
 }
 
 interface SidebarBounds {
   left: number
-  right: number
 }
 
-export function getSidebarWidthFromPointer(
-  sidebarBounds: SidebarBounds,
-  clientX: number,
-  sidebarPosition: SidebarPosition
-): number {
-  return sidebarPosition === 'right' ? sidebarBounds.right - clientX : clientX - sidebarBounds.left
+export function getSidebarWidthFromPointer(sidebarBounds: SidebarBounds, clientX: number): number {
+  return clientX - sidebarBounds.left
 }
 
-export function getSidebarSlideAnimation(
-  direction: number,
-  sidebarPosition: SidebarPosition
-): {
+export function getSidebarSlideAnimation(direction: number): {
   exit: Extract<SlideAnim, 'exit-left' | 'exit-right'>
   enter: Extract<SlideAnim, 'enter-left' | 'enter-right'>
 } {
-  if (sidebarPosition === 'right') {
-    return direction > 0
-      ? { exit: 'exit-right', enter: 'enter-left' }
-      : { exit: 'exit-left', enter: 'enter-right' }
-  }
-
   return direction > 0
     ? { exit: 'exit-left', enter: 'enter-right' }
     : { exit: 'exit-right', enter: 'enter-left' }
@@ -71,89 +67,74 @@ export function getSidebarSlideAnimation(
  * - Sidebar width resize handle
  * - Sidebar trackpad swipe to switch tabs
  */
-export function useDragResize({
-  sidebarPosition,
-  sidebarTabs
-}: DragResizeOptions): DragResizeHandlers {
+export function useDragResize({ sidebarTabs }: DragResizeOptions): DragResizeHandlers {
   const mainContentRef = useRef<HTMLDivElement>(null)
   const sidebarRef = useRef<HTMLDivElement>(null)
-  const isDragging = useRef(false)
-  const isSidebarDragging = useRef(false)
+  const sidebarLeftRef = useRef(0)
+  const sidebarWrapperRef = useRef<HTMLElement | null>(null)
 
   // ---- Split divider drag ----
-  const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    isDragging.current = true
-    document.body.style.cursor = 'col-resize'
-    document.body.style.userSelect = 'none'
-
-    const onMouseMove = (moveEvent: MouseEvent): void => {
-      if (!isDragging.current || !mainContentRef.current) return
+  const handleDividerMouseDown = useHorizontalResize({
+    onMove: (clientX) => {
+      if (!mainContentRef.current) return
       const rect = mainContentRef.current.getBoundingClientRect()
-      const ratio = (moveEvent.clientX - rect.left) / rect.width
-      usePdfStore.getState().setSplitRatio(Math.min(0.8, Math.max(0.2, ratio)))
+      if (rect.width <= 0) return
+      const ratio = (clientX - rect.left) / rect.width
+      usePdfStore.getState().setSplitRatio(ratio)
     }
-
-    const onMouseUp = (): void => {
-      isDragging.current = false
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-      window.removeEventListener('mousemove', onMouseMove)
-      window.removeEventListener('mouseup', onMouseUp)
-    }
-
-    window.addEventListener('mousemove', onMouseMove)
-    window.addEventListener('mouseup', onMouseUp)
-  }, [])
+  })
 
   const handleDividerDoubleClick = useCallback(() => {
     usePdfStore.getState().setSplitRatio(0.5)
   }, [])
 
+  const handleDividerKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const current = usePdfStore.getState().splitRatio
+    const next = getKeyboardResizeValue(e, current, {
+      min: SPLIT_RATIO_MIN,
+      max: SPLIT_RATIO_MAX,
+      step: 0.025,
+      largeStep: 0.1
+    })
+    if (next === null) return
+    e.preventDefault()
+    usePdfStore.getState().setSplitRatio(next)
+  }, [])
+
   // ---- Sidebar resize drag ----
-  const handleSidebarDividerMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault()
-      isSidebarDragging.current = true
-      document.body.style.cursor = 'col-resize'
-      document.body.style.userSelect = 'none'
-
-      // Force sidebar visible during drag so auto-hide doesn't collapse it on hover-loss
-      const wrapper = sidebarRef.current?.parentElement
-      wrapper?.classList.add('sidebar-dragging')
-
-      const sidebarRect = sidebarRef.current?.getBoundingClientRect()
-      const sidebarBounds = {
-        left: sidebarRect?.left ?? 0,
-        right: sidebarRect?.right ?? 0
-      }
-
-      const onMouseMove = (moveEvent: MouseEvent): void => {
-        if (!isSidebarDragging.current) return
-        useProjectStore
-          .getState()
-          .setSidebarWidth(
-            getSidebarWidthFromPointer(sidebarBounds, moveEvent.clientX, sidebarPosition)
-          )
-      }
-
-      const onMouseUp = (): void => {
-        isSidebarDragging.current = false
-        document.body.style.cursor = ''
-        document.body.style.userSelect = ''
-        wrapper?.classList.remove('sidebar-dragging')
-        window.removeEventListener('mousemove', onMouseMove)
-        window.removeEventListener('mouseup', onMouseUp)
-      }
-
-      window.addEventListener('mousemove', onMouseMove)
-      window.addEventListener('mouseup', onMouseUp)
+  const handleSidebarDividerMouseDown = useHorizontalResize({
+    onStart: () => {
+      sidebarLeftRef.current = sidebarRef.current?.getBoundingClientRect().left ?? 0
+      sidebarWrapperRef.current = sidebarRef.current?.parentElement ?? null
+      // Keep an auto-hidden sidebar expanded while its edge is being dragged.
+      sidebarWrapperRef.current?.classList.add('sidebar-dragging')
     },
-    [sidebarPosition]
-  )
+    onMove: (clientX) => {
+      useProjectStore
+        .getState()
+        .setSidebarWidth(getSidebarWidthFromPointer({ left: sidebarLeftRef.current }, clientX))
+    },
+    onStop: () => {
+      sidebarWrapperRef.current?.classList.remove('sidebar-dragging')
+      sidebarWrapperRef.current = null
+    }
+  })
 
   const handleSidebarDividerDoubleClick = useCallback(() => {
     useProjectStore.getState().setSidebarWidth(240)
+  }, [])
+
+  const handleSidebarDividerKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const current = useProjectStore.getState().sidebarWidth
+    const next = getKeyboardResizeValue(e, current, {
+      min: SIDEBAR_WIDTH_MIN,
+      max: SIDEBAR_WIDTH_MAX,
+      step: 10,
+      largeStep: 40
+    })
+    if (next === null) return
+    e.preventDefault()
+    useProjectStore.getState().setSidebarWidth(next)
   }, [])
 
   // ---- Sidebar swipe / horizontal scroll to switch tabs ----
@@ -195,7 +176,7 @@ export function useDragResize({
       const idx = tabs.indexOf(s.sidebarView)
       if (idx === -1 || tabs.length === 0) return
       const next = tabs[(idx + direction + tabs.length) % tabs.length]
-      const animation = getSidebarSlideAnimation(direction, sidebarPosition)
+      const animation = getSidebarSlideAnimation(direction)
 
       // Phase 1: slide out
       setSlideAnim(animation.exit)
@@ -207,7 +188,7 @@ export function useDragResize({
         slideAnimClearTimer.current = setTimeout(() => setSlideAnim(null), 120)
       }, 100)
     },
-    [sidebarPosition, sidebarTabs]
+    [sidebarTabs]
   )
 
   return {
@@ -215,8 +196,10 @@ export function useDragResize({
     sidebarRef,
     handleDividerMouseDown,
     handleDividerDoubleClick,
+    handleDividerKeyDown,
     handleSidebarDividerMouseDown,
     handleSidebarDividerDoubleClick,
+    handleSidebarDividerKeyDown,
     handleSidebarWheel,
     slideAnim
   }

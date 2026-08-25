@@ -44,13 +44,6 @@ pub async fn compile_latex(
     Ok(response)
 }
 
-/// Requests cancellation of the active compile. The compile owner responds by
-/// killing and reaping the child process before completing its command.
-#[tauri::command]
-pub fn cancel_compile(state: State<'_, AppState>) -> AppResult<bool> {
-    compiler::cancel_compile(state.inner())
-}
-
 /// Reports the packaged seed and writable Tectonic cache without accepting a
 /// renderer-provided filesystem path.
 #[tauri::command]

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { GeneralTab } from '../../renderer/components/settings/GeneralTab'
+import { AppearanceTab } from '../../renderer/components/settings/AppearanceTab'
 import { createDefaultUserSettings } from '../../shared/defaultSettings'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 
@@ -10,14 +10,14 @@ const { checkForAppUpdate } = vi.hoisted(() => ({
 
 vi.mock('../../renderer/services/updateLifecycle', () => ({ checkForAppUpdate }))
 
-describe('GeneralTab', () => {
+describe('AppearanceTab application settings', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useSettingsStore.setState({ settings: createDefaultUserSettings() })
   })
 
   it('runs a visible manual check through the shared updater lifecycle', () => {
-    render(<GeneralTab />)
+    render(<AppearanceTab />)
 
     expect(screen.queryByText('User Information')).not.toBeInTheDocument()
     expect(screen.getByText('Automatically check for updates')).toBeInTheDocument()

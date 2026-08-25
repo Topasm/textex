@@ -35,7 +35,6 @@ use transport::{
 const MAX_SEARCH_LENGTH: usize = 1_024;
 const MAX_CITEKEYS: usize = 10_000;
 const MAX_COLLECTION_EXPORT_BYTES: usize = 50 * 1024 * 1024;
-const MAX_CAYW_RESPONSE_BYTES: usize = 64 * 1024;
 const MAX_COLLECTIONS: usize = 10_000;
 const MAX_COLLECTION_ITEMS_PAGE: u32 = 100;
 const DEFAULT_COLLECTION_ITEMS_PAGE: u32 = 50;
@@ -215,20 +214,6 @@ pub async fn search(term: &str, port: Option<u16>) -> AppResult<Vec<ZoteroSearch
     )
     .await?;
     rpc_result(response).map(|items| items.into_iter().map(search_result).collect())
-}
-
-pub async fn cite_cayw(port: Option<u16>) -> AppResult<String> {
-    let response = client()
-        .get(endpoint(port, "cayw?format=latex")?)
-        .timeout(Duration::from_secs(300))
-        .send()
-        .await
-        .map_err(zotero_request_error)?
-        .error_for_status()
-        .map_err(zotero_request_error)?;
-    let bytes = bounded_response(response, MAX_CAYW_RESPONSE_BYTES).await?;
-    String::from_utf8(bytes)
-        .map_err(|_| AppError::Zotero("CAYW response is not valid UTF-8".to_owned()))
 }
 
 pub async fn export_bibtex(citekeys: Vec<String>, port: Option<u16>) -> AppResult<String> {

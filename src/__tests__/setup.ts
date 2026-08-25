@@ -49,7 +49,6 @@ Object.defineProperty(window, 'api', {
     writeFileBinary: vi.fn(),
     saveFileAs: vi.fn(),
     compile: vi.fn(),
-    cancelCompile: vi.fn(),
     tectonicCacheStatus: vi.fn(),
     tectonicCacheReset: vi.fn(),
     exportOverleafZip: vi.fn(),
@@ -63,7 +62,6 @@ Object.defineProperty(window, 'api', {
 
     // Multi-file / directory operations
     readFile: vi.fn(),
-    readFileBinary: vi.fn(),
     readCompiledPdf: vi.fn(),
     createDirectory: vi.fn(),
     openDirectory: vi.fn(),
@@ -117,8 +115,6 @@ Object.defineProperty(window, 'api', {
     gitStage: vi.fn(),
     gitUnstage: vi.fn(),
     gitCommit: vi.fn(),
-    gitDiff: vi.fn(),
-    gitLog: vi.fn(),
     gitFileLog: vi.fn(),
 
     // Auto-update
@@ -139,7 +135,6 @@ Object.defineProperty(window, 'api', {
 
     // Export
     exportDocument: vi.fn(),
-    getExportFormats: vi.fn(),
 
     // AI
     aiGenerate: vi.fn(),
@@ -169,23 +164,10 @@ Object.defineProperty(window, 'api', {
       processes: []
     }),
 
-    // LSP
-    lspStart: vi.fn(),
-    lspStop: vi.fn(),
-    lspSend: vi.fn(),
-    lspStatus: vi.fn(),
-    onLspMessage: vi.fn(),
-    removeLspMessageListener: vi.fn(),
-    onLspStatus: vi.fn(),
-    removeLspStatusListener: vi.fn(),
-
     // Zotero
     zoteroProbe: vi.fn(),
     zoteroSearch: vi.fn(),
-    zoteroCiteCAYW: vi.fn(),
-    zoteroExportBibtex: vi.fn(),
     zoteroSyncCollection: vi.fn(),
-    zoteroCollections: vi.fn().mockResolvedValue([]),
     zoteroLibraryTree: vi.fn().mockResolvedValue([]),
     zoteroCollectionItems: vi.fn().mockResolvedValue({
       items: [],
@@ -229,15 +211,12 @@ Object.defineProperty(window, 'api', {
       revision: String(Number(scope.revision) + 1),
       session: { version: 1, messages: [], selectedContexts: [] }
     })),
-    researchResourceSnapshot: vi.fn(),
     researchSourceIndex: vi.fn(),
-    researchSourceSearch: vi.fn().mockResolvedValue([]),
     researchSourceClone: vi.fn(),
     researchSourceFetch: vi.fn(),
     // Citation groups / history / templates / project data
     loadCitationGroups: vi.fn(),
     saveCitationGroups: vi.fn(),
-    saveHistorySnapshot: vi.fn(),
     getHistoryList: vi.fn(),
     loadHistorySnapshot: vi.fn(),
     saveRecoverySnapshot: vi.fn(),
@@ -249,22 +228,6 @@ Object.defineProperty(window, 'api', {
     addTemplate: vi.fn(),
     removeTemplate: vi.fn(),
     importTemplateZip: vi.fn(),
-    projectInit: vi.fn(),
-    projectExists: vi.fn(),
-    projectLoad: vi.fn(),
-    projectSave: vi.fn(),
-    projectTouch: vi.fn(),
-    projectCompileLoad: vi.fn(),
-    projectCompileSave: vi.fn(),
-    projectCompileClear: vi.fn(),
-    projectCompileLogSave: vi.fn(),
-    projectCompileLogLoad: vi.fn(),
-    projectSnippetsLoad: vi.fn(),
-    projectSnippetsAdd: vi.fn(),
-    projectSnippetsRemove: vi.fn(),
-    projectBookmarksLoad: vi.fn(),
-    projectBookmarksAdd: vi.fn(),
-    projectBookmarksRemove: vi.fn(),
     getDocumentOutline: vi.fn().mockResolvedValue([])
   },
   writable: true

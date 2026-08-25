@@ -86,18 +86,6 @@ pub async fn git_commit(
 }
 
 #[tauri::command]
-pub async fn git_diff(state: State<'_, AppState>, work_dir: String) -> AppResult<String> {
-    let _project_operation = state.lock_project_operation().await;
-    git::diff(state.inner(), &work_dir).await
-}
-
-#[tauri::command]
-pub async fn git_log(state: State<'_, AppState>, work_dir: String) -> AppResult<Vec<GitLogEntry>> {
-    let _project_operation = state.lock_project_operation().await;
-    git::log(state.inner(), &work_dir).await
-}
-
-#[tauri::command]
 pub async fn git_file_log(
     state: State<'_, AppState>,
     work_dir: String,

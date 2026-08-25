@@ -7,7 +7,6 @@ use crate::{
     services::{
         ai::{self, AiState},
         filesystem,
-        lsp::LspState,
         project_index::ProjectIndexState,
         project_session,
         settings::{self, SettingsState},
@@ -62,7 +61,6 @@ pub async fn activate_project(app: AppHandle, project_path: String) -> AppResult
     let project_state = app.state::<AppState>();
     let watcher_state = app.state::<DirectoryWatcherState>();
     let index_state = app.state::<ProjectIndexState>();
-    let lsp_state = app.state::<LspState>();
     let canonical = settings::authorize_project_activation(
         settings_state.inner(),
         project_state.inner(),
@@ -75,7 +73,6 @@ pub async fn activate_project(app: AppHandle, project_path: String) -> AppResult
         project_state.inner(),
         watcher_state.inner(),
         index_state.inner(),
-        lsp_state.inner(),
         canonical,
     )
     .await?;

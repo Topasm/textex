@@ -3,14 +3,12 @@ import { CornerDownLeft, Search, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { APP_COMMAND_MANIFEST, type ShortcutBinding } from '../../shared/appCommandManifest'
 import type { AppCommandId } from '../../shared/types'
-import { getDesktopCapabilities, type DesktopCapabilities } from '../platform/capabilities'
 import './CommandPalette.css'
 
 interface CommandPaletteProps {
   isOpen: boolean
   onClose: () => void
   onRunCommand: (command: AppCommandId) => void
-  capabilities?: DesktopCapabilities
   context?: CommandPaletteContext
 }
 
@@ -71,7 +69,6 @@ export function CommandPalette({
   isOpen,
   onClose,
   onRunCommand,
-  capabilities = getDesktopCapabilities(),
   context = DEFAULT_CONTEXT
 }: CommandPaletteProps) {
   const { t } = useTranslation()
@@ -90,10 +87,7 @@ export function CommandPalette({
 
   const commands = useMemo<PaletteCommand[]>(
     () =>
-      APP_COMMAND_MANIFEST.filter((command) => {
-        if (!('requiredCapability' in command)) return true
-        return capabilities[command.requiredCapability]
-      }).map((command) => {
+      APP_COMMAND_MANIFEST.map((command) => {
         const label = t(commandTranslationKey(command.id), { defaultValue: command.label })
         const groupLabel = t(`commandPalette.groups.${command.group}`)
         const requiredContext = 'requiredContext' in command ? command.requiredContext : undefined
@@ -106,7 +100,7 @@ export function CommandPalette({
         )
         return { command, enabled, groupLabel, label, searchableText, unavailableLabel }
       }),
-    [capabilities, context, t]
+    [context, t]
   )
 
   const filteredCommands = useMemo(() => {

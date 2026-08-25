@@ -6,6 +6,9 @@ import { useProjectStore, type ResearchPanelTab } from '../store/useProjectStore
 import { useNotificationStore } from '../store/useNotificationStore'
 import { useSettingsStore } from '../store/useSettingsStore'
 import { useResearchPanelResize } from '../hooks/useResearchPanelResize'
+import type { AnimatedPresencePhase } from '../hooks/useAnimatedPresence'
+import { RESEARCH_PANEL_WIDTH_MAX, RESEARCH_PANEL_WIDTH_MIN } from '../constants'
+import { getKeyboardResizeValue } from '../utils/keyboardResize'
 import { errorMessage } from '../utils/errorMessage'
 import {
   clearResearchProfileDraft,
@@ -24,6 +27,7 @@ import {
 interface ResearchPanelProps {
   onAiDraft: () => void
   onCompile?: () => Promise<void>
+  presencePhase?: AnimatedPresencePhase
 }
 
 export interface PendingChatReference {
@@ -38,7 +42,11 @@ export interface PendingChatPrompt {
   prompt: string
 }
 
-export function ResearchPanel({ onAiDraft, onCompile }: ResearchPanelProps) {
+export function ResearchPanel({
+  onAiDraft,
+  onCompile,
+  presencePhase = 'entered'
+}: ResearchPanelProps) {
   const { t } = useTranslation()
   const open = useProjectStore((state) => state.isResearchPanelOpen)
   const tab = useProjectStore((state) => state.researchPanelTab)
@@ -67,6 +75,20 @@ export function ResearchPanel({ onAiDraft, onCompile }: ResearchPanelProps) {
   const startResize = useResearchPanelResize(panelRef, open)
   const repairCli = aiProvider === 'claude-cli' ? 'claude' : 'codex'
   const repairCliName = repairCli === 'claude' ? 'Claude Code' : 'Codex CLI'
+
+  const resizePanelByKeyboard = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+    const current = useProjectStore.getState().researchPanelWidth
+    const next = getKeyboardResizeValue(event, current, {
+      min: RESEARCH_PANEL_WIDTH_MIN,
+      max: RESEARCH_PANEL_WIDTH_MAX,
+      step: 10,
+      largeStep: 40,
+      invertArrows: true
+    })
+    if (next === null) return
+    event.preventDefault()
+    useProjectStore.getState().setResearchPanelWidth(next)
+  }, [])
 
   useEffect(() => {
     setChatDropActive(false)
@@ -172,7 +194,9 @@ export function ResearchPanel({ onAiDraft, onCompile }: ResearchPanelProps) {
   )
 
   const closePanel = useCallback(() => {
-    if (leaveProfile()) useProjectStore.getState().closeResearchPanel()
+    if (!leaveProfile()) return
+    useProjectStore.getState().closeResearchPanel()
+    window.requestAnimationFrame(() => document.getElementById('research-panel-toggle')?.focus())
   }, [leaveProfile])
 
   const selectTab = useCallback(
@@ -200,19 +224,33 @@ export function ResearchPanel({ onAiDraft, onCompile }: ResearchPanelProps) {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [closePanel, isCompact, open])
 
-  if (!open && mountedTabs.size === 0) return null
+  if (!open && presencePhase !== 'exiting') return null
 
   return (
     <aside
       ref={panelRef}
-      className="research-panel overlay"
+      id="research-panel"
+      className={`research-panel overlay research-panel-${presencePhase}`}
       style={{ width }}
       aria-label={t('researchPanel.label')}
-      hidden={!open}
+      aria-hidden={!open}
+      inert={!open ? true : undefined}
     >
-      <div className="research-resize-handle" onMouseDown={startResize} />
+      <div
+        className="research-resize-handle"
+        onMouseDown={startResize}
+        onKeyDown={resizePanelByKeyboard}
+        role="separator"
+        tabIndex={0}
+        aria-label={t('researchPanel.resize')}
+        aria-orientation="vertical"
+        aria-valuemin={RESEARCH_PANEL_WIDTH_MIN}
+        aria-valuemax={RESEARCH_PANEL_WIDTH_MAX}
+        aria-valuenow={Math.round(width)}
+      />
       <div className="research-panel-tabs" role="tablist">
         <button
+          type="button"
           role="tab"
           id="research-tab-chat"
           aria-controls="research-tabpanel-chat"
@@ -247,6 +285,7 @@ export function ResearchPanel({ onAiDraft, onCompile }: ResearchPanelProps) {
           <span className="research-panel-tab-label">{t('researchPanel.tabs.chat')}</span>
         </button>
         <button
+          type="button"
           role="tab"
           id="research-tab-references"
           aria-controls="research-tabpanel-references"
@@ -260,6 +299,7 @@ export function ResearchPanel({ onAiDraft, onCompile }: ResearchPanelProps) {
           <span className="research-panel-tab-label">{t('researchPanel.tabs.references')}</span>
         </button>
         <button
+          type="button"
           role="tab"
           id="research-tab-profile"
           aria-controls="research-tabpanel-profile"
@@ -273,6 +313,7 @@ export function ResearchPanel({ onAiDraft, onCompile }: ResearchPanelProps) {
           <span className="research-panel-tab-label">{t('researchPanel.tabs.profile')}</span>
         </button>
         <button
+          type="button"
           role="tab"
           id="research-tab-problems"
           aria-controls="research-tabpanel-problems"
@@ -292,6 +333,7 @@ export function ResearchPanel({ onAiDraft, onCompile }: ResearchPanelProps) {
         </button>
         <span className="research-panel-tool-separator" aria-hidden="true" />
         <button
+          type="button"
           className="research-panel-close"
           onClick={closePanel}
           title={t('researchPanel.close')}

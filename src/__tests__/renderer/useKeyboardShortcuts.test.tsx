@@ -2,7 +2,6 @@ import { cleanup, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { APP_COMMAND_MANIFEST, RENDERER_SHORTCUT_MANIFEST } from '../../shared/appCommandManifest'
 import { useKeyboardShortcuts } from '../../renderer/hooks/useKeyboardShortcuts'
-import { getDesktopCapabilities } from '../../renderer/platform/capabilities'
 import { commandRegistry } from '../../renderer/services/commandRegistry'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
 
@@ -17,14 +16,10 @@ describe('useKeyboardShortcuts', () => {
     const register = vi.spyOn(commandRegistry, 'register')
     const runCommand = vi.fn()
     const openCommandPalette = vi.fn()
-    const capabilities = getDesktopCapabilities()
     const expectedIds: string[] = []
 
     for (const command of APP_COMMAND_MANIFEST) {
       if (!('shortcut' in command)) continue
-      if ('requiredCapability' in command && !capabilities[command.requiredCapability]) {
-        continue
-      }
       expectedIds.push(command.id)
     }
     expectedIds.push(...RENDERER_SHORTCUT_MANIFEST.map((command) => command.id))

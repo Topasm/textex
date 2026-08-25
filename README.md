@@ -26,14 +26,14 @@ A **free**, **local-first** Tauri desktop LaTeX editor. TextEx runs on your mach
 | **Citations** | BibTeX auto-complete + Zotero integration |
 | **Paper Preflight** | Citation provenance, duplicate warnings, and a deterministic submission check |
 | **Research & AI** | Crossref/arXiv search plus native HTTP, Claude Code, and Codex CLI assistants |
-| **Language & Project Tools** | Optional TexLab language features plus one-click project launch in the system terminal |
+| **Language & Project Tools** | Native LaTeX outline, completion, diagnostics, and one-click project launch in the system terminal |
 | **Git Integration** | Built-in staging, commits, branch status, and confirmed Fetch/Pull/Push |
 | **Export** | Create a clean Overleaf source ZIP or convert to DOCX, ODT, HTML, and EPUB via Pandoc |
 | **7 Languages** | EN, KO, ES, FR, DE, PT, ZH |
 
 > **Optional integrations:** AI API providers and online reference search require network
-> access. Claude Code, Codex CLI, and TexLab features require the corresponding executable on
-> `PATH`; the core editor and bundled Tectonic compiler remain local and work without them.
+> access. Claude Code and Codex CLI features require the corresponding executable on `PATH`;
+> the core editor and bundled Tectonic compiler remain local and work without them.
 
 ---
 
@@ -105,7 +105,7 @@ TextEx features a modern Monaco-based editor with:
 - **Syntax Highlighting**: LaTeX syntax coloring through Monaco's local tokenizer.
 - **Auto-Completion**: Intelligent suggestions for commands, environments, labels, and citation keys.
 - **Snippets**: Quickly insert common patterns (e.g., `begin`, `figure`, `table`).
-- **Math Preview**: Live-rendered math equations as you type inside `$...$` or `\[...\]`.
+- **Math Preview**: Lightweight, read-only KaTeX rendering while the cursor is inside `$...$` or `\[...\]`.
 - **Section Highlight**: Color-coded bands for `\section` headings in the gutter.
 - **Visual Table Editor**: Click the CodeLens above any `tabular` to open a visual editor.
 

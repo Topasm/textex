@@ -60,11 +60,20 @@ ErrorBoundary
 - Root layout using Flexbox.
 - Composes the workspace, resizable split panes, left Navigator, independent right Research panel,
   overlays, and status surfaces.
+- Left and right panels use short enter/exit presence transitions, remain mounted only for the
+  exit duration, and disable motion when the operating system requests reduced motion. Resize
+  gestures bypass width transitions so the panel continues to track the pointer directly.
+- Panel separators support arrow-key resizing, Shift+Arrow acceleration, and Home/End bounds.
+  Below the narrow-layout breakpoint, the left Navigator becomes a drawer with backdrop-click
+  and Escape dismissal.
 - Mounts all top-level components.
 - Registers manifest-backed keyboard shortcuts through `useKeyboardShortcuts`.
 - Uses domain Zustand stores and fine-grained selectors rather than a monolithic app store.
 - Accesses native functionality only through the typed `window.api` Tauri adapter.
 - Routes AI Draft and Claude Code/Codex CLI entry points through the Research panel's Chat tab.
+- Presents updater availability, download progress, errors, and restart actions in a compact
+  bottom-centered dock above the status bar. The dock is viewport-fixed, expands upward for
+  release notes, and never changes the editor or preview layout.
 - On macOS, closing the main window hides it without tearing down the active project or dirty
   editor buffers. Clicking the Dock icon restores and focuses that same window. `Cmd+Q` and the
   native Quit item remain explicit application-exit paths and run dirty-document confirmation plus
@@ -129,6 +138,8 @@ ErrorBoundary
   focused on document and preview actions.
 - Left group:
   - `Home` closes the current project and returns to the home screen.
+  - The left-panel toggle mirrors the right-panel affordance, exposes `aria-expanded`, and pins an
+    auto-hidden Navigator when invoked.
   - `Save` calls `window.api.saveFile(...)` / `saveFileAs(...)` through shared app commands.
   - `Compile` triggers manual compilation.
 - Center group:
@@ -141,6 +152,8 @@ ErrorBoundary
   - `Log` toggle button
 - Other commands (`Open`, `Open Folder`, `Save As`, `New from Template`, `Export`,
   `Settings`) are reached through the home screen, OmniSearch, or keyboard shortcuts.
+- Save, compile, and SyncTeX controls are disabled until their required document or PDF exists,
+  avoiding controls that appear actionable but can only return without doing work.
 - The file tree and command palette can open the trusted project root in the system terminal.
 
 ### `EditorPane.tsx`
@@ -151,8 +164,8 @@ ErrorBoundary
   trigger debounced auto-compile without copying the full document into Zustand.
 - Cursor position tracked via `onDidChangeCursorPosition` (disposable stored
   in a ref and cleaned up on unmount).
-- Syntax highlighting always has a local LaTeX Monarch fallback. When optional TexLab is
-  available, its negotiated capabilities add diagnostics, folding, and semantic tokens.
+- Syntax highlighting uses the local LaTeX Monarch tokenizer. Native outline parsing,
+  package/reference completion, and compiler diagnostics provide the language workflow.
 - **Inverse search flash:** When jumping to a line (from PDF click or Problems panel),
   a yellow fade-out highlight draws attention to the target line (1s animation).
 - Config:
@@ -224,10 +237,9 @@ ErrorBoundary
 ### `SettingsModal.tsx`
 - Modal overlay (800×500) for application settings, using shared `.modal-overlay` /
   `.modal-content` / `.modal-header` / `.modal-footer` CSS classes.
-- Left sidebar with six visible icon tabs; right scrollable content area.
-- **General**: Update policy and interface language.
+- Left sidebar with five visible icon tabs; right scrollable content area.
 - **Appearance**: Theme selector cards (Light/Dark/Glass/System), PDF Night Mode,
-  PDF layout controls, and scroll sync.
+  PDF layout controls, scroll sync, update policy, and interface language.
 - **Editor**: Font Size range slider with monospace badge, behavior toggles (Word Wrap,
   Format on Save, Auto-hide Sidebar).
 - **AI**: A default execution target, independent API/CLI connection cards,
@@ -235,7 +247,7 @@ ErrorBoundary
   may keep a conversation-local provider/model override.
 - **Integrations**: Zotero and Git cards.
 - **Automation**: Tectonic/system pdfLaTeX engine selector, Auto Compile,
-  external-file watching, Spell Check, and TexLab toggles. Tectonic cache controls
+  external-file watching, and Spell Check. Tectonic cache controls
   are shown while the bundled engine is selected.
 - All styling uses `settings-*` CSS classes referencing CSS custom properties
   (`--accent`, `--bg-input`, `--card-bg`, etc.) — fully themed across dark/light/high-contrast.
@@ -272,12 +284,11 @@ root-level `.tex` file, then the first nested `.tex` file in stable tree order.
 - Network commands use the user's existing credential helper or SSH agent with terminal prompting
   disabled, and results are discarded if the active project changes while a command is running.
 
-### Capability-gated UI
+### Native-only UI
 
-The Tauri runtime reports native AI and LSP capabilities. `DraftModal`, Research chat,
-and TexLab lifecycle surfaces remain gated through the capability map so a future target
-can omit a domain without bypassing `DesktopApi`. Opening the project in a system terminal
-uses the native active-project authority and never accepts a renderer-supplied path.
+Tauri is the only desktop runtime, so supported commands are presented directly without a
+static all-true capability manifest. Opening the project in a system terminal uses the native
+active-project authority and never accepts a renderer-supplied path.
 
 ---
 

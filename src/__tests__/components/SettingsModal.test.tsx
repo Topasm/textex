@@ -1,7 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SettingsModal } from '../../renderer/components/SettingsModal'
-import { getDesktopCapabilities } from '../../renderer/platform/capabilities'
 import { createDefaultUserSettings } from '../../shared/defaultSettings'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 import { useUiStore } from '../../renderer/store/useUiStore'
@@ -20,19 +19,16 @@ describe('SettingsModal', () => {
     })
   })
 
-  it('renders settings tabs according to the Tauri capability manifest', () => {
+  it('renders the Tauri settings tabs', () => {
     render(<SettingsModal onClose={vi.fn()} />)
 
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: 'Settings' })).toHaveClass('settings-sidebar')
-    expect(screen.getByRole('button', { name: 'General' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Appearance' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Editor' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Integrations' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Automation' })).toBeInTheDocument()
-    const aiTab = screen.queryByRole('button', { name: 'AI' })
-    if (getDesktopCapabilities().ai) expect(aiTab).toBeInTheDocument()
-    else expect(aiTab).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'AI' })).toBeInTheDocument()
   })
 
   it('switches tabs and updates a persisted setting', () => {
@@ -49,9 +45,7 @@ describe('SettingsModal', () => {
     fireEvent.change(compilerEngine, { target: { value: 'pdf-latex' } })
     expect(useSettingsStore.getState().settings.latexEngine).toBe('pdf-latex')
     expect(screen.getByText(/Use system latexmk in pdfLaTeX mode/)).toBeInTheDocument()
-    const languageServer = screen.queryByText('Language Server')
-    if (getDesktopCapabilities().lsp) expect(languageServer).toBeInTheDocument()
-    else expect(languageServer).not.toBeInTheDocument()
+    expect(screen.queryByText('Language Server')).not.toBeInTheDocument()
   })
 
   it('renders and configures the native AI settings flow', async () => {
@@ -112,7 +106,7 @@ describe('SettingsModal', () => {
     const closeButton = screen.getByRole('button', { name: 'Close' })
 
     expect(dialog).toHaveAttribute('aria-modal', 'true')
-    expect(screen.getByRole('button', { name: 'General' })).toHaveFocus()
+    expect(screen.getByRole('button', { name: 'Appearance' })).toHaveFocus()
 
     const focusable = Array.from(
       dialog.querySelectorAll<HTMLElement>(

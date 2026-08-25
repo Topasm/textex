@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useEditorStore } from '../store/useEditorStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { useSettingsStore } from '../store/useSettingsStore'
-import { getDesktopCapabilities } from '../platform/capabilities'
 import {
   isCurrentProjectTransitionSnapshot,
   openProject,
@@ -107,7 +106,6 @@ function publishSessionRestoreFailure(savedRoot: string, error: unknown): void {
  */
 export function useSessionRestore(): boolean {
   const [sessionRestored, setSessionRestored] = useState(false)
-  const capabilities = getDesktopCapabilities()
 
   useEffect(() => {
     let active = true
@@ -277,7 +275,7 @@ export function useSessionRestore(): boolean {
   // Also init spell check and check for updates on mount
   useEffect(() => {
     const settings = useSettingsStore.getState().settings
-    if (capabilities.spellcheck && settings.spellCheckEnabled) {
+    if (settings.spellCheckEnabled) {
       void window.api.spellInit(settings.spellCheckLanguage || 'en-US').catch(() => {})
     }
     const updateTimer = window.setTimeout(() => {
@@ -286,7 +284,7 @@ export function useSessionRestore(): boolean {
       }
     }, 3000)
     return () => window.clearTimeout(updateTimer)
-  }, [capabilities.spellcheck])
+  }, [])
 
   return sessionRestored
 }

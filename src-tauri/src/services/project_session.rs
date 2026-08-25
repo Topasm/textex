@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use crate::{
     error::AppResult,
-    services::{lsp::LspState, project_index::ProjectIndexState, watcher::DirectoryWatcherState},
+    services::{project_index::ProjectIndexState, watcher::DirectoryWatcherState},
     state::AppState,
 };
 
@@ -13,10 +13,9 @@ pub async fn deactivate(
     project_state: &AppState,
     watcher_state: &DirectoryWatcherState,
     index_state: &ProjectIndexState,
-    lsp_state: &LspState,
 ) -> AppResult<()> {
     let _transition = project_state.lock_project_transition().await;
-    deactivate_locked(project_state, watcher_state, index_state, lsp_state).await
+    deactivate_locked(project_state, watcher_state, index_state).await
 }
 
 /// Replaces the native project session under the same transition lock used by
@@ -25,11 +24,10 @@ pub async fn activate(
     project_state: &AppState,
     watcher_state: &DirectoryWatcherState,
     index_state: &ProjectIndexState,
-    lsp_state: &LspState,
     root: PathBuf,
 ) -> AppResult<()> {
     let _transition = project_state.lock_project_transition().await;
-    deactivate_locked(project_state, watcher_state, index_state, lsp_state).await?;
+    deactivate_locked(project_state, watcher_state, index_state).await?;
     project_state.set_project_root(root)
 }
 
@@ -37,7 +35,6 @@ async fn deactivate_locked(
     project_state: &AppState,
     watcher_state: &DirectoryWatcherState,
     index_state: &ProjectIndexState,
-    lsp_state: &LspState,
 ) -> AppResult<()> {
     let previous_project = project_state.clear_project_root()?;
 
@@ -49,13 +46,11 @@ async fn deactivate_locked(
         .as_ref()
         .map_or(Ok(()), |(root, epoch)| index_state.invalidate(root, *epoch));
     let notification_result = index_state.clear_event_channel();
-    let lsp_result = lsp_state.stop().await;
 
     compile_result?;
     watcher_result?;
     index_result?;
-    notification_result?;
-    lsp_result
+    notification_result
 }
 
 #[cfg(test)]
@@ -64,9 +59,7 @@ mod tests {
 
     use crate::{
         error::AppError,
-        services::{
-            lsp::LspState, project_index::ProjectIndexState, watcher::DirectoryWatcherState,
-        },
+        services::{project_index::ProjectIndexState, watcher::DirectoryWatcherState},
         state::AppState,
     };
 
@@ -83,7 +76,6 @@ mod tests {
             &project_state,
             &DirectoryWatcherState::default(),
             &ProjectIndexState::default(),
-            &LspState::default(),
         )
         .await
         .expect("deactivate project");

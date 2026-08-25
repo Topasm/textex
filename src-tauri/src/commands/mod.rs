@@ -4,7 +4,6 @@ pub mod export;
 pub mod filesystem;
 pub mod git;
 pub mod history;
-pub mod lsp;
 pub mod package_data;
 pub mod project_data;
 pub mod project_index;

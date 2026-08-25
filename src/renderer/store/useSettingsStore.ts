@@ -130,9 +130,6 @@ export const useSettingsStore = create<SettingsState>()(
             '#d19a66'
           ]
         }
-        if (state && !state.settings.sidebarPosition) {
-          state.settings.sidebarPosition = 'left'
-        }
       }
     }
   )

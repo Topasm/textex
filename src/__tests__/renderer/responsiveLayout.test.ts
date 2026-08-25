@@ -72,6 +72,8 @@ describe('responsive desktop layout contract', () => {
     expect(responsiveStyles).toMatch(
       /\.editor-main-content > \.split-divider\s*\{\s*display: none;/
     )
+    expect(responsiveStyles).toContain('.sidebar-drawer-backdrop')
+    expect(responsiveStyles).toContain('.sidebar-drawer-backdrop-exiting')
   })
 
   it('keeps compact transitions and boundaries compatible with accessibility preferences', () => {

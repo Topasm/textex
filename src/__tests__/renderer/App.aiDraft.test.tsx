@@ -160,10 +160,6 @@ vi.mock('../../renderer/utils/openProject', () => ({
   deactivateProject: vi.fn().mockResolvedValue(true)
 }))
 
-vi.mock('../../renderer/lsp/lspClient', () => ({
-  stopLspClient: vi.fn()
-}))
-
 describe('App AI Draft flow', () => {
   beforeEach(() => {
     vi.clearAllMocks()

@@ -3,9 +3,9 @@ use tauri::{AppHandle, Manager, State};
 use crate::{
     error::{AppError, AppResult},
     models::{
-        OnlineReference, ReferenceAddResult, ZoteroCollection, ZoteroCollectionItemsPage,
-        ZoteroLibrary, ZoteroMutationPlan, ZoteroMutationResult, ZoteroSaveResult,
-        ZoteroSearchResult, ZoteroSyncResult,
+        OnlineReference, ReferenceAddResult, ZoteroCollectionItemsPage, ZoteroLibrary,
+        ZoteroMutationPlan, ZoteroMutationResult, ZoteroSaveResult, ZoteroSearchResult,
+        ZoteroSyncResult,
     },
     services::{
         project_index::ProjectIndexState,
@@ -25,21 +25,6 @@ pub async fn zotero_probe(port: Option<u16>) -> bool {
 #[tauri::command]
 pub async fn zotero_search(term: String, port: Option<u16>) -> AppResult<Vec<ZoteroSearchResult>> {
     zotero::search(&term, port).await
-}
-
-#[tauri::command]
-pub async fn zotero_cite_cayw(port: Option<u16>) -> AppResult<String> {
-    zotero::cite_cayw(port).await
-}
-
-#[tauri::command]
-pub async fn zotero_export_bibtex(citekeys: Vec<String>, port: Option<u16>) -> AppResult<String> {
-    zotero::export_bibtex(citekeys, port).await
-}
-
-#[tauri::command]
-pub async fn zotero_collections(port: Option<u16>) -> AppResult<Vec<ZoteroCollection>> {
-    zotero::collections(port).await
 }
 
 #[tauri::command]

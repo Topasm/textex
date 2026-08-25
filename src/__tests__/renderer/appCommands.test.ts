@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { executeAppCommand, toggleLogPanel } from '../../renderer/services/appCommands'
 import { usePdfStore } from '../../renderer/store/usePdfStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
+import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 import { useUiStore } from '../../renderer/store/useUiStore'
 import {
   clearResearchProfileDraft,
@@ -41,6 +42,9 @@ describe('executeAppCommand', () => {
       researchReferenceSource: 'project'
     })
     usePdfStore.setState({ zoomLevel: 100, fitRequest: null })
+    useSettingsStore.setState({
+      settings: { ...useSettingsStore.getState().settings, autoHideSidebar: false }
+    })
   })
 
   it('routes file commands through the injected handlers', async () => {
@@ -88,6 +92,17 @@ describe('executeAppCommand', () => {
 
     await executeAppCommand('pdf.fitHeight', context)
     expect(usePdfStore.getState().fitRequest).toBe('height')
+  })
+
+  it('pins an auto-hidden sidebar when the shared toggle is invoked', async () => {
+    useSettingsStore.setState({
+      settings: { ...useSettingsStore.getState().settings, autoHideSidebar: true }
+    })
+
+    await executeAppCommand('view.toggleSidebar', context)
+
+    expect(useProjectStore.getState().isSidebarOpen).toBe(true)
+    expect(useSettingsStore.getState().settings.autoHideSidebar).toBe(false)
   })
 
   it('opens settings and checks for updates through the injected handlers', async () => {

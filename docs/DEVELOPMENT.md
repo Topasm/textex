@@ -49,7 +49,7 @@ npm run package:win
 ```
 
 Linux builds can be reproduced in the supplied Podman image with
-`npm run build:tauri:container`.
+`npm run build:container`.
 
 ## Native command changes
 

@@ -180,15 +180,6 @@ pub async fn read_file_base64(
 }
 
 #[tauri::command]
-pub async fn read_file_binary(
-    state: State<'_, AppState>,
-    file_path: String,
-) -> AppResult<Response> {
-    let bytes = filesystem::read_file_binary(state.inner(), &file_path).await?;
-    Ok(raw_binary_response(bytes))
-}
-
-#[tauri::command]
 pub async fn read_compiled_pdf(
     app: AppHandle,
     state: State<'_, AppState>,

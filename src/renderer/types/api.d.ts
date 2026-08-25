@@ -33,26 +33,18 @@ import {
   ZoteroSearchResult,
   ZoteroSyncResult,
   ZoteroSaveResult,
-  ZoteroCollection,
   ZoteroLibrary,
   ZoteroCollectionItemsPage,
   OnlineReference,
   ReferenceAddResult,
   ResearchConfig,
   ResearchProfile,
-  ResearchResourceSnapshot,
   ResearchSourceIndex,
   ResearchSourceGitResult,
-  ResearchSourceSearchResult,
   HistoryItem,
   RecoveryItem,
   RecoverySnapshot,
   SectionNode,
-  ProjectDatabase,
-  CompileDatabase,
-  CompileRecord,
-  ProjectSnippet,
-  ProjectBookmark,
   AppUpdateActionResult,
   AppUpdateCheckResult,
   AppUpdateDownloadProgress,
@@ -129,7 +121,6 @@ export interface DesktopApi {
   renamePath(source: string, destination: string): Promise<{ success: boolean }>
   deletePath(path: string): Promise<{ success: boolean }>
   readFileBase64(filePath: string): Promise<{ data: string; mimeType: string }>
-  readFileBinary(filePath: string): Promise<{ data: Uint8Array; mimeType: string }>
   readCompiledPdf(filePath: string): Promise<{ data: Uint8Array; mimeType: string }>
   readDirectory(dirPath: string): Promise<DirectoryEntry[]>
   watchDirectory(dirPath: string): Promise<{ success: boolean }>
@@ -141,7 +132,6 @@ export interface DesktopApi {
 
   // Compilation
   compile(request: CompileRequest): Promise<CompileResponse>
-  cancelCompile(): Promise<boolean>
   tectonicCacheStatus(): Promise<TectonicCacheStatus>
   tectonicCacheReset(): Promise<TectonicCacheStatus>
   onCompileLog(cb: (event: CompileLogEvent) => void): void
@@ -197,8 +187,6 @@ export interface DesktopApi {
   gitStage(workDir: string, filePath: string): Promise<{ success: boolean }>
   gitUnstage(workDir: string, filePath: string): Promise<{ success: boolean }>
   gitCommit(workDir: string, message: string): Promise<{ success: boolean }>
-  gitDiff(workDir: string): Promise<string>
-  gitLog(workDir: string): Promise<GitLogEntry[]>
   gitFileLog(workDir: string, filePath: string): Promise<GitLogEntry[]>
 
   // Auto Update
@@ -224,30 +212,16 @@ export interface DesktopApi {
     inputPath: string,
     format: string
   ): Promise<{ success: boolean; outputPath: string } | null>
-  getExportFormats(): Promise<{ name: string; ext: string }[]>
   exportOverleafZip(): Promise<{ success: boolean; outputPath: string } | null>
-
-  // LSP (TexLab)
-  lspStart(workspaceRoot: string): Promise<{ success: boolean }>
-  lspStop(): Promise<{ success: boolean }>
-  lspSend(message: object): Promise<{ success: boolean }>
-  lspStatus(): Promise<{ status: string }>
-  onLspMessage(cb: (message: object) => void): void
-  removeLspMessageListener(): void
-  onLspStatus(cb: (status: string, error?: string) => void): void
-  removeLspStatusListener(): void
 
   // Zotero
   zoteroProbe(port?: number): Promise<boolean>
   zoteroSearch(term: string, port?: number): Promise<ZoteroSearchResult[]>
-  zoteroCiteCAYW(port?: number): Promise<string>
-  zoteroExportBibtex(citekeys: string[], port?: number): Promise<string>
   zoteroSyncCollection(
     collection: string,
     targetFile?: string,
     port?: number
   ): Promise<ZoteroSyncResult>
-  zoteroCollections(port?: number): Promise<ZoteroCollection[]>
   zoteroLibraryTree(port?: number): Promise<ZoteroLibrary[]>
   zoteroCollectionItems(
     collection: string,
@@ -270,13 +244,7 @@ export interface DesktopApi {
     session: ResearchChatSession
   ): Promise<ResearchChatSessionSnapshot>
   researchChatSessionClear(scope: ResearchChatSessionScope): Promise<ResearchChatSessionSnapshot>
-  researchResourceSnapshot(resourceId: string): Promise<ResearchResourceSnapshot>
   researchSourceIndex(resourceId: string, localPath: string): Promise<ResearchSourceIndex>
-  researchSourceSearch(
-    resourceId: string,
-    query: string,
-    limit?: number
-  ): Promise<ResearchSourceSearchResult[]>
   researchSourceClone(resourceId: string): Promise<ResearchSourceGitResult>
   researchSourceFetch(resourceId: string): Promise<ResearchSourceGitResult>
 
@@ -310,7 +278,6 @@ export interface DesktopApi {
   getPerformanceMemory(): Promise<PerformanceMemorySample>
 
   // History
-  saveHistorySnapshot(filePath: string, content: string): Promise<void>
   getHistoryList(filePath: string): Promise<HistoryItem[]>
   loadHistorySnapshot(filePath: string, snapshotPath: string): Promise<string>
 
@@ -326,30 +293,6 @@ export interface DesktopApi {
   addTemplate(name: string, description: string, content: string): Promise<Template>
   removeTemplate(id: string): Promise<{ success: boolean }>
   importTemplateZip(): Promise<Template | null>
-
-  // Project Data (.textex/ folder)
-  projectInit(projectRoot: string): Promise<ProjectDatabase>
-  projectExists(projectRoot: string): Promise<boolean>
-  projectLoad(projectRoot: string): Promise<ProjectDatabase>
-  projectSave(projectRoot: string, partial: Partial<ProjectDatabase>): Promise<ProjectDatabase>
-  projectTouch(projectRoot: string): Promise<{ success: boolean }>
-  projectCompileLoad(projectRoot: string): Promise<CompileDatabase>
-  projectCompileSave(projectRoot: string, record: CompileRecord): Promise<CompileDatabase>
-  projectCompileClear(projectRoot: string): Promise<CompileDatabase>
-  projectCompileLogSave(projectRoot: string, filePath: string, log: string): Promise<string>
-  projectCompileLogLoad(projectRoot: string, filePath: string): Promise<string | null>
-  projectSnippetsLoad(projectRoot: string): Promise<ProjectSnippet[]>
-  projectSnippetsAdd(
-    projectRoot: string,
-    snippet: Omit<ProjectSnippet, 'id'>
-  ): Promise<ProjectSnippet>
-  projectSnippetsRemove(projectRoot: string, id: string): Promise<{ success: boolean }>
-  projectBookmarksLoad(projectRoot: string): Promise<ProjectBookmark[]>
-  projectBookmarksAdd(
-    projectRoot: string,
-    bookmark: Omit<ProjectBookmark, 'id' | 'created'>
-  ): Promise<ProjectBookmark>
-  projectBookmarksRemove(projectRoot: string, id: string): Promise<{ success: boolean }>
 }
 
 declare global {

@@ -81,29 +81,12 @@ describe('ResearchChatPanel', () => {
       totalBytes: 10,
       truncated: false
     })
-    window.api.researchSourceSearch = vi.fn().mockResolvedValue([
-      {
-        resourceId: 'official-code',
-        path: 'train.py',
-        line: 42,
-        startLine: 40,
-        snippet: 'def train():',
-        score: 110
-      }
-    ])
     window.api.aiResearchChat = vi
       .fn()
       .mockResolvedValue(chatResponse('It is implemented in [Official code].'))
     window.api.aiProcessCustom = vi.fn().mockResolvedValue('\\section{Method} Revised draft')
     window.api.aiPlanZotero = vi.fn()
     window.api.zoteroApplyMutationPlan = vi.fn()
-    window.api.researchResourceSnapshot = vi.fn().mockResolvedValue({
-      resourceId: 'project-site',
-      url: 'https://project.example.org',
-      fetchedAt: 1,
-      content: 'Official project documentation',
-      truncated: false
-    })
     window.api.researchChatSessionLoad = vi.fn().mockImplementation(async () => ({
       projectRoot: useProjectStore.getState().projectRoot ?? '/project',
       projectEpoch: '1',
@@ -365,8 +348,6 @@ describe('ResearchChatPanel', () => {
 
     await waitFor(() => expect(window.api.aiResearchChat).toHaveBeenCalledOnce())
     expect(window.api.researchSourceIndex).not.toHaveBeenCalled()
-    expect(window.api.researchSourceSearch).not.toHaveBeenCalled()
-    expect(window.api.researchResourceSnapshot).not.toHaveBeenCalled()
     expect(window.api.aiResearchChat).toHaveBeenCalledWith(
       expect.objectContaining({
         message: 'Where is training implemented?',

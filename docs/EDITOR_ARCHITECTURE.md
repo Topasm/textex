@@ -46,7 +46,7 @@ React / Zustand
 
 DocumentModel.snapshot(revision N)
        +-- spell/outline/package analysis
-       +-- revision-gated TexLab synchronization
+       +-- native outline/package/reference analysis
        +-- save/compile request
 ```
 
@@ -139,8 +139,8 @@ Phase 1은 다음 순서의 작은 변경으로 진행한다.
 5. **완료:** `useEditorStore`에서 full `content`, `openFiles[*].content`, raw Monaco editor
    instance와 controlled refresh state를 제거한다. PDF scroll sync도 adapter API를 사용한다.
 6. **완료:** spell, outline, package detection과 save/compile 입력을 revision
-   snapshot/delta contract로 전환하고 TexLab didChange 및 provider 결과도 현재
-   document revision에서만 반영한다.
+   snapshot/delta contract로 전환하고 비동기 provider 결과도 현재 document
+   revision에서만 반영한다.
 
 완료 조건은 기존 Monaco 기능과 keyboard/IME/undo behavior가 유지되고, async stale-result와
 save-race test가 통과하며, 지속 입력 시 React/Zustand에 전체 문서 문자열을 publish하지 않는
@@ -302,7 +302,7 @@ Phase 2  Tauri shell/filesystem boundary (complete)
 Phase 3  Rust ProjectManager + watcher
 Phase 4  revision-aware CompileManager + Tectonic
 Phase 5  PDF delivery + virtualization
-Phase 6  TexLab manager and bounded streaming (complete; executable optional)
+Phase 6  native outline/completion/diagnostics workflow (complete)
 Phase 7  safe system-terminal launch (complete; no embedded PTY)
 Phase 8  Monaco/CodeMirror A/B decision
 ```

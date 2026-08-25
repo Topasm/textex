@@ -13,7 +13,6 @@ export type UpdateStatus =
   | 'error'
 export type UpdateErrorAction = 'check' | 'download' | 'restart'
 export type ExportStatus = 'idle' | 'exporting' | 'success' | 'error'
-export type LspStatus = 'stopped' | 'starting' | 'running' | 'error'
 
 interface UiState {
   // AI Draft modal
@@ -31,10 +30,6 @@ interface UiState {
 
   // Export
   exportStatus: ExportStatus
-
-  // LSP
-  lspStatus: LspStatus
-  lspError: string | null
 
   // Document symbols
   documentSymbols: DocumentSymbolNode[]
@@ -56,8 +51,6 @@ interface UiState {
   setUpdateProgress: (progress: number | null) => void
   setUpdateError: (error: string, action?: UpdateErrorAction | null) => void
   setExportStatus: (status: ExportStatus) => void
-  setLspStatus: (status: LspStatus) => void
-  setLspError: (error: string | null) => void
   setDocumentSymbols: (symbols: DocumentSymbolNode[]) => void
   requestOmniSearchFocus: (mode?: 'file' | 'cite' | 'zotero' | 'online' | 'pdf' | 'tex') => void
   clearOmniSearchFocus: () => void
@@ -75,8 +68,6 @@ export const useUiStore = create<UiState>()(
     updateError: '',
     updateErrorAction: null,
     exportStatus: 'idle',
-    lspStatus: 'stopped',
-    lspError: null,
     documentSymbols: [],
     omniSearchFocusRequested: false,
     omniSearchFocusMode: null,
@@ -93,8 +84,6 @@ export const useUiStore = create<UiState>()(
     setUpdateError: (updateError, updateErrorAction = null) =>
       set({ updateError, updateErrorAction }),
     setExportStatus: (exportStatus) => set({ exportStatus }),
-    setLspStatus: (lspStatus) => set({ lspStatus }),
-    setLspError: (lspError) => set({ lspError }),
     setDocumentSymbols: (documentSymbols) => set({ documentSymbols }),
     requestOmniSearchFocus: (mode) =>
       set({ omniSearchFocusRequested: true, omniSearchFocusMode: mode ?? 'cite' }),

@@ -42,7 +42,6 @@ describe('IconSystemProvider', () => {
       'ui/ModalChrome.tsx',
       'DraftModal.tsx',
       'TemplateGallery.tsx',
-      'HistoryPanel.tsx',
       'TableEditorModal.tsx',
       'bib/BibEntryCard.tsx',
       'bib/BibGroupHeader.tsx',

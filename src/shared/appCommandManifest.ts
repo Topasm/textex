@@ -16,8 +16,6 @@ export interface ShortcutBinding {
   readonly shift?: boolean
 }
 
-export type AppCommandCapability = 'ai' | 'documentExport' | 'templates'
-
 export type AppCommandGroup = 'file' | 'edit' | 'view' | 'compile' | 'pdf' | 'ai' | 'app' | 'window'
 export type AppCommandContextRequirement = 'document' | 'pdf' | 'project'
 
@@ -29,7 +27,6 @@ interface AppCommandDefinition {
   /** Locale-independent aliases used by command-palette search. */
   readonly keywords: readonly string[]
   readonly shortcut?: ShortcutBinding
-  readonly requiredCapability?: AppCommandCapability
   readonly requiredContext?: AppCommandContextRequirement
 }
 
@@ -81,40 +78,35 @@ export const APP_COMMAND_MANIFEST = [
     label: 'New from Template',
     group: 'file',
     keywords: ['create', 'project', 'gallery'],
-    shortcut: { key: 'n', mod: true, shift: true },
-    requiredCapability: 'templates'
+    shortcut: { key: 'n', mod: true, shift: true }
   },
   {
     id: 'file.export.html',
     label: 'Export as HTML',
     group: 'file',
     keywords: ['convert', 'web'],
-    requiredContext: 'document',
-    requiredCapability: 'documentExport'
+    requiredContext: 'document'
   },
   {
     id: 'file.export.docx',
     label: 'Export as DOCX',
     group: 'file',
     keywords: ['convert', 'word'],
-    requiredContext: 'document',
-    requiredCapability: 'documentExport'
+    requiredContext: 'document'
   },
   {
     id: 'file.export.odt',
     label: 'Export as ODT',
     group: 'file',
     keywords: ['convert', 'open document'],
-    requiredContext: 'document',
-    requiredCapability: 'documentExport'
+    requiredContext: 'document'
   },
   {
     id: 'file.export.epub',
     label: 'Export as EPUB',
     group: 'file',
     keywords: ['convert', 'ebook'],
-    requiredContext: 'document',
-    requiredCapability: 'documentExport'
+    requiredContext: 'document'
   },
   {
     id: 'compile.run',
@@ -136,8 +128,7 @@ export const APP_COMMAND_MANIFEST = [
     label: 'Create AI Draft',
     group: 'ai',
     keywords: ['generate', 'write', 'assistant'],
-    shortcut: { key: ['d', 'D'], mod: true, shift: true },
-    requiredCapability: 'ai'
+    shortcut: { key: ['d', 'D'], mod: true, shift: true }
   },
   {
     id: 'edit.find',

@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createTauriApi } from '../../renderer/platform/tauriApi'
 import { installDesktopApi } from '../../renderer/platform/desktopApi'
-import { getDesktopCapabilities } from '../../renderer/platform/capabilities'
 
 const invokeMock = vi.hoisted(() => vi.fn())
 const isTauriMock = vi.hoisted(() => vi.fn())
@@ -234,7 +233,6 @@ describe('Tauri DesktopApi adapter', () => {
       .mockResolvedValueOnce({ success: true })
       .mockResolvedValueOnce({ data: 'data:image/png;base64,iVBORw==', mimeType: 'image/png' })
       .mockResolvedValueOnce(new Uint8Array([37, 80, 68, 70]).buffer)
-      .mockResolvedValueOnce(new Uint8Array([37, 80, 68, 70]).buffer)
 
     const api = createTauriApi()
 
@@ -259,10 +257,6 @@ describe('Tauri DesktopApi adapter', () => {
       data: 'data:image/png;base64,iVBORw==',
       mimeType: 'image/png'
     })
-    const binary = await api.readFileBinary('/project/main.pdf')
-    expect(binary.mimeType).toBe('application/pdf')
-    expect(binary.data).toBeInstanceOf(Uint8Array)
-    expect([...binary.data]).toEqual([37, 80, 68, 70])
     const compiled = await api.readCompiledPdf('/cache/build/project/tectonic/main.pdf')
     expect(compiled.mimeType).toBe('application/pdf')
     expect([...compiled.data]).toEqual([37, 80, 68, 70])
@@ -276,19 +270,8 @@ describe('Tauri DesktopApi adapter', () => {
       ['rename_path', { source: '/project/draft.tex', destination: '/project/paper.tex' }],
       ['delete_path', { path: '/project/old.tex' }],
       ['read_file_base64', { filePath: '/project/source.png' }],
-      ['read_file_binary', { filePath: '/project/main.pdf' }],
       ['read_compiled_pdf', { filePath: '/cache/build/project/tectonic/main.pdf' }]
     ])
-  })
-
-  it('preserves MIME inference for platform byte-array fallbacks', async () => {
-    invokeMock.mockResolvedValueOnce([137, 80, 78, 71])
-
-    const api = createTauriApi()
-    const binary = await api.readFileBinary('C:\\project\\FIGURE.PNG')
-
-    expect([...binary.data]).toEqual([137, 80, 78, 71])
-    expect(binary.mimeType).toBe('image/png')
   })
 
   it('keeps project activation and settings on the typed Rust boundary', async () => {
@@ -301,7 +284,6 @@ describe('Tauri DesktopApi adapter', () => {
       spellCheckLanguage: 'en-US',
       gitEnabled: true,
       autoUpdateEnabled: true,
-      lspEnabled: true,
       zoteroEnabled: false,
       zoteroPort: 23119,
       aiProvider: '',
@@ -414,62 +396,6 @@ describe('Tauri DesktopApi adapter', () => {
 
     await expect(api.exitApp()).resolves.toEqual({ success: true })
     expect(invokeMock).toHaveBeenCalledWith('exit_app')
-  })
-
-  it('maps project metadata operations to the scoped Rust commands', async () => {
-    const compileRecord = {
-      filePath: '/project/main.tex',
-      lastCompiled: '2026-08-23T00:01:00Z',
-      duration: 1,
-      exitCode: 0,
-      pdfPath: '/project/main.pdf',
-      errorCount: 0,
-      warningCount: 0,
-      hash: 'abc'
-    }
-    const snippet = { prefix: 'fig', label: 'Figure', body: 'body', description: '' }
-    const bookmark = { file: '/project/main.tex', line: 3, column: 1, label: 'Result' }
-    invokeMock.mockResolvedValue(undefined)
-    const api = createTauriApi()
-
-    await api.projectInit('/project')
-    await api.projectExists('/project')
-    await api.projectLoad('/project')
-    await api.projectSave('/project', { mainFile: 'main.tex' })
-    await api.projectTouch('/project')
-    await api.projectCompileLoad('/project')
-    await api.projectCompileSave('/project', compileRecord)
-    await api.projectCompileClear('/project')
-    await api.projectCompileLogSave('/project', '/project/main.tex', 'ok')
-    await api.projectCompileLogLoad('/project', '/project/main.tex')
-    await api.projectSnippetsLoad('/project')
-    await api.projectSnippetsAdd('/project', snippet)
-    await api.projectSnippetsRemove('/project', 'snippet-1')
-    await api.projectBookmarksLoad('/project')
-    await api.projectBookmarksAdd('/project', bookmark)
-    await api.projectBookmarksRemove('/project', 'bm-1')
-
-    expect(invokeMock.mock.calls).toEqual([
-      ['project_init', { projectRoot: '/project' }],
-      ['project_exists', { projectRoot: '/project' }],
-      ['project_load', { projectRoot: '/project' }],
-      ['project_save', { projectRoot: '/project', partial: { mainFile: 'main.tex' } }],
-      ['project_touch', { projectRoot: '/project' }],
-      ['project_compile_load', { projectRoot: '/project' }],
-      ['project_compile_save', { projectRoot: '/project', record: compileRecord }],
-      ['project_compile_clear', { projectRoot: '/project' }],
-      [
-        'project_compile_log_save',
-        { projectRoot: '/project', filePath: '/project/main.tex', log: 'ok' }
-      ],
-      ['project_compile_log_load', { projectRoot: '/project', filePath: '/project/main.tex' }],
-      ['project_snippets_load', { projectRoot: '/project' }],
-      ['project_snippets_add', { projectRoot: '/project', snippet }],
-      ['project_snippets_remove', { projectRoot: '/project', id: 'snippet-1' }],
-      ['project_bookmarks_load', { projectRoot: '/project' }],
-      ['project_bookmarks_add', { projectRoot: '/project', bookmark }],
-      ['project_bookmarks_remove', { projectRoot: '/project', id: 'bm-1' }]
-    ])
   })
 
   it('streams revision-tagged compile logs and diagnostics through a Tauri channel', async () => {
@@ -689,8 +615,6 @@ describe('Tauri DesktopApi adapter', () => {
       .mockResolvedValueOnce({ success: true })
       .mockResolvedValueOnce({ success: true })
       .mockResolvedValueOnce({ success: true })
-      .mockResolvedValueOnce('diff --git a/main.tex b/main.tex')
-      .mockResolvedValueOnce(log)
       .mockResolvedValueOnce(log)
 
     const api = createTauriApi()
@@ -704,8 +628,6 @@ describe('Tauri DesktopApi adapter', () => {
     await expect(api.gitStage('/project', 'main.tex')).resolves.toEqual({ success: true })
     await expect(api.gitUnstage('/project', 'main.tex')).resolves.toEqual({ success: true })
     await expect(api.gitCommit('/project', 'Update paper')).resolves.toEqual({ success: true })
-    await expect(api.gitDiff('/project')).resolves.toContain('diff --git')
-    await expect(api.gitLog('/project')).resolves.toEqual(log)
     await expect(api.gitFileLog('/project', '/project/main.tex')).resolves.toEqual(log)
 
     expect(invokeMock.mock.calls).toEqual([
@@ -719,8 +641,6 @@ describe('Tauri DesktopApi adapter', () => {
       ['git_stage', { workDir: '/project', filePath: 'main.tex' }],
       ['git_unstage', { workDir: '/project', filePath: 'main.tex' }],
       ['git_commit', { workDir: '/project', message: 'Update paper' }],
-      ['git_diff', { workDir: '/project' }],
-      ['git_log', { workDir: '/project' }],
       ['git_file_log', { workDir: '/project', filePath: '/project/main.tex' }]
     ])
   })
@@ -819,18 +739,10 @@ describe('Tauri DesktopApi adapter', () => {
 
   it('maps optional Pandoc export through the scoped Rust service', async () => {
     invokeMock
-      .mockResolvedValueOnce([
-        { name: 'HTML', ext: 'html' },
-        { name: 'DOCX', ext: 'docx' }
-      ])
       .mockResolvedValueOnce({ success: true, outputPath: '/project/paper.docx' })
       .mockResolvedValueOnce({ success: true, outputPath: '/exports/paper-overleaf.zip' })
 
     const api = createTauriApi()
-    await expect(api.getExportFormats()).resolves.toEqual([
-      { name: 'HTML', ext: 'html' },
-      { name: 'DOCX', ext: 'docx' }
-    ])
     await expect(api.exportDocument('/project/paper.tex', 'docx')).resolves.toEqual({
       success: true,
       outputPath: '/project/paper.docx'
@@ -840,7 +752,6 @@ describe('Tauri DesktopApi adapter', () => {
       outputPath: '/exports/paper-overleaf.zip'
     })
     expect(invokeMock.mock.calls).toEqual([
-      ['get_export_formats'],
       ['export_document', { inputPath: '/project/paper.tex', format: 'docx' }],
       ['export_overleaf_zip']
     ])
@@ -991,22 +902,15 @@ describe('Tauri DesktopApi adapter', () => {
       year: '2026',
       type: 'article'
     }
-    invokeMock
-      .mockResolvedValueOnce(true)
-      .mockResolvedValueOnce([result])
-      .mockResolvedValueOnce('\\cite{smith2026}')
-      .mockResolvedValueOnce('@article{smith2026}')
-      .mockResolvedValueOnce({
-        filePath: '/project/references.bib',
-        bytesWritten: 19,
-        entryCount: 1
-      })
+    invokeMock.mockResolvedValueOnce(true).mockResolvedValueOnce([result]).mockResolvedValueOnce({
+      filePath: '/project/references.bib',
+      bytesWritten: 19,
+      entryCount: 1
+    })
 
     const api = createTauriApi()
     await expect(api.zoteroProbe(23119)).resolves.toBe(true)
     await expect(api.zoteroSearch('paper', 23119)).resolves.toEqual([result])
-    await expect(api.zoteroCiteCAYW(23119)).resolves.toBe('\\cite{smith2026}')
-    await expect(api.zoteroExportBibtex(['smith2026'], 23119)).resolves.toBe('@article{smith2026}')
     await expect(api.zoteroSyncCollection('/0/8CV58ZVD', undefined, 23119)).resolves.toEqual({
       filePath: '/project/references.bib',
       bytesWritten: 19,
@@ -1015,8 +919,6 @@ describe('Tauri DesktopApi adapter', () => {
     expect(invokeMock.mock.calls).toEqual([
       ['zotero_probe', { port: 23119 }],
       ['zotero_search', { term: 'paper', port: 23119 }],
-      ['zotero_cite_cayw', { port: 23119 }],
-      ['zotero_export_bibtex', { citekeys: ['smith2026'], port: 23119 }],
       ['zotero_sync_collection', { collection: '/0/8CV58ZVD', targetFile: undefined, port: 23119 }]
     ])
   })
@@ -1065,13 +967,6 @@ describe('Tauri DesktopApi adapter', () => {
       ],
       instructions: ['Prefer the official implementation.']
     }
-    const snapshot = {
-      resourceId: 'project-site',
-      url: 'https://example.org/paper',
-      fetchedAt: 1_725_000_000_000,
-      content: 'Paper and code',
-      truncated: false
-    }
     const chatSession = {
       version: 1 as const,
       messages: [{ role: 'user' as const, content: 'Compare the methods.' }],
@@ -1089,7 +984,6 @@ describe('Tauri DesktopApi adapter', () => {
     }
     const nextChatScope = { ...chatScope, revision: '4' }
     invokeMock
-      .mockResolvedValueOnce([collection])
       .mockResolvedValueOnce([library])
       .mockResolvedValueOnce(collectionPage)
       .mockResolvedValueOnce(added)
@@ -1107,10 +1001,8 @@ describe('Tauri DesktopApi adapter', () => {
         revision: '5',
         session: { ...chatSession, messages: [] }
       })
-      .mockResolvedValueOnce(snapshot)
 
     const api = createTauriApi()
-    await expect(api.zoteroCollections(23119)).resolves.toEqual([collection])
     await expect(api.zoteroLibraryTree(23119)).resolves.toEqual([library])
     await expect(api.zoteroCollectionItems('/0/ABC', 0, 50, 23119)).resolves.toEqual(collectionPage)
     await expect(api.zoteroAddToProject('Smith2026Paper', 23119)).resolves.toEqual(added)
@@ -1130,9 +1022,7 @@ describe('Tauri DesktopApi adapter', () => {
       revision: '5',
       session: { ...chatSession, messages: [] }
     })
-    await expect(api.researchResourceSnapshot('project-site')).resolves.toEqual(snapshot)
     expect(invokeMock.mock.calls).toEqual([
-      ['zotero_collections', { port: 23119 }],
       ['zotero_library_tree', { port: 23119 }],
       ['zotero_collection_items', { collection: '/0/ABC', offset: 0, limit: 50, port: 23119 }],
       ['zotero_add_to_project', { citekey: 'Smith2026Paper', port: 23119 }],
@@ -1145,24 +1035,18 @@ describe('Tauri DesktopApi adapter', () => {
       ['research_profile_save', { profile }],
       ['research_chat_session_load'],
       ['research_chat_session_save', { scope: chatScope, session: chatSession }],
-      ['research_chat_session_clear', { scope: nextChatScope }],
-      ['research_resource_snapshot', { resourceId: 'project-site' }]
+      ['research_chat_session_clear', { scope: nextChatScope }]
     ])
   })
 
   it('maps history snapshots to project-scoped Rust commands', async () => {
     const item = { timestamp: 123, size: 42, path: '/project/.textex/history/main.tex/123.gz' }
-    invokeMock
-      .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce([item])
-      .mockResolvedValueOnce('old')
+    invokeMock.mockResolvedValueOnce([item]).mockResolvedValueOnce('old')
 
     const api = createTauriApi()
-    await expect(api.saveHistorySnapshot('/project/main.tex', 'current')).resolves.toBeUndefined()
     await expect(api.getHistoryList('/project/main.tex')).resolves.toEqual([item])
     await expect(api.loadHistorySnapshot('/project/main.tex', item.path)).resolves.toBe('old')
     expect(invokeMock.mock.calls).toEqual([
-      ['save_history_snapshot', { filePath: '/project/main.tex', content: 'current' }],
       ['get_history_list', { filePath: '/project/main.tex' }],
       ['load_history_snapshot', { filePath: '/project/main.tex', snapshotPath: item.path }]
     ])
@@ -1200,7 +1084,7 @@ describe('Tauri DesktopApi adapter', () => {
     ])
   })
 
-  it('maps bounded research source indexing and search commands', async () => {
+  it('maps bounded research source indexing and Git commands', async () => {
     const index = {
       resourceId: 'official-code',
       rootPath: '/project/sources/code',
@@ -1210,14 +1094,6 @@ describe('Tauri DesktopApi adapter', () => {
       fileCount: 1,
       totalBytes: 42,
       truncated: false
-    }
-    const result = {
-      resourceId: 'official-code',
-      path: 'src/main.rs',
-      line: 5,
-      startLine: 3,
-      snippet: 'fn train() {}',
-      score: 110
     }
     const cloned = {
       success: true,
@@ -1229,18 +1105,15 @@ describe('Tauri DesktopApi adapter', () => {
     const fetched = { ...cloned, action: 'fetched' as const, output: 'Already up to date.' }
     invokeMock
       .mockResolvedValueOnce(index)
-      .mockResolvedValueOnce([result])
       .mockResolvedValueOnce(cloned)
       .mockResolvedValueOnce(fetched)
 
     const api = createTauriApi()
     await expect(api.researchSourceIndex('official-code', 'sources/code')).resolves.toEqual(index)
-    await expect(api.researchSourceSearch('official-code', 'train', 4)).resolves.toEqual([result])
     await expect(api.researchSourceClone('official-code')).resolves.toEqual(cloned)
     await expect(api.researchSourceFetch('official-code')).resolves.toEqual(fetched)
     expect(invokeMock.mock.calls).toEqual([
       ['research_source_index', { resourceId: 'official-code', localPath: 'sources/code' }],
-      ['research_source_search', { resourceId: 'official-code', query: 'train', limit: 4 }],
       ['research_source_clone', { resourceId: 'official-code' }],
       ['research_source_fetch', { resourceId: 'official-code' }]
     ])
@@ -1308,15 +1181,13 @@ describe('Tauri DesktopApi adapter', () => {
     })
   })
 
-  it('keeps mandatory listeners and LSP cleanup safe while their backends are pending', async () => {
+  it('keeps mandatory listeners safe while their backends are pending', () => {
     const api = createTauriApi()
 
     expect(() => api.onCompileLog(() => {})).not.toThrow()
     expect(() => api.onDiagnostics(() => {})).not.toThrow()
     expect(() => api.onAppCommand(() => {})).not.toThrow()
     api.removeAppCommandListener()
-    invokeMock.mockResolvedValueOnce({ success: true })
-    await expect(api.lspStop()).resolves.toEqual({ success: true })
   })
 
   it('forwards validated native menu events and disposes the listener', async () => {
@@ -1336,50 +1207,6 @@ describe('Tauri DesktopApi adapter', () => {
     expect(command).toHaveBeenCalledTimes(2)
   })
 
-  it('maps TexLab lifecycle, JSON-RPC, and channel events', async () => {
-    invokeMock
-      .mockResolvedValueOnce({ success: true })
-      .mockResolvedValueOnce({ success: true })
-      .mockResolvedValueOnce({ status: 'running' })
-      .mockResolvedValueOnce({ success: true })
-    const message = vi.fn()
-    const status = vi.fn()
-    const api = createTauriApi()
-    api.onLspMessage(message)
-    api.onLspStatus(status)
-
-    await expect(api.lspStart('/project')).resolves.toEqual({ success: true })
-    const lspChannel = channelInstances.at(-1)
-    lspChannel?.onmessage({
-      event: 'message',
-      message: { jsonrpc: '2.0', id: 1, result: null }
-    })
-    lspChannel?.onmessage({ event: 'status', status: 'running' })
-    expect(message).toHaveBeenCalledWith({ jsonrpc: '2.0', id: 1, result: null })
-    expect(status).toHaveBeenCalledWith('running', undefined)
-
-    const payload = { jsonrpc: '2.0', method: 'initialized', params: {} }
-    await expect(api.lspSend(payload)).resolves.toEqual({ success: true })
-    await expect(api.lspStatus()).resolves.toEqual({ status: 'running' })
-    await expect(api.lspStop()).resolves.toEqual({ success: true })
-    lspChannel?.onmessage({
-      event: 'message',
-      message: { jsonrpc: '2.0', id: 2, result: 'late' }
-    })
-    lspChannel?.onmessage({ event: 'status', status: 'error', error: 'late' })
-    expect(message).toHaveBeenCalledOnce()
-    expect(status).toHaveBeenCalledOnce()
-    api.removeLspMessageListener()
-    api.removeLspStatusListener()
-
-    expect(invokeMock.mock.calls).toEqual([
-      ['lsp_start', { workspaceRoot: '/project', onEvent: lspChannel }],
-      ['lsp_send', { message: payload }],
-      ['lsp_status'],
-      ['lsp_stop']
-    ])
-  })
-
   it('opens the active project in a system terminal without renderer path input', async () => {
     invokeMock.mockResolvedValueOnce({ success: true })
     const api = createTauriApi()
@@ -1397,7 +1224,6 @@ describe('Tauri DesktopApi adapter', () => {
     expect(window.api).not.toBe(existingApi)
     expect(window.api.openDirectory).toBeTypeOf('function')
     expect(document.documentElement.dataset.desktopRuntime).toBe('tauri')
-    expect(getDesktopCapabilities().runtime).toBe('tauri')
     expect(isTauriMock).toHaveBeenCalledOnce()
   })
 
@@ -1409,7 +1235,6 @@ describe('Tauri DesktopApi adapter', () => {
 
     expect(window.api.openDirectory).toBeTypeOf('function')
     expect(document.documentElement.dataset.desktopRuntime).toBe('tauri')
-    expect(getDesktopCapabilities().runtime).toBe('tauri')
     expect(isTauriMock).toHaveBeenCalledOnce()
   })
 

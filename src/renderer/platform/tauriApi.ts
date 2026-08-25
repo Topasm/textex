@@ -71,17 +71,10 @@ type TauriUpdateDownloadEvent =
     }
   | { event: 'finished' }
 
-type TauriLspEvent =
-  { event: 'message'; message: object } | { event: 'status'; status: string; error?: string }
-
 let compileLogCallback: ((event: CompileLogEvent) => void) | null = null
 let diagnosticsCallback: ((event: CompileDiagnosticsEvent) => void) | null = null
 let directoryChangeCallback: ((change: DirectoryChangeEvent) => void) | null = null
 let directoryWatcherGeneration = 0
-let lspMessageCallback: ((message: object) => void) | null = null
-let lspStatusCallback: ((status: string, error?: string) => void) | null = null
-let lspGeneration = 0
-let lspTransition: Promise<void> = Promise.resolve()
 const APP_COMMAND_EVENT = 'app-command'
 const appCommandIds = new Set<string>(APP_COMMAND_MANIFEST.map(({ id }) => id))
 let appCommandCallback: ((command: AppCommandId) => void) | null = null
@@ -239,39 +232,6 @@ const deletePath: DesktopApi['deletePath'] = (path) =>
 const readFileBase64: DesktopApi['readFileBase64'] = (filePath) =>
   invoke<{ data: string; mimeType: string }>(TAURI_COMMANDS.readFileBase64, { filePath })
 
-function binaryMimeType(filePath: string): string {
-  const extension = filePath.match(/\.([^.\\/]+)$/)?.[1]?.toLowerCase()
-  switch (extension) {
-    case 'pdf':
-      return 'application/pdf'
-    case 'png':
-      return 'image/png'
-    case 'jpg':
-    case 'jpeg':
-      return 'image/jpeg'
-    case 'gif':
-      return 'image/gif'
-    case 'bmp':
-      return 'image/bmp'
-    case 'svg':
-      return 'image/svg+xml'
-    case 'webp':
-      return 'image/webp'
-    default:
-      return 'application/octet-stream'
-  }
-}
-
-const readFileBinary: DesktopApi['readFileBinary'] = async (filePath) => {
-  const bytes = await invoke<ArrayBuffer | Uint8Array | number[]>(TAURI_COMMANDS.readFileBinary, {
-    filePath
-  })
-  return {
-    mimeType: binaryMimeType(filePath),
-    data: bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)
-  }
-}
-
 const readCompiledPdf: DesktopApi['readCompiledPdf'] = async (filePath) => {
   const bytes = await invoke<ArrayBuffer | Uint8Array | number[]>(TAURI_COMMANDS.readCompiledPdf, {
     filePath
@@ -311,15 +271,8 @@ const gitUnstage: DesktopApi['gitUnstage'] = (workDir, filePath) =>
 const gitCommit: DesktopApi['gitCommit'] = (workDir, message) =>
   invoke(TAURI_COMMANDS.gitCommit, { workDir, message })
 
-const gitDiff: DesktopApi['gitDiff'] = (workDir) => invoke(TAURI_COMMANDS.gitDiff, { workDir })
-
-const gitLog: DesktopApi['gitLog'] = (workDir) => invoke(TAURI_COMMANDS.gitLog, { workDir })
-
 const gitFileLog: DesktopApi['gitFileLog'] = (workDir, filePath) =>
   invoke(TAURI_COMMANDS.gitFileLog, { workDir, filePath })
-
-const saveHistorySnapshot: DesktopApi['saveHistorySnapshot'] = (filePath, content) =>
-  invoke(TAURI_COMMANDS.saveHistorySnapshot, { filePath, content })
 
 const getHistoryList: DesktopApi['getHistoryList'] = (filePath) =>
   invoke(TAURI_COMMANDS.getHistoryList, { filePath })
@@ -373,54 +326,6 @@ const removeDirectoryChangedListener: DesktopApi['removeDirectoryChangedListener
 const getProjectIndex = (): Promise<ProjectIndexSnapshot> =>
   invoke<ProjectIndexSnapshot>(TAURI_COMMANDS.getProjectIndex)
 
-const projectInit: DesktopApi['projectInit'] = (projectRoot) =>
-  invoke(TAURI_COMMANDS.projectInit, { projectRoot })
-
-const projectExists: DesktopApi['projectExists'] = (projectRoot) =>
-  invoke(TAURI_COMMANDS.projectExists, { projectRoot })
-
-const projectLoad: DesktopApi['projectLoad'] = (projectRoot) =>
-  invoke(TAURI_COMMANDS.projectLoad, { projectRoot })
-
-const projectSave: DesktopApi['projectSave'] = (projectRoot, partial) =>
-  invoke(TAURI_COMMANDS.projectSave, { projectRoot, partial })
-
-const projectTouch: DesktopApi['projectTouch'] = (projectRoot) =>
-  invoke(TAURI_COMMANDS.projectTouch, { projectRoot })
-
-const projectCompileLoad: DesktopApi['projectCompileLoad'] = (projectRoot) =>
-  invoke(TAURI_COMMANDS.projectCompileLoad, { projectRoot })
-
-const projectCompileSave: DesktopApi['projectCompileSave'] = (projectRoot, record) =>
-  invoke(TAURI_COMMANDS.projectCompileSave, { projectRoot, record })
-
-const projectCompileClear: DesktopApi['projectCompileClear'] = (projectRoot) =>
-  invoke(TAURI_COMMANDS.projectCompileClear, { projectRoot })
-
-const projectCompileLogSave: DesktopApi['projectCompileLogSave'] = (projectRoot, filePath, log) =>
-  invoke(TAURI_COMMANDS.projectCompileLogSave, { projectRoot, filePath, log })
-
-const projectCompileLogLoad: DesktopApi['projectCompileLogLoad'] = (projectRoot, filePath) =>
-  invoke(TAURI_COMMANDS.projectCompileLogLoad, { projectRoot, filePath })
-
-const projectSnippetsLoad: DesktopApi['projectSnippetsLoad'] = (projectRoot) =>
-  invoke(TAURI_COMMANDS.projectSnippetsLoad, { projectRoot })
-
-const projectSnippetsAdd: DesktopApi['projectSnippetsAdd'] = (projectRoot, snippet) =>
-  invoke(TAURI_COMMANDS.projectSnippetsAdd, { projectRoot, snippet })
-
-const projectSnippetsRemove: DesktopApi['projectSnippetsRemove'] = (projectRoot, id) =>
-  invoke(TAURI_COMMANDS.projectSnippetsRemove, { projectRoot, id })
-
-const projectBookmarksLoad: DesktopApi['projectBookmarksLoad'] = (projectRoot) =>
-  invoke(TAURI_COMMANDS.projectBookmarksLoad, { projectRoot })
-
-const projectBookmarksAdd: DesktopApi['projectBookmarksAdd'] = (projectRoot, bookmark) =>
-  invoke(TAURI_COMMANDS.projectBookmarksAdd, { projectRoot, bookmark })
-
-const projectBookmarksRemove: DesktopApi['projectBookmarksRemove'] = (projectRoot, id) =>
-  invoke(TAURI_COMMANDS.projectBookmarksRemove, { projectRoot, id })
-
 const loadCitationGroups: DesktopApi['loadCitationGroups'] = (projectRoot) =>
   invoke(TAURI_COMMANDS.loadCitationGroups, { projectRoot })
 
@@ -473,17 +378,8 @@ const zoteroProbe: DesktopApi['zoteroProbe'] = (port) =>
 const zoteroSearch: DesktopApi['zoteroSearch'] = (term, port) =>
   invoke(TAURI_COMMANDS.zoteroSearch, { term, port })
 
-const zoteroCiteCAYW: DesktopApi['zoteroCiteCAYW'] = (port) =>
-  invoke(TAURI_COMMANDS.zoteroCiteCayw, { port })
-
-const zoteroExportBibtex: DesktopApi['zoteroExportBibtex'] = (citekeys, port) =>
-  invoke(TAURI_COMMANDS.zoteroExportBibtex, { citekeys, port })
-
 const zoteroSyncCollection: DesktopApi['zoteroSyncCollection'] = (collection, targetFile, port) =>
   invoke(TAURI_COMMANDS.zoteroSyncCollection, { collection, targetFile, port })
-
-const zoteroCollections: DesktopApi['zoteroCollections'] = (port) =>
-  invoke(TAURI_COMMANDS.zoteroCollections, { port })
 
 const zoteroLibraryTree: DesktopApi['zoteroLibraryTree'] = (port) =>
   invoke(TAURI_COMMANDS.zoteroLibraryTree, { port })
@@ -531,14 +427,8 @@ const researchChatSessionSave: DesktopApi['researchChatSessionSave'] = (scope, s
 const researchChatSessionClear: DesktopApi['researchChatSessionClear'] = (scope) =>
   invoke(TAURI_COMMANDS.researchChatSessionClear, { scope })
 
-const researchResourceSnapshot: DesktopApi['researchResourceSnapshot'] = (resourceId) =>
-  invoke(TAURI_COMMANDS.researchResourceSnapshot, { resourceId })
-
 const researchSourceIndex: DesktopApi['researchSourceIndex'] = (resourceId, localPath) =>
   invoke(TAURI_COMMANDS.researchSourceIndex, { resourceId, localPath })
-
-const researchSourceSearch: DesktopApi['researchSourceSearch'] = (resourceId, query, limit) =>
-  invoke(TAURI_COMMANDS.researchSourceSearch, { resourceId, query, limit })
 
 const researchSourceClone: DesktopApi['researchSourceClone'] = (resourceId) =>
   invoke(TAURI_COMMANDS.researchSourceClone, { resourceId })
@@ -559,9 +449,6 @@ const compile: DesktopApi['compile'] = (request: CompileRequest) => {
   }
   return invoke<CompileResponse>(TAURI_COMMANDS.compile, { request, onEvent })
 }
-
-const cancelCompile: DesktopApi['cancelCompile'] = () =>
-  invoke<boolean>(TAURI_COMMANDS.cancelCompile)
 
 const tectonicCacheStatus: DesktopApi['tectonicCacheStatus'] = () =>
   invoke(TAURI_COMMANDS.tectonicCacheStatus)
@@ -586,9 +473,6 @@ const synctexBuildLineMap: DesktopApi['synctexBuildLineMap'] = (texFile) =>
 const exportDocument: DesktopApi['exportDocument'] = (inputPath, format) =>
   invoke(TAURI_COMMANDS.exportDocument, { inputPath, format })
 
-const getExportFormats: DesktopApi['getExportFormats'] = () =>
-  invoke(TAURI_COMMANDS.getExportFormats)
-
 const exportOverleafZip: DesktopApi['exportOverleafZip'] = () =>
   invoke(TAURI_COMMANDS.exportOverleafZip)
 
@@ -603,58 +487,6 @@ const openProjectTerminal: DesktopApi['openProjectTerminal'] = () =>
 
 const getPerformanceMemory: DesktopApi['getPerformanceMemory'] = () =>
   invoke(TAURI_COMMANDS.getPerformanceMemory)
-
-const lspStart: DesktopApi['lspStart'] = (workspaceRoot) => {
-  const generation = ++lspGeneration
-  const onEvent = new Channel<TauriLspEvent>()
-  onEvent.onmessage = (event) => {
-    if (generation !== lspGeneration) return
-    if (event.event === 'message') {
-      lspMessageCallback?.(event.message)
-    } else {
-      lspStatusCallback?.(event.status, event.error)
-    }
-  }
-  const transition = lspTransition
-    .catch(() => {})
-    .then(() => {
-      if (generation !== lspGeneration) return { success: false }
-      return invoke<{ success: boolean }>(TAURI_COMMANDS.lspStart, { workspaceRoot, onEvent })
-    })
-  lspTransition = transition.then(
-    () => {},
-    () => {}
-  )
-  return transition
-}
-
-const lspStop: DesktopApi['lspStop'] = () => {
-  lspGeneration += 1
-  const transition = lspTransition
-    .catch(() => {})
-    .then(() => invoke<{ success: boolean }>(TAURI_COMMANDS.lspStop))
-  lspTransition = transition.then(
-    () => {},
-    () => {}
-  )
-  return transition
-}
-const lspSend: DesktopApi['lspSend'] = (message) =>
-  lspTransition.then(() => invoke(TAURI_COMMANDS.lspSend, { message }))
-const lspStatus: DesktopApi['lspStatus'] = () =>
-  lspTransition.then(() => invoke(TAURI_COMMANDS.lspStatus))
-const onLspMessage: DesktopApi['onLspMessage'] = (callback) => {
-  lspMessageCallback = callback
-}
-const removeLspMessageListener: DesktopApi['removeLspMessageListener'] = () => {
-  lspMessageCallback = null
-}
-const onLspStatus: DesktopApi['onLspStatus'] = (callback) => {
-  lspStatusCallback = callback
-}
-const removeLspStatusListener: DesktopApi['removeLspStatusListener'] = () => {
-  lspStatusCallback = null
-}
 
 const onCompileLog: DesktopApi['onCompileLog'] = (callback) => {
   compileLogCallback = callback
@@ -792,7 +624,6 @@ const tauriDesktopApi = {
   renamePath,
   deletePath,
   readFileBase64,
-  readFileBinary,
   readCompiledPdf,
   createTemplateProject,
   gitIsRepo,
@@ -805,10 +636,7 @@ const tauriDesktopApi = {
   gitStage,
   gitUnstage,
   gitCommit,
-  gitDiff,
-  gitLog,
   gitFileLog,
-  saveHistorySnapshot,
   getHistoryList,
   loadHistorySnapshot,
   saveRecoverySnapshot,
@@ -823,22 +651,6 @@ const tauriDesktopApi = {
   onDirectoryChanged,
   removeDirectoryChangedListener,
   getProjectIndex,
-  projectInit,
-  projectExists,
-  projectLoad,
-  projectSave,
-  projectTouch,
-  projectCompileLoad,
-  projectCompileSave,
-  projectCompileClear,
-  projectCompileLogSave,
-  projectCompileLogLoad,
-  projectSnippetsLoad,
-  projectSnippetsAdd,
-  projectSnippetsRemove,
-  projectBookmarksLoad,
-  projectBookmarksAdd,
-  projectBookmarksRemove,
   loadCitationGroups,
   saveCitationGroups,
   parseBibFile,
@@ -856,10 +668,7 @@ const tauriDesktopApi = {
   importTemplateZip,
   zoteroProbe,
   zoteroSearch,
-  zoteroCiteCAYW,
-  zoteroExportBibtex,
   zoteroSyncCollection,
-  zoteroCollections,
   zoteroLibraryTree,
   zoteroCollectionItems,
   zoteroAddToProject,
@@ -874,13 +683,10 @@ const tauriDesktopApi = {
   researchChatSessionLoad,
   researchChatSessionSave,
   researchChatSessionClear,
-  researchResourceSnapshot,
   researchSourceIndex,
-  researchSourceSearch,
   researchSourceClone,
   researchSourceFetch,
   compile,
-  cancelCompile,
   tectonicCacheStatus,
   tectonicCacheReset,
   onCompileLog,
@@ -891,21 +697,12 @@ const tauriDesktopApi = {
   synctexInverse,
   synctexBuildLineMap,
   exportDocument,
-  getExportFormats,
   exportOverleafZip,
   runSubmissionCheck,
   openExternal,
   openProjectTerminal,
   exitApp,
   getPerformanceMemory,
-  lspStart,
-  lspStop,
-  lspSend,
-  lspStatus,
-  onLspMessage,
-  removeLspMessageListener,
-  onLspStatus,
-  removeLspStatusListener,
   loadSettings,
   saveSettings,
   setTheme,

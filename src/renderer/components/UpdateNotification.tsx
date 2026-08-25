@@ -1,4 +1,12 @@
-import { Download, ExternalLink, RefreshCw, RotateCcw, X } from 'lucide-react'
+import {
+  AlertCircle,
+  CheckCircle2,
+  Download,
+  ExternalLink,
+  RefreshCw,
+  RotateCcw,
+  X
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
   appUpdateReleaseUrl,
@@ -59,16 +67,23 @@ function UpdateNotification() {
       ? new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium' }).format(releaseDate)
       : null
 
+  const statusIcon = (() => {
+    if (isActive) return <RefreshCw className="update-spinner" size={16} aria-hidden="true" />
+    if (status === 'error') return <AlertCircle size={16} aria-hidden="true" />
+    if (status === 'available') return <Download size={16} aria-hidden="true" />
+    return <CheckCircle2 size={16} aria-hidden="true" />
+  })()
+
   return (
     <section
-      className={`update-banner update-banner-${status}`}
+      className={`update-banner app-update-notification update-banner-${status}`}
       role={status === 'error' ? 'alert' : 'status'}
       aria-live={status === 'error' ? 'assertive' : 'polite'}
       aria-atomic="true"
       aria-busy={isActive}
       aria-label={t('updateNotification.regionLabel')}
     >
-      {isActive && <RefreshCw className="update-spinner" size={15} aria-hidden="true" />}
+      <span className="update-status-icon">{statusIcon}</span>
       <span className="update-banner-message">
         {message}
         {status === 'error' && updateError && (

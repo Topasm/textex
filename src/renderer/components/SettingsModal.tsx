@@ -1,21 +1,18 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Palette, Type, Zap, Link, Settings as SettingsIcon, User, Bot } from 'lucide-react'
-import { GeneralTab } from './settings/GeneralTab'
+import { Palette, Type, Zap, Link, Settings as SettingsIcon, Bot } from 'lucide-react'
 import { AppearanceTab } from './settings/AppearanceTab'
 import { EditorTab } from './settings/EditorTab'
 import { AiTab } from './settings/AiTab'
 import { IntegrationsTab } from './settings/IntegrationsTab'
 import { AutomationTab } from './settings/AutomationTab'
-import { getDesktopCapabilities } from '../platform/capabilities'
 import UpdateNotification from './UpdateNotification'
 import { ICON_SIZE } from './ui/IconSystem'
 import { ModalCloseButton, ModalFrame } from './ui/ModalChrome'
 
-type TabId = 'general' | 'appearance' | 'editor' | 'ai' | 'integrations' | 'automation'
+type TabId = 'appearance' | 'editor' | 'ai' | 'integrations' | 'automation'
 
 const TAB_ICONS = {
-  general: User,
   appearance: Palette,
   editor: Type,
   ai: Bot,
@@ -24,7 +21,6 @@ const TAB_ICONS = {
 } as const
 
 const TAB_CONTENT: Record<TabId, React.FC> = {
-  general: GeneralTab,
   appearance: AppearanceTab,
   editor: EditorTab,
   ai: AiTab,
@@ -32,7 +28,7 @@ const TAB_CONTENT: Record<TabId, React.FC> = {
   automation: AutomationTab
 }
 
-const TAB_IDS: TabId[] = ['general', 'appearance', 'editor', 'ai', 'integrations', 'automation']
+const TAB_IDS: TabId[] = ['appearance', 'editor', 'ai', 'integrations', 'automation']
 
 const FOCUSABLE_SELECTOR = [
   'a[href]',
@@ -45,14 +41,13 @@ const FOCUSABLE_SELECTOR = [
 
 export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
   const { t } = useTranslation()
-  const capabilities = getDesktopCapabilities()
-  const [activeTab, setActiveTab] = useState<TabId>('general')
+  const [activeTab, setActiveTab] = useState<TabId>('appearance')
   const titleId = useId()
   const dialogRef = useRef<HTMLDivElement>(null)
   const initialFocusRef = useRef<HTMLButtonElement>(null)
   const onCloseRef = useRef(onClose)
   const ActiveContent = TAB_CONTENT[activeTab]
-  const tabIds = capabilities.ai ? TAB_IDS : TAB_IDS.filter((id) => id !== 'ai')
+  const tabIds = TAB_IDS
 
   useEffect(() => {
     onCloseRef.current = onClose
@@ -139,7 +134,7 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
             return (
               <button
                 key={id}
-                ref={id === 'general' ? initialFocusRef : undefined}
+                ref={id === 'appearance' ? initialFocusRef : undefined}
                 type="button"
                 onClick={() => setActiveTab(id)}
                 className={`settings-tab${activeTab === id ? ' active' : ''}`}

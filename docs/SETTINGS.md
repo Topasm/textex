@@ -30,7 +30,6 @@ TextEx uses a "Zero-Friction" configuration system where settings are applied in
 | `spellCheckLanguage` | `string` | `'en-US'` | Hunspell dictionary language. |
 | `gitEnabled` | `boolean` | `true` | Enable Git integration features. |
 | `autoUpdateEnabled` | `boolean` | `true` | Check for updates on startup. |
-| `lspEnabled` | `boolean` | `true` | Enable the optional TexLab language server when its executable is available. |
 | `zoteroEnabled` | `boolean` | `false` | Enable Zotero/Better BibTeX integration. |
 | `zoteroPort` | `number` | `23119` | Zotero Local API and Better BibTeX port. |
 | `zoteroCollection` | `string` | `""` | Better BibTeX pull-export collection path used for project bibliography sync. |
@@ -43,12 +42,11 @@ TextEx uses a "Zero-Friction" configuration system where settings are applied in
 The `SettingsModal` component provides a tabbed interface (800×500) for modifying these values. It is accessible via the gear icon in the Toolbar. The modal uses shared `.modal-*` CSS classes for chrome and `settings-*` CSS classes for layout/form elements, all themed via CSS custom properties.
 
 **Visible Tauri tabs:**
-- **General** — Updates and language
-- **Appearance** — Theme, PDF Night Mode, PDF layout controls, and scroll sync
+- **Appearance** — Theme, PDF controls, updates, and interface language
 - **Editor** — Typography, formatting, layout, and Monaco behavior
 - **AI** — Default execution target, independent provider connections, reasoning, and prompt controls
 - **Integrations** — Zotero and Git
-- **Automation** — Auto Compile, external-file watching, Spell Check, and TexLab
+- **Automation** — Auto Compile, external-file watching, Spell Check, and Tectonic cache controls
 
 The AI tab follows a target-and-connections model: choosing a default provider/model does
 not modify credentials, and configuring a credential or inspecting a CLI does not silently
@@ -56,7 +54,7 @@ change the default target. Cloud API and local CLI connections are checked toget
 Chat can override the default target for one conversation without modifying global settings.
 Custom model identifiers remain available through an explicit advanced choice.
 
-Claude Code, Codex CLI, and TexLab controls require their corresponding executables; the
+Claude Code and Codex CLI controls require their corresponding executables; the
 editor reports discovery/startup errors without falling back to a Node backend. Direct API
 reasoning controls do not claim to configure reasoning inside CLI agents.
 
@@ -82,5 +80,6 @@ TextEx currently highlights LaTeX with its local Monaco Monarch tokenizer.
 - **Standard**: Commands, environments, comments, delimiters, and math receive local syntax coloring.
 - **Sections**: Optional section bands use the configurable section color palette.
 - **Theme**: Coloring adapts to the selected application theme.
-- **TexLab**: When available and enabled, TexLab supplies diagnostics, completion,
-  symbols, formatting, rename, folding, and semantic-token capabilities.
+- **Language features**: TextEx uses its built-in Monaco providers, package/reference
+  indexes, Rust outline parser, and structured compiler diagnostics. No external language
+  server is started.

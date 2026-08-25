@@ -4,8 +4,8 @@ import EditorWorker from 'monaco-editor/editor/editor.worker?worker'
 
 // Monaco's `register.all` entrypoint eagerly includes IDE features and quick-access
 // surfaces that TextEx never exposes. Keep this list aligned with the editor options
-// and providers registered by EditorPane/LspServiceImpl so the lazy editor boundary
-// remains useful without removing normal editing, history diff, or LSP behavior.
+// and providers registered by EditorPane so the lazy editor boundary
+// remains useful without removing normal editing or local language behavior.
 import 'monaco-editor/features/bracketMatching/register'
 import 'monaco-editor/features/clipboard/register'
 import 'monaco-editor/features/codeAction/register'

@@ -112,9 +112,6 @@ pub enum AppError {
     #[error("System terminal operation failed: {0}")]
     SystemTerminal(String),
 
-    #[error("Language server operation failed: {0}")]
-    Lsp(String),
-
     #[error("Zotero operation failed: {0}")]
     Zotero(String),
 

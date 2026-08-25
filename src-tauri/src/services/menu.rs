@@ -42,19 +42,6 @@ const RENDERER_COMMANDS: &[&str] = &[
     "app.quit",
 ];
 
-#[derive(Clone, Copy)]
-struct NativeMenuCapabilities {
-    ai: bool,
-    document_export: bool,
-    templates: bool,
-}
-
-const CAPABILITIES: NativeMenuCapabilities = NativeMenuCapabilities {
-    ai: true,
-    document_export: true,
-    templates: true,
-};
-
 pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
     let menu = Menu::new(app)?;
 
@@ -65,9 +52,7 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
     menu.append(&view_menu(app)?)?;
     menu.append(&pdf_menu(app)?)?;
     menu.append(&compile_menu(app)?)?;
-    if CAPABILITIES.ai {
-        menu.append(&ai_menu(app)?)?;
-    }
+    menu.append(&ai_menu(app)?)?;
     menu.append(&window_menu(app)?)?;
     menu.append(&help_menu(app)?)?;
 
@@ -127,14 +112,12 @@ fn file_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<R>> {
             "Open Project in Terminal",
             None,
         )?);
-    if CAPABILITIES.templates {
-        menu = menu.item(&command_item(
-            app,
-            "file.newTemplate",
-            "New From Template…",
-            Some("CmdOrCtrl+Shift+N"),
-        )?);
-    }
+    menu = menu.item(&command_item(
+        app,
+        "file.newTemplate",
+        "New From Template…",
+        Some("CmdOrCtrl+Shift+N"),
+    )?);
     menu = menu
         .separator()
         .item(&command_item(
@@ -149,9 +132,7 @@ fn file_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<R>> {
             "Save As…",
             Some("CmdOrCtrl+Shift+S"),
         )?);
-    if CAPABILITIES.document_export {
-        menu = menu.separator().item(&export_menu(app)?);
-    }
+    menu = menu.separator().item(&export_menu(app)?);
 
     #[cfg(not(target_os = "macos"))]
     {

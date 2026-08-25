@@ -4,6 +4,7 @@ import { usePdfStore } from '../../store/usePdfStore'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import { SYNCTEX_HIGHLIGHT_MS } from '../../constants'
 import type { SyncTeXInverseResult } from '../../../shared/types'
+import { logError } from '../../utils/errorMessage'
 
 interface PageViewportInfo {
   viewport: { convertToViewportPoint(x: number, y: number): number[]; viewBox: number[] }
@@ -45,9 +46,16 @@ function jumpToSynctexResult(result: SyncTeXInverseResult): void {
       useEditorStore.getState().openFileInTab(fileResult.filePath, fileResult.content)
       setTimeout(() => useEditorStore.getState().requestJumpToLine(line, column), 50)
     })
-    .catch((err) => {
-      console.warn('[SyncTeX UI] failed to open inverse sync target:', err)
+    .catch((error) => logError('SyncTeX:openInverseTarget', error))
+}
+
+function requestInverseSync(filePath: string, page: number, pdfX: number, pdfY: number): void {
+  window.api
+    .synctexInverse(filePath, page, pdfX, pdfY)
+    .then((result) => {
+      if (result) jumpToSynctexResult(result)
     })
+    .catch((error) => logError('SyncTeX:inverse', error))
 }
 
 export function useSynctex(
@@ -68,12 +76,6 @@ export function useSynctex(
     }
 
     const { page, x, y } = synctexHighlight
-    if (import.meta.env.DEV)
-      // eslint-disable-next-line no-console
-      console.log(
-        `[SyncTeX UI] highlight effect: page=${page}, x=${x.toFixed(2)}, y=${y.toFixed(2)}`
-      )
-
     let cancelled = false
     let retryTimer: ReturnType<typeof setTimeout> | null = null
     let fadeTimer: ReturnType<typeof setTimeout> | null = null
@@ -96,12 +98,6 @@ export function useSynctex(
       const [rawVx, rawVy] = viewport.convertToViewportPoint(x, pdfY)
       const vx = rawVx * displayScale
       const vy = rawVy * displayScale
-      if (import.meta.env.DEV)
-        // eslint-disable-next-line no-console
-        console.log(
-          `[SyncTeX UI] viewBoxTop=${viewBoxTop.toFixed(2)}, pdfY=${pdfY.toFixed(2)} -> viewport vx=${vx.toFixed(1)}, vy=${vy.toFixed(1)}`
-        )
-
       if (!isSinglePage) {
         element.scrollIntoView({ behavior: 'smooth', block: 'center' })
       }
@@ -113,12 +109,6 @@ export function useSynctex(
       const scrollTop = containerRef.current?.scrollTop ?? 0
       const pageLeft = pageRect.left - containerRect.left + scrollLeft
       const pageTop = pageRect.top - containerRect.top + scrollTop
-
-      if (import.meta.env.DEV)
-        // eslint-disable-next-line no-console
-        console.log(
-          `[SyncTeX UI] positioning: pageTop=${pageTop.toFixed(1)}, pageLeft=${pageLeft.toFixed(1)}, highlight top=${(pageTop + vy).toFixed(1)}`
-        )
 
       setHighlights({
         lineStyle: {
@@ -158,9 +148,6 @@ export function useSynctex(
 
       // Page viewport not ready — navigate/scroll to page and retry
       if (attempt === 0) {
-        if (import.meta.env.DEV)
-          // eslint-disable-next-line no-console
-          console.log(`[SyncTeX UI] page ${page} viewport NOT available, scrolling and retrying`)
         const pdfState = usePdfStore.getState()
         if (pdfState.scrollToPage) pdfState.scrollToPage(page)
         else if (isSinglePage) pdfState.setCurrentPage(page)
@@ -170,7 +157,7 @@ export function useSynctex(
       if (attempt < 15) {
         retryTimer = setTimeout(() => tryShowHighlight(attempt + 1), 100)
       } else {
-        console.warn(`[SyncTeX UI] gave up waiting for page ${page} viewport`)
+        logError('SyncTeX:highlight', `Timed out waiting for page ${page} viewport`)
       }
     }
 
@@ -231,9 +218,7 @@ export function useSynctex(
     const pdfX = centerX / scale
     const pdfY = centerY / scale
 
-    window.api.synctexInverse(filePath, bestPage, pdfX, pdfY).then((result) => {
-      if (result) jumpToSynctexResult(result)
-    })
+    requestInverseSync(filePath, bestPage, pdfX, pdfY)
   }, [containerRef, pageViewportsRef])
 
   // Ctrl+Click inverse SyncTeX handler
@@ -278,9 +263,7 @@ export function useSynctex(
       const pdfX = clickX / scale
       const pdfY = clickY / scale
 
-      window.api.synctexInverse(filePath, targetPageNumber, pdfX, pdfY).then((result) => {
-        if (result) jumpToSynctexResult(result)
-      })
+      requestInverseSync(filePath, targetPageNumber, pdfX, pdfY)
     },
     [containerRef, pageViewportsRef]
   )

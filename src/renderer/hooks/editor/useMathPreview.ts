@@ -13,13 +13,6 @@ export interface MathPreviewData {
     endLineNumber: number
     endColumn: number
   }
-  /** The range of just the math content (without delimiters) */
-  contentRange: {
-    startLineNumber: number
-    startColumn: number
-    endLineNumber: number
-    endColumn: number
-  }
 }
 
 interface UseMathPreviewOptions {
@@ -68,9 +61,6 @@ export function useMathPreview({ editorRef, enabled }: UseMathPreviewOptions) {
     if (result) {
       const startPos = model.getPositionAt(result.fullStart)
       const endPos = model.getPositionAt(result.fullEnd)
-      const contentStartPos = model.getPositionAt(result.contentStart)
-      const contentEndPos = model.getPositionAt(result.contentEnd)
-
       setMathData({
         latex: result.content,
         isDisplay: result.isDisplay,
@@ -79,12 +69,6 @@ export function useMathPreview({ editorRef, enabled }: UseMathPreviewOptions) {
           startColumn: startPos.column,
           endLineNumber: endPos.lineNumber,
           endColumn: endPos.column
-        },
-        contentRange: {
-          startLineNumber: contentStartPos.lineNumber,
-          startColumn: contentStartPos.column,
-          endLineNumber: contentEndPos.lineNumber,
-          endColumn: contentEndPos.column
         }
       })
     } else {
@@ -131,8 +115,6 @@ interface MatchResult {
   content: string
   fullStart: number
   fullEnd: number
-  contentStart: number
-  contentEnd: number
   isDisplay: boolean
 }
 
@@ -179,8 +161,6 @@ function findDelimitedMath(
         content,
         fullStart: openIdx,
         fullEnd,
-        contentStart,
-        contentEnd: closeIdx,
         isDisplay
       }
     }
@@ -233,8 +213,6 @@ function findEnvironmentMath(text: string, offset: number, envName: string): Mat
         content,
         fullStart: openIdx,
         fullEnd,
-        contentStart,
-        contentEnd: closeIdx,
         isDisplay: true
       }
     }

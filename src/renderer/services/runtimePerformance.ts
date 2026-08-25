@@ -5,7 +5,6 @@ import type {
   RuntimePerformanceMetric,
   RuntimePerformanceReport
 } from '../../shared/performance'
-import { getDesktopCapabilities } from '../platform/capabilities'
 
 const MAX_SAMPLES_PER_METRIC = 2_000
 const MAX_MEMORY_SAMPLES = 120
@@ -184,8 +183,6 @@ export class RuntimePerformanceRecorder {
         jsHeapLimitBytes: rendererMemory.jsHeapSizeLimit
       })
     }
-
-    if (!getDesktopCapabilities().performanceMemory) return
 
     try {
       const sample = await window.api.getPerformanceMemory()

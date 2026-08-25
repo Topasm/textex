@@ -126,6 +126,24 @@
     box-shadow: 8px 0 24px var(--shadow-color);
   }
 
+  .sidebar-drawer-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 29;
+    display: block;
+    padding: 0;
+    background: color-mix(in srgb, var(--overlay-bg) 72%, transparent);
+    border: 0;
+    opacity: 1;
+    transition: opacity 160ms ease;
+  }
+
+  .sidebar-drawer-backdrop-entering,
+  .sidebar-drawer-backdrop-exiting {
+    opacity: 0;
+    pointer-events: none;
+  }
+
   .workspace > .sidebar-wrapper:not(.sidebar-auto-hide) .sidebar {
     width: min(72vw, 220px) !important;
   }
@@ -282,15 +300,20 @@
 
 @media (prefers-reduced-motion: reduce) {
   .toolbar button,
+  .app-container > .toolbar,
   .toolbar .spin,
   .split-divider,
   .sidebar-wrapper,
   .sidebar-wrapper .sidebar,
   .sidebar-wrapper .sidebar-resize-handle,
+  .sidebar-wrapper.sidebar-auto-hide::after,
+  .sidebar-drawer-backdrop,
   .sidebar-exit-left,
   .sidebar-exit-right,
   .sidebar-enter-left,
   .sidebar-enter-right,
+  .research-panel.overlay,
+  .research-panel-view,
   .settings-tab,
   .settings-animate-in,
   .settings-toggle-track,

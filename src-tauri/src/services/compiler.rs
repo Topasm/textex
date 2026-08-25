@@ -226,10 +226,6 @@ fn validate_compile_request(request: &CompileRequest) -> AppResult<()> {
     Ok(())
 }
 
-pub fn cancel_compile(state: &AppState) -> AppResult<bool> {
-    state.cancel_compilation()
-}
-
 async fn run_tectonic(
     tectonic_path: &Path,
     tex_path: &Path,

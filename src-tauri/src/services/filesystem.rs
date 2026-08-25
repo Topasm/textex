@@ -585,17 +585,6 @@ pub async fn read_file_base64(state: &AppState, file_path: &str) -> AppResult<Ba
     Ok(Base64FileResult { data, mime_type })
 }
 
-pub async fn read_file_binary(state: &AppState, file_path: &str) -> AppResult<Vec<u8>> {
-    let canonical =
-        resolve_existing_file(state, require_absolute_str(file_path)?, "read binary file").await?;
-    read_limited_binary(
-        &canonical,
-        "raw binary transfer",
-        RAW_BINARY_TRANSFER_LIMIT_BYTES,
-    )
-    .await
-}
-
 pub async fn read_compiled_pdf(
     app: &AppHandle,
     state: &AppState,
@@ -2023,19 +2012,14 @@ mod tests {
     }
 
     #[test]
-    fn binary_and_base64_reads_match_their_transport_payloads() {
+    fn base64_reads_match_their_transport_payloads() {
         let project = TestDirectory::new("binary");
         let state = AppState::default();
         state
             .set_project_root(project.path().to_path_buf())
             .expect("set project root");
-        let pdf = project.child("preview.PDF");
         let image = project.child("pixel.png");
-        fs::write(&pdf, b"%PDF-1.7").expect("write PDF");
         fs::write(&image, b"Man").expect("write image");
-
-        let binary = block_on(read_file_binary(&state, &path_string(&pdf))).expect("read binary");
-        assert_eq!(binary, b"%PDF-1.7");
 
         let base64 = block_on(read_file_base64(&state, &path_string(&image))).expect("read base64");
         assert_eq!(base64.data, "data:image/png;base64,TWFu");
@@ -2058,7 +2042,7 @@ mod tests {
             .expect("set project root");
 
         let escaped_read = project.child("escape/secret.pdf");
-        assert!(block_on(read_file_binary(&state, &path_string(&escaped_read))).is_err());
+        assert!(block_on(read_file_base64(&state, &path_string(&escaped_read))).is_err());
         let escaped_create = project.child("escape/new.tex");
         assert!(block_on(create_file(&state, &path_string(&escaped_create))).is_err());
         let escaped_directory = project.child("escape/new/directory");

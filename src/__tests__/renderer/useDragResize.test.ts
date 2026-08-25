@@ -1,26 +1,47 @@
-import { describe, expect, it } from 'vitest'
+import { act, renderHook } from '@testing-library/react'
+import type { KeyboardEvent } from 'react'
+import { describe, expect, it, vi } from 'vitest'
 import {
   getSidebarSlideAnimation,
-  getSidebarWidthFromPointer
+  getSidebarWidthFromPointer,
+  useDragResize
 } from '../../renderer/hooks/useDragResize'
+import { usePdfStore } from '../../renderer/store/usePdfStore'
+import { useProjectStore } from '../../renderer/store/useProjectStore'
 
 describe('useDragResize helpers', () => {
-  it('calculates sidebar width from the left edge when sidebar is on the left', () => {
-    expect(getSidebarWidthFromPointer({ left: 100, right: 340 }, 280, 'left')).toBe(180)
+  it('calculates sidebar width from the fixed left edge', () => {
+    expect(getSidebarWidthFromPointer({ left: 100 }, 280)).toBe(180)
   })
 
-  it('calculates sidebar width from the right edge when sidebar is on the right', () => {
-    expect(getSidebarWidthFromPointer({ left: 860, right: 1100 }, 920, 'right')).toBe(180)
-  })
-
-  it('mirrors slide animation directions when the sidebar is on the right', () => {
-    expect(getSidebarSlideAnimation(1, 'left')).toEqual({
+  it('uses the left-sidebar slide animation direction', () => {
+    expect(getSidebarSlideAnimation(1)).toEqual({
       exit: 'exit-left',
       enter: 'enter-right'
     })
-    expect(getSidebarSlideAnimation(1, 'right')).toEqual({
-      exit: 'exit-right',
-      enter: 'enter-left'
+  })
+
+  it('resizes the editor split and sidebar from keyboard separators', () => {
+    usePdfStore.setState({ splitRatio: 0.5 })
+    useProjectStore.setState({ sidebarWidth: 240 })
+    const { result } = renderHook(() => useDragResize({ sidebarTabs: ['files'] }))
+    const preventDefault = vi.fn()
+
+    act(() => {
+      result.current.handleDividerKeyDown({
+        key: 'ArrowRight',
+        shiftKey: false,
+        preventDefault
+      } as unknown as KeyboardEvent)
+      result.current.handleSidebarDividerKeyDown({
+        key: 'ArrowRight',
+        shiftKey: true,
+        preventDefault
+      } as unknown as KeyboardEvent)
     })
+
+    expect(usePdfStore.getState().splitRatio).toBe(0.525)
+    expect(useProjectStore.getState().sidebarWidth).toBe(280)
+    expect(preventDefault).toHaveBeenCalledTimes(2)
   })
 })

@@ -9,7 +9,6 @@ import { BibGroupHeader } from './bib/BibGroupHeader'
 import { BibEntryCard } from './bib/BibEntryCard'
 import { useCitationGroupOps, groupEntries } from '../hooks/useCitationGroups'
 import type { BibGroupMode } from '../hooks/useCitationGroups'
-import { getDesktopCapabilities } from '../platform/capabilities'
 import type { ReferenceDragPayload } from './research/referenceActions'
 
 interface BibPanelProps {
@@ -20,9 +19,7 @@ function BibPanel({ onAddToChat }: BibPanelProps) {
   const { t } = useTranslation()
   const bibEntries = useProjectStore((s) => s.bibEntries)
   const configuredGroupMode = useSettingsStore((s) => s.settings.bibGroupMode) as BibGroupMode
-  const citationGroupsSupported = getDesktopCapabilities().citationGroups
-  const bibGroupMode =
-    configuredGroupMode === 'custom' && !citationGroupsSupported ? 'flat' : configuredGroupMode
+  const bibGroupMode = configuredGroupMode
   const updateSetting = useSettingsStore((s) => s.updateSetting)
   const filter = useProjectStore((s) => s.researchSearchQuery)
   const setFilter = useProjectStore((s) => s.setResearchSearchQuery)
@@ -88,7 +85,7 @@ function BibPanel({ onAddToChat }: BibPanelProps) {
           filter={filter}
           onFilterChange={setFilter}
           groupMode={bibGroupMode}
-          customGroupsAvailable={citationGroupsSupported}
+          customGroupsAvailable
           onGroupModeChange={(mode) => updateSetting('bibGroupMode', mode)}
         />
         <div className="bib-custom-toolbar">
@@ -161,7 +158,7 @@ function BibPanel({ onAddToChat }: BibPanelProps) {
         filter={filter}
         onFilterChange={setFilter}
         groupMode={bibGroupMode}
-        customGroupsAvailable={citationGroupsSupported}
+        customGroupsAvailable
         onGroupModeChange={(mode) => updateSetting('bibGroupMode', mode)}
       />
       <div className="bib-list" role="region" aria-label="Project references" tabIndex={0}>

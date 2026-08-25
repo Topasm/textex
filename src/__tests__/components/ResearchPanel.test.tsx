@@ -98,6 +98,29 @@ describe('ResearchPanel tabs', () => {
     expect(addEventListener.mock.calls.some(([event]) => event === 'keydown')).toBe(false)
   })
 
+  it('keeps a closing panel inert during its exit motion', () => {
+    const view = render(<ResearchPanel onAiDraft={vi.fn()} />)
+    useProjectStore.setState({ isResearchPanelOpen: false })
+    view.rerender(<ResearchPanel onAiDraft={vi.fn()} presencePhase="exiting" />)
+
+    const panel = view.container.querySelector('.research-panel')
+    expect(panel).toHaveClass('research-panel-exiting')
+    expect(panel).toHaveAttribute('aria-hidden', 'true')
+    expect(panel).toHaveAttribute('inert')
+  })
+
+  it('returns focus to the toolbar affordance after closing', async () => {
+    const opener = document.createElement('button')
+    opener.id = 'research-panel-toggle'
+    document.body.appendChild(opener)
+    render(<ResearchPanel onAiDraft={vi.fn()} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Close research panel' }))
+
+    await waitFor(() => expect(opener).toHaveFocus())
+    opener.remove()
+  })
+
   it('cleans up an active resize gesture when the panel unmounts', () => {
     const removeEventListener = vi.spyOn(window, 'removeEventListener')
     document.body.style.cursor = 'crosshair'
@@ -116,6 +139,19 @@ describe('ResearchPanel tabs', () => {
     expect(removeEventListener.mock.calls.some(([event]) => event === 'mouseup')).toBe(true)
     document.body.style.cursor = ''
     document.body.style.userSelect = ''
+  })
+
+  it('exposes a keyboard-resizable panel separator', () => {
+    useProjectStore.setState({ researchPanelWidth: 380 })
+    render(<ResearchPanel onAiDraft={vi.fn()} />)
+    const separator = screen.getByRole('separator', { name: 'Resize research panel' })
+
+    expect(separator).toHaveAttribute('aria-valuenow', '380')
+    fireEvent.keyDown(separator, { key: 'ArrowLeft' })
+    expect(useProjectStore.getState().researchPanelWidth).toBe(390)
+
+    fireEvent.keyDown(separator, { key: 'Home' })
+    expect(useProjectStore.getState().researchPanelWidth).toBe(320)
   })
 
   it('always renders as a PDF overlay without adding a desktop backdrop', () => {
