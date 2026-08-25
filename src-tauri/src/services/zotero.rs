@@ -2054,7 +2054,7 @@ async fn citation_keys_for_items(
         valid_local_key(item_key)
             && citekey
                 .as_deref()
-                .map_or(true, research_limits::is_safe_citation_key)
+                .is_none_or(research_limits::is_safe_citation_key)
     });
     Ok(keys)
 }
