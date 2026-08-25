@@ -822,6 +822,22 @@ describe('Tauri DesktopApi adapter', () => {
     ])
   })
 
+  it('runs a structured submission check through the native adapter', async () => {
+    invokeMock.mockResolvedValueOnce({
+      rootFile: '/project/main.tex',
+      scannedFiles: 1,
+      findings: [],
+      summary: { errors: 0, warnings: 0, info: 0 }
+    })
+    const api = createTauriApi()
+
+    await api.runSubmissionCheck({ rootFile: '/project/main.tex' })
+
+    expect(invokeMock).toHaveBeenCalledWith('run_submission_check', {
+      request: { rootFile: '/project/main.tex' }
+    })
+  })
+
   it('maps citation groups, external URLs, and performance memory to Rust', async () => {
     const groups = [{ id: 'methods', name: 'Methods', citekeys: ['knuth1984'] }]
     const memory = {

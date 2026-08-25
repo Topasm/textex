@@ -468,9 +468,14 @@ export function OmniSearch({
   // ---- ZOTERO MODE: Debounced API search ----
   const searchGenRef = useRef(0)
   useEffect(() => {
-    if (isHomeMode || mode !== 'zotero') return
+    const generation = ++searchGenRef.current
+    if (isHomeMode || mode !== 'zotero') {
+      setLoading(false)
+      return
+    }
     if (searchTerm.length <= 2) {
       setZoteroResults([])
+      setLoading(false)
       setIsDropdownOpen(searchTerm.length > 0 && !zoteroEnabled)
       return
     }
@@ -479,7 +484,6 @@ export function OmniSearch({
       return
     }
     setLoading(true)
-    const generation = ++searchGenRef.current
     const timer = setTimeout(async () => {
       try {
         const res = await window.api.zoteroSearch(searchTerm, zoteroPort)
@@ -494,13 +498,20 @@ export function OmniSearch({
         if (searchGenRef.current === generation) setLoading(false)
       }
     }, 300)
-    return () => clearTimeout(timer)
+    return () => {
+      clearTimeout(timer)
+      if (searchGenRef.current === generation) searchGenRef.current += 1
+    }
   }, [isHomeMode, mode, searchTerm, zoteroPort, zoteroEnabled])
 
   // ---- ONLINE MODE: Debounced Crossref + arXiv search ----
   const onlineSearchGenRef = useRef(0)
   useEffect(() => {
-    if (isHomeMode || mode !== 'online') return
+    const generation = ++onlineSearchGenRef.current
+    if (isHomeMode || mode !== 'online') {
+      setOnlineLoading(false)
+      return
+    }
     const normalized = searchTerm.trim()
     if (normalized.length < 2) {
       setOnlineResults([])
@@ -509,7 +520,6 @@ export function OmniSearch({
       return
     }
     setOnlineLoading(true)
-    const generation = ++onlineSearchGenRef.current
     const timer = setTimeout(async () => {
       try {
         const results = await window.api.researchSearchOnline(normalized)
@@ -526,7 +536,10 @@ export function OmniSearch({
         if (onlineSearchGenRef.current === generation) setOnlineLoading(false)
       }
     }, 350)
-    return () => clearTimeout(timer)
+    return () => {
+      clearTimeout(timer)
+      if (onlineSearchGenRef.current === generation) onlineSearchGenRef.current += 1
+    }
   }, [isHomeMode, mode, searchTerm])
 
   const addOnlineReference = useCallback(

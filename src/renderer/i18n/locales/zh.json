@@ -577,6 +577,7 @@
       "file_export_odt": "导出为 ODT",
       "file_export_epub": "导出为 EPUB",
       "compile_run": "编译文档",
+      "compile_submissionCheck": "运行投稿检查",
       "ai_draft": "创建 AI 草稿",
       "edit_find": "在文档中查找",
       "view_toggleSidebar": "切换侧边栏",
@@ -595,6 +596,29 @@
       "window_close": "关闭窗口",
       "app_quit": "退出 TextEx"
     }
+  },
+  "submissionCheck": {
+    "title": "投稿检查",
+    "backToCurrentPaper": "返回当前论文",
+    "rerun": "重新检查",
+    "running": "正在检查当前论文…",
+    "failed": "投稿检查失败",
+    "retry": "重试",
+    "noDocument": "请打开 LaTeX 文档以运行投稿检查",
+    "noDocumentHint": "活动文档将作为论文的根文件。",
+    "passed": "未发现阻塞问题",
+    "needsAttention": "有 {{count}} 个问题需要处理",
+    "needsAttention_other": "有 {{count}} 个问题需要处理",
+    "scannedFiles": "已检查 {{count}} 个源文件",
+    "scannedFiles_other": "已检查 {{count}} 个源文件",
+    "errors": "错误",
+    "warnings": "警告",
+    "info": "信息",
+    "errorGroup": "错误",
+    "warningGroup": "警告",
+    "infoGroup": "信息",
+    "noFindings": "所有可用检查均已通过",
+    "openFinding": "在 {{location}} 打开 {{message}}"
   },
   "researchPanel": {
     "invalidReferenceDrop": "此项目不是有效的 TextEx 参考文献。",

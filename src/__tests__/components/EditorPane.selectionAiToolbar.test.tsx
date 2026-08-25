@@ -474,7 +474,7 @@ describe('EditorPane selection AI toolbar', () => {
     expect(useProjectStore.getState()).toMatchObject({
       isResearchPanelOpen: true,
       researchPanelTab: 'references',
-      researchReferenceSource: 'online',
+      researchReferenceSource: 'project',
       researchSearchQuery: 'supporting claim with context'
     })
   })

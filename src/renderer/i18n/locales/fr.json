@@ -577,6 +577,7 @@
       "file_export_odt": "Exporter en ODT",
       "file_export_epub": "Exporter en EPUB",
       "compile_run": "Compiler le document",
+      "compile_submissionCheck": "Lancer la vérification de soumission",
       "ai_draft": "Créer un brouillon avec l’IA",
       "edit_find": "Rechercher dans le document",
       "view_toggleSidebar": "Afficher ou masquer la barre latérale",
@@ -595,6 +596,29 @@
       "window_close": "Fermer la fenêtre",
       "app_quit": "Quitter TextEx"
     }
+  },
+  "submissionCheck": {
+    "title": "Vérification de soumission",
+    "backToCurrentPaper": "Retour à l'article actuel",
+    "rerun": "Relancer",
+    "running": "Vérification de l'article actuel…",
+    "failed": "Échec de la vérification de soumission",
+    "retry": "Réessayer",
+    "noDocument": "Ouvrez un document LaTeX pour lancer la vérification",
+    "noDocumentHint": "Le document actif est utilisé comme fichier racine.",
+    "passed": "Aucun problème bloquant détecté",
+    "needsAttention": "{{count}} problème nécessite une attention",
+    "needsAttention_other": "{{count}} problèmes nécessitent une attention",
+    "scannedFiles": "{{count}} fichier source vérifié",
+    "scannedFiles_other": "{{count}} fichiers source vérifiés",
+    "errors": "Erreurs",
+    "warnings": "Avertissements",
+    "info": "Info",
+    "errorGroup": "Erreurs",
+    "warningGroup": "Avertissements",
+    "infoGroup": "Informations",
+    "noFindings": "Toutes les vérifications disponibles ont réussi",
+    "openFinding": "Ouvrir {{message}} à {{location}}"
   },
   "researchPanel": {
     "invalidReferenceDrop": "Cet élément n’est pas une référence TextEx valide.",

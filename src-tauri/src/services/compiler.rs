@@ -79,7 +79,7 @@ pub async fn compile_latex(
     let selected_tex_path = validate_project_tex_file(state, &request.file_path).await?;
     let tex_path = resolve_magic_root(state, &selected_tex_path).await?;
     let display_tex_path = path_to_string(&tex_path)?;
-    let build_dir = prepare_build_directory(app, &project_root, latex_engine).await?;
+    let build_dir = prepare_build_directory(app, &project_root, &tex_path, latex_engine).await?;
     let compiler = match latex_engine {
         LatexEngine::Tectonic => ResolvedCompiler::Tectonic {
             executable: resolve_tectonic_executable(app)?,
@@ -368,6 +368,7 @@ async fn read_aux_content(aux_path: &Path) -> AppResult<Option<String>> {
 async fn prepare_build_directory(
     app: &AppHandle,
     project_root: &Path,
+    root_file: &Path,
     engine: LatexEngine,
 ) -> AppResult<PathBuf> {
     let app_cache = app
@@ -388,7 +389,8 @@ async fn prepare_build_directory(
     };
     let build_dir = canonical_build_root
         .join(project_cache_id(project_root))
-        .join(engine_name);
+        .join(engine_name)
+        .join(root_document_cache_id(project_root, root_file)?);
     fs::create_dir_all(&build_dir).await.map_err(|source| {
         AppError::compiler_io(
             "create engine build cache",
@@ -427,6 +429,18 @@ fn project_cache_id(project_root: &Path) -> String {
         project_root.to_string_lossy().into_owned()
     };
     format!("{:x}", Sha256::digest(identity.as_bytes()))
+}
+
+fn root_document_cache_id(project_root: &Path, root_file: &Path) -> AppResult<String> {
+    let relative = root_file
+        .strip_prefix(project_root)
+        .map_err(|_| AppError::OutsideProject(root_file.to_string_lossy().into_owned()))?;
+    let identity = if cfg!(windows) {
+        relative.to_string_lossy().to_lowercase()
+    } else {
+        relative.to_string_lossy().into_owned()
+    };
+    Ok(format!("{:x}", Sha256::digest(identity.as_bytes())))
 }
 
 async fn run_configured_compiler(
@@ -1286,8 +1300,8 @@ mod tests {
     use super::{
         development_candidates, extract_magic_root, finalize_compile_for_project,
         latexmk_arguments, packaged_candidates, parse_tectonic_diagnostics, resolve_magic_root,
-        sidecar_source_filename, system_latexmk_candidates, validate_compile_request,
-        validate_project_tex_file,
+        root_document_cache_id, sidecar_source_filename, system_latexmk_candidates,
+        validate_compile_request, validate_project_tex_file,
     };
     #[cfg(unix)]
     use super::{isolate_process_group, monitor_child};
@@ -1502,6 +1516,23 @@ mod tests {
             ]
             .map(OsString::from)
         );
+    }
+
+    #[test]
+    fn build_cache_isolated_for_same_stem_root_documents() {
+        let project = Path::new("/project");
+        let first = root_document_cache_id(project, Path::new("/project/paper/main.tex"))
+            .expect("first root cache id");
+        let second = root_document_cache_id(project, Path::new("/project/supplement/main.tex"))
+            .expect("second root cache id");
+
+        assert_ne!(first, second);
+        assert_eq!(
+            first,
+            root_document_cache_id(project, Path::new("/project/paper/main.tex"))
+                .expect("stable root cache id")
+        );
+        assert!(root_document_cache_id(project, Path::new("/outside/main.tex")).is_err());
     }
 
     #[tokio::test]

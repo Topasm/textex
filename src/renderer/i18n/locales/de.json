@@ -577,6 +577,7 @@
       "file_export_odt": "Als ODT exportieren",
       "file_export_epub": "Als EPUB exportieren",
       "compile_run": "Dokument kompilieren",
+      "compile_submissionCheck": "Einreichungsprüfung ausführen",
       "ai_draft": "KI-Entwurf erstellen",
       "edit_find": "Im Dokument suchen",
       "view_toggleSidebar": "Seitenleiste umschalten",
@@ -595,6 +596,29 @@
       "window_close": "Fenster schließen",
       "app_quit": "TextEx beenden"
     }
+  },
+  "submissionCheck": {
+    "title": "Einreichungsprüfung",
+    "backToCurrentPaper": "Zurück zum aktuellen Paper",
+    "rerun": "Erneut ausführen",
+    "running": "Aktuelles Paper wird geprüft…",
+    "failed": "Einreichungsprüfung fehlgeschlagen",
+    "retry": "Erneut versuchen",
+    "noDocument": "Öffnen Sie ein LaTeX-Dokument für die Einreichungsprüfung",
+    "noDocumentHint": "Das aktive Dokument wird als Hauptdatei verwendet.",
+    "passed": "Keine blockierenden Probleme gefunden",
+    "needsAttention": "{{count}} Problem erfordert Aufmerksamkeit",
+    "needsAttention_other": "{{count}} Probleme erfordern Aufmerksamkeit",
+    "scannedFiles": "{{count}} Quelldatei geprüft",
+    "scannedFiles_other": "{{count}} Quelldateien geprüft",
+    "errors": "Fehler",
+    "warnings": "Warnungen",
+    "info": "Info",
+    "errorGroup": "Fehler",
+    "warningGroup": "Warnungen",
+    "infoGroup": "Informationen",
+    "noFindings": "Alle verfügbaren Prüfungen bestanden",
+    "openFinding": "{{message}} bei {{location}} öffnen"
   },
   "researchPanel": {
     "invalidReferenceDrop": "Dieses Element ist keine gültige TextEx-Referenz.",

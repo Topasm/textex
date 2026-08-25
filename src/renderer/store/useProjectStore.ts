@@ -23,7 +23,7 @@ import { applyProjectIndexDelta, projectPathKey } from '../services/projectIndex
 
 export type SidebarView = 'files' | 'git' | 'outline' | 'todo' | 'timeline'
 export type ResearchPanelTab = 'chat' | 'references' | 'profile' | 'problems'
-export type ReferenceSource = 'project' | 'zotero' | 'online'
+export type ReferenceSource = 'project' | 'zotero' | 'online' | 'submission'
 
 export interface BibliographyRegistrationRequest {
   filePath: string

@@ -97,6 +97,9 @@ pub enum AppError {
     #[error("Document export failed: {0}")]
     Export(String),
 
+    #[error("Submission check failed: {0}")]
+    SubmissionCheck(String),
+
     #[error("External URL operation failed: {0}")]
     ExternalUrl(String),
 

@@ -59,6 +59,12 @@ export async function executeAppCommand(
     case 'compile.run':
       await context.compile()
       return
+    case 'compile.submissionCheck': {
+      const projectStore = useProjectStore.getState()
+      projectStore.setResearchReferenceSource('submission')
+      projectStore.openResearchPanel('references')
+      return
+    }
     case 'ai.draft':
       if (capabilities.ai) context.runAiDraft()
       return

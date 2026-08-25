@@ -1,5 +1,14 @@
 export type ResearchChatCommandId =
-  'help' | 'references' | 'zotero' | 'online' | 'todo' | 'outline' | 'draft' | 'zotero-plan'
+  | 'help'
+  | 'references'
+  | 'zotero'
+  | 'online'
+  | 'find-sources'
+  | 'submission-check'
+  | 'todo'
+  | 'outline'
+  | 'draft'
+  | 'zotero-plan'
 
 export interface ResearchChatCommandDefinition {
   readonly id: ResearchChatCommandId
@@ -52,6 +61,24 @@ export const RESEARCH_CHAT_COMMANDS = [
     usage: '/online <query>',
     keywords: ['crossref', 'arxiv', 'sources', 'papers', 'search'],
     acceptsArguments: true
+  },
+  {
+    id: 'find-sources',
+    command: '/find-sources',
+    label: 'Find supporting sources',
+    description: 'Search project and connected library sources together.',
+    usage: '/find-sources <claim or topic>',
+    keywords: ['evidence', 'papers', 'references', 'citation', 'local', 'search'],
+    acceptsArguments: true
+  },
+  {
+    id: 'submission-check',
+    command: '/submission-check',
+    label: 'Submission Check',
+    description: 'Check the current paper for submission issues.',
+    usage: '/submission-check',
+    keywords: ['validate', 'paper', 'preflight', 'warnings', 'references'],
+    acceptsArguments: false
   },
   {
     id: 'todo',

@@ -1,19 +1,34 @@
-import type { BibEntry, CitationUsage, ZoteroCollectionItem } from '../../shared/types'
+import type {
+  BibEntry,
+  CitationLocation,
+  CitationUsage,
+  ZoteroCollectionItem
+} from '../../shared/types'
 
 export type ReferenceMatchKind = 'doi' | 'arxiv' | 'citekey'
+export type ReferenceDuplicateMatchKind = ReferenceMatchKind | 'title-year'
+const MAX_DUPLICATES_PER_ENTRY = 10
+
+export interface ReferenceDuplicate {
+  entry: BibEntry
+  matchKind: ReferenceDuplicateMatchKind
+}
 
 export interface ProjectReferenceHealth {
   entry: BibEntry
   citationCount: number
+  citationLocations: CitationLocation[]
   zoteroItem: ZoteroCollectionItem | null
   matchKind: ReferenceMatchKind | null
   possibleMatch: ZoteroCollectionItem | null
+  possibleDuplicates: ReferenceDuplicate[]
 }
 
 export interface ZoteroReferenceHealth {
   item: ZoteroCollectionItem
   projectEntry: BibEntry | null
   citationCount: number
+  citationLocations: CitationLocation[]
   matchKind: ReferenceMatchKind | null
 }
 
@@ -27,6 +42,7 @@ export interface ReferenceHealthSnapshot {
   projectOnlyCount: number
   unusedCount: number
   zoteroOnlyCount: number
+  duplicateCount: number
 }
 
 export function buildReferenceHealth(
@@ -34,7 +50,7 @@ export function buildReferenceHealth(
   citations: CitationUsage[],
   zoteroItems: ZoteroCollectionItem[]
 ): ReferenceHealthSnapshot {
-  const citationsByKey = new Map(citations.map((usage) => [usage.citekey, usage.count]))
+  const citationsByKey = new Map(citations.map((usage) => [usage.citekey, usage]))
   const bibliographyKeys = new Set(bibliography.map((entry) => entry.key))
   const missingCitations = citations.filter((usage) => !bibliographyKeys.has(usage.citekey))
   const availableZotero = new Set(zoteroItems.map((item) => item.itemKey))
@@ -42,8 +58,9 @@ export function buildReferenceHealth(
   const byArxiv = uniqueIndex(zoteroItems, (item) => normalizeArxiv(item.arxivId))
   const byCitekey = uniqueIndex(zoteroItems, (item) => item.citekey?.trim() ?? '')
   const byTitleYear = uniqueIndex(zoteroItems, (item) => titleYearKey(item.title, item.year))
+  const projectDuplicates = buildProjectDuplicateLookup(bibliography)
 
-  const project = bibliography.map((entry): ProjectReferenceHealth => {
+  const project = bibliography.map((entry, entryIndex): ProjectReferenceHealth => {
     const exact = findExactMatch(entry, availableZotero, byDoi, byArxiv, byCitekey)
     if (exact.item) availableZotero.delete(exact.item.itemKey)
     const possibleCandidate = exact.item
@@ -53,10 +70,12 @@ export function buildReferenceHealth(
       possibleCandidate && availableZotero.has(possibleCandidate.itemKey) ? possibleCandidate : null
     return {
       entry,
-      citationCount: citationsByKey.get(entry.key) ?? 0,
+      citationCount: citationsByKey.get(entry.key)?.count ?? 0,
+      citationLocations: citationsByKey.get(entry.key)?.locations ?? [],
       zoteroItem: exact.item,
       matchKind: exact.kind,
-      possibleMatch
+      possibleMatch,
+      possibleDuplicates: projectDuplicates.byEntry.get(entryIndex) ?? []
     }
   })
 
@@ -71,6 +90,7 @@ export function buildReferenceHealth(
       item,
       projectEntry: match?.entry ?? null,
       citationCount: match?.citationCount ?? 0,
+      citationLocations: match?.citationLocations ?? [],
       matchKind: match?.matchKind ?? null
     }
   })
@@ -86,8 +106,88 @@ export function buildReferenceHealth(
     linkedToZoteroCount,
     projectOnlyCount: bibliography.length - linkedToZoteroCount,
     unusedCount,
-    zoteroOnlyCount: zotero.filter((status) => status.projectEntry === null).length
+    zoteroOnlyCount: zotero.filter((status) => status.projectEntry === null).length,
+    duplicateCount: projectDuplicates.pairCount
   }
+}
+
+function buildProjectDuplicateLookup(bibliography: BibEntry[]): {
+  byEntry: Map<number, ReferenceDuplicate[]>
+  pairCount: number
+} {
+  const indexes: Array<{
+    kind: ReferenceDuplicateMatchKind
+    values: Map<string, number[]>
+    keyFor: (entry: BibEntry) => string
+  }> = [
+    { kind: 'doi', values: new Map(), keyFor: (entry) => normalizeDoi(entry.doi) },
+    { kind: 'arxiv', values: new Map(), keyFor: (entry) => normalizeArxiv(entry.arxivId) },
+    { kind: 'citekey', values: new Map(), keyFor: (entry) => entry.key.trim() },
+    {
+      kind: 'title-year',
+      values: new Map(),
+      keyFor: (entry) => titleYearKey(entry.title, entry.year)
+    }
+  ]
+  bibliography.forEach((entry, entryIndex) => {
+    for (const index of indexes) appendMultiIndex(index.values, index.keyFor(entry), entryIndex)
+  })
+  const compareEntryIndexes = (left: number, right: number) =>
+    compareBibliographyEntries(bibliography[left], bibliography[right]) || left - right
+  for (const index of indexes) {
+    for (const entryIndexes of index.values.values()) entryIndexes.sort(compareEntryIndexes)
+  }
+
+  const byEntry = new Map<number, ReferenceDuplicate[]>()
+  const surfacedPairs = new Set<string>()
+  bibliography.forEach((entry, entryIndex) => {
+    const candidates = new Map<number, ReferenceDuplicateMatchKind>()
+    for (const index of indexes) {
+      const key = index.keyFor(entry)
+      if (!key) continue
+      for (const candidateIndex of index.values.get(key)?.slice(0, MAX_DUPLICATES_PER_ENTRY + 1) ??
+        []) {
+        if (candidateIndex !== entryIndex && !candidates.has(candidateIndex)) {
+          candidates.set(candidateIndex, index.kind)
+        }
+      }
+    }
+    const duplicates = [...candidates]
+      .sort(([left], [right]) => compareEntryIndexes(left, right))
+      .slice(0, MAX_DUPLICATES_PER_ENTRY)
+    for (const [candidateIndex] of duplicates) {
+      surfacedPairs.add(
+        entryIndex < candidateIndex
+          ? `${entryIndex}:${candidateIndex}`
+          : `${candidateIndex}:${entryIndex}`
+      )
+    }
+    if (duplicates.length > 0) {
+      byEntry.set(
+        entryIndex,
+        duplicates.map(([candidateIndex, matchKind]) => ({
+          entry: bibliography[candidateIndex],
+          matchKind
+        }))
+      )
+    }
+  })
+  return { byEntry, pairCount: surfacedPairs.size }
+}
+
+function appendMultiIndex(index: Map<string, number[]>, key: string, entryIndex: number): void {
+  if (!key) return
+  const entries = index.get(key)
+  if (entries) entries.push(entryIndex)
+  else index.set(key, [entryIndex])
+}
+
+function compareBibliographyEntries(left: BibEntry, right: BibEntry): number {
+  return (
+    left.key.localeCompare(right.key) ||
+    (left.file ?? '').localeCompare(right.file ?? '') ||
+    (left.line ?? 0) - (right.line ?? 0)
+  )
 }
 
 function findExactMatch(

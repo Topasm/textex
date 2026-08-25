@@ -146,6 +146,7 @@
     "allow-export-document",
     "allow-get-export-formats",
     "allow-export-overleaf-zip",
+    "allow-run-submission-check",
     "allow-open-external",
     "allow-exit-app",
     "allow-get-performance-memory",

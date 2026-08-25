@@ -12,11 +12,14 @@ use tokio::{fs, sync::Mutex};
 
 use crate::{
     error::{AppError, AppResult},
-    models::{BibEntry, CitationUsage, LabelInfo, ProjectIndexSnapshot, ReferenceIndex},
+    models::{
+        BibEntry, CitationLocation, CitationUsage, LabelInfo, ProjectIndexSnapshot, ReferenceIndex,
+    },
     state::AppState,
 };
 
 const MAX_REFERENCE_FILE_BYTES: u64 = 10 * 1024 * 1024;
+const MAX_CITATION_LOCATIONS_PER_KEY: usize = 20;
 
 #[derive(Clone)]
 struct CachedReferenceIndex {
@@ -214,9 +217,10 @@ pub async fn parse_bib_file(state: &AppState, file_path: &str) -> AppResult<Vec<
         .map_err(|error| AppError::ReferenceIndex(error.to_string()))
 }
 
-fn scan_files(files: Vec<(String, Option<u64>)>) -> ReferenceIndex {
+fn scan_files(mut files: Vec<(String, Option<u64>)>) -> ReferenceIndex {
     let mut index = ReferenceIndex::default();
-    let mut citation_counts = HashMap::<String, u32>::new();
+    let mut citation_usages = HashMap::<String, CitationUsage>::new();
+    files.sort_by(|left, right| left.0.cmp(&right.0));
     for (file, known_size) in files {
         if known_size.is_some_and(|size| size > MAX_REFERENCE_FILE_BYTES) {
             continue;
@@ -237,16 +241,31 @@ fn scan_files(files: Vec<(String, Option<u64>)>) -> ReferenceIndex {
                 .extend(parse_bib_content(&content, Some(&file)));
         } else if extension.eq_ignore_ascii_case("tex") {
             index.labels.extend(parse_labels(&content, &file));
-            for citation in parse_citations(&content) {
-                let count = citation_counts.entry(citation.citekey).or_default();
-                *count = count.saturating_add(citation.count);
+            for citation in parse_citations_in_file(&content, &file) {
+                let usage = citation_usages
+                    .entry(citation.citekey.clone())
+                    .or_insert_with(|| CitationUsage {
+                        citekey: citation.citekey,
+                        count: 0,
+                        locations: Vec::new(),
+                    });
+                usage.count = usage.count.saturating_add(citation.count);
+                let remaining =
+                    MAX_CITATION_LOCATIONS_PER_KEY.saturating_sub(usage.locations.len());
+                usage
+                    .locations
+                    .extend(citation.locations.into_iter().take(remaining));
             }
         }
     }
-    index.citations = citation_counts
-        .into_iter()
-        .map(|(citekey, count)| CitationUsage { citekey, count })
-        .collect();
+    index.citations = citation_usages.into_values().collect();
+    for usage in &mut index.citations {
+        usage.locations.sort_by(|left, right| {
+            left.file
+                .cmp(&right.file)
+                .then_with(|| left.line.cmp(&right.line))
+        });
+    }
     index
         .citations
         .sort_by(|left, right| left.citekey.cmp(&right.citekey));
@@ -317,28 +336,58 @@ fn parse_labels(content: &str, file: &str) -> Vec<LabelInfo> {
 }
 
 fn parse_citations(content: &str) -> Vec<CitationUsage> {
+    parse_citations_with_source(content, None)
+}
+
+fn parse_citations_in_file(content: &str, file: &str) -> Vec<CitationUsage> {
+    parse_citations_with_source(content, Some(file))
+}
+
+fn parse_citations_with_source(content: &str, file: Option<&str>) -> Vec<CitationUsage> {
     let uncommented = content
         .lines()
         .map(strip_latex_comment)
         .collect::<Vec<_>>()
         .join("\n");
-    let mut counts = HashMap::<String, u32>::new();
+    let line_starts = uncommented
+        .bytes()
+        .enumerate()
+        .filter_map(|(index, byte)| (byte == b'\n').then_some(index + 1))
+        .collect::<Vec<_>>();
+    let mut usages = HashMap::<String, CitationUsage>::new();
     for captures in citation_regex().captures_iter(&uncommented) {
         let Some(keys) = captures.get(1) else {
             continue;
         };
+        let line = captures
+            .get(0)
+            .map(|citation| {
+                line_starts.partition_point(|start| *start <= citation.start()) as u32 + 1
+            })
+            .unwrap_or(1);
         for key in keys.as_str().split(',').map(str::trim) {
             if key.is_empty() || key == "*" || key.chars().any(char::is_control) {
                 continue;
             }
-            let count = counts.entry(key.to_owned()).or_default();
-            *count = count.saturating_add(1);
+            let usage = usages
+                .entry(key.to_owned())
+                .or_insert_with(|| CitationUsage {
+                    citekey: key.to_owned(),
+                    count: 0,
+                    locations: Vec::new(),
+                });
+            usage.count = usage.count.saturating_add(1);
+            if let Some(file) = file {
+                if usage.locations.len() < MAX_CITATION_LOCATIONS_PER_KEY {
+                    usage.locations.push(CitationLocation {
+                        file: file.to_owned(),
+                        line,
+                    });
+                }
+            }
         }
     }
-    let mut usages = counts
-        .into_iter()
-        .map(|(citekey, count)| CitationUsage { citekey, count })
-        .collect::<Vec<_>>();
+    let mut usages = usages.into_values().collect::<Vec<_>>();
     usages.sort_by(|left, right| left.citekey.cmp(&right.citekey));
     usages
 }
@@ -568,17 +617,39 @@ mod tests {
                 CitationUsage {
                     citekey: "alpha".to_owned(),
                     count: 3,
+                    locations: Vec::new(),
                 },
                 CitationUsage {
                     citekey: "beta".to_owned(),
                     count: 2,
+                    locations: Vec::new(),
                 },
                 CitationUsage {
                     citekey: "gamma".to_owned(),
                     count: 2,
+                    locations: Vec::new(),
                 },
             ]
         );
+    }
+
+    #[test]
+    fn records_bounded_citation_source_locations() {
+        let content = (1..=25)
+            .map(|index| format!("line {index} \\cite{{alpha}}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        let citations = parse_citations_in_file(&content, "/project/main.tex");
+
+        assert_eq!(citations[0].count, 25);
+        assert_eq!(citations[0].locations.len(), MAX_CITATION_LOCATIONS_PER_KEY);
+        assert_eq!(citations[0].locations[0].line, 1);
+        assert_eq!(citations[0].locations[19].line, 20);
+        assert!(citations[0]
+            .locations
+            .iter()
+            .all(|location| location.file == "/project/main.tex"));
     }
 
     #[tokio::test(flavor = "current_thread")]

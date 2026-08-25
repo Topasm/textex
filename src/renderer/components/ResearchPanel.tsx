@@ -366,7 +366,10 @@ export function ResearchPanel({ onAiDraft, onCompile }: ResearchPanelProps) {
             aria-labelledby="research-tab-references"
             hidden={tab !== 'references'}
           >
-            <ReferencesPanel onAddToChat={queueChatReference} />
+            <ReferencesPanel
+              onAddToChat={queueChatReference}
+              onOpenProblems={() => selectTab('problems')}
+            />
           </div>
         )}
         {mountedTabs.has('profile') && (

@@ -399,7 +399,7 @@ describe('ResearchChatPanel', () => {
     fireEvent.change(input, { target: { value: '/' } })
     const menu = screen.getByRole('listbox', { name: 'Chat commands' })
     const options = within(menu).getAllByRole('option')
-    expect(options).toHaveLength(8)
+    expect(options).toHaveLength(10)
     expect(input).toHaveAttribute('aria-controls', menu.id)
     expect(input).toHaveAttribute('aria-activedescendant', options[0].id)
     expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled()
@@ -463,6 +463,33 @@ describe('ResearchChatPanel', () => {
     fireEvent.change(input, { target: { value: '/draft' } })
     fireEvent.click(screen.getByRole('button', { name: 'Send' }))
     expect(onAiDraft).toHaveBeenCalledOnce()
+    expect(window.api.aiResearchChat).not.toHaveBeenCalled()
+  })
+
+  it('routes source discovery and submission commands to References without calling AI', async () => {
+    useProjectStore.setState({
+      researchPanelTab: 'chat',
+      researchReferenceSource: 'online',
+      researchSearchQuery: ''
+    })
+    render(<ResearchChatPanel onAiDraft={vi.fn()} />)
+    const input = await screen.findByRole('textbox', { name: 'Research question' })
+    await screen.findByRole('button', { name: 'Official code' })
+
+    fireEvent.change(input, { target: { value: '/find-sources manipulation evidence' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    expect(useProjectStore.getState()).toMatchObject({
+      researchPanelTab: 'references',
+      researchReferenceSource: 'project',
+      researchSearchQuery: 'manipulation evidence'
+    })
+
+    fireEvent.change(input, { target: { value: '/submission-check' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    expect(useProjectStore.getState()).toMatchObject({
+      researchPanelTab: 'references',
+      researchReferenceSource: 'submission'
+    })
     expect(window.api.aiResearchChat).not.toHaveBeenCalled()
   })
 

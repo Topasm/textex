@@ -37,7 +37,8 @@ describe('executeAppCommand', () => {
     useProjectStore.setState({
       isSidebarOpen: false,
       isResearchPanelOpen: false,
-      researchPanelTab: 'chat'
+      researchPanelTab: 'chat',
+      researchReferenceSource: 'project'
     })
     usePdfStore.setState({ zoomLevel: 100, fitRequest: null })
   })
@@ -109,6 +110,16 @@ describe('executeAppCommand', () => {
 
     expect(context.compile).toHaveBeenCalledOnce()
     expect(context.toggleLog).toHaveBeenCalledOnce()
+  })
+
+  it('opens Submission Check in the References workflow', async () => {
+    await executeAppCommand('compile.submissionCheck', context)
+
+    expect(useProjectStore.getState()).toMatchObject({
+      isResearchPanelOpen: true,
+      researchPanelTab: 'references',
+      researchReferenceSource: 'submission'
+    })
   })
 
   it('toggles the Problems tab in the right panel', () => {

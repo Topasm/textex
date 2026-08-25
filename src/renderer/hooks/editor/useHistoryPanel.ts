@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useEditorStore } from '../../store/useEditorStore'
+import { useNotificationStore } from '../../store/useNotificationStore'
 import type { HistoryItem } from '../../../shared/types'
+import { errorMessage } from '../../utils/errorMessage'
 
 export interface HistoryPanelState {
   showHistory: boolean
@@ -18,33 +20,69 @@ export function useHistoryPanel(): HistoryPanelState {
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>([])
   const [snapshotContent, setSnapshotContent] = useState('')
   const [historyMode, setHistoryMode] = useState(false)
+  const activeFilePath = useEditorStore((state) => state.activeFilePath)
+  const requestGeneration = useRef(0)
 
   // Load history items when panel opens
   useEffect(() => {
-    if (showHistory) {
-      const activeFilePath = useEditorStore.getState().activeFilePath
-      if (activeFilePath) {
-        window.api.getHistoryList(activeFilePath).then(setHistoryItems)
-      }
+    const generation = ++requestGeneration.current
+    setSnapshotContent('')
+    setHistoryMode(false)
+    if (!showHistory || !activeFilePath) {
+      setHistoryItems([])
+      return
     }
-  }, [showHistory])
+    setHistoryItems([])
+    window.api
+      .getHistoryList(activeFilePath)
+      .then((items) => {
+        if (
+          requestGeneration.current === generation &&
+          useEditorStore.getState().activeFilePath === activeFilePath
+        ) {
+          setHistoryItems(items)
+        }
+      })
+      .catch((error) => {
+        if (requestGeneration.current !== generation) return
+        setHistoryItems([])
+        useNotificationStore.getState().pushNotification({
+          tone: 'error',
+          message: `Could not load document history: ${errorMessage(error)}`
+        })
+      })
+  }, [activeFilePath, showHistory])
 
-  const handleSelectHistoryItem = useCallback(async (item: HistoryItem) => {
-    try {
-      const activeFilePath = useEditorStore.getState().activeFilePath
+  const handleSelectHistoryItem = useCallback(
+    async (item: HistoryItem) => {
       if (!activeFilePath) return
-      const content = await window.api.loadHistorySnapshot(activeFilePath, item.path)
-      setSnapshotContent(content)
-      setHistoryMode(true)
-    } catch (err) {
-      console.error(err)
-      alert('Failed to load snapshot')
-    }
-  }, [])
+      const generation = ++requestGeneration.current
+      try {
+        const content = await window.api.loadHistorySnapshot(activeFilePath, item.path)
+        if (
+          requestGeneration.current !== generation ||
+          useEditorStore.getState().activeFilePath !== activeFilePath
+        ) {
+          return
+        }
+        setSnapshotContent(content)
+        setHistoryMode(true)
+      } catch (error) {
+        if (requestGeneration.current !== generation) return
+        useNotificationStore.getState().pushNotification({
+          tone: 'error',
+          message: `Could not load history snapshot: ${errorMessage(error)}`
+        })
+      }
+    },
+    [activeFilePath]
+  )
 
   const closeHistory = useCallback(() => {
+    requestGeneration.current += 1
     setShowHistory(false)
     setHistoryMode(false)
+    setSnapshotContent('')
   }, [])
 
   return {

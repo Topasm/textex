@@ -22,6 +22,7 @@ const RENDERER_COMMANDS: &[&str] = &[
     "file.export.odt",
     "file.export.epub",
     "compile.run",
+    "compile.submissionCheck",
     "ai.draft",
     "edit.find",
     "view.toggleSidebar",
@@ -281,6 +282,12 @@ fn compile_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<R>> {
             "compile.run",
             "Compile Document",
             Some("CmdOrCtrl+Enter"),
+        )?)
+        .item(&command_item(
+            app,
+            "compile.submissionCheck",
+            "Run Submission Check",
+            None,
         )?)
         .item(&command_item(app, "view.toggleLog", "Show Problems", None)?)
         .build()

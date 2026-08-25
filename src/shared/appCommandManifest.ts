@@ -118,6 +118,13 @@ export const APP_COMMAND_MANIFEST = [
     shortcut: { key: 'Enter', mod: true }
   },
   {
+    id: 'compile.submissionCheck',
+    label: 'Run Submission Check',
+    group: 'compile',
+    keywords: ['paper', 'validate', 'references', 'anonymous', 'venue'],
+    requiredContext: 'document'
+  },
+  {
     id: 'ai.draft',
     label: 'Create AI Draft',
     group: 'ai',

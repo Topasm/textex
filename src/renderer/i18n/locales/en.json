@@ -577,6 +577,7 @@
       "file_export_odt": "Export as ODT",
       "file_export_epub": "Export as EPUB",
       "compile_run": "Compile Document",
+      "compile_submissionCheck": "Run Submission Check",
       "ai_draft": "Create AI Draft",
       "edit_find": "Find in Document",
       "view_toggleSidebar": "Toggle Sidebar",
@@ -595,6 +596,29 @@
       "window_close": "Close Window",
       "app_quit": "Quit TextEx"
     }
+  },
+  "submissionCheck": {
+    "title": "Submission Check",
+    "backToCurrentPaper": "Back to current paper",
+    "rerun": "Run again",
+    "running": "Checking the current paper…",
+    "failed": "Submission check failed",
+    "retry": "Retry",
+    "noDocument": "Open a LaTeX document to run a submission check",
+    "noDocumentHint": "The active document is used as the paper's root file.",
+    "passed": "No blocking issues found",
+    "needsAttention": "{{count}} issue needs attention",
+    "needsAttention_other": "{{count}} issues need attention",
+    "scannedFiles": "Scanned {{count}} source file",
+    "scannedFiles_other": "Scanned {{count}} source files",
+    "errors": "Errors",
+    "warnings": "Warnings",
+    "info": "Info",
+    "errorGroup": "Errors",
+    "warningGroup": "Warnings",
+    "infoGroup": "Information",
+    "noFindings": "All available checks passed",
+    "openFinding": "Open {{message}} at {{location}}"
   },
   "researchPanel": {
     "invalidReferenceDrop": "This item is not a valid TextEx reference.",

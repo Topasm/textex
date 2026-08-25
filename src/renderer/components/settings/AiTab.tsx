@@ -184,16 +184,27 @@ export const AiTab = () => {
 
   // Check CLI availability
   useEffect(() => {
+    let cancelled = false
     if (provider === 'claude-cli' || provider === 'codex-cli') {
       setCliChecking(true)
       const checkPromise =
         provider === 'claude-cli' ? window.api.aiCheckCli() : window.api.aiCheckCodexCli()
       checkPromise
-        .then(setCliAvailable)
-        .catch(() => setCliAvailable(false))
-        .finally(() => setCliChecking(false))
+        .then((available) => {
+          if (!cancelled) setCliAvailable(available)
+        })
+        .catch(() => {
+          if (!cancelled) setCliAvailable(false)
+        })
+        .finally(() => {
+          if (!cancelled) setCliChecking(false)
+        })
     } else {
       setCliAvailable(null)
+      setCliChecking(false)
+    }
+    return () => {
+      cancelled = true
     }
   }, [provider])
 

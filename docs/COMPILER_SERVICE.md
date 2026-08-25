@@ -22,9 +22,10 @@ default) or a system pdfLaTeX installation driven by `latexmk`.
   `-g` guarantees that switching from Tectonic regenerates the PDF even when
   the source timestamps have not changed.
 - Both engines write PDFs and auxiliary files outside the project under the
-  application cache at `build/<project-hash>/<engine>/`. Tectonic and pdfLaTeX
-  use separate `tectonic` and `pdflatex` directories, so one engine can never
-  reuse the other engine's PDF or incremental state.
+  application cache at `build/<project-hash>/<engine>/<root-file-hash>/`.
+  Tectonic and pdfLaTeX use separate engine directories, and root documents
+  with the same filename use separate document directories, so PDF, AUX,
+  SyncTeX, and incremental state cannot cross-contaminate.
 - The PDF preview reads only the current project's compiled PDF cache through a
   dedicated bounded native command. AUX content used for references and
   SyncTeX data is returned or registered from the same build directory instead
@@ -50,8 +51,8 @@ The file tree hides legacy LaTeX-generated files in the project by default and
 offers a visibility toggle for inspecting them. New desktop builds no longer
 place those artifacts beside the sources. The file-tree Overleaf export action
 creates a source ZIP that omits generated outputs, private VCS/application
-metadata, `.latexmkrc`, and a same-stem compiled PDF while retaining source
-assets such as figure PDFs.
+metadata, and transient compiler files while retaining project build
+configuration, submission `.bbl` files, and PDF source assets.
 
 The standalone CLI and MCP server use `src/shared/compiler.ts` in their own
 Node.js processes. That implementation is intentionally separate from the

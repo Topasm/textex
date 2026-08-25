@@ -74,7 +74,8 @@ import {
   toCompileRequest
 } from './services/compileCoordinator'
 import { ICON_SIZE } from './components/ui/IconSystem'
-import { installCrashRecoveryAutosnapshot, syncRecoveryForFile } from './services/crashRecovery'
+import { installCrashRecoveryAutosnapshot } from './services/crashRecovery'
+import { prepareDocumentsForManualCompile } from './services/manualCompilePreparation'
 
 // Lazy-load heavy modals and panels that are rarely shown
 const SettingsModal = lazy(() =>
@@ -207,17 +208,19 @@ function App() {
     const snapshot = documentRegistry.snapshot(editorState.filePath)
     if (!snapshot) return
     cancelPendingAutoCompile()
+    useCompileStore.getState().clearLogs()
     try {
-      await window.api.saveFile(snapshot.text, editorState.filePath)
-      useEditorStore.getState().markDocumentSaved(editorState.filePath, snapshot.revision)
-      await syncRecoveryForFile(editorState.filePath).catch(() => undefined)
+      await prepareDocumentsForManualCompile(editorState.filePath, snapshot)
     } catch (err) {
       logError('App:preSave', err)
+      useCompileStore
+        .getState()
+        .appendLog(`Save failed, compilation was not started: ${errorMessage(err)}\n`)
+      useCompileStore.getState().setCompileStatus('error')
+      return
     }
-    if (!documentRegistry.getModel(editorState.filePath)?.isCurrent(snapshot)) return
     const ticket = beginCompileTicket(editorState.filePath, snapshot)
     useCompileStore.getState().setCompileStatus('compiling')
-    useCompileStore.getState().clearLogs()
     try {
       const result = await window.api.compile(toCompileRequest(ticket, 'high'))
       if (!canPublishCompileResponse(ticket, result)) {

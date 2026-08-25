@@ -2,11 +2,13 @@ import { useEffect } from 'react'
 import {
   BookOpen,
   CircleHelp,
+  FileCheck2,
   FilePenLine,
   Globe2,
   Library,
   ListTodo,
   ListTree,
+  Search,
   ShieldCheck,
   type LucideIcon
 } from 'lucide-react'
@@ -18,6 +20,8 @@ const COMMAND_ICONS: Record<ResearchChatCommandDefinition['id'], LucideIcon> = {
   references: BookOpen,
   zotero: Library,
   online: Globe2,
+  'find-sources': Search,
+  'submission-check': FileCheck2,
   todo: ListTodo,
   outline: ListTree,
   draft: FilePenLine,

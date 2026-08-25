@@ -82,6 +82,12 @@ export interface BibEntry {
 export interface CitationUsage {
   citekey: string
   count: number
+  locations?: CitationLocation[]
+}
+
+export interface CitationLocation {
+  file: string
+  line: number
 }
 
 export interface GitFileStatus {

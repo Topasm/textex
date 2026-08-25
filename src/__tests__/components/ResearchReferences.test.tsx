@@ -6,6 +6,8 @@ import { ZoteroReferences } from '../../renderer/components/research/ZoteroRefer
 import * as referenceActions from '../../renderer/components/research/referenceActions'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
+import { useCompileStore } from '../../renderer/store/useCompileStore'
+import { useEditorStore } from '../../renderer/store/useEditorStore'
 import { invalidateZoteroInventory } from '../../renderer/services/zoteroInventoryCache'
 
 function deferred<T>() {
@@ -46,6 +48,8 @@ describe('Research reference sources', () => {
     useSettingsStore.setState((state) => ({
       settings: { ...state.settings, zoteroPort: 23_119 }
     }))
+    useCompileStore.setState({ diagnostics: [] })
+    useEditorStore.getState().resetEditor()
   })
 
   it('ignores a late Zotero load from the previous project', async () => {
@@ -164,6 +168,75 @@ describe('Research reference sources', () => {
     expect(card).toHaveTextContent('CITED ×2')
     expect(card).toHaveTextContent('Zotero unavailable')
     expect(card).not.toHaveTextContent('Not linked to Zotero')
+  })
+
+  it('reveals citation locations and jumps to the selected source line', async () => {
+    useProjectStore.setState({
+      bibEntries: [
+        {
+          key: 'local2026',
+          type: 'article',
+          title: 'Located paper',
+          author: 'Ada Lovelace',
+          year: '2026'
+        }
+      ]
+    })
+    useEditorStore.getState().openFileInTab('/project-a/main.tex', '\\cite{local2026}')
+    window.api.researchLoadConfig = vi.fn().mockResolvedValue(config)
+    window.api.scanCitations = vi.fn().mockResolvedValue([
+      {
+        citekey: 'local2026',
+        count: 1,
+        locations: [{ file: '/project-a/main.tex', line: 7 }]
+      }
+    ])
+    window.api.zoteroLibraryTree = vi.fn().mockRejectedValue(new Error('Cannot connect to Zotero'))
+
+    render(<ZoteroReferences />)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'CITED ×1' }))
+    fireEvent.click(screen.getByRole('button', { name: 'main.tex:7' }))
+    expect(useEditorStore.getState().pendingJump).toEqual({ line: 7, column: 1 })
+  })
+
+  it('surfaces possible duplicates and makes compile problems actionable', async () => {
+    const onOpenProblems = vi.fn()
+    const onOpenSubmission = vi.fn()
+    useProjectStore.setState({
+      bibEntries: [
+        {
+          key: 'first2026',
+          type: 'article',
+          title: 'Duplicate paper',
+          author: 'Ada Lovelace',
+          year: '2026',
+          doi: '10.1000/duplicate'
+        },
+        {
+          key: 'second2026',
+          type: 'article',
+          title: 'Duplicate paper copy',
+          author: 'Ada Lovelace',
+          year: '2026',
+          doi: 'https://doi.org/10.1000/DUPLICATE'
+        }
+      ]
+    })
+    useCompileStore.setState({
+      diagnostics: [{ file: '/project-a/main.tex', line: 4, severity: 'warning', message: 'Warn' }]
+    })
+    window.api.researchLoadConfig = vi.fn().mockResolvedValue(config)
+    window.api.scanCitations = vi.fn().mockResolvedValue([])
+    window.api.zoteroLibraryTree = vi.fn().mockRejectedValue(new Error('Cannot connect to Zotero'))
+
+    render(<ZoteroReferences onOpenProblems={onOpenProblems} onOpenSubmission={onOpenSubmission} />)
+
+    expect(await screen.findAllByText(/Possible duplicate:/)).toHaveLength(2)
+    fireEvent.click(screen.getByRole('button', { name: '⚠ 1 compile problem' }))
+    expect(onOpenProblems).toHaveBeenCalledOnce()
+    fireEvent.click(screen.getByRole('button', { name: 'Submission check' }))
+    expect(onOpenSubmission).toHaveBeenCalledOnce()
   })
 
   it('ignores a late Zotero load after the configured port changes', async () => {

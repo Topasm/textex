@@ -75,4 +75,45 @@ describe('reference health cross-check', () => {
       'a vision language action model'
     )
   })
+
+  it('keeps duplicate bibliography entries reviewable without merging them', () => {
+    const snapshot = buildReferenceHealth(
+      [
+        projectEntry({ key: 'first', doi: '10.1000/same' }),
+        projectEntry({ key: 'second', doi: 'https://doi.org/10.1000/SAME' }),
+        projectEntry({ key: 'third', title: 'A distinct paper', year: '2020' })
+      ],
+      [{ citekey: 'first', count: 1, locations: [{ file: '/project/main.tex', line: 4 }] }],
+      []
+    )
+
+    expect(snapshot.project[0]).toMatchObject({
+      citationLocations: [{ file: '/project/main.tex', line: 4 }],
+      possibleDuplicates: [{ entry: { key: 'second' }, matchKind: 'doi' }]
+    })
+    expect(snapshot.project[1].possibleDuplicates).toEqual([
+      expect.objectContaining({
+        entry: expect.objectContaining({ key: 'first' }),
+        matchKind: 'doi'
+      })
+    ])
+    expect(snapshot.project[2].possibleDuplicates).toEqual([])
+    expect(snapshot.duplicateCount).toBe(1)
+    expect(snapshot.bibliographyCount).toBe(3)
+  })
+
+  it('bounds duplicate candidates per entry for large matching groups', () => {
+    const bibliography = Array.from({ length: 200 }, (_, index) =>
+      projectEntry({
+        key: `duplicate-${index.toString().padStart(3, '0')}`,
+        doi: '10.1000/shared'
+      })
+    )
+
+    const snapshot = buildReferenceHealth(bibliography, [], [])
+
+    expect(snapshot.project.every((status) => status.possibleDuplicates.length <= 10)).toBe(true)
+    expect(snapshot.duplicateCount).toBeGreaterThan(0)
+    expect(snapshot.duplicateCount).toBeLessThanOrEqual(2_000)
+  })
 })

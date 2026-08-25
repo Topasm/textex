@@ -199,6 +199,15 @@ pub struct LabelInfo {
 pub struct CitationUsage {
     pub citekey: String,
     pub count: u32,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub locations: Vec<CitationLocation>,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CitationLocation {
+    pub file: String,
+    pub line: u32,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -1304,6 +1313,47 @@ pub struct CompileResponse {
     pub compiled_file_path: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub aux_content: Option<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubmissionCheckRequest {
+    pub root_file: String,
+}
+
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SubmissionCheckSeverity {
+    Error,
+    Warning,
+    Info,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubmissionCheckFinding {
+    pub severity: SubmissionCheckSeverity,
+    pub code: String,
+    pub message: String,
+    pub file: String,
+    pub line: u32,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubmissionCheckSummary {
+    pub errors: u32,
+    pub warnings: u32,
+    pub info: u32,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubmissionCheckResult {
+    pub root_file: String,
+    pub scanned_files: u32,
+    pub findings: Vec<SubmissionCheckFinding>,
+    pub summary: SubmissionCheckSummary,
 }
 
 #[derive(Debug, Serialize)]

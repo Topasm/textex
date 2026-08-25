@@ -53,6 +53,7 @@ Object.defineProperty(window, 'api', {
     tectonicCacheStatus: vi.fn(),
     tectonicCacheReset: vi.fn(),
     exportOverleafZip: vi.fn(),
+    runSubmissionCheck: vi.fn(),
     onCompileLog: vi.fn(),
     removeCompileLogListener: vi.fn(),
     onDiagnostics: vi.fn(),

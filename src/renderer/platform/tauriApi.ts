@@ -593,6 +593,9 @@ const getExportFormats: DesktopApi['getExportFormats'] = () =>
 const exportOverleafZip: DesktopApi['exportOverleafZip'] = () =>
   invoke(TAURI_COMMANDS.exportOverleafZip)
 
+const runSubmissionCheck: DesktopApi['runSubmissionCheck'] = (request) =>
+  invoke(TAURI_COMMANDS.runSubmissionCheck, { request })
+
 const openExternal: DesktopApi['openExternal'] = (url) =>
   invoke(TAURI_COMMANDS.openExternal, { url })
 
@@ -970,6 +973,7 @@ const tauriDesktopApi = {
   exportDocument,
   getExportFormats,
   exportOverleafZip,
+  runSubmissionCheck,
   openExternal,
   exitApp,
   getPerformanceMemory,

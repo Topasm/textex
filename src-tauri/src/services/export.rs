@@ -104,9 +104,8 @@ pub async fn export_overleaf_zip(
     app: &AppHandle,
     state: &AppState,
 ) -> AppResult<Option<ExportResult>> {
-    let _project_operation = state.lock_project_operation().await;
-    let project_root = state.project_root()?;
-    let project_name = project_root
+    let (selected_project_root, selected_project_epoch, _) = state.project_root_epoch()?;
+    let project_name = selected_project_root
         .file_name()
         .and_then(|name| name.to_str())
         .unwrap_or("project");
@@ -119,6 +118,13 @@ pub async fn export_overleaf_zip(
     let Some(selected) = selected else {
         return Ok(None);
     };
+    let _project_operation = state.lock_project_operation().await;
+    let (project_root, project_epoch, _) = state.project_root_epoch()?;
+    if project_epoch != selected_project_epoch || project_root != selected_project_root {
+        return Err(export_error(
+            "the active project changed while choosing the Overleaf ZIP destination",
+        ));
+    }
     let output = selected
         .into_path()
         .map_err(|error| AppError::InvalidPath(error.to_string()))?;
@@ -249,7 +255,7 @@ fn collect_overleaf_sources(
                 files,
                 total_bytes,
             )?;
-        } else if metadata.is_file() && !is_generated_latex_file(name, &path) {
+        } else if metadata.is_file() && !is_generated_latex_file(name) {
             if !path.starts_with(project_root) {
                 return Err(export_error("Overleaf source escaped the project root"));
             }
@@ -282,22 +288,19 @@ fn is_excluded_overleaf_directory(name: &str) -> bool {
     )
 }
 
-fn is_generated_latex_file(name: &str, path: &Path) -> bool {
+fn is_generated_latex_file(name: &str) -> bool {
     let lower = name.to_ascii_lowercase();
-    if matches!(lower.as_str(), ".ds_store" | ".latexmkrc") {
+    if lower == ".ds_store" {
         return true;
     }
     const GENERATED_SUFFIXES: &[&str] = &[
         ".aux",
-        ".bbl",
         ".bcf",
         ".blg",
         ".dvi",
         ".fdb_latexmk",
         ".fls",
-        ".idx",
         ".ilg",
-        ".ind",
         ".lof",
         ".log",
         ".lot",
@@ -316,9 +319,6 @@ fn is_generated_latex_file(name: &str, path: &Path) -> bool {
         .any(|suffix| lower.ends_with(suffix))
     {
         return true;
-    }
-    if lower.ends_with(".pdf") {
-        return path.with_extension("tex").is_file();
     }
     false
 }
@@ -492,7 +492,8 @@ mod tests {
         std::fs::write(root.join("main.tex"), "source").expect("write tex");
         std::fs::write(root.join("references.bib"), "bib").expect("write bib");
         std::fs::write(root.join("main.aux"), "generated").expect("write aux");
-        std::fs::write(root.join("main.pdf"), "generated pdf").expect("write output pdf");
+        std::fs::write(root.join("main.pdf"), "source-compatible pdf").expect("write pdf");
+        std::fs::write(root.join("main.bbl"), "submission bibliography").expect("write bbl");
         std::fs::write(root.join(".latexmkrc"), "xelatex").expect("write latexmkrc");
         std::fs::write(root.join(".git/config"), "private").expect("write git config");
         std::fs::write(root.join("figures/result.pdf"), "source figure")
@@ -512,7 +513,17 @@ mod tests {
             })
             .collect::<Vec<_>>();
         names.sort();
-        assert_eq!(names, ["figures/result.pdf", "main.tex", "references.bib"]);
+        assert_eq!(
+            names,
+            [
+                ".latexmkrc",
+                "figures/result.pdf",
+                "main.bbl",
+                "main.pdf",
+                "main.tex",
+                "references.bib"
+            ]
+        );
         let mut source = String::new();
         archive
             .by_name("main.tex")

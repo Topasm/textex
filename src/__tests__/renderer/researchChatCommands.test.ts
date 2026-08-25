@@ -12,6 +12,8 @@ describe('Research Chat commands', () => {
       { id: 'references', command: '/refs' },
       { id: 'zotero', command: '/zotero' },
       { id: 'online', command: '/online' },
+      { id: 'find-sources', command: '/find-sources' },
+      { id: 'submission-check', command: '/submission-check' },
       { id: 'todo', command: '/todo' },
       { id: 'outline', command: '/outline' },
       { id: 'draft', command: '/draft' },
@@ -36,6 +38,12 @@ describe('Research Chat commands', () => {
       'references'
     ])
     expect(matchResearchChatCommands('/sections').map((command) => command.id)).toEqual(['outline'])
+    expect(matchResearchChatCommands('/support').map((command) => command.id)).toEqual([
+      'find-sources'
+    ])
+    expect(matchResearchChatCommands('/preflight').map((command) => command.id)).toEqual([
+      'submission-check'
+    ])
   })
 
   it('closes the menu once whitespace, a newline, or non-token input appears', () => {
@@ -69,7 +77,7 @@ describe('Research Chat commands', () => {
     expect(
       parseResearchChatCommand('/zotero-plan  add tag theory\n  to selected papers  ')
     ).toEqual({
-      command: RESEARCH_CHAT_COMMANDS[7],
+      command: RESEARCH_CHAT_COMMANDS[9],
       argument: 'add tag theory\n  to selected papers'
     })
     expect(parseResearchChatCommand('/zotero   diffusion policy   ')?.argument).toBe(

@@ -137,6 +137,7 @@ export const TAURI_COMMANDS = {
   exportDocument: 'export_document',
   getExportFormats: 'get_export_formats',
   exportOverleafZip: 'export_overleaf_zip',
+  runSubmissionCheck: 'run_submission_check',
   openExternal: 'open_external',
   exitApp: 'exit_app',
   getPerformanceMemory: 'get_performance_memory',

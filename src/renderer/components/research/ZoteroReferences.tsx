@@ -5,6 +5,7 @@ import {
   ChevronRight,
   Circle,
   BookMarked,
+  FileCheck2,
   FolderTree,
   Loader,
   MessageSquarePlus,
@@ -14,6 +15,7 @@ import {
   Search
 } from 'lucide-react'
 import type {
+  CitationLocation,
   CitationUsage,
   ResearchConfig,
   ZoteroCollection,
@@ -24,9 +26,11 @@ import type {
 import { useProjectStore } from '../../store/useProjectStore'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import { useEditorStore } from '../../store/useEditorStore'
+import { useCompileStore } from '../../store/useCompileStore'
 import { documentRegistry } from '../../models/documentRegistry'
 import { overlayCitationUsages } from '../../services/citationUsageOverlay'
 import { cacheZoteroInventory, getCachedZoteroInventory } from '../../services/zoteroInventoryCache'
+import { navigateToDiagnostic } from '../../services/diagnosticNavigation'
 import {
   addReferenceAtCursor,
   buildProjectReferenceDragPayload,
@@ -66,6 +70,8 @@ interface ZoteroReferencesProps {
   onAddToChat?: (payload: ReferenceDragPayload) => void
   onOpenProjectGroups?: () => void
   onSearchOnline?: () => void
+  onOpenProblems?: () => void
+  onOpenSubmission?: () => void
 }
 
 type CollectionInventory = {
@@ -161,23 +167,39 @@ async function scanCurrentCitationUsages(projectRoot: string): Promise<CitationU
         (result) => result.content,
         () => ''
       )
-      return { savedText, currentText: snapshot.text }
+      return { filePath, savedText, currentText: snapshot.text }
     })
   )
   return overlayCitationUsages(base, overlays)
 }
 
+function citationLocationLabel(file: string, projectRoot: string | null): string {
+  if (projectRoot) {
+    const root = projectRoot.replace(/[\\/]$/u, '')
+    if (file === root) return file.split(/[\\/]/u).at(-1) ?? file
+    if (file.startsWith(`${root}/`) || file.startsWith(`${root}\\`)) {
+      return file.slice(root.length + 1).replace(/\\/gu, '/')
+    }
+  }
+  return file.split(/[\\/]/u).at(-1) ?? file
+}
+
 function ProjectReferenceCard({
   status,
+  projectRoot,
   zoteroState,
   onCite,
+  onOpenLocation,
   onAddToChat
 }: {
   status: ProjectReferenceHealth
+  projectRoot: string | null
   zoteroState: 'checking' | 'ready' | 'unavailable' | 'error'
   onCite: (citekey: string) => void
+  onOpenLocation: (location: CitationLocation) => void
   onAddToChat?: (payload: ReferenceDragPayload) => void
 }) {
+  const [locationsExpanded, setLocationsExpanded] = useState(false)
   const payload = buildProjectReferenceDragPayload(status.entry)
   return (
     <article
@@ -197,8 +219,49 @@ function ProjectReferenceCard({
       <span>
         {status.entry.author || 'Unknown author'}
         {status.entry.year ? ` · ${status.entry.year}` : ''}
-        {status.citationCount > 0 ? ` · CITED ×${status.citationCount}` : ' · UNUSED'}
+        {status.citationCount === 0 ? ' · UNUSED' : ''}
       </span>
+      {status.citationCount > 0 &&
+        (status.citationLocations.length > 0 ? (
+          <button
+            type="button"
+            className="reference-citation-count"
+            aria-expanded={locationsExpanded}
+            onClick={() => setLocationsExpanded((current) => !current)}
+          >
+            CITED ×{status.citationCount}
+          </button>
+        ) : (
+          <span>CITED ×{status.citationCount}</span>
+        ))}
+      {locationsExpanded && status.citationLocations.length > 0 && (
+        <div className="reference-citation-locations" aria-label="Citation locations">
+          {status.citationLocations.map((location, index) => (
+            <button
+              type="button"
+              key={`${location.file}:${location.line}:${index}`}
+              onClick={() => onOpenLocation(location)}
+            >
+              {citationLocationLabel(location.file, projectRoot)}:{location.line}
+            </button>
+          ))}
+          {status.citationLocations.length < status.citationCount && (
+            <small>
+              Showing the first {status.citationLocations.length} of {status.citationCount}
+            </small>
+          )}
+        </div>
+      )}
+      {status.possibleDuplicates.length > 0 && (
+        <div className="reference-duplicate-warning" role="status">
+          ⚠ Possible duplicate:{' '}
+          {status.possibleDuplicates.map(({ entry }) => `@${entry.key}`).join(', ')}
+          <small>
+            Matched by {status.possibleDuplicates.map(({ matchKind }) => matchKind).join(', ')}; no
+            entries were merged.
+          </small>
+        </div>
+      )}
       <span className={status.zoteroItem ? 'reference-link-state linked' : 'reference-link-state'}>
         {zoteroState === 'checking'
           ? 'Cross-checking Zotero…'
@@ -233,13 +296,16 @@ function ProjectReferenceCard({
 export function ZoteroReferences({
   onAddToChat,
   onOpenProjectGroups,
-  onSearchOnline
+  onSearchOnline,
+  onOpenProblems,
+  onOpenSubmission
 }: ZoteroReferencesProps = {}) {
   const projectRoot = useProjectStore((state) => state.projectRoot)
   const query = useProjectStore((state) => state.researchSearchQuery)
   const setQuery = useProjectStore((state) => state.setResearchSearchQuery)
   const bibEntries = useProjectStore((state) => state.bibEntries)
   const port = useSettingsStore((state) => state.settings.zoteroPort)
+  const compileDiagnosticCount = useCompileStore((state) => state.diagnostics.length)
   const [results, setResults] = useState<ZoteroSearchResult[]>([])
   const [libraries, setLibraries] = useState<ZoteroLibrary[]>([])
   const [config, setConfig] = useState<ResearchConfig>(DEFAULT_CONFIG)
@@ -497,6 +563,7 @@ export function ZoteroReferences({
   const localSearchResultCount = projectSearchResults.length + results.length
   const issueCount =
     referenceHealth.missingCitations.length +
+    referenceHealth.duplicateCount +
     (zoteroAvailable && libraryInventoryLoaded && !libraryInventoryError
       ? referenceHealth.projectOnlyCount
       : 0)
@@ -850,6 +917,16 @@ export function ZoteroReferences({
     useEditorStore.getState().requestInsertAtCursor(`\\cite{${citekey}}`)
   }, [])
 
+  const openCitationLocation = useCallback((location: CitationLocation) => {
+    void navigateToDiagnostic({
+      file: location.file,
+      line: location.line,
+      column: 1,
+      severity: 'info',
+      message: 'Citation location'
+    })
+  }, [])
+
   const loadMoreInventory = useCallback(async () => {
     if (
       !selectedCollectionKey ||
@@ -1064,6 +1141,8 @@ export function ZoteroReferences({
           </small>
         </div>
         {(referenceHealth.missingCitations.length > 0 ||
+          referenceHealth.duplicateCount > 0 ||
+          compileDiagnosticCount > 0 ||
           (zoteroAvailable &&
             libraryInventoryLoaded &&
             !libraryInventoryError &&
@@ -1072,6 +1151,21 @@ export function ZoteroReferences({
             {referenceHealth.missingCitations.length > 0 && (
               <span>⚠ {referenceHealth.missingCitations.length} missing bibliography</span>
             )}
+            {referenceHealth.duplicateCount > 0 && (
+              <span>⚠ {referenceHealth.duplicateCount} possible duplicate</span>
+            )}
+            {compileDiagnosticCount > 0 &&
+              (onOpenProblems ? (
+                <button type="button" onClick={onOpenProblems}>
+                  ⚠ {compileDiagnosticCount} compile problem
+                  {compileDiagnosticCount === 1 ? '' : 's'}
+                </button>
+              ) : (
+                <span>
+                  ⚠ {compileDiagnosticCount} compile problem
+                  {compileDiagnosticCount === 1 ? '' : 's'}
+                </span>
+              ))}
             {zoteroAvailable &&
               libraryInventoryLoaded &&
               !libraryInventoryError &&
@@ -1101,6 +1195,11 @@ export function ZoteroReferences({
             </button>
           ))}
         </div>
+        {onOpenSubmission && (
+          <button type="button" className="reference-submission-action" onClick={onOpenSubmission}>
+            <FileCheck2 size={12} aria-hidden="true" /> Submission check
+          </button>
+        )}
       </section>
       <div className="zotero-collection-tree" role="tree" aria-label="Zotero collections">
         {!library ? (
@@ -1271,6 +1370,7 @@ export function ZoteroReferences({
             <ProjectReferenceCard
               key={`project:${status.entry.key}`}
               status={status}
+              projectRoot={projectRoot}
               zoteroState={
                 zoteroAvailable === false
                   ? 'unavailable'
@@ -1281,6 +1381,7 @@ export function ZoteroReferences({
                       : 'checking'
               }
               onCite={citeProjectReference}
+              onOpenLocation={(location) => void openCitationLocation(location)}
               onAddToChat={onAddToChat}
             />
           ))}
@@ -1400,6 +1501,7 @@ export function ZoteroReferences({
             <ProjectReferenceCard
               key={`project:${status.entry.key}`}
               status={status}
+              projectRoot={projectRoot}
               zoteroState={
                 zoteroAvailable === false
                   ? 'unavailable'
@@ -1410,6 +1512,7 @@ export function ZoteroReferences({
                       : 'checking'
               }
               onCite={citeProjectReference}
+              onOpenLocation={(location) => void openCitationLocation(location)}
               onAddToChat={onAddToChat}
             />
           ))}

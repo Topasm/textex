@@ -9,6 +9,14 @@ import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { openProject } from '../../renderer/utils/openProject'
 import { addReferenceAtCursor } from '../../renderer/components/research/referenceActions'
 
+function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise
+  })
+  return { promise, resolve }
+}
+
 vi.mock('../../renderer/utils/openProject', () => ({
   openProject: vi.fn()
 }))
@@ -226,5 +234,42 @@ describe('OmniSearch accessibility', () => {
         tone: 'warning'
       })
     )
+  })
+
+  it('does not publish an online search that finishes after the query is cleared', async () => {
+    const search = deferred<
+      Array<{
+        source: 'crossref'
+        id: string
+        title: string
+        authors: string[]
+        year: string
+        type: string
+      }>
+    >()
+    useProjectStore.setState({ projectRoot: '/projects/paper' })
+    vi.mocked(window.api.researchSearchOnline).mockReturnValueOnce(search.promise)
+    render(<OmniSearch />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Search mode: Citations' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: /Online papers/ }))
+    const input = screen.getByRole('combobox', { name: 'Search Online papers' })
+    fireEvent.change(input, { target: { value: 'stale paper' } })
+    await waitFor(() => expect(window.api.researchSearchOnline).toHaveBeenCalledOnce())
+
+    fireEvent.change(input, { target: { value: '' } })
+    search.resolve([
+      {
+        source: 'crossref',
+        id: 'stale',
+        title: 'Stale Result',
+        authors: ['Author'],
+        year: '2026',
+        type: 'article'
+      }
+    ])
+
+    await waitFor(() => expect(input).toHaveValue(''))
+    expect(screen.queryByRole('option', { name: /Stale Result/ })).not.toBeInTheDocument()
   })
 })

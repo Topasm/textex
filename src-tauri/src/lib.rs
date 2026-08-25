@@ -300,6 +300,7 @@ pub fn run() {
             commands::export::export_document,
             commands::export::get_export_formats,
             commands::export::export_overleaf_zip,
+            commands::submission_check::run_submission_check,
             commands::runtime::open_external,
             commands::runtime::exit_app,
             commands::runtime::get_performance_memory,

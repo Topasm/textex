@@ -133,6 +133,7 @@ fn main() {
         "export_document",
         "get_export_formats",
         "export_overleaf_zip",
+        "run_submission_check",
         "open_external",
         "exit_app",
         "get_performance_memory",

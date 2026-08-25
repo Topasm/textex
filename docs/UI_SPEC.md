@@ -84,6 +84,12 @@ ErrorBoundary
 - **References** is a unified current-paper manager: it cross-checks citations in project `.tex`
   files, bibliography entries, and Zotero items instead of separating Project and Zotero into
   peer tabs. Cited, missing, unused, linked, and Zotero-only states share one filterable list.
+- Citation counts expand to bounded file-and-line provenance links. Possible project bibliography
+  duplicates are detected by normalized DOI, arXiv ID, citekey, then title/year and are always
+  presented for review without automatic merging.
+- The Current Paper card includes live compile-problem status and opens the deterministic
+  **Submission Check** as a secondary References view. Findings navigate through the same bounded,
+  project-contained source path as compiler diagnostics.
 - Icon-only Terminal and compilation-log controls live beside the Research tabs, including active
   state and a problem-count badge. Their full-width workspace surfaces remain unchanged.
 - Zotero opens at a **My Library** root with a nested collection tree. Counts load lazily, selecting
@@ -102,14 +108,16 @@ ErrorBoundary
 - Paper classification requests can add/remove matching Zotero items from nested collections.
   A single preview row combines that paper's tag and collection-membership changes.
 - Typing `/` in the Chat composer opens a searchable, keyboard-accessible command menu. `/refs`,
-  `/zotero`, and `/online` open the corresponding reference source with an optional prefilled
-  query; `/todo`, `/outline`, and `/draft` reuse the existing workspace surfaces.
+  `/zotero`, `/online`, and `/find-sources` open the corresponding reference workflow with an
+  optional prefilled query; `/submission-check`, `/todo`, `/outline`, and `/draft` reuse existing
+  workspace surfaces without sending local commands to the AI.
 - Zotero search and mutation intent are separate: `/zotero` navigates to library search, while
   `/zotero-plan <request>` enters the existing review-and-approve change workflow.
 - The existing editor selection toolbar links selected `.tex` text to the workspace without a new
   popup: **Ask Chat** attaches an in-memory selection context, while **Find Sources** opens the
-  Online reference search with a reviewable prefilled query. Selection bodies are not persisted in
-  the per-project Chat session.
+  unified Project + Zotero reference search with a reviewable prefilled query. Crossref/arXiv
+  remains available as a secondary fallback after a completed local search has no matches.
+  Selection bodies are not persisted in the per-project Chat session.
 
 ### `Toolbar.tsx`
 - Acts as the primary document command surface at the top of the application.

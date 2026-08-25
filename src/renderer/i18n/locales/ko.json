@@ -577,6 +577,7 @@
       "file_export_odt": "ODT로 내보내기",
       "file_export_epub": "EPUB로 내보내기",
       "compile_run": "문서 컴파일",
+      "compile_submissionCheck": "제출 전 검사 실행",
       "ai_draft": "AI 초안 만들기",
       "edit_find": "문서에서 찾기",
       "view_toggleSidebar": "사이드바 전환",
@@ -595,6 +596,29 @@
       "window_close": "창 닫기",
       "app_quit": "TextEx 종료"
     }
+  },
+  "submissionCheck": {
+    "title": "제출 전 검사",
+    "backToCurrentPaper": "현재 논문으로 돌아가기",
+    "rerun": "다시 검사",
+    "running": "현재 논문을 검사하는 중…",
+    "failed": "제출 전 검사에 실패했습니다",
+    "retry": "다시 시도",
+    "noDocument": "LaTeX 문서를 열어 제출 전 검사를 실행하세요",
+    "noDocumentHint": "활성 문서를 논문의 루트 파일로 사용합니다.",
+    "passed": "차단되는 문제가 없습니다",
+    "needsAttention": "확인이 필요한 문제 {{count}}개",
+    "needsAttention_other": "확인이 필요한 문제 {{count}}개",
+    "scannedFiles": "소스 파일 {{count}}개 검사",
+    "scannedFiles_other": "소스 파일 {{count}}개 검사",
+    "errors": "오류",
+    "warnings": "경고",
+    "info": "정보",
+    "errorGroup": "오류",
+    "warningGroup": "경고",
+    "infoGroup": "정보",
+    "noFindings": "사용 가능한 모든 검사를 통과했습니다",
+    "openFinding": "{{location}}에서 {{message}} 열기"
   },
   "researchPanel": {
     "invalidReferenceDrop": "유효한 TextEx 참고문헌이 아닙니다.",

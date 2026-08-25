@@ -856,6 +856,17 @@ export function ResearchChatPanel({
           projectStore.openResearchPanel('references')
           setPrompt('')
           return true
+        case 'find-sources':
+          projectStore.setResearchSearchQuery(query)
+          projectStore.setResearchReferenceSource('project')
+          projectStore.openResearchPanel('references')
+          setPrompt('')
+          return true
+        case 'submission-check':
+          projectStore.setResearchReferenceSource('submission')
+          projectStore.openResearchPanel('references')
+          setPrompt('')
+          return true
         case 'todo':
         case 'outline':
           projectStore.setSidebarView(command.id)

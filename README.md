@@ -24,6 +24,7 @@ A **free**, **local-first** Tauri desktop LaTeX editor. TextEx runs on your mach
 | **Monaco Editor** | Syntax highlighting, auto-completion, snippets, Vim mode |
 | **Multi-File Projects** | Sidebar file tree with generated outputs hidden, tab bar, `\input`/`\include` navigation |
 | **Citations** | BibTeX auto-complete + Zotero integration |
+| **Paper Preflight** | Citation provenance, duplicate warnings, and a deterministic submission check |
 | **Research & AI** | Crossref/arXiv search plus native HTTP, Claude CLI, and Codex CLI assistants |
 | **Language & Terminal** | Optional TexLab language features and an embedded native PTY terminal |
 | **Git Integration** | Built-in staging, commits, diffs, and branch info |

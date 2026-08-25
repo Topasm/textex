@@ -66,6 +66,7 @@ import type {
   CompileRequest,
   CompileResponse
 } from '../../shared/compileProtocol'
+import type { SubmissionCheckRequest, SubmissionCheckResult } from '../../shared/submissionCheck'
 
 export interface OpenFileResult {
   content: string
@@ -140,6 +141,7 @@ export interface DesktopApi {
   removeCompileLogListener(): void
   onDiagnostics(cb: (event: CompileDiagnosticsEvent) => void): void
   removeDiagnosticsListener(): void
+  runSubmissionCheck(request: SubmissionCheckRequest): Promise<SubmissionCheckResult>
 
   // SyncTeX
   synctexForward(texFile: string, line: number): Promise<SyncTeXForwardResult | null>

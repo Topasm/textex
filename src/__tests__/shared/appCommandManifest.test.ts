@@ -16,6 +16,7 @@ const EXPECTED_APP_COMMAND_IDS = [
   'file.export.odt',
   'file.export.epub',
   'compile.run',
+  'compile.submissionCheck',
   'ai.draft',
   'edit.find',
   'view.toggleSidebar',

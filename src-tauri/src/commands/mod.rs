@@ -16,6 +16,7 @@ pub mod research_source;
 pub mod runtime;
 pub mod settings;
 pub mod spellcheck;
+pub mod submission_check;
 pub mod synctex;
 pub mod templates;
 pub mod updater;

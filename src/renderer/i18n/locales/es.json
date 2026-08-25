@@ -577,6 +577,7 @@
       "file_export_odt": "Exportar como ODT",
       "file_export_epub": "Exportar como EPUB",
       "compile_run": "Compilar documento",
+      "compile_submissionCheck": "Ejecutar comprobación de envío",
       "ai_draft": "Crear borrador con IA",
       "edit_find": "Buscar en el documento",
       "view_toggleSidebar": "Alternar barra lateral",
@@ -595,6 +596,29 @@
       "window_close": "Cerrar ventana",
       "app_quit": "Salir de TextEx"
     }
+  },
+  "submissionCheck": {
+    "title": "Comprobación de envío",
+    "backToCurrentPaper": "Volver al artículo actual",
+    "rerun": "Ejecutar de nuevo",
+    "running": "Comprobando el artículo actual…",
+    "failed": "Falló la comprobación de envío",
+    "retry": "Reintentar",
+    "noDocument": "Abra un documento LaTeX para ejecutar la comprobación",
+    "noDocumentHint": "El documento activo se usa como archivo raíz.",
+    "passed": "No se encontraron problemas bloqueantes",
+    "needsAttention": "{{count}} problema requiere atención",
+    "needsAttention_other": "{{count}} problemas requieren atención",
+    "scannedFiles": "{{count}} archivo fuente comprobado",
+    "scannedFiles_other": "{{count}} archivos fuente comprobados",
+    "errors": "Errores",
+    "warnings": "Advertencias",
+    "info": "Información",
+    "errorGroup": "Errores",
+    "warningGroup": "Advertencias",
+    "infoGroup": "Información",
+    "noFindings": "Todas las comprobaciones disponibles pasaron",
+    "openFinding": "Abrir {{message}} en {{location}}"
   },
   "researchPanel": {
     "invalidReferenceDrop": "Este elemento no es una referencia válida de TextEx.",
