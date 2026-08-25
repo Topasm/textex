@@ -115,7 +115,7 @@ pub async fn ai_process(
     settings_state: State<'_, SettingsState>,
     project_state: State<'_, AppState>,
     request: AiProcessRequest,
-) -> AppResult<ResearchChatResponse> {
+) -> AppResult<String> {
     filesystem::validate_existing_project_file(project_state.inner(), &request.file_path).await?;
     filesystem::validate_existing_project_file(
         project_state.inner(),
@@ -173,7 +173,7 @@ pub async fn ai_research_chat(
     project_index: State<'_, ProjectIndexState>,
     reference_index: State<'_, ReferenceIndexState>,
     mut request: ResearchChatRequest,
-) -> AppResult<String> {
+) -> AppResult<ResearchChatResponse> {
     // Fail before taking project/profile locks or starting native enrichment.
     // The renderer is an IPC caller, so even fields that native code later
     // replaces must first fit the bounded request envelope.
