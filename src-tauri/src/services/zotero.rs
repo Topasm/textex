@@ -2666,14 +2666,14 @@ mod tests {
     #[test]
     fn local_library_tree_keeps_unknown_counts_unknown() {
         let collections = library_collections(vec![
-            local_collection("RQQT1234", 1, "Writing", None),
-            local_collection("CHILD567", 2, "Thesis", Some("RQQT1234")),
+            local_collection("RQQT2234", 1, "Writing", None),
+            local_collection("CHILD567", 2, "Thesis", Some("RQQT2234")),
         ])
         .unwrap();
 
-        assert_eq!(collections[0].key, "/0/RQQT1234");
+        assert_eq!(collections[0].key, "/0/RQQT2234");
         assert_eq!(collections[0].item_count, None);
-        assert_eq!(collections[1].parent_key.as_deref(), Some("/0/RQQT1234"));
+        assert_eq!(collections[1].parent_key.as_deref(), Some("/0/RQQT2234"));
         assert_eq!(collection_item_count(&serde_json::Map::new()), None);
     }
 
