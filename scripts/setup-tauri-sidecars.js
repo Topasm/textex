@@ -40,14 +40,6 @@ const ASSETS = Object.freeze({
     archiveType: 'zip',
     executableName: 'tectonic.exe'
   }),
-  'x86_64-apple-darwin': Object.freeze({
-    name: 'tectonic-0.17.0-x86_64-apple-darwin.tar.gz',
-    url: `${RELEASE_DOWNLOAD_ROOT}/tectonic-0.17.0-x86_64-apple-darwin.tar.gz`,
-    sha256: '7c90ef5b6ddb1eb1937e4337add5237b79338e4b9676459fa91187d24d6cdf80',
-    size: 21_790_177,
-    archiveType: 'tar.gz',
-    executableName: 'tectonic'
-  }),
   'aarch64-apple-darwin': Object.freeze({
     name: 'tectonic-0.17.0-aarch64-apple-darwin.tar.gz',
     url: `${RELEASE_DOWNLOAD_ROOT}/tectonic-0.17.0-aarch64-apple-darwin.tar.gz`,
@@ -71,17 +63,9 @@ const TARGETS = Object.freeze({
     assetTargets: ['x86_64-pc-windows-msvc'],
     format: 'pe-x86_64'
   }),
-  'x86_64-apple-darwin': Object.freeze({
-    assetTargets: ['x86_64-apple-darwin'],
-    format: 'mach-x86_64'
-  }),
   'aarch64-apple-darwin': Object.freeze({
     assetTargets: ['aarch64-apple-darwin'],
     format: 'mach-arm64'
-  }),
-  'universal-apple-darwin': Object.freeze({
-    assetTargets: ['x86_64-apple-darwin', 'aarch64-apple-darwin'],
-    format: 'mach-universal'
   })
 })
 
@@ -162,9 +146,6 @@ function detectHostTarget() {
   if (process.platform === 'win32' && process.arch === 'x64') {
     return 'x86_64-pc-windows-msvc'
   }
-  if (process.platform === 'darwin' && process.arch === 'x64') {
-    return 'x86_64-apple-darwin'
-  }
   if (process.platform === 'darwin' && process.arch === 'arm64') {
     return 'aarch64-apple-darwin'
   }
@@ -178,11 +159,6 @@ function targetSpec(target) {
   if (!spec) {
     throw new Error(
       `Unsupported target ${target}. Supported targets: ${Object.keys(TARGETS).join(', ')}`
-    )
-  }
-  if (target === 'universal-apple-darwin' && process.platform !== 'darwin') {
-    throw new Error(
-      'universal-apple-darwin requires macOS and the Apple lipo tool; prepare it on a macOS build host'
     )
   }
   return spec
@@ -367,8 +343,8 @@ function archiveBasename(filename) {
   return filename.replaceAll('\\', '/').split('/').filter(Boolean).at(-1) ?? ''
 }
 
-async function prepareBinary(target, spec, temporaryDirectory) {
-  const downloads = await Promise.all(
+async function prepareBinary(spec, temporaryDirectory) {
+  const [download] = await Promise.all(
     spec.assetTargets.map(async (assetTarget) => {
       const asset = ASSETS[assetTarget]
       const archivePath = await downloadAsset(asset, temporaryDirectory)
@@ -377,26 +353,7 @@ async function prepareBinary(target, spec, temporaryDirectory) {
       return { assetTarget, executable }
     })
   )
-
-  if (target !== 'universal-apple-darwin') return downloads[0].executable
-
-  const x64 = downloads.find((item) => item.assetTarget === 'x86_64-apple-darwin')
-  const arm64 = downloads.find((item) => item.assetTarget === 'aarch64-apple-darwin')
-  if (!x64 || !arm64) throw new Error('Both macOS native Tectonic assets are required')
-
-  const x64Path = path.join(temporaryDirectory, 'tectonic-x86_64')
-  const arm64Path = path.join(temporaryDirectory, 'tectonic-arm64')
-  const universalPath = path.join(temporaryDirectory, 'tectonic-universal')
-  await Promise.all([
-    fs.writeFile(x64Path, x64.executable, { mode: 0o755 }),
-    fs.writeFile(arm64Path, arm64.executable, { mode: 0o755 })
-  ])
-
-  await runCommand('lipo', ['-create', x64Path, arm64Path, '-output', universalPath])
-  await runCommand('lipo', [universalPath, '-verify_arch', 'x86_64', 'arm64'])
-  const universal = await fs.readFile(universalPath)
-  validateBinaryBytes(universal, 'mach-universal')
-  return universal
+  return download.executable
 }
 
 function assetBinaryFormat(assetTarget) {
@@ -405,8 +362,6 @@ function assetBinaryFormat(assetTarget) {
       return 'elf-x86_64'
     case 'x86_64-pc-windows-msvc':
       return 'pe-x86_64'
-    case 'x86_64-apple-darwin':
-      return 'mach-x86_64'
     case 'aarch64-apple-darwin':
       return 'mach-arm64'
     default:
@@ -437,52 +392,23 @@ function validateBinaryBytes(binary, format) {
     return
   }
 
-  if (format === 'mach-x86_64' || format === 'mach-arm64') {
+  if (format === 'mach-arm64') {
     if (binary.readUInt32LE(0) !== 0xfeedfacf) throw new Error('Expected a 64-bit Mach-O binary')
-    const expectedCpu = format === 'mach-x86_64' ? 0x01000007 : 0x0100000c
-    if (binary.readUInt32LE(4) !== expectedCpu) {
+    if (binary.readUInt32LE(4) !== 0x0100000c) {
       throw new Error(`Unexpected Mach-O CPU type for ${format}`)
     }
-    return
-  }
-
-  if (format === 'mach-universal') {
-    validateUniversalMachO(binary)
     return
   }
 
   throw new Error(`No binary validator is configured for ${format}`)
 }
 
-function validateUniversalMachO(binary) {
-  const magic = binary.readUInt32BE(0)
-  const is64BitTable = magic === 0xcafebabf
-  if (magic !== 0xcafebabe && !is64BitTable) {
-    throw new Error('Expected a universal Mach-O Tectonic binary')
-  }
-  const count = binary.readUInt32BE(4)
-  const entrySize = is64BitTable ? 32 : 20
-  const cpuTypes = new Set()
-  for (let index = 0; index < count; index += 1) {
-    const offset = 8 + index * entrySize
-    if (offset + entrySize > binary.length) throw new Error('Truncated universal Mach-O header')
-    cpuTypes.add(binary.readUInt32BE(offset))
-  }
-  if (!cpuTypes.has(0x01000007) || !cpuTypes.has(0x0100000c)) {
-    throw new Error('Universal Tectonic must contain both x86_64 and arm64 slices')
-  }
-}
-
 function canExecuteTarget(target) {
-  if (target === 'universal-apple-darwin') return process.platform === 'darwin'
   if (process.platform === 'linux' && process.arch === 'x64') {
     return target === 'x86_64-unknown-linux-gnu' || target === 'x86_64-unknown-linux-musl'
   }
   if (process.platform === 'win32' && process.arch === 'x64') {
     return target === 'x86_64-pc-windows-msvc'
-  }
-  if (process.platform === 'darwin' && process.arch === 'x64') {
-    return target === 'x86_64-apple-darwin'
   }
   if (process.platform === 'darwin' && process.arch === 'arm64') {
     return target === 'aarch64-apple-darwin'
@@ -579,7 +505,7 @@ async function installTarget(target) {
   const temporaryDirectory = await fs.mkdtemp(path.join(os.tmpdir(), TEMPORARY_DIRECTORY_PREFIX))
 
   try {
-    const binary = await prepareBinary(target, spec, temporaryDirectory)
+    const binary = await prepareBinary(spec, temporaryDirectory)
     validateBinaryBytes(binary, spec.format)
     const binarySha256 = createHash('sha256').update(binary).digest('hex')
     const provenance = provenanceFor(target, binarySha256, binary.length)

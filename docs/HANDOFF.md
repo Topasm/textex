@@ -20,11 +20,11 @@ The maintained operational baseline is:
 - The repository is public at `Topasm/textex`, with `main` as the default
   branch.
 - GitHub Actions validates lint, types, formatting, tests, Rust checks, and Tauri
-  packaging for Linux x64, Windows x64, macOS arm64, and macOS x64.
+  packaging for Linux x64, Windows x64, and macOS arm64.
 - A `v*` tag can publish a public GitHub Release. Follow
   [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) before creating one.
-- Tectonic 0.17.0 is bundled as a target-qualified sidecar. macOS arm64 and x64
-  packages each carry the matching architecture-specific binary.
+- Tectonic 0.17.0 is bundled as a target-qualified sidecar. macOS releases are
+  Apple Silicon only and carry the matching arm64 binary.
 - macOS CI output is ad-hoc signed and not Apple-notarized unless all five
   optional Developer ID and notary secrets are configured together.
 - Ordinary branch and pull-request builds need no custom Actions secret. A tagged
@@ -164,7 +164,7 @@ Recommended minimums are:
 - require pull requests for changes to `main`;
 - require the current `Lint & Typecheck` and `Test` checks;
 - for packaging or release changes, require successful Linux x64, Windows x64,
-  macOS arm64, and macOS x64 jobs before tagging;
+  and macOS arm64 jobs before tagging;
 - block force pushes and branch deletion for `main`;
 - keep administrators subject to the rules unless emergency bypass ownership
   is explicitly assigned.
@@ -218,9 +218,9 @@ gh release view --json url,tagName,isDraft,isPrerelease,assets
 Key invariants:
 
 - validate the exact release commit on `main` before creating its tag;
-- wait for all four target builds because fail-fast is disabled on purpose;
+- wait for all three target builds because fail-fast is disabled on purpose;
 - keep version strings synchronized across the app, CLI, MCP server, and lock;
-- preserve separate macOS arm64/x64 packages and target-qualified Tectonic sidecars;
+- preserve the Apple Silicon-only macOS policy and target-qualified Tectonic sidecars;
 - publish installers, signed updater archives, `latest.json`, and `checksums.txt`;
 - never move a tag after a GitHub Release exists.
 

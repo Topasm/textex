@@ -22,9 +22,6 @@ function fixture() {
   write('mac-arm64', 'TextEx.dmg')
   write('mac-arm64', 'TextEx.app.tar.gz')
   write('mac-arm64', 'TextEx.app.tar.gz.sig', 'arm-signature')
-  write('mac-x64', 'TextEx.dmg')
-  write('mac-x64', 'TextEx.app.tar.gz')
-  write('mac-x64', 'TextEx.app.tar.gz.sig', 'x64-signature')
   write('win', 'TextEx.exe')
   write('win', 'TextEx.exe.sig', 'windows-signature')
 
@@ -53,7 +50,6 @@ test('generates architecture-qualified artifacts and installer-aware updater tar
       'linux-x86_64-appimage',
       'linux-x86_64-deb',
       'darwin-aarch64',
-      'darwin-x86_64',
       'windows-x86_64'
     ])
     assert.equal(manifest.platforms['linux-x86_64'].signature, 'linux-signature')
@@ -63,11 +59,8 @@ test('generates architecture-qualified artifacts and installer-aware updater tar
       manifest.platforms['darwin-aarch64'].url,
       /mac-arm64-TextEx\.app\.tar\.gz$/
     )
-    assert.match(manifest.platforms['darwin-x86_64'].url, /mac-x64-TextEx\.app\.tar\.gz$/)
-
     const releaseFiles = fs.readdirSync(project.outputDir).sort()
     assert.ok(releaseFiles.includes('mac-arm64-TextEx.dmg'))
-    assert.ok(releaseFiles.includes('mac-x64-TextEx.dmg'))
     assert.ok(releaseFiles.includes('latest.json'))
     assert.ok(releaseFiles.includes('checksums.txt'))
     assert.match(

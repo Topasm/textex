@@ -51,7 +51,6 @@
 |----------|------|
 | Windows x64 | `.exe` 설치 파일 |
 | macOS Apple Silicon (arm64) | arm64 `.dmg` |
-| macOS Intel (x64) | x64 `.dmg` |
 | Linux x64 | `.AppImage` 또는 `.deb` |
 
 ### 2. OS별 설정

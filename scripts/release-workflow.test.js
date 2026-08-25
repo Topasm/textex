@@ -22,13 +22,23 @@ function matrixEntry(platform) {
   return workflow.slice(entryStart, nextEntry === -1 ? workflow.length : nextEntry)
 }
 
-test('macOS matrix pins native runner architectures and verifies them at runtime', () => {
+test('macOS matrix supports Apple Silicon only and verifies the native runner', () => {
   assert.match(matrixEntry('mac-arm64'), /- os: macos-15\n/)
-  assert.match(matrixEntry('mac-x64'), /- os: macos-15-intel\n/)
-  assert.match(
-    workflow,
-    /matrix\.platform \}\}" == "mac-arm64"[\s\S]*uname -m\)" = "arm64"[\s\S]*matrix\.platform \}\}" == "mac-x64"[\s\S]*uname -m\)" = "x86_64"/
-  )
+  assert.match(workflow, /matrix\.platform \}\}" == "mac-arm64"[\s\S]*uname -m\)" = "arm64"/)
+  assert.doesNotMatch(workflow, /mac-x64|macos-15-intel|x86_64-apple-darwin/)
+})
+
+test('tag builds reuse validation from the exact successful main commit', () => {
+  for (const job of ['lint', 'test', 'rust-test']) {
+    const jobPattern = new RegExp(
+      `  ${job}:\\n    if: \\$\\{\\{ !startsWith\\(github\\.ref, 'refs/tags/v'\\) \\}\\}`
+    )
+    assert.match(workflow, jobPattern)
+  }
+  assert.match(workflow, /build:[\s\S]*if: >-[\s\S]*always\(\)/)
+  assert.match(workflow, /needs\.release-preflight\.result == 'success'/)
+  assert.match(workflow, /startsWith\(github\.ref, 'refs\/tags\/v'\)[\s\S]*needs\.lint\.result == 'skipped'[\s\S]*needs\.test\.result == 'skipped'[\s\S]*needs\.rust-test\.result == 'skipped'/)
+  assert.match(workflow, /!startsWith\(github\.ref, 'refs\/tags\/v'\)[\s\S]*needs\.lint\.result == 'success'[\s\S]*needs\.test\.result == 'success'[\s\S]*needs\.rust-test\.result == 'success'/)
 })
 
 test('tag preflight requires a successful main push workflow for the exact commit', () => {

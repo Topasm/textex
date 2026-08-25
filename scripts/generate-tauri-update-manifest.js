@@ -4,7 +4,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 const crypto = require('node:crypto')
 
-const ARTIFACT_DIRECTORY_PATTERN = /(?:^|\/)TextEx-Tauri-(linux|mac-arm64|mac-x64|win)(?:\/|$)/
+const ARTIFACT_DIRECTORY_PATTERN = /(?:^|\/)TextEx-Tauri-(linux|mac-arm64|win)(?:\/|$)/
 
 function generateReleaseFiles({
   artifactsDir,
@@ -36,11 +36,6 @@ function generateReleaseFiles({
       'darwin-aarch64',
       files,
       (file) => file.endsWith('.app.tar.gz') && artifactPlatform(file) === 'mac-arm64'
-    ),
-    selectTarget(
-      'darwin-x86_64',
-      files,
-      (file) => file.endsWith('.app.tar.gz') && artifactPlatform(file) === 'mac-x64'
     ),
     selectTarget('windows-x86_64', files, (file) => file.endsWith('.exe'))
   ]

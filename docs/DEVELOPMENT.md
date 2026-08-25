@@ -45,7 +45,6 @@ npm run build:mcp
 
 npm run package:linux
 npm run package:mac        # Apple Silicon
-npm run package:mac:x64    # Intel
 npm run package:win
 ```
 

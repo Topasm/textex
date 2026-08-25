@@ -16,12 +16,6 @@
       "sha256": "f61ce51f0b0ade1015b7de7ef368541c5424e9756ecbd0d7af97d6d48030845f",
       "size": 21060223
     },
-    "x86_64-apple-darwin": {
-      "name": "tectonic-0.17.0-x86_64-apple-darwin.tar.gz",
-      "url": "https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.17.0/tectonic-0.17.0-x86_64-apple-darwin.tar.gz",
-      "sha256": "7c90ef5b6ddb1eb1937e4337add5237b79338e4b9676459fa91187d24d6cdf80",
-      "size": 21790177
-    },
     "aarch64-apple-darwin": {
       "name": "tectonic-0.17.0-aarch64-apple-darwin.tar.gz",
       "url": "https://github.com/tectonic-typesetting/tectonic/releases/download/tectonic%400.17.0/tectonic-0.17.0-aarch64-apple-darwin.tar.gz",

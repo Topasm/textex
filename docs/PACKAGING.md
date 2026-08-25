@@ -8,8 +8,10 @@ before invoking the Tauri CLI.
 | --- | --- | --- | --- |
 | Linux x64 | `npm run package:linux` | AppImage + DEB | AppImage + DEB `.sig` files |
 | macOS arm64 | `npm run package:mac` | DMG | `.app.tar.gz` + `.sig` |
-| macOS x64 | `npm run package:mac:x64` | DMG | `.app.tar.gz` + `.sig` |
 | Windows x64 | `npm run package:win` | NSIS EXE | EXE + `.sig` |
+
+macOS releases target Apple Silicon only. Intel and universal macOS packages
+are intentionally excluded from CI and updater manifests.
 
 Updater builds use the corresponding `package:updater:*` command and require:
 
@@ -98,7 +100,7 @@ Each platform job inspects its installer and proves that the application,
 Tectonic binary, cache manifest, and package metadata are present. It then runs
 the packaged executable with `TEXTEX_PACKAGE_SMOKE=1`, which validates embedded
 Tauri/updater/resource configuration and the adjacent sidecar without opening a
-window. macOS jobs verify both architectures independently.
+window. The macOS job also proves it is running natively on Apple Silicon.
 
 ## Curated Tectonic cache seed
 

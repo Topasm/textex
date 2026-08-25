@@ -126,11 +126,12 @@ workflow to pass. Required jobs are:
 - Tauri Build (linux)
 - Tauri Build (win)
 - Tauri Build (mac-arm64)
-- Tauri Build (mac-x64)
 
 Do not tag while any required job is queued, cancelled, or failing.
 The tag workflow fails closed unless the Actions API reports a successful
-`main` push run of `Build & Package` for the exact tagged commit SHA.
+`main` push run of `Build & Package` for the exact tagged commit SHA. Once that
+proof passes, the tag workflow skips the duplicate lint, test, and Rust jobs and
+starts the signed package matrix directly.
 
 Workflow actions are pinned to immutable 40-character commit SHAs. When an
 action is upgraded, resolve the reviewed upstream version tag to its commit,
@@ -147,11 +148,10 @@ updater artifacts and publishes the GitHub Release.
 The Release must contain:
 
 - Linux AppImage, DEB, and both adjacent signatures
-- macOS arm64 and x64 DMGs, updater archives, and signatures
+- macOS arm64 DMG, updater archive, and signature
 - Windows NSIS installer and signature
 - `latest.json` containing `linux-x86_64`, `linux-x86_64-appimage`,
-  `linux-x86_64-deb`, `darwin-aarch64`, `darwin-x86_64`, and
-  `windows-x86_64`
+  `linux-x86_64-deb`, `darwin-aarch64`, and `windows-x86_64`
 - `checksums.txt`
 
 Download `latest.json` from the public release URL, validate every URL and

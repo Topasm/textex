@@ -18,7 +18,7 @@ from components and feature hooks directly.
   src-tauri/Cargo.toml` and `cargo clippy --locked --manifest-path
   src-tauri/Cargo.toml -- -D warnings`.
 - Build with `npm run build`; package with `npm run package:linux`,
-  `npm run package:mac`, `npm run package:mac:x64`, or `npm run package:win`.
+  `npm run package:mac`, or `npm run package:win`.
 - Build the CLI and MCP server with `npm run build:cli` and `npm run build:mcp`.
 - Follow [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md) for every
   version, packaging, tag, or release change.
@@ -65,8 +65,8 @@ from components and feature hooks directly.
 - A `v*` tag creates a public GitHub Release. Do not create or push a tag while
   testing release changes.
 - Push the release commit to `main` first and wait for the complete
-  `Build & Package` workflow to pass on Linux, Windows, macOS arm64, and macOS
-  x64. Only then create the version tag.
+  `Build & Package` workflow to pass on Linux x64, Windows x64, and macOS
+  arm64. Only then create the version tag.
 - Keep the version synchronized in `package.json`, the root entries in
   `package-lock.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`,
   `src/cli/index.ts`, `src/mcp/server.ts`, and the settings UI. Preserve the

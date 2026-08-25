@@ -21,6 +21,7 @@ concurrency:
 
 jobs:
   lint:
+    if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
     name: Lint & Typecheck
     steps:
@@ -50,6 +51,7 @@ jobs:
         run: npm run format:rust:check
 
   test:
+    if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
     name: Test
     steps:
@@ -67,6 +69,7 @@ jobs:
         run: npm run test
 
   rust-test:
+    if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-22.04
     name: Tauri Rust Test & Licenses
     steps:
@@ -178,6 +181,23 @@ jobs:
 
   build:
     needs: [lint, test, rust-test, release-preflight]
+    if: >-
+      always() &&
+      needs.release-preflight.result == 'success' &&
+      (
+        (
+          startsWith(github.ref, 'refs/tags/v') &&
+          needs.lint.result == 'skipped' &&
+          needs.test.result == 'skipped' &&
+          needs.rust-test.result == 'skipped'
+        ) ||
+        (
+          !startsWith(github.ref, 'refs/tags/v') &&
+          needs.lint.result == 'success' &&
+          needs.test.result == 'success' &&
+          needs.rust-test.result == 'success'
+        )
+      )
     strategy:
       fail-fast: false
       matrix:
@@ -201,15 +221,6 @@ jobs:
               src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
               src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz
               src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.sig
-          - os: macos-15-intel
-            platform: mac-x64
-            target: x86_64-apple-darwin
-            rust_targets: x86_64-apple-darwin
-            package_command: npm run package:mac:x64
-            artifact_paths: |
-              src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
-              src-tauri/target/x86_64-apple-darwin/release/bundle/macos/*.app.tar.gz
-              src-tauri/target/x86_64-apple-darwin/release/bundle/macos/*.sig
           - os: windows-latest
             platform: win
             target: x86_64-pc-windows-msvc
@@ -278,8 +289,6 @@ jobs:
           npx tauri --version
           if [[ "${{ matrix.platform }}" == "mac-arm64" ]]; then
             test "$(uname -m)" = "arm64"
-          elif [[ "${{ matrix.platform }}" == "mac-x64" ]]; then
-            test "$(uname -m)" = "x86_64"
           fi
 
       - name: Prepare and verify Tectonic sidecars and cache seed
@@ -728,7 +737,7 @@ jobs:
             minisign -Vm "$artifact" -p "$public_key" -x "$decoded_signature"
             verified=$((verified + 1))
           done < <(find artifacts -name '*.sig' -type f -print0)
-          test "$verified" -eq 5
+          test "$verified" -eq 4
 
       - name: Build updater manifest and checksums
         env:
@@ -741,8 +750,8 @@ jobs:
         run: |
           test -f release-artifacts/latest.json
           test -f release-artifacts/checksums.txt
-          test "$(find release-artifacts -name '*.sig' -type f | wc -l)" -eq 5
-          node -e "const p=require('./release-artifacts/latest.json').platforms; for (const k of ['linux-x86_64','linux-x86_64-appimage','linux-x86_64-deb','darwin-aarch64','darwin-x86_64','windows-x86_64']) if (!p[k]) throw new Error('missing '+k)"
+          test "$(find release-artifacts -name '*.sig' -type f | wc -l)" -eq 4
+          node -e "const p=require('./release-artifacts/latest.json').platforms; for (const k of ['linux-x86_64','linux-x86_64-appimage','linux-x86_64-deb','darwin-aarch64','windows-x86_64']) if (!p[k]) throw new Error('missing '+k)"
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@c12583777ecdfd3be55c69cf75464299dc01057e # v3

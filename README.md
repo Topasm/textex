@@ -51,7 +51,6 @@ Grab the latest release from the [Releases page](https://github.com/Topasm/texte
 |----------|------|
 | Windows x64 | `.exe` installer |
 | macOS Apple Silicon (arm64) | arm64 `.dmg` |
-| macOS Intel (x64) | x64 `.dmg` |
 | Linux x64 | `.AppImage` or `.deb` |
 
 ### 2. OS-Specific Setup
