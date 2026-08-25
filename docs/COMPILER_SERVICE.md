@@ -15,12 +15,16 @@ default) or a system pdfLaTeX installation driven by `latexmk`.
 - System pdfLaTeX mode resolves `latexmk` from standard installation paths and
   `PATH`. On macOS it checks MacTeX's stable
   `/Library/TeX/texbin/latexmk` path first so Finder-launched builds do not
-  depend on an interactive shell environment.
+  depend on an interactive shell environment. The resolved executable's parent
+  directory is prepended to the child-only `PATH`, allowing `latexmk` to find
+  sibling tools such as `pdflatex` without mutating the application process.
 - The pdfLaTeX invocation uses `latexmk -norc -g -pdf` with SyncTeX, nonstop,
   file-line-error, and halt-on-error flags. Ignoring latexmkrc files prevents a
   project XeLaTeX or LuaLaTeX override from defeating the selected engine, and
   `-g` guarantees that switching from Tectonic regenerates the PDF even when
   the source timestamps have not changed.
+- Source and output paths are passed as native `OsStr` arguments. Spaces, `@`,
+  and `_` remain literal filesystem characters and are never LaTeX-escaped.
 - Both engines write PDFs and auxiliary files outside the project under the
   application cache at `build/<project-hash>/<engine>/<root-file-hash>/`.
   Tectonic and pdfLaTeX use separate engine directories, and root documents

@@ -8,16 +8,7 @@ import {
   type CSSProperties
 } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  FolderTree,
-  ListTree,
-  StickyNote,
-  Clock,
-  GitBranch,
-  PanelRightOpen,
-  Pin,
-  PinOff
-} from 'lucide-react'
+import { FolderTree, ListTree, StickyNote, Clock, GitBranch, Pin, PinOff } from 'lucide-react'
 import Toolbar from './components/Toolbar'
 import StatusBar from './components/StatusBar'
 import TabBar from './components/TabBar'
@@ -700,16 +691,6 @@ function App() {
                     <PreviewPane />
                   </Suspense>
                 </PreviewErrorBoundary>
-                {!isResearchPanelOpen && (
-                  <button
-                    className="research-panel-toggle"
-                    onClick={() => useProjectStore.getState().openResearchPanel('references')}
-                    title="Open research panel"
-                    aria-label="Open research panel"
-                  >
-                    <PanelRightOpen size={ICON_SIZE.control} />
-                  </button>
-                )}
               </div>
               {terminalPaneOpen && (
                 <>

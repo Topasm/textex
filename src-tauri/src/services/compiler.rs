@@ -291,6 +291,14 @@ async fn run_latexmk(
     let mut command = Command::new(latexmk_path);
     command
         .args(latexmk_arguments(tex_path, build_dir))
+        // Finder-launched macOS applications do not inherit the user's shell
+        // PATH. latexmk may be resolved through MacTeX's absolute stable path,
+        // but it still launches pdflatex by name, so expose its sibling tools
+        // to the child without mutating the application-wide environment.
+        .env(
+            "PATH",
+            executable_parent_path(latexmk_path, std::env::var_os("PATH").as_deref())?,
+        )
         .current_dir(working_directory)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
@@ -308,6 +316,32 @@ async fn run_latexmk(
         cancel_receiver,
     )
     .await
+}
+
+fn executable_parent_path(executable: &Path, inherited: Option<&OsStr>) -> AppResult<OsString> {
+    let parent = executable
+        .parent()
+        .filter(|path| !path.as_os_str().is_empty())
+        .ok_or_else(|| {
+            AppError::RuntimePath(format!(
+                "compiler executable has no parent directory: {}",
+                executable.to_string_lossy()
+            ))
+        })?;
+    let mut paths = inherited
+        .map(std::env::split_paths)
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
+    if !paths.iter().any(|path| path == parent) {
+        paths.insert(0, parent.to_path_buf());
+    }
+    std::env::join_paths(paths).map_err(|error| {
+        AppError::RuntimePath(format!(
+            "could not construct compiler PATH for {}: {error}",
+            executable.to_string_lossy()
+        ))
+    })
 }
 
 fn latexmk_arguments(tex_path: &Path, build_dir: &Path) -> Vec<OsString> {
@@ -1291,10 +1325,11 @@ mod tests {
     use std::{process::Stdio, time::Instant};
 
     use super::{
-        development_candidates, extract_magic_root, finalize_compile_for_project,
-        latexmk_arguments, packaged_candidates, parse_tectonic_diagnostics, resolve_magic_root,
-        root_document_cache_id, sidecar_source_filename, system_latexmk_candidates,
-        validate_compile_request, validate_project_tex_file,
+        development_candidates, executable_parent_path, extract_magic_root,
+        finalize_compile_for_project, latexmk_arguments, packaged_candidates,
+        parse_tectonic_diagnostics, resolve_magic_root, root_document_cache_id,
+        sidecar_source_filename, system_latexmk_candidates, validate_compile_request,
+        validate_project_tex_file,
     };
     #[cfg(unix)]
     use super::{isolate_process_group, monitor_child};
@@ -1489,6 +1524,42 @@ mod tests {
     }
 
     #[test]
+    fn latexmk_child_path_prepends_the_resolved_executable_directory_once() {
+        let inherited =
+            std::env::join_paths(["/usr/local/bin", "/usr/bin"]).expect("join inherited PATH");
+        let child_path = executable_parent_path(
+            Path::new("/Library/TeX/texbin/latexmk"),
+            Some(inherited.as_os_str()),
+        )
+        .expect("construct latexmk child PATH");
+        let entries = std::env::split_paths(&child_path).collect::<Vec<_>>();
+
+        assert_eq!(
+            entries.first(),
+            Some(&Path::new("/Library/TeX/texbin").to_path_buf())
+        );
+        assert_eq!(
+            entries
+                .iter()
+                .filter(|entry| *entry == Path::new("/Library/TeX/texbin"))
+                .count(),
+            1
+        );
+
+        let child_path = executable_parent_path(
+            Path::new("/Library/TeX/texbin/latexmk"),
+            Some(child_path.as_os_str()),
+        )
+        .expect("preserve existing latexmk directory");
+        assert_eq!(
+            std::env::split_paths(&child_path)
+                .filter(|entry| entry == Path::new("/Library/TeX/texbin"))
+                .count(),
+            1
+        );
+    }
+
+    #[test]
     fn pdf_latex_invocation_ignores_rc_and_requests_submission_compatible_mode() {
         let arguments = latexmk_arguments(
             Path::new("/project/main.tex"),
@@ -1509,6 +1580,29 @@ mod tests {
             ]
             .map(OsString::from)
         );
+    }
+
+    #[test]
+    fn pdf_latex_keeps_source_paths_with_spaces_at_signs_and_underscores_verbatim() {
+        let source = Path::new(
+            "/Users/seonghyeon/Library/CloudStorage/GoogleDrive-shkim.p0215@gmail.com/My Drive/workspace/01_Projects/icra_2027/paper/main.tex",
+        );
+        let arguments = latexmk_arguments(source, Path::new("/cache/pdflatex"));
+
+        assert_eq!(
+            arguments.last().map(OsString::as_os_str),
+            Some(source.as_os_str())
+        );
+        assert!(!arguments
+            .last()
+            .expect("source argument")
+            .to_string_lossy()
+            .contains("\\@"));
+        assert!(!arguments
+            .last()
+            .expect("source argument")
+            .to_string_lossy()
+            .contains("\\_"));
     }
 
     #[test]

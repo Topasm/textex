@@ -5164,23 +5164,6 @@ button.submission-check-finding:hover {
   }
 }
 
-.research-panel-toggle {
-  position: absolute;
-  right: 0;
-  top: 8px;
-  z-index: 12;
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 30px;
-  color: var(--text-secondary);
-  background: var(--sidebar-bg);
-  border: 1px solid var(--border);
-  border-right: 0;
-  border-radius: 5px 0 0 5px;
-  cursor: pointer;
-}
-
 .research-panel.overlay {
   position: absolute;
   inset: 0 0 var(--research-panel-bottom, 0) auto;
@@ -5192,7 +5175,7 @@ button.submission-check-finding:hover {
 }
 
 .research-panel.overlay .research-panel-tabs {
-  min-height: 40px;
+  min-height: 38px;
   background: var(--chrome-bg);
   border-bottom-color: var(--chrome-border);
 }
@@ -5203,7 +5186,7 @@ button.submission-check-finding:hover {
   }
 
   .research-panel.overlay {
-    top: 40px;
+    top: 38px;
     width: min(440px, 100%) !important;
   }
 

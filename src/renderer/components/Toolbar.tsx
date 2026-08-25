@@ -6,6 +6,7 @@ import {
   Loader,
   Menu,
   Minus,
+  PanelRightOpen,
   Play,
   Save as SaveIcon,
   Square,
@@ -106,6 +107,7 @@ const Toolbar = React.memo(function Toolbar({
   const currentPage = usePdfStore((s) => s.currentPage)
   const numPages = usePdfStore((s) => s.numPages)
   const projectRoot = useProjectStore((s) => s.projectRoot)
+  const isResearchPanelOpen = useProjectStore((s) => s.isResearchPanelOpen)
 
   const [pageInputValue, setPageInputValue] = useState('')
   const [isPageInputFocused, setIsPageInputFocused] = useState(false)
@@ -304,6 +306,17 @@ const Toolbar = React.memo(function Toolbar({
             {isDirty && <span className="dirty-dot" />}
             {fileName}
           </span>
+          {projectRoot && !isResearchPanelOpen && (
+            <button
+              type="button"
+              className="toolbar-btn toolbar-research-toggle"
+              onClick={() => useProjectStore.getState().openResearchPanel('references')}
+              title="Open research panel"
+              aria-label="Open research panel"
+            >
+              <PanelRightOpen size={ICON_SIZE.control} />
+            </button>
+          )}
           {customWindowChrome && (
             <div
               className="toolbar-window-controls"
