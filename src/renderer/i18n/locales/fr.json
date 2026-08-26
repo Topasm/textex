@@ -149,6 +149,7 @@
   "settings": {
     "title": "Paramètres",
     "tabs": {
+      "general": "Général",
       "appearance": "Apparence",
       "editor": "Éditeur",
       "ai": "IA",
@@ -157,6 +158,7 @@
     },
     "general": {
       "application": "Application",
+      "applicationDesc": "Gérez la langue, les mises à jour et le comportement général de l’application.",
       "autoUpdates": "Rechercher automatiquement les mises à jour",
       "autoUpdatesDesc": "Rechercher les nouvelles versions de TextEx après le démarrage",
       "checkUpdatesNow": "Rechercher les mises à jour maintenant",
@@ -173,6 +175,8 @@
       "highContrast": "Contraste élevé",
       "system": "Système",
       "glass": "Verre",
+      "pdfDisplay": "Aperçu PDF",
+      "pdfDisplayDesc": "Contrôlez l’affichage des pages compilées indépendamment du thème de l’application.",
       "pdfNightMode": "Mode nuit PDF",
       "pdfNightModeDesc": "Inverser les couleurs du texte et de l'arrière-plan pour une lecture confortable dans les environnements sombres.",
       "pdfViewMode": "Mode d'affichage du PDF",
@@ -507,6 +511,7 @@
     "modeMenuLabel": "Choisir le mode de recherche",
     "resultsLabel": "Résultats : {{mode}}",
     "resultCount": "{{count}} résultats",
+    "appCommandHint": "Saisissez > pour rechercher les commandes de l’application",
     "clearSearch": "Effacer la recherche"
   },
   "errorBoundary": {
@@ -515,7 +520,7 @@
     "reload": "Recharger"
   },
   "searchBar": {
-    "placeholder": "Rechercher des projets, modèles ou tapez / pour les commandes...",
+    "placeholder": "Rechercher des projets, / pour les flux ou > pour les commandes...",
     "draftDesc": "Générer un document LaTeX par IA",
     "templateDesc": "Créer à partir d'un modèle",
     "openDesc": "Ouvrir un dossier de projet",

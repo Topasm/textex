@@ -34,7 +34,7 @@ ErrorBoundary
     +-- Toolbar
     +-- HomeScreen (when no project open)
     |   +-- Brand
-    |   +-- SearchBar + Dropdown (slash commands, project/template search)
+    |   +-- SearchBar + Dropdown (slash workflows, app commands, project/template search)
     |   +-- ActionButtons (Open Folder, New from Template)
     |   +-- RecentProjectsGrid (tiles)
     +-- Workspace (when project open)
@@ -144,6 +144,10 @@ ErrorBoundary
   - `Compile` triggers manual compilation.
 - Center group:
   - `OmniSearch` stays visible as the primary command/search surface.
+  - `/` selects research/search workflows; `>` searches the same translated, context-aware
+    `APP_COMMAND_MANIFEST` catalog used by the command palette.
+  - Unavailable app commands remain discoverable and explain which document, PDF, or project
+    context is required instead of silently doing nothing.
 - Right group:
   - SyncTeX buttons (`PDF → Code`, `Code → PDF`)
   - PDF page jump input + total page count
@@ -237,9 +241,10 @@ ErrorBoundary
 ### `SettingsModal.tsx`
 - Modal overlay (800×500) for application settings, using shared `.modal-overlay` /
   `.modal-content` / `.modal-header` / `.modal-footer` CSS classes.
-- Left sidebar with five visible icon tabs; right scrollable content area.
-- **Appearance**: Theme selector cards (Light/Dark/Glass/System), PDF Night Mode,
-  PDF layout controls, scroll sync, update policy, and interface language.
+- Left sidebar with six visible icon tabs; right scrollable content area.
+- **General**: Interface language, update policy, and package-derived application version.
+- **Appearance**: Theme selector cards (Light/Dark/Glass/System), independently controlled
+  PDF Night Mode, PDF layout controls, and scroll sync.
 - **Editor**: Font Size range slider with monospace badge, behavior toggles (Word Wrap,
   Format on Save, Auto-hide Sidebar).
 - **AI**: A default execution target, independent API/CLI connection cards,
@@ -249,8 +254,9 @@ ErrorBoundary
 - **Automation**: Tectonic/system pdfLaTeX engine selector, Auto Compile,
   external-file watching, and Spell Check. Tectonic cache controls
   are shown while the bundled engine is selected.
-- All styling uses `settings-*` CSS classes referencing CSS custom properties
-  (`--accent`, `--bg-input`, `--card-bg`, etc.) — fully themed across dark/light/high-contrast.
+- Common rows, sections, selects, toggles, and segmented controls use shared typed
+  settings primitives and `styles/settings.css`; specialized integration and AI layouts
+  retain feature-specific classes. All reference the theme CSS custom properties.
 - Toggle component uses `aria-checked` attribute with CSS-only animation (no JS class toggling).
 - Persistence: Updates the settings Zustand store, persists renderer settings
   locally, and mirrors non-secret settings through the typed native API. AI

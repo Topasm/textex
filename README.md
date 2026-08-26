@@ -155,7 +155,8 @@ Enable **Scroll Sync** in Settings > Appearance to keep the editor and PDF align
   <img src="docs/images/omnisearch.png" alt="OmniSearch dialog with search results" width="900" />
 </p>
 
-- **OmniSearch**: Use the toolbar search field to search across files, citations, PDF text, and commands.
+- **OmniSearch**: Search across files, citations, and PDF text; use `/` for focused workflows and
+  `>` for the same context-aware application commands exposed by the command palette.
 - **Todo Panel**: Track writing tasks in the sidebar.
 - **Notes Panel**: Track TODO items and keep project memos.
 - **Timeline**: View local file history and revert to any previous save.

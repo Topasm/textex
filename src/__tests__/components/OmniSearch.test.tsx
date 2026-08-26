@@ -45,6 +45,7 @@ const recentProjects = [
 describe('OmniSearch accessibility', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
+    document.documentElement.dataset.platform = 'linux'
     await i18n.changeLanguage('en')
     useNotificationStore.getState().clearNotifications()
     useEditorStore.getState().resetEditor()
@@ -81,6 +82,60 @@ describe('OmniSearch accessibility', () => {
 
     fireEvent.keyDown(input, { key: 'Home' })
     expect(input).toHaveAttribute('aria-activedescendant', options[0].id)
+  })
+
+  it('searches and runs the shared app command catalog with a leading greater-than sign', async () => {
+    const onRunCommand = vi.fn()
+    render(<OmniSearch onRunCommand={onRunCommand} />)
+    const input = screen.getByRole('combobox', { name: 'Search Home' })
+
+    fireEvent.change(input, { target: { value: '> release' } })
+
+    const updateCommand = await screen.findByRole('option', { name: /Check for Updates/ })
+    expect(updateCommand).toHaveTextContent('Application')
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(onRunCommand).toHaveBeenCalledWith('app.checkUpdates')
+    expect(input).toHaveValue('')
+  })
+
+  it('shows context requirements and does not run unavailable shared commands', async () => {
+    const onRunCommand = vi.fn()
+    render(<OmniSearch onRunCommand={onRunCommand} />)
+    const input = screen.getByRole('combobox', { name: 'Search Home' })
+
+    fireEvent.change(input, { target: { value: '> save file' } })
+
+    const saveLabel = await screen.findByText('Save File')
+    const saveCommand = saveLabel.closest('[role="option"]')
+    if (!saveCommand) throw new Error('Save command option was not rendered')
+    expect(saveCommand).toHaveAttribute('aria-disabled', 'true')
+    expect(saveCommand).toHaveTextContent('Open a document first')
+    expect(screen.getByText('Ctrl+S')).toBeInTheDocument()
+    fireEvent.click(saveCommand)
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    expect(onRunCommand).not.toHaveBeenCalled()
+  })
+
+  it('keeps an empty app-command result visible and announces it independently of search mode', async () => {
+    useProjectStore.setState({ projectRoot: '/projects/paper' })
+    render(<OmniSearch onRunCommand={vi.fn()} />)
+
+    const modeButton = screen.getByRole('button', { name: 'Search mode: Citations' })
+    fireEvent.click(modeButton)
+    fireEvent.click(screen.getByRole('menuitemradio', { name: /PDF/ }))
+
+    const input = screen.getByRole('combobox', { name: 'Search PDF' })
+    expect(input).toHaveAttribute('title', 'Type > to search application commands')
+    fireEvent.change(input, { target: { value: '> definitely-missing' } })
+
+    await waitFor(() =>
+      expect(screen.getByRole('status')).toHaveTextContent('No matching commands')
+    )
+    expect(screen.getByRole('listbox', { name: 'Command Palette results' })).toBeInTheDocument()
+    expect(screen.queryAllByRole('option')).toHaveLength(0)
+    expect(input).not.toHaveAttribute('aria-activedescendant')
   })
 
   it('uses multiselect listbox semantics for citations', async () => {

@@ -15,7 +15,7 @@ beforeEach(() => {
 })
 
 describe('AppearanceTab', () => {
-  it('exposes the existing high-contrast theme and selects it accessibly', () => {
+  it('selects high contrast without overriding the independent PDF appearance', () => {
     render(<AppearanceTab />)
 
     const highContrast = screen.getByRole('button', { name: 'High contrast' })
@@ -24,7 +24,7 @@ describe('AppearanceTab', () => {
     fireEvent.click(highContrast)
 
     expect(useSettingsStore.getState().settings.theme).toBe('high-contrast')
-    expect(useSettingsStore.getState().settings.pdfInvertMode).toBe(true)
+    expect(useSettingsStore.getState().settings.pdfInvertMode).toBe(false)
     expect(highContrast).toHaveAttribute('aria-pressed', 'true')
   })
 })

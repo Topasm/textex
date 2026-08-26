@@ -1,9 +1,17 @@
 import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { CornerDownLeft, Search, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { APP_COMMAND_MANIFEST, type ShortcutBinding } from '../../shared/appCommandManifest'
 import type { AppCommandId } from '../../shared/types'
+import {
+  createCommandSearchEntries,
+  formatCommandShortcut,
+  searchCommandEntries,
+  type CommandAvailabilityContext,
+  type CommandSearchEntry
+} from '../services/commandSearch'
 import './CommandPalette.css'
+
+export { formatCommandShortcut } from '../services/commandSearch'
 
 interface CommandPaletteProps {
   isOpen: boolean
@@ -12,20 +20,7 @@ interface CommandPaletteProps {
   context?: CommandPaletteContext
 }
 
-export interface CommandPaletteContext {
-  document: boolean
-  pdf: boolean
-  project: boolean
-}
-
-interface PaletteCommand {
-  command: (typeof APP_COMMAND_MANIFEST)[number]
-  groupLabel: string
-  label: string
-  searchableText: string
-  enabled: boolean
-  unavailableLabel?: string
-}
+export type CommandPaletteContext = CommandAvailabilityContext
 
 const DEFAULT_CONTEXT: CommandPaletteContext = Object.freeze({
   document: true,
@@ -38,32 +33,6 @@ const FOCUSABLE_SELECTOR = [
   'input:not([disabled])',
   '[tabindex]:not([tabindex="-1"])'
 ].join(',')
-
-function normalizeSearchText(value: string): string {
-  return value
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLocaleLowerCase()
-    .trim()
-}
-
-function commandTranslationKey(command: AppCommandId): string {
-  return `commandPalette.commands.${command.replace(/\./g, '_')}`
-}
-
-export function formatCommandShortcut(
-  binding: ShortcutBinding,
-  isMac = document.documentElement.dataset.platform === 'darwin'
-): string {
-  const parts: string[] = []
-  if (binding.mod) parts.push(isMac ? '⌘' : 'Ctrl')
-  if (binding.alt) parts.push(isMac ? '⌥' : 'Alt')
-  if (binding.shift) parts.push(isMac ? '⇧' : 'Shift')
-
-  const key = Array.isArray(binding.key) ? binding.key[0] : binding.key
-  parts.push(key.length === 1 ? key.toLocaleUpperCase() : key)
-  return isMac ? parts.join('') : parts.join('+')
-}
 
 export function CommandPalette({
   isOpen,
@@ -79,37 +48,16 @@ export function CommandPalette({
   const onCloseRef = useRef(onClose)
   const titleId = useId()
   const hintId = useId()
+  const statusId = useId()
   const listboxId = useId()
 
   useEffect(() => {
     onCloseRef.current = onClose
   }, [onClose])
 
-  const commands = useMemo<PaletteCommand[]>(
-    () =>
-      APP_COMMAND_MANIFEST.map((command) => {
-        const label = t(commandTranslationKey(command.id), { defaultValue: command.label })
-        const groupLabel = t(`commandPalette.groups.${command.group}`)
-        const requiredContext = 'requiredContext' in command ? command.requiredContext : undefined
-        const enabled = !requiredContext || context[requiredContext]
-        const unavailableLabel = requiredContext
-          ? t(`commandPalette.requires.${requiredContext}`)
-          : undefined
-        const searchableText = normalizeSearchText(
-          [label, command.label, groupLabel, command.id, ...command.keywords].join(' ')
-        )
-        return { command, enabled, groupLabel, label, searchableText, unavailableLabel }
-      }),
-    [context, t]
-  )
+  const commands = useMemo(() => createCommandSearchEntries(t, context), [context, t])
 
-  const filteredCommands = useMemo(() => {
-    const searchTokens = normalizeSearchText(query).split(/\s+/).filter(Boolean)
-    if (searchTokens.length === 0) return commands
-    return commands.filter(({ searchableText }) =>
-      searchTokens.every((token) => searchableText.includes(token))
-    )
-  }, [commands, query])
+  const filteredCommands = useMemo(() => searchCommandEntries(commands, query), [commands, query])
 
   useEffect(() => {
     setActiveIndex(0)
@@ -186,7 +134,7 @@ export function CommandPalette({
     ? `${listboxId}-option-${activeIndex}`
     : undefined
 
-  const execute = (entry: PaletteCommand): void => {
+  const execute = (entry: CommandSearchEntry): void => {
     if (!entry.enabled) return
     onClose()
     onRunCommand(entry.command.id)
@@ -253,6 +201,7 @@ export function CommandPalette({
             aria-expanded="true"
             aria-controls={listboxId}
             aria-activedescendant={activeOptionId}
+            aria-describedby={statusId}
             aria-label={t('commandPalette.searchLabel')}
             placeholder={t('commandPalette.placeholder')}
             value={query}
@@ -261,6 +210,17 @@ export function CommandPalette({
             autoComplete="off"
             spellCheck="false"
           />
+          <span
+            id={statusId}
+            className="command-palette-status"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            {filteredCommands.length > 0
+              ? t('omniSearch.resultCount', { count: filteredCommands.length })
+              : t('commandPalette.noResults')}
+          </span>
         </div>
 
         <div className="command-palette-results">
@@ -314,9 +274,7 @@ export function CommandPalette({
             })}
           </ul>
           {filteredCommands.length === 0 && (
-            <p className="command-palette-empty" role="status">
-              {t('commandPalette.noResults')}
-            </p>
+            <p className="command-palette-empty">{t('commandPalette.noResults')}</p>
           )}
         </div>
 

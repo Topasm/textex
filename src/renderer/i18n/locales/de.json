@@ -149,6 +149,7 @@
   "settings": {
     "title": "Einstellungen",
     "tabs": {
+      "general": "Allgemein",
       "appearance": "Erscheinungsbild",
       "editor": "Editor",
       "ai": "KI",
@@ -157,6 +158,7 @@
     },
     "general": {
       "application": "Anwendung",
+      "applicationDesc": "Sprache, Updates und anwendungsweites Verhalten verwalten.",
       "autoUpdates": "Automatisch nach Updates suchen",
       "autoUpdatesDesc": "Nach dem Start von TextEx automatisch nach neuen Versionen suchen",
       "checkUpdatesNow": "Jetzt nach Updates suchen",
@@ -173,6 +175,8 @@
       "highContrast": "Hoher Kontrast",
       "system": "System",
       "glass": "Glas",
+      "pdfDisplay": "PDF-Vorschau",
+      "pdfDisplayDesc": "Die Darstellung kompilierter Seiten unabhängig vom Anwendungsthema steuern.",
       "pdfNightMode": "PDF-Nachtmodus",
       "pdfNightModeDesc": "Text- und Hintergrundfarben invertieren für angenehmes Lesen in dunkler Umgebung.",
       "pdfViewMode": "PDF-Ansichtsmodus",
@@ -507,6 +511,7 @@
     "modeMenuLabel": "Suchmodus auswählen",
     "resultsLabel": "Suchergebnisse: {{mode}}",
     "resultCount": "{{count}} Ergebnisse",
+    "appCommandHint": "> eingeben, um App-Befehle zu suchen",
     "clearSearch": "Suche löschen"
   },
   "errorBoundary": {
@@ -515,7 +520,7 @@
     "reload": "Neu laden"
   },
   "searchBar": {
-    "placeholder": "Projekte, Vorlagen suchen oder / für Befehle eingeben...",
+    "placeholder": "Projekte suchen, / für Workflows oder > für App-Befehle...",
     "draftDesc": "LaTeX-Dokument per KI generieren",
     "templateDesc": "Aus einer Vorlage erstellen",
     "openDesc": "Einen Projektordner öffnen",

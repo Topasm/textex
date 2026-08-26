@@ -8055,12 +8055,6 @@ button.submission-check-finding:hover {
   display: flex;
 }
 
-.settings-column-group {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
 .settings-field-mt {
   margin-top: 16px;
 }
@@ -8231,33 +8225,4 @@ button.submission-check-finding:hover {
   to {
     transform: translateX(0);
   }
-}
-
-/* Segmented control for settings */
-.settings-segmented-control {
-  display: flex;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.settings-segmented-control button {
-  padding: 4px 12px;
-  font-size: 12px;
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-  border: none;
-  cursor: pointer;
-  transition:
-    background-color 0.15s,
-    color 0.15s;
-}
-
-.settings-segmented-control button:not(:last-child) {
-  border-right: 1px solid var(--border);
-}
-
-.settings-segmented-control button.active {
-  background: var(--accent);
-  color: white;
 }

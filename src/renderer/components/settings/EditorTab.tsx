@@ -1,9 +1,8 @@
-import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { Plus, X } from 'lucide-react'
 import { useSettingsStore } from '../../store/useSettingsStore'
-import { Toggle } from './Toggle'
 import { ICON_SIZE } from '../ui/IconSystem'
+import { SettingsSection, SettingsSelect, SettingsToggleRow } from './SettingsControls'
 
 const DEFAULT_RAINBOW: string[] = [
   '#e06c75',
@@ -101,15 +100,16 @@ export const EditorTab = () => {
 
   return (
     <div className="settings-tab-content settings-animate-in">
-      <div>
-        <h3 className="settings-heading">{t('settings.editor.typography')}</h3>
-
+      <SettingsSection title={t('settings.editor.typography')}>
         <div className="settings-field-mt">
           <div className="settings-flex-row-between">
-            <label className="settings-label settings-no-mb">{t('settings.editor.fontSize')}</label>
+            <label className="settings-label settings-no-mb" htmlFor="editor-font-size">
+              {t('settings.editor.fontSize')}
+            </label>
             <span className="settings-badge">{settings.fontSize}px</span>
           </div>
           <input
+            id="editor-font-size"
             type="range"
             min="10"
             max="32"
@@ -126,197 +126,113 @@ export const EditorTab = () => {
 
         <div className="settings-field-mt">
           <div className="settings-flex-row-between">
-            <label className="settings-label settings-no-mb">{t('settings.editor.tabSize')}</label>
+            <label className="settings-label settings-no-mb" htmlFor="editor-tab-size">
+              {t('settings.editor.tabSize')}
+            </label>
             <span className="settings-badge">
               {settings.tabSize ?? 4} {t('settings.editor.spaces')}
             </span>
           </div>
-          <select
+          <SettingsSelect
+            id="editor-tab-size"
+            width="narrow"
             value={settings.tabSize ?? 4}
-            onChange={(e) => updateSetting('tabSize', parseInt(e.target.value))}
-            className="settings-select settings-select-narrow"
+            onChange={(event) => updateSetting('tabSize', parseInt(event.target.value))}
           >
             <option value={2}>2</option>
             <option value={4}>4</option>
             <option value={8}>8</option>
-          </select>
+          </SettingsSelect>
         </div>
-      </div>
+      </SettingsSection>
 
-      <hr className="settings-divider" />
+      <SettingsSection title={t('settings.editor.behavior')}>
+        <SettingsToggleRow
+          label={t('settings.editor.wordWrap')}
+          description={t('settings.editor.wordWrapDesc')}
+          checked={!!settings.wordWrap}
+          onChange={(checked) => updateSetting('wordWrap', checked)}
+        />
+        <SettingsToggleRow
+          label={t('settings.editor.formatOnSave')}
+          description={t('settings.editor.formatOnSaveDesc')}
+          checked={!!settings.formatOnSave}
+          onChange={(checked) => updateSetting('formatOnSave', checked)}
+        />
+        <SettingsToggleRow
+          label={t('settings.editor.lineNumbers')}
+          description={t('settings.editor.lineNumbersDesc')}
+          checked={settings.lineNumbers !== false}
+          onChange={(checked) => updateSetting('lineNumbers', checked)}
+        />
+        <SettingsToggleRow
+          label={t('settings.editor.vimMode')}
+          description={t('settings.editor.vimModeDesc')}
+          checked={!!settings.vimMode}
+          onChange={(checked) => updateSetting('vimMode', checked)}
+        />
+        <SettingsToggleRow
+          label={t('settings.editor.autoHideSidebar')}
+          description={t('settings.editor.autoHideSidebarDesc')}
+          checked={!!settings.autoHideSidebar}
+          onChange={(checked) => updateSetting('autoHideSidebar', checked)}
+        />
+        <SettingsToggleRow
+          label={t('settings.editor.mathPreview')}
+          description={t('settings.editor.mathPreviewDesc')}
+          checked={settings.mathPreviewEnabled !== false}
+          onChange={(checked) => updateSetting('mathPreviewEnabled', checked)}
+        />
+        <SettingsToggleRow
+          label={t('settings.editor.sectionHighlight')}
+          description={t('settings.editor.sectionHighlightDesc')}
+          checked={!!settings.sectionHighlightEnabled}
+          onChange={(checked) => updateSetting('sectionHighlightEnabled', checked)}
+        />
+        {settings.sectionHighlightEnabled && <SectionColorPalette />}
+      </SettingsSection>
 
-      <div>
-        <h3 className="settings-heading settings-heading-mb">{t('settings.editor.behavior')}</h3>
-        <div className="settings-column-group">
-          <div className="settings-row">
-            <div>
-              <div className="settings-row-label">{t('settings.editor.wordWrap')}</div>
-              <div className="settings-row-description">{t('settings.editor.wordWrapDesc')}</div>
-            </div>
-            <Toggle
-              checked={!!settings.wordWrap}
-              onChange={(checked) => updateSetting('wordWrap', checked)}
-            />
-          </div>
-          <div className="settings-row">
-            <div>
-              <div className="settings-row-label">{t('settings.editor.formatOnSave')}</div>
-              <div className="settings-row-description">
-                {t('settings.editor.formatOnSaveDesc')}
-              </div>
-            </div>
-            <Toggle
-              checked={!!settings.formatOnSave}
-              onChange={(checked) => updateSetting('formatOnSave', checked)}
-            />
-          </div>
-          <div className="settings-row">
-            <div>
-              <div className="settings-row-label">{t('settings.editor.lineNumbers')}</div>
-              <div className="settings-row-description">{t('settings.editor.lineNumbersDesc')}</div>
-            </div>
-            <Toggle
-              checked={settings.lineNumbers !== false}
-              onChange={(checked) => updateSetting('lineNumbers', checked)}
-            />
-          </div>
-          <div className="settings-row">
-            <div>
-              <div className="settings-row-label">{t('settings.editor.vimMode')}</div>
-              <div className="settings-row-description">{t('settings.editor.vimModeDesc')}</div>
-            </div>
-            <Toggle
-              checked={!!settings.vimMode}
-              onChange={(checked) => updateSetting('vimMode', checked)}
-            />
-          </div>
-          <div className="settings-row">
-            <div>
-              <div className="settings-row-label">{t('settings.editor.autoHideSidebar')}</div>
-              <div className="settings-row-description">
-                {t('settings.editor.autoHideSidebarDesc')}
-              </div>
-            </div>
-            <Toggle
-              checked={!!settings.autoHideSidebar}
-              onChange={(checked) => updateSetting('autoHideSidebar', checked)}
-            />
-          </div>
-          <div className="settings-row">
-            <div>
-              <div className="settings-row-label">{t('settings.editor.mathPreview')}</div>
-              <div className="settings-row-description">{t('settings.editor.mathPreviewDesc')}</div>
-            </div>
-            <Toggle
-              checked={settings.mathPreviewEnabled !== false}
-              onChange={(checked) => updateSetting('mathPreviewEnabled', checked)}
-            />
-          </div>
-          <div className="settings-row">
-            <div>
-              <div className="settings-row-label">{t('settings.editor.sectionHighlight')}</div>
-              <div className="settings-row-description">
-                {t('settings.editor.sectionHighlightDesc')}
-              </div>
-            </div>
-            <Toggle
-              checked={!!settings.sectionHighlightEnabled}
-              onChange={(checked) => updateSetting('sectionHighlightEnabled', checked)}
-            />
-          </div>
-          {settings.sectionHighlightEnabled && <SectionColorPalette />}
-        </div>
-      </div>
+      <SettingsSection title={t('settings.editor.advanced')}>
+        <SettingsToggleRow
+          label={t('settings.editor.bracketPairColorization')}
+          description={t('settings.editor.bracketPairColorizationDesc')}
+          checked={settings.bracketPairColorization !== false}
+          onChange={(checked) => updateSetting('bracketPairColorization', checked)}
+        />
+        <SettingsToggleRow
+          label={t('settings.editor.stickyScroll')}
+          description={t('settings.editor.stickyScrollDesc')}
+          checked={settings.stickyScrollEnabled !== false}
+          onChange={(checked) => updateSetting('stickyScrollEnabled', checked)}
+        />
+        <SettingsToggleRow
+          label={t('settings.editor.smoothScrolling')}
+          description={t('settings.editor.smoothScrollingDesc')}
+          checked={settings.smoothScrolling !== false}
+          onChange={(checked) => updateSetting('smoothScrolling', checked)}
+        />
+        <SettingsToggleRow
+          label={t('settings.editor.fontLigatures')}
+          description={t('settings.editor.fontLigaturesDesc')}
+          checked={!!settings.fontLigatures}
+          onChange={(checked) => updateSetting('fontLigatures', checked)}
+        />
+        <SettingsToggleRow
+          label={t('settings.editor.minimap')}
+          description={t('settings.editor.minimapDesc')}
+          checked={!!settings.minimapEnabled}
+          onChange={(checked) => updateSetting('minimapEnabled', checked)}
+        />
+      </SettingsSection>
 
-      <hr className="settings-divider" />
-
-      <div>
-        <h3 className="settings-heading settings-heading-mb">{t('settings.editor.advanced')}</h3>
-        <div className="settings-column-group">
-          <div className="settings-row">
-            <div>
-              <div className="settings-row-label">
-                {t('settings.editor.bracketPairColorization')}
-              </div>
-              <div className="settings-row-description">
-                {t('settings.editor.bracketPairColorizationDesc')}
-              </div>
-            </div>
-            <Toggle
-              checked={settings.bracketPairColorization !== false}
-              onChange={(checked) => updateSetting('bracketPairColorization', checked)}
-            />
-          </div>
-          <div className="settings-row">
-            <div>
-              <div className="settings-row-label">{t('settings.editor.stickyScroll')}</div>
-              <div className="settings-row-description">
-                {t('settings.editor.stickyScrollDesc')}
-              </div>
-            </div>
-            <Toggle
-              checked={settings.stickyScrollEnabled !== false}
-              onChange={(checked) => updateSetting('stickyScrollEnabled', checked)}
-            />
-          </div>
-          <div className="settings-row">
-            <div>
-              <div className="settings-row-label">{t('settings.editor.smoothScrolling')}</div>
-              <div className="settings-row-description">
-                {t('settings.editor.smoothScrollingDesc')}
-              </div>
-            </div>
-            <Toggle
-              checked={settings.smoothScrolling !== false}
-              onChange={(checked) => updateSetting('smoothScrolling', checked)}
-            />
-          </div>
-          <div className="settings-row">
-            <div>
-              <div className="settings-row-label">{t('settings.editor.fontLigatures')}</div>
-              <div className="settings-row-description">
-                {t('settings.editor.fontLigaturesDesc')}
-              </div>
-            </div>
-            <Toggle
-              checked={!!settings.fontLigatures}
-              onChange={(checked) => updateSetting('fontLigatures', checked)}
-            />
-          </div>
-          <div className="settings-row">
-            <div>
-              <div className="settings-row-label">{t('settings.editor.minimap')}</div>
-              <div className="settings-row-description">{t('settings.editor.minimapDesc')}</div>
-            </div>
-            <Toggle
-              checked={!!settings.minimapEnabled}
-              onChange={(checked) => updateSetting('minimapEnabled', checked)}
-            />
-          </div>
-        </div>
-      </div>
-
-      <hr className="settings-divider" />
-
-      <div>
-        <h3 className="settings-heading settings-heading-mb">
-          {t('settings.editor.statusBarSection')}
-        </h3>
-        <div className="settings-column-group">
-          <div className="settings-row">
-            <div>
-              <div className="settings-row-label">{t('settings.editor.showStatusBar')}</div>
-              <div className="settings-row-description">
-                {t('settings.editor.showStatusBarDesc')}
-              </div>
-            </div>
-            <Toggle
-              checked={!!settings.showStatusBar}
-              onChange={(checked) => updateSetting('showStatusBar', checked)}
-            />
-          </div>
-        </div>
-      </div>
+      <SettingsSection title={t('settings.editor.statusBarSection')}>
+        <SettingsToggleRow
+          label={t('settings.editor.showStatusBar')}
+          description={t('settings.editor.showStatusBarDesc')}
+          checked={!!settings.showStatusBar}
+          onChange={(checked) => updateSetting('showStatusBar', checked)}
+        />
+      </SettingsSection>
     </div>
   )
 }

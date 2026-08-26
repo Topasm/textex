@@ -53,8 +53,25 @@ function cargoLockPackage(contents, packageName, location) {
   return packages[0]
 }
 
+function requireRendererVersionInjection(projectRoot, version) {
+  const settingsLocation = 'src/renderer/components/SettingsModal.tsx app version'
+  const settingsContents = readText(projectRoot, 'src/renderer/components/SettingsModal.tsx')
+  if (!/TextEx v\{__APP_VERSION__\}/.test(settingsContents)) {
+    throw new Error(`Expected package version injection at ${settingsLocation}`)
+  }
+
+  const viteLocation = 'vite.config.ts app version define'
+  const viteContents = readText(projectRoot, 'vite.config.ts')
+  if (!/__APP_VERSION__:\s*JSON\.stringify\(packageVersion\)/.test(viteContents)) {
+    throw new Error(`Expected package version define at ${viteLocation}`)
+  }
+
+  return { location: `${settingsLocation} (from package.json)`, version }
+}
+
 function collectReleaseVersions(projectRoot = path.resolve(__dirname, '..')) {
   const packageJson = readJson(projectRoot, 'package.json')
+  const packageVersion = requireVersion(packageJson.version, 'package.json version')
   const packageLock = readJson(projectRoot, 'package-lock.json')
   const cargoTomlPath = 'src-tauri/Cargo.toml'
   const cargoLockPath = 'src-tauri/Cargo.lock'
@@ -72,7 +89,7 @@ function collectReleaseVersions(projectRoot = path.resolve(__dirname, '..')) {
   return [
     {
       location: 'package.json version',
-      version: requireVersion(packageJson.version, 'package.json version')
+      version: packageVersion
     },
     {
       location: 'package-lock.json top-level version',
@@ -119,14 +136,7 @@ function collectReleaseVersions(projectRoot = path.resolve(__dirname, '..')) {
         2
       )
     },
-    {
-      location: 'src/renderer/components/SettingsModal.tsx displayed version',
-      version: singleCapturedVersion(
-        readText(projectRoot, 'src/renderer/components/SettingsModal.tsx'),
-        /TextEx v([^<\s]+)/g,
-        'src/renderer/components/SettingsModal.tsx displayed version'
-      )
-    }
+    requireRendererVersionInjection(projectRoot, packageVersion)
   ]
 }
 

@@ -149,6 +149,7 @@
   "settings": {
     "title": "Settings",
     "tabs": {
+      "general": "General",
       "appearance": "Appearance",
       "editor": "Editor",
       "ai": "AI",
@@ -157,6 +158,7 @@
     },
     "general": {
       "application": "Application",
+      "applicationDesc": "Manage language, updates, and application-wide behavior.",
       "autoUpdates": "Automatically check for updates",
       "autoUpdatesDesc": "Check for new TextEx versions after launch",
       "checkUpdatesNow": "Check for updates now",
@@ -173,6 +175,8 @@
       "highContrast": "High contrast",
       "system": "System",
       "glass": "Glass",
+      "pdfDisplay": "PDF preview",
+      "pdfDisplayDesc": "Control compiled page display independently of the application theme.",
       "pdfNightMode": "PDF Night Mode",
       "pdfNightModeDesc": "Invert text and background colors for comfortable reading in dark environments.",
       "pdfViewMode": "PDF View Mode",
@@ -507,6 +511,7 @@
     "modeMenuLabel": "Choose search mode",
     "resultsLabel": "{{mode}} results",
     "resultCount": "{{count}} results",
+    "appCommandHint": "Type > to search application commands",
     "clearSearch": "Clear search"
   },
   "errorBoundary": {
@@ -515,7 +520,7 @@
     "reload": "Reload"
   },
   "searchBar": {
-    "placeholder": "Search projects, templates, or type / for commands...",
+    "placeholder": "Search projects, use / for workflows, or > for app commands...",
     "draftDesc": "AI-generate a LaTeX document",
     "templateDesc": "Create from a template",
     "openDesc": "Open a project folder",

@@ -1,15 +1,22 @@
 import { resolve } from 'path'
+import { readFileSync } from 'node:fs'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 
 const tauriHost = process.env.TAURI_DEV_HOST
 const isTauriDebug = process.env.TAURI_ENV_DEBUG === 'true'
+const packageVersion = (
+  JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8')) as { version: string }
+).version
 
 /** Renderer build embedded by the Tauri shell. */
 export default defineConfig({
   root: resolve(__dirname, 'src/renderer'),
   clearScreen: false,
   envPrefix: ['VITE_', 'TAURI_ENV_*'],
+  define: {
+    __APP_VERSION__: JSON.stringify(packageVersion)
+  },
   resolve: {
     alias: {
       // monaco-vim still imports Monaco's pre-0.56 deep paths.

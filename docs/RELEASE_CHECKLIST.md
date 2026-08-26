@@ -8,7 +8,9 @@ Keep the version synchronized in:
 - `src-tauri/Cargo.toml` and `Cargo.lock`
 - `src/cli/index.ts`
 - `src/mcp/server.ts`
-- `src/renderer/components/SettingsModal.tsx`
+
+The settings UI receives its displayed version from `package.json` through the
+`__APP_VERSION__` Vite build constant; it must not contain a separate version literal.
 
 `src-tauri/tauri.conf.json` must continue to read its version from
 `../package.json` rather than duplicating a literal version.

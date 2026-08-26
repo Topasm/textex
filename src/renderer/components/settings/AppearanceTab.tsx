@@ -2,9 +2,12 @@ import { useTranslation } from 'react-i18next'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import type { UserSettings } from '../../../shared/types'
 import { Moon, Sun, Monitor, Sparkles, Check, Contrast } from 'lucide-react'
-import { Toggle } from './Toggle'
-import { SUPPORTED_LANGUAGES } from '../../i18n'
-import { checkForAppUpdate } from '../../services/updateLifecycle'
+import {
+  SettingsRow,
+  SettingsSection,
+  SettingsSegmentedControl,
+  SettingsToggleRow
+} from './SettingsControls'
 
 export const AppearanceTab = () => {
   const { t } = useTranslation()
@@ -13,10 +16,10 @@ export const AppearanceTab = () => {
 
   return (
     <div className="settings-tab-content settings-animate-in">
-      <div>
-        <h3 className="settings-heading">{t('settings.appearance.theme')}</h3>
-        <p className="settings-subheading">{t('settings.appearance.themeDesc')}</p>
-
+      <SettingsSection
+        title={t('settings.appearance.theme')}
+        description={t('settings.appearance.themeDesc')}
+      >
         <div className="settings-theme-grid">
           {[
             { id: 'light', label: t('settings.appearance.light'), icon: Sun },
@@ -34,14 +37,6 @@ export const AppearanceTab = () => {
               onClick={() => {
                 const newTheme = mode.id as UserSettings['theme']
                 updateSetting('theme', newTheme)
-                if (newTheme === 'dark' || newTheme === 'high-contrast') {
-                  updateSetting('pdfInvertMode', true)
-                } else if (newTheme === 'light' || newTheme === 'glass') {
-                  updateSetting('pdfInvertMode', false)
-                } else if (newTheme === 'system') {
-                  const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-                  updateSetting('pdfInvertMode', isSystemDark)
-                }
               }}
               className={`settings-theme-card${settings.theme === mode.id ? ' selected' : ''}`}
               aria-pressed={settings.theme === mode.id}
@@ -58,123 +53,51 @@ export const AppearanceTab = () => {
             </button>
           ))}
         </div>
-      </div>
+      </SettingsSection>
 
-      <hr className="settings-divider" />
-
-      <div className="settings-row">
-        <div>
-          <div className="settings-row-label">{t('settings.appearance.pdfNightMode')}</div>
-          <div className="settings-row-description">
-            {t('settings.appearance.pdfNightModeDesc')}
-          </div>
-        </div>
-        <Toggle
+      <SettingsSection
+        title={t('settings.appearance.pdfDisplay')}
+        description={t('settings.appearance.pdfDisplayDesc')}
+      >
+        <SettingsToggleRow
+          label={t('settings.appearance.pdfNightMode')}
+          description={t('settings.appearance.pdfNightModeDesc')}
           checked={settings.pdfInvertMode ?? false}
           onChange={(checked) => updateSetting('pdfInvertMode', checked)}
         />
-      </div>
 
-      <hr className="settings-divider" />
+        <SettingsRow
+          label={t('settings.appearance.pdfViewMode')}
+          description={t('settings.appearance.pdfViewModeDesc')}
+        >
+          <SettingsSegmentedControl
+            label={t('settings.appearance.pdfViewMode')}
+            value={settings.pdfViewMode ?? 'continuous'}
+            options={[
+              {
+                value: 'continuous',
+                label: t('settings.appearance.pdfViewModeContinuous')
+              },
+              { value: 'single', label: t('settings.appearance.pdfViewModeSingle') }
+            ]}
+            onChange={(value) => updateSetting('pdfViewMode', value)}
+          />
+        </SettingsRow>
 
-      <div className="settings-row">
-        <div>
-          <div className="settings-row-label">{t('settings.appearance.pdfViewMode')}</div>
-          <div className="settings-row-description">{t('settings.appearance.pdfViewModeDesc')}</div>
-        </div>
-        <div className="settings-segmented-control">
-          <button
-            className={(settings.pdfViewMode ?? 'continuous') === 'continuous' ? 'active' : ''}
-            onClick={() => updateSetting('pdfViewMode', 'continuous')}
-          >
-            {t('settings.appearance.pdfViewModeContinuous')}
-          </button>
-          <button
-            className={(settings.pdfViewMode ?? 'continuous') === 'single' ? 'active' : ''}
-            onClick={() => updateSetting('pdfViewMode', 'single')}
-          >
-            {t('settings.appearance.pdfViewModeSingle')}
-          </button>
-        </div>
-      </div>
-
-      <div className="settings-row">
-        <div>
-          <div className="settings-row-label">
-            {t('settings.appearance.showPdfToolbarControls')}
-          </div>
-          <div className="settings-row-description">
-            {t('settings.appearance.showPdfToolbarControlsDesc')}
-          </div>
-        </div>
-        <Toggle
+        <SettingsToggleRow
+          label={t('settings.appearance.showPdfToolbarControls')}
+          description={t('settings.appearance.showPdfToolbarControlsDesc')}
           checked={settings.showPdfToolbarControls !== false}
           onChange={(checked) => updateSetting('showPdfToolbarControls', checked)}
         />
-      </div>
 
-      <div className="settings-row">
-        <div>
-          <div className="settings-row-label">{t('settings.appearance.scrollSync')}</div>
-          <div className="settings-row-description">{t('settings.appearance.scrollSyncDesc')}</div>
-        </div>
-        <Toggle
+        <SettingsToggleRow
+          label={t('settings.appearance.scrollSync')}
+          description={t('settings.appearance.scrollSyncDesc')}
           checked={!!settings.scrollSyncEnabled}
           onChange={(checked) => updateSetting('scrollSyncEnabled', checked)}
         />
-      </div>
-
-      <hr className="settings-divider" />
-
-      <div>
-        <h3 className="settings-heading">{t('settings.general.application')}</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div className="settings-row">
-            <div>
-              <div className="settings-row-label">{t('settings.general.autoUpdates')}</div>
-              <div className="settings-row-description">
-                {t('settings.general.autoUpdatesDesc')}
-              </div>
-            </div>
-            <Toggle
-              checked={settings.autoUpdateEnabled !== false}
-              onChange={(checked) => updateSetting('autoUpdateEnabled', checked)}
-            />
-          </div>
-          <div className="settings-row">
-            <div>
-              <div className="settings-row-label">{t('settings.general.checkUpdatesNow')}</div>
-              <div className="settings-row-description">
-                {t('settings.general.checkUpdatesNowDesc')}
-              </div>
-            </div>
-            <button
-              type="button"
-              className="primary-button settings-nowrap"
-              onClick={() => void checkForAppUpdate({ interactive: true })}
-            >
-              {t('settings.general.checkNow')}
-            </button>
-          </div>
-          <div className="settings-row">
-            <div>
-              <div className="settings-row-label">{t('settings.general.language')}</div>
-              <div className="settings-row-description">{t('settings.general.languageDesc')}</div>
-            </div>
-            <select
-              value={settings.language || 'en'}
-              onChange={(event) => updateSetting('language', event.target.value)}
-              className="settings-select settings-select-narrow"
-            >
-              {SUPPORTED_LANGUAGES.map((language) => (
-                <option key={language.code} value={language.code}>
-                  {language.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
+      </SettingsSection>
     </div>
   )
 }

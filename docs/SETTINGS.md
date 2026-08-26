@@ -39,14 +39,19 @@ TextEx uses a "Zero-Friction" configuration system where settings are applied in
 | `aiModel` | `string` | `''` | Model identifier for the selected AI provider. |
 
 ### Settings Modal
-The `SettingsModal` component provides a tabbed interface (800×500) for modifying these values. It is accessible via the gear icon in the Toolbar. The modal uses shared `.modal-*` CSS classes for chrome and `settings-*` CSS classes for layout/form elements, all themed via CSS custom properties.
+The `SettingsModal` component provides a tabbed interface (800×500) for modifying these values. It is accessible via the gear icon in the Toolbar. Modal chrome uses shared `.modal-*` classes. Settings tabs compose the typed `SettingsSection`, `SettingsRow`, `SettingsToggleRow`, `SettingsSelect`, and `SettingsSegmentedControl` primitives, with their common layout in `styles/settings.css`. Feature-specific legacy styles remain in `styles/index.css` until their tabs adopt the shared controls.
 
 **Visible Tauri tabs:**
-- **Appearance** — Theme, PDF controls, updates, and interface language
+- **General** — Interface language, update policy, and application information
+- **Appearance** — Theme and PDF display controls. PDF color inversion is an
+  independent preference and is never overwritten by changing the application theme.
 - **Editor** — Typography, formatting, layout, and Monaco behavior
 - **AI** — Default execution target, independent provider connections, reasoning, and prompt controls
 - **Integrations** — Zotero and Git
 - **Automation** — Auto Compile, external-file watching, Spell Check, and Tectonic cache controls
+
+The displayed application version is injected from `package.json` by Vite, so the
+settings footer does not maintain a separate release-version literal.
 
 The AI tab follows a target-and-connections model: choosing a default provider/model does
 not modify credentials, and configuring a credential or inspecting a CLI does not silently

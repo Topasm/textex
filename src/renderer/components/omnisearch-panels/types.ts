@@ -1,5 +1,6 @@
 import type { BookOpen } from 'lucide-react'
 import type {
+  AppCommandId,
   BibEntry,
   ProjectIndexEntry,
   RecentProject,
@@ -29,14 +30,20 @@ export interface HomeSlashCommand {
   icon: React.ReactNode
 }
 
-export type HomeResultKind = 'project' | 'template' | 'command'
+export type HomeResultKind = 'project' | 'template' | 'command' | 'app-command'
+
+export interface HomeAppCommand {
+  id: AppCommandId
+}
 
 export interface HomeResult {
   kind: HomeResultKind
   label: string
   detail: string
   badgeKey: string
-  data: RecentProject | { name: string; description: string } | HomeSlashCommand
+  disabled?: boolean
+  shortcut?: string
+  data: RecentProject | { name: string; description: string } | HomeSlashCommand | HomeAppCommand
 }
 
 export type { ZoteroSearchResult, BibEntry, RecentProject }

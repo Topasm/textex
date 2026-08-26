@@ -18,6 +18,7 @@ const defaultProps = {
   onReturnHome: vi.fn(),
   onNewFromTemplate: vi.fn(),
   onAiDraft: vi.fn(),
+  onRunCommand: vi.fn(),
   onOpenCommandPalette: vi.fn(),
   onOpenSettings: vi.fn()
 }

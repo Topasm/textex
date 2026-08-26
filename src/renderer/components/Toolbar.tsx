@@ -27,6 +27,7 @@ import PdfZoomDropdown from './PdfZoomDropdown'
 import { ICON_SIZE } from './ui/IconSystem'
 import { toggleProjectSidebar } from '../services/appCommands'
 import { logError } from '../utils/errorMessage'
+import type { AppCommandId } from '../../shared/types'
 
 interface ToolbarProps {
   onSave: () => void
@@ -35,6 +36,7 @@ interface ToolbarProps {
   onReturnHome: () => void
   onNewFromTemplate: () => void
   onAiDraft: (prefill?: string) => void
+  onRunCommand: (command: AppCommandId) => void
   onOpenCommandPalette: () => void
   onOpenSettings: () => void
 }
@@ -100,6 +102,7 @@ const Toolbar = React.memo(function Toolbar({
   onReturnHome,
   onNewFromTemplate,
   onAiDraft,
+  onRunCommand,
   onOpenCommandPalette,
   onOpenSettings
 }: ToolbarProps) {
@@ -258,6 +261,7 @@ const Toolbar = React.memo(function Toolbar({
               onNewFromTemplate={onNewFromTemplate}
               onAiDraft={onAiDraft}
               onOpenSettings={onOpenSettings}
+              onRunCommand={onRunCommand}
             />
           </div>
         </div>

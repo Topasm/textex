@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useEditorStore } from '../store/useEditorStore'
+import { useCompileStore } from '../store/useCompileStore'
 import { documentRegistry } from '../models/documentRegistry'
 import { useProjectStore } from '../store/useProjectStore'
 import { useSettingsStore } from '../store/useSettingsStore'
@@ -44,7 +45,9 @@ import type {
   TexSearchResult,
   ProjectFileSearchResult
 } from './omnisearch-panels'
+import type { HomeAppCommand } from './omnisearch-panels/types'
 import type {
+  AppCommandId,
   BibEntry,
   OnlineReference,
   RecentProject,
@@ -52,6 +55,11 @@ import type {
 } from '../../shared/types'
 import { searchProjectFiles } from '../services/projectIndex'
 import { addReferenceAtCursor } from './research/referenceActions'
+import {
+  createCommandSearchEntries,
+  formatCommandShortcut,
+  searchCommandEntries
+} from '../services/commandSearch'
 import './OmniSearch.css'
 
 const MODE_CONFIGS: Record<SearchMode, ModeConfig> = {
@@ -145,13 +153,15 @@ interface OmniSearchProps {
   onNewFromTemplate?: () => void
   onAiDraft?: (prefill?: string) => void
   onOpenSettings?: () => void
+  onRunCommand?: (command: AppCommandId) => void
 }
 
 export function OmniSearch({
   onOpenFolder,
   onNewFromTemplate,
   onAiDraft,
-  onOpenSettings
+  onOpenSettings,
+  onRunCommand
 }: OmniSearchProps) {
   const { t } = useTranslation()
   const settings = useSettingsStore((s) => s.settings)
@@ -160,6 +170,8 @@ export function OmniSearch({
   const bibEntries = useProjectStore((s) => s.bibEntries)
   const projectRoot = useProjectStore((s) => s.projectRoot)
   const projectIndexEntries = useProjectStore((s) => s.projectIndex?.entries)
+  const activeDocumentPath = useEditorStore((s) => s.filePath)
+  const compiledPdfPath = useCompileStore((s) => s.pdfPath)
   const omniSearchFocusRequested = useUiStore((s) => s.omniSearchFocusRequested)
   const omniSearchFocusMode = useUiStore((s) => s.omniSearchFocusMode)
   const pdfMatchCount = usePdfStore((s) => s.pdfMatchCount)
@@ -170,6 +182,7 @@ export function OmniSearch({
 
   const [mode, setMode] = useState<SearchMode>('cite')
   const [searchTerm, setSearchTerm] = useState('')
+  const isCommandQuery = searchTerm.trimStart().startsWith('>')
   const [isModeMenuOpen, setIsModeMenuOpen] = useState(false)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
@@ -192,12 +205,38 @@ export function OmniSearch({
   const inputId = `omni-search-${generatedId}`
   const resultsId = `${inputId}-results`
   const resultsStatusId = `${inputId}-status`
+  const inputHintId = `${inputId}-hint`
   const modeMenuId = `${inputId}-mode-menu`
   const getOptionId = useCallback((index: number) => `${resultsId}-option-${index}`, [resultsId])
   const projectFileResults = useMemo(
-    () => searchProjectFiles(projectIndexEntries ?? [], deferredSearchTerm),
-    [projectIndexEntries, deferredSearchTerm]
+    () => (isCommandQuery ? [] : searchProjectFiles(projectIndexEntries ?? [], deferredSearchTerm)),
+    [deferredSearchTerm, isCommandQuery, projectIndexEntries]
   )
+  const commandEntries = useMemo(
+    () =>
+      createCommandSearchEntries(t, {
+        document: Boolean(activeDocumentPath),
+        pdf: Boolean(compiledPdfPath),
+        project: Boolean(projectRoot)
+      }),
+    [activeDocumentPath, compiledPdfPath, projectRoot, t]
+  )
+  const commandResults = useMemo<HomeResult[]>(() => {
+    if (!isCommandQuery || !onRunCommand) return []
+    return searchCommandEntries(commandEntries, deferredSearchTerm).map((entry) => {
+      const shortcut =
+        'shortcut' in entry.command ? formatCommandShortcut(entry.command.shortcut) : undefined
+      return {
+        kind: 'app-command',
+        label: entry.label,
+        detail: entry.enabled ? entry.groupLabel : (entry.unavailableLabel ?? entry.groupLabel),
+        badgeKey: 'searchBar.command',
+        disabled: !entry.enabled,
+        shortcut,
+        data: { id: entry.command.id }
+      }
+    })
+  }, [commandEntries, deferredSearchTerm, isCommandQuery, onRunCommand])
 
   const wrapperRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -319,10 +358,16 @@ export function OmniSearch({
 
   // Update dropdown state when home results change
   useEffect(() => {
-    if (!isHomeMode) return
+    if (!isHomeMode || isCommandQuery) return
     setIsDropdownOpen(homeResults.length > 0)
     setHomeHighlightedIndex(0)
-  }, [deferredSearchTerm, homeResults.length, isHomeMode])
+  }, [deferredSearchTerm, homeResults.length, isCommandQuery, isHomeMode])
+
+  useEffect(() => {
+    if (!isCommandQuery) return
+    setIsDropdownOpen(searchTerm.trim().length > 0)
+    setHomeHighlightedIndex(0)
+  }, [commandResults.length, isCommandQuery, searchTerm])
 
   // ---- Home mode: select result ----
   const openRecentProject = useCallback(
@@ -351,6 +396,7 @@ export function OmniSearch({
 
   const handleHomeSelect = useCallback(
     (result: HomeResult) => {
+      if (result.disabled) return
       setSearchTerm('')
       setIsDropdownOpen(false)
 
@@ -378,9 +424,22 @@ export function OmniSearch({
           }
           break
         }
+        case 'app-command': {
+          const command = result.data as HomeAppCommand
+          onRunCommand?.(command.id)
+          break
+        }
       }
     },
-    [searchTerm, onOpenFolder, onNewFromTemplate, onAiDraft, onOpenSettings, openRecentProject]
+    [
+      searchTerm,
+      onOpenFolder,
+      onNewFromTemplate,
+      onAiDraft,
+      onOpenSettings,
+      onRunCommand,
+      openRecentProject
+    ]
   )
 
   // Slash prefix detection (editor mode only)
@@ -428,7 +487,7 @@ export function OmniSearch({
 
   // ---- CITE MODE: Filter local bib entries ----
   const citeResults = useMemo(() => {
-    if (isHomeMode || mode !== 'cite' || !searchTerm) return []
+    if (isHomeMode || isCommandQuery || mode !== 'cite' || !searchTerm) return []
     const q = searchTerm.toLowerCase()
     return bibEntries.filter(
       (e: BibEntry) =>
@@ -436,21 +495,21 @@ export function OmniSearch({
         e.title.toLowerCase().includes(q) ||
         e.author.toLowerCase().includes(q)
     )
-  }, [isHomeMode, mode, searchTerm, bibEntries])
+  }, [bibEntries, isCommandQuery, isHomeMode, mode, searchTerm])
 
   useEffect(() => {
-    if (isHomeMode) return
+    if (isHomeMode || isCommandQuery) return
     if (mode === 'cite') {
       setHighlightedIndex(0)
       setIsDropdownOpen(searchTerm.length > 0)
     }
-  }, [isHomeMode, mode, searchTerm, citeResults.length])
+  }, [citeResults.length, isCommandQuery, isHomeMode, mode, searchTerm])
 
   // ---- ZOTERO MODE: Debounced API search ----
   const searchGenRef = useRef(0)
   useEffect(() => {
     const generation = ++searchGenRef.current
-    if (isHomeMode || mode !== 'zotero') {
+    if (isHomeMode || isCommandQuery || mode !== 'zotero') {
       setLoading(false)
       return
     }
@@ -483,13 +542,13 @@ export function OmniSearch({
       clearTimeout(timer)
       if (searchGenRef.current === generation) searchGenRef.current += 1
     }
-  }, [isHomeMode, mode, searchTerm, zoteroPort, zoteroEnabled])
+  }, [isCommandQuery, isHomeMode, mode, searchTerm, zoteroEnabled, zoteroPort])
 
   // ---- ONLINE MODE: Debounced Crossref + arXiv search ----
   const onlineSearchGenRef = useRef(0)
   useEffect(() => {
     const generation = ++onlineSearchGenRef.current
-    if (isHomeMode || mode !== 'online') {
+    if (isHomeMode || isCommandQuery || mode !== 'online') {
       setOnlineLoading(false)
       return
     }
@@ -521,7 +580,7 @@ export function OmniSearch({
       clearTimeout(timer)
       if (onlineSearchGenRef.current === generation) onlineSearchGenRef.current += 1
     }
-  }, [isHomeMode, mode, searchTerm])
+  }, [isCommandQuery, isHomeMode, mode, searchTerm])
 
   const addOnlineReference = useCallback(
     async (reference: OnlineReference) => {
@@ -547,7 +606,7 @@ export function OmniSearch({
 
   // ---- PDF MODE: Drive usePdfSearch via store ----
   useEffect(() => {
-    if (isHomeMode || mode !== 'pdf') return
+    if (isHomeMode || isCommandQuery || mode !== 'pdf') return
     const pdfState = usePdfStore.getState()
     pdfState.setPdfSearchVisible(true)
     pdfState.setPdfSearchQuery(searchTerm)
@@ -555,13 +614,13 @@ export function OmniSearch({
     if (searchTerm.length > 0) {
       setIsDropdownOpen(true)
     }
-  }, [isHomeMode, mode, searchTerm])
+  }, [isCommandQuery, isHomeMode, mode, searchTerm])
 
   useEffect(() => {
-    if (isHomeMode || mode !== 'file') return
+    if (isHomeMode || isCommandQuery || mode !== 'file') return
     setHighlightedIndex(0)
     setIsDropdownOpen(searchTerm.length > 0)
-  }, [isHomeMode, mode, searchTerm, projectFileResults])
+  }, [isCommandQuery, isHomeMode, mode, projectFileResults, searchTerm])
 
   const handleProjectFileSelect = useCallback(async (result: ProjectFileSearchResult) => {
     try {
@@ -585,7 +644,7 @@ export function OmniSearch({
 
   // ---- TEX MODE: Search editor content ----
   useEffect(() => {
-    if (isHomeMode) return
+    if (isHomeMode || isCommandQuery) return
     if (mode !== 'tex') {
       setTexResults([])
       return
@@ -613,7 +672,7 @@ export function OmniSearch({
     if (matches.length > 0) {
       useEditorStore.getState().requestJumpToLine(matches[0].line, 1, true)
     }
-  }, [isHomeMode, mode, searchTerm])
+  }, [isCommandQuery, isHomeMode, mode, searchTerm])
 
   // ---- Shared: toggle selection for cite/zotero ----
   const toggleSelection = useCallback((key: string) => {
@@ -681,6 +740,32 @@ export function OmniSearch({
       if (e.key === 'Escape') {
         setIsDropdownOpen(false)
         ;(e.target as HTMLInputElement).blur()
+        return
+      }
+
+      if (isCommandQuery) {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault()
+          if (commandResults.length) {
+            setHomeHighlightedIndex((previous) => (previous + 1) % commandResults.length)
+          }
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault()
+          if (commandResults.length) {
+            setHomeHighlightedIndex(
+              (previous) => (previous - 1 + commandResults.length) % commandResults.length
+            )
+          }
+        } else if (e.key === 'Home' && commandResults.length) {
+          e.preventDefault()
+          setHomeHighlightedIndex(0)
+        } else if (e.key === 'End' && commandResults.length) {
+          e.preventDefault()
+          setHomeHighlightedIndex(commandResults.length - 1)
+        } else if (e.key === 'Enter' && commandResults[homeHighlightedIndex]) {
+          e.preventDefault()
+          handleHomeSelect(commandResults[homeHighlightedIndex])
+        }
         return
       }
 
@@ -825,6 +910,8 @@ export function OmniSearch({
     },
     [
       isHomeMode,
+      isCommandQuery,
+      commandResults,
       homeResults,
       homeHighlightedIndex,
       handleHomeSelect,
@@ -899,13 +986,15 @@ export function OmniSearch({
 
   const modeConfig = MODE_CONFIGS[mode]
   const ModeIcon = modeConfig.icon
+  const DisplayModeIcon = isCommandQuery ? Terminal : ModeIcon
 
   // Determine what to render in dropdown
   const renderDropdown = () => {
-    if (isHomeMode) {
+    if (isCommandQuery || isHomeMode) {
       return (
         <HomePanel
-          homeResults={homeResults}
+          homeResults={isCommandQuery ? commandResults : homeResults}
+          emptyLabel={isCommandQuery ? t('commandPalette.noResults') : undefined}
           homeHighlightedIndex={homeHighlightedIndex}
           setHomeHighlightedIndex={setHomeHighlightedIndex}
           handleHomeSelect={handleHomeSelect}
@@ -999,38 +1088,42 @@ export function OmniSearch({
     return null
   }
 
-  const showDropdown = isHomeMode
-    ? isDropdownOpen && homeResults.length > 0
-    : isDropdownOpen &&
-      (mode === 'pdf'
-        ? searchTerm.length > 0
-        : mode === 'file'
-          ? projectFileResults.length > 0 || searchTerm.length > 0
-          : mode === 'cite'
-            ? citeResults.length > 0 || searchTerm.length > 0
-            : mode === 'zotero'
-              ? (!zoteroEnabled && searchTerm.length > 0) ||
-                zoteroResults.length > 0 ||
-                loading ||
-                searchTerm.length > 2
-              : mode === 'online'
-                ? onlineResults.length > 0 || onlineLoading || searchTerm.length > 1
-                : texResults.length > 0 || searchTerm.length > 0)
+  const showDropdown = isCommandQuery
+    ? isDropdownOpen
+    : isHomeMode
+      ? isDropdownOpen && homeResults.length > 0
+      : isDropdownOpen &&
+        (mode === 'pdf'
+          ? searchTerm.length > 0
+          : mode === 'file'
+            ? projectFileResults.length > 0 || searchTerm.length > 0
+            : mode === 'cite'
+              ? citeResults.length > 0 || searchTerm.length > 0
+              : mode === 'zotero'
+                ? (!zoteroEnabled && searchTerm.length > 0) ||
+                  zoteroResults.length > 0 ||
+                  loading ||
+                  searchTerm.length > 2
+                : mode === 'online'
+                  ? onlineResults.length > 0 || onlineLoading || searchTerm.length > 1
+                  : texResults.length > 0 || searchTerm.length > 0)
 
-  const selectableResultCount = isHomeMode
-    ? homeResults.length
-    : mode === 'file'
-      ? projectFileResults.length
-      : mode === 'cite'
-        ? citeResults.length
-        : mode === 'zotero'
-          ? zoteroResults.length
-          : mode === 'online'
-            ? onlineResults.length
-            : mode === 'tex'
-              ? texResults.length
-              : 0
-  const activeIndex = isHomeMode ? homeHighlightedIndex : highlightedIndex
+  const selectableResultCount = isCommandQuery
+    ? commandResults.length
+    : isHomeMode
+      ? homeResults.length
+      : mode === 'file'
+        ? projectFileResults.length
+        : mode === 'cite'
+          ? citeResults.length
+          : mode === 'zotero'
+            ? zoteroResults.length
+            : mode === 'online'
+              ? onlineResults.length
+              : mode === 'tex'
+                ? texResults.length
+                : 0
+  const activeIndex = isCommandQuery || isHomeMode ? homeHighlightedIndex : highlightedIndex
   const activeDescendant =
     showDropdown && selectableResultCount > 0
       ? getOptionId(Math.min(activeIndex, selectableResultCount - 1))
@@ -1041,14 +1134,20 @@ export function OmniSearch({
     : selectableResultCount > 0
       ? t('omniSearch.resultCount', { count: selectableResultCount })
       : searchTerm
-        ? mode === 'pdf' && !isHomeMode
-          ? pdfMatchCount > 0
-            ? t('omniSearch.matches', { current: pdfCurrentMatch + 1, total: pdfMatchCount })
-            : t('omniSearch.noMatches')
-          : t('omniSearch.noResults')
+        ? isCommandQuery
+          ? t('commandPalette.noResults')
+          : mode === 'pdf' && !isHomeMode
+            ? pdfMatchCount > 0
+              ? t('omniSearch.matches', { current: pdfCurrentMatch + 1, total: pdfMatchCount })
+              : t('omniSearch.noMatches')
+            : t('omniSearch.noResults')
         : ''
-  const translatedMode = isHomeMode ? t('omniSearch.home') : t(modeConfig.label)
-  const popupRole = !isHomeMode && mode === 'pdf' ? 'dialog' : 'listbox'
+  const translatedMode = isCommandQuery
+    ? t('commandPalette.title')
+    : isHomeMode
+      ? t('omniSearch.home')
+      : t(modeConfig.label)
+  const popupRole = !isCommandQuery && !isHomeMode && mode === 'pdf' ? 'dialog' : 'listbox'
 
   return (
     <div
@@ -1087,7 +1186,7 @@ export function OmniSearch({
             aria-expanded={isModeMenuOpen}
             aria-controls={isModeMenuOpen ? modeMenuId : undefined}
           >
-            <ModeIcon size={14} aria-hidden="true" />
+            <DisplayModeIcon size={14} aria-hidden="true" />
             <ChevronDown size={10} aria-hidden="true" />
           </button>
           {isModeMenuOpen && (
@@ -1132,14 +1231,17 @@ export function OmniSearch({
         aria-expanded={showDropdown}
         aria-controls={showDropdown ? resultsId : undefined}
         aria-activedescendant={activeDescendant}
-        aria-describedby={resultsStatusId}
+        aria-describedby={`${inputHintId} ${resultsStatusId}`}
         aria-busy={searchBusy}
+        title={t('omniSearch.appCommandHint')}
         placeholder={isHomeMode ? t('searchBar.placeholder') : t(modeConfig.placeholder)}
         value={searchTerm}
         onChange={(e) => handleInputChange(e.target.value)}
         onKeyDown={handleKeyDown}
         onFocus={() => {
-          if (isHomeMode) {
+          if (isCommandQuery) {
+            if (searchTerm.trim().length > 0) setIsDropdownOpen(true)
+          } else if (isHomeMode) {
             if (homeResults.length > 0) setIsDropdownOpen(true)
           } else if (mode === 'file' && searchTerm.length > 0) setIsDropdownOpen(true)
           else if (mode === 'cite' && searchTerm.length > 0) setIsDropdownOpen(true)
@@ -1153,6 +1255,10 @@ export function OmniSearch({
           else if (mode === 'pdf' && searchTerm.length > 0) setIsDropdownOpen(true)
         }}
       />
+
+      <span id={inputHintId} className="omni-search-description">
+        {t('omniSearch.appCommandHint')}
+      </span>
 
       {!isHomeMode && selectedKeys.size > 0 && (
         <span
@@ -1187,7 +1293,7 @@ export function OmniSearch({
 
       {showDropdown && (
         <div className="omni-search-dropdown" ref={dropdownRef}>
-          {!isHomeMode && mode === 'tex' && texResults.length > 0 && (
+          {!isCommandQuery && !isHomeMode && mode === 'tex' && texResults.length > 0 && (
             <div className="omni-search-tex-nav">
               <span className="omni-search-tex-count">
                 {t('omniSearch.matches', {
@@ -1219,7 +1325,10 @@ export function OmniSearch({
             aria-label={t('omniSearch.resultsLabel', { mode: translatedMode })}
             aria-busy={searchBusy}
             aria-multiselectable={
-              popupRole === 'listbox' && !isHomeMode && (mode === 'cite' || mode === 'zotero')
+              popupRole === 'listbox' &&
+              !isCommandQuery &&
+              !isHomeMode &&
+              (mode === 'cite' || mode === 'zotero')
                 ? true
                 : undefined
             }

@@ -19,6 +19,7 @@ describe('CommandPalette', () => {
     expect(input).toHaveFocus()
     expect(input).toHaveAttribute('aria-controls', screen.getByRole('listbox').id)
     expect(input).toHaveAttribute('aria-activedescendant', options[0].id)
+    expect(input).toHaveAccessibleDescription(`${options.length} results`)
     expect(options[0]).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('option', { name: /Create AI Draft/ })).toBeInTheDocument()
   })

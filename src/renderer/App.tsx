@@ -596,6 +596,7 @@ function App() {
         onReturnHome={handleCloseProject}
         onNewFromTemplate={handleOpenTemplateGallery}
         onAiDraft={handleAiDraft}
+        onRunCommand={runAppCommand}
         onOpenCommandPalette={openCommandPalette}
         onOpenSettings={handleOpenSettings}
       />

@@ -1,6 +1,15 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Palette, Type, Zap, Link, Settings as SettingsIcon, Bot } from 'lucide-react'
+import {
+  Palette,
+  Type,
+  Zap,
+  Link,
+  Settings as SettingsIcon,
+  Bot,
+  SlidersHorizontal
+} from 'lucide-react'
+import { GeneralTab } from './settings/GeneralTab'
 import { AppearanceTab } from './settings/AppearanceTab'
 import { EditorTab } from './settings/EditorTab'
 import { AiTab } from './settings/AiTab'
@@ -10,9 +19,10 @@ import UpdateNotification from './UpdateNotification'
 import { ICON_SIZE } from './ui/IconSystem'
 import { ModalCloseButton, ModalFrame } from './ui/ModalChrome'
 
-type TabId = 'appearance' | 'editor' | 'ai' | 'integrations' | 'automation'
+type TabId = 'general' | 'appearance' | 'editor' | 'ai' | 'integrations' | 'automation'
 
 const TAB_ICONS = {
+  general: SlidersHorizontal,
   appearance: Palette,
   editor: Type,
   ai: Bot,
@@ -21,6 +31,7 @@ const TAB_ICONS = {
 } as const
 
 const TAB_CONTENT: Record<TabId, React.FC> = {
+  general: GeneralTab,
   appearance: AppearanceTab,
   editor: EditorTab,
   ai: AiTab,
@@ -28,7 +39,7 @@ const TAB_CONTENT: Record<TabId, React.FC> = {
   automation: AutomationTab
 }
 
-const TAB_IDS: TabId[] = ['appearance', 'editor', 'ai', 'integrations', 'automation']
+const TAB_IDS: TabId[] = ['general', 'appearance', 'editor', 'ai', 'integrations', 'automation']
 
 const FOCUSABLE_SELECTOR = [
   'a[href]',
@@ -41,7 +52,7 @@ const FOCUSABLE_SELECTOR = [
 
 export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
   const { t } = useTranslation()
-  const [activeTab, setActiveTab] = useState<TabId>('appearance')
+  const [activeTab, setActiveTab] = useState<TabId>('general')
   const titleId = useId()
   const dialogRef = useRef<HTMLDivElement>(null)
   const initialFocusRef = useRef<HTMLButtonElement>(null)
@@ -134,7 +145,7 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
             return (
               <button
                 key={id}
-                ref={id === 'appearance' ? initialFocusRef : undefined}
+                ref={id === 'general' ? initialFocusRef : undefined}
                 type="button"
                 onClick={() => setActiveTab(id)}
                 className={`settings-tab${activeTab === id ? ' active' : ''}`}
@@ -155,17 +166,7 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
 
       {/* Footer */}
       <div className="modal-footer">
-        <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>TextEx v1.0.15</span>
-        <span
-          style={{
-            fontSize: 12,
-            fontFamily: 'monospace',
-            color: 'var(--text-secondary)',
-            opacity: 0.5
-          }}
-        >
-          Build 2026
-        </span>
+        <span className="settings-version">TextEx v{__APP_VERSION__}</span>
       </div>
     </ModalFrame>
   )

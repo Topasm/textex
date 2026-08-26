@@ -149,6 +149,7 @@
   "settings": {
     "title": "설정",
     "tabs": {
+      "general": "일반",
       "appearance": "모양",
       "editor": "편집기",
       "ai": "AI",
@@ -157,6 +158,7 @@
     },
     "general": {
       "application": "애플리케이션",
+      "applicationDesc": "언어, 업데이트 및 앱 전체 동작을 관리합니다.",
       "autoUpdates": "업데이트 자동 확인",
       "autoUpdatesDesc": "TextEx 시작 후 새 버전을 자동으로 확인",
       "checkUpdatesNow": "지금 업데이트 확인",
@@ -173,6 +175,8 @@
       "highContrast": "고대비",
       "system": "시스템",
       "glass": "글래스",
+      "pdfDisplay": "PDF 미리보기",
+      "pdfDisplayDesc": "앱 테마와 별개로 컴파일된 페이지 표시 방식을 설정합니다.",
       "pdfNightMode": "PDF 야간 모드",
       "pdfNightModeDesc": "어두운 환경에서 편안하게 읽을 수 있도록 텍스트와 배경색을 반전합니다.",
       "pdfViewMode": "PDF 보기 모드",
@@ -507,6 +511,7 @@
     "modeMenuLabel": "검색 모드 선택",
     "resultsLabel": "{{mode}} 검색 결과",
     "resultCount": "검색 결과 {{count}}개",
+    "appCommandHint": ">를 입력하여 앱 명령 검색",
     "clearSearch": "검색 지우기"
   },
   "errorBoundary": {
@@ -515,7 +520,7 @@
     "reload": "새로고침"
   },
   "searchBar": {
-    "placeholder": "프로젝트, 템플릿 검색 또는 /를 입력하여 명령 실행...",
+    "placeholder": "프로젝트 검색, / 워크플로 또는 > 앱 명령 실행...",
     "draftDesc": "AI로 LaTeX 문서 생성",
     "templateDesc": "템플릿에서 만들기",
     "openDesc": "프로젝트 폴더 열기",

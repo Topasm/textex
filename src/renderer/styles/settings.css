@@ -1,0 +1,76 @@
+/* Shared settings primitives. Feature-specific settings styles remain colocated
+ * with the legacy settings surface until each tab adopts these controls. */
+
+.settings-version {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.settings-pane-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+}
+
+.settings-pane-section + .settings-pane-section {
+  border-top: 1px solid var(--border);
+  padding-top: 24px;
+}
+
+.settings-pane-section-header > :last-child {
+  margin-bottom: 0;
+}
+
+.settings-stack,
+.settings-column-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-row-copy {
+  min-width: 0;
+}
+
+.settings-row-control {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  margin-left: 16px;
+}
+
+.settings-segmented-control {
+  display: flex;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--ui-radius-control, 6px);
+}
+
+.settings-segmented-control button {
+  padding: 4px 12px;
+  border: none;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+
+.settings-segmented-control button:not(:last-child) {
+  border-right: 1px solid var(--border);
+}
+
+.settings-segmented-control button.active {
+  background: var(--accent);
+  color: var(--accent-contrast, white);
+}
+
+.settings-segmented-control button:focus-visible {
+  position: relative;
+  z-index: 1;
+}

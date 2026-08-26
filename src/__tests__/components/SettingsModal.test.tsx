@@ -24,11 +24,14 @@ describe('SettingsModal', () => {
 
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: 'Settings' })).toHaveClass('settings-sidebar')
+    expect(screen.getByRole('button', { name: 'General' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Appearance' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Editor' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Integrations' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Automation' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'AI' })).toBeInTheDocument()
+    expect(screen.getByText('TextEx v1.0.15')).toBeInTheDocument()
+    expect(screen.queryByText('Build 2026')).not.toBeInTheDocument()
   })
 
   it('switches tabs and updates a persisted setting', () => {
@@ -106,7 +109,7 @@ describe('SettingsModal', () => {
     const closeButton = screen.getByRole('button', { name: 'Close' })
 
     expect(dialog).toHaveAttribute('aria-modal', 'true')
-    expect(screen.getByRole('button', { name: 'Appearance' })).toHaveFocus()
+    expect(screen.getByRole('button', { name: 'General' })).toHaveFocus()
 
     const focusable = Array.from(
       dialog.querySelectorAll<HTMLElement>(

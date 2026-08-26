@@ -19,7 +19,6 @@ function fixture(overrides = {}) {
     cargoLock: VERSION,
     cli: VERSION,
     mcp: VERSION,
-    settings: VERSION,
     ...overrides
   }
 
@@ -54,7 +53,11 @@ function fixture(overrides = {}) {
   )
   write(
     'src/renderer/components/SettingsModal.tsx',
-    `export const SettingsModal = () => <span>TextEx v${versions.settings}</span>\n`
+    'export const SettingsModal = () => <span>TextEx v{__APP_VERSION__}</span>\n'
+  )
+  write(
+    'vite.config.ts',
+    'const packageVersion = packageJson.version\nexport default { define: { __APP_VERSION__: JSON.stringify(packageVersion) } }\n'
   )
 
   return { root, cleanup: () => fs.rmSync(root, { recursive: true, force: true }) }
@@ -83,8 +86,7 @@ test('rejects drift in every duplicated release version declaration', async (t) 
     ['cargoToml', 'src-tauri/Cargo.toml [package] version'],
     ['cargoLock', 'src-tauri/Cargo.lock textex-tauri version'],
     ['cli', 'src/cli/index.ts program version'],
-    ['mcp', 'src/mcp/server.ts server version'],
-    ['settings', 'src/renderer/components/SettingsModal.tsx displayed version']
+    ['mcp', 'src/mcp/server.ts server version']
   ]
 
   for (const [key, location] of declarations) {
@@ -105,6 +107,22 @@ test('rejects drift in every duplicated release version declaration', async (t) 
   }
 })
 
+test('fails closed when the settings version is not injected from package.json', () => {
+  const project = fixture()
+  try {
+    fs.writeFileSync(
+      path.join(project.root, 'src/renderer/components/SettingsModal.tsx'),
+      '<span>TextEx development</span>\n'
+    )
+    assert.throws(
+      () => collectReleaseVersions(project.root),
+      /Expected package version injection at src\/renderer\/components\/SettingsModal\.tsx app version/
+    )
+  } finally {
+    project.cleanup()
+  }
+})
+
 test('fails closed when a declaration is ambiguous', () => {
   const project = fixture()
   try {
@@ -119,12 +137,12 @@ test('fails closed when a declaration is ambiguous', () => {
 })
 
 test('command exits non-zero and reports locations when versions drift', () => {
-  const project = fixture({ settings: '2.0.0' })
+  const project = fixture({ mcp: '2.0.0' })
   try {
     const result = spawnSync(process.execPath, [scriptPath, project.root], { encoding: 'utf8' })
     assert.equal(result.status, 1)
     assert.match(result.stderr, /Release versions do not match package\.json/)
-    assert.match(result.stderr, /SettingsModal\.tsx displayed version: 2\.0\.0/)
+    assert.match(result.stderr, /src\/mcp\/server\.ts server version: 2\.0\.0/)
   } finally {
     project.cleanup()
   }

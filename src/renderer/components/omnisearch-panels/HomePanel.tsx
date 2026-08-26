@@ -4,6 +4,7 @@ import type { HomeResult } from './types'
 
 interface HomePanelProps {
   homeResults: HomeResult[]
+  emptyLabel?: string
   homeHighlightedIndex: number
   setHomeHighlightedIndex: (index: number) => void
   handleHomeSelect: (result: HomeResult) => void
@@ -17,12 +18,14 @@ function homeResultIcon(result: HomeResult): React.ReactNode {
     case 'template':
       return <BookOpen size={16} />
     case 'command':
+    case 'app-command':
       return <Terminal size={16} />
   }
 }
 
 export function HomePanel({
   homeResults,
+  emptyLabel,
   homeHighlightedIndex,
   setHomeHighlightedIndex,
   handleHomeSelect,
@@ -32,24 +35,45 @@ export function HomePanel({
 
   return (
     <>
-      {homeResults.map((result, i) => (
-        <div
-          key={`${result.kind}-${result.label}-${i}`}
-          id={getOptionId(i)}
-          role="option"
-          aria-selected={i === homeHighlightedIndex}
-          className={`omni-search-result omni-search-home-result${i === homeHighlightedIndex ? ' highlighted' : ''}`}
-          onMouseEnter={() => setHomeHighlightedIndex(i)}
-          onClick={() => handleHomeSelect(result)}
-        >
-          <span className="omni-search-home-result-icon">{homeResultIcon(result)}</span>
-          <div className="omni-search-result-text">
-            <span className="omni-search-result-title">{result.label}</span>
-            <span className="omni-search-result-meta">{result.detail}</span>
-          </div>
-          <span className="omni-search-home-badge">{t(result.badgeKey)}</span>
+      {homeResults.length === 0 && emptyLabel && (
+        <div className="omni-search-message" aria-hidden="true">
+          {emptyLabel}
         </div>
-      ))}
+      )}
+      {homeResults.map((result, i) => {
+        const optionId = getOptionId(i)
+        const detailId = `${optionId}-detail`
+        return (
+          <div
+            key={`${result.kind}-${result.label}-${i}`}
+            id={optionId}
+            role="option"
+            aria-label={result.label}
+            aria-describedby={detailId}
+            aria-selected={i === homeHighlightedIndex}
+            aria-disabled={result.disabled || undefined}
+            className={`omni-search-result omni-search-home-result${i === homeHighlightedIndex ? ' highlighted' : ''}${result.disabled ? ' disabled' : ''}`}
+            onMouseEnter={() => setHomeHighlightedIndex(i)}
+            onClick={() => {
+              if (!result.disabled) handleHomeSelect(result)
+            }}
+          >
+            <span className="omni-search-home-result-icon">{homeResultIcon(result)}</span>
+            <div className="omni-search-result-text">
+              <span className="omni-search-result-title">{result.label}</span>
+              <span id={detailId} className="omni-search-result-meta">
+                {result.detail}
+              </span>
+            </div>
+            {result.shortcut && (
+              <kbd className="omni-search-command-shortcut" aria-hidden="true">
+                {result.shortcut}
+              </kbd>
+            )}
+            <span className="omni-search-home-badge">{t(result.badgeKey)}</span>
+          </div>
+        )
+      })}
     </>
   )
 }
