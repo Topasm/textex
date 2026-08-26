@@ -30,7 +30,7 @@ describe('SettingsModal', () => {
     expect(screen.getByRole('button', { name: 'Integrations' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Automation' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'AI' })).toBeInTheDocument()
-    expect(screen.getByText('TextEx v1.0.15')).toBeInTheDocument()
+    expect(screen.getByText(`TextEx v${__APP_VERSION__}`)).toBeInTheDocument()
     expect(screen.queryByText('Build 2026')).not.toBeInTheDocument()
   })
 

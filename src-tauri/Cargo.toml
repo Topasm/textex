@@ -1,6 +1,6 @@
 [package]
 name = "textex-tauri"
-version = "1.0.15"
+version = "1.0.16"
 description = "Tauri desktop backend for TextEx"
 authors = ["Topasm <dhkdwk0215@naver.com>"]
 license = "MIT"
