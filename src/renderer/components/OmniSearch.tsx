@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo, useDeferredValue, useId } from 'react'
+import { ICON_SIZE } from './ui/IconSystem'
 import {
   BookOpen,
   Library,
@@ -126,25 +127,25 @@ const HOME_SLASH_COMMANDS: HomeSlashCommand[] = [
     command: '/draft',
     label: '/draft',
     descriptionKey: 'searchBar.draftDesc',
-    icon: <Code size={16} />
+    icon: <Code size={ICON_SIZE.control} />
   },
   {
     command: '/template',
     label: '/template',
     descriptionKey: 'searchBar.templateDesc',
-    icon: <BookOpen size={16} />
+    icon: <BookOpen size={ICON_SIZE.control} />
   },
   {
     command: '/open',
     label: '/open',
     descriptionKey: 'searchBar.openDesc',
-    icon: <FolderOpen size={16} />
+    icon: <FolderOpen size={ICON_SIZE.control} />
   },
   {
     command: '/help',
     label: '/help',
     descriptionKey: 'searchBar.helpDesc',
-    icon: <Terminal size={16} />
+    icon: <Terminal size={ICON_SIZE.control} />
   }
 ]
 
@@ -1156,7 +1157,7 @@ export function OmniSearch({
     >
       {isHomeMode ? (
         <div className="omni-search-home-icon" aria-hidden="true">
-          <Search size={14} />
+          <Search size={ICON_SIZE.compact} />
         </div>
       ) : (
         <div className="omni-search-mode-btn-wrapper" ref={modeMenuRef}>
@@ -1186,8 +1187,8 @@ export function OmniSearch({
             aria-expanded={isModeMenuOpen}
             aria-controls={isModeMenuOpen ? modeMenuId : undefined}
           >
-            <DisplayModeIcon size={14} aria-hidden="true" />
-            <ChevronDown size={10} aria-hidden="true" />
+            <DisplayModeIcon size={ICON_SIZE.compact} aria-hidden="true" />
+            <ChevronDown size={ICON_SIZE.micro} aria-hidden="true" />
           </button>
           {isModeMenuOpen && (
             <div
@@ -1209,7 +1210,7 @@ export function OmniSearch({
                     role="menuitemradio"
                     aria-checked={m === mode}
                   >
-                    <Icon size={14} aria-hidden="true" />
+                    <Icon size={ICON_SIZE.compact} aria-hidden="true" />
                     <span>{t(cfg.label)}</span>
                     <kbd>{cfg.shortcut}</kbd>
                   </button>
@@ -1277,7 +1278,7 @@ export function OmniSearch({
           title={t('omniSearch.clearSearch')}
           aria-label={t('omniSearch.clearSearch')}
         >
-          <X size={12} aria-hidden="true" />
+          <X size={ICON_SIZE.micro} aria-hidden="true" />
         </button>
       )}
 
@@ -1307,7 +1308,7 @@ export function OmniSearch({
                 title={t('omniSearch.prevMatch')}
                 aria-label={t('omniSearch.prevMatch')}
               >
-                <ChevronUp size={14} aria-hidden="true" />
+                <ChevronUp size={ICON_SIZE.compact} aria-hidden="true" />
               </button>
               <button
                 type="button"
@@ -1315,7 +1316,7 @@ export function OmniSearch({
                 title={t('omniSearch.nextMatch')}
                 aria-label={t('omniSearch.nextMatch')}
               >
-                <ChevronDown size={14} aria-hidden="true" />
+                <ChevronDown size={ICON_SIZE.compact} aria-hidden="true" />
               </button>
             </div>
           )}

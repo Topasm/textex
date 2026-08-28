@@ -262,4 +262,21 @@ describe('Toolbar', () => {
       true
     )
   })
+
+  it('teaches each accelerator in the control tooltip', () => {
+    render(<Toolbar {...defaultProps} />)
+
+    // The label stays free of key names so it reads correctly on every
+    // platform; the tooltip adds the binding the manifest actually holds.
+    const save = screen.getByRole('button', { name: 'Quick Save' })
+    expect(save).toHaveAttribute('title', 'Quick Save (Ctrl+S)')
+    expect(screen.getByRole('button', { name: 'Compile LaTeX' })).toHaveAttribute(
+      'title',
+      'Compile LaTeX (Ctrl+Enter)'
+    )
+    expect(screen.getByRole('button', { name: 'Open app menu' })).toHaveAttribute(
+      'title',
+      'Open app menu (Ctrl+Shift+P)'
+    )
+  })
 })

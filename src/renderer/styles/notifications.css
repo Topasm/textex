@@ -7,7 +7,7 @@
   width: min(380px, calc(100vw - 32px));
   max-height: calc(100vh - 88px);
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-8);
   overflow-y: auto;
   pointer-events: none;
 }
@@ -29,12 +29,12 @@ body:has(
   align-items: center;
   gap: 9px;
   min-height: 42px;
-  padding: 9px 10px;
+  padding: 9px var(--space-10);
   color: var(--text-primary);
   background: var(--ui-surface-raised, var(--bg-secondary));
   border: 1px solid var(--ui-border-strong, var(--border));
   border-left: 3px solid var(--info);
-  border-radius: var(--ui-radius-panel, 6px);
+  border-radius: var(--ui-radius-panel);
   box-shadow: var(--ui-shadow-popover, 0 4px 14px var(--shadow-color));
   pointer-events: auto;
   animation: app-notification-enter 140ms ease-out;
@@ -58,7 +58,7 @@ body:has(
   height: 4px;
   appearance: none;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--ui-radius-pill);
   overflow: hidden;
   background: var(--progress-bar-bg);
 }
@@ -104,19 +104,19 @@ body:has(
 .app-notification-message {
   min-width: 0;
   overflow-wrap: anywhere;
-  font-size: 13px;
+  font-size: var(--font-base);
   line-height: 1.35;
 }
 
 .app-notification button {
   min-height: 28px;
   border: 0;
-  border-radius: var(--ui-radius-control, 4px);
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
 }
 
 .app-notification-action {
-  padding: 4px 9px;
+  padding: var(--space-4) 9px;
   color: var(--accent-contrast, white);
   background: var(--accent);
 }

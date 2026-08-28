@@ -1,4 +1,5 @@
 import type { AppCommandId } from '../../shared/types'
+import { useEditorStore } from '../store/useEditorStore'
 import { usePdfStore } from '../store/usePdfStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { useSettingsStore } from '../store/useSettingsStore'
@@ -92,6 +93,9 @@ export async function executeAppCommand(
     case 'view.toggleResearchPanel':
       useProjectStore.getState().toggleResearchPanel()
       return
+    case 'view.toggleProse':
+      toggleProseMode()
+      return
     case 'view.toggleLog':
       context.toggleLog()
       return
@@ -136,11 +140,33 @@ export async function executeAppCommand(
   }
 }
 
-export function toggleLogPanel(): void {
+/**
+ * Brings the Problems view forward without toggling it shut.
+ *
+ * Returns false when an unsaved research profile draft blocks the switch, so
+ * callers reacting to a compile failure can fall back to a notification
+ * instead of silently doing nothing.
+ */
+/**
+ * Switches the active document between TeX and prose, and puts the caret on
+ * the matching place so the author does not lose their spot across the swap.
+ */
+export function toggleProseMode(): void {
+  const { filePath, cursorLine } = useEditorStore.getState()
+  if (!filePath || !filePath.toLowerCase().endsWith('.tex')) return
+
+  const ui = useUiStore.getState()
+  const enabling = !ui.proseModePaths.includes(filePath)
+  ui.setProseMode(filePath, enabling)
+
+  // Leaving prose mode: land Monaco on the line the author was reading.
+  if (!enabling) useEditorStore.getState().requestJumpToLine(cursorLine, 1)
+}
+
+export function openProblemsPanel(): boolean {
   const projectStore = useProjectStore.getState()
   if (projectStore.isResearchPanelOpen && projectStore.researchPanelTab === 'problems') {
-    projectStore.closeResearchPanel()
-    return
+    return true
   }
 
   if (
@@ -148,11 +174,21 @@ export function toggleLogPanel(): void {
     projectStore.researchPanelTab === 'profile' &&
     !confirmResearchProfileDraftDiscard()
   ) {
-    return
+    return false
   }
 
   if (projectStore.isResearchPanelOpen && projectStore.researchPanelTab === 'profile') {
     clearResearchProfileDraft()
   }
   projectStore.openResearchPanel('problems')
+  return true
+}
+
+export function toggleLogPanel(): void {
+  const projectStore = useProjectStore.getState()
+  if (projectStore.isResearchPanelOpen && projectStore.researchPanelTab === 'problems') {
+    projectStore.closeResearchPanel()
+    return
+  }
+  openProblemsPanel()
 }

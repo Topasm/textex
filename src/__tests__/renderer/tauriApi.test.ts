@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createTauriApi } from '../../renderer/platform/tauriApi'
 import { installDesktopApi } from '../../renderer/platform/desktopApi'
+import { NativeError, nativeErrorCode } from '../../shared/appError'
 
 const invokeMock = vi.hoisted(() => vi.fn())
 const isTauriMock = vi.hoisted(() => vi.fn())
@@ -1245,5 +1246,41 @@ describe('Tauri DesktopApi adapter', () => {
     await expect(installDesktopApi()).rejects.toThrow('TextEx requires the Tauri desktop runtime')
     expect(window.api).toBe(existingApi)
     expect(document.documentElement.dataset.desktopRuntime).toBeUndefined()
+  })
+
+  it('normalizes a rejected native command into a coded NativeError', async () => {
+    invokeMock.mockRejectedValueOnce({
+      code: 'compilerNotFound',
+      message: 'LaTeX compiler executable was not found. Checked: /usr/bin',
+      data: { checkedPaths: '/usr/bin' }
+    })
+    const api = createTauriApi()
+
+    const error = await api
+      .compile({
+        requestId: 1,
+        documentId: 'doc',
+        documentRevision: 1,
+        filePath: '/project/main.tex',
+        priority: 'high'
+      })
+      .catch((thrown: unknown) => thrown)
+
+    expect(error).toBeInstanceOf(NativeError)
+    expect(nativeErrorCode(error)).toBe('compilerNotFound')
+    expect((error as Error).message).toBe(
+      'LaTeX compiler executable was not found. Checked: /usr/bin'
+    )
+  })
+
+  it('keeps a non-structured native rejection readable as an Error', async () => {
+    invokeMock.mockRejectedValueOnce('command not found')
+    const api = createTauriApi()
+
+    const error = await api.readFile('/project/main.tex').catch((thrown: unknown) => thrown)
+
+    expect(error).toBeInstanceOf(Error)
+    expect(error).not.toBeInstanceOf(NativeError)
+    expect((error as Error).message).toBe('command not found')
   })
 })

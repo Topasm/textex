@@ -16,7 +16,7 @@
   color: var(--text-primary);
   background: var(--ui-surface-raised, var(--modal-bg, var(--bg-primary)));
   border: 1px solid var(--ui-border-strong, var(--border));
-  border-radius: var(--ui-radius-panel, 6px);
+  border-radius: var(--ui-radius-panel);
   box-shadow: var(--ui-shadow-modal, 0 8px 28px rgba(0, 0, 0, 0.28));
 }
 
@@ -24,12 +24,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px 8px 18px;
+  padding: var(--space-12) 14px var(--space-8) 18px;
 }
 
 .command-palette-header h2 {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--font-base);
   font-weight: 600;
   color: var(--text-secondary);
 }
@@ -44,7 +44,7 @@
   color: var(--text-secondary);
   background: transparent;
   border: 0;
-  border-radius: var(--ui-radius-control, 4px);
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
 }
 
@@ -62,13 +62,13 @@
 .command-palette-search {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin: 0 16px 10px;
-  padding: 0 12px;
+  gap: var(--space-10);
+  margin: 0 var(--space-16) 10px;
+  padding: 0 var(--space-12);
   color: var(--text-secondary);
   background: var(--bg-input);
   border: 1px solid var(--ui-border, var(--border));
-  border-radius: var(--ui-radius-control, 4px);
+  border-radius: var(--ui-radius-control);
 }
 
 .command-palette-search:focus-within {
@@ -83,7 +83,7 @@
   min-width: 0;
   padding: 11px 0;
   font: inherit;
-  font-size: 14px;
+  font-size: var(--font-lg);
   color: var(--text-primary);
   background: transparent;
   border: 0;
@@ -116,14 +116,14 @@
 }
 
 .command-palette-list {
-  padding: 6px;
+  padding: var(--space-6);
   margin: 0;
   list-style: none;
 }
 
 .command-palette-group {
-  padding: 9px 10px 5px;
-  font-size: 11px;
+  padding: 9px var(--space-10) 5px;
+  font-size: var(--font-sm);
   font-weight: 600;
   color: var(--text-secondary);
   text-transform: uppercase;
@@ -134,10 +134,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--space-16);
   min-height: 36px;
-  padding: 7px 10px;
-  border-radius: var(--ui-radius-control, 4px);
+  padding: 7px var(--space-10);
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
 }
 
@@ -160,30 +160,30 @@
 
 .command-palette-option kbd {
   flex-shrink: 0;
-  padding: 2px 6px;
+  padding: var(--space-2) var(--space-6);
   font-family: inherit;
-  font-size: 11px;
+  font-size: var(--font-sm);
   color: var(--text-secondary);
   background: var(--bg-secondary);
   border: 1px solid var(--ui-border, var(--border));
-  border-radius: var(--ui-radius-control, 4px);
+  border-radius: var(--ui-radius-control);
 }
 
 .command-palette-option-meta {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   flex-shrink: 0;
 }
 
 .command-palette-unavailable {
-  font-size: 11px;
+  font-size: var(--font-sm);
   color: var(--text-secondary);
 }
 
 .command-palette-empty {
   margin: 0;
-  padding: 30px 20px;
+  padding: 30px var(--space-20);
   text-align: center;
   color: var(--text-secondary);
 }
@@ -192,17 +192,17 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 6px;
+  gap: var(--space-6);
   min-height: 34px;
-  padding: 0 16px;
+  padding: 0 var(--space-16);
   margin: 0;
-  font-size: 11px;
+  font-size: var(--font-sm);
   color: var(--text-secondary);
 }
 
 @media (max-width: 540px) {
   .command-palette-overlay {
-    padding: 10px;
+    padding: var(--space-10);
   }
 
   .command-palette {

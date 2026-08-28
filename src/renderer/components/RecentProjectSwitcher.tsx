@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { ICON_SIZE } from './ui/IconSystem'
 import { Check, ChevronDown, FolderKanban, Pin } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { RecentProject } from '../../shared/types'
@@ -197,9 +198,9 @@ export function RecentProjectSwitcher() {
           setIsOpen(true)
         }}
       >
-        <FolderKanban size={15} aria-hidden="true" />
+        <FolderKanban size={ICON_SIZE.compact} aria-hidden="true" />
         <span className="recent-project-switcher-name">{currentProjectName}</span>
-        <ChevronDown size={13} aria-hidden="true" />
+        <ChevronDown size={ICON_SIZE.micro} aria-hidden="true" />
       </button>
 
       {isOpen && (
@@ -239,9 +240,9 @@ export function RecentProjectSwitcher() {
                 >
                   <span className="recent-project-switcher-item-icon" aria-hidden="true">
                     {isCurrent ? (
-                      <Check size={14} />
+                      <Check size={ICON_SIZE.compact} />
                     ) : project.pinned ? (
-                      <Pin size={13} />
+                      <Pin size={ICON_SIZE.micro} />
                     ) : (
                       <span />
                     )}

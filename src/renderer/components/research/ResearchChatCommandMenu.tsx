@@ -1,4 +1,6 @@
 import { useEffect } from 'react'
+import { ICON_SIZE } from '../ui/IconSystem'
+import { useTranslation } from 'react-i18next'
 import {
   BookOpen,
   CircleHelp,
@@ -43,6 +45,7 @@ export function ResearchChatCommandMenu({
   onActiveIndexChange,
   onSelect
 }: ResearchChatCommandMenuProps) {
+  const { t } = useTranslation()
   useEffect(() => {
     if (!commands[activeIndex]) return
 
@@ -57,11 +60,14 @@ export function ResearchChatCommandMenu({
       id={listboxId}
       className="research-chat-command-menu"
       role="listbox"
-      aria-label="Chat commands"
+      aria-label={t('researchPanel.chat.commandsLabel')}
     >
       {commands.map((command, index) => {
         const active = index === activeIndex
         const Icon = COMMAND_ICONS[command.id]
+        // The manifest keeps the English syntax that `/`-matching searches on;
+        // only the copy shown to the author is translated.
+        const key = `researchPanel.chatCommands.${command.id}`
 
         return (
           <li
@@ -76,14 +82,22 @@ export function ResearchChatCommandMenu({
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => onSelect(command)}
           >
-            <Icon className="research-chat-command-icon" size={15} aria-hidden="true" />
+            <Icon
+              className="research-chat-command-icon"
+              size={ICON_SIZE.compact}
+              aria-hidden="true"
+            />
             <span className="research-chat-command-copy">
               <span className="research-chat-command-heading">
                 <code>{command.command}</code>
-                <span>{command.label}</span>
+                <span>{t(`${key}.label`, { defaultValue: command.label })}</span>
               </span>
-              <span className="research-chat-command-description">{command.description}</span>
-              <code className="research-chat-command-usage">{command.usage}</code>
+              <span className="research-chat-command-description">
+                {t(`${key}.description`, { defaultValue: command.description })}
+              </span>
+              <code className="research-chat-command-usage">
+                {t(`${key}.usage`, { defaultValue: command.usage })}
+              </code>
             </span>
           </li>
         )

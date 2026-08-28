@@ -302,7 +302,7 @@ body,
 
 ::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb);
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -399,9 +399,9 @@ body,
   z-index: 40;
   isolation: isolate;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   min-height: var(--app-toolbar-height);
-  padding: 4px 10px;
+  padding: var(--space-4) 10px;
   background-color: var(--chrome-bg);
   border-bottom: 1px solid var(--chrome-border);
   user-select: none;
@@ -421,7 +421,7 @@ body,
   align-self: stretch;
   align-items: stretch;
   height: var(--app-toolbar-height);
-  margin: -4px 0 -4px 4px;
+  margin: -4px 0 -4px var(--space-4);
 }
 
 .toolbar .toolbar-window-control {
@@ -526,7 +526,7 @@ body,
 .toolbar-right {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-4);
   min-width: 0;
 }
 
@@ -547,7 +547,7 @@ body,
   flex: 1 1 auto;
   align-items: center;
   min-width: 0;
-  margin-left: 4px;
+  margin-left: var(--space-4);
 }
 
 .toolbar-search-slot .omni-search-wrapper {
@@ -557,9 +557,9 @@ body,
 .toolbar-sync-controls {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: var(--space-2);
   padding: 1px;
-  border-radius: 8px;
+  border-radius: var(--ui-radius-large);
   background-color: var(--chrome-pill-bg);
   border: 1px solid var(--chrome-border);
 }
@@ -569,15 +569,15 @@ body,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: var(--space-6);
   height: 28px;
   min-width: 28px;
   padding: 0 7px;
-  font-size: 11px;
+  font-size: var(--font-sm);
   background-color: var(--chrome-pill-bg);
   color: color-mix(in srgb, var(--text-primary) 72%, var(--text-secondary));
   border: 1px solid transparent;
-  border-radius: 7px;
+  border-radius: var(--ui-radius-panel);
   cursor: pointer;
   transition:
     background-color 0.15s,
@@ -646,11 +646,11 @@ body,
   left: 0;
   z-index: 200;
   min-width: 180px;
-  margin-top: 4px;
-  padding: 6px;
+  margin-top: var(--space-4);
+  padding: var(--space-6);
   background-color: var(--chrome-elevated-bg);
   border: 1px solid var(--chrome-border);
-  border-radius: 12px;
+  border-radius: var(--ui-radius-large);
   box-shadow: 0 12px 30px var(--shadow-color);
 }
 
@@ -659,11 +659,11 @@ body,
   justify-content: space-between;
   width: 100%;
   height: auto;
-  padding: 7px 10px;
-  font-size: 13px;
+  padding: 7px var(--space-10);
+  font-size: var(--font-base);
   text-align: left;
   background: transparent;
-  border-radius: 8px;
+  border-radius: var(--ui-radius-large);
 }
 
 .toolbar .menu-dropdown-content button:hover {
@@ -676,16 +676,16 @@ body,
 }
 
 .toolbar .file-name {
-  font-size: 11px;
+  font-size: var(--font-sm);
   color: var(--chrome-muted);
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   min-width: 0;
   max-width: 170px;
-  padding: 0 8px;
+  padding: 0 var(--space-8);
   height: 28px;
-  border-radius: 999px;
+  border-radius: var(--ui-radius-pill);
   background-color: var(--chrome-pill-bg);
   border: 1px solid var(--chrome-border);
   overflow: hidden;
@@ -710,19 +710,19 @@ body,
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  padding: 4px 8px;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-8);
   background-color: var(--zoom-bg);
   border-bottom: 1px solid var(--border);
 }
 
 .zoom-toolbar button {
-  padding: 2px 8px;
-  font-size: 12px;
+  padding: var(--space-2) var(--space-8);
+  font-size: var(--font-md);
   background-color: var(--bg-toolbar);
   color: var(--text-primary);
   border: none;
-  border-radius: 3px;
+  border-radius: var(--ui-radius-subtle);
   cursor: pointer;
 }
 
@@ -736,16 +736,16 @@ body,
 }
 
 .zoom-toolbar span {
-  font-size: 12px;
+  font-size: var(--font-md);
   color: var(--text-primary);
   min-width: 40px;
   text-align: center;
 }
 
 .zoom-toolbar .synctex-btn {
-  font-size: 14px;
+  font-size: var(--font-lg);
   font-weight: bold;
-  padding: 2px 6px;
+  padding: var(--space-2) var(--space-6);
 }
 
 .zoom-toolbar-separator {
@@ -753,7 +753,7 @@ body,
   height: 16px;
   min-width: 1px;
   background-color: var(--border);
-  margin: 0 4px;
+  margin: 0 var(--space-4);
 }
 
 /* Preview */
@@ -761,7 +761,7 @@ body,
   height: 100%;
   overflow: auto;
   background-color: var(--preview-bg);
-  padding: 16px;
+  padding: var(--space-16);
 }
 
 .preview-invert .react-pdf__Document {
@@ -783,7 +783,7 @@ body,
   border-top-color: transparent;
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  margin: 0 auto 12px;
+  margin: 0 auto var(--space-12);
 }
 
 @keyframes spin {
@@ -805,7 +805,7 @@ body,
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 8px;
+  padding: var(--space-8);
   background-color: var(--overlay-bg);
 }
 
@@ -818,12 +818,12 @@ body,
 }
 
 .preview-empty p:first-child {
-  font-size: 18px;
-  margin-bottom: 8px;
+  font-size: var(--font-2xl);
+  margin-bottom: var(--space-8);
 }
 
 .preview-empty p:last-child {
-  font-size: 13px;
+  font-size: var(--font-base);
 }
 
 /* Log Panel */
@@ -841,14 +841,14 @@ body,
   flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 4px 12px;
+  gap: var(--space-8);
+  padding: var(--space-4) var(--space-12);
   background-color: var(--bg-secondary);
   border-bottom: 1px solid var(--border);
 }
 
 .log-panel-header span {
-  font-size: 11px;
+  font-size: var(--font-sm);
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -858,19 +858,19 @@ body,
   display: flex;
   min-width: 0;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .log-view-tabs {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-6);
 }
 
 .log-panel-header button {
   background: none;
   border: none;
-  font-size: 11px;
+  font-size: var(--font-sm);
   color: var(--text-secondary);
   cursor: pointer;
   transition: color 0.15s;
@@ -891,7 +891,7 @@ body,
   height: 24px;
   align-items: center;
   justify-content: center;
-  border-radius: var(--ui-radius-control, 4px);
+  border-radius: var(--ui-radius-control);
 }
 
 .log-panel-header .log-repair-action:hover:not(:disabled) {
@@ -907,8 +907,8 @@ body,
 .log-panel pre {
   height: 100%;
   overflow: auto;
-  padding: 12px;
-  font-size: 12px;
+  padding: var(--space-12);
+  font-size: var(--font-md);
   font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
   color: var(--text-primary);
   white-space: pre-wrap;
@@ -920,23 +920,23 @@ body,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 2px 12px;
+  padding: var(--space-2) var(--space-12);
   background-color: var(--status-bar-bg);
   color: var(--status-bar-text);
-  font-size: 12px;
+  font-size: var(--font-md);
   user-select: none;
 }
 
 .status-bar .status-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .status-bar .status-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-12);
 }
 
 .status-action {
@@ -954,8 +954,8 @@ body,
 
 .status-spellcheck {
   cursor: pointer;
-  padding: 0 4px;
-  border-radius: 2px;
+  padding: 0 var(--space-4);
+  border-radius: var(--ui-radius-subtle);
 }
 
 .status-spellcheck:hover {
@@ -965,13 +965,13 @@ body,
 .status-git-branch {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-4);
 }
 
 .status-diagnostics {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-6);
 }
 
 .status-errors {
@@ -1003,10 +1003,10 @@ body,
 .status-compile-indicator {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-6);
   cursor: pointer;
-  padding: 0 4px;
-  border-radius: 3px;
+  padding: 0 var(--space-4);
+  border-radius: var(--ui-radius-subtle);
 }
 
 .status-compile-indicator:hover {
@@ -1026,28 +1026,28 @@ body,
 .error-boundary-content {
   text-align: center;
   max-width: 480px;
-  padding: 32px;
+  padding: var(--space-32);
 }
 
 .error-boundary-content h1 {
-  font-size: 20px;
-  margin-bottom: 8px;
+  font-size: var(--font-3xl);
+  margin-bottom: var(--space-8);
   color: var(--error);
 }
 
 .error-boundary-content p {
-  font-size: 14px;
-  margin-bottom: 16px;
+  font-size: var(--font-lg);
+  margin-bottom: var(--space-16);
   color: var(--text-secondary);
 }
 
 .error-boundary-details {
   text-align: left;
-  padding: 12px;
-  margin-bottom: 16px;
+  padding: var(--space-12);
+  margin-bottom: var(--space-16);
   background-color: var(--bg-secondary);
-  border-radius: 4px;
-  font-size: 12px;
+  border-radius: var(--ui-radius-control);
+  font-size: var(--font-md);
   font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
   color: var(--error);
   white-space: pre-wrap;
@@ -1056,12 +1056,12 @@ body,
 }
 
 .error-boundary-reload {
-  padding: 8px 24px;
-  font-size: 14px;
+  padding: var(--space-8) var(--space-24);
+  font-size: var(--font-lg);
   background-color: var(--accent);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
   transition: background-color 0.15s;
 }
@@ -1075,25 +1075,25 @@ body,
   height: 100%;
   min-height: 0;
   overflow: auto;
-  padding: 4px 0;
+  padding: var(--space-4) 0;
 }
 
 .log-empty {
-  padding: 12px;
+  padding: var(--space-12);
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: var(--font-md);
 }
 
 .log-entry {
   display: flex;
   width: 100%;
   align-items: flex-start;
-  gap: 8px;
-  padding: 4px 12px;
+  gap: var(--space-8);
+  padding: var(--space-4) var(--space-12);
   color: inherit;
   background: transparent;
   border: 0;
-  font-size: 12px;
+  font-size: var(--font-md);
   font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
   text-align: left;
   cursor: pointer;
@@ -1150,20 +1150,20 @@ body,
 /* Problems Panel: filter buttons */
 .log-filters {
   display: flex;
-  gap: 4px;
-  padding: 4px 12px;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-12);
   border-bottom: 1px solid var(--border);
 }
 
 .log-filter-btn {
   background: none;
   border: 1px solid transparent;
-  border-radius: 3px;
-  font-size: 11px;
+  border-radius: var(--ui-radius-subtle);
+  font-size: var(--font-sm);
   font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
   color: var(--text-secondary);
   cursor: pointer;
-  padding: 2px 6px;
+  padding: var(--space-2) var(--space-6);
   opacity: 0.5;
   transition:
     opacity 0.15s,
@@ -1204,10 +1204,10 @@ body,
   display: flex;
   width: 100%;
   align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
+  gap: var(--space-6);
+  padding: var(--space-4) var(--space-12);
   color: inherit;
-  font-size: 12px;
+  font-size: var(--font-md);
   text-align: left;
   cursor: pointer;
   user-select: none;
@@ -1220,7 +1220,7 @@ body,
 }
 
 .log-file-chevron {
-  font-size: 8px;
+  font-size: var(--font-2xs);
   width: 12px;
   text-align: center;
   color: var(--text-secondary);
@@ -1234,8 +1234,8 @@ body,
 .log-file-counts {
   margin-left: auto;
   display: flex;
-  gap: 8px;
-  font-size: 11px;
+  gap: var(--space-8);
+  font-size: var(--font-sm);
 }
 
 .log-file-count-error {
@@ -1249,8 +1249,8 @@ body,
 /* Status Bar Diagnostics */
 .status-diagnostics {
   display: inline-flex;
-  gap: 10px;
-  margin-left: 8px;
+  gap: var(--space-10);
+  margin-left: var(--space-8);
 }
 
 .status-errors {
@@ -1322,7 +1322,7 @@ body,
 
 /* PDF Page styling */
 .react-pdf__Page {
-  margin-bottom: 16px;
+  margin-bottom: var(--space-16);
   box-shadow: 0 4px 6px -1px var(--shadow-color);
 }
 
@@ -1347,8 +1347,8 @@ body,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 16px;
-  font-size: 11px;
+  padding: var(--space-8) var(--space-16);
+  font-size: var(--font-sm);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text-secondary);
@@ -1361,68 +1361,18 @@ body,
   border: none;
   color: var(--text-secondary);
   cursor: pointer;
-  font-size: 14px;
-  padding: 0 4px;
+  font-size: var(--font-lg);
+  padding: 0 var(--space-4);
 }
 
 .sidebar-header button:hover {
   color: var(--text-primary);
 }
 
-.sidebar-tabs {
-  display: flex;
-  justify-content: flex-start;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
-.sidebar-tab {
-  flex: none;
-  padding: 7px 8px;
-  font-size: 11px;
-  text-align: center;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  min-width: 0;
-  overflow: hidden;
-  transition:
-    color 120ms ease,
-    border-color 120ms ease,
-    background-color 120ms ease;
-}
-
-.sidebar-tab-label {
-  display: none;
-}
-
-.sidebar-tab:hover {
-  color: var(--text-primary);
-}
-
-.sidebar-tab.active {
-  color: var(--text-primary);
-  border-bottom-color: var(--accent);
-}
+/* Strip metrics live with the shared `.panel-tabs` rules further down, so the
+   left sidebar and the right research panel wear the same tab bar. */
 
 .sidebar-pin-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  flex-shrink: 0;
-  margin-left: auto;
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 0 4px;
   opacity: 0.6;
   transition:
     opacity 0.15s,
@@ -1452,31 +1402,32 @@ body,
   overflow-x: hidden;
 }
 
-.sidebar-exit-left {
+/* Tab-swipe transition, shared by the sidebar and the research panel. */
+.panel-slide-exit-left,
+.panel-slide-exit-right {
   transition:
     transform 100ms ease-in,
     opacity 100ms ease-in;
+  opacity: 0;
+}
+
+.panel-slide-exit-left {
   transform: translateX(-24px);
-  opacity: 0;
 }
 
-.sidebar-exit-right {
-  transition:
-    transform 100ms ease-in,
-    opacity 100ms ease-in;
+.panel-slide-exit-right {
   transform: translateX(24px);
-  opacity: 0;
 }
 
-.sidebar-enter-left {
-  animation: sidebar-enter-from-left 120ms ease-out;
+.panel-slide-enter-left {
+  animation: panel-slide-from-left 120ms ease-out;
 }
 
-.sidebar-enter-right {
-  animation: sidebar-enter-from-right 120ms ease-out;
+.panel-slide-enter-right {
+  animation: panel-slide-from-right 120ms ease-out;
 }
 
-@keyframes sidebar-enter-from-left {
+@keyframes panel-slide-from-left {
   from {
     transform: translateX(-16px);
     opacity: 0;
@@ -1488,7 +1439,7 @@ body,
   }
 }
 
-@keyframes sidebar-enter-from-right {
+@keyframes panel-slide-from-right {
   from {
     transform: translateX(16px);
     opacity: 0;
@@ -1563,7 +1514,7 @@ body,
   width: 3px;
   height: 34px;
   background: var(--text-secondary);
-  border-radius: 999px;
+  border-radius: var(--ui-radius-pill);
   content: '';
   opacity: 0.28;
   pointer-events: none;
@@ -1638,7 +1589,7 @@ body,
 
 /* File Tree */
 .file-tree {
-  padding: 4px 0;
+  padding: var(--space-4) 0;
 }
 
 .file-tree-virtualized {
@@ -1675,9 +1626,9 @@ body,
 .file-tree-item {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 12px;
-  font-size: 13px;
+  gap: var(--space-4);
+  padding: 3px var(--space-12);
+  font-size: var(--font-base);
   cursor: pointer;
   transition: background-color 0.1s;
   min-width: 0;
@@ -1753,7 +1704,7 @@ body,
   border: none;
   color: var(--text-kbd);
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   transition:
     color 0.12s,
     background-color 0.12s,
@@ -1797,9 +1748,9 @@ body,
 
 .file-tree-git {
   margin-left: auto;
-  font-size: 10px;
+  font-size: var(--font-xs);
   flex-shrink: 0;
-  padding-left: 4px;
+  padding-left: var(--space-4);
 }
 
 .file-tree-git.added {
@@ -1821,18 +1772,18 @@ body,
 .file-tree-header {
   display: flex;
   justify-content: flex-end;
-  gap: 2px;
-  padding: 2px 8px;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-8);
   border-bottom: 1px solid var(--border);
 }
 
 .file-tree-header-btn {
   background: none;
   border: 1px solid var(--border);
-  border-radius: 3px;
+  border-radius: var(--ui-radius-subtle);
   color: var(--text-secondary);
-  font-size: 12px;
-  padding: 1px 6px;
+  font-size: var(--font-md);
+  padding: 1px var(--space-6);
   cursor: pointer;
   line-height: 1.4;
 }
@@ -1857,11 +1808,11 @@ body,
   background: none;
   border: none;
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: var(--font-sm);
   padding: 0 3px;
   cursor: pointer;
   line-height: 1;
-  border-radius: 2px;
+  border-radius: var(--ui-radius-subtle);
 }
 
 .file-tree-action-btn:hover {
@@ -1887,10 +1838,10 @@ body,
   min-width: 0;
   background: var(--bg-input);
   border: 1px solid var(--accent);
-  border-radius: 2px;
+  border-radius: var(--ui-radius-subtle);
   color: var(--text-primary);
-  font-size: 13px;
-  padding: 1px 4px;
+  font-size: var(--font-base);
+  padding: 1px var(--space-4);
   outline: none;
   font-family: inherit;
 }
@@ -1916,7 +1867,7 @@ body,
   gap: 0;
   padding: 0;
   height: 100%;
-  font-size: 13px;
+  font-size: var(--font-base);
   color: var(--text-secondary);
   background-color: var(--tab-inactive-bg);
   border-right: 1px solid var(--border);
@@ -1930,9 +1881,9 @@ body,
   display: flex;
   align-items: center;
   align-self: stretch;
-  gap: 6px;
+  gap: var(--space-6);
   min-width: 0;
-  padding: 0 4px 0 12px;
+  padding: 0 var(--space-4) 0 var(--space-12);
   color: inherit;
   background: none;
   border: none;
@@ -1968,14 +1919,14 @@ body,
   justify-content: center;
   width: 24px;
   height: 24px;
-  margin-right: 4px;
-  font-size: 14px;
+  margin-right: var(--space-4);
+  font-size: var(--font-lg);
   color: var(--text-secondary);
   background: none;
   border: none;
   padding: 0;
   cursor: pointer;
-  border-radius: 3px;
+  border-radius: var(--ui-radius-subtle);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.1s;
@@ -1996,14 +1947,14 @@ body,
 
 /* Git Panel */
 .git-panel {
-  padding: 8px 0;
+  padding: var(--space-8) 0;
 }
 
 .git-remote-section {
-  margin: 0 8px 10px;
-  padding: 8px;
+  margin: 0 var(--space-8) 10px;
+  padding: var(--space-8);
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--ui-radius-control);
   background: var(--bg-secondary);
 }
 
@@ -2016,7 +1967,7 @@ body,
 
 .git-remote-header {
   justify-content: space-between;
-  gap: 6px;
+  gap: var(--space-6);
 }
 
 .git-remote-summary {
@@ -2029,7 +1980,7 @@ body,
   max-width: 100%;
   overflow: hidden;
   color: var(--text-primary);
-  font-size: 12px;
+  font-size: var(--font-md);
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2039,19 +1990,19 @@ body,
 .git-remote-hint,
 .git-remote-message {
   color: var(--text-secondary);
-  font-size: 10px;
+  font-size: var(--font-xs);
 }
 
 .git-remote-hint {
-  margin: 6px 0 0;
+  margin: var(--space-6) 0 0;
   line-height: 1.35;
 }
 
 .git-remote-icon-btn {
   display: inline-flex;
-  padding: 4px;
+  padding: var(--space-4);
   border: 0;
-  border-radius: 3px;
+  border-radius: var(--ui-radius-subtle);
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
@@ -2063,8 +2014,8 @@ body,
 }
 
 .git-remote-actions {
-  gap: 4px;
-  margin-top: 8px;
+  gap: var(--space-4);
+  margin-top: var(--space-8);
 }
 
 .git-remote-actions button {
@@ -2072,14 +2023,14 @@ body,
   flex: 1;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: var(--space-4);
   min-width: 0;
-  padding: 5px 4px;
+  padding: 5px var(--space-4);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-size: 10px;
+  font-size: var(--font-xs);
   cursor: pointer;
 }
 
@@ -2114,31 +2065,31 @@ body,
 }
 
 .git-section {
-  margin-bottom: 8px;
+  margin-bottom: var(--space-8);
 }
 
 .git-section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 12px;
-  font-size: 11px;
+  padding: var(--space-4) var(--space-12);
+  font-size: var(--font-sm);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text-secondary);
 }
 
 .git-section-header span:last-child {
-  font-size: 10px;
+  font-size: var(--font-xs);
   color: var(--text-kbd);
 }
 
 .git-file {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 12px 3px 20px;
-  font-size: 13px;
+  gap: var(--space-6);
+  padding: 3px var(--space-12) 3px var(--space-20);
+  font-size: var(--font-base);
   cursor: pointer;
   transition: background-color 0.1s;
 }
@@ -2149,7 +2100,7 @@ body,
 
 .git-file-status {
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: var(--font-sm);
   width: 16px;
   text-align: center;
   font-weight: bold;
@@ -2184,8 +2135,8 @@ body,
   border: none;
   color: var(--text-secondary);
   cursor: pointer;
-  font-size: 14px;
-  padding: 0 4px;
+  font-size: var(--font-lg);
+  padding: 0 var(--space-4);
 }
 
 .git-file:hover .git-file-action {
@@ -2197,19 +2148,19 @@ body,
 }
 
 .git-commit-section {
-  padding: 8px 12px;
+  padding: var(--space-8) var(--space-12);
   border-top: 1px solid var(--border);
 }
 
 .git-commit-input {
   width: 100%;
-  padding: 6px 8px;
-  font-size: 13px;
+  padding: var(--space-6) var(--space-8);
+  font-size: var(--font-base);
   font-family: inherit;
   background-color: var(--bg-input);
   color: var(--text-primary);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   resize: none;
 }
 
@@ -2220,13 +2171,13 @@ body,
 
 .git-commit-btn {
   width: 100%;
-  margin-top: 6px;
-  padding: 6px;
-  font-size: 13px;
+  margin-top: var(--space-6);
+  padding: var(--space-6);
+  font-size: var(--font-base);
   background-color: var(--accent);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
 }
 
@@ -2240,8 +2191,8 @@ body,
 }
 
 .git-empty {
-  padding: 12px;
-  font-size: 13px;
+  padding: var(--space-12);
+  font-size: var(--font-base);
   color: var(--text-secondary);
   text-align: center;
 }
@@ -2262,8 +2213,8 @@ body,
 
 .modal {
   background-color: var(--modal-bg);
-  border-radius: 8px;
-  padding: 24px;
+  border-radius: var(--ui-radius-large);
+  padding: var(--space-24);
   max-width: 700px;
   width: 90%;
   max-height: 80vh;
@@ -2272,28 +2223,28 @@ body,
 }
 
 .modal h2 {
-  font-size: 18px;
-  margin-bottom: 4px;
+  font-size: var(--font-2xl);
+  margin-bottom: var(--space-4);
   color: var(--text-primary);
 }
 
 .modal p {
-  font-size: 13px;
+  font-size: var(--font-base);
   color: var(--text-secondary);
-  margin-bottom: 16px;
+  margin-bottom: var(--space-16);
 }
 
 .template-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 12px;
+  gap: var(--space-12);
 }
 
 .template-card {
-  padding: 16px;
+  padding: var(--space-16);
   background-color: var(--card-bg);
   border: 1px solid var(--card-border);
-  border-radius: 6px;
+  border-radius: var(--ui-radius-panel);
   cursor: pointer;
   transition:
     background-color 0.15s,
@@ -2306,13 +2257,13 @@ body,
 }
 
 .template-card h3 {
-  font-size: 14px;
-  margin-bottom: 4px;
+  font-size: var(--font-lg);
+  margin-bottom: var(--space-4);
   color: var(--text-primary);
 }
 
 .template-card p {
-  font-size: 12px;
+  font-size: var(--font-md);
   color: var(--text-secondary);
   margin-bottom: 0;
 }
@@ -2328,10 +2279,10 @@ body,
   width: 22px;
   height: 22px;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   background: var(--bg-hover);
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: var(--font-md);
   cursor: pointer;
   opacity: 0;
   transition:
@@ -2353,17 +2304,17 @@ body,
 
 .template-actions {
   display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: var(--space-8);
+  margin-bottom: var(--space-12);
 }
 
 .template-action-btn {
-  padding: 6px 14px;
+  padding: var(--space-6) 14px;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   background: var(--bg-input);
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: var(--font-base);
   cursor: pointer;
   transition: background-color 0.15s;
 }
@@ -2378,10 +2329,10 @@ body,
 }
 
 .template-section-label {
-  font-size: 13px;
+  font-size: var(--font-base);
   font-weight: 600;
   color: var(--text-secondary);
-  margin: 16px 0 8px;
+  margin: var(--space-16) 0 var(--space-8);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -2390,13 +2341,13 @@ body,
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  margin-bottom: 12px;
+  padding: var(--space-8) var(--space-12);
+  margin-bottom: var(--space-12);
   background: rgba(244, 71, 71, 0.15);
   border: 1px solid var(--error);
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   color: var(--error);
-  font-size: 13px;
+  font-size: var(--font-base);
 }
 
 .template-error button {
@@ -2404,29 +2355,29 @@ body,
   border: none;
   color: var(--error);
   cursor: pointer;
-  font-size: 16px;
-  padding: 0 0 0 8px;
+  font-size: var(--font-xl);
+  padding: 0 0 0 var(--space-8);
 }
 
 .template-add-form {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 16px;
-  padding: 12px;
+  gap: var(--space-8);
+  margin-bottom: var(--space-16);
+  padding: var(--space-12);
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--ui-radius-panel);
 }
 
 .template-add-form input,
 .template-add-form textarea {
-  padding: 8px 10px;
+  padding: var(--space-8) 10px;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   background: var(--bg-input);
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: var(--font-base);
   font-family: inherit;
   resize: vertical;
 }
@@ -2441,7 +2392,7 @@ body,
   float: right;
   background: none;
   border: none;
-  font-size: 20px;
+  font-size: var(--font-3xl);
   color: var(--text-secondary);
   cursor: pointer;
 }
@@ -2452,21 +2403,21 @@ body,
 
 /* Bib Panel */
 .bib-panel {
-  padding: 4px 0;
+  padding: var(--space-4) 0;
 }
 
 .bib-search {
-  padding: 4px 12px 8px;
+  padding: var(--space-4) var(--space-12) var(--space-8);
 }
 
 .bib-search input {
   width: 100%;
-  padding: 4px 8px;
-  font-size: 13px;
+  padding: var(--space-4) var(--space-8);
+  font-size: var(--font-base);
   background-color: var(--bg-input);
   color: var(--text-primary);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
 }
 
 .bib-search input:focus {
@@ -2477,9 +2428,9 @@ body,
 .bib-entry {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 4px 12px;
-  font-size: 13px;
+  gap: var(--space-8);
+  padding: var(--space-4) var(--space-12);
+  font-size: var(--font-base);
   cursor: pointer;
   transition: background-color 0.1s;
 }
@@ -2492,7 +2443,7 @@ body,
   flex-shrink: 0;
   color: var(--accent);
   font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-  font-size: 12px;
+  font-size: var(--font-md);
 }
 
 .bib-details {
@@ -2501,19 +2452,19 @@ body,
 }
 
 .bib-title {
-  font-size: 13px;
+  font-size: var(--font-base);
   color: var(--text-primary);
   word-break: break-word;
 }
 
 .bib-meta {
-  font-size: 11px;
+  font-size: var(--font-sm);
   color: var(--text-secondary);
 }
 
 /* Structure Panel */
 .outline-panel {
-  padding: 6px 0;
+  padding: var(--space-6) 0;
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -2521,21 +2472,21 @@ body,
 .outline-panel-header {
   display: flex;
   justify-content: flex-end;
-  padding: 2px 8px 4px;
+  padding: var(--space-2) var(--space-8) var(--space-4);
   border-bottom: 1px solid var(--border);
-  margin-bottom: 2px;
+  margin-bottom: var(--space-2);
 }
 
 .outline-highlight-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 8px;
-  font-size: 11px;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-8);
+  font-size: var(--font-sm);
   color: var(--text-secondary);
   background: none;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
   transition:
     background-color 0.12s,
@@ -2556,9 +2507,9 @@ body,
 .outline-item {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  font-size: 13px;
+  gap: var(--space-4);
+  padding: var(--space-4) 10px;
+  font-size: var(--font-base);
   cursor: pointer;
   min-width: 0;
   transition: background-color 0.12s;
@@ -2599,12 +2550,12 @@ body,
   color: var(--text-secondary);
   cursor: pointer;
   padding: 0;
-  font-size: 8px;
+  font-size: var(--font-2xs);
   transition:
     transform 0.15s ease,
     color 0.1s;
   transform: rotate(0deg);
-  border-radius: 3px;
+  border-radius: var(--ui-radius-subtle);
 }
 
 .outline-toggle:hover {
@@ -2627,7 +2578,7 @@ body,
   flex-shrink: 0;
   width: 18px;
   text-align: center;
-  font-size: 13px;
+  font-size: var(--font-base);
   font-weight: 600;
   line-height: 1;
 }
@@ -2647,7 +2598,7 @@ body,
 
 .outline-icon-label {
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: var(--font-sm);
 }
 
 .outline-icon-default {
@@ -2703,13 +2654,13 @@ body,
 /* Detail badge (label name, e.g. sec:intro) */
 .outline-detail {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: var(--font-xs);
   font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
   color: var(--text-kbd);
-  margin-left: 6px;
-  padding: 1px 6px;
+  margin-left: var(--space-6);
+  padding: 1px var(--space-6);
   background-color: var(--bg-hover);
-  border-radius: 8px;
+  border-radius: var(--ui-radius-large);
   max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2721,11 +2672,11 @@ body,
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
-  padding: 8px 16px;
+  gap: var(--space-12);
+  padding: var(--space-8) var(--space-16);
   background-color: var(--update-banner-bg);
   border-bottom: 1px solid var(--update-banner-border);
-  font-size: 13px;
+  font-size: var(--font-base);
   color: var(--text-primary);
 }
 
@@ -2737,11 +2688,11 @@ body,
   z-index: var(--z-background-notification, 900);
   width: min(680px, calc(100vw - 32px));
   max-height: min(360px, calc(100vh - 80px));
-  padding: 10px 12px;
+  padding: 10px var(--space-12);
   overflow-y: auto;
   background: var(--ui-surface-raised, var(--update-banner-bg));
   border: 1px solid var(--update-banner-border);
-  border-radius: var(--ui-radius-panel, 8px);
+  border-radius: var(--ui-radius-panel);
   box-shadow: var(--ui-shadow-popover, 0 8px 28px var(--shadow-color));
   transform: translateX(-50%);
   animation: update-dock-enter 160ms ease-out;
@@ -2784,12 +2735,12 @@ body,
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 4px 12px;
-  font-size: 12px;
+  padding: var(--space-4) var(--space-12);
+  font-size: var(--font-md);
   background-color: var(--accent);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
 }
 
@@ -2811,7 +2762,7 @@ body,
 .update-banner .update-dismiss {
   background: none;
   color: var(--text-secondary);
-  padding: 0 4px;
+  padding: 0 var(--space-4);
 }
 
 .update-progress {
@@ -2819,7 +2770,7 @@ body,
   height: 4px;
   appearance: none;
   border: 0;
-  border-radius: 2px;
+  border-radius: var(--ui-radius-subtle);
   overflow: hidden;
   background-color: var(--progress-bar-bg);
 }
@@ -2851,7 +2802,7 @@ body,
 
 .app-update-notification .update-release-details {
   margin-left: 25px;
-  padding-top: 2px;
+  padding-top: var(--space-2);
   border-top: 1px solid var(--border);
 }
 
@@ -2862,13 +2813,13 @@ body,
 }
 
 .update-release-date {
-  margin-top: 6px;
-  font-size: 12px;
+  margin-top: var(--space-6);
+  font-size: var(--font-md);
 }
 
 .update-release-notes {
   max-height: 140px;
-  margin-top: 6px;
+  margin-top: var(--space-6);
   overflow: auto;
   white-space: pre-wrap;
 }
@@ -2887,7 +2838,7 @@ body,
   .app-update-notification {
     bottom: calc(var(--research-panel-bottom, 0px) + 6px);
     width: calc(100vw - 16px);
-    gap: 8px;
+    gap: var(--space-8);
   }
 
   .app-update-notification .update-banner-message {
@@ -2953,7 +2904,9 @@ body,
   display: none;
 }
 
-.research-panel-tabs,
+/* One tab strip for both panels: `.panel-tabs` is worn by the project sidebar
+   and by the research panel, so left and right match icon for icon. */
+.panel-tabs,
 .reference-source-tabs {
   display: flex;
   flex-shrink: 0;
@@ -2961,14 +2914,14 @@ body,
   border-bottom: 1px solid var(--border);
 }
 
-.research-panel-tabs > button,
+.panel-tabs > button,
 .reference-source-tabs > button {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 5px;
   min-height: 34px;
-  padding: 0 12px;
+  padding: 0 var(--space-12);
   color: var(--text-secondary);
   background: transparent;
   border: 0;
@@ -2980,14 +2933,25 @@ body,
     background-color 120ms ease;
 }
 
-.research-panel-tabs > [role='tab'] {
+/* Both strips sit at the top of their panel, so both stand a toolbar tall. */
+.panel-tabs > button {
+  min-height: var(--app-toolbar-height);
+}
+
+.panel-tabs > [role='tab'] {
   flex: 0 0 38px;
   min-width: 38px;
   padding-inline: 0;
-  font-size: 11px;
+  font-size: var(--font-sm);
   white-space: nowrap;
 }
 
+.panel-tabs > button:hover,
+.reference-source-tabs > button:hover {
+  color: var(--text-primary);
+}
+
+.sidebar-tab-label,
 .research-panel-tab-label {
   position: absolute;
   width: 1px;
@@ -3003,23 +2967,24 @@ body,
 .research-panel-tab-badge {
   min-width: 16px;
   height: 16px;
-  padding: 0 4px;
+  padding: 0 var(--space-4);
   color: var(--text-on-accent, #fff);
   background: var(--error);
-  border-radius: 8px;
-  font-size: 9px;
+  border-radius: var(--ui-radius-large);
+  font-size: var(--font-2xs);
   font-weight: 700;
   line-height: 16px;
   text-align: center;
 }
 
-.research-panel-tabs > button.active,
+.panel-tabs > button.active,
+.panel-tabs > [role='tab'][aria-selected='true'],
 .reference-source-tabs > button.active {
   color: var(--text-primary);
   border-bottom-color: var(--accent);
 }
 
-.research-panel-tabs > button.drop-active {
+.panel-tabs > button.drop-active {
   color: var(--text-primary);
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   border-bottom-color: var(--accent);
@@ -3027,16 +2992,17 @@ body,
   outline-offset: -3px;
 }
 
-.research-panel-tool-separator {
+.panel-tool-separator {
   align-self: stretch;
   width: 1px;
-  margin: 7px 2px;
+  margin: 7px var(--space-2);
   background: var(--border);
 }
 
-.research-panel-tabs .research-panel-close {
+.panel-tabs .panel-tool-btn {
+  flex-shrink: 0;
   margin-left: auto;
-  padding-inline: 10px;
+  padding-inline: var(--space-10);
 }
 
 .research-panel-content,
@@ -3072,7 +3038,7 @@ body,
 
   .log-panel-header {
     justify-content: flex-end;
-    padding-inline: 8px;
+    padding-inline: var(--space-8);
   }
 }
 
@@ -3095,12 +3061,12 @@ body,
   flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-8);
   min-height: 34px;
-  padding: 0 10px;
+  padding: 0 var(--space-10);
   color: var(--text-secondary);
   border-bottom: 1px solid var(--border);
-  font-size: 10px;
+  font-size: var(--font-xs);
 }
 
 .reference-manager-secondary-header > button,
@@ -3112,11 +3078,11 @@ body,
 }
 
 .reference-manager-secondary-header > button {
-  padding: 4px 6px;
+  padding: var(--space-4) var(--space-6);
   color: var(--text-primary);
   background: transparent;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
 }
 
@@ -3133,7 +3099,7 @@ body,
   padding: 9px;
   background: color-mix(in srgb, var(--accent) 5%, var(--bg-secondary));
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--ui-radius-panel);
 }
 
 .reference-health-heading,
@@ -3145,24 +3111,24 @@ body,
 .reference-health-heading {
   align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--space-10);
 }
 
 .reference-health-heading > div {
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-2);
 }
 
 .reference-health-heading strong {
   color: var(--text-primary);
-  font-size: 11px;
+  font-size: var(--font-sm);
 }
 
 .reference-health-heading span,
 .reference-health-heading small,
 .reference-health-issues {
   color: var(--text-secondary);
-  font-size: 9px;
+  font-size: var(--font-2xs);
 }
 
 .reference-health-heading small {
@@ -3173,7 +3139,7 @@ body,
 .reference-health-issues {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 9px;
+  gap: var(--space-4) 9px;
   color: var(--warning, #c98600);
 }
 
@@ -3190,7 +3156,7 @@ body,
 
 .reference-health-filters {
   display: flex;
-  gap: 4px;
+  gap: var(--space-4);
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -3203,13 +3169,13 @@ body,
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: 4px;
-  padding: 3px 6px;
+  gap: var(--space-4);
+  padding: 3px var(--space-6);
   color: var(--text-secondary);
   background: transparent;
   border: 1px solid var(--border);
-  border-radius: 999px;
-  font-size: 9px;
+  border-radius: var(--ui-radius-pill);
+  font-size: var(--font-2xs);
   cursor: pointer;
 }
 
@@ -3227,13 +3193,13 @@ body,
   display: inline-flex;
   align-self: flex-start;
   align-items: center;
-  gap: 4px;
-  padding: 3px 6px;
+  gap: var(--space-4);
+  padding: 3px var(--space-6);
   color: var(--text-secondary);
   background: transparent;
   border: 1px solid var(--border);
-  border-radius: 5px;
-  font-size: 9px;
+  border-radius: var(--ui-radius-control);
+  font-size: var(--font-2xs);
   cursor: pointer;
 }
 
@@ -3246,7 +3212,7 @@ body,
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-6);
 }
 
 .reference-health-card.broken {
@@ -3255,7 +3221,7 @@ body,
 
 .reference-link-state {
   color: var(--text-secondary);
-  font-size: 9px;
+  font-size: var(--font-2xs);
 }
 
 .reference-link-state.linked {
@@ -3264,34 +3230,34 @@ body,
 
 .reference-warning {
   color: var(--error);
-  font-size: 11px;
+  font-size: var(--font-sm);
 }
 
 .reference-card > .reference-citation-count {
   align-self: flex-start;
   min-height: 0;
-  padding: 2px 5px;
+  padding: var(--space-2) 5px;
   color: var(--accent);
   background: color-mix(in srgb, var(--accent) 8%, transparent);
   border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
-  font-size: 9px;
+  font-size: var(--font-2xs);
 }
 
 .reference-citation-locations {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--space-4);
 }
 
 .reference-citation-locations > button {
   max-width: 100%;
-  padding: 2px 5px;
+  padding: var(--space-2) 5px;
   overflow: hidden;
   color: var(--text-secondary);
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: 4px;
-  font-size: 9px;
+  border-radius: var(--ui-radius-control);
+  font-size: var(--font-2xs);
   cursor: pointer;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -3300,52 +3266,52 @@ body,
 .reference-citation-locations > small {
   flex-basis: 100%;
   color: var(--text-muted);
-  font-size: 9px;
+  font-size: var(--font-2xs);
 }
 
 .reference-duplicate-warning {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 5px 6px;
+  gap: var(--space-2);
+  padding: 5px var(--space-6);
   color: var(--warning, #c98600);
   background: color-mix(in srgb, var(--warning, #c98600) 7%, transparent);
-  border-radius: 4px;
-  font-size: 9px;
+  border-radius: var(--ui-radius-control);
+  font-size: var(--font-2xs);
 }
 
 .reference-duplicate-warning > small {
   color: var(--text-secondary);
-  font-size: 8px;
+  font-size: var(--font-2xs);
 }
 
 .reference-online-fallback {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  margin: 10px 0;
-  padding: 14px 10px;
+  gap: var(--space-8);
+  margin: var(--space-10) 0;
+  padding: var(--space-14) var(--space-10);
   color: var(--text-secondary);
   border: 1px dashed var(--border);
-  border-radius: 7px;
-  font-size: 10px;
+  border-radius: var(--ui-radius-panel);
+  font-size: var(--font-xs);
   text-align: center;
 }
 
 .reference-online-fallback > button {
-  padding: 5px 8px;
+  padding: 5px var(--space-8);
   color: var(--text-primary);
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
 }
 
 .reference-source-tabs > button {
   flex: 1;
   min-width: 0;
-  font-size: 11px;
+  font-size: var(--font-sm);
 }
 
 .reference-source-content > .bib-panel,
@@ -3360,7 +3326,7 @@ body,
 .research-profile-panel {
   box-sizing: border-box;
   height: 100%;
-  padding: 12px;
+  padding: var(--space-12);
   overflow-y: auto;
 }
 
@@ -3374,7 +3340,7 @@ body,
 .research-reference-view > .reference-card-list {
   flex: 1 1 auto;
   min-height: 0;
-  padding-right: 2px;
+  padding-right: var(--space-2);
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -3382,7 +3348,7 @@ body,
 }
 
 .submission-check-view {
-  gap: 10px;
+  gap: var(--space-10);
   overflow-y: auto;
 }
 
@@ -3401,7 +3367,7 @@ body,
   flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .submission-check-toolbar > div,
@@ -3411,14 +3377,14 @@ body,
 
 .submission-check-toolbar > div > strong {
   color: var(--text-primary);
-  font-size: 12px;
+  font-size: var(--font-md);
 }
 
 .submission-check-toolbar > div > span {
   max-width: 210px;
   overflow: hidden;
   color: var(--text-secondary);
-  font-size: 9px;
+  font-size: var(--font-2xs);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -3433,8 +3399,8 @@ body,
   color: var(--text-primary);
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: 5px;
-  font-size: 10px;
+  border-radius: var(--ui-radius-control);
+  font-size: var(--font-xs);
   cursor: pointer;
 }
 
@@ -3447,11 +3413,11 @@ body,
   flex: 0 0 auto;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  padding: 10px;
+  gap: var(--space-8);
+  padding: var(--space-10);
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--ui-radius-panel);
 }
 
 .submission-check-summary.passed > svg {
@@ -3471,12 +3437,12 @@ body,
 
 .submission-check-summary > div > strong {
   color: var(--text-primary);
-  font-size: 11px;
+  font-size: var(--font-sm);
 }
 
 .submission-check-summary > div > span {
   color: var(--text-secondary);
-  font-size: 9px;
+  font-size: var(--font-2xs);
 }
 
 .submission-check-summary dl {
@@ -3491,11 +3457,11 @@ body,
   flex: 1;
   align-items: center;
   justify-content: space-between;
-  gap: 4px;
-  padding: 4px 6px;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-6);
   background: color-mix(in srgb, currentColor 5%, transparent);
-  border-radius: 4px;
-  font-size: 9px;
+  border-radius: var(--ui-radius-control);
+  font-size: var(--font-2xs);
 }
 
 .submission-check-summary dt,
@@ -3527,13 +3493,13 @@ body,
   display: flex;
   flex: 1 0 auto;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-10);
 }
 
 .submission-check-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-4);
 }
 
 .submission-check-group h3 {
@@ -3542,7 +3508,7 @@ body,
   justify-content: space-between;
   margin: 0;
   color: var(--text-secondary);
-  font-size: 9px;
+  font-size: var(--font-2xs);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -3561,7 +3527,7 @@ body,
   color: var(--text-primary);
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--ui-radius-control);
   font: inherit;
   text-align: left;
 }
@@ -3582,21 +3548,21 @@ button.submission-check-finding:hover {
 
 .submission-check-finding-copy {
   flex: 1;
-  gap: 4px;
+  gap: var(--space-4);
 }
 
 .submission-check-finding-copy > strong {
   color: var(--text-primary);
-  font-size: 10px;
+  font-size: var(--font-xs);
   font-weight: 500;
   line-height: 1.35;
 }
 
 .submission-check-finding-copy > span {
   flex-wrap: wrap;
-  gap: 4px 8px;
+  gap: var(--space-4) var(--space-8);
   color: var(--text-secondary);
-  font-size: 9px;
+  font-size: var(--font-2xs);
 }
 
 .submission-check-finding-copy code {
@@ -3612,7 +3578,7 @@ button.submission-check-finding:hover {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: var(--space-6);
   color: var(--text-secondary);
   text-align: center;
 }
@@ -3623,12 +3589,12 @@ button.submission-check-finding:hover {
 
 .submission-check-empty > strong {
   color: var(--text-primary);
-  font-size: 11px;
+  font-size: var(--font-sm);
 }
 
 .submission-check-empty > span {
   max-width: 260px;
-  font-size: 9px;
+  font-size: var(--font-2xs);
 }
 
 .submission-check-empty.compact {
@@ -3642,24 +3608,24 @@ button.submission-check-finding:hover {
 .research-profile-panel {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-10);
 }
 
 .research-profile-panel > .research-muted {
-  margin: 0 0 2px;
+  margin: 0 0 var(--space-2);
 }
 
 .research-profile-section {
   flex: 0 0 auto;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--ui-radius-panel);
 }
 
 .research-profile-section > summary {
-  padding: 10px;
+  padding: var(--space-10);
   color: var(--text-primary);
-  font-size: 11px;
+  font-size: var(--font-sm);
   font-weight: 700;
   cursor: pointer;
   user-select: none;
@@ -3673,7 +3639,7 @@ button.submission-check-finding:hover {
   display: flex;
   flex-direction: column;
   gap: 9px;
-  padding: 10px;
+  padding: var(--space-10);
 }
 
 .research-profile-section-content > .research-muted {
@@ -3683,16 +3649,16 @@ button.submission-check-finding:hover {
 .research-profile-field-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .research-profile-field {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  gap: 4px;
+  gap: var(--space-4);
   color: var(--text-secondary);
-  font-size: 10px;
+  font-size: var(--font-xs);
 }
 
 .research-profile-field.wide {
@@ -3705,13 +3671,13 @@ button.submission-check-finding:hover {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  padding: 7px 8px;
+  padding: 7px var(--space-8);
   color: var(--text-primary);
   background: var(--bg-input);
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--ui-radius-control);
   font: inherit;
-  font-size: 11px;
+  font-size: var(--font-sm);
   outline: 0;
 }
 
@@ -3729,24 +3695,24 @@ button.submission-check-finding:hover {
 .research-profile-items {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .research-profile-card {
-  padding: 8px;
+  padding: var(--space-8);
   background: var(--bg-primary);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--ui-radius-panel);
 }
 
 .research-profile-card-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: var(--space-8);
+  margin-bottom: var(--space-8);
   color: var(--text-primary);
-  font-size: 11px;
+  font-size: var(--font-sm);
 }
 
 .research-profile-card-heading strong {
@@ -3765,7 +3731,7 @@ button.submission-check-finding:hover {
   color: var(--text-secondary);
   background: transparent;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
 }
 
@@ -3781,13 +3747,13 @@ button.submission-check-finding:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: var(--space-6);
   min-height: 30px;
-  padding: 0 10px;
+  padding: 0 var(--space-10);
   color: var(--text-primary);
   background: var(--bg-input);
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
 }
 
@@ -3808,10 +3774,10 @@ button.submission-check-finding:hover {
 .research-profile-index-result {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 10px;
-  margin-top: 8px;
+  gap: var(--space-4) 10px;
+  margin-top: var(--space-8);
   color: var(--text-secondary);
-  font-size: 10px;
+  font-size: var(--font-xs);
 }
 
 .research-profile-index-controls {
@@ -3820,8 +3786,8 @@ button.submission-check-finding:hover {
 
 .research-profile-source-actions {
   display: flex;
-  gap: 6px;
-  margin-bottom: 6px;
+  gap: var(--space-6);
+  margin-bottom: var(--space-6);
 }
 
 .research-profile-index-result .warning {
@@ -3831,7 +3797,7 @@ button.submission-check-finding:hover {
 .research-profile-index-error {
   margin-top: 7px;
   color: var(--error);
-  font-size: 10px;
+  font-size: var(--font-xs);
   overflow-wrap: anywhere;
 }
 
@@ -3840,8 +3806,8 @@ button.submission-check-finding:hover {
   bottom: -12px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 0 12px;
+  gap: var(--space-8);
+  padding: 10px 0 var(--space-12);
   background: var(--sidebar-bg);
 }
 
@@ -3859,7 +3825,7 @@ button.submission-check-finding:hover {
 
 .research-profile-save-status {
   color: var(--text-secondary);
-  font-size: 10px;
+  font-size: var(--font-xs);
 }
 
 .research-search {
@@ -3867,11 +3833,11 @@ button.submission-check-finding:hover {
   align-items: center;
   gap: 7px;
   padding: 7px 9px;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-12);
   color: var(--text-secondary);
   background: var(--bg-input);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--ui-radius-panel);
 }
 
 .research-search:focus-within {
@@ -3892,9 +3858,9 @@ button.submission-check-finding:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 12px 0 7px;
+  margin: var(--space-12) 0 7px;
   color: var(--text-secondary);
-  font-size: 10px;
+  font-size: var(--font-xs);
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -3910,35 +3876,35 @@ button.submission-check-finding:hover {
 .research-muted,
 .research-empty {
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: var(--font-md);
   line-height: 1.5;
 }
 
 .research-empty {
-  padding: 20px 8px;
+  padding: var(--space-20) var(--space-8);
   text-align: center;
 }
 
 .reference-card-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .reference-card {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 10px;
+  gap: var(--space-4);
+  padding: var(--space-10);
   background: var(--bg-hover);
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: var(--ui-radius-panel);
   cursor: grab;
 }
 
 .reference-card strong {
   color: var(--text-primary);
-  font-size: 12px;
+  font-size: var(--font-md);
   line-height: 1.35;
 }
 
@@ -3946,7 +3912,7 @@ button.submission-check-finding:hover {
 .reference-card code {
   overflow: hidden;
   color: var(--text-secondary);
-  font-size: 10px;
+  font-size: var(--font-xs);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -3959,12 +3925,12 @@ button.submission-check-finding:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: var(--space-6);
   min-height: 28px;
   color: var(--text-primary);
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
 }
 
@@ -3981,8 +3947,8 @@ button.submission-check-finding:hover {
 .research-config-row {
   display: flex;
   justify-content: flex-end;
-  gap: 6px;
-  margin-bottom: 8px;
+  gap: var(--space-6);
+  margin-bottom: var(--space-8);
 }
 
 .research-config-row button {
@@ -3993,23 +3959,23 @@ button.submission-check-finding:hover {
   color: var(--text-secondary);
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
 }
 
 .zotero-collection-tree {
   max-height: 180px;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-8);
   overflow: auto;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--ui-radius-panel);
 }
 
 .zotero-collection-tree > button {
   display: flex;
   align-items: center;
   width: 100%;
-  gap: 8px;
+  gap: var(--space-8);
   min-height: 28px;
   color: var(--text-primary);
   background: transparent;
@@ -4035,7 +4001,7 @@ button.submission-check-finding:hover {
 }
 
 .zotero-collection-tree > button small {
-  padding-right: 8px;
+  padding-right: var(--space-8);
   color: var(--text-secondary);
 }
 
@@ -4066,13 +4032,13 @@ button.submission-check-finding:hover {
 
 .zotero-show-more {
   width: 100%;
-  margin: -2px 0 8px;
-  padding: 5px 8px;
+  margin: -2px 0 var(--space-8);
+  padding: 5px var(--space-8);
   color: var(--text-secondary);
   background: transparent;
   border: 0;
   cursor: pointer;
-  font-size: 10px;
+  font-size: var(--font-xs);
 }
 
 .zotero-show-more:hover {
@@ -4084,38 +4050,38 @@ button.submission-check-finding:hover {
   display: flex;
   flex-direction: column;
   gap: 3px;
-  margin: 2px 0 8px;
-  padding: 8px 9px;
+  margin: var(--space-2) 0 var(--space-8);
+  padding: var(--space-8) 9px;
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--ui-radius-panel);
 }
 
 .zotero-inventory-summary > div {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .zotero-inventory-summary strong {
   overflow: hidden;
   color: var(--text-primary);
-  font-size: 11px;
+  font-size: var(--font-sm);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .zotero-inventory-summary span {
   color: var(--text-secondary);
-  font-size: 10px;
+  font-size: var(--font-xs);
 }
 
 .zotero-inventory-card > div:first-child {
   display: grid;
   grid-template-columns: 14px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-6);
 }
 
 .zotero-project-state {
@@ -4130,14 +4096,14 @@ button.submission-check-finding:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: var(--space-6);
   min-height: 30px;
   color: var(--text-secondary);
   background: transparent;
   border: 1px dashed var(--border);
-  border-radius: 6px;
+  border-radius: var(--ui-radius-panel);
   cursor: pointer;
-  font-size: 10px;
+  font-size: var(--font-xs);
 }
 
 .zotero-sync-preview {
@@ -4145,12 +4111,12 @@ button.submission-check-finding:hover {
   flex: 0 0 auto;
   flex-direction: column;
   gap: 7px;
-  margin-top: 8px;
-  padding: 10px;
+  margin-top: var(--space-8);
+  padding: var(--space-10);
   background: var(--bg-secondary);
   border: 1px solid var(--accent);
-  border-radius: 7px;
-  font-size: 11px;
+  border-radius: var(--ui-radius-panel);
+  font-size: var(--font-sm);
 }
 
 .zotero-sync-preview > span {
@@ -4167,11 +4133,11 @@ button.submission-check-finding:hover {
 }
 
 .zotero-sync-preview dl {
-  gap: 12px;
+  gap: var(--space-12);
 }
 
 .zotero-sync-preview dl > div {
-  gap: 4px;
+  gap: var(--space-4);
 }
 
 .zotero-sync-preview dd {
@@ -4183,7 +4149,7 @@ button.submission-check-finding:hover {
 .zotero-sync-preview-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 6px;
+  gap: var(--space-6);
 }
 
 .zotero-sync-preview-actions button {
@@ -4195,7 +4161,7 @@ button.submission-check-finding:hover {
   color: var(--text-primary);
   background: var(--bg-primary);
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
 }
 
@@ -4203,9 +4169,9 @@ button.submission-check-finding:hover {
   display: flex;
   align-items: flex-start;
   gap: 7px;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-12);
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: var(--font-sm);
   line-height: 1.4;
 }
 
@@ -4218,12 +4184,12 @@ button.submission-check-finding:hover {
   display: flex;
   align-items: center;
   width: 100%;
-  gap: 6px;
+  gap: var(--space-6);
   padding: 5px;
   color: var(--text-primary);
   background: transparent;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
   text-align: left;
 }
@@ -4237,31 +4203,31 @@ button.submission-check-finding:hover {
 }
 
 .zotero-collection-children {
-  padding-left: 14px;
+  padding-left: var(--space-14);
 }
 
 .research-sync-button {
   width: 100%;
-  margin-top: 8px;
+  margin-top: var(--space-8);
 }
 
 .research-inline-status,
 .research-status {
-  margin-top: 10px;
-  padding: 8px;
+  margin-top: var(--space-10);
+  padding: var(--space-8);
   overflow-wrap: anywhere;
   color: var(--text-secondary);
   background: var(--bg-input);
   border: 1px solid var(--border);
-  border-radius: 5px;
-  font-size: 10px;
+  border-radius: var(--ui-radius-control);
+  font-size: var(--font-xs);
   white-space: pre-wrap;
 }
 
 .research-primary-action {
   justify-content: flex-start;
   width: 100%;
-  padding: 10px;
+  padding: var(--space-10);
 }
 
 .research-primary-action span {
@@ -4278,7 +4244,7 @@ button.submission-check-finding:hover {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 7px;
-  margin-top: 12px;
+  margin-top: var(--space-12);
 }
 
 .research-chat-panel {
@@ -4294,7 +4260,7 @@ button.submission-check-finding:hover {
   align-items: center;
   justify-content: space-between;
   min-height: 38px;
-  padding: 0 1px 10px;
+  padding: 0 1px var(--space-10);
   border-bottom: 1px solid var(--border);
 }
 
@@ -4302,7 +4268,7 @@ button.submission-check-finding:hover {
   display: flex;
   min-width: 0;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .research-chat-brand-icon,
@@ -4319,14 +4285,14 @@ button.submission-check-finding:hover {
   height: 26px;
   background: color-mix(in srgb, var(--accent) 10%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
-  border-radius: 6px;
+  border-radius: var(--ui-radius-panel);
 }
 
 .research-chat-heading .research-section-heading {
   justify-content: flex-start;
   margin: 0;
   color: var(--text-primary);
-  font-size: 12px;
+  font-size: var(--font-md);
   letter-spacing: 0;
   line-height: 1.25;
   text-transform: none;
@@ -4335,10 +4301,10 @@ button.submission-check-finding:hover {
 .research-chat-subtitle {
   display: block;
   max-width: 260px;
-  margin-top: 2px;
+  margin-top: var(--space-2);
   overflow: hidden;
   color: var(--text-secondary);
-  font-size: 9px;
+  font-size: var(--font-2xs);
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -4354,7 +4320,7 @@ button.submission-check-finding:hover {
   color: var(--text-secondary);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 5px;
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
 }
 
@@ -4372,7 +4338,7 @@ button.submission-check-finding:hover {
 .research-chat-messages {
   flex: 1;
   min-height: 0;
-  padding: 14px 2px 12px;
+  padding: 14px var(--space-2) var(--space-12);
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
@@ -4385,7 +4351,7 @@ button.submission-check-finding:hover {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 28px 14px;
+  padding: 28px var(--space-14);
   color: var(--text-secondary);
   text-align: center;
 }
@@ -4393,7 +4359,7 @@ button.submission-check-finding:hover {
 .research-chat-empty-icon {
   width: 38px;
   height: 38px;
-  margin-bottom: 10px;
+  margin-bottom: var(--space-10);
   background: color-mix(in srgb, var(--accent) 9%, transparent);
   border-radius: 50%;
 }
@@ -4401,14 +4367,14 @@ button.submission-check-finding:hover {
 .research-chat-empty h3 {
   margin: 0;
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: var(--font-base);
   font-weight: 600;
 }
 
 .research-chat-empty p {
   max-width: 270px;
-  margin: 6px 0 0;
-  font-size: 11px;
+  margin: var(--space-6) 0 0;
+  font-size: var(--font-sm);
   line-height: 1.5;
 }
 
@@ -4416,18 +4382,18 @@ button.submission-check-finding:hover {
   display: grid;
   width: min(100%, 270px);
   gap: 5px;
-  margin-top: 14px;
+  margin-top: var(--space-14);
 }
 
 .research-chat-starters button {
   min-height: 30px;
-  padding: 6px 9px;
+  padding: var(--space-6) 9px;
   color: var(--text-secondary);
   background: transparent;
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
-  font-size: 10px;
+  font-size: var(--font-xs);
   text-align: left;
 }
 
@@ -4441,7 +4407,7 @@ button.submission-check-finding:hover {
 .research-chat-message {
   display: flex;
   flex-direction: column;
-  margin: 0 0 16px;
+  margin: 0 0 var(--space-16);
   padding: 0;
   color: var(--text-primary);
   background: transparent;
@@ -4459,22 +4425,23 @@ button.submission-check-finding:hover {
 
 .research-chat-message.user .research-chat-message-content {
   max-width: 85%;
-  padding: 8px 11px;
+  padding: var(--space-8) 11px;
   background: color-mix(in srgb, var(--accent) 9%, var(--bg-secondary));
   border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
-  border-radius: 12px 12px 2px 12px;
+  border-radius: var(--ui-radius-large) var(--ui-radius-large) var(--ui-radius-subtle)
+    var(--ui-radius-large);
 }
 
 .research-chat-message.assistant .research-chat-message-content {
   width: 100%;
-  padding: 0 2px;
+  padding: 0 var(--space-2);
 }
 
 .research-chat-message-author {
   display: flex;
   align-items: center;
   gap: 5px;
-  margin-bottom: 6px;
+  margin-bottom: var(--space-6);
   color: var(--text-secondary);
 }
 
@@ -4483,7 +4450,7 @@ button.submission-check-finding:hover {
 }
 
 .research-chat-message-author strong {
-  font-size: 10px;
+  font-size: var(--font-xs);
   font-weight: 600;
   letter-spacing: 0.01em;
 }
@@ -4493,7 +4460,7 @@ button.submission-check-finding:hover {
   margin-left: auto;
   overflow: hidden;
   color: color-mix(in srgb, var(--text-secondary) 85%, transparent);
-  font-size: 9px;
+  font-size: var(--font-2xs);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -4501,7 +4468,7 @@ button.submission-check-finding:hover {
 .research-chat-message-text {
   margin: 0;
   overflow-wrap: anywhere;
-  font-size: 13px;
+  font-size: var(--font-base);
   line-height: 1.6;
   white-space: pre-wrap;
 }
@@ -4517,17 +4484,17 @@ button.submission-check-finding:hover {
 .research-chat-sources > span {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  margin-bottom: 4px;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
   color: var(--text-secondary);
-  font-size: 10px;
+  font-size: var(--font-xs);
   font-weight: 600;
 }
 
 .research-chat-source-card {
   display: flex;
   min-width: 0;
-  gap: 8px;
+  gap: var(--space-8);
   align-items: center;
   justify-content: space-between;
   padding: 7px 0;
@@ -4550,34 +4517,34 @@ button.submission-check-finding:hover {
 }
 
 .research-chat-source-card b {
-  font-size: 11px;
+  font-size: var(--font-sm);
 }
 
 .research-chat-source-card small {
-  margin-top: 2px;
+  margin-top: var(--space-2);
   color: var(--text-secondary);
-  font-size: 9px;
+  font-size: var(--font-2xs);
 }
 
 .research-chat-source-actions {
   display: flex;
   flex-shrink: 0;
-  gap: 4px;
+  gap: var(--space-4);
 }
 
 .research-chat-source-actions button,
 .research-chat-insert-answer {
   display: inline-flex;
-  gap: 4px;
+  gap: var(--space-4);
   align-items: center;
   min-height: 26px;
-  padding: 4px 6px;
+  padding: var(--space-4) var(--space-6);
   color: var(--text-secondary);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
-  font-size: 9px;
+  font-size: var(--font-2xs);
 }
 
 .research-chat-source-actions button:hover:not(:disabled),
@@ -4597,17 +4564,17 @@ button.submission-check-finding:hover {
   display: flex;
   min-height: 28px;
   align-items: center;
-  margin-top: 4px;
+  margin-top: var(--space-4);
 }
 
 .research-chat-thinking {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-6);
   width: fit-content;
-  margin: 0 0 14px 2px;
+  margin: 0 0 14px var(--space-2);
   color: var(--text-secondary);
-  font-size: 10px;
+  font-size: var(--font-xs);
 }
 
 .research-chat-thinking > svg {
@@ -4658,8 +4625,8 @@ button.submission-check-finding:hover {
 .research-zotero-plan,
 .research-document-edit {
   flex-shrink: 0;
-  margin: 8px 0;
-  padding: 8px 10px;
+  margin: var(--space-8) 0;
+  padding: var(--space-8) 10px;
   background: transparent;
   border: 0;
   border-left: 2px solid var(--accent);
@@ -4683,36 +4650,36 @@ button.submission-check-finding:hover {
 
 .research-zotero-plan-heading strong,
 .research-document-edit-heading strong {
-  font-size: 12px;
+  font-size: var(--font-md);
 }
 
 .research-zotero-plan-heading span,
 .research-document-edit-heading span {
-  margin-top: 2px;
+  margin-top: var(--space-2);
   color: var(--text-secondary);
-  font-size: 9px;
+  font-size: var(--font-2xs);
 }
 
 .research-zotero-plan > p,
 .research-document-edit > p {
-  margin: 8px 0 5px;
+  margin: var(--space-8) 0 5px;
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: var(--font-sm);
 }
 
 .research-zotero-plan ol {
   max-height: 150px;
   margin: 0;
-  padding-left: 20px;
+  padding-left: var(--space-20);
   overflow-y: auto;
   color: var(--text-primary);
-  font-size: 10px;
+  font-size: var(--font-xs);
   line-height: 1.45;
 }
 
 .research-zotero-plan li + li {
-  margin-top: 4px;
-  padding-top: 4px;
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
   border-top: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
 }
 
@@ -4727,15 +4694,15 @@ button.submission-check-finding:hover {
 .research-zotero-plan-actions button,
 .research-document-edit-actions button {
   display: inline-flex;
-  gap: 4px;
+  gap: var(--space-4);
   align-items: center;
   padding: 5px 7px;
   color: var(--text-secondary);
   background: var(--bg-input);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
-  font-size: 10px;
+  font-size: var(--font-xs);
 }
 
 .research-zotero-plan-actions button.primary,
@@ -4752,15 +4719,15 @@ button.submission-check-finding:hover {
 
 .research-document-edit pre {
   max-height: 150px;
-  margin: 6px 0 0;
-  padding: 7px 8px;
+  margin: var(--space-6) 0 0;
+  padding: 7px var(--space-8);
   overflow: auto;
   color: var(--text-primary);
   background: var(--bg-input);
   border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   font-family: var(--font-mono, monospace);
-  font-size: 9px;
+  font-size: var(--font-2xs);
   line-height: 1.45;
   white-space: pre-wrap;
 }
@@ -4781,13 +4748,13 @@ button.submission-check-finding:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-8);
   margin: 5px 0;
   padding: 5px 7px;
   color: var(--text-secondary);
   background: color-mix(in srgb, var(--accent) 6%, transparent);
   border-left: 2px solid var(--accent);
-  font-size: 9px;
+  font-size: var(--font-2xs);
 }
 
 .research-chat-queue > div {
@@ -4804,7 +4771,7 @@ button.submission-check-finding:hover {
 }
 
 .research-chat-queue span {
-  margin-top: 2px;
+  margin-top: var(--space-2);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -4821,7 +4788,7 @@ button.submission-check-finding:hover {
   color: var(--text-secondary);
   background: transparent;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
 }
 
@@ -4834,7 +4801,7 @@ button.submission-check-finding:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-8);
   color: var(--text-secondary);
 }
 
@@ -4842,15 +4809,15 @@ button.submission-check-finding:hover {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
-  gap: 4px;
-  font-size: 10px;
+  gap: var(--space-4);
+  font-size: var(--font-xs);
   font-weight: 600;
 }
 
 .research-chat-context-bar small {
   min-width: 0;
   overflow: hidden;
-  font-size: 9px;
+  font-size: var(--font-2xs);
   font-weight: 400;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -4860,8 +4827,8 @@ button.submission-check-finding:hover {
   display: flex;
   flex-wrap: wrap;
   max-height: 58px;
-  gap: 4px;
-  margin: 6px 0 8px;
+  gap: var(--space-4);
+  margin: var(--space-6) 0 var(--space-8);
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -4874,9 +4841,9 @@ button.submission-check-finding:hover {
   color: var(--text-secondary);
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--ui-radius-pill);
   cursor: pointer;
-  font-size: 10px;
+  font-size: var(--font-xs);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -4890,7 +4857,7 @@ button.submission-check-finding:hover {
 .research-chat-composer-shell {
   background: var(--bg-input);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--ui-radius-large);
   transition: border-color 120ms ease;
 }
 
@@ -4903,14 +4870,14 @@ button.submission-check-finding:hover {
   width: 100%;
   min-height: 56px;
   max-height: 120px;
-  padding: 9px 10px 6px;
+  padding: 9px 10px var(--space-6);
   resize: none;
   color: var(--text-primary);
   background: transparent;
   border: 0;
-  border-radius: 8px 8px 0 0;
+  border-radius: var(--ui-radius-large) var(--ui-radius-large) 0 0;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--font-md);
   line-height: 1.5;
   outline: 0;
   overflow-y: auto;
@@ -4925,7 +4892,7 @@ button.submission-check-finding:hover {
   min-height: 34px;
   align-items: center;
   gap: 5px;
-  padding: 3px 4px 3px 6px;
+  padding: 3px var(--space-4) 3px var(--space-6);
   border-top: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
 }
 
@@ -4948,15 +4915,15 @@ button.submission-check-finding:hover {
 .research-chat-model-selector select {
   width: 100%;
   min-height: 26px;
-  padding: 2px 22px 2px 7px;
+  padding: var(--space-2) 22px var(--space-2) 7px;
   overflow: hidden;
   color: var(--text-primary);
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
   font: inherit;
-  font-size: 9px;
+  font-size: var(--font-2xs);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -4971,12 +4938,12 @@ button.submission-check-finding:hover {
   flex: 0 0 auto;
   min-height: 26px;
   align-items: center;
-  padding: 2px 8px;
+  padding: var(--space-2) var(--space-8);
   color: var(--text-secondary);
   background: transparent;
   border: 1px solid var(--border);
-  border-radius: 5px;
-  font-size: 9px;
+  border-radius: var(--ui-radius-control);
+  font-size: var(--font-2xs);
 }
 
 .research-chat-execution-bar .research-chat-send {
@@ -4994,7 +4961,7 @@ button.submission-check-finding:hover {
   color: var(--error);
   background: color-mix(in srgb, var(--error) 9%, transparent);
   border: 1px solid color-mix(in srgb, var(--error) 42%, var(--border));
-  border-radius: 5px;
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
 }
 
@@ -5011,7 +4978,7 @@ button.submission-check-finding:hover {
   min-height: 34px;
   align-items: center;
   gap: 5px;
-  padding: 3px 4px 4px 5px;
+  padding: 3px var(--space-4) var(--space-4) 5px;
   border-top: 1px solid color-mix(in srgb, var(--border) 46%, transparent);
 }
 
@@ -5019,7 +4986,7 @@ button.submission-check-finding:hover {
   display: flex;
   min-width: 0;
   align-items: center;
-  gap: 2px;
+  gap: var(--space-2);
 }
 
 .research-chat-footer-button,
@@ -5027,14 +4994,14 @@ button.submission-check-finding:hover {
   display: inline-flex;
   min-height: 25px;
   align-items: center;
-  gap: 4px;
-  padding: 3px 6px;
+  gap: var(--space-4);
+  padding: 3px var(--space-6);
   color: var(--text-secondary);
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
-  font-size: 9px;
+  font-size: var(--font-2xs);
   line-height: 1;
   list-style: none;
 }
@@ -5060,7 +5027,7 @@ button.submission-check-finding:hover {
   flex: 0 0 auto;
   margin-left: auto;
   color: var(--text-secondary);
-  font-size: 8px;
+  font-size: var(--font-2xs);
 }
 
 .research-chat-send {
@@ -5074,7 +5041,7 @@ button.submission-check-finding:hover {
   color: var(--text-primary);
   background: var(--accent);
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--ui-radius-panel);
   cursor: pointer;
 }
 
@@ -5092,7 +5059,7 @@ button.submission-check-finding:hover {
   flex: 0 0 auto;
   margin: 0;
   color: var(--text-secondary);
-  font-size: 10px;
+  font-size: var(--font-xs);
 }
 
 .research-chat-tools-popover {
@@ -5105,7 +5072,7 @@ button.submission-check-finding:hover {
   padding: 9px;
   background: var(--ui-surface-raised, var(--bg-secondary));
   border: 1px solid var(--ui-border-strong, var(--border));
-  border-radius: 6px;
+  border-radius: var(--ui-radius-panel);
   box-shadow: var(--ui-shadow-popover, 0 4px 14px var(--shadow-color));
 }
 
@@ -5113,7 +5080,7 @@ button.submission-check-finding:hover {
   display: block;
   margin: 0 1px 7px;
   color: var(--text-primary);
-  font-size: 10px;
+  font-size: var(--font-xs);
 }
 
 .research-chat-tools-popover .research-primary-action {
@@ -5123,24 +5090,24 @@ button.submission-check-finding:hover {
 
 .research-chat-tools-popover .research-action-grid {
   gap: 5px;
-  margin-top: 6px;
+  margin-top: var(--space-6);
 }
 
 .research-chat-tools-popover .research-action-grid button {
   min-width: 0;
   padding: 5px;
-  font-size: 9px;
+  font-size: var(--font-2xs);
 }
 
 .research-chat-status {
   display: flex;
   align-items: flex-start;
   gap: 5px;
-  margin: 6px 2px 0;
+  margin: var(--space-6) var(--space-2) 0;
   padding: 0;
   background: transparent;
   border: 0;
-  font-size: 9px;
+  font-size: var(--font-2xs);
   line-height: 1.4;
 }
 
@@ -5218,7 +5185,6 @@ button.submission-check-finding:hover {
 }
 
 .research-panel.overlay .research-panel-tabs {
-  min-height: var(--app-toolbar-height);
   background: var(--chrome-bg);
   border-bottom-color: var(--chrome-border);
 }
@@ -5247,13 +5213,13 @@ button.submission-check-finding:hover {
 /* PDF Search Highlights */
 .pdf-search-highlight {
   background-color: rgba(255, 255, 0, 0.4) !important;
-  border-radius: 2px;
+  border-radius: var(--ui-radius-subtle);
 }
 
 .pdf-search-current {
   background-color: rgba(255, 165, 0, 0.6) !important;
   outline: 2px solid orange;
-  border-radius: 2px;
+  border-radius: var(--ui-radius-subtle);
 }
 
 /* OmniSearch (Unified Toolbar Search) */
@@ -5271,14 +5237,14 @@ button.submission-check-finding:hover {
 .omni-search-mode-btn {
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 4px 6px;
-  font-size: 12px;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-6);
+  font-size: var(--font-md);
   background-color: var(--bg-secondary);
   color: var(--text-primary);
   border: 1px solid var(--border);
   border-right: none;
-  border-radius: 4px 0 0 4px;
+  border-radius: var(--ui-radius-control) 0 0 var(--ui-radius-control);
   cursor: pointer;
   height: 28px;
 }
@@ -5294,23 +5260,23 @@ button.submission-check-finding:hover {
   min-width: 200px;
   background-color: var(--modal-bg, var(--bg-secondary));
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--ui-radius-large);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   z-index: 210;
-  padding: 4px;
+  padding: var(--space-4);
 }
 
 .omni-search-mode-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   width: 100%;
-  padding: 6px 10px;
-  font-size: 13px;
+  padding: var(--space-6) 10px;
+  font-size: var(--font-base);
   color: var(--text-primary);
   background: none;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
   text-align: left;
 }
@@ -5325,22 +5291,22 @@ button.submission-check-finding:hover {
 
 .omni-search-mode-item kbd {
   margin-left: auto;
-  font-size: 11px;
+  font-size: var(--font-sm);
   color: var(--text-secondary);
   background-color: var(--bg-secondary);
   padding: 1px 5px;
-  border-radius: 3px;
+  border-radius: var(--ui-radius-subtle);
   border: 1px solid var(--border);
 }
 
 .omni-search-input {
   width: 260px;
-  padding: 4px 10px;
-  font-size: 13px;
+  padding: var(--space-4) 10px;
+  font-size: var(--font-base);
   border: 1px solid var(--border);
   background-color: var(--bg-input, var(--bg-secondary));
   color: var(--text-primary);
-  border-radius: 0 4px 4px 0;
+  border-radius: 0 var(--ui-radius-control) var(--ui-radius-control) 0;
   height: 28px;
   transition:
     border-color 0.15s,
@@ -5359,10 +5325,10 @@ button.submission-check-finding:hover {
   right: 26px;
   background: var(--accent);
   color: white;
-  font-size: 10px;
+  font-size: var(--font-xs);
   font-weight: 600;
   padding: 1px 5px;
-  border-radius: 9999px;
+  border-radius: var(--ui-radius-pill);
   pointer-events: none;
 }
 
@@ -5370,13 +5336,13 @@ button.submission-check-finding:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-left: 2px;
-  padding: 2px;
+  margin-left: var(--space-2);
+  padding: var(--space-2);
   background: none;
   border: none;
   color: var(--text-secondary);
   cursor: pointer;
-  border-radius: 3px;
+  border-radius: var(--ui-radius-subtle);
 }
 
 .omni-search-clear:hover {
@@ -5393,18 +5359,18 @@ button.submission-check-finding:hover {
   overflow-y: auto;
   background-color: var(--modal-bg, var(--bg-secondary));
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--ui-radius-large);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   z-index: 200;
-  padding: 4px;
+  padding: var(--space-4);
 }
 
 .omni-search-result {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: 4px;
+  gap: var(--space-8);
+  padding: var(--space-6) var(--space-8);
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
 }
 
@@ -5430,7 +5396,7 @@ button.submission-check-finding:hover {
 }
 
 .omni-search-result-title {
-  font-size: 13px;
+  font-size: var(--font-base);
   font-weight: 500;
   color: var(--text-primary);
   white-space: nowrap;
@@ -5439,7 +5405,7 @@ button.submission-check-finding:hover {
 }
 
 .omni-search-result-meta {
-  font-size: 11px;
+  font-size: var(--font-sm);
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -5447,28 +5413,28 @@ button.submission-check-finding:hover {
 }
 
 .omni-search-footer {
-  font-size: 11px;
+  font-size: var(--font-sm);
   text-align: center;
   color: var(--text-secondary);
-  padding: 6px 8px 4px;
+  padding: var(--space-6) var(--space-8) var(--space-4);
 }
 
 .omni-search-message {
   text-align: center;
   color: var(--text-secondary);
-  padding: 12px 8px;
-  font-size: 12px;
+  padding: var(--space-12) var(--space-8);
+  font-size: var(--font-md);
 }
 
 .omni-search-pdf-controls {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
+  gap: var(--space-6);
+  padding: var(--space-6) var(--space-8);
 }
 
 .omni-search-pdf-count {
-  font-size: 12px;
+  font-size: var(--font-md);
   color: var(--text-secondary);
   white-space: nowrap;
   min-width: 60px;
@@ -5476,12 +5442,12 @@ button.submission-check-finding:hover {
 }
 
 .omni-search-pdf-controls button {
-  padding: 2px 8px;
-  font-size: 12px;
+  padding: var(--space-2) var(--space-8);
+  font-size: var(--font-md);
   background-color: var(--bg-toolbar);
   color: var(--text-primary);
   border: none;
-  border-radius: 3px;
+  border-radius: var(--ui-radius-subtle);
   cursor: pointer;
 }
 
@@ -5497,14 +5463,14 @@ button.submission-check-finding:hover {
 .omni-search-tex-nav {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 8px;
+  gap: var(--space-4);
+  padding: var(--space-6) var(--space-8);
   border-bottom: 1px solid var(--border);
-  margin-bottom: 2px;
+  margin-bottom: var(--space-2);
 }
 
 .omni-search-tex-count {
-  font-size: 12px;
+  font-size: var(--font-md);
   color: var(--text-secondary);
   white-space: nowrap;
   min-width: 50px;
@@ -5514,11 +5480,11 @@ button.submission-check-finding:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2px 4px;
+  padding: var(--space-2) var(--space-4);
   background-color: var(--bg-toolbar);
   color: var(--text-primary);
   border: none;
-  border-radius: 3px;
+  border-radius: var(--ui-radius-subtle);
   cursor: pointer;
 }
 
@@ -5532,17 +5498,17 @@ button.submission-check-finding:hover {
 }
 
 .omni-search-tex-result {
-  gap: 6px;
+  gap: var(--space-6);
   align-items: center;
   font-family: var(--font-mono, monospace);
-  font-size: 12px;
+  font-size: var(--font-md);
 }
 
 .omni-search-line-number {
   min-width: 36px;
   text-align: right;
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: var(--font-sm);
   flex-shrink: 0;
 }
 
@@ -5557,7 +5523,7 @@ button.submission-check-finding:hover {
 /* OmniSearch Home Mode */
 .omni-search-home-mode .omni-search-input {
   width: 340px;
-  border-radius: 0 4px 4px 0;
+  border-radius: 0 var(--ui-radius-control) var(--ui-radius-control) 0;
 }
 
 .omni-search-home-mode .omni-search-input:focus {
@@ -5572,11 +5538,11 @@ button.submission-check-finding:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 4px 8px;
+  padding: var(--space-4) var(--space-8);
   background-color: var(--bg-secondary);
   border: 1px solid var(--border);
   border-right: none;
-  border-radius: 4px 0 0 4px;
+  border-radius: var(--ui-radius-control) 0 0 var(--ui-radius-control);
   color: var(--text-secondary);
   height: 28px;
 }
@@ -5584,7 +5550,7 @@ button.submission-check-finding:hover {
 .omni-search-home-result {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-10);
 }
 
 .omni-search-home-result-icon {
@@ -5596,10 +5562,10 @@ button.submission-check-finding:hover {
 
 .omni-search-home-badge {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: var(--font-xs);
   font-weight: 600;
   padding: 1px 7px;
-  border-radius: 9999px;
+  border-radius: var(--ui-radius-pill);
   background-color: var(--bg-secondary);
   color: var(--text-secondary);
   border: 1px solid var(--border);
@@ -5619,8 +5585,8 @@ button.submission-check-finding:hover {
 
 .bib-panel-header {
   display: flex;
-  gap: 6px;
-  padding: 8px;
+  gap: var(--space-6);
+  padding: var(--space-8);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
@@ -5628,12 +5594,12 @@ button.submission-check-finding:hover {
 .bib-panel-header input {
   flex: 1;
   min-width: 0;
-  padding: 6px 8px;
-  border-radius: 4px;
+  padding: var(--space-6) var(--space-8);
+  border-radius: var(--ui-radius-control);
   border: 1px solid var(--border);
   background-color: var(--bg-input);
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: var(--font-base);
 }
 
 .bib-panel-header input:focus {
@@ -5645,9 +5611,9 @@ button.submission-check-finding:hover {
   background-color: var(--bg-input);
   color: var(--text-primary);
   border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 4px 6px;
-  font-size: 12px;
+  border-radius: var(--ui-radius-control);
+  padding: var(--space-4) var(--space-6);
+  font-size: var(--font-md);
   cursor: pointer;
   flex-shrink: 0;
 }
@@ -5663,7 +5629,7 @@ button.submission-check-finding:hover {
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 4px 0;
+  padding: var(--space-4) 0;
   scrollbar-gutter: stable;
 }
 
@@ -5671,10 +5637,10 @@ button.submission-check-finding:hover {
 .bib-group-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
+  gap: var(--space-6);
+  padding: var(--space-6) var(--space-12);
   font-weight: 600;
-  font-size: 13px;
+  font-size: var(--font-base);
   cursor: grab;
   user-select: none;
   border-bottom: 1px solid var(--border);
@@ -5695,7 +5661,7 @@ button.submission-check-finding:hover {
 
 .bib-group-chevron {
   width: 12px;
-  font-size: 11px;
+  font-size: var(--font-sm);
   color: var(--text-secondary);
   flex-shrink: 0;
 }
@@ -5711,12 +5677,12 @@ button.submission-check-finding:hover {
 .bib-group-count {
   color: var(--text-secondary);
   font-weight: 400;
-  font-size: 12px;
+  font-size: var(--font-md);
   flex-shrink: 0;
 }
 
 .bib-entry {
-  padding: 8px 12px;
+  padding: var(--space-8) var(--space-12);
   border-bottom: 1px solid var(--border);
   cursor: pointer;
   transition: background-color 0.15s;
@@ -5725,12 +5691,12 @@ button.submission-check-finding:hover {
 /* Indent entries under a group header */
 .bib-group .bib-group-header + .bib-entry,
 .bib-group .bib-entry {
-  padding-left: 24px;
+  padding-left: var(--space-24);
 }
 
 /* No indent in flat mode (group has no header) */
 .bib-group:only-child .bib-entry {
-  padding-left: 12px;
+  padding-left: var(--space-12);
 }
 
 .bib-entry:hover {
@@ -5738,11 +5704,11 @@ button.submission-check-finding:hover {
 }
 
 .bib-entry-header {
-  margin-bottom: 2px;
+  margin-bottom: var(--space-2);
 }
 
 .bib-title {
-  font-size: 13px;
+  font-size: var(--font-base);
   font-weight: 500;
   color: var(--text-primary);
   line-height: 1.3;
@@ -5750,18 +5716,18 @@ button.submission-check-finding:hover {
 }
 
 .bib-authors {
-  font-size: 12px;
+  font-size: var(--font-md);
   color: var(--text-secondary);
   font-style: italic;
-  margin-bottom: 4px;
+  margin-bottom: var(--space-4);
   word-break: break-word;
 }
 
 .bib-meta-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 11px;
+  gap: var(--space-8);
+  font-size: var(--font-sm);
   flex-wrap: wrap;
 }
 
@@ -5769,8 +5735,8 @@ button.submission-check-finding:hover {
   font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
   color: var(--accent);
   background-color: rgba(127, 127, 127, 0.1);
-  padding: 1px 4px;
-  border-radius: 3px;
+  padding: 1px var(--space-4);
+  border-radius: var(--ui-radius-subtle);
   word-break: break-all;
 }
 
@@ -5780,19 +5746,19 @@ button.submission-check-finding:hover {
 
 /* Custom citation groups */
 .bib-custom-toolbar {
-  padding: 6px 8px;
+  padding: var(--space-6) var(--space-8);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 
 .bib-new-group-btn {
   width: 100%;
-  padding: 5px 8px;
+  padding: 5px var(--space-8);
   border: 1px dashed var(--border);
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   background: transparent;
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: var(--font-md);
   cursor: pointer;
   transition:
     background-color 0.15s,
@@ -5808,7 +5774,7 @@ button.submission-check-finding:hover {
 .bib-custom-group-header {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-6);
 }
 
 .bib-group-delete-btn {
@@ -5818,10 +5784,10 @@ button.submission-check-finding:hover {
   border: none;
   background: transparent;
   color: var(--text-secondary);
-  font-size: 16px;
+  font-size: var(--font-xl);
   line-height: 1;
   cursor: pointer;
-  border-radius: 3px;
+  border-radius: var(--ui-radius-subtle);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -5843,12 +5809,12 @@ button.submission-check-finding:hover {
 .bib-rename-input {
   flex: 1;
   min-width: 0;
-  padding: 2px 4px;
+  padding: var(--space-2) var(--space-4);
   border: 1px solid var(--accent);
-  border-radius: 3px;
+  border-radius: var(--ui-radius-subtle);
   background-color: var(--bg-input);
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: var(--font-base);
   font-weight: 600;
   outline: none;
 }
@@ -5856,7 +5822,7 @@ button.submission-check-finding:hover {
 .bib-entry-header {
   display: flex;
   align-items: flex-start;
-  gap: 4px;
+  gap: var(--space-4);
 }
 
 .bib-entry-action-btn {
@@ -5866,10 +5832,10 @@ button.submission-check-finding:hover {
   border: none;
   background: transparent;
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: var(--font-lg);
   line-height: 1;
   cursor: pointer;
-  border-radius: 3px;
+  border-radius: var(--ui-radius-subtle);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -5895,7 +5861,7 @@ button.submission-check-finding:hover {
 
 .bib-ungrouped-header {
   border-top: 2px solid var(--border);
-  margin-top: 4px;
+  margin-top: var(--space-4);
   cursor: pointer;
   font-style: italic;
 }
@@ -5917,7 +5883,7 @@ button.submission-check-finding:hover {
 
 .modal-content {
   background: var(--modal-bg, var(--bg-primary));
-  border-radius: 12px;
+  border-radius: var(--ui-radius-large);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   display: flex;
   flex-direction: column;
@@ -5927,48 +5893,48 @@ button.submission-check-finding:hover {
 
 .bibliography-registration-dialog {
   width: min(520px, calc(100vw - 40px));
-  padding: 20px;
+  padding: var(--space-20);
   color: var(--text-primary);
   background: var(--modal-bg, var(--bg-primary));
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--ui-radius-large);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
 }
 
 .bibliography-registration-dialog h2 {
-  margin: 0 0 10px;
-  font-size: 16px;
+  margin: 0 0 var(--space-10);
+  font-size: var(--font-xl);
 }
 
 .bibliography-registration-dialog p {
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: var(--font-md);
   line-height: 1.5;
 }
 
 .bibliography-registration-dialog pre {
-  padding: 12px;
+  padding: var(--space-12);
   overflow-x: auto;
   color: var(--text-primary);
   background: var(--bg-input);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 12px;
+  border-radius: var(--ui-radius-panel);
+  font-size: var(--font-md);
 }
 
 .bibliography-registration-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  margin-top: 16px;
+  gap: var(--space-8);
+  margin-top: var(--space-16);
 }
 
 .bibliography-registration-actions button {
-  padding: 7px 12px;
+  padding: 7px var(--space-12);
   color: var(--text-primary);
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--ui-radius-panel);
   cursor: pointer;
 }
 
@@ -5982,13 +5948,13 @@ button.submission-check-finding:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: var(--space-16) var(--space-20);
   border-bottom: 1px solid var(--border);
 }
 
 .modal-header h2 {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--font-xl);
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -5996,31 +5962,31 @@ button.submission-check-finding:hover {
 .modal-body {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
+  padding: var(--space-20);
 }
 
 .modal-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 20px;
+  padding: var(--space-12) var(--space-20);
   border-top: 1px solid var(--border);
 }
 
 .modal-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-8);
   align-items: center;
 }
 
 .close-button {
   background: none;
   border: none;
-  font-size: 20px;
+  font-size: var(--font-3xl);
   cursor: pointer;
   color: var(--text-secondary);
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--ui-radius-control);
   line-height: 1;
 }
 
@@ -6033,9 +5999,9 @@ button.submission-check-finding:hover {
   background: var(--accent);
   color: white;
   border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 13px;
+  padding: var(--space-8) var(--space-16);
+  border-radius: var(--ui-radius-panel);
+  font-size: var(--font-base);
   font-weight: 500;
   cursor: pointer;
 }
@@ -6056,23 +6022,23 @@ button.submission-check-finding:hover {
 }
 
 .draft-hint {
-  font-size: 13px;
+  font-size: var(--font-base);
   color: var(--text-secondary);
-  margin-bottom: 12px;
+  margin-bottom: var(--space-12);
 }
 
 .draft-input,
 .draft-preview {
   width: 100%;
   min-height: 300px;
-  padding: 12px;
+  padding: var(--space-12);
   font-family: monospace;
-  font-size: 13px;
+  font-size: var(--font-base);
   line-height: 1.5;
   background: var(--bg-input, var(--bg-secondary));
   color: var(--text-primary);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--ui-radius-large);
   resize: vertical;
   box-sizing: border-box;
 }
@@ -6088,23 +6054,23 @@ button.submission-check-finding:hover {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 60px 20px;
-  gap: 16px;
+  padding: 60px var(--space-20);
+  gap: var(--space-16);
   color: var(--text-secondary);
 }
 
 .draft-error {
-  margin-top: 12px;
-  padding: 10px 14px;
+  margin-top: var(--space-12);
+  padding: var(--space-10) var(--space-14);
   background: rgba(220, 38, 38, 0.1);
   border: 1px solid rgba(220, 38, 38, 0.3);
-  border-radius: 6px;
+  border-radius: var(--ui-radius-panel);
   color: var(--error, #dc2626);
-  font-size: 13px;
+  font-size: var(--font-base);
 }
 
 .draft-provider-label {
-  font-size: 12px;
+  font-size: var(--font-md);
   color: var(--text-secondary);
 }
 
@@ -6128,23 +6094,23 @@ button.submission-check-finding:hover {
   flex-shrink: 0;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border);
-  padding: 12px 8px;
+  padding: var(--space-12) var(--space-8);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-2);
 }
 
 .settings-tab {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-10);
   width: 100%;
-  padding: 8px 12px;
+  padding: var(--space-8) var(--space-12);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--ui-radius-panel);
   background: transparent;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--font-base);
   font-weight: 500;
   cursor: pointer;
   transition:
@@ -6169,27 +6135,27 @@ button.submission-check-finding:hover {
 .settings-content {
   flex: 1;
   overflow-y: auto;
-  padding: 24px;
+  padding: var(--space-24);
   background: var(--bg-primary);
 }
 
 .settings-tab-content {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--space-24);
 }
 
 .settings-section {
-  padding: 16px;
+  padding: var(--space-16);
   background: var(--card-bg);
   border: 1px solid var(--card-border);
-  border-radius: 10px;
+  border-radius: var(--ui-radius-large);
 }
 
 .settings-section-header {
   display: flex;
   align-items: flex-start;
-  gap: 14px;
+  gap: var(--space-14);
 }
 
 .settings-section-icon {
@@ -6199,7 +6165,7 @@ button.submission-check-finding:hover {
   width: 40px;
   height: 40px;
   flex-shrink: 0;
-  border-radius: 8px;
+  border-radius: var(--ui-radius-large);
   background: var(--bg-secondary);
   color: var(--accent);
 }
@@ -6210,48 +6176,48 @@ button.submission-check-finding:hover {
 }
 
 .settings-section-title {
-  margin: 0 0 4px;
-  font-size: 14px;
+  margin: 0 0 var(--space-4);
+  font-size: var(--font-lg);
   font-weight: 600;
   color: var(--text-primary);
 }
 
 .settings-section-description {
-  margin: 0 0 16px;
-  font-size: 13px;
+  margin: 0 0 var(--space-16);
+  font-size: var(--font-base);
   color: var(--text-secondary);
   line-height: 1.5;
 }
 
 .settings-heading {
-  margin: 0 0 4px;
-  font-size: 16px;
+  margin: 0 0 var(--space-4);
+  font-size: var(--font-xl);
   font-weight: 500;
   color: var(--text-primary);
 }
 
 .settings-subheading {
-  margin: 0 0 16px;
-  font-size: 13px;
+  margin: 0 0 var(--space-16);
+  font-size: var(--font-base);
   color: var(--text-secondary);
 }
 
 .settings-label {
   display: block;
-  font-size: 13px;
+  font-size: var(--font-base);
   font-weight: 500;
   color: var(--text-primary);
-  margin-bottom: 6px;
+  margin-bottom: var(--space-6);
 }
 
 .settings-input,
 .settings-input-small {
-  padding: 7px 10px;
-  font-size: 13px;
+  padding: 7px var(--space-10);
+  font-size: var(--font-base);
   background: var(--bg-input);
   color: var(--text-primary);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--ui-radius-panel);
   outline: none;
   transition: border-color 0.15s;
 }
@@ -6278,12 +6244,12 @@ button.submission-check-finding:hover {
 
 .settings-select {
   width: 100%;
-  padding: 7px 10px;
-  font-size: 13px;
+  padding: 7px var(--space-10);
+  font-size: var(--font-base);
   background: var(--bg-input);
   color: var(--text-primary);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--ui-radius-panel);
   outline: none;
   transition: border-color 0.15s;
   box-sizing: border-box;
@@ -6305,7 +6271,7 @@ button.submission-check-finding:hover {
   width: 36px;
   height: 20px;
   flex-shrink: 0;
-  border-radius: 10px;
+  border-radius: var(--ui-radius-large);
   background: var(--bg-hover);
   border: none;
   cursor: pointer;
@@ -6339,8 +6305,8 @@ button.submission-check-finding:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
-  border-radius: 6px;
+  padding: 10px var(--space-12);
+  border-radius: var(--ui-radius-panel);
   transition: background 0.15s;
 }
 
@@ -6349,22 +6315,22 @@ button.submission-check-finding:hover {
 }
 
 .settings-row-label {
-  font-size: 13px;
+  font-size: var(--font-base);
   font-weight: 500;
   color: var(--text-primary);
 }
 
 .settings-row-description {
-  font-size: 12px;
+  font-size: var(--font-md);
   color: var(--text-secondary);
-  margin-top: 2px;
+  margin-top: var(--space-2);
 }
 
 /* Range slider */
 .settings-range {
   width: 100%;
   height: 6px;
-  border-radius: 3px;
+  border-radius: var(--ui-radius-subtle);
   background: var(--bg-hover);
   accent-color: var(--accent);
   appearance: auto;
@@ -6374,9 +6340,9 @@ button.submission-check-finding:hover {
 .settings-badge {
   display: inline-block;
   font-family: monospace;
-  font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 4px;
+  font-size: var(--font-md);
+  padding: var(--space-2) var(--space-8);
+  border-radius: var(--ui-radius-control);
   background: var(--bg-secondary);
   color: var(--text-secondary);
 }
@@ -6384,8 +6350,8 @@ button.submission-check-finding:hover {
 .settings-range-labels {
   display: flex;
   justify-content: space-between;
-  margin-top: 4px;
-  font-size: 11px;
+  margin-top: var(--space-4);
+  font-size: var(--font-sm);
   color: var(--text-secondary);
 }
 
@@ -6399,7 +6365,7 @@ button.submission-check-finding:hover {
 .settings-theme-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
-  gap: 12px;
+  gap: var(--space-12);
 }
 
 .settings-theme-card {
@@ -6407,10 +6373,10 @@ button.submission-check-finding:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 16px;
+  gap: var(--space-10);
+  padding: var(--space-16);
   border: 2px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--ui-radius-large);
   background: var(--card-bg);
   cursor: pointer;
   transition:
@@ -6442,7 +6408,7 @@ button.submission-check-finding:hover {
 }
 
 .settings-theme-card-label {
-  font-size: 13px;
+  font-size: var(--font-base);
   font-weight: 500;
   color: var(--text-primary);
 }
@@ -6458,9 +6424,9 @@ button.submission-check-finding:hover {
 .settings-status-badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 4px;
+  gap: var(--space-6);
+  padding: var(--space-4) 10px;
+  border-radius: var(--ui-radius-control);
   background: var(--bg-secondary);
 }
 
@@ -6480,7 +6446,7 @@ button.submission-check-finding:hover {
 }
 
 .settings-status-text {
-  font-size: 12px;
+  font-size: var(--font-md);
   font-weight: 500;
   color: var(--text-secondary);
 }
@@ -6494,26 +6460,26 @@ button.submission-check-finding:hover {
 }
 
 .settings-status-label {
-  font-size: 11px;
+  font-size: var(--font-sm);
   font-weight: 600;
   text-transform: uppercase;
   color: var(--text-secondary);
 }
 
 .settings-configured-tag {
-  font-size: 11px;
+  font-size: var(--font-sm);
   font-weight: 500;
   color: var(--text-secondary);
   background: var(--surface-hover, rgba(128, 128, 128, 0.12));
-  padding: 2px 8px;
-  border-radius: 10px;
-  margin-left: 4px;
+  padding: var(--space-2) var(--space-8);
+  border-radius: var(--ui-radius-large);
+  margin-left: var(--space-4);
 }
 
 .settings-field-group {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--space-14);
   max-width: 400px;
 }
 
@@ -6521,20 +6487,20 @@ button.submission-check-finding:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 14px;
-  margin-top: 14px;
+  padding-top: var(--space-14);
+  margin-top: var(--space-14);
   border-top: 1px solid var(--border);
 }
 
 .settings-inline-label {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .settings-key-row {
   display: flex;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .settings-key-row .settings-input {
@@ -6543,13 +6509,13 @@ button.submission-check-finding:hover {
 
 /* ---- AI Settings ---- */
 .ai-settings-tab {
-  gap: 16px;
+  gap: var(--space-16);
 }
 
 .ai-settings-block {
   padding: 18px;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: var(--ui-radius-large);
   background: var(--card-bg);
 }
 
@@ -6557,17 +6523,17 @@ button.submission-check-finding:hover {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 14px;
+  gap: var(--space-16);
+  margin-bottom: var(--space-14);
 }
 
 .ai-settings-kicker {
   flex: 0 0 auto;
-  padding: 3px 8px;
+  padding: 3px var(--space-8);
   color: var(--accent);
   background: color-mix(in srgb, var(--accent) 12%, transparent);
-  border-radius: 999px;
-  font-size: 10px;
+  border-radius: var(--ui-radius-pill);
+  font-size: var(--font-xs);
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -6576,26 +6542,26 @@ button.submission-check-finding:hover {
 .ai-target-select {
   width: 100%;
   min-height: 38px;
-  margin-top: 6px;
+  margin-top: var(--space-6);
 }
 
 .ai-custom-model-field {
   display: grid;
-  gap: 6px;
-  margin-top: 12px;
+  gap: var(--space-6);
+  margin-top: var(--space-12);
 }
 
 .ai-settings-footnote {
-  margin: 10px 0 0;
+  margin: var(--space-10) 0 0;
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: var(--font-sm);
   line-height: 1.45;
 }
 
 .ai-connections-layout {
   display: grid;
   grid-template-columns: minmax(260px, 1fr) minmax(240px, 0.85fr);
-  gap: 14px;
+  gap: var(--space-14);
   align-items: start;
 }
 
@@ -6603,17 +6569,17 @@ button.submission-check-finding:hover {
 .ai-connections-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-8);
 }
 
 .ai-connections-column {
-  gap: 14px;
+  gap: var(--space-14);
 }
 
 .ai-connections-group-title {
-  padding: 0 2px;
+  padding: 0 var(--space-2);
   color: var(--text-secondary);
-  font-size: 10px;
+  font-size: var(--font-xs);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -6622,16 +6588,16 @@ button.submission-check-finding:hover {
 .ai-connections-list {
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--ui-radius-large);
 }
 
 .ai-connection-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-10);
   width: 100%;
-  padding: 10px;
+  padding: var(--space-10);
   color: var(--text-primary);
   text-align: left;
   background: transparent;
@@ -6662,7 +6628,7 @@ button.submission-check-finding:hover {
   flex: 0 0 auto;
   color: var(--text-secondary);
   background: var(--bg-secondary);
-  border-radius: 7px;
+  border-radius: var(--ui-radius-panel);
 }
 
 .ai-connection-icon.large {
@@ -6675,12 +6641,12 @@ button.submission-check-finding:hover {
   display: flex;
   min-width: 0;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-2);
 }
 
 .ai-connection-name {
   overflow: hidden;
-  font-size: 12px;
+  font-size: var(--font-md);
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -6689,7 +6655,7 @@ button.submission-check-finding:hover {
 .ai-connection-description {
   overflow: hidden;
   color: var(--text-secondary);
-  font-size: 10px;
+  font-size: var(--font-xs);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -6699,7 +6665,7 @@ button.submission-check-finding:hover {
   align-items: center;
   gap: 5px;
   color: var(--text-secondary);
-  font-size: 10px;
+  font-size: var(--font-xs);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -6726,28 +6692,28 @@ button.submission-check-finding:hover {
 
 .ai-connection-detail {
   min-width: 0;
-  padding: 14px;
+  padding: var(--space-14);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--ui-radius-large);
   background: var(--bg-secondary);
 }
 
 .ai-connection-detail-header {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: var(--space-10);
 }
 
 .ai-connection-detail h4 {
   margin: 1px 0 3px;
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: var(--font-base);
 }
 
 .ai-connection-detail p {
   margin: 0;
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: var(--font-sm);
   line-height: 1.45;
 }
 
@@ -6755,13 +6721,13 @@ button.submission-check-finding:hover {
   display: flex;
   align-items: center;
   gap: 7px;
-  margin-top: 12px;
-  padding: 8px 10px;
+  margin-top: var(--space-12);
+  padding: var(--space-8) 10px;
   color: var(--text-secondary);
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: 7px;
-  font-size: 11px;
+  border-radius: var(--ui-radius-panel);
+  font-size: var(--font-sm);
   line-height: 1.4;
 }
 
@@ -6779,7 +6745,7 @@ button.submission-check-finding:hover {
   margin-left: auto;
   padding: 0;
   color: inherit;
-  font-size: 11px;
+  font-size: var(--font-sm);
   font-weight: 600;
   background: none;
   border: 0;
@@ -6790,7 +6756,7 @@ button.submission-check-finding:hover {
 .ai-external-link {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-6);
   color: var(--text-secondary);
   background: transparent;
   border: 0;
@@ -6801,8 +6767,8 @@ button.submission-check-finding:hover {
   flex: 0 0 auto;
   padding: 5px 7px;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 11px;
+  border-radius: var(--ui-radius-panel);
+  font-size: var(--font-sm);
 }
 
 .ai-refresh-button:hover,
@@ -6820,10 +6786,10 @@ button.submission-check-finding:hover {
 }
 
 .ai-external-link {
-  margin-top: 10px;
-  padding: 2px 0;
+  margin-top: var(--space-10);
+  padding: var(--space-2) 0;
   color: var(--accent);
-  font-size: 11px;
+  font-size: var(--font-sm);
 }
 
 @keyframes settingsFadeIn {
@@ -6847,7 +6813,7 @@ button.submission-check-finding:hover {
   display: flex;
   flex-direction: column;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--ui-radius-large);
   overflow: hidden;
 }
 
@@ -6864,11 +6830,11 @@ button.submission-check-finding:hover {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 10px 12px;
+  padding: 10px var(--space-12);
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--font-base);
   font-weight: 500;
   color: var(--text-primary);
   text-align: left;
@@ -6879,19 +6845,19 @@ button.submission-check-finding:hover {
 }
 
 .ai-prompt-body {
-  padding: 0 12px 12px;
+  padding: 0 var(--space-12) var(--space-12);
 }
 
 .ai-prompt-textarea {
   width: 100%;
-  padding: 8px 10px;
-  font-size: 12px;
+  padding: var(--space-8) 10px;
+  font-size: var(--font-md);
   font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
   line-height: 1.5;
   color: var(--text-primary);
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--ui-radius-panel);
   resize: vertical;
   min-height: 60px;
   box-sizing: border-box;
@@ -6910,14 +6876,14 @@ button.submission-check-finding:hover {
 .ai-prompt-reset {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  margin-top: 6px;
-  padding: 3px 8px;
-  font-size: 11px;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+  padding: 3px var(--space-8);
+  font-size: var(--font-sm);
   color: var(--text-secondary);
   background: none;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
 }
 
@@ -6933,25 +6899,26 @@ button.submission-check-finding:hover {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 48px 24px;
+  padding: 48px var(--space-24);
   background-color: var(--bg-primary);
   overflow-y: auto;
 }
 
 .home-brand {
   text-align: center;
-  margin-bottom: 32px;
+  margin-bottom: 28px;
 }
 
 .home-title {
-  font-size: 36px;
+  font-size: clamp(30px, 4vw, 36px);
+  letter-spacing: -0.035em;
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 4px;
+  margin-bottom: var(--space-4);
 }
 
 .home-subtitle {
-  font-size: 16px;
+  font-size: var(--font-xl);
   color: var(--text-secondary);
 }
 
@@ -6960,17 +6927,17 @@ button.submission-check-finding:hover {
   position: relative;
   width: 100%;
   max-width: 560px;
-  margin-bottom: 32px;
+  margin-bottom: var(--space-32);
 }
 
 .home-search-bar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
+  gap: var(--space-8);
+  padding: var(--space-8) var(--space-12);
   background-color: var(--bg-input, var(--bg-secondary));
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--ui-radius-large);
   transition:
     border-color 0.15s,
     box-shadow 0.15s;
@@ -6991,7 +6958,7 @@ button.submission-check-finding:hover {
   background: transparent;
   border: none;
   outline: none;
-  font-size: 15px;
+  font-size: var(--font-lg);
   color: var(--text-primary);
   font-family: inherit;
 }
@@ -7009,7 +6976,7 @@ button.submission-check-finding:hover {
   height: 24px;
   background: none;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   color: var(--text-secondary);
   cursor: pointer;
   flex-shrink: 0;
@@ -7031,20 +6998,20 @@ button.submission-check-finding:hover {
   right: 0;
   background-color: var(--modal-bg, var(--bg-secondary));
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--ui-radius-large);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   max-height: 320px;
   overflow-y: auto;
   z-index: 50;
-  padding: 4px;
+  padding: var(--space-4);
 }
 
 .home-search-result {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: 6px;
+  gap: var(--space-10);
+  padding: var(--space-8) 10px;
+  border-radius: var(--ui-radius-panel);
   cursor: pointer;
   transition: background-color 0.1s;
 }
@@ -7068,13 +7035,13 @@ button.submission-check-finding:hover {
 }
 
 .home-search-result-label {
-  font-size: 13px;
+  font-size: var(--font-base);
   font-weight: 500;
   color: var(--text-primary);
 }
 
 .home-search-result-detail {
-  font-size: 11px;
+  font-size: var(--font-sm);
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -7082,10 +7049,10 @@ button.submission-check-finding:hover {
 }
 
 .home-search-result-badge {
-  font-size: 10px;
+  font-size: var(--font-xs);
   font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 9999px;
+  padding: var(--space-2) var(--space-6);
+  border-radius: var(--ui-radius-pill);
   background-color: var(--bg-hover);
   color: var(--text-secondary);
   white-space: nowrap;
@@ -7097,7 +7064,7 @@ button.submission-check-finding:hover {
 .home-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: var(--space-12);
   margin-bottom: 40px;
 }
 
@@ -7108,11 +7075,11 @@ button.submission-check-finding:hover {
 .home-action-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  font-size: 14px;
+  gap: var(--space-8);
+  padding: 10px var(--space-20);
+  font-size: var(--font-lg);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--ui-radius-panel);
   background-color: var(--bg-secondary);
   color: var(--text-primary);
   cursor: pointer;
@@ -7145,11 +7112,11 @@ button.submission-check-finding:hover {
 .home-recent-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
+  gap: var(--space-8);
+  font-size: var(--font-lg);
   font-weight: 600;
   color: var(--text-secondary);
-  margin-bottom: 12px;
+  margin-bottom: var(--space-12);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -7158,7 +7125,7 @@ button.submission-check-finding:hover {
 .home-recent-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-2);
 }
 
 .home-recent-item {
@@ -7169,7 +7136,7 @@ button.submission-check-finding:hover {
   padding: 0;
   background-color: var(--card-bg, var(--bg-secondary));
   border: 1px solid var(--card-border, var(--border));
-  border-radius: 6px;
+  border-radius: var(--ui-radius-panel);
   transition:
     background-color 0.15s,
     border-color 0.15s;
@@ -7186,13 +7153,13 @@ button.submission-check-finding:hover {
   align-items: center;
   align-self: stretch;
   flex: 1;
-  gap: 12px;
+  gap: var(--space-12);
   min-width: 0;
-  padding: 10px 0 10px 12px;
+  padding: 10px 0 10px var(--space-12);
   color: inherit;
   background: none;
   border: none;
-  border-radius: 5px;
+  border-radius: var(--ui-radius-control);
   font: inherit;
   text-align: left;
   cursor: pointer;
@@ -7222,11 +7189,11 @@ button.submission-check-finding:hover {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-2);
 }
 
 .home-recent-item-title {
-  font-size: 13px;
+  font-size: var(--font-base);
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
@@ -7235,7 +7202,7 @@ button.submission-check-finding:hover {
 }
 
 .home-recent-item-folder {
-  font-size: 11px;
+  font-size: var(--font-sm);
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -7245,12 +7212,12 @@ button.submission-check-finding:hover {
 .home-recent-item-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   flex-shrink: 0;
 }
 
 .home-recent-item-date {
-  font-size: 11px;
+  font-size: var(--font-sm);
   color: var(--text-secondary);
   white-space: nowrap;
 }
@@ -7276,10 +7243,10 @@ button.submission-check-finding:hover {
 /* Tag badge */
 .home-recent-item-tag {
   display: inline-block;
-  padding: 2px 8px;
-  font-size: 10px;
+  padding: var(--space-2) var(--space-8);
+  font-size: var(--font-xs);
   font-weight: 600;
-  border-radius: 9999px;
+  border-radius: var(--ui-radius-pill);
   background-color: var(--accent);
   color: white;
   white-space: nowrap;
@@ -7294,7 +7261,7 @@ button.submission-check-finding:hover {
 .home-recent-item-menu-wrapper {
   position: relative;
   flex-shrink: 0;
-  margin: 0 12px;
+  margin: 0 var(--space-12);
 }
 
 .home-recent-item-menu-btn {
@@ -7305,7 +7272,7 @@ button.submission-check-finding:hover {
   height: 24px;
   background: none;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   color: var(--text-secondary);
   cursor: pointer;
   opacity: 0;
@@ -7330,26 +7297,26 @@ button.submission-check-finding:hover {
   position: absolute;
   top: 100%;
   right: 0;
-  margin-top: 4px;
+  margin-top: var(--space-4);
   min-width: 140px;
   background-color: var(--modal-bg, var(--bg-secondary));
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--ui-radius-panel);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   z-index: 60;
-  padding: 4px;
+  padding: var(--space-4);
 }
 
 .home-recent-item-dropdown button {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   width: 100%;
-  padding: 6px 10px;
-  font-size: 13px;
+  padding: var(--space-6) 10px;
+  font-size: var(--font-base);
   background: none;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   color: var(--text-primary);
   cursor: pointer;
   transition: background-color 0.1s;
@@ -7372,25 +7339,25 @@ button.submission-check-finding:hover {
   position: absolute;
   top: 100%;
   right: 0;
-  margin-top: 4px;
+  margin-top: var(--space-4);
   display: flex;
-  gap: 4px;
-  padding: 8px;
+  gap: var(--space-4);
+  padding: var(--space-8);
   background-color: var(--modal-bg, var(--bg-secondary));
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--ui-radius-panel);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   z-index: 60;
 }
 
 .home-recent-item-tag-input {
   width: 140px;
-  padding: 4px 8px;
-  font-size: 13px;
+  padding: var(--space-4) var(--space-8);
+  font-size: var(--font-base);
   background-color: var(--bg-input);
   color: var(--text-primary);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   outline: none;
 }
 
@@ -7399,12 +7366,12 @@ button.submission-check-finding:hover {
 }
 
 .home-recent-item-tag-save {
-  padding: 4px 10px;
-  font-size: 12px;
+  padding: var(--space-4) 10px;
+  font-size: var(--font-md);
   background-color: var(--accent);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -7422,27 +7389,27 @@ button.submission-check-finding:hover {
   position: absolute;
   top: 100%;
   right: 0;
-  margin-top: 4px;
+  margin-top: var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-8);
   width: 320px;
-  padding: 10px;
+  padding: var(--space-10);
   background-color: var(--modal-bg, var(--bg-secondary));
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--ui-radius-panel);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   z-index: 60;
 }
 
 .home-recent-item-path-input {
   width: 100%;
-  padding: 6px 8px;
-  font-size: 13px;
+  padding: var(--space-6) var(--space-8);
+  font-size: var(--font-base);
   background-color: var(--bg-input);
   color: var(--text-primary);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   outline: none;
 }
 
@@ -7453,16 +7420,16 @@ button.submission-check-finding:hover {
 .home-recent-item-path-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 6px;
+  gap: var(--space-6);
 }
 
 .home-recent-item-path-browse {
-  padding: 4px 10px;
-  font-size: 12px;
+  padding: var(--space-4) 10px;
+  font-size: var(--font-md);
   background-color: var(--bg-tertiary, var(--bg-secondary));
   color: var(--text-primary);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -7472,7 +7439,7 @@ button.submission-check-finding:hover {
 }
 
 .home-recent-item-path-error {
-  font-size: 12px;
+  font-size: var(--font-md);
   color: var(--error);
 }
 
@@ -7480,8 +7447,8 @@ button.submission-check-finding:hover {
   flex: 0 0 100%;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px 12px 12px;
+  gap: var(--space-8);
+  padding: 10px var(--space-12) var(--space-12);
   border-top: 1px solid color-mix(in srgb, var(--error) 45%, var(--border));
   background-color: color-mix(in srgb, var(--error) 7%, transparent);
 }
@@ -7489,9 +7456,9 @@ button.submission-check-finding:hover {
 .home-recent-item-recovery-message {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: var(--space-8);
   color: var(--error);
-  font-size: 12px;
+  font-size: var(--font-md);
   line-height: 1.45;
   overflow-wrap: anywhere;
 }
@@ -7503,7 +7470,7 @@ button.submission-check-finding:hover {
 
 .home-recent-item-recovery-label {
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: var(--font-sm);
   font-weight: 600;
 }
 
@@ -7511,7 +7478,7 @@ button.submission-check-finding:hover {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 6px;
+  gap: var(--space-6);
 }
 
 .home-recent-item-recovery-actions button {
@@ -7519,11 +7486,11 @@ button.submission-check-finding:hover {
   align-items: center;
   gap: 5px;
   min-height: 28px;
-  padding: 4px 10px;
+  padding: var(--space-4) 10px;
   color: var(--text-primary);
   background-color: var(--bg-tertiary, var(--bg-secondary));
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
 }
 
@@ -7553,11 +7520,11 @@ button.submission-check-finding:hover {
 
 /* ===== TODO Panel ===== */
 .todo-panel {
-  padding: 12px;
+  padding: var(--space-12);
   overflow-y: auto;
   overflow-x: hidden;
   height: 100%;
-  font-size: 13px;
+  font-size: var(--font-base);
   line-height: 1.6;
 }
 
@@ -7568,8 +7535,8 @@ button.submission-check-finding:hover {
   justify-content: center;
   height: 100%;
   color: var(--text-secondary);
-  font-size: 13px;
-  gap: 12px;
+  font-size: var(--font-base);
+  gap: var(--space-12);
 }
 
 .panel-create-icon-btn {
@@ -7594,7 +7561,7 @@ button.submission-check-finding:hover {
 }
 
 .todo-panel__header {
-  margin: 12px 0 6px;
+  margin: var(--space-12) 0 var(--space-6);
   color: var(--text-primary);
   font-weight: 600;
 }
@@ -7604,39 +7571,39 @@ button.submission-check-finding:hover {
 }
 
 .todo-panel h1.todo-panel__header {
-  font-size: 18px;
+  font-size: var(--font-2xl);
 }
 
 .todo-panel h2.todo-panel__header {
-  font-size: 15px;
+  font-size: var(--font-lg);
 }
 
 .todo-panel h3.todo-panel__header {
-  font-size: 14px;
+  font-size: var(--font-lg);
 }
 
 .todo-panel h4.todo-panel__header,
 .todo-panel h5.todo-panel__header,
 .todo-panel h6.todo-panel__header {
-  font-size: 13px;
+  font-size: var(--font-base);
 }
 
 .todo-panel__blockquote {
-  margin: 4px 0;
-  padding: 4px 8px 4px 12px;
+  margin: var(--space-4) 0;
+  padding: var(--space-4) var(--space-8) var(--space-4) var(--space-12);
   border-left: 3px solid var(--accent);
   background-color: var(--bg-hover);
   color: var(--text-secondary);
-  font-size: 12px;
-  border-radius: 0 4px 4px 0;
+  font-size: var(--font-md);
+  border-radius: 0 var(--ui-radius-control) var(--ui-radius-control) 0;
 }
 
 .todo-panel__item {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 3px 4px;
-  border-radius: 4px;
+  gap: var(--space-8);
+  padding: 3px var(--space-4);
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
   transition: background-color 0.1s;
 }
@@ -7658,12 +7625,12 @@ button.submission-check-finding:hover {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 0 4px;
+  padding: 0 var(--space-4);
   margin-left: auto;
   transition:
     opacity 0.1s,
     color 0.1s;
-  font-size: 16px;
+  font-size: var(--font-xl);
   line-height: 1;
 }
 
@@ -7682,7 +7649,7 @@ button.submission-check-finding:hover {
 }
 
 .todo-panel__text {
-  margin: 2px 0;
+  margin: var(--space-2) 0;
   color: var(--text-primary);
 }
 
@@ -7692,20 +7659,20 @@ button.submission-check-finding:hover {
 
 .todo-panel__input-row {
   display: flex;
-  gap: 8px;
-  margin-top: 12px;
-  padding-top: 12px;
+  gap: var(--space-8);
+  margin-top: var(--space-12);
+  padding-top: var(--space-12);
   border-top: 1px solid var(--border);
 }
 
 .todo-panel__input {
   flex: 1;
-  padding: 4px 8px;
-  font-size: 13px;
+  padding: var(--space-4) var(--space-8);
+  font-size: var(--font-base);
   background-color: var(--bg-input);
   color: var(--text-primary);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
 }
 
 .todo-panel__input:focus {
@@ -7714,13 +7681,13 @@ button.submission-check-finding:hover {
 }
 
 .todo-panel__add-btn {
-  padding: 4px 12px;
+  padding: var(--space-4) var(--space-12);
   background-color: var(--accent);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--font-base);
 }
 
 .todo-panel__add-btn:hover {
@@ -7737,8 +7704,8 @@ button.submission-check-finding:hover {
 .timeline-entry {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 6px 12px;
+  gap: var(--space-8);
+  padding: var(--space-6) var(--space-12);
   cursor: default;
 }
 
@@ -7752,7 +7719,7 @@ button.submission-check-finding:hover {
 
 .timeline-icon {
   flex-shrink: 0;
-  margin-top: 2px;
+  margin-top: var(--space-2);
   color: var(--text-secondary);
 }
 
@@ -7767,20 +7734,20 @@ button.submission-check-finding:hover {
 }
 
 .timeline-message {
-  font-size: 13px;
+  font-size: var(--font-base);
   color: var(--text-primary);
   word-break: break-word;
 }
 
 .timeline-meta {
-  font-size: 11px;
+  font-size: var(--font-sm);
   color: var(--text-secondary);
   word-break: break-word;
 }
 
 .timeline-empty {
-  padding: 12px;
-  font-size: 13px;
+  padding: var(--space-12);
+  font-size: var(--font-base);
   color: var(--text-secondary);
   text-align: center;
 }
@@ -7796,7 +7763,7 @@ button.submission-check-finding:hover {
 
 .sh-bar {
   width: 4px !important;
-  margin-left: 2px;
+  margin-left: var(--space-2);
 }
 
 [data-theme='high-contrast'] .sh-heading {
@@ -7810,15 +7777,15 @@ button.submission-check-finding:hover {
 /* ── Section Color Palette Editor (Settings) ──────────────────── */
 
 .sh-palette-editor {
-  padding: 4px 0 4px 16px;
+  padding: var(--space-4) 0 var(--space-4) var(--space-16);
 }
 
 .sh-palette-label {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
-  font-size: 12px;
+  margin-bottom: var(--space-8);
+  font-size: var(--font-md);
   color: var(--text-secondary);
 }
 
@@ -7826,9 +7793,9 @@ button.submission-check-finding:hover {
   background: none;
   border: 1px solid var(--border);
   color: var(--text-secondary);
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 4px;
+  font-size: var(--font-sm);
+  padding: var(--space-2) var(--space-8);
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
 }
 
@@ -7840,7 +7807,7 @@ button.submission-check-finding:hover {
 .sh-palette-swatches {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--space-6);
   align-items: center;
 }
 
@@ -7852,7 +7819,7 @@ button.submission-check-finding:hover {
   display: block;
   width: 28px;
   height: 28px;
-  border-radius: 6px;
+  border-radius: var(--ui-radius-panel);
   border: 2px solid var(--border);
   cursor: pointer;
   transition:
@@ -7883,7 +7850,7 @@ button.submission-check-finding:hover {
   background: var(--error);
   color: white;
   border: none;
-  font-size: 10px;
+  font-size: var(--font-xs);
   line-height: 1;
   cursor: pointer;
   display: none;
@@ -7899,11 +7866,11 @@ button.submission-check-finding:hover {
 .sh-swatch-add {
   width: 28px;
   height: 28px;
-  border-radius: 6px;
+  border-radius: var(--ui-radius-panel);
   border: 2px dashed var(--border);
   background: none;
   color: var(--text-secondary);
-  font-size: 16px;
+  font-size: var(--font-xl);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -7923,27 +7890,27 @@ button.submission-check-finding:hover {
 .toolbar-separator-line {
   height: 1px;
   width: 100%;
-  margin: 4px 0;
+  margin: var(--space-4) 0;
 }
 
 .toolbar-export-header {
-  padding: 4px 12px;
-  font-size: 11px;
+  padding: var(--space-4) var(--space-12);
+  font-size: var(--font-sm);
   color: var(--text-secondary);
   font-weight: 600;
   text-transform: uppercase;
 }
 
 .toolbar-export-item {
-  padding-left: 24px;
+  padding-left: var(--space-24);
 }
 
 .toolbar-pdf-controls {
   display: flex;
-  gap: 2px;
+  gap: var(--space-2);
   align-items: center;
   padding: 1px;
-  border-radius: 8px;
+  border-radius: var(--ui-radius-large);
   background-color: var(--chrome-pill-bg);
   border: 1px solid var(--chrome-border);
 }
@@ -7954,7 +7921,7 @@ button.submission-check-finding:hover {
 }
 
 .toolbar-zoom-label {
-  font-size: 11px;
+  font-size: var(--font-sm);
   min-width: 44px;
   text-align: center;
   cursor: pointer;
@@ -7971,13 +7938,13 @@ button.submission-check-finding:hover {
 .toolbar-page-input {
   width: 30px;
   height: 26px;
-  padding: 0 4px;
-  font-size: 11px;
+  padding: 0 var(--space-4);
+  font-size: var(--font-sm);
   text-align: center;
   background-color: var(--chrome-elevated-bg);
   color: var(--text-primary);
   border: 1px solid var(--chrome-border);
-  border-radius: 6px;
+  border-radius: var(--ui-radius-panel);
   outline: none;
 }
 
@@ -7986,7 +7953,7 @@ button.submission-check-finding:hover {
 }
 
 .toolbar-page-label {
-  font-size: 11px;
+  font-size: var(--font-sm);
   color: var(--text-secondary);
   white-space: nowrap;
 }
@@ -8015,26 +7982,26 @@ button.submission-check-finding:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 4px;
+  margin-bottom: var(--space-4);
 }
 
 .settings-flex-row-start {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
+  gap: var(--space-8);
+  margin-bottom: var(--space-4);
 }
 
 .settings-flex-row-between {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-8);
 }
 
 .settings-section-header-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-6);
 }
 
 .settings-key-input-wrapper {
@@ -8050,21 +8017,21 @@ button.submission-check-finding:hover {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 2px;
+  padding: var(--space-2);
   color: var(--text-secondary);
   display: flex;
 }
 
 .settings-field-mt {
-  margin-top: 16px;
+  margin-top: var(--space-16);
 }
 
 .settings-field-mt-sm {
-  margin-top: 12px;
+  margin-top: var(--space-12);
 }
 
 .settings-heading-mb {
-  margin-bottom: 12px;
+  margin-bottom: var(--space-12);
 }
 
 .settings-no-mb {
@@ -8074,18 +8041,18 @@ button.submission-check-finding:hover {
 .settings-thinking-budget-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-12);
 }
 
 .settings-thinking-sub {
   padding-left: 0;
-  margin-top: 8px;
+  margin-top: var(--space-8);
 }
 
 .settings-spellcheck-sub {
   padding-left: 0;
-  margin-top: 4px;
-  margin-bottom: 8px;
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-8);
 }
 
 .settings-select-narrow {
@@ -8124,7 +8091,7 @@ button.submission-check-finding:hover {
 .settings-status-inline {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-4);
 }
 
 /* Citation Tooltip */
@@ -8132,24 +8099,24 @@ button.submission-check-finding:hover {
   position: absolute;
   z-index: 10;
   max-width: 350px;
-  padding: 10px 12px;
+  padding: 10px var(--space-12);
   background: var(--bg-secondary);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--ui-radius-panel);
   box-shadow: 0 4px 12px var(--shadow-color);
   pointer-events: none;
   animation: citation-tooltip-fade-in 100ms ease-out;
 }
 
 .citation-tooltip-entry + .citation-tooltip-entry {
-  margin-top: 8px;
-  padding-top: 8px;
+  margin-top: var(--space-8);
+  padding-top: var(--space-8);
   border-top: 1px solid var(--border);
 }
 
 .citation-tooltip-title {
   font-weight: 600;
-  font-size: 13px;
+  font-size: var(--font-base);
   line-height: 1.3;
   color: var(--text-primary);
   display: -webkit-box;
@@ -8160,7 +8127,7 @@ button.submission-check-finding:hover {
 
 .citation-tooltip-authors {
   margin-top: 3px;
-  font-size: 12px;
+  font-size: var(--font-md);
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -8168,8 +8135,8 @@ button.submission-check-finding:hover {
 }
 
 .citation-tooltip-meta {
-  margin-top: 2px;
-  font-size: 11px;
+  margin-top: var(--space-2);
+  font-size: var(--font-sm);
   color: var(--text-secondary);
 }
 

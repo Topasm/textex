@@ -195,7 +195,7 @@ describe('SelectionAiToolbar', () => {
       />
     )
 
-    expect(screen.getByRole('button', { name: 'Updating Context...' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Updating Context…' })).toBeDisabled()
   })
 
   it('forwards the minimal research actions', () => {

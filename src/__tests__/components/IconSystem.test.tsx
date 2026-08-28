@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { join, relative, resolve } from 'node:path'
 import { render, screen } from '@testing-library/react'
 import { Search } from 'lucide-react'
 import { describe, expect, it } from 'vitest'
@@ -8,6 +8,16 @@ import {
   ICON_STROKE_WIDTH,
   IconSystemProvider
 } from '../../renderer/components/ui/IconSystem'
+
+function rendererComponents(dir = resolve(process.cwd(), 'src/renderer')): string[] {
+  const out: string[] = []
+  for (const entry of readdirSync(dir)) {
+    const full = join(dir, entry)
+    if (statSync(full).isDirectory()) out.push(...rendererComponents(full))
+    else if (full.endsWith('.tsx')) out.push(full)
+  }
+  return out
+}
 
 describe('IconSystemProvider', () => {
   it('applies the shared size, physical stroke, class, and decorative semantics', () => {
@@ -59,5 +69,26 @@ describe('IconSystemProvider', () => {
         /<svg\b|&times;|&#x(?:2395|25b2|25b6|25bc|270e);|[×✓✕✖⚠]/i
       )
     }
+  })
+})
+
+describe('icon scale', () => {
+  it('is the only source of icon sizes in the renderer', () => {
+    const offScale: string[] = []
+    for (const file of rendererComponents()) {
+      const source = readFileSync(file, 'utf8')
+      for (const [index, line] of source.split('\n').entries()) {
+        for (const match of line.matchAll(/size=\{(\d+)\}/gu)) {
+          offScale.push(`${relative(process.cwd(), file)}:${index + 1} size={${match[1]}}`)
+        }
+      }
+    }
+    expect(offScale).toEqual([])
+  })
+
+  it('keeps the steps distinct and ordered', () => {
+    const steps = Object.values(ICON_SIZE)
+    expect(steps).toEqual([...steps].sort((a, b) => a - b))
+    expect(new Set(steps).size).toBe(steps.length)
   })
 })

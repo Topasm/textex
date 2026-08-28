@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ICON_SIZE } from '../ui/IconSystem'
 import { useTranslation } from 'react-i18next'
 import {
   AlertTriangle,
@@ -12,7 +13,9 @@ import {
 } from 'lucide-react'
 import type { RecentProject } from '../../../shared/types'
 import { openProject } from '../../utils/openProject'
-import { errorMessage, logError } from '../../utils/errorMessage'
+import { logError } from '../../utils/errorMessage'
+import { nativeErrorCode } from '../../../shared/appError'
+import { describeNativeError } from '../../services/nativeErrors'
 import type { TFunction } from 'i18next'
 
 function formatRelativeDate(iso: string, t: TFunction): string {
@@ -69,32 +72,30 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
   const tagInputRef = useRef<HTMLInputElement>(null)
   const pathInputRef = useRef<HTMLInputElement>(null)
 
+  // Native path failures are matched by code, never by their English text.
   const getPathErrorMessage = useCallback(
     (err: unknown) => {
-      const message = errorMessage(err)
-      if (message.includes('must be absolute') || message.includes('Invalid recent project path')) {
-        return t('recentProjects.invalidPath')
+      switch (nativeErrorCode(err)) {
+        case 'invalidPath':
+        case 'nonUtf8Path':
+          return t('recentProjects.invalidPath')
+        case 'io':
+        case 'notADirectory':
+        case 'notAFile':
+          return t('recentProjects.pathNotFound')
+        case 'recentProjectUnauthorized':
+          return t('recentProjects.pathNotAuthorized')
+        default:
+          return t('recentProjects.pathSaveFailed')
       }
-      if (message.includes('not found') || message.includes('must be a directory')) {
-        return t('recentProjects.pathNotFound')
-      }
-      return t('recentProjects.pathSaveFailed')
     },
     [t]
   )
 
   const getOpenErrorMessage = useCallback(
     (err: unknown) => {
-      const message = errorMessage(err).trim()
-      if (
-        message.includes('must be absolute') ||
-        message.includes('Invalid recent project path') ||
-        message.includes('not found') ||
-        message.includes('must be a directory')
-      ) {
-        return getPathErrorMessage(err)
-      }
-      return message || t('recentProjects.pathSaveFailed')
+      if (nativeErrorCode(err) !== null) return getPathErrorMessage(err)
+      return describeNativeError(err).trim() || t('recentProjects.pathSaveFailed')
     },
     [getPathErrorMessage, t]
   )
@@ -324,7 +325,7 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
   return (
     <div className="home-recent">
       <h2 className="home-recent-title">
-        <Clock size={16} />
+        <Clock size={ICON_SIZE.control} />
         {t('recentProjects.title')}
       </h2>
       <div className="home-recent-list">
@@ -346,10 +347,10 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
               >
                 {project.pinned && (
                   <span className="home-recent-item-pin-indicator">
-                    <Pin size={12} />
+                    <Pin size={ICON_SIZE.micro} />
                   </span>
                 )}
-                <FolderOpen size={20} className="home-recent-item-icon" />
+                <FolderOpen size={ICON_SIZE.prominent} className="home-recent-item-icon" />
                 <span className="home-recent-item-info">
                   <span className="home-recent-item-title">{project.title || project.name}</span>
                   <span className="home-recent-item-folder">{project.name}</span>
@@ -372,21 +373,21 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
                   aria-label={t('recentProjects.moreActions')}
                   title={t('recentProjects.moreActions')}
                 >
-                  <MoreVertical size={14} />
+                  <MoreVertical size={ICON_SIZE.compact} />
                 </button>
 
                 {menuOpenPath === project.path && (
                   <div className="home-recent-item-dropdown">
                     <button onClick={(e) => handleTogglePin(e, project)}>
-                      <Pin size={14} />
+                      <Pin size={ICON_SIZE.compact} />
                       {project.pinned ? t('recentProjects.unpin') : t('recentProjects.pin')}
                     </button>
                     <button onClick={(e) => handleEditTag(e, project)}>
-                      <Tag size={14} />
+                      <Tag size={ICON_SIZE.compact} />
                       {t('recentProjects.editTag')}
                     </button>
                     <button onClick={(e) => handleEditPath(e, project)}>
-                      <FolderOpen size={14} />
+                      <FolderOpen size={ICON_SIZE.compact} />
                       {t('recentProjects.editPath')}
                     </button>
                     <button
@@ -396,7 +397,7 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
                         handleRemoveRecent(project.path)
                       }}
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={ICON_SIZE.compact} />
                       {t('recentProjects.remove')}
                     </button>
                   </div>
@@ -502,7 +503,7 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
                     className="home-recent-item-recovery-message"
                     role="alert"
                   >
-                    <AlertTriangle size={16} aria-hidden="true" />
+                    <AlertTriangle size={ICON_SIZE.control} aria-hidden="true" />
                     <span>
                       {t('recentProjects.openFailed', {
                         path: failure.projectPath,
@@ -550,11 +551,11 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
                       disabled={isRetryingPath}
                       onClick={() => void handleOpenRecent(project)}
                     >
-                      <RotateCcw size={14} aria-hidden="true" />
+                      <RotateCcw size={ICON_SIZE.compact} aria-hidden="true" />
                       {t('recentProjects.retry')}
                     </button>
                     <button type="button" onClick={() => void handleBrowseRecovery(project.path)}>
-                      <FolderOpen size={14} aria-hidden="true" />
+                      <FolderOpen size={ICON_SIZE.compact} aria-hidden="true" />
                       {t('recentProjects.browse')}
                     </button>
                     <button
@@ -570,7 +571,7 @@ export function RecentProjectList({ recentProjects, setRecentProjects }: RecentP
                       className="danger"
                       onClick={() => handleRemoveRecent(project.path)}
                     >
-                      <Trash2 size={14} aria-hidden="true" />
+                      <Trash2 size={ICON_SIZE.compact} aria-hidden="true" />
                       {t('recentProjects.remove')}
                     </button>
                   </div>

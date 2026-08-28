@@ -1,4 +1,5 @@
 import { FileText } from 'lucide-react'
+import { ICON_SIZE } from '../ui/IconSystem'
 import { useTranslation } from 'react-i18next'
 import type { ProjectFileSearchResult } from './types'
 
@@ -37,7 +38,7 @@ export function ProjectFileSearchPanel({
           onClick={() => openFile(result)}
           onMouseEnter={() => setHighlightedIndex(index)}
         >
-          <FileText size={15} aria-hidden="true" />
+          <FileText size={ICON_SIZE.compact} aria-hidden="true" />
           <span className="omni-search-result-text">
             <span className="omni-search-result-title">{result.name}</span>
             <span className="omni-search-result-meta">{result.relativePath}</span>

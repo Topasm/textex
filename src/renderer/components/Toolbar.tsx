@@ -9,6 +9,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   PanelRightOpen,
+  Pilcrow,
   Play,
   Save as SaveIcon,
   Square,
@@ -21,11 +22,13 @@ import { useCompileStore } from '../store/useCompileStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { usePdfStore } from '../store/usePdfStore'
 import { useSettingsStore } from '../store/useSettingsStore'
+import { useUiStore } from '../store/useUiStore'
 import { OmniSearch } from './OmniSearch'
 import { RecentProjectSwitcher } from './RecentProjectSwitcher'
 import PdfZoomDropdown from './PdfZoomDropdown'
 import { ICON_SIZE } from './ui/IconSystem'
-import { toggleProjectSidebar } from '../services/appCommands'
+import { withShortcutHint } from '../services/commandSearch'
+import { toggleProjectSidebar, toggleProseMode } from '../services/appCommands'
 import { logError } from '../utils/errorMessage'
 import type { AppCommandId } from '../../shared/types'
 
@@ -117,6 +120,10 @@ const Toolbar = React.memo(function Toolbar({
   const projectRoot = useProjectStore((s) => s.projectRoot)
   const isSidebarOpen = useProjectStore((s) => s.isSidebarOpen)
   const isResearchPanelOpen = useProjectStore((s) => s.isResearchPanelOpen)
+  const isProseMode = useUiStore((state) =>
+    Boolean(filePath && state.proseModePaths.includes(filePath))
+  )
+  const canUseProseMode = Boolean(filePath?.toLowerCase().endsWith('.tex'))
 
   const [pageInputValue, setPageInputValue] = useState('')
   const [isPageInputFocused, setIsPageInputFocused] = useState(false)
@@ -195,7 +202,7 @@ const Toolbar = React.memo(function Toolbar({
               type="button"
               className="toolbar-btn toolbar-app-menu"
               onClick={onOpenCommandPalette}
-              title={t('toolbar.appMenu')}
+              title={withShortcutHint(t('toolbar.appMenu'), 'commandPalette.open')}
               aria-label={t('toolbar.appMenu')}
               data-no-drag
             >
@@ -217,7 +224,10 @@ const Toolbar = React.memo(function Toolbar({
                 type="button"
                 className={`toolbar-btn toolbar-sidebar-toggle${isSidebarOpen && !settings.autoHideSidebar ? ' active' : ''}`}
                 onClick={toggleProjectSidebar}
-                title={t('commandPalette.commands.view_toggleSidebar')}
+                title={withShortcutHint(
+                  t('commandPalette.commands.view_toggleSidebar'),
+                  'view.toggleSidebar'
+                )}
                 aria-label={t('commandPalette.commands.view_toggleSidebar')}
                 aria-controls="project-sidebar"
                 aria-expanded={isSidebarOpen && !settings.autoHideSidebar}
@@ -235,7 +245,7 @@ const Toolbar = React.memo(function Toolbar({
             className={`toolbar-btn${isDirty ? ' save-btn-dirty' : ''}`}
             onClick={onSave}
             disabled={!filePath}
-            title={t('toolbar.quickSave')}
+            title={withShortcutHint(t('toolbar.quickSave'), 'file.save')}
             aria-label={t('toolbar.quickSave')}
           >
             <SaveIcon size={ICON_SIZE.control} />
@@ -245,7 +255,7 @@ const Toolbar = React.memo(function Toolbar({
             className="toolbar-btn compile-btn"
             onClick={onCompile}
             disabled={!filePath || compileStatus === 'compiling'}
-            title={t('toolbar.compileLaTeX')}
+            title={withShortcutHint(t('toolbar.compileLaTeX'), 'compile.run')}
             aria-label={t('toolbar.compileLaTeX')}
           >
             {compileStatus === 'compiling' ? (
@@ -253,6 +263,21 @@ const Toolbar = React.memo(function Toolbar({
             ) : (
               <Play size={ICON_SIZE.control} />
             )}
+          </button>
+
+          <button
+            type="button"
+            className={`toolbar-btn toolbar-prose-toggle${isProseMode ? ' active' : ''}`}
+            onClick={toggleProseMode}
+            disabled={!canUseProseMode}
+            title={withShortcutHint(
+              t(isProseMode ? 'prosePane.showTex' : 'prosePane.showProse'),
+              'view.toggleProse'
+            )}
+            aria-label={t(isProseMode ? 'prosePane.showTex' : 'prosePane.showProse')}
+            aria-pressed={isProseMode}
+          >
+            <Pilcrow size={ICON_SIZE.control} />
           </button>
 
           <div className="toolbar-search-slot">
@@ -330,7 +355,7 @@ const Toolbar = React.memo(function Toolbar({
               type="button"
               className="toolbar-btn toolbar-research-toggle"
               onClick={() => useProjectStore.getState().openResearchPanel('references')}
-              title={t('researchPanel.open')}
+              title={withShortcutHint(t('researchPanel.open'), 'view.toggleResearchPanel')}
               aria-label={t('researchPanel.open')}
               aria-controls="research-panel"
               aria-expanded="false"

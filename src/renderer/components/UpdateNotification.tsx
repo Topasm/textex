@@ -8,6 +8,7 @@ import {
   X
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { ICON_SIZE } from './ui/IconSystem'
 import {
   appUpdateReleaseUrl,
   dismissAppUpdate,
@@ -68,10 +69,11 @@ function UpdateNotification() {
       : null
 
   const statusIcon = (() => {
-    if (isActive) return <RefreshCw className="update-spinner" size={16} aria-hidden="true" />
-    if (status === 'error') return <AlertCircle size={16} aria-hidden="true" />
-    if (status === 'available') return <Download size={16} aria-hidden="true" />
-    return <CheckCircle2 size={16} aria-hidden="true" />
+    if (isActive)
+      return <RefreshCw className="update-spinner" size={ICON_SIZE.control} aria-hidden="true" />
+    if (status === 'error') return <AlertCircle size={ICON_SIZE.control} aria-hidden="true" />
+    if (status === 'available') return <Download size={ICON_SIZE.control} aria-hidden="true" />
+    return <CheckCircle2 size={ICON_SIZE.control} aria-hidden="true" />
   })()
 
   return (
@@ -102,21 +104,21 @@ function UpdateNotification() {
 
       {status === 'available' && (
         <button type="button" onClick={() => void downloadAppUpdate()}>
-          <Download size={14} aria-hidden="true" />
+          <Download size={ICON_SIZE.compact} aria-hidden="true" />
           {t('updateNotification.download')}
         </button>
       )}
 
       {status === 'ready' && (
         <button type="button" onClick={() => void restartAppUpdate()}>
-          <RotateCcw size={14} aria-hidden="true" />
+          <RotateCcw size={ICON_SIZE.compact} aria-hidden="true" />
           {t('updateNotification.restart')}
         </button>
       )}
 
       {status === 'error' && (
         <button type="button" onClick={() => void retryAppUpdate()}>
-          <RefreshCw size={14} aria-hidden="true" />
+          <RefreshCw size={ICON_SIZE.compact} aria-hidden="true" />
           {t('updateNotification.retry')}
         </button>
       )}
@@ -128,7 +130,7 @@ function UpdateNotification() {
           onClick={() => void window.api.openExternal(appUpdateReleaseUrl(version)).catch(() => {})}
         >
           {t('updateNotification.viewRelease')}
-          <ExternalLink size={12} aria-hidden="true" />
+          <ExternalLink size={ICON_SIZE.micro} aria-hidden="true" />
         </button>
       )}
 
@@ -140,7 +142,7 @@ function UpdateNotification() {
           title={t('updateNotification.dismiss')}
           aria-label={t('updateNotification.dismiss')}
         >
-          <X size={16} aria-hidden="true" />
+          <X size={ICON_SIZE.control} aria-hidden="true" />
         </button>
       )}
 

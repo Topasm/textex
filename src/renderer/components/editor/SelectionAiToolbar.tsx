@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { editor as monacoEditor, Selection } from 'monaco-editor'
 import type { AiActionDef } from './editorAiActions'
 import type { AiContextStatus } from '../../services/aiContext'
@@ -85,6 +86,7 @@ export function SelectionAiToolbar({
   isUpdatingContext,
   onClose
 }: SelectionAiToolbarProps) {
+  const { t } = useTranslation()
   const [command, setCommand] = useState('')
   const position = useMemo(() => {
     const editor = editorRef.current
@@ -105,10 +107,10 @@ export function SelectionAiToolbar({
 
   const contextButtonLabel =
     contextStatus === 'fresh'
-      ? 'Context Fresh'
+      ? t('selectionAi.contextFresh')
       : contextStatus === 'stale'
-        ? 'Context Stale'
-        : 'Context Update'
+        ? t('selectionAi.contextStale')
+        : t('selectionAi.contextUpdate')
 
   const submitCommand = () => {
     const trimmed = command.trim()
@@ -134,7 +136,7 @@ export function SelectionAiToolbar({
             onClick={onAskChat}
             disabled={researchActionsDisabled}
           >
-            Ask Chat
+            {t('selectionAi.askChat')}
           </button>
         )}
         {onFindSources && (
@@ -144,7 +146,7 @@ export function SelectionAiToolbar({
             onClick={onFindSources}
             disabled={researchActionsDisabled}
           >
-            Find Sources
+            {t('selectionAi.findSources')}
           </button>
         )}
         <button
@@ -156,7 +158,7 @@ export function SelectionAiToolbar({
           {isUpdatingContext && (
             <span className="selection-ai-toolbar-spinner" aria-hidden="true" />
           )}
-          <span>{isUpdatingContext ? 'Updating Context...' : contextButtonLabel}</span>
+          <span>{isUpdatingContext ? t('selectionAi.updatingContext') : contextButtonLabel}</span>
         </button>
       </div>
       <div className="selection-ai-toolbar-command-row">
@@ -165,8 +167,8 @@ export function SelectionAiToolbar({
           type="text"
           value={command}
           onChange={(e) => setCommand(e.target.value)}
-          placeholder="Ask AI to transform this selection..."
-          aria-label="AI command"
+          placeholder={t('selectionAi.commandPlaceholder')}
+          aria-label={t('selectionAi.commandLabel')}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault()

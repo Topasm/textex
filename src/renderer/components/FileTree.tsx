@@ -104,6 +104,7 @@ interface InlineInputProps {
 }
 
 function InlineInput({ depth, icon, initialValue = '', onSubmit, onCancel }: InlineInputProps) {
+  const { t } = useTranslation()
   const inputRef = useRef<HTMLInputElement>(null)
   const [value, setValue] = useState(initialValue)
 
@@ -135,7 +136,7 @@ function InlineInput({ depth, icon, initialValue = '', onSubmit, onCancel }: Inl
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
         onBlur={onCancel}
-        placeholder="name"
+        placeholder={t('fileTree.namePlaceholder')}
       />
     </div>
   )

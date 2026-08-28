@@ -30,6 +30,17 @@ adapter is installed before React mounts and rejects browser-only execution.
 Command names live in `src/shared/tauriCommands.ts`; request/response types live
 in shared TypeScript contracts and Rust models.
 
+### Native error contract
+
+Rejected commands cross the boundary as `{ code, message, data }`. `AppError`
+in `src-tauri/src/error.rs` owns the code table; `src/shared/appError.ts`
+mirrors it and `src/__tests__/shared/appErrorParity.test.ts` fails when the two
+drift. `tauriApi.ts` normalizes every rejection into a `NativeError`, so
+existing `errorMessage(err)` call sites keep reading the English sentence while
+features branch on `nativeErrorCode(err)` and render
+`describeNativeError(err)`, which resolves the `errors.<code>` translation and
+falls back to the native English message for an unmapped code.
+
 ## Renderer ownership
 
 - Monaco models own editable document text.
@@ -40,6 +51,23 @@ in shared TypeScript contracts and Rust models.
   string. Components use fine-grained selectors.
 - Async compile, PDF, outline, watcher, and index results publish only when
   their document revision or generation is still current.
+- Feature dialogs that App does not own — the table editor, crash recovery,
+  bibliography registration — declare themselves with `useFeatureModal` so the
+  overlay policy is state, not something inferred by observing the DOM.
+
+### Presentation tokens
+
+Geometry has one source. `styles/flat.css` defines the spacing grid
+(`--space-2` … `--space-32`, the name is the value), the type scale
+(`--font-2xs` … `--font-4xl`), corner radii (`--ui-radius-*`), and the icon
+steps that mirror `ICON_SIZE` in `components/ui/IconSystem.tsx`. Components
+reference `ICON_SIZE` by name rather than a pixel count, and feature CSS
+references a token unless the shape genuinely has no scale step — a `50%` pill,
+a hairline, a measured control height. `designTokens.test.ts` and
+`IconSystem.test.tsx` keep both sides honest.
+
+`styles/startupShell.css` is the exception: it is linked from `index.html` and
+paints before the bundle, so it predates the tokens and keeps literal lengths.
 
 ## Native ownership
 

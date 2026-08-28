@@ -1,8 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { executeAppCommand, toggleLogPanel } from '../../renderer/services/appCommands'
+import {
+  executeAppCommand,
+  toggleLogPanel,
+  toggleProseMode
+} from '../../renderer/services/appCommands'
 import { usePdfStore } from '../../renderer/store/usePdfStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
+import { useEditorStore } from '../../renderer/store/useEditorStore'
 import { useUiStore } from '../../renderer/store/useUiStore'
 import {
   clearResearchProfileDraft,
@@ -175,5 +180,45 @@ describe('executeAppCommand', () => {
     expect(context.openTemplateGallery).toHaveBeenCalledOnce()
     expect(context.exportDocument).toHaveBeenCalledWith('docx')
     expect(context.runAiDraft).toHaveBeenCalledOnce()
+  })
+})
+
+describe('toggleProseMode', () => {
+  beforeEach(() => {
+    useUiStore.setState({ proseModePaths: [] })
+    useEditorStore.getState().resetEditor()
+  })
+
+  it('switches the active .tex document and leaves the others alone', () => {
+    useEditorStore.getState().openFileInTab('/p/a.tex', 'a')
+    useEditorStore.getState().openFileInTab('/p/b.tex', 'b')
+
+    toggleProseMode()
+    expect(useUiStore.getState().proseModePaths).toEqual(['/p/b.tex'])
+
+    useEditorStore.getState().setActiveTab('/p/a.tex')
+    expect(useUiStore.getState().proseModePaths).toEqual(['/p/b.tex'])
+  })
+
+  it('puts the caret back in the source when leaving prose mode', () => {
+    useEditorStore.getState().openFileInTab('/p/a.tex', 'a')
+    useEditorStore.getState().setCursorPosition(42, 7)
+
+    toggleProseMode()
+    expect(useEditorStore.getState().pendingJump).toBeNull()
+
+    toggleProseMode()
+    expect(useEditorStore.getState().pendingJump).toEqual({
+      line: 42,
+      column: 1,
+      skipFocus: undefined
+    })
+  })
+
+  it('does nothing for a file that is not LaTeX', () => {
+    useEditorStore.getState().openFileInTab('/p/notes.md', '# notes')
+
+    toggleProseMode()
+    expect(useUiStore.getState().proseModePaths).toEqual([])
   })
 })

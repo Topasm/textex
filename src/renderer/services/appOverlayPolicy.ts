@@ -5,6 +5,12 @@ export interface AppOverlaySnapshot {
   settings: boolean
   aiDraft: boolean
   templateGallery: boolean
+  /**
+   * A dialog owned by a feature rather than by App — the table editor, crash
+   * recovery, bibliography registration. Features declare themselves through
+   * `useFeatureModal`, so this is plain state rather than something inferred
+   * from the rendered DOM.
+   */
   featureModal: boolean
 }
 
@@ -18,14 +24,6 @@ const OVERLAY_PRIORITY: readonly ExclusiveAppOverlay[] = [
   'settings',
   'commandPalette'
 ]
-
-const RENDERED_BLOCKING_OVERLAY_SELECTOR = [
-  '[aria-modal="true"]',
-  '.modal-overlay',
-  '.modal-backdrop',
-  '.table-editor-overlay',
-  '.loading-fallback--modal'
-].join(',')
 
 export function getTopmostAppOverlay(snapshot: AppOverlaySnapshot): ExclusiveAppOverlay | null {
   if (snapshot.featureModal) return null
@@ -55,20 +53,4 @@ export function canOpenExclusiveAppOverlay(
 
 export function shouldSuppressBackgroundSurfaces(snapshot: AppOverlaySnapshot): boolean {
   return snapshot.featureModal || getTopmostAppOverlay(snapshot) !== null
-}
-
-/** Covers feature-owned dialogs that do not participate in App's overlay state. */
-export function hasRenderedBlockingOverlay(root: ParentNode): boolean {
-  return root.querySelector(RENDERED_BLOCKING_OVERLAY_SELECTOR) !== null
-}
-
-export function containsRenderedBlockingOverlay(element: Element): boolean {
-  return element.matches(RENDERED_BLOCKING_OVERLAY_SELECTOR) || hasRenderedBlockingOverlay(element)
-}
-
-/** Feature dialogs are rendered outside App's four explicitly owned overlays. */
-export function hasRenderedFeatureModal(root: ParentNode): boolean {
-  return Array.from(root.querySelectorAll<HTMLElement>(RENDERED_BLOCKING_OVERLAY_SELECTOR)).some(
-    (element) => !element.closest('[data-app-overlay-owner]')
-  )
 }

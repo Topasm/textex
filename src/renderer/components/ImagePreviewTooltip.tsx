@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import ReactDOM from 'react-dom'
 import './ImagePreviewTooltip.css'
 
@@ -12,6 +13,7 @@ interface ImagePreviewTooltipProps {
 }
 
 export function ImagePreviewTooltip({ filePath, fileName, anchorRect }: ImagePreviewTooltipProps) {
+  const { t } = useTranslation()
   const [dataUrl, setDataUrl] = useState<string | null>(imageCache.get(filePath) ?? null)
   const [error, setError] = useState(false)
 
@@ -52,11 +54,11 @@ export function ImagePreviewTooltip({ filePath, fileName, anchorRect }: ImagePre
       <div className="image-preview-tooltip-header">{fileName}</div>
       <div className="image-preview-tooltip-body">
         {error ? (
-          <div className="image-preview-tooltip-loading">Failed to load</div>
+          <div className="image-preview-tooltip-loading">{t('imagePreview.failed')}</div>
         ) : dataUrl ? (
           <img src={dataUrl} alt={fileName} />
         ) : (
-          <div className="image-preview-tooltip-loading">Loading...</div>
+          <div className="image-preview-tooltip-loading">{t('imagePreview.loading')}</div>
         )}
       </div>
     </div>,

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { ICON_SIZE } from './ui/IconSystem'
 import { useTranslation } from 'react-i18next'
 import { Compass, FolderOpen, FileText, FilePlus } from 'lucide-react'
 import type { RecentProject } from '../../shared/types'
@@ -39,7 +40,7 @@ function HomeScreen({
 
       <div className="home-actions">
         <button className="home-action-btn home-action-primary" onClick={onOpenFolder}>
-          <FolderOpen size={18} />
+          <FolderOpen size={ICON_SIZE.feature} />
           {t('homeScreen.openFolder')}
         </button>
         <>
@@ -48,15 +49,15 @@ function HomeScreen({
             onClick={onOpenGuidedDemo}
             data-testid="guided-demo-action"
           >
-            <Compass size={18} />
+            <Compass size={ICON_SIZE.feature} />
             {t('homeScreen.guidedDemo')}
           </button>
           <button className="home-action-btn" onClick={onNewBlankProject}>
-            <FilePlus size={18} />
+            <FilePlus size={ICON_SIZE.feature} />
             {t('homeScreen.newBlankProject')}
           </button>
           <button className="home-action-btn" onClick={onNewFromTemplate}>
-            <FileText size={18} />
+            <FileText size={ICON_SIZE.feature} />
             {t('homeScreen.newFromTemplate')}
           </button>
         </>

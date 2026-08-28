@@ -17,14 +17,14 @@
   width: 80%;
   height: 80%;
   border: 1px solid var(--ui-border-strong, var(--border-color, #e0e0e0));
-  border-radius: var(--ui-radius-panel, 6px);
+  border-radius: var(--ui-radius-panel);
   display: flex;
   flex-direction: column;
   box-shadow: var(--ui-shadow-modal, 0 8px 28px rgba(0, 0, 0, 0.2));
 }
 
 .table-editor-header {
-  padding: 16px;
+  padding: var(--space-16);
   border-bottom: 1px solid var(--ui-border, var(--border-color, #e0e0e0));
   display: flex;
   justify-content: space-between;
@@ -38,7 +38,7 @@
 .close-btn {
   background: none;
   border: none;
-  font-size: 24px;
+  font-size: var(--font-4xl);
   cursor: pointer;
   color: var(--text-secondary, #666);
 }
@@ -46,21 +46,21 @@
 .table-editor-grid-container {
   flex: 1;
   overflow: hidden;
-  padding: 16px;
+  padding: var(--space-16);
 }
 
 .table-editor-footer {
-  padding: 16px;
+  padding: var(--space-16);
   border-top: 1px solid var(--ui-border, var(--border-color, #e0e0e0));
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
+  gap: var(--space-12);
 }
 
 .cancel-btn,
 .apply-btn {
-  padding: 8px 16px;
-  border-radius: var(--ui-radius-control, 4px);
+  padding: var(--space-8) var(--space-16);
+  border-radius: var(--ui-radius-control);
   cursor: pointer;
   border: none;
   font-weight: 500;

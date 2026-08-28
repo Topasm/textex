@@ -1,10 +1,13 @@
 import { useEffect, useRef } from 'react'
+import i18n from '../i18n'
 import { useEditorStore } from '../store/useEditorStore'
 import { useCompileStore } from '../store/useCompileStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { useSettingsStore } from '../store/useSettingsStore'
 import { documentRegistry } from '../models/documentRegistry'
-import { errorMessage } from '../utils/errorMessage'
+import { hasNativeErrorCode } from '../../shared/appError'
+import { describeNativeError } from '../services/nativeErrors'
+import { clearCompileFailure, reportCompileFailure } from '../services/compileFeedback'
 import { AUTO_COMPILE_DELAY_MS } from '../constants'
 import { parseAuxContent } from '../../shared/auxparser'
 import {
@@ -60,8 +63,11 @@ export function useAutoCompile(): void {
           if (preparation.status !== 'ready') return
         } catch (err: unknown) {
           if (!isCurrentRun()) return
-          appendLog(`Save failed, skipping compile: ${errorMessage(err)}`)
+          appendLog(
+            i18n.t('logPanel.saveFailedSkippingCompile', { reason: describeNativeError(err) })
+          )
           setCompileStatus('error')
+          reportCompileFailure(err, 'automatic')
           return
         }
 
@@ -85,6 +91,7 @@ export function useAutoCompile(): void {
             revision: sourceSnapshot.revision
           })
           useCompileStore.getState().setCompileStatus('success')
+          clearCompileFailure()
 
           if (isCurrentRun() && canPublishCompileTicket(ticket)) {
             useProjectStore
@@ -101,10 +108,15 @@ export function useAutoCompile(): void {
             setCompileStatus('idle')
             return
           }
-          const message = errorMessage(err)
-          if (message.includes('Compilation was cancelled')) return
-          useCompileStore.getState().appendLog(message)
+          // A cancelled or superseded compile is the expected outcome of typing
+          // during a build, not a failure the author needs to see.
+          if (hasNativeErrorCode(err, 'compilationCancelled', 'compilationSuperseded')) {
+            setCompileStatus('idle')
+            return
+          }
+          useCompileStore.getState().appendLog(describeNativeError(err))
           useCompileStore.getState().setCompileStatus('error')
+          reportCompileFailure(err, 'automatic')
         }
       }, AUTO_COMPILE_DELAY_MS)
     }

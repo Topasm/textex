@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { RecentProjectList } from '../../renderer/components/home/RecentProjectList'
+import { normalizeNativeError } from '../../shared/appError'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 import { openProject } from '../../renderer/utils/openProject'
 
@@ -20,6 +21,18 @@ const secondRecentProject = {
   name: 'second',
   title: 'Second Project',
   lastOpened: new Date().toISOString()
+}
+
+/**
+ * A missing project folder reaches the renderer as a serialized `AppError`,
+ * so the recovery UI must be driven by the code rather than by message text.
+ */
+function missingDirectoryError(path: string): Error {
+  return normalizeNativeError({
+    code: 'io',
+    message: `Failed to resolve project directory ${path}: No such file or directory (os error 2)`,
+    data: { operation: 'resolve project directory', path }
+  })
 }
 
 describe('RecentProjectList', () => {
@@ -93,7 +106,7 @@ describe('RecentProjectList', () => {
   it('keeps the path editor open and shows an inline error when saving fails', async () => {
     const setRecentProjects = vi.fn()
     vi.mocked(window.api.updateRecentProject).mockRejectedValueOnce(
-      new Error('Recent project path not found')
+      missingDirectoryError('/projects/missing')
     )
 
     render(
@@ -133,7 +146,7 @@ describe('RecentProjectList', () => {
   it('keeps a failed recent project and exposes an accessible retry', async () => {
     const setRecentProjects = vi.fn()
     vi.mocked(openProject)
-      .mockRejectedValueOnce(new Error('Project directory not found'))
+      .mockRejectedValueOnce(missingDirectoryError('/projects/original'))
       .mockResolvedValueOnce({ generation: 2, projectPath: recentProject.path })
 
     render(
@@ -165,7 +178,7 @@ describe('RecentProjectList', () => {
     const replacementProjects = [
       { ...recentProject, path: '/projects/replacement', name: 'replacement' }
     ]
-    vi.mocked(openProject).mockRejectedValueOnce(new Error('Project directory not found'))
+    vi.mocked(openProject).mockRejectedValueOnce(missingDirectoryError('/projects/original'))
     vi.mocked(window.api.openDirectory).mockResolvedValueOnce('/projects/replacement')
     vi.mocked(window.api.updateRecentProject).mockResolvedValueOnce({
       ...useSettingsStore.getState().settings,
@@ -199,7 +212,7 @@ describe('RecentProjectList', () => {
   it('keeps recovery visible when the guarded retry is cancelled', async () => {
     const setRecentProjects = vi.fn()
     vi.mocked(openProject)
-      .mockRejectedValueOnce(new Error('Project directory not found'))
+      .mockRejectedValueOnce(missingDirectoryError('/projects/original'))
       .mockResolvedValueOnce(null)
 
     render(
@@ -217,7 +230,7 @@ describe('RecentProjectList', () => {
 
   it('keeps recovery and another project path editor state isolated', async () => {
     const setRecentProjects = vi.fn()
-    vi.mocked(openProject).mockRejectedValueOnce(new Error('Project directory not found'))
+    vi.mocked(openProject).mockRejectedValueOnce(missingDirectoryError('/projects/original'))
 
     const { container } = render(
       <RecentProjectList
@@ -267,7 +280,7 @@ describe('RecentProjectList', () => {
 
   it('only removes a failed recent project after the explicit remove action', async () => {
     const setRecentProjects = vi.fn()
-    vi.mocked(openProject).mockRejectedValueOnce(new Error('Project directory not found'))
+    vi.mocked(openProject).mockRejectedValueOnce(missingDirectoryError('/projects/original'))
 
     render(
       <RecentProjectList recentProjects={[recentProject]} setRecentProjects={setRecentProjects} />
@@ -283,5 +296,56 @@ describe('RecentProjectList', () => {
       expect(window.api.removeRecentProject).toHaveBeenCalledWith('/projects/original')
     })
     expect(setRecentProjects).toHaveBeenCalledWith([])
+  })
+
+  it('explains an unauthorized replacement path instead of a generic save failure', async () => {
+    const setRecentProjects = vi.fn()
+    vi.mocked(window.api.updateRecentProject).mockRejectedValueOnce(
+      normalizeNativeError({
+        code: 'recentProjectUnauthorized',
+        message: 'Project is not present in the trusted recent-project list: /projects/typed',
+        data: { path: '/projects/typed' }
+      })
+    )
+
+    render(
+      <RecentProjectList recentProjects={[recentProject]} setRecentProjects={setRecentProjects} />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'More actions' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Path' }))
+    fireEvent.change(screen.getByDisplayValue('/projects/original'), {
+      target: { value: '/projects/typed' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(
+      await screen.findByText('This folder was not chosen with Browse, so it cannot be saved.')
+    ).toBeInTheDocument()
+    expect(setRecentProjects).not.toHaveBeenCalled()
+  })
+
+  it('rejects a non-absolute path with the invalid-path message', async () => {
+    const setRecentProjects = vi.fn()
+    vi.mocked(window.api.updateRecentProject).mockRejectedValueOnce(
+      normalizeNativeError({
+        code: 'invalidPath',
+        message: 'Invalid path: file path must be absolute: relative/dir',
+        data: { path: 'file path must be absolute: relative/dir' }
+      })
+    )
+
+    render(
+      <RecentProjectList recentProjects={[recentProject]} setRecentProjects={setRecentProjects} />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'More actions' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Path' }))
+    fireEvent.change(screen.getByDisplayValue('/projects/original'), {
+      target: { value: 'relative/dir' }
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByText('Enter an absolute folder path.')).toBeInTheDocument()
   })
 })

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { ICON_SIZE } from './ui/IconSystem'
 import { AlertCircle, AlertTriangle, CheckCircle2, Info, LoaderCircle, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -95,7 +96,7 @@ function NotificationItem({ notification }: { notification: AppNotification }) {
           aria-label={t('notifications.dismiss')}
           title={t('notifications.dismiss')}
         >
-          <X size={15} aria-hidden="true" />
+          <X size={ICON_SIZE.compact} aria-hidden="true" />
         </button>
       )}
     </article>

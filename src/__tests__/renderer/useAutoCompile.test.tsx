@@ -12,6 +12,7 @@ import {
 import { useCompileStore } from '../../renderer/store/useCompileStore'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
+import { normalizeNativeError } from '../../shared/appError'
 
 const filePath = '/project/main.tex'
 const saveFileBatchMock = vi.fn(async (_files: Array<{ content: string; filePath: string }>) => ({
@@ -221,5 +222,50 @@ describe('useAutoCompile', () => {
     })
 
     expect(window.api.compile).not.toHaveBeenCalled()
+  })
+
+  it('stays quiet when the native side reports a cancelled or superseded compile', async () => {
+    for (const code of ['compilationCancelled', 'compilationSuperseded'] as const) {
+      useCompileStore.setState({ compileStatus: 'idle', logs: '' })
+      vi.mocked(window.api.compile).mockRejectedValueOnce(
+        normalizeNativeError({
+          code,
+          message: `LaTeX compilation was ${code === 'compilationCancelled' ? 'cancelled' : 'superseded'}`,
+          data: null
+        })
+      )
+      setAutoCompile(true)
+      const { unmount } = renderHook(() => useAutoCompile())
+
+      await act(async () => {
+        useEditorStore.getState().updateActiveDocument(`edited for ${code}`, 'editor')
+        await vi.advanceTimersByTimeAsync(AUTO_COMPILE_DELAY_MS)
+      })
+
+      expect(useCompileStore.getState().compileStatus, code).toBe('idle')
+      expect(useCompileStore.getState().logs, code).toBe('')
+      unmount()
+      setAutoCompile(false)
+    }
+  })
+
+  it('surfaces a real native compile failure in the log', async () => {
+    vi.mocked(window.api.compile).mockRejectedValueOnce(
+      normalizeNativeError({
+        code: 'compilerNotFound',
+        message: 'LaTeX compiler executable was not found. Checked: /usr/bin',
+        data: { checkedPaths: '/usr/bin' }
+      })
+    )
+    setAutoCompile(true)
+    renderHook(() => useAutoCompile())
+
+    await act(async () => {
+      useEditorStore.getState().updateActiveDocument('edited before failure', 'editor')
+      await vi.advanceTimersByTimeAsync(AUTO_COMPILE_DELAY_MS)
+    })
+
+    expect(useCompileStore.getState().compileStatus).toBe('error')
+    expect(useCompileStore.getState().logs).toContain('No LaTeX engine was found')
   })
 })

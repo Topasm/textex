@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { ICON_SIZE } from '../ui/IconSystem'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import type { UserSettings } from '../../../shared/types'
 import { Moon, Sun, Monitor, Sparkles, Check, Contrast } from 'lucide-react'
@@ -42,12 +43,12 @@ export const AppearanceTab = () => {
               aria-pressed={settings.theme === mode.id}
             >
               <div className="settings-theme-card-icon">
-                <mode.icon size={20} />
+                <mode.icon size={ICON_SIZE.prominent} />
               </div>
               <span className="settings-theme-card-label">{mode.label}</span>
               {settings.theme === mode.id && (
                 <div className="settings-theme-card-check">
-                  <Check size={16} />
+                  <Check size={ICON_SIZE.control} />
                 </div>
               )}
             </button>
