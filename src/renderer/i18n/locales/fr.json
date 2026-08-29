@@ -1155,14 +1155,17 @@
     "commandLabel": "Commande IA"
   },
   "prosePane": {
-    "label": "Vue prose",
     "showProse": "Afficher la vue prose",
     "showTex": "Afficher le source TeX",
-    "openInTex": "Ouvrir dans le source TeX",
     "noFile": "Ouvrez un document .tex pour utiliser la vue prose.",
     "noBody": "Ce fichier n’a pas de corps \\begin{document} à afficher.",
-    "protectedBlock": "Bloc {{kind}} à la ligne {{line}} — ouvrir dans le source TeX",
-    "headingField": "Titre de la section : {{title}}",
-    "proseField": "Paragraphe à la ligne {{line}}"
+    "sourceLabel": "Source Markdown",
+    "previewLabel": "Prose rendue",
+    "mathBlock": "Équation",
+    "discardChange": "Annuler",
+    "refused": {
+      "protectedChanged": "Les équations, figures et tableaux se modifient dans le TeX. Cette modification n’a pas été appliquée.",
+      "structureChanged": "L’ajout, la suppression et le réordonnancement des sections se font dans le TeX. Cette modification n’a pas été appliquée."
+    }
   }
 }

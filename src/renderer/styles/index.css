@@ -340,6 +340,32 @@ body,
   flex-direction: column;
 }
 
+/*
+ * The editor half hosts two surfaces: Monaco, and the prose view stacked over
+ * it. These rules carry the flex height chain from `.editor-pane` down to the
+ * editor, so they belong here rather than in the prose view's own stylesheet —
+ * that one only loads once the prose chunk is fetched, and until then the
+ * editor would have no height at all.
+ */
+.editor-surface {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.editor-surface__tex {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.editor-surface__tex[hidden] {
+  display: none;
+}
+
 @keyframes fadeOutBackground {
   0% {
     background-color: var(--synctex-flash-bg, rgba(0, 122, 204, 0.25));

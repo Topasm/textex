@@ -79,7 +79,13 @@ function readLatexAtom(source: string, index: number): { text: string; next: num
   // An escaped character such as `\%` or `\&`.
   if (!name) return { text: source.slice(index, index + 2), next: index + 2 }
 
-  let cursor = index + name[0].length
+  // `\section*{…}` is a starred command; the `*` closing `*\cmd*` is Markdown
+  // emphasis. A starred command is always followed by its argument, so the
+  // star only belongs to the command when a bracket comes next. A star that
+  // does not becomes an escaped literal in Markdown and round-trips as one.
+  const afterStar = source[index + name[0].length]
+  const starred = name[2] === '*' && (afterStar === '{' || afterStar === '[')
+  let cursor = index + name[1].length + 1 + (starred ? 1 : 0)
   // Optional argument, then every braced argument that follows.
   if (source[cursor] === '[') {
     const close = source.indexOf(']', cursor)

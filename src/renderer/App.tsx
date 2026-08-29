@@ -111,6 +111,9 @@ const HomeScreen = lazy(() => import('./components/HomeScreen'))
 const ProsePane = lazy(() =>
   import('./components/ProsePane').then((module) => ({ default: module.ProsePane }))
 )
+const ProsePreview = lazy(() =>
+  import('./components/ProsePreview').then((module) => ({ default: module.ProsePreview }))
+)
 const BibliographyRegistrationDialog = lazy(() =>
   import('./components/research/BibliographyRegistrationDialog').then((module) => ({
     default: module.BibliographyRegistrationDialog
@@ -763,7 +766,9 @@ function App() {
                   <Suspense
                     fallback={<LoadingFallback variant="pane" label={t('loading.preview')} />}
                   >
-                    <PreviewPane />
+                    {/* Prose mode swaps both halves at once: Markdown source on
+                        the left, its rendering here in the PDF's slot. */}
+                    {isProseMode ? <ProsePreview /> : <PreviewPane />}
                   </Suspense>
                 </PreviewErrorBoundary>
               </div>

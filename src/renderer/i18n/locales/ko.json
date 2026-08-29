@@ -431,16 +431,16 @@
   },
   "todoPanel": {
     "openProject": "TODO를 사용하려면 프로젝트를 여세요",
-    "loading": "로딩 중\u2026",
+    "loading": "로딩 중…",
     "createTodo": "TODO.md 만들기",
     "deleteItem": "항목 삭제",
     "deleteLine": "줄 삭제",
-    "inputPlaceholder": "Enter: 메모 \u00b7 Shift+Enter: 할 일",
+    "inputPlaceholder": "Enter: 메모 · Shift+Enter: 할 일",
     "add": "추가"
   },
   "timelinePanel": {
     "noFile": "열린 파일 없음",
-    "loading": "타임라인 로딩 중\u2026",
+    "loading": "타임라인 로딩 중…",
     "noHistory": "이 파일의 기록이 없습니다",
     "localSave": "로컬 저장",
     "restoreConfirm": "이 스냅샷을 편집기로 복원할까요? 직접 저장하기 전까지 저장되지 않은 변경으로 유지됩니다.",
@@ -1155,14 +1155,17 @@
     "commandLabel": "AI 명령"
   },
   "prosePane": {
-    "label": "산문 보기",
     "showProse": "산문 보기로 전환",
     "showTex": "TeX 소스로 전환",
-    "openInTex": "TeX 소스에서 열기",
     "noFile": "산문 보기를 사용하려면 .tex 문서를 여세요.",
     "noBody": "이 파일에는 표시할 \\begin{document} 본문이 없습니다.",
-    "protectedBlock": "{{line}}행의 {{kind}} 블록 — TeX 소스에서 열기",
-    "headingField": "섹션 제목: {{title}}",
-    "proseField": "{{line}}행 문단"
+    "sourceLabel": "마크다운 소스",
+    "previewLabel": "렌더링된 본문",
+    "mathBlock": "수식",
+    "discardChange": "되돌리기",
+    "refused": {
+      "protectedChanged": "수식·그림·표는 TeX에서 편집합니다. 해당 변경은 적용되지 않았습니다.",
+      "structureChanged": "절의 추가·삭제·순서 변경은 TeX에서 합니다. 해당 변경은 적용되지 않았습니다."
+    }
   }
 }

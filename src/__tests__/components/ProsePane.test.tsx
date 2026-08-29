@@ -1,18 +1,21 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProsePane } from '../../renderer/components/ProsePane'
+import { ProsePreview } from '../../renderer/components/ProsePreview'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
 import { setActiveEditorAdapter } from '../../renderer/editor/activeEditorAdapter'
 import type { EditorAdapter } from '../../renderer/editor/EditorAdapter'
 
 const filePath = '/project/main.tex'
 const SOURCE = `\\documentclass{article}
+\\newcommand{\\method}{TextEx}
 
 \\begin{document}
 \\section{Introduction}
 \\label{sec:intro}
 
-We propose \\textbf{TextEx}~\\cite{kim2026}.
+We propose \\textbf{\\method}~\\cite{kim2026}.
+See Figure~\\ref{fig:arch}.
 
 \\begin{equation}
   y = f(x)
@@ -21,8 +24,8 @@ We propose \\textbf{TextEx}~\\cite{kim2026}.
 
 const applyEdits = vi.fn()
 
-function installAdapter(): void {
-  setActiveEditorAdapter({ applyEdits } as unknown as EditorAdapter)
+function source(): HTMLTextAreaElement {
+  return screen.getByRole('textbox', { name: 'Markdown source' }) as HTMLTextAreaElement
 }
 
 describe('ProsePane', () => {
@@ -30,7 +33,7 @@ describe('ProsePane', () => {
     applyEdits.mockClear()
     useEditorStore.getState().resetEditor()
     useEditorStore.getState().openFileInTab(filePath, SOURCE)
-    installAdapter()
+    setActiveEditorAdapter({ applyEdits } as unknown as EditorAdapter)
   })
 
   afterEach(() => {
@@ -38,109 +41,112 @@ describe('ProsePane', () => {
     setActiveEditorAdapter(null)
   })
 
-  it('shows headings and prose as editable fields', () => {
+  it('shows the document as one Markdown source', () => {
     render(<ProsePane />)
 
-    const fields = screen.getAllByRole('textbox') as HTMLTextAreaElement[]
-    expect(fields.map((field) => field.value)).toEqual([
-      '## Introduction',
-      'We propose **TextEx**~\\cite{kim2026}.'
-    ])
+    expect(source().value).toBe(
+      [
+        '## Introduction',
+        '',
+        'We propose **\\method**~\\cite{kim2026}.',
+        'See Figure~\\ref{fig:arch}.',
+        '',
+        '\\begin{equation}',
+        '  y = f(x)',
+        '\\end{equation}'
+      ].join('\n')
+    )
   })
 
-  it('keeps math out of the editable surface and offers a jump to TeX', () => {
+  it('keeps the preamble, macro and label out of view', () => {
     render(<ProsePane />)
 
-    const card = screen.getByRole('button', { name: /equation block at line 9/u })
-    expect(card).toHaveTextContent('y = f(x)')
-
-    fireEvent.click(card)
-    expect(useEditorStore.getState().pendingJump?.line).toBe(9)
+    expect(source().value).not.toContain('\\documentclass')
+    expect(source().value).not.toContain('\\newcommand')
+    expect(source().value).not.toContain('\\label{sec:intro}')
   })
 
-  it('writes an edited paragraph back as one ranged edit', () => {
+  it('writes an edited sentence back as a ranged edit', () => {
     render(<ProsePane />)
+    const area = source()
 
-    const paragraph = screen.getByDisplayValue('We propose **TextEx**~\\cite{kim2026}.')
-    fireEvent.change(paragraph, {
-      target: { value: 'We propose **TextEx**~\\cite{kim2026}, a fast editor.' }
+    fireEvent.change(area, {
+      target: {
+        value: area.value.replace(
+          'See Figure~\\ref{fig:arch}.',
+          'See Figure~\\ref{fig:arch} for the layout.'
+        )
+      }
     })
-    fireEvent.blur(paragraph)
+    fireEvent.blur(area)
 
     expect(applyEdits).toHaveBeenCalledOnce()
-    const [source, edits] = applyEdits.mock.calls[0]
-    expect(source).toBe('prose-view')
-
-    // The replacement covers exactly the paragraph's own line, nothing more.
-    const paragraphLine = 7
-    const original = SOURCE.split('\n')[paragraphLine - 1]
-    expect(original).toBe('We propose \\textbf{TextEx}~\\cite{kim2026}.')
-    expect(edits).toEqual([
-      {
-        range: {
-          start: { line: paragraphLine, column: 1 },
-          end: { line: paragraphLine, column: original.length + 1 }
-        },
-        text: 'We propose \\textbf{TextEx}~\\cite{kim2026}, a fast editor.',
-        forceMoveMarkers: true
-      }
-    ])
+    const [origin, edits] = applyEdits.mock.calls[0]
+    expect(origin).toBe('prose-view')
+    expect(edits).toHaveLength(1)
+    expect(edits[0].text).toBe(
+      'We propose \\textbf{\\method}~\\cite{kim2026}.\nSee Figure~\\ref{fig:arch} for the layout.'
+    )
   })
 
-  it('rewrites only the braces when a heading title changes', () => {
+  it('does nothing when the author changed nothing', () => {
     render(<ProsePane />)
-
-    const heading = screen.getByDisplayValue('## Introduction')
-    fireEvent.change(heading, { target: { value: '## Motivation' } })
-    fireEvent.blur(heading)
-
-    // Only the braces move: `\\section{` and the closing brace stay put, so a
-    // `\\label` or a starred variant on the same construct cannot be lost.
-    const headingLine = 4
-    const original = SOURCE.split('\n')[headingLine - 1]
-    const startColumn = original.indexOf('{') + 2
-    const endColumn = original.indexOf('}') + 1
-    expect(original.slice(startColumn - 1, endColumn - 1)).toBe('Introduction')
-    expect(applyEdits.mock.calls[0][1]).toEqual([
-      {
-        range: {
-          start: { line: headingLine, column: startColumn },
-          end: { line: headingLine, column: endColumn }
-        },
-        text: 'Motivation',
-        forceMoveMarkers: true
-      }
-    ])
-  })
-
-  it('does not touch the document when nothing changed', () => {
-    render(<ProsePane />)
-
-    const paragraph = screen.getByDisplayValue('We propose **TextEx**~\\cite{kim2026}.')
-    fireEvent.blur(paragraph)
-
+    fireEvent.blur(source())
     expect(applyEdits).not.toHaveBeenCalled()
   })
 
-  it('restores the projected text when the author presses Escape', () => {
+  it('refuses an edit inside an equation and says why', () => {
     render(<ProsePane />)
+    const area = source()
 
-    const paragraph = screen.getByDisplayValue(
-      'We propose **TextEx**~\\cite{kim2026}.'
-    ) as HTMLTextAreaElement
-    fireEvent.change(paragraph, { target: { value: 'abandoned' } })
-    fireEvent.keyDown(paragraph, { key: 'Escape' })
+    fireEvent.change(area, { target: { value: area.value.replace('y = f(x)', 'y = g(x)') } })
+    fireEvent.blur(area)
 
-    expect(paragraph.value).toBe('We propose **TextEx**~\\cite{kim2026}.')
-    fireEvent.blur(paragraph)
     expect(applyEdits).not.toHaveBeenCalled()
+    expect(screen.getByRole('alert')).toHaveTextContent(/Equations, figures and tables are edited/u)
   })
 
-  it('explains itself when the file has no document body', () => {
+  it('restores the projected source on Escape', () => {
+    render(<ProsePane />)
+    const area = source()
+    const original = area.value
+
+    fireEvent.change(area, { target: { value: 'wiped' } })
+    fireEvent.keyDown(area, { key: 'Escape' })
+
+    expect(area.value).toBe(original)
+    fireEvent.blur(area)
+    expect(applyEdits).not.toHaveBeenCalled()
+  })
+})
+
+describe('ProsePreview', () => {
+  beforeEach(() => {
     useEditorStore.getState().resetEditor()
-    useEditorStore.getState().openFileInTab('/project/preamble.tex', '\\usepackage{amsmath}\n')
-    render(<ProsePane />)
+    useEditorStore.getState().openFileInTab(filePath, SOURCE)
+  })
 
-    expect(screen.getByText(/no \\begin\{document\} body/u)).toBeInTheDocument()
+  afterEach(cleanup)
+
+  it('renders headings and prose, keeping citations and references visible', () => {
+    render(<ProsePreview />)
+
+    expect(screen.getByRole('heading', { name: 'Introduction' })).toBeInTheDocument()
+    // The citation stays legible as a chip rather than dissolving into the text.
+    expect(screen.getByTitle('\\cite{kim2026}')).toHaveTextContent('kim2026')
+    expect(screen.getByTitle('\\ref{fig:arch}')).toHaveTextContent('fig:arch')
+  })
+
+  it('renders an equation rather than showing its source', () => {
+    const { container } = render(<ProsePreview />)
+
+    const math = container.querySelector('.prose-preview__math')
+    expect(math).not.toBeNull()
+    expect(math?.querySelector('.katex')).not.toBeNull()
+  })
+
+  it('never shows the preamble', () => {
+    const { container } = render(<ProsePreview />)
+    expect(container.textContent).not.toContain('documentclass')
   })
 })
