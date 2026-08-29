@@ -637,8 +637,7 @@
       "app_checkUpdates": "Check for Updates",
       "window_close": "Close Window",
       "app_quit": "Quit TextEx",
-      "view_toggleProse": "Toggle Prose View",
-      "view_toggleProsePreview": "Toggle Prose Rendering"
+      "view_toggleProse": "Toggle Prose View"
     }
   },
   "submissionCheck": {
@@ -1158,8 +1157,6 @@
   "prosePane": {
     "showProse": "Show prose view",
     "showTex": "Show TeX source",
-    "showRendering": "Show prose rendering",
-    "showPdf": "Show the PDF",
     "noFile": "Open a .tex document to use the prose view.",
     "noBody": "This file has no \\begin{document} body to show.",
     "sourceLabel": "Markdown source",

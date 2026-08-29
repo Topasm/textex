@@ -22,6 +22,6 @@ export function closeEditorTab(filePath: string): boolean {
 
   void clearRecoveryForFile(filePath).catch(() => undefined)
   useEditorStore.getState().closeTab(filePath)
-  useUiStore.getState().forgetProseView(filePath)
+  useUiStore.getState().forgetProseMode(filePath)
   return true
 }

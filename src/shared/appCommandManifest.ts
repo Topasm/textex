@@ -161,14 +161,6 @@ export const APP_COMMAND_MANIFEST = [
     shortcut: { key: ['m', 'M'], mod: true, shift: true }
   },
   {
-    id: 'view.toggleProsePreview',
-    label: 'Toggle Prose Rendering',
-    group: 'view',
-    keywords: ['markdown', 'rendering', 'preview', 'pdf', 'prose'],
-    requiredContext: 'document',
-    shortcut: { key: ['r', 'R'], mod: true, shift: true }
-  },
-  {
     id: 'view.toggleLog',
     label: 'Toggle Problems Panel',
     group: 'view',

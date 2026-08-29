@@ -637,8 +637,7 @@
       "app_checkUpdates": "检查更新",
       "window_close": "关闭窗口",
       "app_quit": "退出 TextEx",
-      "view_toggleProse": "切换正文视图",
-      "view_toggleProsePreview": "切换正文渲染"
+      "view_toggleProse": "切换正文视图"
     }
   },
   "submissionCheck": {
@@ -1158,8 +1157,6 @@
   "prosePane": {
     "showProse": "切换到正文视图",
     "showTex": "切换到 TeX 源码",
-    "showRendering": "显示正文渲染",
-    "showPdf": "显示 PDF",
     "noFile": "请打开 .tex 文档以使用正文视图。",
     "noBody": "此文件没有可显示的 \\begin{document} 正文。",
     "sourceLabel": "Markdown 源码",
