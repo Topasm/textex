@@ -4,7 +4,7 @@ import katex from 'katex'
 import { documentRegistry } from '../models/documentRegistry'
 import { useEditorStore } from '../store/useEditorStore'
 import { useProjectStore } from '../store/useProjectStore'
-import { useUiStore } from '../store/useUiStore'
+import { proseAnchorFor, useUiStore } from '../store/useUiStore'
 import { logError } from '../utils/errorMessage'
 import { projectLatexToProse, type ProseBlock } from '../../shared/proseProjection'
 import { proseTokensToText, tokenizeProse, type ProseToken } from '../../shared/proseRender'
@@ -234,7 +234,7 @@ export function ProsePreview() {
   const { t } = useTranslation()
   const filePath = useEditorStore((state) => state.filePath)
   const revision = useEditorStore((state) => state.revision)
-  const proseAnchor = useUiStore((state) => state.proseAnchor)
+  const proseAnchor = useUiStore((state) => proseAnchorFor(state, filePath))
   const sheetRef = useRef<HTMLElement>(null)
 
   const blocks = useMemo(() => {
@@ -271,7 +271,11 @@ export function ProsePreview() {
             className="prose-preview__block"
             // Clicking a passage puts the caret on it in the Markdown source,
             // which is how the author gets from reading to editing.
-            onClick={() => useUiStore.getState().setProseAnchor(block.startLine, 'preview')}
+            onClick={() => {
+              if (filePath) {
+                useUiStore.getState().setProseAnchor(filePath, block.startLine, 'preview')
+              }
+            }}
           >
             <Block block={block} />
           </div>

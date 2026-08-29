@@ -7,6 +7,7 @@ import { useNotificationStore } from '../../renderer/store/useNotificationStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 import { documentRegistry } from '../../renderer/models/documentRegistry'
+import { registerPendingDocumentEditFlusher } from '../../renderer/services/pendingDocumentEdits'
 
 const { formatLatexMock, isCurrentProjectTransitionSnapshotMock, openProjectMock } = vi.hoisted(
   () => ({
@@ -113,6 +114,25 @@ describe('useFileOps', () => {
     expect(documentRegistry.snapshot(filePath)?.text).toBe('formatted')
     expect(window.api.saveFile).toHaveBeenCalledWith('formatted', filePath)
     expect(useEditorStore.getState().isDirty).toBe(false)
+  })
+
+  it('flushes a pending alternate-editor change before taking the save snapshot', async () => {
+    const filePath = '/workspace/project/paper.tex'
+    useEditorStore.getState().openFileInTab(filePath, 'before prose edit')
+    useSettingsStore.setState((state) => ({
+      settings: { ...state.settings, formatOnSave: false }
+    }))
+    const unregister = registerPendingDocumentEditFlusher(filePath, () => {
+      useEditorStore.getState().updateActiveDocument('after prose edit', 'prose-view')
+    })
+    const { result } = renderHook(() => useFileOps())
+
+    await act(async () => {
+      await result.current.handleSave()
+    })
+    unregister()
+
+    expect(window.api.saveFile).toHaveBeenCalledWith('after prose edit', filePath)
   })
 
   it('reports a save failure without stealing the active right-panel tab', async () => {

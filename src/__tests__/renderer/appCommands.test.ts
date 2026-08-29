@@ -8,7 +8,7 @@ import { usePdfStore } from '../../renderer/store/usePdfStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
-import { useUiStore } from '../../renderer/store/useUiStore'
+import { proseModeFor, useUiStore } from '../../renderer/store/useUiStore'
 import {
   clearResearchProfileDraft,
   setResearchProfileDraftDirty
@@ -185,7 +185,7 @@ describe('executeAppCommand', () => {
 
 describe('toggleProseMode', () => {
   beforeEach(() => {
-    useUiStore.setState({ proseModePaths: [] })
+    useUiStore.setState({ proseModeDocumentIds: [], proseAnchors: {} })
     useEditorStore.getState().resetEditor()
   })
 
@@ -194,10 +194,11 @@ describe('toggleProseMode', () => {
     useEditorStore.getState().openFileInTab('/p/b.tex', 'b')
 
     toggleProseMode()
-    expect(useUiStore.getState().proseModePaths).toEqual(['/p/b.tex'])
+    expect(proseModeFor(useUiStore.getState(), '/p/b.tex')).toBe(true)
 
     useEditorStore.getState().setActiveTab('/p/a.tex')
-    expect(useUiStore.getState().proseModePaths).toEqual(['/p/b.tex'])
+    expect(proseModeFor(useUiStore.getState(), '/p/b.tex')).toBe(true)
+    expect(proseModeFor(useUiStore.getState(), '/p/a.tex')).toBe(false)
   })
 
   it('puts the caret back in the source when leaving prose mode', () => {
@@ -219,6 +220,19 @@ describe('toggleProseMode', () => {
     useEditorStore.getState().openFileInTab('/p/notes.md', '# notes')
 
     toggleProseMode()
-    expect(useUiStore.getState().proseModePaths).toEqual([])
+    expect(useUiStore.getState().proseModeDocumentIds).toEqual([])
+  })
+
+  it('keeps mode and anchors independent across documents and Windows path casing', () => {
+    const ui = useUiStore.getState()
+    ui.setProseMode('C:\\Paper\\Main.tex', true)
+    ui.setProseAnchor('C:\\Paper\\Main.tex', 17, 'source')
+    ui.setProseAnchor('C:\\Paper\\Other.tex', 4, 'preview')
+
+    expect(proseModeFor(useUiStore.getState(), 'c:/paper/main.tex')).toBe(true)
+    expect(useUiStore.getState().proseAnchors).toMatchObject({
+      'c:/paper/main.tex': { line: 17, origin: 'source' },
+      'c:/paper/other.tex': { line: 4, origin: 'preview' }
+    })
   })
 })

@@ -1,4 +1,7 @@
 import { useEditorStore } from '../store/useEditorStore'
+import { useUiStore } from '../store/useUiStore'
+import { flushPendingDocumentEdits } from './pendingDocumentEdits'
+import { documentRegistry } from '../models/documentRegistry'
 
 export interface FileTreeActionEntry {
   name: string
@@ -51,7 +54,10 @@ export async function renameFileTreeEntry(
 
   const editor = useEditorStore.getState()
   const affected = affectedOpenDocuments(entry.path)
-  if (affected.some(([, file]) => file.isDirty)) return { status: 'dirty-documents' }
+  for (const [filePath] of affected) flushPendingDocumentEdits(filePath)
+  if (affected.some(([filePath]) => documentRegistry.getModel(filePath)?.isDirty)) {
+    return { status: 'dirty-documents' }
+  }
 
   const destination = siblingPath(entry.path, name)
   await window.api.renamePath(entry.path, destination)
@@ -65,7 +71,10 @@ export async function renameFileTreeEntry(
     }))
     .sort((left, right) => Number(left.wasActive) - Number(right.wasActive))
 
-  for (const file of reopen) editor.closeTab(file.oldPath)
+  for (const file of reopen) {
+    useUiStore.getState().moveProseMode(file.oldPath, file.newPath)
+    editor.closeTab(file.oldPath)
+  }
   for (const file of reopen) {
     const result = await window.api.readFile(file.newPath)
     useEditorStore.getState().openFileInTab(result.filePath, result.content)
@@ -78,10 +87,16 @@ export async function deleteFileTreeEntry(
   confirmDelete: () => boolean
 ): Promise<FileTreeDeleteResult> {
   const affected = affectedOpenDocuments(entry.path)
-  if (affected.some(([, file]) => file.isDirty)) return { status: 'dirty-documents' }
+  for (const [filePath] of affected) flushPendingDocumentEdits(filePath)
+  if (affected.some(([filePath]) => documentRegistry.getModel(filePath)?.isDirty)) {
+    return { status: 'dirty-documents' }
+  }
   if (!confirmDelete()) return { status: 'cancelled' }
 
   await window.api.deletePath(entry.path)
-  for (const [filePath] of affected) useEditorStore.getState().closeTab(filePath)
+  for (const [filePath] of affected) {
+    useUiStore.getState().forgetProseMode(filePath)
+    useEditorStore.getState().closeTab(filePath)
+  }
   return { status: 'deleted' }
 }

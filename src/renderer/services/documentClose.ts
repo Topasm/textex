@@ -2,6 +2,7 @@ import { documentRegistry } from '../models/documentRegistry'
 import { useEditorStore } from '../store/useEditorStore'
 import { useUiStore } from '../store/useUiStore'
 import { clearRecoveryForFile } from './crashRecovery'
+import { flushPendingDocumentEdits } from './pendingDocumentEdits'
 
 function fileName(filePath: string): string {
   return filePath.split(/[\\/]/).pop() || filePath
@@ -12,6 +13,7 @@ function fileName(filePath: string): string {
  * saved or explicitly rejected dirty files may continue to use the store action.
  */
 export function closeEditorTab(filePath: string): boolean {
+  flushPendingDocumentEdits(filePath)
   const model = documentRegistry.getModel(filePath)
   if (
     model?.isDirty &&

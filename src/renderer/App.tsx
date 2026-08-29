@@ -36,7 +36,7 @@ import { useCompileStore } from './store/useCompileStore'
 import { useProjectStore } from './store/useProjectStore'
 import type { SidebarView } from './store/useProjectStore'
 import { usePdfStore } from './store/usePdfStore'
-import { useUiStore } from './store/useUiStore'
+import { proseModeFor, useUiStore } from './store/useUiStore'
 import { useSettingsStore } from './store/useSettingsStore'
 import { useNotificationStore } from './store/useNotificationStore'
 import { deactivateProject, openProject } from './utils/openProject'
@@ -69,6 +69,7 @@ import {
 import { ICON_SIZE } from './components/ui/IconSystem'
 import { installCrashRecoveryAutosnapshot } from './services/crashRecovery'
 import { prepareDocumentsForManualCompile } from './services/compilePersistenceCoordinator'
+import { flushPendingDocumentEdits } from './services/pendingDocumentEdits'
 import { SIDEBAR_WIDTH_MAX, SIDEBAR_WIDTH_MIN, SPLIT_RATIO_MAX, SPLIT_RATIO_MIN } from './constants'
 
 // Lazy-load heavy modals and panels that are rarely shown
@@ -152,7 +153,7 @@ function App() {
   const isTemplateGalleryOpen = useUiStore((s) => s.isTemplateGalleryOpen)
   const updateStatus = useUiStore((s) => s.updateStatus)
   const settingsRequested = useUiStore((s) => s.settingsRequested)
-  const isProseMode = useUiStore((s) => Boolean(filePath && s.proseModePaths.includes(filePath)))
+  const isProseMode = useUiStore((state) => proseModeFor(state, filePath))
 
   // A two-finger horizontal swipe over the editor half flips TeX ⇄ prose. The
   // direction is ignored: there are only two screens, so either way toggles.
@@ -221,6 +222,7 @@ function App() {
     const editorState = useEditorStore.getState()
     if (!editorState.filePath) return
     if (!editorState.filePath.toLowerCase().endsWith('.tex')) return
+    flushPendingDocumentEdits(editorState.filePath)
     const snapshot = documentRegistry.snapshot(editorState.filePath)
     if (!snapshot) return
     cancelPendingAutoCompile()
@@ -738,7 +740,7 @@ function App() {
                     <Suspense
                       fallback={<LoadingFallback variant="pane" label={t('loading.editor')} />}
                     >
-                      <ProsePane />
+                      <ProsePane key={filePath} />
                     </Suspense>
                   )}
                 </div>
@@ -768,7 +770,7 @@ function App() {
                   >
                     {/* Prose mode swaps both halves at once: Markdown source on
                         the left, its rendering here in the PDF's slot. */}
-                    {isProseMode ? <ProsePreview /> : <PreviewPane />}
+                    {isProseMode ? <ProsePreview key={filePath} /> : <PreviewPane />}
                   </Suspense>
                 </PreviewErrorBoundary>
               </div>

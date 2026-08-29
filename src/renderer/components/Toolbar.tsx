@@ -22,7 +22,7 @@ import { useCompileStore } from '../store/useCompileStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { usePdfStore } from '../store/usePdfStore'
 import { useSettingsStore } from '../store/useSettingsStore'
-import { useUiStore } from '../store/useUiStore'
+import { proseModeFor, useUiStore } from '../store/useUiStore'
 import { OmniSearch } from './OmniSearch'
 import { RecentProjectSwitcher } from './RecentProjectSwitcher'
 import PdfZoomDropdown from './PdfZoomDropdown'
@@ -120,10 +120,9 @@ const Toolbar = React.memo(function Toolbar({
   const projectRoot = useProjectStore((s) => s.projectRoot)
   const isSidebarOpen = useProjectStore((s) => s.isSidebarOpen)
   const isResearchPanelOpen = useProjectStore((s) => s.isResearchPanelOpen)
-  const isProseMode = useUiStore((state) =>
-    Boolean(filePath && state.proseModePaths.includes(filePath))
-  )
+  const isProseMode = useUiStore((state) => proseModeFor(state, filePath))
   const canUseProseMode = Boolean(filePath?.toLowerCase().endsWith('.tex'))
+  const showPdfControls = settings.showPdfToolbarControls !== false && !isProseMode
 
   const [pageInputValue, setPageInputValue] = useState('')
   const [isPageInputFocused, setIsPageInputFocused] = useState(false)
@@ -292,7 +291,7 @@ const Toolbar = React.memo(function Toolbar({
         </div>
 
         <div className="toolbar-center" data-responsive-priority="secondary">
-          {settings.showPdfToolbarControls !== false && (
+          {showPdfControls && (
             <div className="toolbar-sync-controls">
               <button
                 className="toolbar-btn toolbar-compact-btn"
@@ -317,7 +316,7 @@ const Toolbar = React.memo(function Toolbar({
         </div>
 
         <div className="toolbar-right">
-          {settings.showPdfToolbarControls !== false && (
+          {showPdfControls && (
             <div className="toolbar-pdf-controls" data-responsive-priority="compact">
               {numPages > 0 && (
                 <>

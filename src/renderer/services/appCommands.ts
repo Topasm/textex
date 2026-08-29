@@ -3,7 +3,7 @@ import { useEditorStore } from '../store/useEditorStore'
 import { usePdfStore } from '../store/usePdfStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { useSettingsStore } from '../store/useSettingsStore'
-import { useUiStore } from '../store/useUiStore'
+import { proseAnchorFor, proseModeFor, useUiStore } from '../store/useUiStore'
 import {
   clearResearchProfileDraft,
   confirmResearchProfileDraftDiscard
@@ -156,17 +156,17 @@ export function toggleProseMode(): void {
   if (!filePath || !filePath.toLowerCase().endsWith('.tex')) return
 
   const ui = useUiStore.getState()
-  const enabling = !ui.proseModePaths.includes(filePath)
+  const enabling = !proseModeFor(ui, filePath)
   ui.setProseMode(filePath, enabling)
 
   // Switching views keeps the author's place. Entering prose, the caret's line
   // becomes the anchor the Markdown scrolls to; leaving it, the anchor is
   // where Monaco lands, so the passage stays put across the swap.
   if (enabling) {
-    ui.setProseAnchor(cursorLine, 'tex')
+    ui.setProseAnchor(filePath, cursorLine, 'tex')
     return
   }
-  useEditorStore.getState().requestJumpToLine(ui.proseAnchor?.line ?? cursorLine, 1)
+  useEditorStore.getState().requestJumpToLine(proseAnchorFor(ui, filePath)?.line ?? cursorLine, 1)
 }
 
 export function openProblemsPanel(): boolean {

@@ -17,6 +17,7 @@ function createHarness() {
       text = value
     }),
     getValueInRange: vi.fn(() => 'one'),
+    pushEditOperations: vi.fn(() => null),
     getLineCount: vi.fn(() => 2),
     getLineMaxColumn: vi.fn((line: number) => (line === 1 ? 4 : 4))
   }
@@ -147,6 +148,35 @@ describe('MonacoEditorAdapter', () => {
     buffer?.replaceText('replacement')
     expect(model.setValue).toHaveBeenCalledWith('replacement')
     expect(buffer?.getText()).toBe('replacement')
+
+    expect(
+      buffer?.applyEdits('prose-view', [
+        {
+          range: {
+            start: { line: 1, column: 1 },
+            end: { line: 1, column: 4 }
+          },
+          text: 'edited',
+          forceMoveMarkers: true
+        }
+      ])
+    ).toBe(true)
+    expect(model.pushEditOperations).toHaveBeenCalledWith(
+      null,
+      [
+        {
+          range: {
+            startLineNumber: 1,
+            startColumn: 1,
+            endLineNumber: 1,
+            endColumn: 4
+          },
+          text: 'edited',
+          forceMoveMarkers: true
+        }
+      ],
+      expect.any(Function)
+    )
   })
 
   it('maps editor-neutral positions, selections, and edits to Monaco', () => {

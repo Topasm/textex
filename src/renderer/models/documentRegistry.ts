@@ -4,11 +4,13 @@ import {
   type DocumentRevisionSnapshot,
   type DocumentSnapshot
 } from './documentModel'
+import type { EditorTextEdit } from '../editor/EditorAdapter'
 
 export interface DocumentTextBuffer {
   readonly documentId: string
   getText(): string
   replaceText(text: string): void
+  applyEdits(source: string, edits: readonly EditorTextEdit[]): boolean
 }
 
 export type DiskReloadResult =
@@ -40,8 +42,48 @@ function createBootstrapBuffer(documentId: string, initialText: string): Documen
     getText: () => text,
     replaceText: (nextText) => {
       text = nextText
+    },
+    applyEdits: (_source, edits) => {
+      const nextText = applyTextEdits(text, edits)
+      if (nextText === null) return false
+      text = nextText
+      return true
     }
   }
+}
+
+function offsetAt(text: string, line: number, column: number): number | null {
+  if (!Number.isSafeInteger(line) || line < 1 || !Number.isSafeInteger(column) || column < 1) {
+    return null
+  }
+  const lines = text.split('\n')
+  if (line > lines.length || column > lines[line - 1].length + 1) return null
+  let offset = column - 1
+  for (let index = 0; index < line - 1; index += 1) offset += lines[index].length + 1
+  return offset
+}
+
+/** Applies editor-style ranges without requiring an active editor engine. */
+function applyTextEdits(text: string, edits: readonly EditorTextEdit[]): string | null {
+  const resolved = edits.map((edit) => {
+    const start = offsetAt(text, edit.range.start.line, edit.range.start.column)
+    const end = offsetAt(text, edit.range.end.line, edit.range.end.column)
+    return start === null || end === null || end < start ? null : { start, end, text: edit.text }
+  })
+  if (resolved.some((edit) => edit === null)) return null
+
+  const descending = resolved
+    .filter((edit): edit is NonNullable<typeof edit> => edit !== null)
+    .sort((left, right) => right.start - left.start)
+  for (let index = 1; index < descending.length; index += 1) {
+    if (descending[index - 1].start < descending[index].end) return null
+  }
+
+  let result = text
+  for (const edit of descending) {
+    result = `${result.slice(0, edit.start)}${edit.text}${result.slice(edit.end)}`
+  }
+  return result
 }
 
 export class DocumentRegistry {
@@ -116,6 +158,27 @@ export class DocumentRegistry {
     if (entry.buffer.getText() === text) return entry.model.snapshot()
 
     this.#replaceBuffer(entry, text)
+    entry.model.recordChange(source)
+    return entry.model.snapshot()
+  }
+
+  applyEdits(
+    filePath: string,
+    source: DocumentChangeSource,
+    edits: readonly EditorTextEdit[]
+  ): DocumentSnapshot | null {
+    const entry = this.#documents.get(normalizeDocumentId(filePath))
+    if (!entry) return null
+    if (edits.length === 0) return entry.model.snapshot()
+
+    let applied = false
+    entry.replacingBuffer = true
+    try {
+      applied = entry.buffer.applyEdits(source, edits)
+    } finally {
+      entry.replacingBuffer = false
+    }
+    if (!applied) return null
     entry.model.recordChange(source)
     return entry.model.snapshot()
   }

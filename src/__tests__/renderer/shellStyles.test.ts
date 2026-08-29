@@ -111,6 +111,12 @@ describe('app shell styles', () => {
     expect(rule).toMatch(/height:\s*100%/u)
     expect(rule).toMatch(/overflow-y:\s*auto/u)
     expect(eagerCss).toMatch(/\.preview-container\s*\{[^}]*height:\s*100%/u)
+
+    const sourceRule = /\.prose-pane__source\s*\{([^}]*)\}/u.exec(
+      readCss(resolve(root, 'components/ProsePane.css'))
+    )?.[1]
+    expect(sourceRule).toMatch(/min-height:\s*0/u)
+    expect(sourceRule).toMatch(/overflow-y:\s*auto/u)
   })
 
   it('keeps the editor height chain eager', () => {

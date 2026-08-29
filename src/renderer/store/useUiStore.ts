@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import type { AppUpdateMetadata, DocumentSymbolNode } from '../../shared/types'
+import { normalizeDocumentId } from '../models/documentRegistry'
 
 export type UpdateStatus =
   | 'idle'
@@ -13,6 +14,11 @@ export type UpdateStatus =
   | 'error'
 export type UpdateErrorAction = 'check' | 'download' | 'restart'
 export type ExportStatus = 'idle' | 'exporting' | 'success' | 'error'
+export type ProseAnchorOrigin = 'source' | 'preview' | 'tex'
+export interface ProseAnchor {
+  line: number
+  origin: ProseAnchorOrigin
+}
 
 interface UiState {
   // AI Draft modal
@@ -59,7 +65,7 @@ interface UiState {
    * Per document, not global: an author drafting one chapter in prose often
    * wants the TeX of another in front of them at the same time.
    */
-  proseModePaths: readonly string[]
+  proseModeDocumentIds: readonly string[]
 
   /**
    * Where the author is in the prose view, as a `.tex` source line.
@@ -69,7 +75,7 @@ interface UiState {
    * `origin` records which side moved, so the other follows without echoing
    * the move straight back.
    */
-  proseAnchor: { line: number; origin: 'source' | 'preview' | 'tex' } | null
+  proseAnchors: Readonly<Record<string, ProseAnchor>>
 
   // Actions
   setDraftModalOpen: (open: boolean) => void
@@ -90,10 +96,29 @@ interface UiState {
   clearSettingsRequest: () => void
   registerFeatureModal: (id: string) => void
   unregisterFeatureModal: (id: string) => void
-  setProseAnchor: (line: number, origin: 'source' | 'preview' | 'tex') => void
-  toggleProseMode: (filePath: string) => void
+  setProseAnchor: (filePath: string, line: number, origin: ProseAnchorOrigin) => void
   setProseMode: (filePath: string, enabled: boolean) => void
   forgetProseMode: (filePath: string) => void
+  moveProseMode: (oldPath: string, newPath: string) => void
+}
+
+export function proseModeFor(
+  state: Pick<UiState, 'proseModeDocumentIds'>,
+  filePath: string | null
+): boolean {
+  return Boolean(filePath && state.proseModeDocumentIds.includes(normalizeDocumentId(filePath)))
+}
+
+export function proseAnchorFor(
+  state: Pick<UiState, 'proseAnchors'>,
+  filePath: string | null
+): ProseAnchor | null {
+  return filePath ? (state.proseAnchors[normalizeDocumentId(filePath)] ?? null) : null
+}
+
+function withoutRecordKey<T>(record: Readonly<Record<string, T>>, key: string): Record<string, T> {
+  if (!(key in record)) return record
+  return Object.fromEntries(Object.entries(record).filter(([entryKey]) => entryKey !== key))
 }
 
 export const useUiStore = create<UiState>()(
@@ -112,8 +137,8 @@ export const useUiStore = create<UiState>()(
     externalChangeConflicts: [],
     settingsRequested: false,
     openFeatureModals: [],
-    proseModePaths: [],
-    proseAnchor: null,
+    proseModeDocumentIds: [],
+    proseAnchors: {},
 
     setDraftModalOpen: (isDraftModalOpen) => set({ isDraftModalOpen }),
     toggleDraftModal: () => set((state) => ({ isDraftModalOpen: !state.isDraftModalOpen })),
@@ -148,34 +173,59 @@ export const useUiStore = create<UiState>()(
           ? state
           : { openFeatureModals: [...state.openFeatureModals, id] }
       ),
-    setProseAnchor: (line, origin) =>
-      set((state) =>
-        state.proseAnchor?.line === line && state.proseAnchor.origin === origin
-          ? state
-          : { proseAnchor: { line, origin } }
-      ),
-    toggleProseMode: (filePath) =>
-      set((state) => ({
-        proseModePaths: state.proseModePaths.includes(filePath)
-          ? state.proseModePaths.filter((path) => path !== filePath)
-          : [...state.proseModePaths, filePath]
-      })),
+    setProseAnchor: (filePath, line, origin) =>
+      set((state) => {
+        const documentId = normalizeDocumentId(filePath)
+        const current = state.proseAnchors[documentId]
+        if (current?.line === line && current.origin === origin) return state
+        return { proseAnchors: { ...state.proseAnchors, [documentId]: { line, origin } } }
+      }),
     setProseMode: (filePath, enabled) =>
       set((state) => {
-        const active = state.proseModePaths.includes(filePath)
+        const documentId = normalizeDocumentId(filePath)
+        const active = state.proseModeDocumentIds.includes(documentId)
         if (active === enabled) return state
         return {
-          proseModePaths: enabled
-            ? [...state.proseModePaths, filePath]
-            : state.proseModePaths.filter((path) => path !== filePath)
+          proseModeDocumentIds: enabled
+            ? [...state.proseModeDocumentIds, documentId]
+            : state.proseModeDocumentIds.filter((id) => id !== documentId)
         }
       }),
     forgetProseMode: (filePath) =>
-      set((state) =>
-        state.proseModePaths.includes(filePath)
-          ? { proseModePaths: state.proseModePaths.filter((path) => path !== filePath) }
-          : state
-      ),
+      set((state) => {
+        const documentId = normalizeDocumentId(filePath)
+        const hasMode = state.proseModeDocumentIds.includes(documentId)
+        const hasAnchor = documentId in state.proseAnchors
+        if (!hasMode && !hasAnchor) return state
+        return {
+          proseModeDocumentIds: hasMode
+            ? state.proseModeDocumentIds.filter((id) => id !== documentId)
+            : state.proseModeDocumentIds,
+          proseAnchors: hasAnchor
+            ? withoutRecordKey(state.proseAnchors, documentId)
+            : state.proseAnchors
+        }
+      }),
+    moveProseMode: (oldPath, newPath) =>
+      set((state) => {
+        const oldId = normalizeDocumentId(oldPath)
+        const newId = normalizeDocumentId(newPath)
+        if (oldId === newId) return state
+        const hadMode = state.proseModeDocumentIds.includes(oldId)
+        const anchor = state.proseAnchors[oldId]
+        if (!hadMode && !anchor) return state
+
+        const withoutOldMode = state.proseModeDocumentIds.filter((id) => id !== oldId)
+        return {
+          proseModeDocumentIds:
+            hadMode && !withoutOldMode.includes(newId)
+              ? [...withoutOldMode, newId]
+              : withoutOldMode,
+          proseAnchors: anchor
+            ? { ...withoutRecordKey(state.proseAnchors, oldId), [newId]: anchor }
+            : withoutRecordKey(state.proseAnchors, oldId)
+        }
+      }),
     unregisterFeatureModal: (id) =>
       set((state) =>
         state.openFeatureModals.includes(id)
