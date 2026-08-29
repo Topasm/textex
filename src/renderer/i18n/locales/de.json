@@ -1155,14 +1155,17 @@
     "commandLabel": "KI-Befehl"
   },
   "prosePane": {
-    "label": "Prosaansicht",
     "showProse": "Prosaansicht anzeigen",
     "showTex": "TeX-Quelltext anzeigen",
-    "openInTex": "Im TeX-Quelltext öffnen",
     "noFile": "Öffnen Sie ein .tex-Dokument für die Prosaansicht.",
     "noBody": "Diese Datei hat keinen \\begin{document}-Textkörper.",
-    "protectedBlock": "{{kind}}-Block in Zeile {{line}} — im TeX-Quelltext öffnen",
-    "headingField": "Abschnittstitel: {{title}}",
-    "proseField": "Absatz in Zeile {{line}}"
+    "sourceLabel": "Markdown-Quelltext",
+    "previewLabel": "Gerenderte Prosa",
+    "mathBlock": "Formel",
+    "discardChange": "Verwerfen",
+    "refused": {
+      "protectedChanged": "Formeln, Abbildungen und Tabellen werden im TeX bearbeitet. Diese Änderung wurde nicht übernommen.",
+      "structureChanged": "Abschnitte werden im TeX hinzugefügt, entfernt oder umsortiert. Diese Änderung wurde nicht übernommen."
+    }
   }
 }

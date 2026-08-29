@@ -99,7 +99,7 @@
     "hideComparison": "Hide comparison",
     "recover": "Recover",
     "discard": "Discard",
-    "loading": "Loading\u2026",
+    "loading": "Loading…",
     "replaceDirty": "{{name}} now has other unsaved changes. Replace them with the recovered text?",
     "discardConfirm": "Permanently discard the recovery snapshot for {{name}}?",
     "applyFailed": "The recovered text could not be applied to the editor.",
@@ -435,12 +435,12 @@
     "createTodo": "Create TODO.md",
     "deleteItem": "Delete item",
     "deleteLine": "Delete line",
-    "inputPlaceholder": "Enter: note \u00b7 Shift+Enter: task",
+    "inputPlaceholder": "Enter: note · Shift+Enter: task",
     "add": "Add"
   },
   "timelinePanel": {
     "noFile": "No file open",
-    "loading": "Loading timeline\u2026",
+    "loading": "Loading timeline…",
     "noHistory": "No history available for this file",
     "localSave": "Local save",
     "restoreConfirm": "Restore this snapshot into the editor? It will remain unsaved until you save it.",
@@ -507,12 +507,12 @@
     "online": "Online papers",
     "pdf": "PDF",
     "tex": "TeX",
-    "zoteroNotConnected": "Zotero not connected. Enable in Settings \u2192 Integrations.",
+    "zoteroNotConnected": "Zotero not connected. Enable in Settings → Integrations.",
     "noResults": "No results",
     "searching": "Searching…",
     "onlineInsertHint": "Enter or click to add to the project and cite",
-    "enterToSelect": "Enter to select \u00b7 Ctrl+Enter to insert",
-    "selectedInsert": "{{count}} selected \u00b7 Ctrl+Enter to insert",
+    "enterToSelect": "Enter to select · Ctrl+Enter to insert",
+    "selectedInsert": "{{count}} selected · Ctrl+Enter to insert",
     "matches": "{{current}}/{{total}}",
     "noMatches": "No matches",
     "prevMatch": "Previous",
@@ -1155,14 +1155,17 @@
     "commandLabel": "AI command"
   },
   "prosePane": {
-    "label": "Prose view",
     "showProse": "Show prose view",
     "showTex": "Show TeX source",
-    "openInTex": "Open this in the TeX source",
     "noFile": "Open a .tex document to use the prose view.",
     "noBody": "This file has no \\begin{document} body to show.",
-    "protectedBlock": "{{kind}} block at line {{line}} — open in the TeX source",
-    "headingField": "Section title: {{title}}",
-    "proseField": "Paragraph at line {{line}}"
+    "sourceLabel": "Markdown source",
+    "previewLabel": "Rendered prose",
+    "mathBlock": "Equation",
+    "discardChange": "Discard",
+    "refused": {
+      "protectedChanged": "Equations, figures and tables are edited in TeX. That change was not applied.",
+      "structureChanged": "Adding, removing or reordering sections is done in TeX. That change was not applied."
+    }
   }
 }

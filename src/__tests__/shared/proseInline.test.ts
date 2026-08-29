@@ -64,7 +64,11 @@ describe('round trip', () => {
     '\\textit{unconverted} next to \\emph{converted}',
     'Escaped percent \\% and ampersand \\& survive.',
     '\\frac{1}{2} of \\texttt{code_with_underscore}',
-    'Multiple **like** characters that are not Markdown: 2*3*4'
+    'Multiple **like** characters that are not Markdown: 2*3*4',
+    // A star closing emphasis is not the command's own star.
+    '\\textbf{\\method} and \\section*{Aside}',
+    'Bold around a macro: \\textbf{\\method}',
+    'Emphasis around a macro: \\emph{\\method}'
   ]
 
   for (const sample of samples) {
@@ -72,4 +76,16 @@ describe('round trip', () => {
       expect(roundTrip(sample)).toBe(sample)
     })
   }
+})
+
+describe('starred commands versus Markdown emphasis', () => {
+  it('does not let a bold fence be eaten as a command star', () => {
+    expect(markdownProseToLatex('We propose **\\method**.')).toBe('We propose \\textbf{\\method}.')
+    expect(markdownProseToLatex('We propose *\\method*.')).toBe('We propose \\emph{\\method}.')
+  })
+
+  it('still treats a real starred command as one atom', () => {
+    expect(markdownProseToLatex('\\section*{Aside} follows')).toBe('\\section*{Aside} follows')
+    expect(latexProseToMarkdown('\\section*{Aside} follows')).toBe('\\section*{Aside} follows')
+  })
 })

@@ -1155,14 +1155,17 @@
     "commandLabel": "Comando de IA"
   },
   "prosePane": {
-    "label": "Vista de prosa",
     "showProse": "Mostrar la vista de prosa",
     "showTex": "Mostrar el código TeX",
-    "openInTex": "Abrir esto en el código TeX",
     "noFile": "Abre un documento .tex para usar la vista de prosa.",
     "noBody": "Este archivo no tiene un cuerpo \\begin{document} que mostrar.",
-    "protectedBlock": "Bloque {{kind}} en la línea {{line}} — abrir en el código TeX",
-    "headingField": "Título de la sección: {{title}}",
-    "proseField": "Párrafo en la línea {{line}}"
+    "sourceLabel": "Código Markdown",
+    "previewLabel": "Prosa renderizada",
+    "mathBlock": "Ecuación",
+    "discardChange": "Descartar",
+    "refused": {
+      "protectedChanged": "Las ecuaciones, figuras y tablas se editan en TeX. Ese cambio no se aplicó.",
+      "structureChanged": "Añadir, eliminar o reordenar secciones se hace en TeX. Ese cambio no se aplicó."
+    }
   }
 }

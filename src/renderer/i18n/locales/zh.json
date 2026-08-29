@@ -1155,14 +1155,17 @@
     "commandLabel": "AI 命令"
   },
   "prosePane": {
-    "label": "正文视图",
     "showProse": "切换到正文视图",
     "showTex": "切换到 TeX 源码",
-    "openInTex": "在 TeX 源码中打开",
     "noFile": "请打开 .tex 文档以使用正文视图。",
     "noBody": "此文件没有可显示的 \\begin{document} 正文。",
-    "protectedBlock": "第 {{line}} 行的 {{kind}} 块 — 在 TeX 源码中打开",
-    "headingField": "章节标题：{{title}}",
-    "proseField": "第 {{line}} 行的段落"
+    "sourceLabel": "Markdown 源码",
+    "previewLabel": "渲染后的正文",
+    "mathBlock": "公式",
+    "discardChange": "撤销",
+    "refused": {
+      "protectedChanged": "公式、图和表需在 TeX 中编辑。该修改未被应用。",
+      "structureChanged": "章节的增删与重排需在 TeX 中完成。该修改未被应用。"
+    }
   }
 }
