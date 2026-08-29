@@ -15,6 +15,7 @@ function wheel(
     deltaY,
     deltaMode: 0,
     ctrlKey: false,
+    metaKey: false,
     shiftKey: false,
     target: null,
     currentTarget: null,
@@ -80,6 +81,14 @@ describe('useHorizontalSwipe', () => {
     const { result } = renderHook(() => useHorizontalSwipe(onSwipe))
 
     act(() => result.current(wheel(20, 1)))
+    expect(onSwipe).not.toHaveBeenCalled()
+  })
+
+  it.each(['ctrlKey', 'metaKey'] as const)('leaves %s wheel gestures to zoom', (modifier) => {
+    const onSwipe = vi.fn()
+    const { result } = renderHook(() => useHorizontalSwipe(onSwipe))
+
+    burst(result.current, [60, 80, 70], { extra: { [modifier]: true } })
     expect(onSwipe).not.toHaveBeenCalled()
   })
 
@@ -284,14 +293,6 @@ describe('useHorizontalSwipe', () => {
 
     act(() => result.current(wheel(0, 100, { shiftKey: true })))
     expect(onSwipe).toHaveBeenCalledWith(1)
-  })
-
-  it('leaves pinch-zoom alone', () => {
-    const onSwipe = vi.fn()
-    const { result } = renderHook(() => useHorizontalSwipe(onSwipe))
-
-    burst(result.current, [60, 80, 70], { extra: { ctrlKey: true } })
-    expect(onSwipe).not.toHaveBeenCalled()
   })
 
   it('leaves the gesture to a sideways scroller that can still move', () => {

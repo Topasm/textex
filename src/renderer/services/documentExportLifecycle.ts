@@ -3,6 +3,7 @@ import { useEditorStore } from '../store/useEditorStore'
 import { useNotificationStore } from '../store/useNotificationStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { useUiStore } from '../store/useUiStore'
+import { flushPendingDocumentEdits } from './pendingDocumentEdits'
 import { syncRecoveryForFile } from './crashRecovery'
 import { errorMessage } from '../utils/errorMessage'
 import { documentRegistry, normalizeDocumentId } from '../models/documentRegistry'
@@ -106,6 +107,7 @@ function captureRequest(
   format: string,
   messages: DocumentExportMessages
 ): DocumentExportRequest | null {
+  flushPendingDocumentEdits(inputPath)
   const editorState = useEditorStore.getState()
   const projectRoot = useProjectStore.getState().projectRoot
   const snapshot = documentRegistry.snapshot(inputPath)

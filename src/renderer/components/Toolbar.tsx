@@ -2,7 +2,6 @@ import React, { useState, useCallback } from 'react'
 import {
   ArrowLeft,
   ArrowRight,
-  BookOpen,
   House,
   Loader,
   Menu,
@@ -23,13 +22,13 @@ import { useCompileStore } from '../store/useCompileStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { usePdfStore } from '../store/usePdfStore'
 import { useSettingsStore } from '../store/useSettingsStore'
-import { proseViewFor, useUiStore } from '../store/useUiStore'
+import { proseModeFor, useUiStore } from '../store/useUiStore'
 import { OmniSearch } from './OmniSearch'
 import { RecentProjectSwitcher } from './RecentProjectSwitcher'
 import PdfZoomDropdown from './PdfZoomDropdown'
 import { ICON_SIZE } from './ui/IconSystem'
 import { withShortcutHint } from '../services/commandSearch'
-import { toggleProjectSidebar, toggleProseMode, toggleProsePreview } from '../services/appCommands'
+import { toggleProjectSidebar, toggleProseMode } from '../services/appCommands'
 import { logError } from '../utils/errorMessage'
 import type { AppCommandId } from '../../shared/types'
 
@@ -121,9 +120,9 @@ const Toolbar = React.memo(function Toolbar({
   const projectRoot = useProjectStore((s) => s.projectRoot)
   const isSidebarOpen = useProjectStore((s) => s.isSidebarOpen)
   const isResearchPanelOpen = useProjectStore((s) => s.isResearchPanelOpen)
-  const isProseEditor = useUiStore((state) => proseViewFor(state, filePath).editor === 'prose')
-  const isProsePreview = useUiStore((state) => proseViewFor(state, filePath).preview === 'prose')
+  const isProseMode = useUiStore((state) => proseModeFor(state, filePath))
   const canUseProseMode = Boolean(filePath?.toLowerCase().endsWith('.tex'))
+  const showPdfControls = settings.showPdfToolbarControls !== false && !isProseMode
 
   const [pageInputValue, setPageInputValue] = useState('')
   const [isPageInputFocused, setIsPageInputFocused] = useState(false)
@@ -265,36 +264,19 @@ const Toolbar = React.memo(function Toolbar({
             )}
           </button>
 
-          {/* One button per half of the workspace. They are independent, so
-              the author can draft in Markdown with the PDF still in view. */}
           <button
             type="button"
-            className={`toolbar-btn toolbar-prose-toggle${isProseEditor ? ' active' : ''}`}
+            className={`toolbar-btn toolbar-prose-toggle${isProseMode ? ' active' : ''}`}
             onClick={toggleProseMode}
             disabled={!canUseProseMode}
-            title={withShortcutHint(
-              t(isProseEditor ? 'prosePane.showTex' : 'prosePane.showProse'),
+            title={`${withShortcutHint(
+              t(isProseMode ? 'prosePane.showTex' : 'prosePane.showProse'),
               'view.toggleProse'
-            )}
-            aria-label={t(isProseEditor ? 'prosePane.showTex' : 'prosePane.showProse')}
-            aria-pressed={isProseEditor}
+            )}\n${t('prosePane.swipeHint')}`}
+            aria-label={t(isProseMode ? 'prosePane.showTex' : 'prosePane.showProse')}
+            aria-pressed={isProseMode}
           >
             <Pilcrow size={ICON_SIZE.control} />
-          </button>
-
-          <button
-            type="button"
-            className={`toolbar-btn toolbar-prose-preview-toggle${isProsePreview ? ' active' : ''}`}
-            onClick={toggleProsePreview}
-            disabled={!canUseProseMode}
-            title={withShortcutHint(
-              t(isProsePreview ? 'prosePane.showPdf' : 'prosePane.showRendering'),
-              'view.toggleProsePreview'
-            )}
-            aria-label={t(isProsePreview ? 'prosePane.showPdf' : 'prosePane.showRendering')}
-            aria-pressed={isProsePreview}
-          >
-            <BookOpen size={ICON_SIZE.control} />
           </button>
 
           <div className="toolbar-search-slot">
@@ -309,7 +291,7 @@ const Toolbar = React.memo(function Toolbar({
         </div>
 
         <div className="toolbar-center" data-responsive-priority="secondary">
-          {settings.showPdfToolbarControls !== false && (
+          {showPdfControls && (
             <div className="toolbar-sync-controls">
               <button
                 className="toolbar-btn toolbar-compact-btn"
@@ -334,7 +316,7 @@ const Toolbar = React.memo(function Toolbar({
         </div>
 
         <div className="toolbar-right">
-          {settings.showPdfToolbarControls !== false && (
+          {showPdfControls && (
             <div className="toolbar-pdf-controls" data-responsive-priority="compact">
               {numPages > 0 && (
                 <>

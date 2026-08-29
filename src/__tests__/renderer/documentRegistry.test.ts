@@ -40,7 +40,8 @@ describe('DocumentRegistry', () => {
       getText,
       replaceText: (text) => {
         editorText = text
-      }
+      },
+      applyEdits: () => true
     })
     getText.mockClear()
 
@@ -51,6 +52,24 @@ describe('DocumentRegistry', () => {
     expect(getText).not.toHaveBeenCalled()
     expect(registry.snapshot('/paper/main.tex')?.text).toBe('bootstrap!')
     expect(getText).toHaveBeenCalledTimes(1)
+  })
+
+  it('applies ranged edits to the requested document rather than the active one', () => {
+    registry.open('/paper/first.tex', 'first line\nsecond line')
+    registry.open('/paper/second.tex', 'leave this alone')
+
+    const result = registry.applyEdits('/paper/first.tex', 'prose-view', [
+      {
+        range: {
+          start: { line: 2, column: 1 },
+          end: { line: 2, column: 7 }
+        },
+        text: 'updated'
+      }
+    ])
+
+    expect(result).toMatchObject({ revision: 1, text: 'first line\nupdated line' })
+    expect(registry.snapshot('/paper/second.tex')?.text).toBe('leave this alone')
   })
 
   it('can explicitly accept an external disk version and close the document', () => {

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import type { AppUpdateMetadata, DocumentSymbolNode } from '../../shared/types'
+import { normalizeDocumentId } from '../models/documentRegistry'
 
 export type UpdateStatus =
   | 'idle'
@@ -13,25 +14,13 @@ export type UpdateStatus =
   | 'error'
 export type UpdateErrorAction = 'check' | 'download' | 'restart'
 export type ExportStatus = 'idle' | 'exporting' | 'success' | 'error'
-
-/**
- * Which surface each half of the workspace shows for one document.
- *
- * The two halves are independent on purpose. Flipping both at once made the
- * useful pairing — drafting in Markdown while watching the compiled PDF —
- * impossible to reach, so each half is chosen and remembered on its own.
- */
-export interface ProseView {
-  /** The editor half: the TeX source, or the document's prose as Markdown. */
-  editor: 'tex' | 'prose'
-  /** The preview half: the compiled PDF, or the prose rendering. */
-  preview: 'pdf' | 'prose'
+export type ProseAnchorOrigin = 'source' | 'preview' | 'tex'
+export interface ProseAnchor {
+  line: number
+  origin: ProseAnchorOrigin
 }
 
-/** Shared so selectors comparing by identity do not see a new object. */
-export const DEFAULT_PROSE_VIEW: ProseView = Object.freeze({ editor: 'tex', preview: 'pdf' })
-
-export interface UiState {
+interface UiState {
   // AI Draft modal
   isDraftModalOpen: boolean
 
@@ -71,13 +60,12 @@ export interface UiState {
   openFeatureModals: readonly string[]
 
   /**
-   * How each document's two halves are shown, for the documents that differ
-   * from the default.
+   * Documents currently shown as prose rather than TeX source.
    *
    * Per document, not global: an author drafting one chapter in prose often
    * wants the TeX of another in front of them at the same time.
    */
-  proseViews: Readonly<Record<string, ProseView>>
+  proseModeDocumentIds: readonly string[]
 
   /**
    * Where the author is in the prose view, as a `.tex` source line.
@@ -87,7 +75,7 @@ export interface UiState {
    * `origin` records which side moved, so the other follows without echoing
    * the move straight back.
    */
-  proseAnchor: { line: number; origin: 'source' | 'preview' | 'tex' } | null
+  proseAnchors: Readonly<Record<string, ProseAnchor>>
 
   // Actions
   setDraftModalOpen: (open: boolean) => void
@@ -108,27 +96,29 @@ export interface UiState {
   clearSettingsRequest: () => void
   registerFeatureModal: (id: string) => void
   unregisterFeatureModal: (id: string) => void
-  setProseView: (filePath: string, patch: Partial<ProseView>) => void
-  setProseAnchor: (line: number, origin: 'source' | 'preview' | 'tex') => void
-  forgetProseView: (filePath: string) => void
+  setProseAnchor: (filePath: string, line: number, origin: ProseAnchorOrigin) => void
+  setProseMode: (filePath: string, enabled: boolean) => void
+  forgetProseMode: (filePath: string) => void
+  moveProseMode: (oldPath: string, newPath: string) => void
 }
 
-/** The record without one document's entry. */
-function withoutProseView(
-  views: Readonly<Record<string, ProseView>>,
-  filePath: string
-): Record<string, ProseView> {
-  const rest: Record<string, ProseView> = {}
-  for (const [path, view] of Object.entries(views)) {
-    if (path !== filePath) rest[path] = view
-  }
-  return rest
+export function proseModeFor(
+  state: Pick<UiState, 'proseModeDocumentIds'>,
+  filePath: string | null
+): boolean {
+  return Boolean(filePath && state.proseModeDocumentIds.includes(normalizeDocumentId(filePath)))
 }
 
-/** What a document's halves show, falling back to the default pairing. */
-export function proseViewFor(state: UiState, filePath: string | null): ProseView {
-  if (!filePath) return DEFAULT_PROSE_VIEW
-  return state.proseViews[filePath] ?? DEFAULT_PROSE_VIEW
+export function proseAnchorFor(
+  state: Pick<UiState, 'proseAnchors'>,
+  filePath: string | null
+): ProseAnchor | null {
+  return filePath ? (state.proseAnchors[normalizeDocumentId(filePath)] ?? null) : null
+}
+
+function withoutRecordKey<T>(record: Readonly<Record<string, T>>, key: string): Record<string, T> {
+  if (!(key in record)) return record
+  return Object.fromEntries(Object.entries(record).filter(([entryKey]) => entryKey !== key))
 }
 
 export const useUiStore = create<UiState>()(
@@ -147,8 +137,8 @@ export const useUiStore = create<UiState>()(
     externalChangeConflicts: [],
     settingsRequested: false,
     openFeatureModals: [],
-    proseViews: {},
-    proseAnchor: null,
+    proseModeDocumentIds: [],
+    proseAnchors: {},
 
     setDraftModalOpen: (isDraftModalOpen) => set({ isDraftModalOpen }),
     toggleDraftModal: () => set((state) => ({ isDraftModalOpen: !state.isDraftModalOpen })),
@@ -183,28 +173,58 @@ export const useUiStore = create<UiState>()(
           ? state
           : { openFeatureModals: [...state.openFeatureModals, id] }
       ),
-    setProseAnchor: (line, origin) =>
-      set((state) =>
-        state.proseAnchor?.line === line && state.proseAnchor.origin === origin
-          ? state
-          : { proseAnchor: { line, origin } }
-      ),
-    setProseView: (filePath, patch) =>
+    setProseAnchor: (filePath, line, origin) =>
       set((state) => {
-        const current = state.proseViews[filePath] ?? DEFAULT_PROSE_VIEW
-        const next = { ...current, ...patch }
-        if (next.editor === current.editor && next.preview === current.preview) return state
-        // A document back on the default pairing drops out of the record, so a
-        // closed file leaves nothing behind even if nobody forgets it.
-        const isDefault =
-          next.editor === DEFAULT_PROSE_VIEW.editor && next.preview === DEFAULT_PROSE_VIEW.preview
-        if (isDefault) return { proseViews: withoutProseView(state.proseViews, filePath) }
-        return { proseViews: { ...state.proseViews, [filePath]: next } }
+        const documentId = normalizeDocumentId(filePath)
+        const current = state.proseAnchors[documentId]
+        if (current?.line === line && current.origin === origin) return state
+        return { proseAnchors: { ...state.proseAnchors, [documentId]: { line, origin } } }
       }),
-    forgetProseView: (filePath) =>
+    setProseMode: (filePath, enabled) =>
       set((state) => {
-        if (!(filePath in state.proseViews)) return state
-        return { proseViews: withoutProseView(state.proseViews, filePath) }
+        const documentId = normalizeDocumentId(filePath)
+        const active = state.proseModeDocumentIds.includes(documentId)
+        if (active === enabled) return state
+        return {
+          proseModeDocumentIds: enabled
+            ? [...state.proseModeDocumentIds, documentId]
+            : state.proseModeDocumentIds.filter((id) => id !== documentId)
+        }
+      }),
+    forgetProseMode: (filePath) =>
+      set((state) => {
+        const documentId = normalizeDocumentId(filePath)
+        const hasMode = state.proseModeDocumentIds.includes(documentId)
+        const hasAnchor = documentId in state.proseAnchors
+        if (!hasMode && !hasAnchor) return state
+        return {
+          proseModeDocumentIds: hasMode
+            ? state.proseModeDocumentIds.filter((id) => id !== documentId)
+            : state.proseModeDocumentIds,
+          proseAnchors: hasAnchor
+            ? withoutRecordKey(state.proseAnchors, documentId)
+            : state.proseAnchors
+        }
+      }),
+    moveProseMode: (oldPath, newPath) =>
+      set((state) => {
+        const oldId = normalizeDocumentId(oldPath)
+        const newId = normalizeDocumentId(newPath)
+        if (oldId === newId) return state
+        const hadMode = state.proseModeDocumentIds.includes(oldId)
+        const anchor = state.proseAnchors[oldId]
+        if (!hadMode && !anchor) return state
+
+        const withoutOldMode = state.proseModeDocumentIds.filter((id) => id !== oldId)
+        return {
+          proseModeDocumentIds:
+            hadMode && !withoutOldMode.includes(newId)
+              ? [...withoutOldMode, newId]
+              : withoutOldMode,
+          proseAnchors: anchor
+            ? { ...withoutRecordKey(state.proseAnchors, oldId), [newId]: anchor }
+            : withoutRecordKey(state.proseAnchors, oldId)
+        }
       }),
     unregisterFeatureModal: (id) =>
       set((state) =>

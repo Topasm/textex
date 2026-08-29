@@ -7,9 +7,13 @@
  */
 
 .prose-preview {
-  flex: 1;
-  min-height: 0;
+  /* `.preview-pane` is not a flex container — it sizes its child by height,
+     the way the PDF's own scroller does. A `flex: 1` here resolved to the
+     content's full height, so this never scrolled and the overflow was
+     clipped by the pane instead. */
+  height: 100%;
   overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--preview-bg);
 }
 

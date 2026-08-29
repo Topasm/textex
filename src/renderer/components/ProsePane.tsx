@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next'
 import { FileCode2 } from 'lucide-react'
 import { documentRegistry } from '../models/documentRegistry'
 import { useEditorStore } from '../store/useEditorStore'
-import { getActiveEditorAdapter } from '../editor/activeEditorAdapter'
 import { projectLatexToProse } from '../../shared/proseProjection'
 import {
   proseDocumentEdits,
@@ -12,8 +11,9 @@ import {
   spanAtSourceLine
 } from '../../shared/proseDocument'
 import type { ProseRefusal } from '../../shared/proseDocument'
-import { useUiStore } from '../store/useUiStore'
+import { proseAnchorFor, useUiStore } from '../store/useUiStore'
 import { PROSE_COMMIT_DELAY_MS } from '../constants'
+import { registerPendingDocumentEditFlusher } from '../services/pendingDocumentEdits'
 import { ICON_SIZE } from './ui/IconSystem'
 import './ProsePane.css'
 
@@ -31,7 +31,7 @@ export function ProsePane() {
   const revision = useEditorStore((state) => state.revision)
   const areaRef = useRef<HTMLTextAreaElement>(null)
   const [refusal, setRefusal] = useState<ProseRefusal | null>(null)
-  const proseAnchor = useUiStore((state) => state.proseAnchor)
+  const proseAnchor = useUiStore((state) => proseAnchorFor(state, filePath))
 
   const projection = useMemo(() => {
     // The store's revision is the signal that the buffer changed; the text
@@ -82,11 +82,12 @@ export function ProsePane() {
     setRefusal(null)
     if (result.status === 'unchanged') return
 
-    committed.current = text
-    getActiveEditorAdapter()?.applyEdits(
+    const applied = useEditorStore.getState().applyDocumentEdits(
+      path,
       'prose-view',
       result.edits.map((edit) => ({ ...edit, forceMoveMarkers: true }))
     )
+    if (applied) committed.current = text
   }, [])
 
   /*
@@ -99,6 +100,11 @@ export function ProsePane() {
    */
   const commitRef = useRef(commit)
   commitRef.current = commit
+  useEffect(() => {
+    if (!filePath) return
+    return registerPendingDocumentEditFlusher(filePath, () => commitRef.current())
+  }, [filePath])
+
   useEffect(() => {
     if (draft === committed.current) return
     const timer = setTimeout(() => commitRef.current(), PROSE_COMMIT_DELAY_MS)
@@ -124,7 +130,10 @@ export function ProsePane() {
     if (!area || !current?.hasBody) return
     const line = area.value.slice(0, area.selectionStart).split('\n').length
     const span = spanAtMarkdownLine(current.text, line)
-    if (span) useUiStore.getState().setProseAnchor(span.block.startLine, 'source')
+    const path = pending.current.filePath
+    if (path && span) {
+      useUiStore.getState().setProseAnchor(path, span.block.startLine, 'source')
+    }
   }, [])
 
   // Follow the rendering, or a mode switch, back to the right passage.
@@ -147,6 +156,10 @@ export function ProsePane() {
     // Put the target near the top rather than wherever the caret lands.
     const lineHeight = area.scrollHeight / Math.max(1, area.value.split('\n').length)
     area.scrollTop = Math.max(0, (span.startLine - 2) * lineHeight)
+    // The old surface can be hidden while it still owns DOM focus. Move focus
+    // with the caret so a toolbar/gesture switch, or a rendered-passage click,
+    // is immediately ready for typing without another click.
+    area.focus({ preventScroll: true })
   }, [projection, proseAnchor])
 
   if (!filePath) return <div className="prose-pane prose-pane--empty">{t('prosePane.noFile')}</div>

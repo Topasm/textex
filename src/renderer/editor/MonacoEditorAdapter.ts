@@ -132,7 +132,19 @@ export class MonacoEditorAdapter implements EditorAdapter {
     return Object.freeze({
       documentId,
       getText: () => model.getValue(),
-      replaceText: (text: string) => model.setValue(text)
+      replaceText: (text: string) => model.setValue(text),
+      applyEdits: (_source: string, edits: readonly EditorTextEdit[]) => {
+        model.pushEditOperations(
+          null,
+          edits.map((edit) => ({
+            range: toMonacoRange(edit.range),
+            text: edit.text,
+            forceMoveMarkers: edit.forceMoveMarkers
+          })),
+          () => null
+        )
+        return true
+      }
     })
   }
 

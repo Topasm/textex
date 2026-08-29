@@ -25,6 +25,8 @@
 .prose-pane__source {
   flex: 1;
   min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: var(--space-16) var(--space-24);
   color: var(--text-primary);
   font-family: var(--editor-font-family, ui-monospace, monospace);

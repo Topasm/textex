@@ -97,11 +97,42 @@ describe('app shell styles', () => {
     expect(stranded).toEqual([])
   })
 
+  it('lets the prose rendering scroll inside the preview pane', () => {
+    // `.preview-pane` sizes its child by height rather than as a flex item,
+    // the way the PDF's own `.preview-container` is written. v1.2.0 gave the
+    // prose rendering `flex: 1` instead, so it grew to the height of its
+    // content: nothing overflowed it, nothing scrolled, and the pane clipped
+    // whatever did not fit.
+    const rule = /\.prose-preview\s*\{([^}]*)\}/u.exec(
+      readCss(resolve(root, 'components/ProsePreview.css'))
+    )?.[1]
+
+    expect(rule).toBeDefined()
+    expect(rule).toMatch(/height:\s*100%/u)
+    expect(rule).toMatch(/overflow-y:\s*auto/u)
+    expect(eagerCss).toMatch(/\.preview-container\s*\{[^}]*height:\s*100%/u)
+
+    const sourceRule = /\.prose-pane__source\s*\{([^}]*)\}/u.exec(
+      readCss(resolve(root, 'components/ProsePane.css'))
+    )?.[1]
+    expect(sourceRule).toMatch(/min-height:\s*0/u)
+    expect(sourceRule).toMatch(/overflow-y:\s*auto/u)
+  })
+
   it('keeps the editor height chain eager', () => {
     // The regression this file exists for.
     for (const selector of ['.editor-surface', '.editor-surface__tex']) {
       expect(eagerCss).toContain(selector)
     }
     expect(readCss(resolve(root, 'components/ProsePane.css'))).not.toContain('.editor-surface')
+  })
+
+  it('animates the paired workspace together and respects reduced motion', () => {
+    expect(eagerCss).toContain(".editor-surface[data-prose-mode='true'] > .prose-pane")
+    expect(eagerCss).toContain(".preview-pane[data-workspace-view='prose'] > .prose-preview")
+    expect(eagerCss).toContain('@keyframes workspace-paired-view-enter')
+    expect(eagerCss).toMatch(
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.preview-pane\[data-workspace-view\] > \.prose-preview\s*\{[^}]*animation:\s*none/u
+    )
   })
 })

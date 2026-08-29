@@ -16,6 +16,7 @@ import type { DirectoryEntry } from '../../shared/types'
 import { projectPathKey } from '../services/projectIndex'
 import { discardRecoveryForFiles } from '../services/crashRecovery'
 import { findDefaultTexFile } from '../services/defaultTexFile'
+import { flushAllPendingDocumentEdits } from '../services/pendingDocumentEdits'
 
 interface OpenProjectOptions {
   autoOpenFirstTex?: boolean
@@ -37,6 +38,7 @@ let nativeProjectTransition: Promise<void> = Promise.resolve()
  * dirty state, including inactive tabs.
  */
 export function confirmProjectTransition(): boolean {
+  flushAllPendingDocumentEdits()
   const dirtyDocumentCount = documentRegistry.dirtySnapshots().length
   const dirtyResearchProfile = hasUnsavedResearchProfileDraft()
   if (dirtyDocumentCount === 0 && !dirtyResearchProfile) return true

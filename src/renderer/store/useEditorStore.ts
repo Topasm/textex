@@ -6,6 +6,8 @@ import type {
   DocumentSnapshot
 } from '../models/documentModel'
 import { documentRegistry } from '../models/documentRegistry'
+import type { EditorTextEdit } from '../editor/EditorAdapter'
+import { flushPendingDocumentEdits } from '../services/pendingDocumentEdits'
 
 interface OpenFileData {
   isDirty: boolean
@@ -44,6 +46,11 @@ interface EditorState {
   _sessionCursors: Record<string, { cursorLine: number; cursorColumn: number }>
 
   updateActiveDocument: (text: string, source?: DocumentChangeSource) => DocumentSnapshot | null
+  applyDocumentEdits: (
+    filePath: string,
+    source: DocumentChangeSource,
+    edits: readonly EditorTextEdit[]
+  ) => DocumentSnapshot | null
   recordEditorChange: (filePath: string) => DocumentRevisionSnapshot | null
   markDocumentSaved: (filePath: string, revision?: number) => boolean
   openFileInTab: (filePath: string, content: string) => void
@@ -133,6 +140,22 @@ export const useEditorStore = create<EditorState>()(
           isDirty,
           openFiles
         })
+        return after
+      },
+
+      applyDocumentEdits: (filePath, source, edits) => {
+        const beforeRevision = documentRegistry.getModel(filePath)?.revision
+        const after = documentRegistry.applyEdits(filePath, source, edits)
+        if (!after || after.revision === beforeRevision) return after
+
+        const state = get()
+        const isDirty = documentRegistry.getModel(filePath)?.isDirty ?? false
+        const openFiles = withDirtyState(state.openFiles, filePath, isDirty)
+        if (state.activeFilePath === filePath) {
+          set({ revision: after.revision, isDirty, openFiles })
+        } else if (openFiles !== state.openFiles) {
+          set({ openFiles })
+        }
         return after
       },
 
@@ -248,6 +271,7 @@ export const useEditorStore = create<EditorState>()(
       },
 
       closeTab: (filePath) => {
+        flushPendingDocumentEdits(filePath)
         const state = get()
         const openFiles = { ...state.openFiles }
         delete openFiles[filePath]
@@ -292,6 +316,10 @@ export const useEditorStore = create<EditorState>()(
       },
 
       setActiveTab: (filePath) => {
+        const previousActivePath = get().activeFilePath
+        if (previousActivePath && previousActivePath !== filePath) {
+          flushPendingDocumentEdits(previousActivePath)
+        }
         const state = get()
         const target = state.openFiles[filePath]
         const model = documentRegistry.getModel(filePath)

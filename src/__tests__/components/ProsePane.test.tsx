@@ -2,11 +2,10 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProsePane } from '../../renderer/components/ProsePane'
 import { ProsePreview } from '../../renderer/components/ProsePreview'
+import { documentRegistry } from '../../renderer/models/documentRegistry'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
-import { useUiStore } from '../../renderer/store/useUiStore'
-import { setActiveEditorAdapter } from '../../renderer/editor/activeEditorAdapter'
-import type { EditorAdapter } from '../../renderer/editor/EditorAdapter'
+import { proseAnchorFor, useUiStore } from '../../renderer/store/useUiStore'
 import { PROSE_COMMIT_DELAY_MS } from '../../renderer/constants'
 
 const filePath = '/project/main.tex'
@@ -25,7 +24,7 @@ See Figure~\\ref{fig:arch}.
 \\end{equation}
 \\end{document}`
 
-const applyEdits = vi.fn()
+const applyEdits = vi.spyOn(documentRegistry, 'applyEdits')
 
 function source(): HTMLTextAreaElement {
   return screen.getByRole('textbox', { name: 'Markdown source' }) as HTMLTextAreaElement
@@ -37,13 +36,11 @@ describe('ProsePane', () => {
     applyEdits.mockClear()
     useEditorStore.getState().resetEditor()
     useEditorStore.getState().openFileInTab(filePath, SOURCE)
-    setActiveEditorAdapter({ applyEdits } as unknown as EditorAdapter)
   })
 
   afterEach(() => {
     cleanup()
     vi.useRealTimers()
-    setActiveEditorAdapter(null)
   })
 
   it('shows the document as one Markdown source', () => {
@@ -86,7 +83,8 @@ describe('ProsePane', () => {
     fireEvent.blur(area)
 
     expect(applyEdits).toHaveBeenCalledOnce()
-    const [origin, edits] = applyEdits.mock.calls[0]
+    const [targetPath, origin, edits] = applyEdits.mock.calls[0]
+    expect(targetPath).toBe(filePath)
     expect(origin).toBe('prose-view')
     expect(edits).toHaveLength(1)
     expect(edits[0].text).toBe(
@@ -182,7 +180,30 @@ describe('ProsePane', () => {
     unmount()
 
     expect(applyEdits).toHaveBeenCalledOnce()
-    expect(applyEdits.mock.calls[0][1][0].text).toContain('for the layout.')
+    expect(applyEdits.mock.calls[0][2][0].text).toContain('for the layout.')
+  })
+
+  it('flushes a pending edit to its original document when the active tab changes', () => {
+    const otherPath = '/project/other.tex'
+    const otherSource = SOURCE.replace('Introduction', 'Other document')
+    useEditorStore.getState().openFileInTab(otherPath, otherSource)
+    useEditorStore.getState().setActiveTab(filePath)
+
+    function KeyedPane() {
+      const activePath = useEditorStore((state) => state.filePath)
+      return <ProsePane key={activePath} />
+    }
+
+    render(<KeyedPane />)
+    const area = source()
+    fireEvent.change(area, {
+      target: { value: area.value.replace('We propose', 'We safely propose') }
+    })
+
+    act(() => useEditorStore.getState().setActiveTab(otherPath))
+
+    expect(documentRegistry.snapshot(filePath)?.text).toContain('We safely propose')
+    expect(documentRegistry.snapshot(otherPath)?.text).toBe(otherSource)
   })
 })
 
@@ -280,13 +301,11 @@ describe('prose view anchoring', () => {
   beforeEach(() => {
     useEditorStore.getState().resetEditor()
     useEditorStore.getState().openFileInTab(filePath, SOURCE)
-    useUiStore.setState({ proseAnchor: null })
-    setActiveEditorAdapter({ applyEdits } as unknown as EditorAdapter)
+    useUiStore.setState({ proseAnchors: {} })
   })
 
   afterEach(() => {
     cleanup()
-    setActiveEditorAdapter(null)
   })
 
   it('publishes the block the caret sits in', () => {
@@ -298,7 +317,7 @@ describe('prose view anchoring', () => {
     area.setSelectionRange(offset, offset)
     fireEvent.select(area)
 
-    expect(useUiStore.getState().proseAnchor).toEqual({
+    expect(proseAnchorFor(useUiStore.getState(), filePath)).toEqual({
       line: paragraphLine,
       origin: 'source'
     })
@@ -310,9 +329,23 @@ describe('prose view anchoring', () => {
     area.setSelectionRange(0, 0)
 
     act(() => {
-      useUiStore.getState().setProseAnchor(paragraphLine, 'preview')
+      useUiStore.getState().setProseAnchor(filePath, paragraphLine, 'preview')
     })
 
+    const caretLine = area.value.slice(0, area.selectionStart).split('\n').length
+    expect(area.value.split('\n')[caretLine - 1]).toContain('We propose')
+    expect(area).toHaveFocus()
+  })
+
+  it('takes focus when a TeX-to-prose switch supplies the source anchor', () => {
+    render(<ProsePane />)
+    const area = source()
+
+    act(() => {
+      useUiStore.getState().setProseAnchor(filePath, paragraphLine, 'tex')
+    })
+
+    expect(area).toHaveFocus()
     const caretLine = area.value.slice(0, area.selectionStart).split('\n').length
     expect(area.value.split('\n')[caretLine - 1]).toContain('We propose')
   })
@@ -323,7 +356,7 @@ describe('prose view anchoring', () => {
     area.setSelectionRange(0, 0)
 
     act(() => {
-      useUiStore.getState().setProseAnchor(paragraphLine, 'source')
+      useUiStore.getState().setProseAnchor(filePath, paragraphLine, 'source')
     })
 
     expect(area.selectionStart).toBe(0)
@@ -334,7 +367,7 @@ describe('ProsePreview anchoring', () => {
   beforeEach(() => {
     useEditorStore.getState().resetEditor()
     useEditorStore.getState().openFileInTab(filePath, SOURCE)
-    useUiStore.setState({ proseAnchor: null })
+    useUiStore.setState({ proseAnchors: {} })
   })
 
   afterEach(cleanup)
@@ -355,6 +388,9 @@ describe('ProsePreview anchoring', () => {
 
     fireEvent.click(container.querySelector(`[data-prose-line="${line}"]`)!)
 
-    expect(useUiStore.getState().proseAnchor).toEqual({ line, origin: 'preview' })
+    expect(proseAnchorFor(useUiStore.getState(), filePath)).toEqual({
+      line,
+      origin: 'preview'
+    })
   })
 })

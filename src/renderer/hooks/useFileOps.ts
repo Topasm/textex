@@ -7,6 +7,7 @@ import { formatLatex } from '../utils/formatter'
 import { isCurrentProjectTransitionSnapshot, openProject } from '../utils/openProject'
 import { errorMessage } from '../utils/errorMessage'
 import { documentRegistry } from '../models/documentRegistry'
+import { flushPendingDocumentEdits } from '../services/pendingDocumentEdits'
 import { clearRecoveryForFile, syncRecoveryForFile } from '../services/crashRecovery'
 
 interface FileOps {
@@ -39,6 +40,7 @@ export function useFileOps(): FileOps {
     const { settings } = useSettingsStore.getState()
 
     if (!filePath) return
+    flushPendingDocumentEdits(filePath)
     const initialModel = documentRegistry.getModel(filePath)
     const initialSnapshot = initialModel?.snapshot()
     if (!initialSnapshot) return
@@ -86,6 +88,7 @@ export function useFileOps(): FileOps {
     const state = useEditorStore.getState()
     const filePath = state.filePath
     if (!filePath) return
+    flushPendingDocumentEdits(filePath)
     const snapshot = documentRegistry.snapshot(filePath)
     if (!snapshot) return
 

@@ -637,8 +637,7 @@
       "app_checkUpdates": "Verificar atualizações",
       "window_close": "Fechar janela",
       "app_quit": "Sair do TextEx",
-      "view_toggleProse": "Alternar a visão de prosa",
-      "view_toggleProsePreview": "Alternar a renderização da prosa"
+      "view_toggleProse": "Alternar a visão de prosa"
     }
   },
   "submissionCheck": {
@@ -1158,8 +1157,7 @@
   "prosePane": {
     "showProse": "Mostrar a visão de prosa",
     "showTex": "Mostrar o código TeX",
-    "showRendering": "Mostrar a renderização da prosa",
-    "showPdf": "Mostrar o PDF",
+    "swipeHint": "Deslize horizontalmente no painel de código para alternar a visualização.",
     "noFile": "Abra um documento .tex para usar a visão de prosa.",
     "noBody": "Este arquivo não tem um corpo \\begin{document} para exibir.",
     "sourceLabel": "Código Markdown",

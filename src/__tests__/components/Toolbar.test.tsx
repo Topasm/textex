@@ -6,6 +6,7 @@ import { useCompileStore } from '../../renderer/store/useCompileStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { usePdfStore } from '../../renderer/store/usePdfStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
+import { useUiStore } from '../../renderer/store/useUiStore'
 
 vi.mock('../../renderer/components/OmniSearch', () => ({
   OmniSearch: () => <div data-testid="omni-search-mock">Search citations...</div>
@@ -49,6 +50,7 @@ beforeEach(() => {
       showPdfToolbarControls: true
     }
   })
+  useUiStore.setState({ proseModeDocumentIds: [], proseAnchors: {} })
   vi.clearAllMocks()
 })
 
@@ -243,6 +245,18 @@ describe('Toolbar', () => {
     expect(screen.queryByTitle(/Zoom level/)).not.toBeInTheDocument()
   })
 
+  it('hides PDF-only controls while the paired prose view is active', () => {
+    const filePath = '/project/main.tex'
+    useEditorStore.setState({ filePath })
+    useUiStore.getState().setProseMode(filePath, true)
+
+    render(<Toolbar {...defaultProps} />)
+
+    expect(screen.queryByTitle(/Sync PDF to Code/)).not.toBeInTheDocument()
+    expect(screen.queryByTitle(/Sync Code to PDF/)).not.toBeInTheDocument()
+    expect(screen.queryByTitle(/Zoom level/)).not.toBeInTheDocument()
+  })
+
   it('renders fractional zoom values as integer percentages', () => {
     usePdfStore.setState({ zoomLevel: 92.00965826511386 })
 
@@ -277,6 +291,10 @@ describe('Toolbar', () => {
     expect(screen.getByRole('button', { name: 'Open app menu' })).toHaveAttribute(
       'title',
       'Open app menu (Ctrl+Shift+P)'
+    )
+    expect(screen.getByRole('button', { name: 'Show prose view' })).toHaveAttribute(
+      'title',
+      'Show prose view (Ctrl+Shift+M)\nSwipe horizontally on the source pane to switch views.'
     )
   })
 })

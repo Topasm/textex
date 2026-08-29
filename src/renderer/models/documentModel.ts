@@ -7,7 +7,7 @@
  */
 
 export type DocumentChangeSource =
-  'editor' | 'format' | 'external' | 'programmatic' | 'history-restore'
+  'editor' | 'format' | 'external' | 'programmatic' | 'history-restore' | 'prose-view'
 
 export interface DocumentRevisionSnapshot {
   readonly documentId: string

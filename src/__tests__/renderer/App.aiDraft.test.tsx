@@ -2,8 +2,9 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../renderer/App'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
+import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
-import { useUiStore } from '../../renderer/store/useUiStore'
+import { proseModeFor, useUiStore } from '../../renderer/store/useUiStore'
 
 const shortcutHarness = vi.hoisted(() => ({ openCommandPalette: null as (() => void) | null }))
 
@@ -30,7 +31,15 @@ vi.mock('../../renderer/components/EditorPane', () => ({
 }))
 
 vi.mock('../../renderer/components/PreviewPane', () => ({
-  default: () => null
+  default: () => <div data-testid="pdf-preview" />
+}))
+
+vi.mock('../../renderer/components/ProsePane', () => ({
+  ProsePane: () => <div data-testid="markdown-source" />
+}))
+
+vi.mock('../../renderer/components/ProsePreview', () => ({
+  ProsePreview: () => <div data-testid="markdown-preview" />
 }))
 
 vi.mock('../../renderer/components/LogPanel', () => ({
@@ -253,5 +262,53 @@ describe('App AI Draft flow', () => {
       expect(screen.queryByRole('dialog', { name: 'Command Palette' })).not.toBeInTheDocument()
     })
     act(() => useUiStore.getState().unregisterFeatureModal('bibliographyRegistration'))
+  })
+})
+
+describe('App paired workspace gestures', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    useProjectStore.setState({ projectRoot: '/project', isSidebarOpen: false })
+    useEditorStore.getState().resetEditor()
+    useEditorStore.getState().openFileInTab('/project/main.tex', 'paper')
+    useUiStore.setState({ proseModeDocumentIds: [], proseAnchors: {} })
+    useSettingsStore.setState((state) => ({
+      settings: { ...state.settings, autoHideSidebar: false, showStatusBar: false }
+    }))
+  })
+
+  it('keeps PDF page swipes separate while the editor can open the Markdown pair', async () => {
+    const view = render(<App />)
+    const previewSurface = view.container.querySelector<HTMLElement>('.preview-pane')
+    const editorSurface = view.container.querySelector<HTMLElement>('.editor-surface')
+
+    expect(previewSurface).not.toBeNull()
+    expect(editorSurface).not.toBeNull()
+    expect(previewSurface).toHaveAttribute('data-workspace-view', 'pdf')
+
+    fireEvent.wheel(previewSurface!, { deltaX: 60, deltaY: 2 })
+    expect(proseModeFor(useUiStore.getState(), '/project/main.tex')).toBe(false)
+
+    fireEvent.wheel(editorSurface!, { deltaX: 60, deltaY: 2 })
+    await waitFor(() => {
+      expect(proseModeFor(useUiStore.getState(), '/project/main.tex')).toBe(true)
+    })
+    expect(await screen.findByTestId('markdown-source')).toBeInTheDocument()
+    expect(screen.getByTestId('markdown-preview')).toBeInTheDocument()
+  })
+
+  it('returns to the TeX/PDF pair from a swipe over the Markdown render', async () => {
+    useUiStore.getState().setProseMode('/project/main.tex', true)
+    const view = render(<App />)
+    const previewSurface = view.container.querySelector<HTMLElement>('.preview-pane')
+
+    expect(await screen.findByTestId('markdown-preview')).toBeInTheDocument()
+    expect(previewSurface).toHaveAttribute('data-workspace-view', 'prose')
+
+    fireEvent.wheel(previewSurface!, { deltaX: -60, deltaY: 2 })
+    await waitFor(() => {
+      expect(proseModeFor(useUiStore.getState(), '/project/main.tex')).toBe(false)
+    })
+    expect(await screen.findByTestId('pdf-preview')).toBeInTheDocument()
   })
 })

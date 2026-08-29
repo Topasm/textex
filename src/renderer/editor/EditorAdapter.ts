@@ -74,6 +74,8 @@ export interface EditorDocumentBuffer {
   readonly documentId: string
   getText(): string
   replaceText(text: string): void
+  /** Applies one undoable edit group to this document, even while it is not active. */
+  applyEdits(source: string, edits: readonly EditorTextEdit[]): boolean
 }
 
 export interface EditorDisposable {
