@@ -41,6 +41,26 @@ interface UiState {
   // External file change conflicts
   externalChangeConflicts: string[]
 
+  /** Set by background services that need App to open the settings modal. */
+  settingsRequested: boolean
+
+  /**
+   * Ids of modal surfaces owned by features rather than by App.
+   *
+   * App suppresses its own overlays while any of these is on screen. Features
+   * register explicitly so the policy never has to infer modal state by
+   * scanning the DOM.
+   */
+  openFeatureModals: readonly string[]
+
+  /**
+   * Documents currently shown as prose rather than TeX source.
+   *
+   * Per document, not global: an author drafting one chapter in prose often
+   * wants the TeX of another in front of them at the same time.
+   */
+  proseModePaths: readonly string[]
+
   // Actions
   setDraftModalOpen: (open: boolean) => void
   toggleDraftModal: () => void
@@ -56,6 +76,13 @@ interface UiState {
   clearOmniSearchFocus: () => void
   addExternalChangeConflict: (filePath: string) => void
   removeExternalChangeConflict: (filePath: string) => void
+  requestSettings: () => void
+  clearSettingsRequest: () => void
+  registerFeatureModal: (id: string) => void
+  unregisterFeatureModal: (id: string) => void
+  toggleProseMode: (filePath: string) => void
+  setProseMode: (filePath: string, enabled: boolean) => void
+  forgetProseMode: (filePath: string) => void
 }
 
 export const useUiStore = create<UiState>()(
@@ -72,6 +99,9 @@ export const useUiStore = create<UiState>()(
     omniSearchFocusRequested: false,
     omniSearchFocusMode: null,
     externalChangeConflicts: [],
+    settingsRequested: false,
+    openFeatureModals: [],
+    proseModePaths: [],
 
     setDraftModalOpen: (isDraftModalOpen) => set({ isDraftModalOpen }),
     toggleDraftModal: () => set((state) => ({ isDraftModalOpen: !state.isDraftModalOpen })),
@@ -97,6 +127,42 @@ export const useUiStore = create<UiState>()(
     removeExternalChangeConflict: (filePath) =>
       set((state) => ({
         externalChangeConflicts: state.externalChangeConflicts.filter((p) => p !== filePath)
-      }))
+      })),
+    requestSettings: () => set({ settingsRequested: true }),
+    clearSettingsRequest: () => set({ settingsRequested: false }),
+    registerFeatureModal: (id) =>
+      set((state) =>
+        state.openFeatureModals.includes(id)
+          ? state
+          : { openFeatureModals: [...state.openFeatureModals, id] }
+      ),
+    toggleProseMode: (filePath) =>
+      set((state) => ({
+        proseModePaths: state.proseModePaths.includes(filePath)
+          ? state.proseModePaths.filter((path) => path !== filePath)
+          : [...state.proseModePaths, filePath]
+      })),
+    setProseMode: (filePath, enabled) =>
+      set((state) => {
+        const active = state.proseModePaths.includes(filePath)
+        if (active === enabled) return state
+        return {
+          proseModePaths: enabled
+            ? [...state.proseModePaths, filePath]
+            : state.proseModePaths.filter((path) => path !== filePath)
+        }
+      }),
+    forgetProseMode: (filePath) =>
+      set((state) =>
+        state.proseModePaths.includes(filePath)
+          ? { proseModePaths: state.proseModePaths.filter((path) => path !== filePath) }
+          : state
+      ),
+    unregisterFeatureModal: (id) =>
+      set((state) =>
+        state.openFeatureModals.includes(id)
+          ? { openFeatureModals: state.openFeatureModals.filter((item) => item !== id) }
+          : state
+      )
   }))
 )

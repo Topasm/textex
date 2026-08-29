@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import katex from 'katex'
 import { Sigma, X } from 'lucide-react'
 import type { editor as monacoEditor } from 'monaco-editor'
@@ -14,6 +15,7 @@ interface MathPreviewWidgetProps {
 }
 
 export function MathPreviewWidget({ mathData, editorRef, onClose }: MathPreviewWidgetProps) {
+  const { t } = useTranslation()
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null)
   const renderedMath = useMemo(
     () =>
@@ -63,14 +65,14 @@ export function MathPreviewWidget({ mathData, editorRef, onClose }: MathPreviewW
           <span className="math-preview-label-icon">
             <Sigma size={ICON_SIZE.compact} />
           </span>
-          {mathData.isDisplay ? 'Display Math' : 'Inline Math'}
+          {mathData.isDisplay ? t('mathPreview.displayMath') : t('mathPreview.inlineMath')}
         </span>
         <button
           type="button"
           className="math-preview-btn"
           onClick={onClose}
-          title="Close (Esc)"
-          aria-label="Close (Esc)"
+          title={t('mathPreview.close')}
+          aria-label={t('mathPreview.close')}
         >
           <X size={ICON_SIZE.compact} />
         </button>
@@ -79,7 +81,7 @@ export function MathPreviewWidget({ mathData, editorRef, onClose }: MathPreviewW
         className={`math-preview-body${mathData.isDisplay ? ' math-preview-body--display' : ''}`}
         dangerouslySetInnerHTML={{ __html: renderedMath }}
       />
-      <div className="math-preview-hint">Read-only preview · Edit the LaTeX source to update</div>
+      <div className="math-preview-hint">{t('mathPreview.hint')}</div>
     </div>
   )
 }

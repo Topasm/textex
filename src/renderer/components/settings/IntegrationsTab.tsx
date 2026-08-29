@@ -1,4 +1,5 @@
 import React from 'react'
+import { ICON_SIZE } from '../ui/IconSystem'
 import { useTranslation } from 'react-i18next'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import { Link, RefreshCw } from 'lucide-react'
@@ -84,7 +85,7 @@ export const IntegrationsTab = () => {
       <div className="settings-section">
         <div className="settings-section-header">
           <div className="settings-section-icon">
-            <Link size={24} />
+            <Link size={ICON_SIZE.prominent} />
           </div>
           <div className="settings-section-body">
             <div className="settings-flex-row">
@@ -123,10 +124,10 @@ export const IntegrationsTab = () => {
                   <div className="settings-flex-row">
                     <div>
                       <label className="settings-label settings-no-mb">
-                        Save online papers to Zotero when citing
+                        {t('settings.integrations.citeOnlineToZotero')}
                       </label>
                       <p className="settings-section-description">
-                        Ask Zotero for local write permission, then use the Better BibTeX key.
+                        {t('settings.integrations.citeOnlineToZoteroHint')}
                       </p>
                     </div>
                     <Toggle
@@ -158,7 +159,7 @@ export const IntegrationsTab = () => {
                         syncStatus.state === 'syncing'
                       }
                     >
-                      <RefreshCw size={14} aria-hidden="true" />
+                      <RefreshCw size={ICON_SIZE.compact} aria-hidden="true" />
                       {syncStatus.state === 'syncing'
                         ? t('settings.integrations.syncing')
                         : t('settings.integrations.syncCollection')}
@@ -185,7 +186,7 @@ export const IntegrationsTab = () => {
       <div className="settings-section">
         <div className="settings-section-header">
           <div className="settings-section-icon">
-            <Link size={24} />
+            <Link size={ICON_SIZE.prominent} />
           </div>
           <div className="settings-section-body">
             <div className="settings-flex-row">

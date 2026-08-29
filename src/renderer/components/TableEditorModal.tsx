@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { DataGrid, Column, RenderEditCellProps } from 'react-data-grid'
 import { X } from 'lucide-react'
 import 'react-data-grid/lib/styles.css'
@@ -17,6 +18,7 @@ interface Row {
 }
 
 export const TableEditorModal: React.FC<Props> = ({ initialLatex, onApply, onClose }) => {
+  const { t } = useTranslation()
   // Parse initial LaTeX
   const initialData = useMemo(() => parseLatexTable(initialLatex), [initialLatex])
 
@@ -64,8 +66,8 @@ export const TableEditorModal: React.FC<Props> = ({ initialLatex, onApply, onClo
     <div className="table-editor-overlay">
       <div className="table-editor-modal">
         <div className="table-editor-header">
-          <h3>Visual Table Editor</h3>
-          <button onClick={onClose} className="close-btn" aria-label="Close">
+          <h3>{t('tableEditor.title')}</h3>
+          <button onClick={onClose} className="close-btn" aria-label={t('tableEditor.close')}>
             <X size={ICON_SIZE.control} />
           </button>
         </div>
@@ -81,10 +83,10 @@ export const TableEditorModal: React.FC<Props> = ({ initialLatex, onApply, onClo
 
         <div className="table-editor-footer">
           <button onClick={onClose} className="cancel-btn">
-            Cancel
+            {t('tableEditor.cancel')}
           </button>
           <button onClick={handleApply} className="apply-btn">
-            Apply Changes
+            {t('tableEditor.apply')}
           </button>
         </div>
       </div>

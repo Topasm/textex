@@ -24,7 +24,13 @@ import { useBibAutoLoad } from './hooks/useBibAutoLoad'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { useDragResize } from './hooks/useDragResize'
 import { useAnimatedPresence } from './hooks/useAnimatedPresence'
-import { executeAppCommand, toggleLogPanel, toggleProjectSidebar } from './services/appCommands'
+import { useHorizontalSwipe } from './hooks/useHorizontalSwipe'
+import {
+  executeAppCommand,
+  toggleLogPanel,
+  toggleProjectSidebar,
+  toggleProseMode
+} from './services/appCommands'
 import { useEditorStore } from './store/useEditorStore'
 import { useCompileStore } from './store/useCompileStore'
 import { useProjectStore } from './store/useProjectStore'
@@ -34,7 +40,10 @@ import { useUiStore } from './store/useUiStore'
 import { useSettingsStore } from './store/useSettingsStore'
 import { useNotificationStore } from './store/useNotificationStore'
 import { deactivateProject, openProject } from './utils/openProject'
-import { errorMessage, logError } from './utils/errorMessage'
+import { logError } from './utils/errorMessage'
+import { hasNativeErrorCode } from '../shared/appError'
+import { describeNativeError } from './services/nativeErrors'
+import { clearCompileFailure, reportCompileFailure } from './services/compileFeedback'
 import { isFeatureEnabled } from './utils/featureFlags'
 import type { AppCommandId } from '../shared/types'
 import { parseAuxContent } from '../shared/auxparser'
@@ -45,8 +54,6 @@ import { checkForAppUpdate } from './services/updateLifecycle'
 import { exportDocumentWithFeedback } from './services/documentExportLifecycle'
 import {
   canOpenExclusiveAppOverlay,
-  containsRenderedBlockingOverlay,
-  hasRenderedFeatureModal,
   shouldSuppressBackgroundSurfaces,
   type AppOverlaySnapshot
 } from './services/appOverlayPolicy'
@@ -101,6 +108,9 @@ const UpdateNotification = lazy(() => import('./components/UpdateNotification'))
 const ExternalChangeBanner = lazy(() => import('./components/ExternalChangeBanner'))
 const NotificationCenter = lazy(() => import('./components/NotificationCenter'))
 const HomeScreen = lazy(() => import('./components/HomeScreen'))
+const ProsePane = lazy(() =>
+  import('./components/ProsePane').then((module) => ({ default: module.ProsePane }))
+)
 const BibliographyRegistrationDialog = lazy(() =>
   import('./components/research/BibliographyRegistrationDialog').then((module) => ({
     default: module.BibliographyRegistrationDialog
@@ -111,7 +121,6 @@ function App() {
   const { t } = useTranslation()
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
-  const [isFeatureModalOpen, setIsFeatureModalOpen] = useState(false)
   useAutoCompile()
   const { handleOpen, handleSave, handleSaveAs } = useFileOps()
 
@@ -139,6 +148,14 @@ function App() {
   const showStatusBar = useSettingsStore((s) => s.settings.showStatusBar)
   const isTemplateGalleryOpen = useUiStore((s) => s.isTemplateGalleryOpen)
   const updateStatus = useUiStore((s) => s.updateStatus)
+  const settingsRequested = useUiStore((s) => s.settingsRequested)
+  const isProseMode = useUiStore((s) => Boolean(filePath && s.proseModePaths.includes(filePath)))
+
+  // A two-finger horizontal swipe over the editor half flips TeX ⇄ prose. The
+  // direction is ignored: there are only two screens, so either way toggles.
+  const handleEditorSwipe = useHorizontalSwipe(useCallback(() => toggleProseMode(), []))
+  // Feature dialogs register themselves; App never inspects the DOM for them.
+  const isFeatureModalOpen = useUiStore((s) => s.openFeatureModals.length > 0)
   const hasNotifications = useNotificationStore((s) => s.notifications.length > 0)
   const hasActiveExternalChange = useUiStore((s) =>
     Boolean(filePath && s.externalChangeConflicts.includes(filePath))
@@ -185,7 +202,6 @@ function App() {
   const handleAiDraft = useCallback(
     (prefill?: string) => {
       if (!canOpenExclusiveAppOverlay('aiDraft', overlaySnapshot)) return
-      if (hasRenderedFeatureModal(document)) return
       setIsCommandPaletteOpen(false)
       setDraftPrefill(typeof prefill === 'string' ? prefill : undefined)
       setIsDraftModalOpen(true)
@@ -210,8 +226,11 @@ function App() {
       await prepareDocumentsForManualCompile(editorState.filePath, snapshot)
     } catch (err) {
       logError('App:preSave', err)
-      useCompileStore.getState().appendLog(`Compilation was not started: ${errorMessage(err)}\n`)
+      useCompileStore
+        .getState()
+        .appendLog(`${t('logPanel.compileNotStarted', { reason: describeNativeError(err) })}\n`)
       useCompileStore.getState().setCompileStatus('error')
+      reportCompileFailure(err, 'manual')
       return
     }
     const ticket = beginCompileTicket(editorState.filePath, snapshot)
@@ -227,6 +246,7 @@ function App() {
         revision: snapshot.revision
       })
       useCompileStore.getState().setCompileStatus('success')
+      clearCompileFailure()
       useProjectStore
         .getState()
         .setAuxCitationMap(result.auxContent ? parseAuxContent(result.auxContent) : null)
@@ -249,10 +269,15 @@ function App() {
         useCompileStore.getState().setCompileStatus('idle')
         return
       }
-      useCompileStore.getState().appendLog(errorMessage(err))
+      if (hasNativeErrorCode(err, 'compilationCancelled', 'compilationSuperseded')) {
+        useCompileStore.getState().setCompileStatus('idle')
+        return
+      }
+      useCompileStore.getState().appendLog(describeNativeError(err))
       useCompileStore.getState().setCompileStatus('error')
+      reportCompileFailure(err, 'manual')
     }
-  }, [])
+  }, [t])
 
   // ---- Open folder handler ----
   const handleOpenFolder = useCallback(async (): Promise<void> => {
@@ -288,7 +313,6 @@ function App() {
 
   const handleOpenTemplateGallery = useCallback(() => {
     if (!canOpenExclusiveAppOverlay('templateGallery', overlaySnapshot)) return
-    if (hasRenderedFeatureModal(document)) return
     setIsCommandPaletteOpen(false)
     useUiStore.getState().setTemplateGalleryOpen(true)
   }, [overlaySnapshot])
@@ -354,14 +378,12 @@ function App() {
 
   const handleOpenSettings = useCallback((): void => {
     if (!canOpenExclusiveAppOverlay('settings', overlaySnapshot)) return
-    if (hasRenderedFeatureModal(document)) return
     setIsCommandPaletteOpen(false)
     setIsSettingsOpen(true)
   }, [overlaySnapshot])
 
   const openCommandPalette = useCallback((): void => {
     if (!canOpenExclusiveAppOverlay('commandPalette', overlaySnapshot)) return
-    if (hasRenderedFeatureModal(document)) return
     setIsCommandPaletteOpen(true)
   }, [overlaySnapshot])
 
@@ -378,7 +400,7 @@ function App() {
           } catch (error) {
             useNotificationStore.getState().pushNotification({
               tone: 'error',
-              message: errorMessage(error)
+              message: describeNativeError(error)
             })
           }
         },
@@ -428,29 +450,6 @@ function App() {
   useKeyboardShortcuts({ runCommand: runAppCommand, openCommandPalette })
 
   useEffect(() => {
-    const updateFeatureModalState = (): void => {
-      setIsFeatureModalOpen(hasRenderedFeatureModal(document))
-    }
-    updateFeatureModalState()
-    const observer = new MutationObserver((records) => {
-      const overlayChanged = records.some((record) => {
-        if (record.type === 'attributes') return true
-        return [...record.addedNodes, ...record.removedNodes].some(
-          (node) => node instanceof Element && containsRenderedBlockingOverlay(node)
-        )
-      })
-      if (overlayChanged) updateFeatureModalState()
-    })
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['aria-modal', 'data-app-overlay-owner']
-    })
-    return () => observer.disconnect()
-  }, [])
-
-  useEffect(() => {
     if (!isFeatureModalOpen) return
     setIsCommandPaletteOpen(false)
     setIsSettingsOpen(false)
@@ -466,6 +465,14 @@ function App() {
       setIsCommandPaletteOpen(false)
     }
   }, [commandPaletteVisible, isCommandPaletteOpen])
+
+  // Background services (a compile that failed for lack of an engine) ask for
+  // Settings through the store; App still owns whether an overlay may open.
+  useEffect(() => {
+    if (!settingsRequested) return
+    useUiStore.getState().clearSettingsRequest()
+    handleOpenSettings()
+  }, [handleOpenSettings, settingsRequested])
 
   useEffect(() => {
     window.api.onAppCommand(runAppCommand)
@@ -514,24 +521,28 @@ function App() {
         style={{ width: `${sidebarWidth}px` }}
         onWheel={handleSidebarWheel}
       >
-        <div className="sidebar-tabs">
+        <div className="sidebar-tabs panel-tabs" role="tablist" aria-label={t('sidebar.label')}>
           {sidebarTabs.map((tab) => (
             <button
               type="button"
+              role="tab"
               key={tab.key}
+              id={`sidebar-tab-${tab.key}`}
+              aria-controls="sidebar-tabpanel"
               className={`sidebar-tab${sidebarView === tab.key ? ' active' : ''}`}
               onClick={() => useProjectStore.getState().setSidebarView(tab.key)}
               title={tab.label}
               aria-label={tab.label}
-              aria-pressed={sidebarView === tab.key}
+              aria-selected={sidebarView === tab.key}
             >
               {tab.icon}
               <span className="sidebar-tab-label">{tab.label}</span>
             </button>
           ))}
+          <span className="panel-tool-separator" aria-hidden="true" />
           <button
             type="button"
-            className="sidebar-pin-btn"
+            className="sidebar-pin-btn panel-tool-btn"
             title={autoHideSidebar ? t('sidebar.pinSidebar') : t('sidebar.unpinSidebar')}
             aria-label={autoHideSidebar ? t('sidebar.pinSidebar') : t('sidebar.unpinSidebar')}
             onClick={() => {
@@ -552,7 +563,12 @@ function App() {
             )}
           </button>
         </div>
-        <div className={`sidebar-content${slideAnim ? ` sidebar-${slideAnim}` : ''}`}>
+        <div
+          className={`sidebar-content${slideAnim ? ` panel-slide-${slideAnim}` : ''}`}
+          id="sidebar-tabpanel"
+          role="tabpanel"
+          aria-labelledby={`sidebar-tab-${sidebarView}`}
+        >
           <Suspense fallback={<LoadingFallback variant="panel" label={t('loading.workspace')} />}>
             {sidebarView === 'files' && <FileTree />}
             {sidebarView === 'git' && <GitPanel />}
@@ -700,9 +716,29 @@ function App() {
                 }}
               >
                 <TabBar />
-                <Suspense fallback={<LoadingFallback variant="pane" label={t('loading.editor')} />}>
-                  <EditorPane />
-                </Suspense>
+                {/* Monaco stays mounted behind the prose view: it owns the
+                    document adapter the prose edits are applied through, and
+                    keeping it alive makes switching back instant. */}
+                <div
+                  className="editor-surface"
+                  data-prose-mode={isProseMode ? 'true' : 'false'}
+                  onWheel={handleEditorSwipe}
+                >
+                  <div className="editor-surface__tex" hidden={isProseMode}>
+                    <Suspense
+                      fallback={<LoadingFallback variant="pane" label={t('loading.editor')} />}
+                    >
+                      <EditorPane />
+                    </Suspense>
+                  </div>
+                  {isProseMode && (
+                    <Suspense
+                      fallback={<LoadingFallback variant="pane" label={t('loading.editor')} />}
+                    >
+                      <ProsePane />
+                    </Suspense>
+                  )}
+                </div>
               </div>
               <div
                 className="split-divider"

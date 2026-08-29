@@ -1,3 +1,11 @@
+/*
+ * Static startup shell
+ *
+ * Linked directly from index.html so it paints before the bundle — and so
+ * before the design tokens in flat.css exist. Every length here is literal on
+ * purpose; a `var(--space-*)` would resolve to nothing during the very frames
+ * this file is meant to cover. `flatUi.test.ts` holds this contract.
+ */
 :root {
   --startup-bg: #1e1e1e;
   --startup-surface: #252526;

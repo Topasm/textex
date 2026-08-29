@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useFeatureModal } from '../hooks/useFeatureModal'
 import { useTranslation } from 'react-i18next'
 import type { RecoveryItem, RecoverySnapshot } from '../../shared/types'
 import { documentRegistry } from '../models/documentRegistry'
@@ -42,6 +43,7 @@ export function CrashRecoveryDialog({ enabled }: CrashRecoveryDialogProps) {
   const dialogRef = useRef<HTMLElement>(null)
   const initialFocusRef = useRef<HTMLButtonElement>(null)
   const visible = items.length > 0
+  useFeatureModal('crashRecovery', visible)
 
   useEffect(() => {
     if (!visible) return

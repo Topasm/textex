@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ICON_SIZE } from '../ui/IconSystem'
 import { useTranslation } from 'react-i18next'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import type { AiProvider, UserSettings } from '../../../shared/types'
@@ -84,7 +85,7 @@ const AiPromptsEditor = () => {
   return (
     <div>
       <div className="settings-flex-row-start">
-        <MessageSquare size={16} className="settings-icon-secondary" />
+        <MessageSquare size={ICON_SIZE.control} className="settings-icon-secondary" />
         <h3 className="settings-heading settings-no-mb">{t('settings.ai.customPrompts')}</h3>
       </div>
       <p className="settings-subheading">{t('settings.ai.customPromptsDesc')}</p>
@@ -99,7 +100,11 @@ const AiPromptsEditor = () => {
                 onClick={() => setExpandedPrompt(isExpanded ? null : id)}
               >
                 <div className="settings-section-header-row">
-                  {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                  {isExpanded ? (
+                    <ChevronDown size={ICON_SIZE.compact} />
+                  ) : (
+                    <ChevronRight size={ICON_SIZE.compact} />
+                  )}
                   <span>{t(prompt.labelKey)}</span>
                   {isCustom && (
                     <span className="settings-configured-tag">{t('settings.ai.custom')}</span>
@@ -121,7 +126,7 @@ const AiPromptsEditor = () => {
                       onClick={() => handleReset(prompt.key)}
                       title={t('settings.ai.resetToDefault')}
                     >
-                      <RotateCcw size={13} />
+                      <RotateCcw size={ICON_SIZE.micro} />
                       {t('settings.editor.resetColors')}
                     </button>
                   )}
@@ -293,7 +298,11 @@ export const AiTab = () => {
               aria-pressed={isSelected}
             >
               <span className="ai-connection-icon" aria-hidden="true">
-                {info.kind === 'cli' ? <Terminal size={17} /> : <Cloud size={17} />}
+                {info.kind === 'cli' ? (
+                  <Terminal size={ICON_SIZE.control} />
+                ) : (
+                  <Cloud size={ICON_SIZE.control} />
+                )}
               </span>
               <span className="ai-connection-copy">
                 <span className="ai-connection-name">{info.label}</span>
@@ -319,7 +328,11 @@ export const AiTab = () => {
                         ? t('settings.ai.notInstalled')
                         : t('settings.ai.keyRequired')}
               </span>
-              <ChevronRight size={15} className="ai-connection-chevron" aria-hidden="true" />
+              <ChevronRight
+                size={ICON_SIZE.compact}
+                className="ai-connection-chevron"
+                aria-hidden="true"
+              />
             </button>
           )
         })}
@@ -335,7 +348,7 @@ export const AiTab = () => {
       <div className="settings-section">
         <div className="settings-section-header">
           <div className="settings-section-icon">
-            <Bot size={24} />
+            <Bot size={ICON_SIZE.prominent} />
           </div>
           <div className="settings-section-body">
             <div className="settings-flex-row">
@@ -446,7 +459,7 @@ export const AiTab = () => {
             )}
             {provider && availability[provider] === false && (
               <div className="ai-settings-notice warning">
-                <AlertCircle size={15} />
+                <AlertCircle size={ICON_SIZE.compact} />
                 <span>{t('settings.ai.defaultTargetUnavailable')}</span>
                 <button type="button" onClick={() => setSelectedConnection(provider)}>
                   {t('settings.ai.configure')}
@@ -470,7 +483,10 @@ export const AiTab = () => {
                 onClick={() => void refreshConnections()}
                 disabled={checkingConnections}
               >
-                <RefreshCw size={14} className={checkingConnections ? 'spinning' : ''} />
+                <RefreshCw
+                  size={ICON_SIZE.compact}
+                  className={checkingConnections ? 'spinning' : ''}
+                />
                 {t('settings.ai.refresh')}
               </button>
             </div>
@@ -484,7 +500,11 @@ export const AiTab = () => {
               <div className="ai-connection-detail">
                 <div className="ai-connection-detail-header">
                   <span className="ai-connection-icon large" aria-hidden="true">
-                    {selectedInfo.kind === 'cli' ? <Terminal size={18} /> : <Key size={18} />}
+                    {selectedInfo.kind === 'cli' ? (
+                      <Terminal size={ICON_SIZE.feature} />
+                    ) : (
+                      <Key size={ICON_SIZE.feature} />
+                    )}
                   </span>
                   <div>
                     <h4>{selectedInfo.label}</h4>
@@ -518,7 +538,11 @@ export const AiTab = () => {
                           onClick={() => setShowKey(!showKey)}
                           title={showKey ? t('settings.ai.hideKey') : t('settings.ai.showKey')}
                         >
-                          {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                          {showKey ? (
+                            <EyeOff size={ICON_SIZE.control} />
+                          ) : (
+                            <Eye size={ICON_SIZE.control} />
+                          )}
                         </button>
                       </div>
                       <button
@@ -528,7 +552,7 @@ export const AiTab = () => {
                       >
                         {keySaved ? (
                           <>
-                            <Check size={14} /> {t('settings.ai.saved')}
+                            <Check size={ICON_SIZE.compact} /> {t('settings.ai.saved')}
                           </>
                         ) : (
                           t('settings.ai.saveKey')
@@ -546,7 +570,11 @@ export const AiTab = () => {
                   <div
                     className={`ai-settings-notice${selectedAvailable ? ' success' : ' warning'}`}
                   >
-                    {selectedAvailable ? <Check size={15} /> : <AlertCircle size={15} />}
+                    {selectedAvailable ? (
+                      <Check size={ICON_SIZE.compact} />
+                    ) : (
+                      <AlertCircle size={ICON_SIZE.compact} />
+                    )}
                     <span>
                       {selectedAvailable
                         ? t('settings.ai.cliFound', { provider: selectedInfo.shortLabel })
@@ -563,7 +591,7 @@ export const AiTab = () => {
                   {selectedInfo.kind === 'cli'
                     ? t('settings.ai.openSetupGuide')
                     : t('settings.ai.getKey')}
-                  <ExternalLink size={13} />
+                  <ExternalLink size={ICON_SIZE.micro} />
                 </button>
                 {connectionErrors[selectedConnection] && (
                   <span className="settings-status-text error settings-status-inline">
@@ -577,14 +605,14 @@ export const AiTab = () => {
 
           <section className="ai-settings-block" aria-labelledby="ai-reasoning-heading">
             <div className="settings-flex-row-start">
-              <Brain size={16} className="settings-icon-secondary" />
+              <Brain size={ICON_SIZE.control} className="settings-icon-secondary" />
               <h3 id="ai-reasoning-heading" className="settings-heading settings-no-mb">
                 {t('settings.ai.thinking')}
               </h3>
             </div>
             {provider && AI_PROVIDER_INFO[provider].kind === 'cli' ? (
               <div className="ai-settings-notice neutral">
-                <Terminal size={15} />
+                <Terminal size={ICON_SIZE.compact} />
                 <span>{t('settings.ai.cliReasoningManaged')}</span>
               </div>
             ) : (

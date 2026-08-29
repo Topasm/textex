@@ -1,4 +1,9 @@
-import { Channel, invoke } from '@tauri-apps/api/core'
+import {
+  Channel,
+  invoke as invokeNative,
+  type InvokeArgs,
+  type InvokeOptions
+} from '@tauri-apps/api/core'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import type { DesktopApi, OpenFileResult, SaveAsResult, SaveResult } from '../types/api'
@@ -13,6 +18,7 @@ import type {
   SyncTeXLineMapEntry
 } from '../../shared/types'
 import { TAURI_COMMANDS } from '../../shared/tauriCommands'
+import { normalizeNativeError } from '../../shared/appError'
 import type {
   CompileDiagnosticsEvent,
   CompileLogEvent,
@@ -23,6 +29,25 @@ import { parseContentOutline } from '../../shared/contentOutline'
 import { builtInTemplates } from '../../shared/templates'
 import type { Template } from '../../shared/templates'
 import { APP_COMMAND_MANIFEST, type AppCommandId } from '../../shared/appCommandManifest'
+
+/**
+ * The single native call site for the renderer.
+ *
+ * Tauri rejects with the serialized `AppError` payload, which is a plain
+ * object. Normalizing here means every feature keeps catching an `Error` —
+ * `errorMessage(err)` still yields the English sentence — while code that
+ * needs to branch or localize can read `nativeErrorCode(err)`.
+ */
+function invoke<T>(
+  cmd: string,
+  // Forwarded as a rest tuple so a no-argument command still reaches Tauri as a
+  // one-argument call rather than gaining trailing `undefined`s.
+  ...rest: [args?: InvokeArgs, options?: InvokeOptions]
+): Promise<T> {
+  return invokeNative<T>(cmd, ...rest).catch((error: unknown) => {
+    throw normalizeNativeError(error)
+  })
+}
 
 const aiGenerate: DesktopApi['aiGenerate'] = (input, provider, model) =>
   invoke(TAURI_COMMANDS.aiGenerate, { input, provider, model })

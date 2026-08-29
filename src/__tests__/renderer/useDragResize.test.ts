@@ -1,11 +1,8 @@
 import { act, renderHook } from '@testing-library/react'
 import type { KeyboardEvent } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import {
-  getSidebarSlideAnimation,
-  getSidebarWidthFromPointer,
-  useDragResize
-} from '../../renderer/hooks/useDragResize'
+import { getSidebarWidthFromPointer, useDragResize } from '../../renderer/hooks/useDragResize'
+import { getPanelSlideAnimation } from '../../renderer/hooks/usePanelTabSwipe'
 import { usePdfStore } from '../../renderer/store/usePdfStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
 
@@ -15,7 +12,7 @@ describe('useDragResize helpers', () => {
   })
 
   it('uses the left-sidebar slide animation direction', () => {
-    expect(getSidebarSlideAnimation(1)).toEqual({
+    expect(getPanelSlideAnimation(1)).toEqual({
       exit: 'exit-left',
       enter: 'enter-right'
     })

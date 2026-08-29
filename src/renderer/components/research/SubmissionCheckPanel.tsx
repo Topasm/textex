@@ -143,7 +143,7 @@ export function SubmissionCheckPanel() {
     return (
       <div className="research-reference-view submission-check-view">
         <div className="submission-check-empty">
-          <FileCheck2 size={28} aria-hidden="true" />
+          <FileCheck2 size={ICON_SIZE.emptyState} aria-hidden="true" />
           <strong>{t('submissionCheck.noDocument')}</strong>
           <span>{t('submissionCheck.noDocumentHint')}</span>
         </div>
@@ -173,14 +173,14 @@ export function SubmissionCheckPanel() {
 
       {loading && !result ? (
         <div className="submission-check-empty" role="status">
-          <LoaderCircle className="spin" size={24} aria-hidden="true" />
+          <LoaderCircle className="spin" size={ICON_SIZE.prominent} aria-hidden="true" />
           <strong>{t('submissionCheck.running')}</strong>
         </div>
       ) : null}
 
       {error ? (
         <div className="submission-check-empty error" role="alert">
-          <CircleX size={24} aria-hidden="true" />
+          <CircleX size={ICON_SIZE.prominent} aria-hidden="true" />
           <strong>{t('submissionCheck.failed')}</strong>
           <span>{error}</span>
           <button type="button" onClick={() => void runCheck()}>
@@ -193,9 +193,9 @@ export function SubmissionCheckPanel() {
         <>
           <section className={`submission-check-summary ${passed ? 'passed' : 'issues'}`}>
             {passed ? (
-              <CircleCheck size={22} aria-hidden="true" />
+              <CircleCheck size={ICON_SIZE.prominent} aria-hidden="true" />
             ) : (
-              <TriangleAlert size={22} aria-hidden="true" />
+              <TriangleAlert size={ICON_SIZE.prominent} aria-hidden="true" />
             )}
             <div>
               <strong>
@@ -224,7 +224,7 @@ export function SubmissionCheckPanel() {
           <div className="submission-check-groups">
             {result.findings.length === 0 ? (
               <div className="submission-check-empty compact">
-                <CircleCheck size={22} aria-hidden="true" />
+                <CircleCheck size={ICON_SIZE.prominent} aria-hidden="true" />
                 <strong>{t('submissionCheck.noFindings')}</strong>
               </div>
             ) : (

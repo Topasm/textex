@@ -8,6 +8,7 @@ import { useSettingsStore } from '../store/useSettingsStore'
 import { isFeatureEnabled } from '../utils/featureFlags'
 import { toggleLogPanel } from '../services/appCommands'
 import { ICON_SIZE } from './ui/IconSystem'
+import { withShortcutHint } from '../services/commandSearch'
 
 const StatusBar = React.memo(function StatusBar() {
   const { t } = useTranslation()
@@ -47,7 +48,7 @@ const StatusBar = React.memo(function StatusBar() {
           className="status-action status-compile-indicator"
           data-responsive-priority="primary"
           onClick={toggleLogPanel}
-          title={t('statusBar.toggleLog')}
+          title={withShortcutHint(t('statusBar.toggleLog'), 'view.toggleLog')}
         >
           <span className={`status-dot ${dotClass}`} />
           <span>{label}</span>

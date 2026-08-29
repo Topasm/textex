@@ -1,11 +1,15 @@
 import { useState } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import { documentRegistry } from '../../models/documentRegistry'
 import { useEditorStore } from '../../store/useEditorStore'
 import { useProjectStore } from '../../store/useProjectStore'
+import { useFeatureModal } from '../../hooks/useFeatureModal'
 
 export function BibliographyRegistrationDialog() {
+  const { t } = useTranslation()
   const request = useProjectStore((state) => state.bibliographyRegistrationRequest)
   const [error, setError] = useState('')
+  useFeatureModal('bibliographyRegistration', Boolean(request))
   if (!request) return null
 
   const close = () => {
@@ -16,9 +20,7 @@ export function BibliographyRegistrationDialog() {
     const editor = useEditorStore.getState()
     const current = documentRegistry.snapshot(request.filePath)?.text
     if (editor.activeFilePath !== request.filePath || current !== request.originalContent) {
-      setError(
-        'The document changed after this preview was created. Add the bibliography again to refresh it.'
-      )
+      setError(t('researchPanel.bibliographyRegistration.stale'))
       return
     }
     editor.updateActiveDocument(request.proposedContent, 'programmatic')
@@ -33,20 +35,27 @@ export function BibliographyRegistrationDialog() {
         aria-modal="true"
         aria-labelledby="bibliography-registration-title"
       >
-        <h2 id="bibliography-registration-title">Register project bibliography?</h2>
+        <h2 id="bibliography-registration-title">
+          {t('researchPanel.bibliographyRegistration.title')}
+        </h2>
         <p>
-          TextEx added <strong>{request.bibliographyFile}</strong>. The active document does not
-          reference it yet. Review the proposed{' '}
-          {request.mode === 'biblatex' ? 'BibLaTeX' : 'BibTeX'} change.
+          <Trans
+            i18nKey="researchPanel.bibliographyRegistration.body"
+            values={{
+              file: request.bibliographyFile,
+              format: request.mode === 'biblatex' ? 'BibLaTeX' : 'BibTeX'
+            }}
+            components={{ file: <strong /> }}
+          />
         </p>
         <pre>{request.command}</pre>
         {error && <div className="research-status">{error}</div>}
         <div className="bibliography-registration-actions">
           <button type="button" onClick={close}>
-            Not now
+            {t('researchPanel.bibliographyRegistration.notNow')}
           </button>
           <button type="button" className="primary" onClick={apply}>
-            Apply change
+            {t('researchPanel.bibliographyRegistration.apply')}
           </button>
         </div>
       </section>

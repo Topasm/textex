@@ -1,4 +1,5 @@
 import { BookOpen, FolderOpen, Terminal } from 'lucide-react'
+import { ICON_SIZE } from '../ui/IconSystem'
 import { useTranslation } from 'react-i18next'
 import type { HomeResult } from './types'
 
@@ -14,12 +15,12 @@ interface HomePanelProps {
 function homeResultIcon(result: HomeResult): React.ReactNode {
   switch (result.kind) {
     case 'project':
-      return <FolderOpen size={16} />
+      return <FolderOpen size={ICON_SIZE.control} />
     case 'template':
-      return <BookOpen size={16} />
+      return <BookOpen size={ICON_SIZE.control} />
     case 'command':
     case 'app-command':
-      return <Terminal size={16} />
+      return <Terminal size={ICON_SIZE.control} />
   }
 }
 

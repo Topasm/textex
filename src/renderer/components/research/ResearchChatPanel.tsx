@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { ICON_SIZE } from '../ui/IconSystem'
+import { useTranslation } from 'react-i18next'
 import {
   FileText,
   LoaderCircle,
@@ -28,6 +30,7 @@ import type {
   ZoteroMutationPlan
 } from '../../../shared/types'
 import { getActiveEditorAdapter } from '../../editor/activeEditorAdapter'
+import { describeNativeError } from '../../services/nativeErrors'
 import { documentRegistry, normalizeDocumentId } from '../../models/documentRegistry'
 import {
   buildReferenceChatContext,
@@ -118,20 +121,9 @@ const HISTORY_LIMIT = 12
 const REFERENCE_SEARCH_QUERY_LIMIT = 512
 const PROMPT_QUEUE_LIMIT = 8
 
-const CHAT_STARTERS = [
-  {
-    label: 'Summarize context',
-    prompt: 'Summarize the selected research context and highlight the main contribution.'
-  },
-  {
-    label: 'Review the argument',
-    prompt: 'Review the current argument for gaps, weak evidence, and unclear claims.'
-  },
-  {
-    label: 'Plan the next section',
-    prompt: 'Suggest a focused outline for the next section based on the selected context.'
-  }
-] as const
+// Ids are stable; both the button copy and the prompt it inserts are
+// translated so the composer is filled in the author's language.
+const CHAT_STARTER_IDS = ['summarize', 'review', 'plan'] as const
 
 function sourcePayload(
   source: ResearchChatSessionContext,
@@ -159,6 +151,7 @@ export function ResearchChatPanel({
   incomingPrompt = null,
   onIncomingPromptConsumed
 }: ResearchChatPanelProps) {
+  const { t } = useTranslation()
   const projectRoot = useProjectStore((state) => state.projectRoot)
   const filePath = useEditorStore((state) => state.filePath)
   const workDir = projectRoot || (filePath ? dirname(filePath) : '')
@@ -254,12 +247,12 @@ export function ResearchChatPanel({
 
   const openCommandMenu = useCallback(() => {
     if (prompt.trim() && !prompt.trimStart().startsWith('/')) {
-      setStatus('Clear the current draft before choosing a slash command.')
+      setStatus(t('researchPanel.chat.clearDraftFirst'))
       composerInputRef.current?.focus()
       return
     }
     fillComposer(prompt || '/')
-  }, [fillComposer, prompt])
+  }, [fillComposer, prompt, t])
 
   useEffect(() => {
     const input = composerInputRef.current
@@ -288,25 +281,28 @@ export function ResearchChatPanel({
     setActiveCommandIndex(0)
   }, [])
 
-  const attachReference = useCallback((payload: ReferenceDragPayload) => {
-    const item: SessionReferenceContextItem = buildReferenceChatContext(payload)
-    const current = referenceContextsRef.current
-    const alreadyAttached = current.some((entry) => entry.id === item.id)
-    const next = mergeReferenceChatContexts(current, item)
-    if (!alreadyAttached && !next.some((entry) => entry.id === item.id)) {
-      setStatus('Chat supports up to 12 attached references.')
-      return 'limit' as const
-    }
-    referenceContextsRef.current = next
-    setReferenceContexts(next)
-    setSelectedContexts((selected) => new Set(selected).add(item.id))
-    setStatus(
-      alreadyAttached
-        ? `“${item.label}” is already attached to Chat.`
-        : `Added “${item.label}” to Chat context.`
-    )
-    return alreadyAttached ? ('duplicate' as const) : ('added' as const)
-  }, [])
+  const attachReference = useCallback(
+    (payload: ReferenceDragPayload) => {
+      const item: SessionReferenceContextItem = buildReferenceChatContext(payload)
+      const current = referenceContextsRef.current
+      const alreadyAttached = current.some((entry) => entry.id === item.id)
+      const next = mergeReferenceChatContexts(current, item)
+      if (!alreadyAttached && !next.some((entry) => entry.id === item.id)) {
+        setStatus(t('researchPanel.chat.referenceLimit'))
+        return 'limit' as const
+      }
+      referenceContextsRef.current = next
+      setReferenceContexts(next)
+      setSelectedContexts((selected) => new Set(selected).add(item.id))
+      setStatus(
+        alreadyAttached
+          ? t('researchPanel.chat.alreadyAttached', { label: item.label })
+          : t('researchPanel.chat.addedToContext', { label: item.label })
+      )
+      return alreadyAttached ? ('duplicate' as const) : ('added' as const)
+    },
+    [t]
+  )
 
   const isCurrentRequest = useCallback((generation: number, root: string) => {
     return (
@@ -457,9 +453,9 @@ export function ResearchChatPanel({
       content: incomingSelection.content
     })
     setSelectedContexts((current) => new Set(current).add(id))
-    setStatus('Added the editor selection to Chat context.')
+    setStatus(t('researchPanel.chat.addedSelection'))
     onIncomingSelectionConsumed?.(incomingSelection.token)
-  }, [incomingSelection, onIncomingSelectionConsumed, projectRoot, sessionReadyRoot])
+  }, [incomingSelection, onIncomingSelectionConsumed, projectRoot, sessionReadyRoot, t])
 
   useEffect(() => {
     if (
@@ -492,9 +488,9 @@ export function ResearchChatPanel({
     }
     consumedPromptToken.current = incomingPrompt.token
     fillComposer(incomingPrompt.prompt)
-    setStatus('Added the compilation problems to the Chat composer. Review and send when ready.')
+    setStatus(t('researchPanel.chat.addedProblems'))
     onIncomingPromptConsumed?.(incomingPrompt.token)
-  }, [fillComposer, incomingPrompt, onIncomingPromptConsumed, projectRoot, sessionReadyRoot])
+  }, [fillComposer, incomingPrompt, onIncomingPromptConsumed, projectRoot, sessionReadyRoot, t])
 
   useEffect(() => {
     const hadDocument = Boolean(previousFilePath.current)
@@ -537,11 +533,11 @@ export function ResearchChatPanel({
           ? [
               {
                 id: 'document',
-                label: 'Current document',
+                label: t('researchPanel.chat.contextDocument'),
                 persisted: {
                   id: 'document',
                   kind: 'document' as const,
-                  label: 'Current document',
+                  label: t('researchPanel.chat.contextDocument'),
                   source: filePath
                 }
               }
@@ -558,7 +554,7 @@ export function ResearchChatPanel({
         ? [
             {
               id: 'paper',
-              label: 'Paper',
+              label: t('researchPanel.chat.contextPaper'),
               context: paper,
               persisted: { id: 'paper', kind: 'paper' as const, label: paper.label }
             }
@@ -568,7 +564,7 @@ export function ResearchChatPanel({
         ? [
             {
               id: 'authors',
-              label: 'Authors',
+              label: t('researchPanel.chat.contextAuthors'),
               context: authors,
               persisted: { id: 'authors', kind: 'author' as const, label: authors.label }
             }
@@ -578,11 +574,11 @@ export function ResearchChatPanel({
         ? [
             {
               id: 'document',
-              label: 'Current document',
+              label: t('researchPanel.chat.contextDocument'),
               persisted: {
                 id: 'document',
                 kind: 'document' as const,
-                label: filePath.split(/[\\/]/u).at(-1) || 'Current document',
+                label: filePath.split(/[\\/]/u).at(-1) || t('researchPanel.chat.contextDocument'),
                 source: filePath
               }
             }
@@ -608,7 +604,7 @@ export function ResearchChatPanel({
       ...selectionOptions,
       ...referenceOptions
     ]
-  }, [filePath, profile, referenceContexts, selectionContext])
+  }, [filePath, profile, referenceContexts, selectionContext, t])
 
   const selectedSessionContexts = useMemo(
     () =>
@@ -631,7 +627,7 @@ export function ResearchChatPanel({
       window.api.researchChatSessionSave(scope, session)
     ).catch((error: unknown) => {
       if (isCurrentAction(generation, root)) {
-        setStatus(error instanceof Error ? error.message : String(error))
+        setStatus(describeNativeError(error))
       }
     })
   }, [
@@ -667,7 +663,7 @@ export function ResearchChatPanel({
           if (content.trim()) {
             contexts.push({
               kind: 'document',
-              label: filePath.split(/[\\/]/u).at(-1) || 'Current document',
+              label: filePath.split(/[\\/]/u).at(-1) || t('researchPanel.chat.contextDocument'),
               source: filePath,
               content: content.slice(0, DOCUMENT_CONTEXT_LIMIT)
             })
@@ -678,7 +674,7 @@ export function ResearchChatPanel({
       }
       return isCurrentRequest(generation, root) ? contexts : null
     },
-    [contextOptions, filePath, isCurrentRequest, profile, selectedContexts]
+    [contextOptions, filePath, isCurrentRequest, profile, selectedContexts, t]
   )
 
   const runLocalSlashCommand = useCallback(
@@ -690,7 +686,7 @@ export function ResearchChatPanel({
           setPrompt('/')
           setCommandMenuDismissed(false)
           setActiveCommandIndex(0)
-          setStatus('Choose a command from the menu. App actions are not sent to the AI.')
+          setStatus(t('researchPanel.chat.chooseCommand'))
           return true
         case 'references':
           projectStore.setResearchSearchQuery(query)
@@ -728,8 +724,8 @@ export function ResearchChatPanel({
           setPrompt('')
           setStatus(
             command.id === 'todo'
-              ? 'Opened the project TODO panel.'
-              : 'Opened the current document outline.'
+              ? t('researchPanel.chat.openedTodo')
+              : t('researchPanel.chat.openedOutline')
           )
           return true
         case 'draft':
@@ -740,24 +736,27 @@ export function ResearchChatPanel({
           return false
       }
     },
-    [onAiDraft]
+    [onAiDraft, t]
   )
 
-  const enqueuePrompt = useCallback((question: string) => {
-    const current = queuedPromptsRef.current
-    if (current.length >= PROMPT_QUEUE_LIMIT) {
-      setStatus(`Chat queue supports up to ${PROMPT_QUEUE_LIMIT} messages.`)
-      return false
-    }
-    const next = [...current, question]
-    queuedPromptsRef.current = next
-    setQueuedPrompts(next)
-    setPrompt('')
-    historyIndexRef.current = null
-    historyDraftRef.current = ''
-    setStatus(`${next.length} message${next.length === 1 ? '' : 's'} queued.`)
-    return true
-  }, [])
+  const enqueuePrompt = useCallback(
+    (question: string) => {
+      const current = queuedPromptsRef.current
+      if (current.length >= PROMPT_QUEUE_LIMIT) {
+        setStatus(t('researchPanel.chat.queueLimit', { count: PROMPT_QUEUE_LIMIT }))
+        return false
+      }
+      const next = [...current, question]
+      queuedPromptsRef.current = next
+      setQueuedPrompts(next)
+      setPrompt('')
+      historyIndexRef.current = null
+      historyDraftRef.current = ''
+      setStatus(t('researchPanel.chat.queued', { count: next.length }))
+      return true
+    },
+    [t]
+  )
 
   const send = useCallback(
     async (queuedQuestion?: string) => {
@@ -775,7 +774,7 @@ export function ResearchChatPanel({
         parsedCommand?.command.id === 'zotero-plan' ? parsedCommand.argument : null
       if (parsedCommand?.command.id === 'zotero-plan' && !zoteroPlanRequest) {
         setPrompt('/zotero-plan ')
-        setStatus('Describe the Zotero changes to preview before sending.')
+        setStatus(t('researchPanel.chat.describeZoteroChanges'))
         return
       }
       if (queuedQuestion === undefined) setPrompt('')
@@ -788,7 +787,7 @@ export function ResearchChatPanel({
       activeRequestId.current = requestId
       requestInFlight.current = true
       setBusy(true)
-      setStatus('Gathering selected research context…')
+      setStatus(t('researchPanel.chat.gatheringContext'))
       const history = compactResearchChatSessionMessages(
         messagesRef.current.slice(-HISTORY_LIMIT)
       ).map(({ role, content }) => ({ role, content }))
@@ -802,7 +801,7 @@ export function ResearchChatPanel({
           (context) => context.kind === 'reference'
         )
         if (zoteroPlanRequest || isLikelyZoteroMutation(question)) {
-          setStatus('Preparing a read-only Zotero change preview…')
+          setStatus(t('researchPanel.chat.preparingZoteroPreview'))
           const port = useSettingsStore.getState().settings.zoteroPort
           const plan = await window.api.aiPlanZotero(
             { message: zoteroPlanRequest || question, history },
@@ -810,10 +809,10 @@ export function ResearchChatPanel({
           )
           if (!isCurrentRequest(generation, root)) return
           setPendingZoteroPlan(plan)
-          setStatus('Review the Zotero changes below. Nothing has been changed yet.')
+          setStatus(t('researchPanel.chat.reviewZoteroChanges'))
           return
         }
-        setStatus('Thinking…')
+        setStatus(t('researchPanel.chat.thinking'))
         const answer = await window.api.aiResearchChat({
           requestId,
           message: question,
@@ -827,9 +826,7 @@ export function ResearchChatPanel({
         setMessages((current) =>
           appendResearchChatSessionMessages(current, {
             role: 'assistant',
-            content: compactAnswer.trim()
-              ? compactAnswer
-              : 'The provider returned an empty answer.',
+            content: compactAnswer.trim() ? compactAnswer : t('researchPanel.chat.emptyAnswer'),
             execution: answer.execution,
             ...(answerSources.length > 0 ? { sources: answerSources } : {})
           })
@@ -837,7 +834,7 @@ export function ResearchChatPanel({
         setStatus('')
       } catch (error) {
         if (isCurrentRequest(generation, root)) {
-          setStatus(error instanceof Error ? error.message : String(error))
+          setStatus(describeNativeError(error))
         }
       } finally {
         if (isCurrentRequest(generation, root)) {
@@ -857,7 +854,8 @@ export function ResearchChatPanel({
       projectRoot,
       prompt,
       runLocalSlashCommand,
-      selectedSessionContexts
+      selectedSessionContexts,
+      t
     ]
   )
 
@@ -868,12 +866,12 @@ export function ResearchChatPanel({
     requestGeneration.current += 1
     requestInFlight.current = false
     setBusy(false)
-    setStatus('Stopping the current Chat request…')
+    setStatus(t('researchPanel.chat.stopping'))
     if (requestId) {
       await window.api.aiCancelResearchChat(requestId).catch(() => false)
     }
-    setStatus('Chat request stopped. Queued messages were preserved.')
-  }, [])
+    setStatus(t('researchPanel.chat.stopped'))
+  }, [t])
 
   useEffect(() => {
     if (
@@ -899,7 +897,7 @@ export function ResearchChatPanel({
     const plan = pendingZoteroPlan
     actionInFlight.current = true
     setActionBusy('zotero-plan')
-    setStatus('Waiting for Zotero authorization…')
+    setStatus(t('researchPanel.online.waitingForZotero'))
     try {
       const result = await window.api.zoteroApplyMutationPlan(plan)
       if (!isCurrentAction(generation, root)) return
@@ -911,10 +909,10 @@ export function ResearchChatPanel({
           content: `${result.summary} ${result.collectionChanges} collection change(s), ${result.itemChanges} item change(s).`
         })
       )
-      setStatus('Zotero changes applied.')
+      setStatus(t('researchPanel.chat.zoteroApplied'))
     } catch (error) {
       if (isCurrentAction(generation, root)) {
-        setStatus(error instanceof Error ? error.message : String(error))
+        setStatus(describeNativeError(error))
       }
     } finally {
       if (isCurrentAction(generation, root)) {
@@ -922,7 +920,7 @@ export function ResearchChatPanel({
         setActionBusy('')
       }
     }
-  }, [isCurrentAction, pendingZoteroPlan, projectRoot])
+  }, [isCurrentAction, pendingZoteroPlan, projectRoot, t])
 
   const cancelZoteroPlan = useCallback(() => {
     if (!pendingZoteroPlan || actionInFlight.current) return
@@ -930,11 +928,11 @@ export function ResearchChatPanel({
     setMessages((current) =>
       appendResearchChatSessionMessages(current, {
         role: 'assistant',
-        content: 'Cancelled the Zotero changes. Nothing was modified.'
+        content: t('researchPanel.chat.zoteroCancelledDetail')
       })
     )
-    setStatus('Zotero changes cancelled.')
-  }, [pendingZoteroPlan])
+    setStatus(t('researchPanel.chat.zoteroCancelled'))
+  }, [pendingZoteroPlan, t])
 
   const dropReference = useCallback(
     (event: React.DragEvent) => {
@@ -942,12 +940,12 @@ export function ResearchChatPanel({
       setDropActive(false)
       const payload = parseReferenceDragData(event.dataTransfer.getData(TEXTEX_REFERENCE_MIME))
       if (!payload) {
-        setStatus('This item is not a valid TextEx reference.')
+        setStatus(t('researchPanel.invalidReferenceDrop'))
         return
       }
       attachReference(payload)
     },
-    [attachReference]
+    [attachReference, t]
   )
 
   const citeSource = useCallback(
@@ -970,7 +968,7 @@ export function ResearchChatPanel({
         }
       } catch (error) {
         if (isCurrentAction(generation, root)) {
-          setStatus(error instanceof Error ? error.message : String(error))
+          setStatus(describeNativeError(error))
         }
       } finally {
         if (isCurrentAction(generation, root)) {
@@ -994,11 +992,15 @@ export function ResearchChatPanel({
         const result = await window.api.zoteroSaveOnline(reference, port)
         if (isCurrentAction(generation, root)) {
           invalidateZoteroInventory(port)
-          setStatus(result.duplicate ? 'Already saved in Zotero.' : 'Saved to Zotero.')
+          setStatus(
+            result.duplicate
+              ? t('researchPanel.chat.alreadyInZotero')
+              : t('researchPanel.chat.savedToZotero')
+          )
         }
       } catch (error) {
         if (isCurrentAction(generation, root)) {
-          setStatus(error instanceof Error ? error.message : String(error))
+          setStatus(describeNativeError(error))
         }
       } finally {
         if (isCurrentAction(generation, root)) {
@@ -1007,7 +1009,7 @@ export function ResearchChatPanel({
         }
       }
     },
-    [isCurrentAction, projectRoot]
+    [isCurrentAction, projectRoot, t]
   )
 
   const prepareDocumentEdit = useCallback(
@@ -1018,11 +1020,11 @@ export function ResearchChatPanel({
       const snapshot = documentRegistry.snapshot(activePath)
       const model = documentRegistry.getModel(activePath)
       if (!snapshot || !model) {
-        setStatus('The active document is not available for editing.')
+        setStatus(t('researchPanel.chat.documentNotEditable'))
         return
       }
       if (!isResearchChatDocumentWithinEditLimit(snapshot.text)) {
-        setStatus('This document is too large for a Chat-generated edit.')
+        setStatus(t('researchPanel.chat.documentTooLarge'))
         return
       }
 
@@ -1032,7 +1034,7 @@ export function ResearchChatPanel({
 
       actionInFlight.current = true
       setActionBusy(key)
-      setStatus('Preparing a document change preview…')
+      setStatus(t('researchPanel.chat.preparingEdit'))
       try {
         const response = await window.api.aiProcessCustom(request)
         if (!isCurrentAction(generation, root)) return
@@ -1041,25 +1043,25 @@ export function ResearchChatPanel({
           currentEditor.activeFilePath !== activePath ||
           !documentRegistry.getModel(activePath)?.isCurrent(snapshot)
         ) {
-          setStatus('The document changed while the edit was being prepared. Try again.')
+          setStatus(t('researchPanel.chat.documentChangedDuringEdit'))
           return
         }
         const proposedText = unwrapResearchChatDocumentEdit(response)
         if (!proposedText.trim()) {
-          setStatus('The provider returned an empty document edit.')
+          setStatus(t('researchPanel.chat.emptyEdit'))
           return
         }
         if (proposedText === snapshot.text) {
-          setStatus('The recommendation does not require a source change.')
+          setStatus(t('researchPanel.chat.noSourceChange'))
           return
         }
         setPendingDocumentEdit(
           buildPendingResearchChatDocumentEdit(activePath, snapshot, proposedText)
         )
-        setStatus('Review the proposed source change before applying it.')
+        setStatus(t('researchPanel.chat.reviewSourceChange'))
       } catch (error) {
         if (isCurrentAction(generation, root)) {
-          setStatus(error instanceof Error ? error.message : String(error))
+          setStatus(describeNativeError(error))
         }
       } finally {
         if (isCurrentAction(generation, root)) {
@@ -1068,13 +1070,13 @@ export function ResearchChatPanel({
         }
       }
     },
-    [isCurrentAction, projectRoot]
+    [isCurrentAction, projectRoot, t]
   )
 
   const discardDocumentEdit = useCallback(() => {
     setPendingDocumentEdit(null)
-    setStatus('Document edit discarded. The source was not changed.')
-  }, [])
+    setStatus(t('researchPanel.chat.editDiscarded'))
+  }, [t])
 
   const applyDocumentEdit = useCallback(
     async (compileAfterApply: boolean) => {
@@ -1086,7 +1088,7 @@ export function ResearchChatPanel({
         !model?.isCurrent(pendingDocumentEdit.snapshot)
       ) {
         setPendingDocumentEdit(null)
-        setStatus('The document changed after this preview was created. Prepare the edit again.')
+        setStatus(t('researchPanel.chat.editStale'))
         return
       }
 
@@ -1127,25 +1129,25 @@ export function ResearchChatPanel({
       setPendingDocumentEdit(null)
       if (compileAfterApply && onCompile) {
         setActionBusy('document-compile')
-        setStatus(`Applied the proposed change to ${fileName}. Compiling…`)
+        setStatus(t('researchPanel.chat.appliedCompiling', { file: fileName }))
         try {
           await onCompile()
           const compileStatus = useCompileStore.getState().compileStatus
           setStatus(
             compileStatus === 'success'
-              ? `Applied and compiled ${fileName} successfully.`
+              ? t('researchPanel.chat.appliedCompiled', { file: fileName })
               : compileStatus === 'error'
-                ? `Applied ${fileName}, but compilation still reports problems. Review the Problems panel.`
-                : `Applied ${fileName}. Compilation did not produce a current result.`
+                ? t('researchPanel.chat.appliedCompileFailed', { file: fileName })
+                : t('researchPanel.chat.appliedCompileStale', { file: fileName })
           )
         } finally {
           setActionBusy('')
         }
         return
       }
-      setStatus(`Applied the proposed change to ${fileName}. Review and compile before saving.`)
+      setStatus(t('researchPanel.chat.appliedNoCompile', { file: fileName }))
     },
-    [onCompile, pendingDocumentEdit]
+    [onCompile, pendingDocumentEdit, t]
   )
 
   const navigatePromptHistory = useCallback(
@@ -1208,10 +1210,10 @@ export function ResearchChatPanel({
             .map((resource) => `resource:${resource.id}`)
         ])
       )
-      setStatus('Chat history cleared.')
+      setStatus(t('researchPanel.chat.historyCleared'))
     } catch (error) {
       if (isCurrentAction(generation, root)) {
-        setStatus(error instanceof Error ? error.message : String(error))
+        setStatus(describeNativeError(error))
       }
     } finally {
       if (isCurrentAction(generation, root)) {
@@ -1219,7 +1221,7 @@ export function ResearchChatPanel({
         setActionBusy('')
       }
     }
-  }, [busy, enqueueSessionMutation, isCurrentAction, profile, projectRoot])
+  }, [busy, enqueueSessionMutation, isCurrentAction, profile, projectRoot, t])
 
   const launch = useCallback(
     async (provider: 'claude' | 'codex', resume: boolean) => {
@@ -1228,13 +1230,21 @@ export function ResearchChatPanel({
       const generation = ++requestGeneration.current
       requestInFlight.current = true
       setBusy(true)
-      setStatus(`Checking ${provider === 'claude' ? 'Claude Code' : 'Codex CLI'}…`)
+      setStatus(
+        t('researchPanel.chat.checkingCli', {
+          cli: provider === 'claude' ? 'Claude Code' : 'Codex CLI'
+        })
+      )
       try {
         const available =
           provider === 'claude' ? await window.api.aiCheckCli() : await window.api.aiCheckCodexCli()
         if (!isCurrentRequest(generation, root)) return
         if (!available)
-          throw new Error(`${provider === 'claude' ? 'Claude Code' : 'Codex CLI'} was not found.`)
+          throw new Error(
+            t('researchPanel.chat.cliNotFound', {
+              cli: provider === 'claude' ? 'Claude Code' : 'Codex CLI'
+            })
+          )
         const result =
           provider === 'claude'
             ? await window.api.aiOpenClaudeTerminal({ workDir, resume })
@@ -1242,7 +1252,7 @@ export function ResearchChatPanel({
         if (isCurrentRequest(generation, root)) setStatus(result.command)
       } catch (error) {
         if (isCurrentRequest(generation, root)) {
-          setStatus(error instanceof Error ? error.message : String(error))
+          setStatus(describeNativeError(error))
         }
       } finally {
         if (isCurrentRequest(generation, root)) {
@@ -1251,48 +1261,51 @@ export function ResearchChatPanel({
         }
       }
     },
-    [isCurrentRequest, projectRoot, workDir]
+    [isCurrentRequest, projectRoot, t, workDir]
   )
 
   if (!projectRoot)
-    return <div className="research-empty">Open a project to use Research Chat.</div>
+    return <div className="research-empty">{t('researchPanel.chat.openProjectFirst')}</div>
 
   const headerStatus = !profile
     ? status
-      ? 'Research context unavailable'
-      : 'Loading research context…'
+      ? t('researchPanel.chat.contextUnavailable')
+      : t('researchPanel.chat.contextLoading')
     : busy
-      ? 'Working with selected context…'
-      : `${selectedContextCount} of ${contextOptions.length} contexts selected`
+      ? t('researchPanel.chat.working')
+      : t('researchPanel.chat.contextsSelected', {
+          selected: selectedContextCount,
+          total: contextOptions.length
+        })
 
   return (
     <div className="research-chat-panel">
       <header className="research-chat-heading">
         <div className="research-chat-heading-copy">
           <span className="research-chat-brand-icon" aria-hidden="true">
-            <Sparkles size={15} />
+            <Sparkles size={ICON_SIZE.compact} />
           </span>
           <div>
-            <h2 className="research-section-heading">Research Chat</h2>
+            <h2 className="research-section-heading">{t('researchPanel.chat.title')}</h2>
             <span className="research-chat-subtitle">{headerStatus}</span>
           </div>
         </div>
         <button
           type="button"
           className="research-icon-button"
-          aria-label="Clear chat history"
-          title="Clear chat history"
+          aria-label={t('researchPanel.chat.clearHistory')}
+          title={t('researchPanel.chat.clearHistory')}
           disabled={messages.length === 0 || busy || Boolean(actionBusy)}
           onClick={() => void clearChat()}
         >
-          <Trash2 size={14} />
+          <Trash2 size={ICON_SIZE.compact} />
         </button>
       </header>
 
       <div
         className="research-chat-messages"
         role="log"
-        aria-label="Research Chat messages"
+        aria-label={t('researchPanel.chat.messagesLabel')}
         aria-live="polite"
         aria-relevant="additions text"
         aria-atomic="false"
@@ -1305,37 +1318,49 @@ export function ResearchChatPanel({
       >
         {messages.length === 0 ? (
           profile ? (
-            <section className="research-chat-empty" aria-label="Start a Research Chat">
+            <section
+              className="research-chat-empty"
+              aria-label={t('researchPanel.chat.startLabel')}
+            >
               <span className="research-chat-empty-icon" aria-hidden="true">
-                <Sparkles size={22} />
+                <Sparkles size={ICON_SIZE.prominent} />
               </span>
-              <h3>Explore your research</h3>
-              <p>Ask about the paper, current document, attached references, or indexed code.</p>
-              <div className="research-chat-starters" aria-label="Suggested questions">
-                {CHAT_STARTERS.map((starter) => (
+              <h3>{t('researchPanel.chat.emptyTitle')}</h3>
+              <p>{t('researchPanel.chat.emptyBody')}</p>
+              <div
+                className="research-chat-starters"
+                aria-label={t('researchPanel.chat.suggestedQuestions')}
+              >
+                {CHAT_STARTER_IDS.map((starter) => (
                   <button
                     type="button"
-                    key={starter.label}
-                    onClick={() => fillComposer(starter.prompt)}
+                    key={starter}
+                    onClick={() => fillComposer(t(`researchPanel.chat.starters.${starter}.prompt`))}
                   >
-                    {starter.label}
+                    {t(`researchPanel.chat.starters.${starter}.label`)}
                   </button>
                 ))}
               </div>
             </section>
           ) : status ? (
-            <section className="research-chat-empty" aria-label="Research Chat unavailable">
+            <section
+              className="research-chat-empty"
+              aria-label={t('researchPanel.chat.unavailable')}
+            >
               <span className="research-chat-empty-icon" aria-hidden="true">
-                <Sparkles size={21} />
+                <Sparkles size={ICON_SIZE.prominent} />
               </span>
-              <h3>Research Chat unavailable</h3>
+              <h3>{t('researchPanel.chat.unavailable')}</h3>
               <p>{status}</p>
             </section>
           ) : (
-            <section className="research-chat-empty" aria-label="Loading Research Chat">
-              <LoaderCircle className="spin" size={21} aria-hidden="true" />
-              <h3>Preparing research context</h3>
-              <p>Loading the project profile and saved conversation.</p>
+            <section
+              className="research-chat-empty"
+              aria-label={t('researchPanel.chat.loadingLabel')}
+            >
+              <LoaderCircle className="spin" size={ICON_SIZE.prominent} aria-hidden="true" />
+              <h3>{t('researchPanel.chat.preparingContext')}</h3>
+              <p>{t('researchPanel.chat.preparingContextBody')}</p>
             </section>
           )
         ) : (
@@ -1344,13 +1369,17 @@ export function ResearchChatPanel({
               className={`research-chat-message ${message.role}`}
               key={`${message.role}-${index}`}
               role="group"
-              aria-label={message.role === 'user' ? 'Your message' : 'Research Chat message'}
+              aria-label={
+                message.role === 'user'
+                  ? t('researchPanel.chat.yourMessage')
+                  : t('researchPanel.chat.assistantMessage')
+              }
             >
               <div className="research-chat-message-content">
                 {message.role === 'assistant' && (
                   <div className="research-chat-message-author">
-                    <Sparkles size={13} aria-hidden="true" />
-                    <strong>Research Chat</strong>
+                    <Sparkles size={ICON_SIZE.micro} aria-hidden="true" />
+                    <strong>{t('researchPanel.chat.title')}</strong>
                     {message.execution && (
                       <span>{researchChatExecutionLabel(message.execution)}</span>
                     )}
@@ -1358,9 +1387,13 @@ export function ResearchChatPanel({
                 )}
                 <p className="research-chat-message-text">{message.content}</p>
                 {message.sources && message.sources.length > 0 && (
-                  <div className="research-chat-sources" aria-label="Attached references">
+                  <div
+                    className="research-chat-sources"
+                    aria-label={t('researchPanel.chat.attachedReferences')}
+                  >
                     <span>
-                      <Paperclip size={11} aria-hidden="true" /> Attached references
+                      <Paperclip size={ICON_SIZE.micro} aria-hidden="true" />{' '}
+                      {t('researchPanel.chat.attachedReferences')}
                     </span>
                     {message.sources.map((source, sourceIndex) => {
                       const citeKey = `${index}:${source.id}:cite`
@@ -1383,8 +1416,10 @@ export function ResearchChatPanel({
                                   void saveOnlineSource(source.onlineReference!, saveKey)
                                 }
                               >
-                                <Plus size={12} />
-                                {actionBusy === saveKey ? 'Saving…' : 'Save to library'}
+                                <Plus size={ICON_SIZE.micro} />
+                                {actionBusy === saveKey
+                                  ? t('researchPanel.chat.saving')
+                                  : t('researchPanel.online.saveToLibrary')}
                               </button>
                             )}
                             <button
@@ -1392,8 +1427,10 @@ export function ResearchChatPanel({
                               disabled={!filePath || Boolean(actionBusy)}
                               onClick={() => void citeSource(source, citeKey)}
                             >
-                              <Quote size={11} aria-hidden="true" />
-                              {actionBusy === citeKey ? 'Citing…' : 'Cite'}
+                              <Quote size={ICON_SIZE.micro} aria-hidden="true" />
+                              {actionBusy === citeKey
+                                ? t('researchPanel.chat.citing')
+                                : t('researchPanel.referenceCard.cite')}
                             </button>
                           </div>
                         </article>
@@ -1411,10 +1448,10 @@ export function ResearchChatPanel({
                         void prepareDocumentEdit(message.content, `document-edit:${index}`)
                       }
                     >
-                      <FileText size={12} aria-hidden="true" />
+                      <FileText size={ICON_SIZE.micro} aria-hidden="true" />
                       {actionBusy === `document-edit:${index}`
-                        ? 'Preparing edit…'
-                        : 'Prepare document edit'}
+                        ? t('researchPanel.chat.preparingEditShort')
+                        : t('researchPanel.chat.prepareDocumentEdit')}
                     </button>
                   </div>
                 )}
@@ -1424,8 +1461,8 @@ export function ResearchChatPanel({
         )}
         {busy && messages.length > 0 && (
           <div className="research-chat-thinking" aria-hidden="true">
-            <Sparkles size={13} />
-            <span>Working</span>
+            <Sparkles size={ICON_SIZE.micro} />
+            <span>{t('researchPanel.chat.workingShort')}</span>
             <span className="research-chat-thinking-dots">
               <i />
               <i />
@@ -1437,26 +1474,32 @@ export function ResearchChatPanel({
       </div>
 
       {pendingDocumentEdit && (
-        <section className="research-document-edit" aria-label="Document change preview">
+        <section
+          className="research-document-edit"
+          aria-label={t('researchPanel.chat.documentPreview')}
+        >
           <div className="research-document-edit-heading">
             <div>
-              <strong>Document change preview</strong>
+              <strong>{t('researchPanel.chat.documentPreview')}</strong>
               <span>
-                {pendingDocumentEdit.filePath.split(/[\\/]/u).at(-1)} · line{' '}
-                {pendingDocumentEdit.startLine} · −{pendingDocumentEdit.removedLines} +
-                {pendingDocumentEdit.addedLines}
+                {t('researchPanel.chat.documentPreviewMeta', {
+                  file: pendingDocumentEdit.filePath.split(/[\\/]/u).at(-1),
+                  line: pendingDocumentEdit.startLine,
+                  removed: pendingDocumentEdit.removedLines,
+                  added: pendingDocumentEdit.addedLines
+                })}
               </span>
             </div>
-            <ShieldCheck size={18} aria-hidden="true" />
+            <ShieldCheck size={ICON_SIZE.feature} aria-hidden="true" />
           </div>
-          <p>The source stays unchanged until you approve this edit.</p>
+          <p>{t('researchPanel.chat.documentPreviewNotice')}</p>
           <pre>
             {pendingDocumentEdit.excerpt}
             {pendingDocumentEdit.excerptTruncated ? '\n…' : ''}
           </pre>
           <div className="research-document-edit-actions">
             <button type="button" onClick={discardDocumentEdit}>
-              <X size={13} /> Discard
+              <X size={ICON_SIZE.micro} /> {t('researchPanel.chat.discard')}
             </button>
             <button
               className="primary"
@@ -1464,7 +1507,7 @@ export function ResearchChatPanel({
               disabled={Boolean(actionBusy)}
               onClick={() => void applyDocumentEdit(false)}
             >
-              <ShieldCheck size={13} /> Apply changes
+              <ShieldCheck size={ICON_SIZE.micro} /> {t('researchPanel.chat.applyChanges')}
             </button>
             {onCompile && (
               <button
@@ -1474,11 +1517,11 @@ export function ResearchChatPanel({
                 onClick={() => void applyDocumentEdit(true)}
               >
                 {actionBusy === 'document-compile' ? (
-                  <LoaderCircle className="spin" size={13} />
+                  <LoaderCircle className="spin" size={ICON_SIZE.micro} />
                 ) : (
-                  <FileText size={13} />
+                  <FileText size={ICON_SIZE.micro} />
                 )}{' '}
-                Apply &amp; compile
+                {t('researchPanel.chat.applyAndCompile')}
               </button>
             )}
           </div>
@@ -1493,10 +1536,12 @@ export function ResearchChatPanel({
         >
           <div className="research-zotero-plan-heading">
             <div>
-              <strong id={zoteroPlanHeadingId}>Zotero change preview</strong>
-              <span id={zoteroPlanDescriptionId}>No changes occur until you approve.</span>
+              <strong id={zoteroPlanHeadingId}>{t('researchPanel.chat.zoteroPreview')}</strong>
+              <span id={zoteroPlanDescriptionId}>
+                {t('researchPanel.chat.zoteroPreviewNotice')}
+              </span>
             </div>
-            <ShieldCheck size={18} aria-hidden="true" />
+            <ShieldCheck size={ICON_SIZE.feature} aria-hidden="true" />
           </div>
           <p>{pendingZoteroPlan.summary}</p>
           <ol>
@@ -1508,7 +1553,7 @@ export function ResearchChatPanel({
           </ol>
           <div className="research-zotero-plan-actions">
             <button type="button" disabled={Boolean(actionBusy)} onClick={cancelZoteroPlan}>
-              <X size={13} /> Cancel
+              <X size={ICON_SIZE.micro} /> {t('researchPanel.zotero.cancel')}
             </button>
             <button
               className="primary"
@@ -1516,8 +1561,10 @@ export function ResearchChatPanel({
               disabled={Boolean(actionBusy)}
               onClick={() => void applyZoteroPlan()}
             >
-              <ShieldCheck size={13} />
-              {actionBusy === 'zotero-plan' ? 'Applying…' : 'Approve in Zotero'}
+              <ShieldCheck size={ICON_SIZE.micro} />
+              {actionBusy === 'zotero-plan'
+                ? t('researchPanel.chat.applying')
+                : t('researchPanel.chat.approveInZotero')}
             </button>
           </div>
         </section>
@@ -1525,7 +1572,7 @@ export function ResearchChatPanel({
 
       <div
         className={`research-chat-composer${dropActive ? ' drop-active' : ''}`}
-        aria-label="Research Chat composer"
+        aria-label={t('researchPanel.chat.composerLabel')}
         onDragEnter={(event) => {
           if (event.dataTransfer.types.includes(TEXTEX_REFERENCE_MIME)) {
             event.preventDefault()
@@ -1546,9 +1593,10 @@ export function ResearchChatPanel({
       >
         <div className="research-chat-context-bar">
           <span>
-            <Paperclip size={12} aria-hidden="true" /> Context
+            <Paperclip size={ICON_SIZE.micro} aria-hidden="true" />{' '}
+            {t('researchPanel.chat.context')}
           </span>
-          <small>{selectedContextCount} selected · drop a reference here</small>
+          <small>{t('researchPanel.chat.contextHint', { count: selectedContextCount })}</small>
         </div>
         <div className="research-context-chips">
           {contextOptions.map((chip) => (
@@ -1558,7 +1606,11 @@ export function ResearchChatPanel({
               aria-pressed={selectedContexts.has(chip.id)}
               onClick={() => toggleContext(chip.id)}
               key={chip.id}
-              title={chip.persisted?.kind === 'reference' ? 'Toggle reference context' : undefined}
+              title={
+                chip.persisted?.kind === 'reference'
+                  ? t('researchPanel.chat.toggleReferenceContext')
+                  : undefined
+              }
             >
               {chip.label}
             </button>
@@ -1566,24 +1618,24 @@ export function ResearchChatPanel({
         </div>
 
         {queuedPrompts.length > 0 && (
-          <div className="research-chat-queue" aria-label="Queued Chat messages">
+          <div className="research-chat-queue" aria-label={t('researchPanel.chat.queueLabel')}>
             <div>
               <strong>
-                {queuedPrompts.length} queued message{queuedPrompts.length === 1 ? '' : 's'}
+                {t('researchPanel.chat.queuedCount', { count: queuedPrompts.length })}
               </strong>
               <span>{queuedPrompts[0]}</span>
             </div>
             <button
               type="button"
-              aria-label="Clear queued messages"
-              title="Clear queued messages"
+              aria-label={t('researchPanel.chat.clearQueue')}
+              title={t('researchPanel.chat.clearQueue')}
               onClick={() => {
                 queuedPromptsRef.current = []
                 setQueuedPrompts([])
-                setStatus('Queued messages cleared.')
+                setStatus(t('researchPanel.chat.queueCleared'))
               }}
             >
-              <X size={12} aria-hidden="true" />
+              <X size={ICON_SIZE.micro} aria-hidden="true" />
             </button>
           </div>
         )}
@@ -1602,7 +1654,7 @@ export function ResearchChatPanel({
             <textarea
               ref={composerInputRef}
               rows={2}
-              aria-label="Research question"
+              aria-label={t('researchPanel.chat.questionLabel')}
               aria-describedby={commandHintId}
               aria-autocomplete="list"
               aria-haspopup="listbox"
@@ -1610,7 +1662,7 @@ export function ResearchChatPanel({
               aria-controls={commandMenuOpen ? commandListboxId : undefined}
               aria-activedescendant={activeCommandId}
               value={prompt}
-              placeholder="Ask about this paper or its source code…"
+              placeholder={t('researchPanel.chat.questionPlaceholder')}
               onChange={(event) => {
                 setPrompt(event.target.value)
                 historyIndexRef.current = null
@@ -1683,8 +1735,8 @@ export function ResearchChatPanel({
             />
             <span className="research-chat-command-status" id={commandHintId}>
               {commandMenuOpen
-                ? `${commandSuggestions.length} commands available. Use arrow keys to choose.`
-                : 'Enter sends · Shift+Enter adds a line · Up/Down recalls prompts.'}
+                ? t('researchPanel.chat.commandsAvailable', { count: commandSuggestions.length })
+                : t('researchPanel.chat.composerHint')}
             </span>
           </div>
 
@@ -1696,29 +1748,33 @@ export function ResearchChatPanel({
               disabled={busy || Boolean(pendingZoteroPlan)}
               onChange={setExecutionOverride}
             />
-            <span className="research-chat-mode" title="Answers without changing files">
-              Ask
+            <span className="research-chat-mode" title={t('researchPanel.chat.askModeHint')}>
+              {t('researchPanel.chat.askMode')}
             </span>
             {busy && (
               <button
                 className="research-chat-stop"
                 type="button"
-                aria-label="Stop current Chat request"
-                title="Stop current Chat request"
+                aria-label={t('researchPanel.chat.stopRequest')}
+                title={t('researchPanel.chat.stopRequest')}
                 onClick={() => void stopRequest()}
               >
-                <Square size={12} aria-hidden="true" />
+                <Square size={ICON_SIZE.micro} aria-hidden="true" />
               </button>
             )}
             <button
               className="research-chat-send"
               type="button"
-              aria-label="Send"
-              title={busy || pendingZoteroPlan ? 'Queue message · Enter' : 'Send · Enter'}
+              aria-label={t('researchPanel.chat.send')}
+              title={
+                busy || pendingZoteroPlan
+                  ? t('researchPanel.chat.queueMessageHint')
+                  : t('researchPanel.chat.sendHint')
+              }
               disabled={!prompt.trim() || !profile || (commandMenuOpen && !exactPromptCommand)}
               onClick={() => void send()}
             >
-              <Send size={14} aria-hidden="true" />
+              <Send size={ICON_SIZE.compact} aria-hidden="true" />
             </button>
           </div>
 
@@ -1730,16 +1786,18 @@ export function ResearchChatPanel({
                 disabled={busy || Boolean(pendingZoteroPlan)}
                 onClick={openCommandMenu}
               >
-                <Slash size={13} aria-hidden="true" /> Commands
+                <Slash size={ICON_SIZE.micro} aria-hidden="true" />{' '}
+                {t('researchPanel.chat.commands')}
               </button>
               <details className="research-chat-tools">
                 <summary>
-                  <Wrench size={13} aria-hidden="true" /> Tools
+                  <Wrench size={ICON_SIZE.micro} aria-hidden="true" />{' '}
+                  {t('researchPanel.chat.tools')}
                 </summary>
                 <div className="research-chat-tools-popover">
-                  <strong>Draft and CLI tools</strong>
+                  <strong>{t('researchPanel.chat.toolsHeading')}</strong>
                   <button className="research-primary-action" type="button" onClick={onAiDraft}>
-                    <FileText size={16} /> AI Draft
+                    <FileText size={ICON_SIZE.control} /> {t('researchPanel.chat.aiDraft')}
                   </button>
                   <div className="research-action-grid">
                     <button
@@ -1747,28 +1805,28 @@ export function ResearchChatPanel({
                       disabled={!workDir || busy}
                       onClick={() => launch('claude', false)}
                     >
-                      <Terminal size={15} /> Claude Code
+                      <Terminal size={ICON_SIZE.compact} /> Claude Code
                     </button>
                     <button
                       type="button"
                       disabled={!workDir || busy}
                       onClick={() => launch('claude', true)}
                     >
-                      <RotateCcw size={15} /> Resume Claude
+                      <RotateCcw size={ICON_SIZE.compact} /> {t('researchPanel.chat.resumeClaude')}
                     </button>
                     <button
                       type="button"
                       disabled={!workDir || busy}
                       onClick={() => launch('codex', false)}
                     >
-                      <Terminal size={15} /> Codex CLI
+                      <Terminal size={ICON_SIZE.compact} /> Codex CLI
                     </button>
                     <button
                       type="button"
                       disabled={!workDir || busy}
                       onClick={() => launch('codex', true)}
                     >
-                      <RotateCcw size={15} /> Resume Codex
+                      <RotateCcw size={ICON_SIZE.compact} /> {t('researchPanel.chat.resumeCodex')}
                     </button>
                   </div>
                 </div>
@@ -1784,7 +1842,7 @@ export function ResearchChatPanel({
         {status && (
           <div className="research-status research-chat-status" role="status">
             {(busy || Boolean(actionBusy)) && (
-              <LoaderCircle className="spin" size={12} aria-hidden="true" />
+              <LoaderCircle className="spin" size={ICON_SIZE.micro} aria-hidden="true" />
             )}
             <span>{status}</span>
           </div>

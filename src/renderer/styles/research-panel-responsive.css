@@ -79,18 +79,18 @@
   }
 
   .research-config-row {
-    margin-bottom: 6px;
+    margin-bottom: var(--space-6);
   }
 
   .reference-health {
-    gap: 6px;
+    gap: var(--space-6);
     margin-bottom: 7px;
-    padding: 8px;
+    padding: var(--space-8);
   }
 
   .reference-health-heading {
     flex-direction: column;
-    gap: 4px;
+    gap: var(--space-4);
   }
 
   .reference-health-heading small {
@@ -99,7 +99,7 @@
   }
 
   .reference-health-issues {
-    gap: 3px 8px;
+    gap: 3px var(--space-8);
     line-height: 1.35;
   }
 
@@ -116,20 +116,20 @@
   }
 
   .zotero-inventory-summary {
-    padding: 7px 8px;
+    padding: 7px var(--space-8);
   }
 
   .research-search {
-    margin-bottom: 8px;
+    margin-bottom: var(--space-8);
   }
 
   .reference-card-list {
-    gap: 6px;
+    gap: var(--space-6);
   }
 
   .reference-card {
     gap: 5px;
-    padding: 8px;
+    padding: var(--space-8);
   }
 
   .reference-card-actions {
@@ -162,7 +162,7 @@
     min-width: 34px;
   }
 
-  .research-panel-tabs .research-panel-close {
+  .research-panel-tabs .panel-tool-btn {
     padding-inline: 7px;
   }
 
@@ -183,7 +183,7 @@
   .zotero-inventory-summary > div {
     align-items: flex-start;
     flex-direction: column;
-    gap: 2px;
+    gap: var(--space-2);
   }
 
   .reference-card-actions {

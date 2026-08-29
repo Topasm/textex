@@ -1,5 +1,6 @@
 import { documentRegistry } from '../models/documentRegistry'
 import { useEditorStore } from '../store/useEditorStore'
+import { useUiStore } from '../store/useUiStore'
 import { clearRecoveryForFile } from './crashRecovery'
 
 function fileName(filePath: string): string {
@@ -21,5 +22,6 @@ export function closeEditorTab(filePath: string): boolean {
 
   void clearRecoveryForFile(filePath).catch(() => undefined)
   useEditorStore.getState().closeTab(filePath)
+  useUiStore.getState().forgetProseMode(filePath)
   return true
 }

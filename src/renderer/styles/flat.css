@@ -7,14 +7,60 @@
  */
 
 :root {
+  /*
+   * Design tokens.
+   *
+   * Geometry has one source here so a value cannot drift a pixel at a time
+   * across 8k lines of feature CSS. Feature rules reference a token; they only
+   * hard-code a length when the shape genuinely has no scale step (a 50% pill,
+   * a hairline border, a measured control height).
+   *
+   * The icon steps mirror `ICON_SIZE` in components/ui/IconSystem.tsx.
+   */
+
+  /* Icons */
   --ui-icon-size-micro: 12px;
   --ui-icon-size-compact: 14px;
   --ui-icon-size-control: 16px;
   --ui-icon-size-feature: 18px;
+  --ui-icon-size-prominent: 22px;
+  --ui-icon-size-empty-state: 28px;
   --ui-icon-stroke: 1.75;
+
+  /* Type scale — dense by design; `base` is the workspace body size. */
+  --font-2xs: 9px;
+  --font-xs: 10px;
+  --font-sm: 11px;
+  --font-md: 12px;
+  --font-base: 13px;
+  --font-lg: 14px;
+  --font-xl: 16px;
+  --font-2xl: 18px;
+  --font-3xl: 20px;
+  --font-4xl: 24px;
+
+  /*
+   * Spacing — a 2px grid to 16px, then 4px steps. The name is the value, so a
+   * length that is not on the grid is obvious in a diff instead of blending in.
+   */
+  --space-2: 2px;
+  --space-4: 4px;
+  --space-6: 6px;
+  --space-8: 8px;
+  --space-10: 10px;
+  --space-12: 12px;
+  --space-14: 14px;
+  --space-16: 16px;
+  --space-20: 20px;
+  --space-24: 24px;
+  --space-32: 32px;
+
+  /* Corners */
   --ui-radius-subtle: 2px;
   --ui-radius-control: 4px;
   --ui-radius-panel: 6px;
+  --ui-radius-large: 8px;
+  --ui-radius-pill: 999px;
   --ui-surface-app: var(--bg-primary);
   --ui-surface-sidebar: var(--sidebar-bg);
   --ui-surface-panel: var(--bg-secondary);
@@ -40,8 +86,7 @@ html .toolbar button > .ui-icon {
   height: var(--ui-icon-size-control);
 }
 
-html .sidebar-tab > .ui-icon,
-html .research-panel-tabs > button > .ui-icon,
+html .panel-tabs > button > .ui-icon,
 html .reference-source-tabs > button > .ui-icon,
 html .file-tree-icon > .ui-icon,
 html .file-tree-header-btn > .ui-icon {
@@ -100,7 +145,6 @@ html .status-warnings {
 /* Application chrome */
 html .toolbar {
   min-height: var(--app-toolbar-height);
-  gap: 5px;
   padding-block: 3px;
   background: var(--ui-surface-panel);
   border-color: var(--ui-border);
@@ -117,8 +161,6 @@ html .toolbar-pdf-controls {
 
 html .toolbar-btn,
 html .toolbar button {
-  height: 28px;
-  min-width: 28px;
   background: transparent;
   border-radius: var(--ui-radius-control);
   transition:
@@ -135,7 +177,6 @@ html .toolbar button:hover {
 
 html .toolbar-btn.active,
 html .toolbar button.active {
-  color: var(--accent);
   background: var(--ui-selected-bg);
   border-color: transparent;
 }
@@ -157,7 +198,7 @@ html .toolbar .compile-btn:hover {
 }
 
 html .toolbar .file-name {
-  padding-inline: 6px;
+  padding-inline: var(--space-6);
   background: transparent;
   border: 0;
   border-radius: var(--ui-radius-control);
@@ -168,38 +209,16 @@ html .toolbar .toolbar-window-controls {
   margin-block: -3px;
 }
 
-html .toolbar .toolbar-window-control {
-  width: 42px;
-  min-width: 42px;
-  height: var(--app-toolbar-height);
-  padding: 0;
-  border-radius: 0;
-}
-
-html .toolbar .toolbar-window-close:hover {
-  color: #fff;
-  background: var(--error);
-}
-
 html .toolbar .menu-dropdown-content,
 html .recent-project-switcher-menu {
   margin-top: 3px;
-  padding: 4px;
+  padding: var(--space-4);
   background: var(--ui-surface-raised);
   border-color: var(--ui-border-strong);
-  border-radius: var(--ui-radius-panel);
   box-shadow: var(--ui-shadow-popover);
 }
 
 html .toolbar .menu-dropdown-content button,
-html .toolbar .recent-project-switcher-item {
-  border-radius: var(--ui-radius-control);
-}
-
-html .recent-project-switcher-error {
-  border-radius: var(--ui-radius-control);
-}
-
 html .tab-bar {
   height: 34px;
   background: var(--ui-surface-sidebar);
@@ -217,7 +236,6 @@ html .tab:hover {
 }
 
 html .tab.active {
-  color: var(--text-primary);
   background: var(--ui-surface-app);
   border-top-color: var(--accent);
 }
@@ -228,12 +246,11 @@ html .research-panel {
 }
 
 html .sidebar-header {
-  padding: 7px 10px;
+  padding: 7px var(--space-10);
   background: transparent;
 }
 
-html .sidebar-tab,
-html .research-panel-tabs > button,
+html .panel-tabs > button,
 html .reference-source-tabs > button {
   border-bottom-width: 1px;
 }
@@ -259,7 +276,7 @@ html .sidebar-resize-handle {
 
 html .status-bar {
   min-height: 25px;
-  padding-block: 2px;
+  padding-block: var(--space-2);
   color: var(--text-secondary);
   background: var(--ui-surface-sidebar);
   border-top: 1px solid var(--ui-border);
@@ -288,7 +305,6 @@ html .omni-search-home-mode .omni-search-input:focus,
 html .home-search-bar:focus-within,
 html .command-palette-search:focus-within,
 html .research-search:focus-within {
-  border-color: var(--accent);
   box-shadow: none;
   outline: 1px solid var(--accent);
   outline-offset: -1px;
@@ -299,10 +315,6 @@ html .omni-search-clear,
 html .omni-search-result,
 html .omni-search-home-result,
 html .home-search-result,
-html .command-palette-option {
-  border-radius: var(--ui-radius-control);
-}
-
 html .omni-search-mode-menu,
 html .omni-search-dropdown,
 html .home-search-dropdown {
@@ -314,10 +326,8 @@ html .home-search-dropdown {
 }
 
 html .command-palette {
-  color: var(--text-primary);
   background: var(--ui-surface-raised);
   border: 1px solid var(--ui-border-strong);
-  border-radius: var(--ui-radius-panel);
   box-shadow: var(--ui-shadow-modal);
 }
 
@@ -335,7 +345,6 @@ html .bibliography-registration-dialog,
 html .table-editor-modal {
   background: var(--ui-surface-raised);
   border: 1px solid var(--ui-border-strong);
-  border-radius: var(--ui-radius-panel);
   box-shadow: var(--ui-shadow-modal);
 }
 
@@ -343,7 +352,7 @@ html .modal-header,
 html .modal-footer,
 html .table-editor-header,
 html .table-editor-footer {
-  padding-block: 12px;
+  padding-block: var(--space-12);
 }
 
 html .primary-button,
@@ -387,7 +396,7 @@ html .settings-tab.active {
 }
 
 html .settings-section {
-  padding: 14px 0 18px;
+  padding: var(--space-14) 0 18px;
   background: transparent;
   border: 0;
   border-bottom: 1px solid var(--ui-border);
@@ -413,15 +422,6 @@ html .ai-prompts-list {
 }
 
 /* Home and panel content */
-html .home-brand {
-  margin-bottom: 28px;
-}
-
-html .home-title {
-  font-size: clamp(30px, 4vw, 36px);
-  letter-spacing: -0.035em;
-}
-
 html .home-action-btn {
   border-radius: var(--ui-radius-control);
 }
@@ -462,7 +462,6 @@ html .home-recent-item-tag-editor,
 html .home-recent-item-path-editor {
   background: var(--ui-surface-raised);
   border-color: var(--ui-border-strong);
-  border-radius: var(--ui-radius-panel);
   box-shadow: var(--ui-shadow-popover);
 }
 
@@ -478,7 +477,7 @@ html .zotero-collection-tree {
 }
 
 html .research-profile-section > summary {
-  padding-block: 8px;
+  padding-block: var(--space-8);
 }
 
 html .research-profile-items,
@@ -520,7 +519,6 @@ html .template-add-form textarea:focus-visible {
 }
 
 html .research-chat-composer-shell:focus-within {
-  border-color: var(--accent);
   outline: 2px solid var(--ui-focus-ring);
   outline-offset: 1px;
 }

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import { ICON_SIZE } from '../ui/IconSystem'
 
@@ -25,6 +26,7 @@ export function BibGroupHeader({
   onRename,
   onDelete
 }: BibGroupHeaderProps) {
+  const { t } = useTranslation()
   const [isRenaming, setIsRenaming] = useState(false)
   const [renameValue, setRenameValue] = useState('')
 
@@ -86,8 +88,8 @@ export function BibGroupHeader({
             e.stopPropagation()
             onDelete()
           }}
-          title="Delete group"
-          aria-label="Delete group"
+          title={t('bibPanel.deleteGroup')}
+          aria-label={t('bibPanel.deleteGroup')}
         >
           <X size={ICON_SIZE.micro} />
         </button>

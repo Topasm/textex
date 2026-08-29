@@ -1,6 +1,7 @@
 import React from 'react'
+import { withTranslation, type WithTranslation } from 'react-i18next'
 
-interface Props {
+interface Props extends WithTranslation {
   children: React.ReactNode
 }
 
@@ -9,7 +10,7 @@ interface State {
   error: Error | null
 }
 
-class PreviewErrorBoundary extends React.Component<Props, State> {
+class PreviewErrorBoundaryInner extends React.Component<Props, State> {
   constructor(props: Props) {
     super(props)
     this.state = { hasError: false, error: null }
@@ -24,11 +25,12 @@ class PreviewErrorBoundary extends React.Component<Props, State> {
   }
 
   render(): React.ReactNode {
+    const { t } = this.props
     if (this.state.hasError) {
       return (
         <div className="preview-center preview-error">
           <div>
-            <p>PDF preview encountered an error.</p>
+            <p>{t('previewPane.previewCrashed')}</p>
             {this.state.error && (
               <p style={{ fontSize: '0.85em', opacity: 0.8 }}>{this.state.error.message}</p>
             )}
@@ -36,7 +38,7 @@ class PreviewErrorBoundary extends React.Component<Props, State> {
               onClick={this.handleRetry}
               style={{ marginTop: '8px', padding: '4px 12px', cursor: 'pointer' }}
             >
-              Retry
+              {t('previewPane.retry')}
             </button>
           </div>
         </div>
@@ -47,4 +49,5 @@ class PreviewErrorBoundary extends React.Component<Props, State> {
   }
 }
 
+const PreviewErrorBoundary = withTranslation()(PreviewErrorBoundaryInner)
 export default PreviewErrorBoundary

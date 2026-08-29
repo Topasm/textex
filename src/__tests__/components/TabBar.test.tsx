@@ -60,7 +60,10 @@ describe('TabBar dirty close guard', () => {
 
     expect(tabList).toContainElement(draftTab)
     expect(tabList.querySelectorAll('[role="tab"]')).toHaveLength(2)
-    expect(tabList.querySelectorAll('button:not([role="tab"])')).toHaveLength(0)
+    // The close control is a sibling of the tab button, never nested inside it.
+    expect(tabList.querySelectorAll('button button')).toHaveLength(0)
+    expect(tabList.querySelectorAll('.tab-close')).toHaveLength(2)
+    expect(screen.getByRole('button', { name: 'Close notes.tex' })).toBeInTheDocument()
     expect(notesTab).toHaveAttribute('aria-selected', 'true')
     expect(notesTab).toHaveAttribute('tabindex', '0')
     expect(draftTab).toHaveAttribute('tabindex', '-1')
@@ -75,5 +78,18 @@ describe('TabBar dirty close guard', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     fireEvent.keyDown(draftTab, { key: 'Delete' })
     expect(useEditorStore.getState().openFiles[filePath]).toBeUndefined()
+  })
+
+  it('disambiguates tabs that share a basename', () => {
+    useEditorStore.getState().resetEditor()
+    useEditorStore.getState().openFileInTab('/project/sections/intro.tex', 'a')
+    useEditorStore.getState().openFileInTab('/project/appendix/intro.tex', 'b')
+    useEditorStore.getState().openFileInTab('/project/main.tex', 'c')
+    render(<TabBar />)
+
+    expect(screen.getByRole('tab', { name: 'sections/intro.tex' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'appendix/intro.tex' })).toBeInTheDocument()
+    // A name that is already unique stays short.
+    expect(screen.getByRole('tab', { name: 'main.tex' })).toBeInTheDocument()
   })
 })

@@ -1,5 +1,9 @@
 import type { TFunction } from 'i18next'
-import { APP_COMMAND_MANIFEST, type ShortcutBinding } from '../../shared/appCommandManifest'
+import {
+  APP_COMMAND_MANIFEST,
+  RENDERER_SHORTCUT_MANIFEST,
+  type ShortcutBinding
+} from '../../shared/appCommandManifest'
 import type { AppCommandId } from '../../shared/types'
 
 export interface CommandAvailabilityContext {
@@ -49,6 +53,28 @@ export function formatCommandShortcut(
   const key = Array.isArray(binding.key) ? binding.key[0] : binding.key
   parts.push(key.length === 1 ? key.toLocaleUpperCase() : key)
   return isMac ? parts.join('') : parts.join('+')
+}
+
+/**
+ * The shortcut bound to a command, formatted for the current platform.
+ *
+ * Shortcuts were only ever visible inside the command palette, so a control
+ * the author uses every day never taught its own accelerator. Chrome can now
+ * append the hint to its tooltip.
+ */
+export function commandShortcutHint(id: string): string | null {
+  const appCommand = APP_COMMAND_MANIFEST.find((command) => command.id === id)
+  const binding: ShortcutBinding | undefined =
+    appCommand && 'shortcut' in appCommand
+      ? appCommand.shortcut
+      : RENDERER_SHORTCUT_MANIFEST.find((command) => command.id === id)?.shortcut
+  return binding ? formatCommandShortcut(binding) : null
+}
+
+/** `Save (Ctrl+S)` — the label alone when the command has no binding. */
+export function withShortcutHint(label: string, id: string): string {
+  const hint = commandShortcutHint(id)
+  return hint ? `${label} (${hint})` : label
 }
 
 export function createCommandSearchEntries(

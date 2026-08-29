@@ -93,7 +93,12 @@ function BibPanel({ onAddToChat }: BibPanelProps) {
             {t('bibPanel.newGroup')}
           </button>
         </div>
-        <div className="bib-list" role="region" aria-label="Project references" tabIndex={0}>
+        <div
+          className="bib-list"
+          role="region"
+          aria-label={t('bibPanel.projectReferences')}
+          tabIndex={0}
+        >
           {citationGroups.map((group) => {
             const groupEntries = group.citekeys
               .map((k) => entryMap.get(k))
@@ -161,7 +166,12 @@ function BibPanel({ onAddToChat }: BibPanelProps) {
         customGroupsAvailable
         onGroupModeChange={(mode) => updateSetting('bibGroupMode', mode)}
       />
-      <div className="bib-list" role="region" aria-label="Project references" tabIndex={0}>
+      <div
+        className="bib-list"
+        role="region"
+        aria-label={t('bibPanel.projectReferences')}
+        tabIndex={0}
+      >
         {groups.map((group) => (
           <div key={group.label || '__flat__'} className="bib-group">
             {bibGroupMode !== 'flat' && (

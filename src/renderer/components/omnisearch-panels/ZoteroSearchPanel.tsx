@@ -32,7 +32,7 @@ export function ZoteroSearchPanel({
     return <div className="omni-search-message">{t('omniSearch.zoteroNotConnected')}</div>
   }
   if (loading) {
-    return <div className="omni-search-message">Searching...</div>
+    return <div className="omni-search-message">{t('omniSearch.searching')}</div>
   }
   if (zoteroResults.length === 0 && searchTerm.length > 2) {
     return <div className="omni-search-message">{t('omniSearch.noResults')}</div>

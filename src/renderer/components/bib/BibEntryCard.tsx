@@ -69,8 +69,8 @@ export const BibEntryCard = React.memo(function BibEntryCard({
               event.stopPropagation()
               onAddToChat(buildProjectReferenceDragPayload(entry))
             }}
-            title="Add to Chat"
-            aria-label={`Add ${cleanTitle} to Chat`}
+            title={t('researchPanel.referenceCard.addToChat')}
+            aria-label={t('researchPanel.referenceCard.addNamedToChat', { name: cleanTitle })}
           >
             <MessageSquarePlus size={ICON_SIZE.micro} />
           </button>

@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { ICON_SIZE } from './ui/IconSystem'
 import { CornerDownLeft, Search, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { AppCommandId } from '../../shared/types'
@@ -188,11 +189,11 @@ export function CommandPalette({
             onClick={onClose}
             aria-label={t('commandPalette.close')}
           >
-            <X size={16} aria-hidden="true" />
+            <X size={ICON_SIZE.control} aria-hidden="true" />
           </button>
         </div>
         <div className="command-palette-search">
-          <Search size={17} aria-hidden="true" />
+          <Search size={ICON_SIZE.control} aria-hidden="true" />
           <input
             ref={inputRef}
             type="text"
@@ -279,7 +280,7 @@ export function CommandPalette({
         </div>
 
         <p id={hintId} className="command-palette-hint">
-          <CornerDownLeft size={13} aria-hidden="true" />
+          <CornerDownLeft size={ICON_SIZE.micro} aria-hidden="true" />
           {t('commandPalette.hint')}
         </p>
       </div>

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { ICON_SIZE } from '../ui/IconSystem'
 import type { FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { BookmarkPlus, ExternalLink, Loader, MessageSquarePlus, Plus, Search } from 'lucide-react'
 import type { OnlineReference } from '../../../shared/types'
 import {
@@ -10,12 +12,14 @@ import {
 import { invalidateZoteroInventory } from '../../services/zoteroInventoryCache'
 import { useProjectStore } from '../../store/useProjectStore'
 import { useSettingsStore } from '../../store/useSettingsStore'
+import { describeNativeError } from '../../services/nativeErrors'
 
 interface OnlineReferencesProps {
   onAddToChat?: (payload: ReferenceDragPayload) => void
 }
 
 export function OnlineReferences({ onAddToChat }: OnlineReferencesProps = {}) {
+  const { t } = useTranslation()
   const projectRoot = useProjectStore((state) => state.projectRoot)
   const query = useProjectStore((state) => state.researchSearchQuery)
   const [results, setResults] = useState<OnlineReference[]>([])
@@ -63,11 +67,11 @@ export function OnlineReferences({ onAddToChat }: OnlineReferencesProps = {}) {
         const references = await window.api.researchSearchOnline(normalized)
         if (!isCurrentScope(generation, root, apiPort)) return
         setResults(references)
-        if (references.length === 0) setMessage('No matching references found.')
+        if (references.length === 0) setMessage(t('researchPanel.online.noResults'))
       } catch (error) {
         if (isCurrentScope(generation, root, apiPort)) {
           setResults([])
-          setMessage(error instanceof Error ? error.message : String(error))
+          setMessage(describeNativeError(error))
         }
       } finally {
         if (isCurrentScope(generation, root, apiPort)) {
@@ -76,7 +80,7 @@ export function OnlineReferences({ onAddToChat }: OnlineReferencesProps = {}) {
         }
       }
     },
-    [isCurrentScope, port, projectRoot, query]
+    [isCurrentScope, port, projectRoot, query, t]
   )
 
   const add = useCallback(
@@ -93,13 +97,13 @@ export function OnlineReferences({ onAddToChat }: OnlineReferencesProps = {}) {
         if (isCurrentScope(generation, root, apiPort)) {
           setMessage(
             inserted
-              ? `Added ${reference.title} and inserted its citation.`
-              : `Added ${reference.title} to the project bibliography, but the editor changed before citation insertion.`
+              ? t('researchPanel.online.addedAndCited', { title: reference.title })
+              : t('researchPanel.online.addedWithoutCitation', { title: reference.title })
           )
         }
       } catch (error) {
         if (isCurrentScope(generation, root, apiPort)) {
-          setMessage(error instanceof Error ? error.message : String(error))
+          setMessage(describeNativeError(error))
         }
       } finally {
         if (isCurrentScope(generation, root, apiPort)) {
@@ -108,7 +112,7 @@ export function OnlineReferences({ onAddToChat }: OnlineReferencesProps = {}) {
         }
       }
     },
-    [isCurrentScope, port, projectRoot]
+    [isCurrentScope, port, projectRoot, t]
   )
 
   const saveToLibrary = useCallback(
@@ -119,19 +123,22 @@ export function OnlineReferences({ onAddToChat }: OnlineReferencesProps = {}) {
       const apiPort = port
       operationInFlight.current = true
       setSavingId(reference.id)
-      setMessage('Waiting for Zotero authorization…')
+      setMessage(t('researchPanel.online.waitingForZotero'))
       try {
         const result = await window.api.zoteroSaveOnline(reference, port)
         if (!isCurrentScope(generation, root, apiPort)) return
         invalidateZoteroInventory(port)
+        const citekeySuffix = result.citekey
+          ? t('researchPanel.online.asCitekey', { citekey: result.citekey })
+          : ''
         setMessage(
           result.duplicate
-            ? `Already in Zotero${result.citekey ? ` as @${result.citekey}` : ''}.`
-            : `Saved to Zotero${result.citekey ? ` as @${result.citekey}` : ''}.`
+            ? t('researchPanel.online.alreadyInZotero', { citekey: citekeySuffix })
+            : t('researchPanel.online.savedToZotero', { citekey: citekeySuffix })
         )
       } catch (error) {
         if (isCurrentScope(generation, root, apiPort)) {
-          setMessage(error instanceof Error ? error.message : String(error))
+          setMessage(describeNativeError(error))
         }
       } finally {
         if (isCurrentScope(generation, root, apiPort)) {
@@ -140,13 +147,13 @@ export function OnlineReferences({ onAddToChat }: OnlineReferencesProps = {}) {
         }
       }
     },
-    [isCurrentScope, port, projectRoot]
+    [isCurrentScope, port, projectRoot, t]
   )
 
   const busy = searching || busyId !== null || savingId !== null
 
   return (
-    <section className="research-reference-view" aria-label="Online references">
+    <section className="research-reference-view" aria-label={t('researchPanel.online.label')}>
       <form className="research-search" onSubmit={search}>
         <input
           value={query}
@@ -154,20 +161,26 @@ export function OnlineReferences({ onAddToChat }: OnlineReferencesProps = {}) {
             useProjectStore.getState().setResearchSearchQuery(event.target.value)
           }
           maxLength={512}
-          placeholder="Search Crossref and arXiv"
-          aria-label="Search Crossref and arXiv"
+          placeholder={t('researchPanel.online.searchPlaceholder')}
+          aria-label={t('researchPanel.online.searchPlaceholder')}
         />
-        <button type="submit" disabled={query.trim().length < 2 || busy} aria-label="Search">
-          {searching ? <Loader className="spin" size={15} /> : <Search size={15} />}
+        <button
+          type="submit"
+          disabled={query.trim().length < 2 || busy}
+          aria-label={t('researchPanel.online.search')}
+        >
+          {searching ? (
+            <Loader className="spin" size={ICON_SIZE.compact} />
+          ) : (
+            <Search size={ICON_SIZE.compact} />
+          )}
         </button>
       </form>
-      <p className="research-muted">
-        Results are added atomically to the managed project bibliography.
-      </p>
+      <p className="research-muted">{t('researchPanel.online.atomicNotice')}</p>
       <div
         className="reference-card-list"
         role="region"
-        aria-label="Online search results"
+        aria-label={t('researchPanel.online.resultsLabel')}
         tabIndex={results.length > 0 ? 0 : -1}
       >
         {results.map((reference) => (
@@ -183,7 +196,8 @@ export function OnlineReferences({ onAddToChat }: OnlineReferencesProps = {}) {
               <span>{reference.source}</span>
             </div>
             <span>
-              {reference.authors.slice(0, 3).join(', ') || 'Unknown author'}
+              {reference.authors.slice(0, 3).join(', ') ||
+                t('researchPanel.referenceCard.unknownAuthor')}
               {reference.year ? ` · ${reference.year}` : ''}
             </span>
             {reference.abstract && <p>{reference.abstract}</p>}
@@ -192,9 +206,12 @@ export function OnlineReferences({ onAddToChat }: OnlineReferencesProps = {}) {
                 <button
                   type="button"
                   onClick={() => onAddToChat({ source: 'online', reference })}
-                  aria-label={`Add ${reference.title} to Chat`}
+                  aria-label={t('researchPanel.referenceCard.addNamedToChat', {
+                    name: reference.title
+                  })}
                 >
-                  <MessageSquarePlus size={13} /> Add to Chat
+                  <MessageSquarePlus size={ICON_SIZE.micro} />{' '}
+                  {t('researchPanel.referenceCard.addToChat')}
                 </button>
               )}
               {reference.url && (
@@ -202,24 +219,24 @@ export function OnlineReferences({ onAddToChat }: OnlineReferencesProps = {}) {
                   type="button"
                   onClick={() => reference.url && void window.api.openExternal(reference.url)}
                 >
-                  <ExternalLink size={13} /> Source
+                  <ExternalLink size={ICON_SIZE.micro} /> {t('researchPanel.online.source')}
                 </button>
               )}
               <button type="button" onClick={() => void saveToLibrary(reference)} disabled={busy}>
                 {savingId === reference.id ? (
-                  <Loader className="spin" size={13} />
+                  <Loader className="spin" size={ICON_SIZE.micro} />
                 ) : (
-                  <BookmarkPlus size={13} />
+                  <BookmarkPlus size={ICON_SIZE.micro} />
                 )}
-                Save to library
+                {t('researchPanel.online.saveToLibrary')}
               </button>
               <button type="button" onClick={() => void add(reference)} disabled={busy}>
                 {busyId === reference.id ? (
-                  <Loader className="spin" size={13} />
+                  <Loader className="spin" size={ICON_SIZE.micro} />
                 ) : (
-                  <Plus size={13} />
+                  <Plus size={ICON_SIZE.micro} />
                 )}
-                Add &amp; cite
+                {t('researchPanel.online.addAndCite')}
               </button>
             </div>
           </article>

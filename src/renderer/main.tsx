@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import './i18n'
+import { initialLanguageReady } from './i18n'
 import App from './App'
 import ErrorBoundary from './components/ErrorBoundary'
 import { IconSystemProvider } from './components/ui/IconSystem'
@@ -25,7 +25,9 @@ if (navigator.platform.startsWith('Win')) {
 }
 
 async function bootstrap(): Promise<void> {
-  await installDesktopApi()
+  // The chosen language is a separate chunk; wait for it so the first paint is
+  // not a flash of English.
+  await Promise.all([installDesktopApi(), initialLanguageReady])
   const nativeSettings = await loadNativeSettingsSnapshot()
   await Promise.all([
     installRendererSessionBridge(nativeSettings),

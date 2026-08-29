@@ -4,11 +4,11 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 8px;
-  padding: 6px;
+  gap: var(--space-8);
+  padding: var(--space-6);
   min-width: 440px;
   max-width: min(560px, calc(100% - 16px));
-  border-radius: var(--ui-radius-panel, 6px);
+  border-radius: var(--ui-radius-panel);
   border: 1px solid var(--ui-border-strong, var(--border));
   background: var(--ui-surface-raised, var(--bg-secondary));
   box-shadow: var(--ui-shadow-popover, 0 4px 14px var(--shadow-color));
@@ -21,19 +21,19 @@
 .selection-ai-toolbar-context-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-6);
 }
 
 .selection-ai-toolbar-context-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-8);
   border: 1px solid var(--ui-border, var(--border));
-  border-radius: 999px;
+  border-radius: var(--ui-radius-pill);
   background: var(--ui-surface-panel, var(--bg-primary));
   color: var(--text-primary);
-  padding: 7px 12px;
-  font-size: 12px;
+  padding: 7px var(--space-12);
+  font-size: var(--font-md);
   font-weight: 700;
   cursor: pointer;
   transition:
@@ -44,11 +44,11 @@
 
 .selection-ai-toolbar-research-btn {
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--ui-radius-pill);
   background: transparent;
   color: var(--text-primary);
-  padding: 7px 10px;
-  font-size: 12px;
+  padding: 7px var(--space-10);
+  font-size: var(--font-md);
   font-weight: 650;
   cursor: pointer;
 }
@@ -89,7 +89,7 @@
   height: 12px;
   border: 2px solid color-mix(in srgb, var(--text-secondary) 30%, transparent);
   border-top-color: currentColor;
-  border-radius: 999px;
+  border-radius: var(--ui-radius-pill);
   animation: selection-ai-toolbar-spin 0.7s linear infinite;
 }
 
@@ -97,11 +97,11 @@
   flex: 1;
   min-width: 0;
   border: 1px solid var(--ui-border, var(--border));
-  border-radius: var(--ui-radius-control, 4px);
+  border-radius: var(--ui-radius-control);
   background: var(--ui-surface-input, var(--bg-input));
   color: var(--text-primary);
-  padding: 9px 12px;
-  font-size: 12px;
+  padding: 9px var(--space-12);
+  font-size: var(--font-md);
   outline: none;
 }
 
@@ -118,11 +118,11 @@
 
 .selection-ai-toolbar-submit {
   border: none;
-  border-radius: var(--ui-radius-control, 4px);
+  border-radius: var(--ui-radius-control);
   background: var(--accent);
   color: var(--accent-contrast, #fff);
-  padding: 9px 12px;
-  font-size: 12px;
+  padding: 9px var(--space-12);
+  font-size: var(--font-md);
   font-weight: 700;
   cursor: pointer;
   transition: background-color 0.15s ease;
@@ -177,11 +177,11 @@
 
 .selection-ai-toolbar-btn {
   border: none;
-  border-radius: 999px;
+  border-radius: var(--ui-radius-pill);
   background: transparent;
   color: var(--text-primary);
   padding: 7px 11px;
-  font-size: 12px;
+  font-size: var(--font-md);
   font-weight: 600;
   cursor: pointer;
   transition:

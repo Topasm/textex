@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ICON_SIZE } from '../ui/IconSystem'
 import type { FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   Check,
   ChevronRight,
@@ -28,6 +30,7 @@ import { useEditorStore } from '../../store/useEditorStore'
 import { useCompileStore } from '../../store/useCompileStore'
 import { cacheZoteroInventory, getCachedZoteroInventory } from '../../services/zoteroInventoryCache'
 import { navigateToDiagnostic } from '../../services/diagnosticNavigation'
+import { describeNativeError } from '../../services/nativeErrors'
 import {
   addReferenceAtCursor,
   setReferenceDragData,
@@ -129,6 +132,7 @@ export function ZoteroReferences({
   onOpenProblems,
   onOpenSubmission
 }: ZoteroReferencesProps = {}) {
+  const { t } = useTranslation()
   const projectRoot = useProjectStore((state) => state.projectRoot)
   const query = useProjectStore((state) => state.researchSearchQuery)
   const setQuery = useProjectStore((state) => state.setResearchSearchQuery)
@@ -258,7 +262,7 @@ export function ZoteroReferences({
       })
       .catch((error) => {
         if (isCurrentScope(generation, root, apiPort)) {
-          setMessage(error instanceof Error ? error.message : String(error))
+          setMessage(describeNativeError(error))
         }
       })
       .finally(() => {
@@ -521,7 +525,7 @@ export function ZoteroReferences({
       })
       .catch((error) => {
         if (!cancelled && isCurrentScope(generation, root, apiPort)) {
-          setMessage(error instanceof Error ? error.message : String(error))
+          setMessage(describeNativeError(error))
         }
       })
       .finally(() => {
@@ -683,11 +687,11 @@ export function ZoteroReferences({
           )
         )
         if (items.length === 0 && !hasProjectMatch) {
-          setMessage('No matching project or Zotero references found.')
+          setMessage(t('researchPanel.zotero.noReferenceMatches'))
         }
       } catch (error) {
         if (isCurrentScope(generation, root, apiPort)) {
-          setMessage(error instanceof Error ? error.message : String(error))
+          setMessage(describeNativeError(error))
         }
       } finally {
         if (isCurrentScope(generation, root, apiPort)) {
@@ -696,7 +700,7 @@ export function ZoteroReferences({
         }
       }
     },
-    [bibEntries, isCurrentScope, port, projectRoot, zoteroAvailable]
+    [bibEntries, isCurrentScope, port, projectRoot, t, zoteroAvailable]
   )
 
   const search = useCallback(
@@ -725,13 +729,13 @@ export function ZoteroReferences({
         if (isCurrentScope(generation, root, apiPort)) {
           setMessage(
             inserted
-              ? `Added @${item.citekey} and inserted its citation.`
-              : `Added @${item.citekey} to the project bibliography, but the editor changed before citation insertion.`
+              ? t('researchPanel.zotero.addedAndCited', { citekey: item.citekey })
+              : t('researchPanel.zotero.addedWithoutCitation', { citekey: item.citekey })
           )
         }
       } catch (error) {
         if (isCurrentScope(generation, root, apiPort)) {
-          setMessage(error instanceof Error ? error.message : String(error))
+          setMessage(describeNativeError(error))
         }
       } finally {
         if (isCurrentScope(generation, root, apiPort)) {
@@ -740,22 +744,25 @@ export function ZoteroReferences({
         }
       }
     },
-    [isCurrentScope, port, projectRoot]
+    [isCurrentScope, port, projectRoot, t]
   )
 
   const citeProjectReference = useCallback((citekey: string) => {
     useEditorStore.getState().requestInsertAtCursor(`\\cite{${citekey}}`)
   }, [])
 
-  const openCitationLocation = useCallback((location: CitationLocation) => {
-    void navigateToDiagnostic({
-      file: location.file,
-      line: location.line,
-      column: 1,
-      severity: 'info',
-      message: 'Citation location'
-    })
-  }, [])
+  const openCitationLocation = useCallback(
+    (location: CitationLocation) => {
+      void navigateToDiagnostic({
+        file: location.file,
+        line: location.line,
+        column: 1,
+        severity: 'info',
+        message: t('researchPanel.referenceCard.citationLocations')
+      })
+    },
+    [t]
+  )
 
   const loadMoreInventory = useCallback(async () => {
     if (
@@ -794,7 +801,7 @@ export function ZoteroReferences({
       )
     } catch (error) {
       if (isCurrentScope(generation, root, apiPort)) {
-        setMessage(error instanceof Error ? error.message : String(error))
+        setMessage(describeNativeError(error))
       }
     } finally {
       if (isCurrentScope(generation, root, apiPort)) setInventoryBusy(false)
@@ -832,7 +839,7 @@ export function ZoteroReferences({
       })
     } catch (error) {
       if (isCurrentScope(generation, root, apiPort)) {
-        setMessage(error instanceof Error ? error.message : String(error))
+        setMessage(describeNativeError(error))
       }
     } finally {
       if (isCurrentScope(generation, root, apiPort)) setSyncPreviewBusy(false)
@@ -859,10 +866,10 @@ export function ZoteroReferences({
       const saved = await window.api.researchSaveConfig(config)
       if (!isCurrentScope(generation, root, apiPort)) return
       setConfig(saved)
-      setMessage('Research settings saved.')
+      setMessage(t('researchPanel.zotero.settingsSaved'))
     } catch (error) {
       if (isCurrentScope(generation, root, apiPort)) {
-        setMessage(error instanceof Error ? error.message : String(error))
+        setMessage(describeNativeError(error))
       }
     } finally {
       if (isCurrentScope(generation, root, apiPort)) {
@@ -870,7 +877,7 @@ export function ZoteroReferences({
         setBusy(null)
       }
     }
-  }, [config, isCurrentScope, port, projectRoot])
+  }, [config, isCurrentScope, port, projectRoot, t])
 
   const syncCollection = useCallback(async () => {
     if (!config.zoteroCollection || !targetFile || operationInFlight.current) return
@@ -893,11 +900,16 @@ export function ZoteroReferences({
         useProjectStore.getState().setBibEntries(entries)
         useProjectStore.getState().invalidateDirectory(root)
       }
-      setMessage(`Synchronized ${result.entryCount} entries to ${config.zoteroFile}.`)
+      setMessage(
+        t('researchPanel.zotero.synchronized', {
+          count: result.entryCount,
+          file: config.zoteroFile
+        })
+      )
       setSyncPreview(null)
     } catch (error) {
       if (isCurrentScope(generation, root, apiPort)) {
-        setMessage(error instanceof Error ? error.message : String(error))
+        setMessage(describeNativeError(error))
       }
     } finally {
       if (isCurrentScope(generation, root, apiPort)) {
@@ -905,69 +917,74 @@ export function ZoteroReferences({
         setBusy(null)
       }
     }
-  }, [config.zoteroCollection, config.zoteroFile, isCurrentScope, port, projectRoot, targetFile])
+  }, [config.zoteroCollection, config.zoteroFile, isCurrentScope, port, projectRoot, t, targetFile])
 
   if (busy === 'load') {
     return (
       <div className="research-empty">
-        <Loader className="spin" size={18} /> Loading Zotero…
+        <Loader className="spin" size={ICON_SIZE.feature} /> Loading Zotero…
       </div>
     )
   }
 
   return (
-    <section className="research-reference-view" aria-label="Zotero references">
+    <section className="research-reference-view" aria-label={t('researchPanel.zotero.label')}>
       <div className="research-config-row">
         {onOpenProjectGroups && (
           <button
             type="button"
             onClick={onOpenProjectGroups}
-            title="Project citation groups"
-            aria-label="Project citation groups"
+            title={t('researchPanel.references.projectCitationGroups')}
+            aria-label={t('researchPanel.references.projectCitationGroups')}
           >
-            <BookMarked size={14} />
+            <BookMarked size={ICON_SIZE.compact} />
           </button>
         )}
         <button
           type="button"
           onClick={() => void saveConfig()}
           disabled={busy !== null}
-          title="Save research settings"
-          aria-label="Save research settings"
+          title={t('researchPanel.zotero.saveSettings')}
+          aria-label={t('researchPanel.zotero.saveSettings')}
         >
-          <Save size={14} />
+          <Save size={ICON_SIZE.compact} />
         </button>
         <button
           type="button"
           onClick={() => void prepareSyncPreview()}
           disabled={busy !== null || !configuredCollection || !projectRoot}
-          title="Synchronize selected collection"
-          aria-label="Synchronize selected collection"
+          title={t('researchPanel.zotero.syncCollection')}
+          aria-label={t('researchPanel.zotero.syncCollection')}
         >
           {busy === 'sync' || syncPreviewBusy ? (
-            <Loader className="spin" size={14} />
+            <Loader className="spin" size={ICON_SIZE.compact} />
           ) : (
-            <RefreshCw size={14} />
+            <RefreshCw size={ICON_SIZE.compact} />
           )}
         </button>
       </div>
-      <section className="reference-health" aria-label="Current paper reference health">
+      <section className="reference-health" aria-label={t('researchPanel.zotero.healthLabel')}>
         <div className="reference-health-heading">
           <div>
-            <strong>Current paper</strong>
+            <strong>{t('researchPanel.zotero.currentPaper')}</strong>
             <span>
-              {referenceHealth.citedCount} cited · {referenceHealth.bibliographyCount} bib ·{' '}
-              {issueCount} issue{issueCount === 1 ? '' : 's'}
+              {t('researchPanel.zotero.healthSummary', {
+                cited: referenceHealth.citedCount,
+                bibliography: referenceHealth.bibliographyCount,
+                count: issueCount
+              })}
             </span>
           </div>
           <small>
             {zoteroAvailable === false
-              ? 'Zotero unavailable'
+              ? t('researchPanel.referenceCard.zoteroUnavailable')
               : libraryInventoryError
-                ? 'Cross-check unavailable'
+                ? t('researchPanel.zotero.crossCheckUnavailable')
                 : libraryInventoryLoaded
-                  ? `${referenceHealth.linkedToZoteroCount} linked to Zotero`
-                  : 'Cross-checking Zotero…'}
+                  ? t('researchPanel.zotero.linkedToZotero', {
+                      count: referenceHealth.linkedToZoteroCount
+                    })
+                  : t('researchPanel.referenceCard.zoteroChecking')}
           </small>
         </div>
         {(referenceHealth.missingCitations.length > 0 ||
@@ -979,39 +996,56 @@ export function ZoteroReferences({
             referenceHealth.projectOnlyCount > 0)) && (
           <div className="reference-health-issues" role="status">
             {referenceHealth.missingCitations.length > 0 && (
-              <span>⚠ {referenceHealth.missingCitations.length} missing bibliography</span>
+              <span>
+                {t('researchPanel.zotero.issueMissingBibliography', {
+                  count: referenceHealth.missingCitations.length
+                })}
+              </span>
             )}
             {referenceHealth.duplicateCount > 0 && (
-              <span>⚠ {referenceHealth.duplicateCount} possible duplicate</span>
+              <span>
+                {t('researchPanel.zotero.issuePossibleDuplicate', {
+                  count: referenceHealth.duplicateCount
+                })}
+              </span>
             )}
             {compileDiagnosticCount > 0 &&
               (onOpenProblems ? (
                 <button type="button" onClick={onOpenProblems}>
-                  ⚠ {compileDiagnosticCount} compile problem
-                  {compileDiagnosticCount === 1 ? '' : 's'}
+                  {t('researchPanel.zotero.issueCompileProblem', { count: compileDiagnosticCount })}
                 </button>
               ) : (
                 <span>
-                  ⚠ {compileDiagnosticCount} compile problem
-                  {compileDiagnosticCount === 1 ? '' : 's'}
+                  {t('researchPanel.zotero.issueCompileProblem', { count: compileDiagnosticCount })}
                 </span>
               ))}
             {zoteroAvailable &&
               libraryInventoryLoaded &&
               !libraryInventoryError &&
               referenceHealth.projectOnlyCount > 0 && (
-                <span>○ {referenceHealth.projectOnlyCount} not linked to Zotero</span>
+                <span>
+                  {t('researchPanel.zotero.issueNotLinked', {
+                    count: referenceHealth.projectOnlyCount
+                  })}
+                </span>
               )}
           </div>
         )}
-        <div className="reference-health-filters" aria-label="Reference filters">
+        <div
+          className="reference-health-filters"
+          aria-label={t('researchPanel.zotero.filtersLabel')}
+        >
           {(
             [
-              ['all', 'All', referenceHealth.bibliographyCount + selectedZoteroOnlyCount],
-              ['cited', 'Cited', referenceHealth.citedCount],
-              ['missing', 'Missing', issueCount],
-              ['unused', 'Unused', referenceHealth.unusedCount],
-              ['zotero', 'Zotero', inventory?.totalResults ?? 0]
+              [
+                'all',
+                t('researchPanel.zotero.filterAll'),
+                referenceHealth.bibliographyCount + selectedZoteroOnlyCount
+              ],
+              ['cited', t('researchPanel.zotero.filterCited'), referenceHealth.citedCount],
+              ['missing', t('researchPanel.zotero.filterMissing'), issueCount],
+              ['unused', t('researchPanel.zotero.filterUnused'), referenceHealth.unusedCount],
+              ['zotero', t('researchPanel.zotero.filterZotero'), inventory?.totalResults ?? 0]
             ] as const
           ).map(([value, label, count]) => (
             <button
@@ -1027,13 +1061,18 @@ export function ZoteroReferences({
         </div>
         {onOpenSubmission && (
           <button type="button" className="reference-submission-action" onClick={onOpenSubmission}>
-            <FileCheck2 size={12} aria-hidden="true" /> Submission check
+            <FileCheck2 size={ICON_SIZE.micro} aria-hidden="true" />{' '}
+            {t('researchPanel.zotero.submissionCheck')}
           </button>
         )}
       </section>
-      <div className="zotero-collection-tree" role="tree" aria-label="Zotero collections">
+      <div
+        className="zotero-collection-tree"
+        role="tree"
+        aria-label={t('researchPanel.zotero.collectionsLabel')}
+      >
         {!library ? (
-          <div className="research-muted">No Zotero collections found.</div>
+          <div className="research-muted">{t('researchPanel.zotero.noCollections')}</div>
         ) : (
           <>
             <button
@@ -1066,10 +1105,10 @@ export function ZoteroReferences({
             >
               <ChevronRight
                 className={libraryExpanded ? 'collection-chevron expanded' : 'collection-chevron'}
-                size={13}
+                size={ICON_SIZE.micro}
                 aria-hidden="true"
               />
-              <FolderTree size={13} aria-hidden="true" />
+              <FolderTree size={ICON_SIZE.micro} aria-hidden="true" />
               <span>{library.name}</span>
               <small>{library.itemCount ?? '…'}</small>
             </button>
@@ -1118,7 +1157,7 @@ export function ZoteroReferences({
                       ? 'collection-chevron expanded'
                       : 'collection-chevron'
                   }
-                  size={13}
+                  size={ICON_SIZE.micro}
                   aria-hidden="true"
                 />
                 <span>{row.collection.name}</span>
@@ -1145,7 +1184,7 @@ export function ZoteroReferences({
           </div>
           {inventoryBusy && !inventory ? (
             <span className="research-muted">
-              <Loader className="spin" size={12} /> Loading papers…
+              <Loader className="spin" size={ICON_SIZE.micro} /> Loading papers…
             </span>
           ) : inventory ? (
             <span className="research-muted">
@@ -1166,7 +1205,7 @@ export function ZoteroReferences({
               setConfig((current) => ({ ...current, syncOnOpen: event.target.checked }))
             }
           />
-          Keep synchronized when this project opens
+          {t('researchPanel.zotero.syncOnOpen')}
         </label>
       )}
       <form className="research-search" onSubmit={search}>
@@ -1178,17 +1217,29 @@ export function ZoteroReferences({
             setLastLocalSearch('')
           }}
           maxLength={1_024}
-          placeholder="Search project & Zotero"
-          aria-label="Search project and Zotero"
+          placeholder={t('researchPanel.zotero.searchPlaceholder')}
+          aria-label={t('researchPanel.zotero.searchLabel')}
         />
-        <button type="submit" disabled={!query.trim() || busy !== null} aria-label="Search">
-          {busy === 'search' ? <Loader className="spin" size={15} /> : <Search size={15} />}
+        <button
+          type="submit"
+          disabled={!query.trim() || busy !== null}
+          aria-label={t('researchPanel.online.search')}
+        >
+          {busy === 'search' ? (
+            <Loader className="spin" size={ICON_SIZE.compact} />
+          ) : (
+            <Search size={ICON_SIZE.compact} />
+          )}
         </button>
       </form>
       <div
         className="reference-card-list"
         role="region"
-        aria-label={normalizedQuery ? 'Local reference search results' : 'Reference manager items'}
+        aria-label={
+          normalizedQuery
+            ? t('researchPanel.zotero.localResultsLabel')
+            : t('researchPanel.zotero.managerItemsLabel')
+        }
         tabIndex={
           normalizedQuery || visibleInventoryItems.length > 0 || visibleProjectReferences.length > 0
             ? 0
@@ -1228,9 +1279,9 @@ export function ZoteroReferences({
                   ⚠
                 </span>
                 <strong>@{usage.citekey}</strong>
-                <span>Cited ×{usage.count}</span>
+                <span>{t('researchPanel.referenceCard.cited', { count: usage.count })}</span>
               </div>
-              <span>Used in TeX but missing from every project bibliography.</span>
+              <span>{t('researchPanel.zotero.missingFromBibliography')}</span>
               <div className="reference-card-actions">
                 <button
                   type="button"
@@ -1240,7 +1291,7 @@ export function ZoteroReferences({
                     void runSearch(usage.citekey)
                   }}
                 >
-                  <Search size={13} /> Find source
+                  <Search size={ICON_SIZE.micro} /> {t('researchPanel.zotero.findSource')}
                 </button>
               </div>
             </article>
@@ -1279,24 +1330,32 @@ export function ZoteroReferences({
                   {inProject ? (
                     <Check
                       className="zotero-project-state in-project"
-                      size={14}
+                      size={ICON_SIZE.compact}
                       aria-hidden="true"
                     />
                   ) : (
-                    <Circle className="zotero-project-state" size={12} aria-hidden="true" />
+                    <Circle
+                      className="zotero-project-state"
+                      size={ICON_SIZE.micro}
+                      aria-hidden="true"
+                    />
                   )}
                   <strong>{item.title}</strong>
-                  <span>{item.citekey ? `@${item.citekey}` : 'Citekey unavailable'}</span>
+                  <span>
+                    {item.citekey
+                      ? `@${item.citekey}`
+                      : t('researchPanel.zotero.citekeyUnavailable')}
+                  </span>
                 </div>
                 <span>
-                  {item.author || 'Unknown author'}
+                  {item.author || t('researchPanel.referenceCard.unknownAuthor')}
                   {item.year ? ` · ${item.year}` : ''}
                   {citationCount > 0
-                    ? ` · CITED ×${citationCount}`
+                    ? ` · ${t('researchPanel.referenceCard.cited', { count: citationCount })}`
                     : inProject
-                      ? ' · IN PROJECT, UNUSED'
+                      ? ` · ${t('researchPanel.zotero.inProjectUnused')}`
                       : item.citekey
-                        ? ' · ZOTERO ONLY'
+                        ? ` · ${t('researchPanel.zotero.zoteroOnly')}`
                         : ''}
                 </span>
                 {searchableItem && (
@@ -1307,9 +1366,12 @@ export function ZoteroReferences({
                         onClick={() =>
                           onAddToChat(buildZoteroReferencePayload(searchableItem, port))
                         }
-                        aria-label={`Add ${item.title} to Chat`}
+                        aria-label={t('researchPanel.referenceCard.addNamedToChat', {
+                          name: item.title
+                        })}
                       >
-                        <MessageSquarePlus size={13} /> Add to Chat
+                        <MessageSquarePlus size={ICON_SIZE.micro} />{' '}
+                        {t('researchPanel.referenceCard.addToChat')}
                       </button>
                     )}
                     <button
@@ -1318,13 +1380,15 @@ export function ZoteroReferences({
                       disabled={busy !== null}
                     >
                       {busy === item.citekey ? (
-                        <Loader className="spin" size={13} />
+                        <Loader className="spin" size={ICON_SIZE.micro} />
                       ) : inProject ? (
-                        <Check size={13} />
+                        <Check size={ICON_SIZE.micro} />
                       ) : (
-                        <Plus size={13} />
+                        <Plus size={ICON_SIZE.micro} />
                       )}
-                      {inProject ? 'Cite' : 'Add & cite'}
+                      {inProject
+                        ? t('researchPanel.referenceCard.cite')
+                        : t('researchPanel.online.addAndCite')}
                     </button>
                   </div>
                 )}
@@ -1367,7 +1431,7 @@ export function ZoteroReferences({
                 <span>@{item.citekey}</span>
               </div>
               <span>
-                {item.author || 'Unknown author'}
+                {item.author || t('researchPanel.referenceCard.unknownAuthor')}
                 {item.year ? ` · ${item.year}` : ''}
               </span>
               <div className="reference-card-actions">
@@ -1375,18 +1439,21 @@ export function ZoteroReferences({
                   <button
                     type="button"
                     onClick={() => onAddToChat(buildZoteroReferencePayload(item, port))}
-                    aria-label={`Add ${item.title || item.citekey} to Chat`}
+                    aria-label={t('researchPanel.referenceCard.addNamedToChat', {
+                      name: item.title || item.citekey
+                    })}
                   >
-                    <MessageSquarePlus size={13} /> Add to Chat
+                    <MessageSquarePlus size={ICON_SIZE.micro} />{' '}
+                    {t('researchPanel.referenceCard.addToChat')}
                   </button>
                 )}
                 <button type="button" onClick={() => void add(item)} disabled={busy !== null}>
                   {busy === item.citekey ? (
-                    <Loader className="spin" size={13} />
+                    <Loader className="spin" size={ICON_SIZE.micro} />
                   ) : (
-                    <Plus size={13} />
+                    <Plus size={ICON_SIZE.micro} />
                   )}
-                  Add &amp; cite
+                  {t('researchPanel.online.addAndCite')}
                 </button>
               </div>
             </article>
@@ -1398,56 +1465,68 @@ export function ZoteroReferences({
             onClick={() => void loadMoreInventory()}
             disabled={inventoryBusy}
           >
-            {inventoryBusy ? <Loader className="spin" size={13} /> : null}
-            Load more papers ({inventory.totalResults - inventory.items.length})
+            {inventoryBusy ? <Loader className="spin" size={ICON_SIZE.micro} /> : null}
+            {t('researchPanel.zotero.loadMorePapers', {
+              count: inventory.totalResults - inventory.items.length
+            })}
           </button>
         )}
         {normalizedQuery && lastLocalSearch === normalizedQuery && localSearchResultCount === 0 && (
           <div className="reference-online-fallback">
-            <span>No project or Zotero matches.</span>
+            <span>{t('researchPanel.zotero.noLocalMatches')}</span>
             {onSearchOnline && (
               <button type="button" onClick={onSearchOnline}>
-                Search Crossref / arXiv
+                {t('researchPanel.zotero.searchOnlineInstead')}
               </button>
             )}
           </div>
         )}
       </div>
       {syncPreview && configuredCollection && (
-        <div className="zotero-sync-preview" role="dialog" aria-label="Zotero sync preview">
-          <strong>Sync preview</strong>
+        <div
+          className="zotero-sync-preview"
+          role="dialog"
+          aria-label={t('researchPanel.zotero.syncPreviewLabel')}
+        >
+          <strong>{t('researchPanel.zotero.syncPreview')}</strong>
           <span>{configuredCollection.name}</span>
           <dl>
             <div>
-              <dt>New</dt>
+              <dt>{t('researchPanel.zotero.syncNew')}</dt>
               <dd>+{syncPreview.added.length}</dd>
             </div>
             <div>
-              <dt>Removed</dt>
+              <dt>{t('researchPanel.zotero.syncRemoved')}</dt>
               <dd>−{syncPreview.removed.length}</dd>
             </div>
             <div>
-              <dt>Unchanged</dt>
+              <dt>{t('researchPanel.zotero.syncUnchanged')}</dt>
               <dd>{syncPreview.unchanged}</dd>
             </div>
           </dl>
           {syncPreview.unresolved > 0 && (
             <span className="research-muted">
-              {syncPreview.unresolved} item(s) are still waiting for a Better BibTeX citekey.
+              {t('researchPanel.zotero.syncUnresolved', { count: syncPreview.unresolved })}
             </span>
           )}
-          <span className="research-muted">Target: {config.zoteroFile}</span>
+          <span className="research-muted">
+            {t('researchPanel.zotero.syncTarget', { file: config.zoteroFile })}
+          </span>
           <div className="zotero-sync-preview-actions">
             <button type="button" onClick={() => setSyncPreview(null)} disabled={busy === 'sync'}>
-              Cancel
+              {t('researchPanel.zotero.cancel')}
             </button>
             <button
               type="button"
               onClick={() => void syncCollection()}
               disabled={busy === 'sync' || syncPreview.unresolved > 0}
             >
-              {busy === 'sync' ? <Loader className="spin" size={13} /> : <RefreshCw size={13} />}
-              Sync
+              {busy === 'sync' ? (
+                <Loader className="spin" size={ICON_SIZE.micro} />
+              ) : (
+                <RefreshCw size={ICON_SIZE.micro} />
+              )}
+              {t('researchPanel.zotero.sync')}
             </button>
           </div>
         </div>

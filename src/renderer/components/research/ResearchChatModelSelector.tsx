@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import i18n from '../../i18n'
 import type { AiProvider, ResearchChatExecution } from '../../../shared/types'
 import { AI_MODEL_OPTIONS, AI_PROVIDER_INFO, AI_PROVIDER_ORDER } from '../../constants'
 
@@ -27,13 +29,18 @@ function optionValue(execution: ResearchChatExecution): string {
 }
 
 function unavailableReason(provider: AiProvider): string {
-  return provider.endsWith('-cli') ? 'Not installed' : 'API key required'
+  return provider.endsWith('-cli')
+    ? i18n.t('researchPanel.modelSelector.notInstalled')
+    : i18n.t('researchPanel.modelSelector.apiKeyRequired')
 }
 
 export function researchChatExecutionLabel(execution: ResearchChatExecution): string {
   const model =
     AI_MODEL_OPTIONS[execution.provider]?.find((option) => option.value === execution.model)
-      ?.label ?? (execution.model === 'default' ? 'Default model' : execution.model)
+      ?.label ??
+    (execution.model === 'default'
+      ? i18n.t('researchPanel.modelSelector.defaultModel')
+      : execution.model)
   const provider =
     execution.provider === 'claude-cli'
       ? 'Claude Code'
@@ -58,6 +65,7 @@ export function ResearchChatModelSelector({
   disabled = false,
   onChange
 }: ResearchChatModelSelectorProps) {
+  const { t } = useTranslation()
   const [availability, setAvailability] = useState<ProviderAvailability>(INITIAL_AVAILABILITY)
 
   useEffect(() => {
@@ -100,14 +108,16 @@ export function ResearchChatModelSelector({
     ? { provider: defaultProvider, model: defaultModel || 'default' }
     : null
   const defaultLabel = defaultExecution
-    ? `Default · ${researchChatExecutionLabel(defaultExecution)}`
-    : 'Default · Configure AI in Settings'
+    ? t('researchPanel.modelSelector.defaultWithModel', {
+        model: researchChatExecutionLabel(defaultExecution)
+      })
+    : t('researchPanel.modelSelector.defaultUnconfigured')
 
   return (
-    <label className="research-chat-model-selector" title="Model for this conversation">
-      <span className="sr-only">Research Chat model</span>
+    <label className="research-chat-model-selector" title={t('researchPanel.modelSelector.title')}>
+      <span className="sr-only">{t('researchPanel.modelSelector.label')}</span>
       <select
-        aria-label="Research Chat model"
+        aria-label={t('researchPanel.modelSelector.label')}
         disabled={disabled}
         value={execution ? optionValue(execution) : ''}
         onChange={(event) =>
@@ -123,7 +133,7 @@ export function ResearchChatModelSelector({
                 providerAvailable === false
                   ? ` — ${unavailableReason(provider)}`
                   : providerAvailable === null
-                    ? ' — Checking…'
+                    ? ` — ${t('researchPanel.modelSelector.checking')}`
                     : ''
               return (
                 <option

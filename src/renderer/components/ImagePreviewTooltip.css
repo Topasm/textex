@@ -3,7 +3,7 @@
   z-index: 10000;
   min-width: 160px;
   max-width: 280px;
-  border-radius: var(--ui-radius-panel, 6px);
+  border-radius: var(--ui-radius-panel);
   overflow: hidden;
   animation: image-preview-fade-in 0.15s ease-out;
   box-shadow: var(--ui-shadow-popover, 0 4px 14px rgba(0, 0, 0, 0.2));
@@ -24,8 +24,8 @@
 }
 
 .image-preview-tooltip-header {
-  padding: 6px 10px;
-  font-size: 11px;
+  padding: var(--space-6) 10px;
+  font-size: var(--font-sm);
   font-weight: 600;
   color: var(--text-secondary);
   border-bottom: 1px solid var(--ui-border, var(--border));
@@ -35,7 +35,7 @@
 }
 
 .image-preview-tooltip-body {
-  padding: 8px;
+  padding: var(--space-8);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -45,12 +45,12 @@
   max-width: 260px;
   max-height: 200px;
   object-fit: contain;
-  border-radius: var(--ui-radius-control, 4px);
+  border-radius: var(--ui-radius-control);
 }
 
 .image-preview-tooltip-loading {
-  padding: 20px;
+  padding: var(--space-20);
   text-align: center;
-  font-size: 11px;
+  font-size: var(--font-sm);
   color: var(--text-secondary);
 }

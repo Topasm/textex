@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef } from 'react'
 import { useProjectStore } from '../store/useProjectStore'
 import type { SidebarView } from '../store/useProjectStore'
 import { usePdfStore } from '../store/usePdfStore'
@@ -6,16 +6,13 @@ import {
   SIDEBAR_WIDTH_MAX,
   SIDEBAR_WIDTH_MIN,
   SPLIT_RATIO_MAX,
-  SPLIT_RATIO_MIN,
-  SWIPE_LOCK_MS
+  SPLIT_RATIO_MIN
 } from '../constants'
 import { getKeyboardResizeValue } from '../utils/keyboardResize'
 import { useHorizontalResize } from './useHorizontalResize'
+import { usePanelTabSwipe, type SlideAnim } from './usePanelTabSwipe'
 
-/** Shorter lock for discrete mouse horizontal scroll (e.g. MX Master thumb wheel). */
-const MOUSE_SWIPE_LOCK_MS = 400
-
-export type SlideAnim = 'exit-left' | 'exit-right' | 'enter-left' | 'enter-right' | null
+export type { SlideAnim }
 
 interface DragResizeHandlers {
   /** Ref to attach to the main content area for split ratio calculation. */
@@ -50,15 +47,6 @@ interface SidebarBounds {
 
 export function getSidebarWidthFromPointer(sidebarBounds: SidebarBounds, clientX: number): number {
   return clientX - sidebarBounds.left
-}
-
-export function getSidebarSlideAnimation(direction: number): {
-  exit: Extract<SlideAnim, 'exit-left' | 'exit-right'>
-  enter: Extract<SlideAnim, 'enter-left' | 'enter-right'>
-} {
-  return direction > 0
-    ? { exit: 'exit-left', enter: 'enter-right' }
-    : { exit: 'exit-right', enter: 'enter-left' }
 }
 
 /**
@@ -138,58 +126,14 @@ export function useDragResize({ sidebarTabs }: DragResizeOptions): DragResizeHan
   }, [])
 
   // ---- Sidebar swipe / horizontal scroll to switch tabs ----
-  const lastSwipeTime = useRef(0)
-  const slideAnimTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const slideAnimClearTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const [slideAnim, setSlideAnim] = useState<SlideAnim>(null)
-
-  // Clean up animation timers on unmount
-  useEffect(() => {
-    return () => {
-      clearTimeout(slideAnimTimer.current)
-      clearTimeout(slideAnimClearTimer.current)
-    }
-  }, [])
-
-  const handleSidebarWheel = useCallback(
-    (e: React.WheelEvent) => {
-      if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return
-
-      // Discrete mouse wheel (e.g. MX Master thumb wheel): deltaY===0, lower threshold
-      const isMouseWheel = e.deltaY === 0
-      if (Math.abs(e.deltaX) < (isMouseWheel ? 5 : 30)) return
-
-      // Timestamp-based lock: prevent rapid consecutive switches
-      const now = Date.now()
-      const lockMs = isMouseWheel ? MOUSE_SWIPE_LOCK_MS : SWIPE_LOCK_MS
-      if (now - lastSwipeTime.current < lockMs) return
-      lastSwipeTime.current = now
-
-      const direction = e.deltaX > 0 ? 1 : -1
-
-      // Clear any in-flight animation timers before starting new ones
-      clearTimeout(slideAnimTimer.current)
-      clearTimeout(slideAnimClearTimer.current)
-
-      const s = useProjectStore.getState()
-      const tabs = sidebarTabs
-      const idx = tabs.indexOf(s.sidebarView)
-      if (idx === -1 || tabs.length === 0) return
-      const next = tabs[(idx + direction + tabs.length) % tabs.length]
-      const animation = getSidebarSlideAnimation(direction)
-
-      // Phase 1: slide out
-      setSlideAnim(animation.exit)
-      // Phase 2: switch tab + slide in from opposite side
-      slideAnimTimer.current = setTimeout(() => {
-        s.setSidebarView(next)
-        setSlideAnim(animation.enter)
-        // Phase 3: clear animation class
-        slideAnimClearTimer.current = setTimeout(() => setSlideAnim(null), 120)
-      }, 100)
-    },
-    [sidebarTabs]
-  )
+  const sidebarView = useProjectStore((state) => state.sidebarView)
+  const { handleWheel: handleSidebarWheel, slideAnim } = usePanelTabSwipe<SidebarView>({
+    tabs: sidebarTabs,
+    activeTab: sidebarView,
+    onSelect: useCallback((tab: SidebarView) => {
+      useProjectStore.getState().setSidebarView(tab)
+    }, [])
+  })
 
   return {
     mainContentRef,

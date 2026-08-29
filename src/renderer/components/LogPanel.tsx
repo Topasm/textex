@@ -152,8 +152,8 @@ function LogPanel({ onFixWithChat, onFixWithCli, cliName = 'Codex CLI' }: LogPan
               className="log-repair-action"
               disabled={!hasRepairContext}
               onClick={() => onFixWithChat(repairPrompt)}
-              title="Review problems in Research Chat"
-              aria-label="Review problems in Research Chat"
+              title={t('logPanel.reviewInChat')}
+              aria-label={t('logPanel.reviewInChat')}
             >
               <MessageSquareText size={ICON_SIZE.compact} />
             </button>
@@ -164,8 +164,8 @@ function LogPanel({ onFixWithChat, onFixWithCli, cliName = 'Codex CLI' }: LogPan
               className="log-repair-action"
               disabled={!hasRepairContext || cliBusy}
               onClick={() => void fixWithCli()}
-              title={`Fix problems with ${cliName}`}
-              aria-label={`Fix problems with ${cliName}`}
+              title={t('logPanel.fixWithCli', { cli: cliName })}
+              aria-label={t('logPanel.fixWithCli', { cli: cliName })}
             >
               {cliBusy ? (
                 <LoaderCircle className="spin" size={ICON_SIZE.compact} />

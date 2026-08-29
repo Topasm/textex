@@ -165,6 +165,7 @@ describe('App AI Draft flow', () => {
     vi.clearAllMocks()
     shortcutHarness.openCommandPalette = null
     useUiStore.getState().setTemplateGalleryOpen(false)
+    useUiStore.setState({ openFeatureModals: [], settingsRequested: false })
     useSettingsStore.setState((state) => ({
       settings: {
         ...state.settings,
@@ -233,26 +234,24 @@ describe('App AI Draft flow', () => {
 
   it('blocks App modals over a feature dialog and closes a palette when one appears', async () => {
     render(<App />)
-    const featureModal = document.createElement('div')
-    featureModal.className = 'table-editor-overlay'
-    document.body.appendChild(featureModal)
+    // Feature dialogs announce themselves through the store; App no longer
+    // infers them from the rendered DOM.
+    act(() => useUiStore.getState().registerFeatureModal('tableEditor'))
 
     fireEvent.click(screen.getByText('Open Settings'))
     expect(screen.queryByRole('dialog', { name: 'Mock Settings' })).not.toBeInTheDocument()
 
     await act(async () => {
-      featureModal.remove()
+      useUiStore.getState().unregisterFeatureModal('tableEditor')
       await Promise.resolve()
     })
     act(() => shortcutHarness.openCommandPalette?.())
     expect(await screen.findByRole('dialog', { name: 'Command Palette' })).toBeInTheDocument()
 
-    const asyncFeatureModal = document.createElement('div')
-    asyncFeatureModal.className = 'bibliography-registration-overlay modal-overlay'
-    document.body.appendChild(asyncFeatureModal)
+    act(() => useUiStore.getState().registerFeatureModal('bibliographyRegistration'))
     await waitFor(() => {
       expect(screen.queryByRole('dialog', { name: 'Command Palette' })).not.toBeInTheDocument()
     })
-    asyncFeatureModal.remove()
+    act(() => useUiStore.getState().unregisterFeatureModal('bibliographyRegistration'))
   })
 })

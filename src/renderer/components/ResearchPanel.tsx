@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { ICON_SIZE } from './ui/IconSystem'
 import { BookOpen, MessageSquare, PanelRightClose, ScrollText, Settings2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useCompileStore } from '../store/useCompileStore'
@@ -6,6 +7,7 @@ import { useProjectStore, type ResearchPanelTab } from '../store/useProjectStore
 import { useNotificationStore } from '../store/useNotificationStore'
 import { useSettingsStore } from '../store/useSettingsStore'
 import { useResearchPanelResize } from '../hooks/useResearchPanelResize'
+import { usePanelTabSwipe } from '../hooks/usePanelTabSwipe'
 import type { AnimatedPresencePhase } from '../hooks/useAnimatedPresence'
 import { RESEARCH_PANEL_WIDTH_MAX, RESEARCH_PANEL_WIDTH_MIN } from '../constants'
 import { getKeyboardResizeValue } from '../utils/keyboardResize'
@@ -23,6 +25,9 @@ import {
   TEXTEX_REFERENCE_MIME,
   type ReferenceDragPayload
 } from './research/referenceActions'
+
+/** Swipe order, matching the tab strip left to right. */
+const RESEARCH_TAB_ORDER: ResearchPanelTab[] = ['chat', 'references', 'profile', 'problems']
 
 interface ResearchPanelProps {
   onAiDraft: () => void
@@ -208,6 +213,12 @@ export function ResearchPanel({
     [leaveProfile, tab]
   )
 
+  const { handleWheel, slideAnim } = usePanelTabSwipe<ResearchPanelTab>({
+    tabs: RESEARCH_TAB_ORDER,
+    activeTab: tab,
+    onSelect: selectTab
+  })
+
   useEffect(() => {
     if (!open) return
     const onResize = () => setIsCompact(window.innerWidth < 1200)
@@ -232,6 +243,7 @@ export function ResearchPanel({
       id="research-panel"
       className={`research-panel overlay research-panel-${presencePhase}`}
       style={{ width }}
+      onWheel={handleWheel}
       aria-label={t('researchPanel.label')}
       aria-hidden={!open}
       inert={!open ? true : undefined}
@@ -248,7 +260,11 @@ export function ResearchPanel({
         aria-valuemax={RESEARCH_PANEL_WIDTH_MAX}
         aria-valuenow={Math.round(width)}
       />
-      <div className="research-panel-tabs" role="tablist">
+      <div
+        className="research-panel-tabs panel-tabs"
+        role="tablist"
+        aria-label={t('researchPanel.label')}
+      >
         <button
           type="button"
           role="tab"
@@ -281,7 +297,7 @@ export function ResearchPanel({
           }}
           onDrop={dropReferenceOnChat}
         >
-          <MessageSquare size={14} />
+          <MessageSquare size={ICON_SIZE.compact} />
           <span className="research-panel-tab-label">{t('researchPanel.tabs.chat')}</span>
         </button>
         <button
@@ -295,7 +311,7 @@ export function ResearchPanel({
           className={tab === 'references' ? 'active' : ''}
           onClick={() => selectTab('references')}
         >
-          <BookOpen size={14} />
+          <BookOpen size={ICON_SIZE.compact} />
           <span className="research-panel-tab-label">{t('researchPanel.tabs.references')}</span>
         </button>
         <button
@@ -309,7 +325,7 @@ export function ResearchPanel({
           className={tab === 'profile' ? 'active' : ''}
           onClick={() => selectTab('profile')}
         >
-          <Settings2 size={14} />
+          <Settings2 size={ICON_SIZE.compact} />
           <span className="research-panel-tab-label">{t('researchPanel.tabs.profile')}</span>
         </button>
         <button
@@ -323,7 +339,7 @@ export function ResearchPanel({
           onClick={() => selectTab('problems')}
           title={problemsLabel}
         >
-          <ScrollText size={14} />
+          <ScrollText size={ICON_SIZE.compact} />
           <span className="research-panel-tab-label">{t('logPanel.problems')}</span>
           {problemCount > 0 && (
             <span className="research-panel-tab-badge" aria-hidden="true">
@@ -331,18 +347,18 @@ export function ResearchPanel({
             </span>
           )}
         </button>
-        <span className="research-panel-tool-separator" aria-hidden="true" />
+        <span className="panel-tool-separator" aria-hidden="true" />
         <button
           type="button"
-          className="research-panel-close"
+          className="research-panel-close panel-tool-btn"
           onClick={closePanel}
           title={t('researchPanel.close')}
           aria-label={t('researchPanel.close')}
         >
-          <PanelRightClose size={15} />
+          <PanelRightClose size={ICON_SIZE.compact} />
         </button>
       </div>
-      <div className="research-panel-content">
+      <div className={`research-panel-content${slideAnim ? ` panel-slide-${slideAnim}` : ''}`}>
         {mountedTabs.has('chat') && (
           <div
             id="research-tabpanel-chat"

@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
+import { ICON_SIZE } from '../ui/IconSystem'
+import { useTranslation } from 'react-i18next'
 import { Database, Download, Plus, RefreshCw, Save, Sparkles, Trash2 } from 'lucide-react'
+import i18n from '../../i18n'
 import type {
   ResearchPerson,
   ResearchProfile,
@@ -7,6 +10,7 @@ import type {
   ResearchSourceIndex
 } from '../../../shared/types'
 import { documentRegistry } from '../../models/documentRegistry'
+import { describeNativeError } from '../../services/nativeErrors'
 import {
   alternateGitRemote,
   applicableResearchProfileSuggestionFields,
@@ -28,24 +32,26 @@ const EMPTY_PROFILE: ResearchProfile = {
   instructions: []
 }
 
-const RESOURCE_KINDS: Array<{ value: ResearchResource['kind']; label: string }> = [
-  { value: 'git', label: 'Git repository' },
-  { value: 'website', label: 'Website' },
-  { value: 'dataset', label: 'Dataset' },
-  { value: 'documentation', label: 'Documentation' }
+// Only the stable values live here; labels resolve through i18n at render time
+// so switching language re-renders the options.
+const RESOURCE_KINDS: ReadonlyArray<ResearchResource['kind']> = [
+  'git',
+  'website',
+  'dataset',
+  'documentation'
 ]
 
-const CHAT_ACCESS_OPTIONS: Array<{ value: ResearchResource['chatAccess']; label: string }> = [
-  { value: 'none', label: 'No access' },
-  { value: 'metadata', label: 'Metadata only' },
-  { value: 'indexed-read', label: 'Read indexed source' },
-  { value: 'snapshot', label: 'Read saved snapshot' }
+const CHAT_ACCESS_VALUES: ReadonlyArray<ResearchResource['chatAccess']> = [
+  'none',
+  'metadata',
+  'indexed-read',
+  'snapshot'
 ]
 
 function chatAccessOptions(
   kind: ResearchResource['kind']
-): Array<{ value: ResearchResource['chatAccess']; label: string }> {
-  return CHAT_ACCESS_OPTIONS.filter(({ value }) =>
+): ReadonlyArray<ResearchResource['chatAccess']> {
+  return CHAT_ACCESS_VALUES.filter((value) =>
     kind === 'git' ? value !== 'snapshot' : value !== 'indexed-read'
   )
 }
@@ -131,10 +137,13 @@ function isLatexDocument(filePath: string | null): filePath is string {
 function suggestionFieldLabel(field: ResearchProfileSuggestionField): string {
   if (field === 'doi') return 'DOI'
   if (field === 'arxiv') return 'arXiv'
-  return field
+  return String(
+    i18n.t(`researchPanel.profileForm.suggestionField.${field}`, { defaultValue: field })
+  )
 }
 
 export function ResearchProfilePanel() {
+  const { t } = useTranslation()
   const projectRoot = useProjectStore((state) => state.projectRoot)
   const activeFilePath = useEditorStore((state) => state.activeFilePath)
   const activeRevision = useEditorStore((state) => state.revision)
@@ -202,7 +211,7 @@ export function ResearchProfilePanel() {
           loadGeneration.current === generation &&
           useProjectStore.getState().projectRoot === root
         ) {
-          setStatus(error instanceof Error ? error.message : String(error))
+          setStatus(describeNativeError(error))
         }
       })
       .finally(() => {
@@ -258,9 +267,12 @@ export function ResearchProfilePanel() {
     editRevision.current += 1
     setResearchProfileDraftDirty(true)
     setStatus(
-      `Filled from ${activeFilePath.split(/[\\/]/u).pop()}: ${fields.map(suggestionFieldLabel).join(', ')}.`
+      t('researchPanel.profileForm.filledFromDocument', {
+        file: activeFilePath.split(/[\\/]/u).pop(),
+        fields: fields.map(suggestionFieldLabel).join(', ')
+      })
     )
-  }, [activeFilePath, activeRevision, profile])
+  }, [activeFilePath, activeRevision, profile, t])
 
   const updateResource = <K extends keyof ResearchResource>(
     id: string,
@@ -288,24 +300,28 @@ export function ResearchProfilePanel() {
 
   const suggestFromDocument = () => {
     if (!isLatexDocument(activeFilePath)) {
-      setStatus('Open a .tex document before requesting profile suggestions.')
+      setStatus(t('researchPanel.profileForm.openTexFirst'))
       return
     }
     const snapshot = documentRegistry.snapshot(activeFilePath)
     if (!snapshot) {
-      setStatus('The active document is not available.')
+      setStatus(t('researchPanel.profileForm.documentUnavailable'))
       return
     }
 
     const suggestion = suggestResearchProfileFromLatex(snapshot.text)
     const added = profile ? applicableResearchProfileSuggestionFields(profile, suggestion) : []
     if (!profile || added.length === 0) {
-      setStatus('No suggestions were found for empty profile fields.')
+      setStatus(t('researchPanel.profileForm.noSuggestions'))
       return
     }
 
     update((current) => applyResearchProfileSuggestion(current, suggestion))
-    setStatus(`Added from the active document: ${added.map(suggestionFieldLabel).join(', ')}.`)
+    setStatus(
+      t('researchPanel.profileForm.addedFromDocument', {
+        fields: added.map(suggestionFieldLabel).join(', ')
+      })
+    )
   }
 
   const fillAlternateGitRemote = (resource: ResearchResource, field: 'url' | 'sshUrl') => {
@@ -323,7 +339,9 @@ export function ResearchProfilePanel() {
             : { ...item, url: alternate }
       )
     }))
-    setStatus(`Added the matching ${field === 'url' ? 'SSH' : 'HTTPS'} Git remote.`)
+    setStatus(
+      t('researchPanel.profileForm.addedGitRemote', { kind: field === 'url' ? 'SSH' : 'HTTPS' })
+    )
   }
 
   const updateResourceLocalPath = (resource: ResearchResource, localPath: string) => {
@@ -352,7 +370,11 @@ export function ResearchProfilePanel() {
       delete next[resource.id]
       return next
     })
-    setStatus(`Indexing ${resource.label || 'source'}…`)
+    setStatus(
+      t('researchPanel.profileForm.indexing', {
+        label: resource.label || t('researchPanel.profileForm.fallbackSource')
+      })
+    )
     try {
       const result = await window.api.researchSourceIndex(resource.id, localPath)
       if (
@@ -360,16 +382,16 @@ export function ResearchProfilePanel() {
         useProjectStore.getState().projectRoot === root
       ) {
         setSourceIndexes((current) => ({ ...current, [resource.id]: result }))
-        setStatus(`Indexed ${result.fileCount} source files.`)
+        setStatus(t('researchPanel.profileForm.indexed', { count: result.fileCount }))
       }
     } catch (error) {
       if (
         indexGeneration.current === generation &&
         useProjectStore.getState().projectRoot === root
       ) {
-        const message = error instanceof Error ? error.message : String(error)
+        const message = describeNativeError(error)
         setIndexErrors((current) => ({ ...current, [resource.id]: message }))
-        setStatus(`Source indexing failed: ${message}`)
+        setStatus(t('researchPanel.profileForm.indexFailed', { reason: message }))
       }
     } finally {
       if (indexGeneration.current === generation) {
@@ -382,10 +404,13 @@ export function ResearchProfilePanel() {
   const runGitAction = async (resource: ResearchResource, action: 'clone' | 'fetch') => {
     if (!profile || !projectRoot || saveInFlight.current || sourceOperationInFlight.current) return
     sourceOperationInFlight.current = true
-    const verb = action === 'clone' ? 'clone this repository' : 'fetch updates'
+    const verb =
+      action === 'clone'
+        ? t('researchPanel.profileForm.gitVerbClone')
+        : t('researchPanel.profileForm.gitVerbFetch')
     if (
       !window.confirm(
-        `Save this profile and ${verb} using your existing Git/SSH credentials?\n\n${resource.label || resource.id}`
+        t('researchPanel.profileForm.gitConfirm', { verb, label: resource.label || resource.id })
       )
     ) {
       sourceOperationInFlight.current = false
@@ -397,7 +422,15 @@ export function ResearchProfilePanel() {
     const revision = editRevision.current
     saveInFlight.current = true
     setGitResourceId(resource.id)
-    setStatus(`${action === 'clone' ? 'Cloning' : 'Fetching'} ${resource.label || 'source'}…`)
+    setStatus(
+      action === 'clone'
+        ? t('researchPanel.profileForm.cloning', {
+            label: resource.label || t('researchPanel.profileForm.fallbackSource')
+          })
+        : t('researchPanel.profileForm.fetching', {
+            label: resource.label || t('researchPanel.profileForm.fallbackSource')
+          })
+    )
     try {
       const saved = await window.api.researchProfileSave(normalizeProfileForSave(profile))
       if (indexGeneration.current !== generation || useProjectStore.getState().projectRoot !== root)
@@ -412,17 +445,24 @@ export function ResearchProfilePanel() {
           : await window.api.researchSourceFetch(resource.id)
       if (indexGeneration.current !== generation || useProjectStore.getState().projectRoot !== root)
         return
-      setStatus(
-        `${result.action === 'cloned' ? 'Cloned' : 'Fetched'} ${resource.label || 'source'} at ${result.localPath}.${result.output ? `\n${result.output}` : ''}`
-      )
+      const label = resource.label || t('researchPanel.profileForm.fallbackSource')
+      const summary =
+        result.action === 'cloned'
+          ? t('researchPanel.profileForm.cloned', { label, path: result.localPath })
+          : t('researchPanel.profileForm.fetched', { label, path: result.localPath })
+      setStatus(result.output ? `${summary}\n${result.output}` : summary)
     } catch (error) {
       if (
         indexGeneration.current === generation &&
         useProjectStore.getState().projectRoot === root
       ) {
-        const message = error instanceof Error ? error.message : String(error)
+        const message = describeNativeError(error)
         setIndexErrors((current) => ({ ...current, [resource.id]: message }))
-        setStatus(`Git ${action} failed: ${message}`)
+        setStatus(
+          action === 'clone'
+            ? t('researchPanel.profileForm.gitCloneFailed', { reason: message })
+            : t('researchPanel.profileForm.gitFetchFailed', { reason: message })
+        )
       }
     } finally {
       if (indexGeneration.current === generation) {
@@ -440,7 +480,7 @@ export function ResearchProfilePanel() {
     const root = projectRoot
     const revision = editRevision.current
     setSaving(true)
-    setStatus('Saving…')
+    setStatus(t('researchPanel.profileForm.saving'))
     try {
       const saved = await window.api.researchProfileSave(normalizeProfileForSave(profile))
       if (
@@ -450,9 +490,9 @@ export function ResearchProfilePanel() {
         if (editRevision.current === revision) {
           setProfile(copyProfile(saved))
           clearResearchProfileDraft()
-          setStatus('Research profile saved.')
+          setStatus(t('researchPanel.profileForm.saved'))
         } else {
-          setStatus('Profile saved. You have newer unsaved changes.')
+          setStatus(t('researchPanel.profileForm.savedStale'))
         }
       }
     } catch (error) {
@@ -471,13 +511,13 @@ export function ResearchProfilePanel() {
   }
 
   if (!projectRoot) {
-    return <div className="research-empty">Open a project to configure its research profile.</div>
+    return <div className="research-empty">{t('researchPanel.profileForm.openProjectFirst')}</div>
   }
 
   if (loading) {
     return (
       <div className="research-empty" role="status">
-        Loading research profile…
+        {t('researchPanel.profileForm.loading')}
       </div>
     )
   }
@@ -486,7 +526,7 @@ export function ResearchProfilePanel() {
     return (
       <div className="research-profile-panel">
         <p className="research-status" role="alert">
-          {status || 'The research profile could not be loaded.'}
+          {status || t('researchPanel.profileForm.loadFailed')}
         </p>
         <button
           className="research-primary-action"
@@ -497,7 +537,7 @@ export function ResearchProfilePanel() {
             setStatus('')
           }}
         >
-          Create an empty profile
+          {t('researchPanel.profileForm.createEmpty')}
         </button>
       </div>
     )
@@ -515,51 +555,50 @@ export function ResearchProfilePanel() {
         void save()
       }}
     >
-      <p className="research-muted">
-        Empty title, author, DOI, and arXiv fields are filled from explicit commands in the active
-        .tex document. Values you enter are never overwritten.
-      </p>
+      <p className="research-muted">{t('researchPanel.profileForm.autofillNotice')}</p>
 
-      <ProfileSection title="Paper" open>
+      <ProfileSection title={t('researchPanel.profileForm.sectionPaper')} open>
         <button
           className="research-profile-suggest"
           type="button"
           disabled={!isLatexDocument(activeFilePath)}
           onClick={suggestFromDocument}
         >
-          <Sparkles size={14} /> Fill empty fields from document
+          <Sparkles size={ICON_SIZE.compact} /> {t('researchPanel.profileForm.fillFromDocument')}
         </button>
         <ProfileField
-          label="Title"
+          label={t('researchPanel.profileForm.fieldTitle')}
           value={profile.paper.title}
           onChange={(value) => updatePaper('title', value)}
         />
         <ProfileField
-          label="Abstract"
+          label={t('researchPanel.profileForm.fieldAbstract')}
           value={profile.paper.abstract ?? ''}
           multiline
           onChange={(value) => updatePaper('abstract', value)}
         />
         <div className="research-profile-field-grid">
           <ProfileField
-            label="Venue"
+            label={t('researchPanel.profileForm.fieldVenue')}
             value={profile.paper.venue ?? ''}
             onChange={(value) => updatePaper('venue', value)}
           />
           <ProfileField
-            label="Project website"
+            label={t('researchPanel.profileForm.fieldWebsite')}
             type="url"
             value={profile.paper.website ?? ''}
             onChange={(value) => updatePaper('website', value)}
           />
         </div>
         <ProfileSection
-          title={`Publication identifiers (${hasPublicationIdentifiers ? 'configured' : 'optional'})`}
+          title={
+            hasPublicationIdentifiers
+              ? t('researchPanel.profileForm.sectionIdentifiersConfigured')
+              : t('researchPanel.profileForm.sectionIdentifiersOptional')
+          }
           open={hasPublicationIdentifiers}
         >
-          <p className="research-muted">
-            Add these only when the paper has a published DOI or arXiv identifier.
-          </p>
+          <p className="research-muted">{t('researchPanel.profileForm.identifiersNotice')}</p>
           <div className="research-profile-field-grid">
             <ProfileField
               label="DOI"
@@ -575,16 +614,27 @@ export function ResearchProfilePanel() {
         </ProfileSection>
       </ProfileSection>
 
-      <ProfileSection title={`Authors (${profile.paper.authors.length})`}>
+      <ProfileSection
+        title={t('researchPanel.profileForm.sectionAuthors', {
+          count: profile.paper.authors.length
+        })}
+      >
         <div className="research-profile-items">
           {profile.paper.authors.map((author, index) => (
             <div className="research-profile-card" key={author.id}>
               <div className="research-profile-card-heading">
-                <strong>{author.name || `Author ${index + 1}`}</strong>
+                <strong>
+                  {author.name ||
+                    t('researchPanel.profileForm.authorFallback', { index: index + 1 })}
+                </strong>
                 <button
                   type="button"
-                  aria-label={`Remove ${author.name || `author ${index + 1}`}`}
-                  title="Remove author"
+                  aria-label={t('researchPanel.profileForm.removeNamed', {
+                    name:
+                      author.name ||
+                      t('researchPanel.profileForm.authorFallback', { index: index + 1 })
+                  })}
+                  title={t('researchPanel.profileForm.removeAuthor')}
                   onClick={() => {
                     manuallyEditedMetadata.current.add('authors')
                     update((current) => ({
@@ -596,22 +646,22 @@ export function ResearchProfilePanel() {
                     }))
                   }}
                 >
-                  <Trash2 size={14} />
+                  <Trash2 size={ICON_SIZE.compact} />
                 </button>
               </div>
               <div className="research-profile-field-grid">
                 <ProfileField
-                  label="Name"
+                  label={t('researchPanel.profileForm.fieldName')}
                   value={author.name}
                   onChange={(value) => updateAuthor(author.id, 'name', value)}
                 />
                 <ProfileField
-                  label="Role"
+                  label={t('researchPanel.profileForm.fieldRole')}
                   value={author.role ?? ''}
                   onChange={(value) => updateAuthor(author.id, 'role', value)}
                 />
                 <ProfileField
-                  label="Homepage"
+                  label={t('researchPanel.profileForm.fieldHomepage')}
                   type="url"
                   value={author.homepage ?? ''}
                   onChange={(value) => updateAuthor(author.id, 'homepage', value)}
@@ -628,7 +678,7 @@ export function ResearchProfilePanel() {
                   onChange={(value) => updateAuthor(author.id, 'orcid', value)}
                 />
                 <ProfileField
-                  label="Email"
+                  label={t('researchPanel.profileForm.fieldEmail')}
                   type="email"
                   value={author.email ?? ''}
                   onChange={(value) => updateAuthor(author.id, 'email', value)}
@@ -649,23 +699,31 @@ export function ResearchProfilePanel() {
             }))
           }}
         >
-          <Plus size={14} /> Add author
+          <Plus size={ICON_SIZE.compact} /> {t('researchPanel.profileForm.addAuthor')}
         </button>
       </ProfileSection>
 
-      <ProfileSection title={`Resources (${profile.resources.length})`} open>
-        <p className="research-muted">
-          Credentials are never stored here. SSH repositories use your configured SSH agent.
-        </p>
+      <ProfileSection
+        title={t('researchPanel.profileForm.sectionResources', { count: profile.resources.length })}
+        open
+      >
+        <p className="research-muted">{t('researchPanel.profileForm.credentialsNotice')}</p>
         <div className="research-profile-items">
           {profile.resources.map((resource, index) => (
             <div className="research-profile-card" key={resource.id}>
               <div className="research-profile-card-heading">
-                <strong>{resource.label || `Resource ${index + 1}`}</strong>
+                <strong>
+                  {resource.label ||
+                    t('researchPanel.profileForm.resourceFallback', { index: index + 1 })}
+                </strong>
                 <button
                   type="button"
-                  aria-label={`Remove ${resource.label || `resource ${index + 1}`}`}
-                  title="Remove resource"
+                  aria-label={t('researchPanel.profileForm.removeNamed', {
+                    name:
+                      resource.label ||
+                      t('researchPanel.profileForm.resourceFallback', { index: index + 1 })
+                  })}
+                  title={t('researchPanel.profileForm.removeResource')}
                   onClick={() =>
                     update((current) => ({
                       ...current,
@@ -673,12 +731,12 @@ export function ResearchProfilePanel() {
                     }))
                   }
                 >
-                  <Trash2 size={14} />
+                  <Trash2 size={ICON_SIZE.compact} />
                 </button>
               </div>
               <div className="research-profile-field-grid">
                 <label className="research-profile-field">
-                  <span>Kind</span>
+                  <span>{t('researchPanel.profileForm.fieldKind')}</span>
                   <select
                     value={resource.kind}
                     onChange={(event) =>
@@ -688,15 +746,15 @@ export function ResearchProfilePanel() {
                       )
                     }
                   >
-                    {RESOURCE_KINDS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
+                    {RESOURCE_KINDS.map((value) => (
+                      <option key={value} value={value}>
+                        {t(`researchPanel.profileForm.resourceKind.${value}`)}
                       </option>
                     ))}
                   </select>
                 </label>
                 <ProfileField
-                  label="Label"
+                  label={t('researchPanel.profileForm.fieldLabel')}
                   value={resource.label}
                   onChange={(value) => updateResource(resource.id, 'label', value)}
                 />
@@ -712,7 +770,7 @@ export function ResearchProfilePanel() {
                   }
                 />
                 <label className="research-profile-field">
-                  <span>Chat access</span>
+                  <span>{t('researchPanel.profileForm.fieldChatAccess')}</span>
                   <select
                     value={resource.chatAccess}
                     onChange={(event) =>
@@ -723,9 +781,9 @@ export function ResearchProfilePanel() {
                       )
                     }
                   >
-                    {chatAccessOptions(resource.kind).map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
+                    {chatAccessOptions(resource.kind).map((value) => (
+                      <option key={value} value={value}>
+                        {t(`researchPanel.profileForm.chatAccess.${value}`)}
                       </option>
                     ))}
                   </select>
@@ -739,12 +797,12 @@ export function ResearchProfilePanel() {
                       onBlur={() => fillAlternateGitRemote(resource, 'sshUrl')}
                     />
                     <ProfileField
-                      label="Local path"
+                      label={t('researchPanel.profileForm.fieldLocalPath')}
                       value={resource.localPath ?? ''}
                       onChange={(value) => updateResourceLocalPath(resource, value)}
                     />
                     <ProfileField
-                      label="Branch"
+                      label={t('researchPanel.profileForm.fieldBranch')}
                       value={resource.branch ?? ''}
                       onChange={(value) => updateResource(resource.id, 'branch', value)}
                     />
@@ -762,8 +820,10 @@ export function ResearchProfilePanel() {
                         disabled={gitResourceId !== null || indexingResourceId !== null}
                         onClick={() => void runGitAction(resource, 'clone')}
                       >
-                        <Download size={14} />
-                        {gitResourceId === resource.id ? 'Working…' : 'Clone'}
+                        <Download size={ICON_SIZE.compact} />
+                        {gitResourceId === resource.id
+                          ? t('researchPanel.profileForm.working')
+                          : t('researchPanel.profileForm.clone')}
                       </button>
                       <button
                         className="research-profile-index"
@@ -771,7 +831,8 @@ export function ResearchProfilePanel() {
                         disabled={gitResourceId !== null || indexingResourceId !== null}
                         onClick={() => void runGitAction(resource, 'fetch')}
                       >
-                        <RefreshCw size={14} /> Fetch
+                        <RefreshCw size={ICON_SIZE.compact} />{' '}
+                        {t('researchPanel.profileForm.fetch')}
                       </button>
                     </div>
                     <button
@@ -780,15 +841,23 @@ export function ResearchProfilePanel() {
                       disabled={indexingResourceId !== null || gitResourceId !== null}
                       onClick={() => void indexSource(resource)}
                     >
-                      <Database size={14} />
-                      {indexingResourceId === resource.id ? 'Indexing…' : 'Index source'}
+                      <Database size={ICON_SIZE.compact} />
+                      {indexingResourceId === resource.id
+                        ? t('researchPanel.profileForm.indexingShort')
+                        : t('researchPanel.profileForm.indexSource')}
                     </button>
                     {sourceIndexes[resource.id] && (
                       <div className="research-profile-index-result" role="status">
-                        <span>{sourceIndexes[resource.id].fileCount} files</span>
+                        <span>
+                          {t('researchPanel.profileForm.fileCount', {
+                            count: sourceIndexes[resource.id].fileCount
+                          })}
+                        </span>
                         <span>{formatBytes(sourceIndexes[resource.id].totalBytes)}</span>
                         {sourceIndexes[resource.id].truncated && (
-                          <span className="warning">Index limit reached</span>
+                          <span className="warning">
+                            {t('researchPanel.profileForm.indexLimitReached')}
+                          </span>
                         )}
                       </div>
                     )}
@@ -816,21 +885,18 @@ export function ResearchProfilePanel() {
             update((current) => ({ ...current, resources: [...current.resources, resource] }))
           }}
         >
-          <Plus size={14} /> Add resource
+          <Plus size={ICON_SIZE.compact} /> {t('researchPanel.profileForm.addResource')}
         </button>
       </ProfileSection>
 
-      <ProfileSection title="Chat access & instructions">
-        <p className="research-muted">
-          Only instructions you enter here guide Chat. Resource content remains untrusted reference
-          material.
-        </p>
+      <ProfileSection title={t('researchPanel.profileForm.sectionInstructions')}>
+        <p className="research-muted">{t('researchPanel.profileForm.instructionsNotice')}</p>
         <label className="research-profile-field">
-          <span>Project-specific instructions, one per line</span>
+          <span>{t('researchPanel.profileForm.instructionsLabel')}</span>
           <textarea
             rows={6}
             value={profile.instructions.join('\n')}
-            placeholder="Compare implementation claims against the paper."
+            placeholder={t('researchPanel.profileForm.instructionsPlaceholder')}
             onChange={(event) =>
               update((current) => ({
                 ...current,
@@ -847,7 +913,10 @@ export function ResearchProfilePanel() {
           type="submit"
           disabled={saving || gitResourceId !== null}
         >
-          <Save size={14} /> {saving ? 'Saving…' : 'Save profile'}
+          <Save size={ICON_SIZE.compact} />{' '}
+          {saving
+            ? t('researchPanel.profileForm.saving')
+            : t('researchPanel.profileForm.saveProfile')}
         </button>
         {status && (
           <span className="research-profile-save-status" role="status">

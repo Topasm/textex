@@ -9,7 +9,7 @@
 @media (max-width: 1020px) {
   .toolbar {
     gap: 5px;
-    padding-inline: 8px;
+    padding-inline: var(--space-8);
   }
 
   .toolbar .file-name {
@@ -17,7 +17,7 @@
   }
 
   .toolbar-search-slot {
-    margin-left: 2px;
+    margin-left: var(--space-2);
   }
 
   .toolbar-search-slot .omni-search-wrapper {
@@ -166,7 +166,7 @@
   }
 
   .modal-overlay {
-    padding: 12px;
+    padding: var(--space-12);
   }
 
   .settings-modal {
@@ -184,7 +184,7 @@
     width: 100%;
     flex: 0 0 auto;
     flex-direction: row;
-    gap: 4px;
+    gap: var(--space-4);
     padding: 7px;
     overflow-x: auto;
     overflow-y: hidden;
@@ -196,21 +196,21 @@
   .settings-tab {
     width: auto;
     flex: 0 0 auto;
-    padding: 7px 10px;
+    padding: 7px var(--space-10);
     white-space: nowrap;
   }
 
   .settings-content {
     min-height: 0;
-    padding: 16px;
+    padding: var(--space-16);
   }
 
   .settings-tab-content {
-    gap: 16px;
+    gap: var(--space-16);
   }
 
   .settings-section {
-    padding: 14px;
+    padding: var(--space-14);
   }
 
   .settings-field-group {
@@ -225,7 +225,7 @@
   }
 
   .toolbar-left {
-    gap: 2px;
+    gap: var(--space-2);
   }
 
   .toolbar-btn,
@@ -238,7 +238,7 @@
   }
 
   .modal-overlay {
-    padding: 8px;
+    padding: var(--space-8);
   }
 
   .settings-modal {
@@ -247,15 +247,15 @@
 
   .settings-modal .modal-header,
   .settings-modal .modal-footer {
-    padding: 10px 12px;
+    padding: 10px var(--space-12);
   }
 
   .settings-content {
-    padding: 12px;
+    padding: var(--space-12);
   }
 
   .settings-section {
-    padding: 12px;
+    padding: var(--space-12);
   }
 
   .settings-row,
@@ -265,12 +265,12 @@
   .settings-thinking-budget-row,
   .settings-key-row {
     flex-wrap: wrap;
-    gap: 8px;
+    gap: var(--space-8);
   }
 
   .settings-theme-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: var(--space-8);
   }
 
   .ai-connections-layout {
@@ -308,10 +308,10 @@
   .sidebar-wrapper .sidebar-resize-handle,
   .sidebar-wrapper.sidebar-auto-hide::after,
   .sidebar-drawer-backdrop,
-  .sidebar-exit-left,
-  .sidebar-exit-right,
-  .sidebar-enter-left,
-  .sidebar-enter-right,
+  .panel-slide-exit-left,
+  .panel-slide-exit-right,
+  .panel-slide-enter-left,
+  .panel-slide-enter-right,
   .research-panel.overlay,
   .research-panel-view,
   .settings-tab,

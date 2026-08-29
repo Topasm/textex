@@ -48,7 +48,7 @@
   right: 16px;
   min-height: auto;
   border: 1px solid var(--ui-border-strong, var(--border));
-  border-radius: var(--ui-radius-panel, 6px);
+  border-radius: var(--ui-radius-panel);
   background: var(--ui-surface-raised, var(--bg-secondary));
   box-shadow: var(--ui-shadow-popover, 0 4px 14px var(--shadow-color));
 }
@@ -57,9 +57,9 @@
   display: grid;
   width: min(260px, calc(100% - 32px));
   justify-items: center;
-  gap: 12px;
-  padding: 20px;
-  border-radius: var(--ui-radius-panel, 6px);
+  gap: var(--space-12);
+  padding: var(--space-20);
+  border-radius: var(--ui-radius-panel);
 }
 
 .loading-fallback--modal .loading-fallback__card {
@@ -74,7 +74,7 @@
   width: auto;
   align-items: center;
   gap: 9px;
-  padding: 9px 12px;
+  padding: 9px var(--space-12);
 }
 
 .loading-fallback__spinner {
@@ -93,7 +93,7 @@
 
 .loading-fallback__label {
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--font-base);
   line-height: 1.4;
   text-align: center;
 }
@@ -109,7 +109,7 @@
   display: block;
   width: 100%;
   height: 6px;
-  border-radius: 999px;
+  border-radius: var(--ui-radius-pill);
   background: var(--bg-hover);
   animation: loading-fallback-fade 1.25s ease-in-out infinite alternate;
 }

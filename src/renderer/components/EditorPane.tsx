@@ -1,4 +1,5 @@
 import Editor, { BeforeMount, OnMount } from '@monaco-editor/react'
+import { useFeatureModal } from '../hooks/useFeatureModal'
 import { memo, useEffect, useRef, useState, useCallback, useMemo, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useEditorStore } from '../store/useEditorStore'
@@ -140,6 +141,8 @@ function EditorPane() {
 
   // Table editor hook
   const { tableModal, setTableModal, registerTableEditor, disposeTableEditor } = useTableEditor()
+  // Covers the lazy chunk's loading fallback as well as the modal itself.
+  useFeatureModal('tableEditor', tableModal.isOpen)
 
   // Editor commands hook
   const registerEditorCommands = useEditorCommands()

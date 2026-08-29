@@ -1,4 +1,5 @@
 import { memo, useMemo, useRef, useCallback, useState, useEffect, useReducer } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Document, Page, pdfjs } from 'react-pdf'
 import type { PDFPageProxy } from 'pdfjs-dist'
 import { useCompileStore } from '../store/useCompileStore'
@@ -51,6 +52,7 @@ interface PageViewportInfo {
 }
 
 function PreviewPane() {
+  const { t } = useTranslation()
   const pdfPath = useCompileStore((s) => s.pdfPath)
   const pdfRevision = useCompileStore((s) => s.pdfRevision)
   const pdfDocumentId = useCompileStore((s) => s.pdfDocumentId)
@@ -684,13 +686,13 @@ function PreviewPane() {
     >
       {compileStatus === 'error' && !displayedGeneration ? (
         <div className="preview-center preview-error">
-          <p>Compilation failed. Check the Problems tab.</p>
+          <p>{t('previewPane.compileFailed')}</p>
         </div>
       ) : !displayedGeneration ? (
         <div className="preview-center preview-empty">
           <div>
-            <p>No PDF to display</p>
-            <p>Open a .tex file and compile to see the preview</p>
+            <p>{t('previewPane.noPdf')}</p>
+            <p>{t('previewPane.noPdfHint')}</p>
           </div>
         </div>
       ) : (
@@ -741,7 +743,7 @@ function PreviewPane() {
                           <div>
                             <div className="preview-spinner" />
                             <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>
-                              Loading PDF...
+                              {t('previewPane.loadingPdf')}
                             </p>
                           </div>
                         </div>
@@ -759,8 +761,8 @@ function PreviewPane() {
               className="preview-center preview-error"
               style={{ position: 'absolute', top: 40, left: 0, right: 0 }}
             >
-              <p>Failed to load PDF: {pdfError}</p>
-              <p>Check the Problems tab for details.</p>
+              <p>{t('previewPane.loadFailed', { reason: pdfError })}</p>
+              <p>{t('previewPane.checkProblems')}</p>
             </div>
           )}
           {highlights.lineStyle && (

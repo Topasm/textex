@@ -28,6 +28,7 @@ const RENDERER_COMMANDS: &[&str] = &[
     "edit.find",
     "view.toggleSidebar",
     "view.toggleResearchPanel",
+    "view.toggleProse",
     "view.toggleLog",
     "view.search.citations",
     "view.search.pdf",
@@ -203,6 +204,12 @@ fn view_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<R>> {
             "view.toggleResearchPanel",
             "Toggle Research Panel",
             Some("CmdOrCtrl+Shift+B"),
+        )?)
+        .item(&command_item(
+            app,
+            "view.toggleProse",
+            "Toggle Prose View",
+            Some("CmdOrCtrl+Shift+M"),
         )?)
         .item(&command_item(
             app,

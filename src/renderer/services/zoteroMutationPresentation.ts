@@ -1,3 +1,4 @@
+import i18n from '../i18n'
 import type { ZoteroMutationOperation } from '../../shared/types'
 
 export function isLikelyZoteroMutation(value: string): boolean {
@@ -11,26 +12,48 @@ export function isLikelyZoteroMutation(value: string): boolean {
   return namesZoteroObject && requestsMutation
 }
 
+/**
+ * Human-readable summary of one planned Zotero change.
+ *
+ * Read outside React (plan previews are built before render), so it resolves
+ * translations through the shared i18n instance rather than a `t` prop.
+ */
 export function zoteroOperationLabel(operation: ZoteroMutationOperation): string {
+  const t = i18n.t.bind(i18n)
   switch (operation.kind) {
     case 'createCollection':
-      return `Create “${operation.name}” in ${operation.parentLabel}`
+      return t('researchPanel.zoteroPlan.createCollection', {
+        name: operation.name,
+        parent: operation.parentLabel
+      })
     case 'moveCollection':
-      return `Move “${operation.path}” to ${operation.parentLabel}`
+      return t('researchPanel.zoteroPlan.moveCollection', {
+        path: operation.path,
+        parent: operation.parentLabel
+      })
     case 'renameCollection':
-      return `Rename “${operation.path}” to “${operation.newName}”`
+      return t('researchPanel.zoteroPlan.renameCollection', {
+        path: operation.path,
+        name: operation.newName
+      })
     case 'updateItem': {
       const changes = [
-        operation.addTags.length > 0 && `add ${operation.addTags.join(', ')}`,
-        operation.removeTags.length > 0 && `remove ${operation.removeTags.join(', ')}`,
+        operation.addTags.length > 0 &&
+          t('researchPanel.zoteroPlan.addTags', { tags: operation.addTags.join(', ') }),
+        operation.removeTags.length > 0 &&
+          t('researchPanel.zoteroPlan.removeTags', { tags: operation.removeTags.join(', ') }),
         operation.addCollections.length > 0 &&
-          `add to ${operation.addCollections.map((collection) => collection.path).join(', ')}`,
+          t('researchPanel.zoteroPlan.addToCollections', {
+            collections: operation.addCollections.map((collection) => collection.path).join(', ')
+          }),
         operation.removeCollections.length > 0 &&
-          `remove from ${operation.removeCollections.map((collection) => collection.path).join(', ')}`
+          t('researchPanel.zoteroPlan.removeFromCollections', {
+            collections: operation.removeCollections.map((collection) => collection.path).join(', ')
+          })
       ]
         .filter(Boolean)
         .join('; ')
-      return `${operation.title}: ${changes}`
+      return t('researchPanel.zoteroPlan.updateItem', { title: operation.title, changes })
     }
   }
 }
