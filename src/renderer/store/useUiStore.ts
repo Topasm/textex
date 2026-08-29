@@ -79,6 +79,16 @@ export interface UiState {
    */
   proseViews: Readonly<Record<string, ProseView>>
 
+  /**
+   * Where the author is in the prose view, as a `.tex` source line.
+   *
+   * The Markdown source and its rendering are two projections of the same
+   * blocks, so a source line is the one anchor both halves understand.
+   * `origin` records which side moved, so the other follows without echoing
+   * the move straight back.
+   */
+  proseAnchor: { line: number; origin: 'source' | 'preview' | 'tex' } | null
+
   // Actions
   setDraftModalOpen: (open: boolean) => void
   toggleDraftModal: () => void
@@ -99,6 +109,7 @@ export interface UiState {
   registerFeatureModal: (id: string) => void
   unregisterFeatureModal: (id: string) => void
   setProseView: (filePath: string, patch: Partial<ProseView>) => void
+  setProseAnchor: (line: number, origin: 'source' | 'preview' | 'tex') => void
   forgetProseView: (filePath: string) => void
 }
 
@@ -137,6 +148,7 @@ export const useUiStore = create<UiState>()(
     settingsRequested: false,
     openFeatureModals: [],
     proseViews: {},
+    proseAnchor: null,
 
     setDraftModalOpen: (isDraftModalOpen) => set({ isDraftModalOpen }),
     toggleDraftModal: () => set((state) => ({ isDraftModalOpen: !state.isDraftModalOpen })),
@@ -170,6 +182,12 @@ export const useUiStore = create<UiState>()(
         state.openFeatureModals.includes(id)
           ? state
           : { openFeatureModals: [...state.openFeatureModals, id] }
+      ),
+    setProseAnchor: (line, origin) =>
+      set((state) =>
+        state.proseAnchor?.line === line && state.proseAnchor.origin === origin
+          ? state
+          : { proseAnchor: { line, origin } }
       ),
     setProseView: (filePath, patch) =>
       set((state) => {

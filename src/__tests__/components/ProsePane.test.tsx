@@ -4,6 +4,7 @@ import { ProsePane } from '../../renderer/components/ProsePane'
 import { ProsePreview } from '../../renderer/components/ProsePreview'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
+import { useUiStore } from '../../renderer/store/useUiStore'
 import { setActiveEditorAdapter } from '../../renderer/editor/activeEditorAdapter'
 import type { EditorAdapter } from '../../renderer/editor/EditorAdapter'
 import { PROSE_COMMIT_DELAY_MS } from '../../renderer/constants'
@@ -269,5 +270,91 @@ Prose before the figure.
     })
     expect(screen.queryByRole('img')).toBeNull()
     expect(container.textContent).toContain('includegraphics')
+  })
+})
+
+describe('prose view anchoring', () => {
+  /** Derived rather than hard-coded, so the fixture can grow safely. */
+  const paragraphLine = SOURCE.split('\n').findIndex((line) => line.startsWith('We propose')) + 1
+
+  beforeEach(() => {
+    useEditorStore.getState().resetEditor()
+    useEditorStore.getState().openFileInTab(filePath, SOURCE)
+    useUiStore.setState({ proseAnchor: null })
+    setActiveEditorAdapter({ applyEdits } as unknown as EditorAdapter)
+  })
+
+  afterEach(() => {
+    cleanup()
+    setActiveEditorAdapter(null)
+  })
+
+  it('publishes the block the caret sits in', () => {
+    render(<ProsePane />)
+    const area = source()
+
+    // Put the caret in the paragraph rather than the heading.
+    const offset = area.value.indexOf('See Figure')
+    area.setSelectionRange(offset, offset)
+    fireEvent.select(area)
+
+    expect(useUiStore.getState().proseAnchor).toEqual({
+      line: paragraphLine,
+      origin: 'source'
+    })
+  })
+
+  it('moves the caret when the rendering picks a passage', () => {
+    render(<ProsePane />)
+    const area = source()
+    area.setSelectionRange(0, 0)
+
+    act(() => {
+      useUiStore.getState().setProseAnchor(paragraphLine, 'preview')
+    })
+
+    const caretLine = area.value.slice(0, area.selectionStart).split('\n').length
+    expect(area.value.split('\n')[caretLine - 1]).toContain('We propose')
+  })
+
+  it('ignores its own anchor so the two sides cannot echo', () => {
+    render(<ProsePane />)
+    const area = source()
+    area.setSelectionRange(0, 0)
+
+    act(() => {
+      useUiStore.getState().setProseAnchor(paragraphLine, 'source')
+    })
+
+    expect(area.selectionStart).toBe(0)
+  })
+})
+
+describe('ProsePreview anchoring', () => {
+  beforeEach(() => {
+    useEditorStore.getState().resetEditor()
+    useEditorStore.getState().openFileInTab(filePath, SOURCE)
+    useUiStore.setState({ proseAnchor: null })
+  })
+
+  afterEach(cleanup)
+
+  it('labels every block with the source line it came from', () => {
+    const { container } = render(<ProsePreview />)
+    const lines = [...container.querySelectorAll('[data-prose-line]')].map((node) =>
+      Number(node.getAttribute('data-prose-line'))
+    )
+
+    expect(lines.length).toBeGreaterThan(0)
+    expect(lines).toEqual([...lines].sort((left, right) => left - right))
+  })
+
+  it('publishes a passage when the reader clicks it', () => {
+    const line = SOURCE.split('\n').findIndex((text) => text.startsWith('We propose')) + 1
+    const { container } = render(<ProsePreview />)
+
+    fireEvent.click(container.querySelector(`[data-prose-line="${line}"]`)!)
+
+    expect(useUiStore.getState().proseAnchor).toEqual({ line, origin: 'preview' })
   })
 })

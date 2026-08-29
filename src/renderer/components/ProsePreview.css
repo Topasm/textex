@@ -32,6 +32,10 @@
   line-height: 1.75;
 }
 
+.prose-preview__block {
+  scroll-margin-top: var(--space-16);
+}
+
 .prose-preview__heading {
   margin: var(--space-24) 0 var(--space-8);
   font-weight: 600;

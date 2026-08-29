@@ -173,8 +173,14 @@ export function toggleProseMode(): void {
   const enabling = proseViewFor(ui, filePath).editor === 'tex'
   ui.setProseView(filePath, { editor: enabling ? 'prose' : 'tex' })
 
-  // Leaving prose mode: land Monaco on the line the author was reading.
-  if (!enabling) useEditorStore.getState().requestJumpToLine(cursorLine, 1)
+  // Switching views keeps the author's place. Entering prose, the caret's line
+  // becomes the anchor the Markdown scrolls to; leaving it, the anchor is
+  // where Monaco lands, so the passage stays put across the swap.
+  if (enabling) {
+    ui.setProseAnchor(cursorLine, 'tex')
+    return
+  }
+  useEditorStore.getState().requestJumpToLine(ui.proseAnchor?.line ?? cursorLine, 1)
 }
 
 /** Switches the preview half between the compiled PDF and the prose rendering. */

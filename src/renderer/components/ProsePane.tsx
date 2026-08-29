@@ -5,8 +5,14 @@ import { documentRegistry } from '../models/documentRegistry'
 import { useEditorStore } from '../store/useEditorStore'
 import { getActiveEditorAdapter } from '../editor/activeEditorAdapter'
 import { projectLatexToProse } from '../../shared/proseProjection'
-import { proseDocumentEdits, proseDocumentText } from '../../shared/proseDocument'
+import {
+  proseDocumentEdits,
+  proseDocumentText,
+  spanAtMarkdownLine,
+  spanAtSourceLine
+} from '../../shared/proseDocument'
 import type { ProseRefusal } from '../../shared/proseDocument'
+import { useUiStore } from '../store/useUiStore'
 import { PROSE_COMMIT_DELAY_MS } from '../constants'
 import { ICON_SIZE } from './ui/IconSystem'
 import './ProsePane.css'
@@ -25,6 +31,7 @@ export function ProsePane() {
   const revision = useEditorStore((state) => state.revision)
   const areaRef = useRef<HTMLTextAreaElement>(null)
   const [refusal, setRefusal] = useState<ProseRefusal | null>(null)
+  const proseAnchor = useUiStore((state) => state.proseAnchor)
 
   const projection = useMemo(() => {
     // The store's revision is the signal that the buffer changed; the text
@@ -103,6 +110,45 @@ export function ProsePane() {
     return () => commitRef.current()
   }, [])
 
+  /*
+   * Keeping the two halves on the same passage.
+   *
+   * A caret position maps to a Markdown line exactly — counting newlines has
+   * none of the wrapping trouble a scroll offset does — and from there to the
+   * block that produced it. Publishing that block's `.tex` line lets the
+   * rendering follow the sentence being written.
+   */
+  const publishCaret = useCallback(() => {
+    const area = areaRef.current
+    const current = pending.current.projection
+    if (!area || !current?.hasBody) return
+    const line = area.value.slice(0, area.selectionStart).split('\n').length
+    const span = spanAtMarkdownLine(current.text, line)
+    if (span) useUiStore.getState().setProseAnchor(span.block.startLine, 'source')
+  }, [])
+
+  // Follow the rendering, or a mode switch, back to the right passage.
+  useEffect(() => {
+    if (!proseAnchor || proseAnchor.origin === 'source') return
+    const area = areaRef.current
+    if (!area || !projection?.hasBody) return
+
+    const span = spanAtSourceLine(projection.text, proseAnchor.line)
+    if (!span) return
+
+    // Everything above the target line, plus the newline that ends it, so the
+    // caret lands on the passage rather than just before its break.
+    const preceding = area.value
+      .split('\n')
+      .slice(0, span.startLine - 1)
+      .join('\n')
+    const offset = span.startLine > 1 ? preceding.length + 1 : 0
+    area.setSelectionRange(offset, offset)
+    // Put the target near the top rather than wherever the caret lands.
+    const lineHeight = area.scrollHeight / Math.max(1, area.value.split('\n').length)
+    area.scrollTop = Math.max(0, (span.startLine - 2) * lineHeight)
+  }, [projection, proseAnchor])
+
   if (!filePath) return <div className="prose-pane prose-pane--empty">{t('prosePane.noFile')}</div>
   if (!projection?.hasBody) {
     return <div className="prose-pane prose-pane--empty">{t('prosePane.noBody')}</div>
@@ -131,7 +177,12 @@ export function ProsePane() {
         value={draft}
         spellCheck
         aria-label={t('prosePane.sourceLabel')}
-        onChange={(event) => setDraft(event.target.value)}
+        onChange={(event) => {
+          setDraft(event.target.value)
+          publishCaret()
+        }}
+        onSelect={publishCaret}
+        onClick={publishCaret}
         onBlur={commit}
         onKeyDown={(event) => {
           if (event.key === 'Escape') {

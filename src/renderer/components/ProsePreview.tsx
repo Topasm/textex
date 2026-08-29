@@ -1,9 +1,10 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import katex from 'katex'
 import { documentRegistry } from '../models/documentRegistry'
 import { useEditorStore } from '../store/useEditorStore'
 import { useProjectStore } from '../store/useProjectStore'
+import { useUiStore } from '../store/useUiStore'
 import { logError } from '../utils/errorMessage'
 import { projectLatexToProse, type ProseBlock } from '../../shared/proseProjection'
 import { proseTokensToText, tokenizeProse, type ProseToken } from '../../shared/proseRender'
@@ -233,6 +234,8 @@ export function ProsePreview() {
   const { t } = useTranslation()
   const filePath = useEditorStore((state) => state.filePath)
   const revision = useEditorStore((state) => state.revision)
+  const proseAnchor = useUiStore((state) => state.proseAnchor)
+  const sheetRef = useRef<HTMLElement>(null)
 
   const blocks = useMemo(() => {
     // The store's revision is the signal that the buffer changed; the text
@@ -245,15 +248,33 @@ export function ProsePreview() {
     return document.hasBody ? document.blocks : null
   }, [filePath, revision])
 
+  // Follow the caret in the Markdown source, and a switch back from TeX.
+  useEffect(() => {
+    if (!proseAnchor || proseAnchor.origin === 'preview') return
+    const target = sheetRef.current?.querySelector(`[data-prose-line="${proseAnchor.line}"]`)
+    if (target && typeof target.scrollIntoView === 'function') {
+      target.scrollIntoView({ block: 'nearest' })
+    }
+  }, [blocks, proseAnchor])
+
   if (!blocks) {
     return <div className="prose-preview prose-preview--empty">{t('prosePane.noBody')}</div>
   }
 
   return (
     <div className="prose-preview" role="document" aria-label={t('prosePane.previewLabel')}>
-      <article className="prose-preview__sheet">
+      <article className="prose-preview__sheet" ref={sheetRef}>
         {blocks.map((block) => (
-          <Block key={`${block.kind}-${block.startLine}`} block={block} />
+          <div
+            key={`${block.kind}-${block.startLine}`}
+            data-prose-line={block.startLine}
+            className="prose-preview__block"
+            // Clicking a passage puts the caret on it in the Markdown source,
+            // which is how the author gets from reading to editing.
+            onClick={() => useUiStore.getState().setProseAnchor(block.startLine, 'preview')}
+          >
+            <Block block={block} />
+          </div>
         ))}
       </article>
     </div>
