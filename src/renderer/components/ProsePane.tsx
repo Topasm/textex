@@ -7,6 +7,7 @@ import { getActiveEditorAdapter } from '../editor/activeEditorAdapter'
 import { projectLatexToProse } from '../../shared/proseProjection'
 import { proseDocumentEdits, proseDocumentText } from '../../shared/proseDocument'
 import type { ProseRefusal } from '../../shared/proseDocument'
+import { PROSE_COMMIT_DELAY_MS } from '../constants'
 import { ICON_SIZE } from './ui/IconSystem'
 import './ProsePane.css'
 
@@ -52,15 +53,21 @@ export function ProsePane() {
     if (document.activeElement !== areaRef.current) setDraft(projected)
   }, [projected])
 
+  // Read through a ref so the debounce timer always commits the newest text
+  // without being torn down on every keystroke.
+  const pending = useRef({ draft, filePath, projection })
+  pending.current = { draft, filePath, projection }
+
   const commit = useCallback(() => {
-    if (!filePath || !projection?.hasBody) return
-    if (draft === committed.current) return
+    const { draft: text, filePath: path, projection: current } = pending.current
+    if (!path || !current?.hasBody) return
+    if (text === committed.current) return
 
     // The projection must still describe the buffer we are about to edit.
-    const current = documentRegistry.snapshot(filePath)
-    if (!current || current.revision !== projection.revision) return
+    const snapshot = documentRegistry.snapshot(path)
+    if (!snapshot || snapshot.revision !== current.revision) return
 
-    const result = proseDocumentEdits(projection.text, draft)
+    const result = proseDocumentEdits(current.text, text)
     if (result.status === 'refused') {
       setRefusal(result.reason)
       return
@@ -68,12 +75,33 @@ export function ProsePane() {
     setRefusal(null)
     if (result.status === 'unchanged') return
 
-    committed.current = draft
+    committed.current = text
     getActiveEditorAdapter()?.applyEdits(
       'prose-view',
       result.edits.map((edit) => ({ ...edit, forceMoveMarkers: true }))
     )
-  }, [draft, filePath, projection])
+  }, [])
+
+  /*
+   * Typing reaches the document on its own.
+   *
+   * Committing only on blur lost the edit whenever the author left with the
+   * keyboard or a swipe, because React fires no blur on unmount. Writing back
+   * as they type also means the TeX side and the PDF are already current when
+   * they switch, which is the point of having two views of one document.
+   */
+  const commitRef = useRef(commit)
+  commitRef.current = commit
+  useEffect(() => {
+    if (draft === committed.current) return
+    const timer = setTimeout(() => commitRef.current(), PROSE_COMMIT_DELAY_MS)
+    return () => clearTimeout(timer)
+  }, [draft])
+
+  // The last debounce may still be pending when the view closes.
+  useEffect(() => {
+    return () => commitRef.current()
+  }, [])
 
   if (!filePath) return <div className="prose-pane prose-pane--empty">{t('prosePane.noFile')}</div>
   if (!projection?.hasBody) {

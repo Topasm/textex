@@ -36,7 +36,7 @@ import { useCompileStore } from './store/useCompileStore'
 import { useProjectStore } from './store/useProjectStore'
 import type { SidebarView } from './store/useProjectStore'
 import { usePdfStore } from './store/usePdfStore'
-import { useUiStore } from './store/useUiStore'
+import { proseViewFor, useUiStore } from './store/useUiStore'
 import { useSettingsStore } from './store/useSettingsStore'
 import { useNotificationStore } from './store/useNotificationStore'
 import { deactivateProject, openProject } from './utils/openProject'
@@ -152,7 +152,10 @@ function App() {
   const isTemplateGalleryOpen = useUiStore((s) => s.isTemplateGalleryOpen)
   const updateStatus = useUiStore((s) => s.updateStatus)
   const settingsRequested = useUiStore((s) => s.settingsRequested)
-  const isProseMode = useUiStore((s) => Boolean(filePath && s.proseModePaths.includes(filePath)))
+  // The two halves are chosen independently, so drafting in Markdown against
+  // the compiled PDF is one of the four pairings rather than an unreachable one.
+  const isProseEditor = useUiStore((s) => proseViewFor(s, filePath).editor === 'prose')
+  const isProsePreview = useUiStore((s) => proseViewFor(s, filePath).preview === 'prose')
 
   // A two-finger horizontal swipe over the editor half flips TeX ⇄ prose. The
   // direction is ignored: there are only two screens, so either way toggles.
@@ -724,17 +727,17 @@ function App() {
                     keeping it alive makes switching back instant. */}
                 <div
                   className="editor-surface"
-                  data-prose-mode={isProseMode ? 'true' : 'false'}
+                  data-prose-mode={isProseEditor ? 'true' : 'false'}
                   onWheel={handleEditorSwipe}
                 >
-                  <div className="editor-surface__tex" hidden={isProseMode}>
+                  <div className="editor-surface__tex" hidden={isProseEditor}>
                     <Suspense
                       fallback={<LoadingFallback variant="pane" label={t('loading.editor')} />}
                     >
                       <EditorPane />
                     </Suspense>
                   </div>
-                  {isProseMode && (
+                  {isProseEditor && (
                     <Suspense
                       fallback={<LoadingFallback variant="pane" label={t('loading.editor')} />}
                     >
@@ -766,9 +769,9 @@ function App() {
                   <Suspense
                     fallback={<LoadingFallback variant="pane" label={t('loading.preview')} />}
                   >
-                    {/* Prose mode swaps both halves at once: Markdown source on
-                        the left, its rendering here in the PDF's slot. */}
-                    {isProseMode ? <ProsePreview /> : <PreviewPane />}
+                    {/* This half follows its own switch: the compiled PDF, or
+                        the prose rendering, whichever the author asked for. */}
+                    {isProsePreview ? <ProsePreview /> : <PreviewPane />}
                   </Suspense>
                 </PreviewErrorBoundary>
               </div>

@@ -1,10 +1,13 @@
-import { Fragment, useMemo } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import katex from 'katex'
 import { documentRegistry } from '../models/documentRegistry'
 import { useEditorStore } from '../store/useEditorStore'
+import { useProjectStore } from '../store/useProjectStore'
+import { logError } from '../utils/errorMessage'
 import { projectLatexToProse, type ProseBlock } from '../../shared/proseProjection'
-import { tokenizeProse, type ProseToken } from '../../shared/proseRender'
+import { proseTokensToText, tokenizeProse, type ProseToken } from '../../shared/proseRender'
+import { latexProseToMarkdown } from '../../shared/proseInline'
 import 'katex/dist/katex.min.css'
 import './ProsePreview.css'
 
@@ -85,6 +88,95 @@ function Inline({ tokens }: { tokens: readonly ProseToken[] }) {
   )
 }
 
+/** `\includegraphics[…]{path}` — the path, without any options. */
+const INCLUDEGRAPHICS = /\\includegraphics\s*(?:\[[^\]]*\])?\s*\{([^}]+)\}/u
+const CAPTION = /\\caption\s*\{([\s\S]*?)\}\s*(?:\n|$)/u
+
+/** LaTeX lets the extension be omitted, so try the usual ones in turn. */
+const GRAPHICS_EXTENSIONS = ['', '.png', '.jpg', '.jpeg', '.pdf', '.gif', '.webp', '.svg']
+
+const imageCache = new Map<string, string>()
+
+function joinPath(root: string, relative: string): string {
+  const separator = root.includes('\\') && !root.includes('/') ? '\\' : '/'
+  return `${root.replace(/[\\/]$/u, '')}${separator}${relative.replace(/^[\\/]/u, '')}`
+}
+
+/**
+ * Resolves a figure's graphic against the project and reads it as a data URL.
+ *
+ * A paper's figures are half of what the author is checking, so the preview
+ * shows the real image rather than the path that points at it.
+ */
+function useGraphic(reference: string | null): string | null {
+  const projectRoot = useProjectStore((state) => state.projectRoot)
+  const [dataUrl, setDataUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!reference || !projectRoot) {
+      setDataUrl(null)
+      return
+    }
+
+    let cancelled = false
+    const attempt = async (): Promise<void> => {
+      for (const extension of GRAPHICS_EXTENSIONS) {
+        const path = joinPath(projectRoot, `${reference}${extension}`)
+        const cached = imageCache.get(path)
+        if (cached) {
+          if (!cancelled) setDataUrl(cached)
+          return
+        }
+        try {
+          const { data } = await window.api.readFileBase64(path)
+          imageCache.set(path, data)
+          if (!cancelled) setDataUrl(data)
+          return
+        } catch {
+          // Try the next extension; a genuinely missing file falls through.
+        }
+      }
+      if (!cancelled) setDataUrl(null)
+    }
+
+    void attempt().catch((error) => logError('ProsePreview:graphic', error))
+    return () => {
+      cancelled = true
+    }
+  }, [projectRoot, reference])
+
+  return dataUrl
+}
+
+function Figure({ block }: { block: ProseBlock }) {
+  const reference = INCLUDEGRAPHICS.exec(block.source)?.[1]?.trim() ?? null
+  const raw = CAPTION.exec(block.source)?.[1]?.trim()
+  // A caption is LaTeX prose, so it goes through the same projection the body
+  // does before it is tokenized for display.
+  const caption = raw ? tokenizeProse(latexProseToMarkdown(raw)) : null
+  const dataUrl = useGraphic(reference)
+
+  if (!dataUrl) {
+    return (
+      <figure className="prose-preview__protected">
+        <figcaption>{block.protectedLabel}</figcaption>
+        <pre>{block.source}</pre>
+      </figure>
+    )
+  }
+
+  return (
+    <figure className="prose-preview__figure">
+      <img src={dataUrl} alt={caption ? proseTokensToText(caption) : (reference ?? '')} />
+      {caption && (
+        <figcaption>
+          <Inline tokens={caption} />
+        </figcaption>
+      )}
+    </figure>
+  )
+}
+
 const MATH_ENVIRONMENTS = new Set(['math', 'equation', 'equation*', 'align', 'align*', 'gather'])
 
 /** Strips the environment or delimiters so KaTeX sees only the body. */
@@ -116,6 +208,8 @@ function Block({ block }: { block: ProseBlock }) {
   }
 
   if (block.kind !== 'protected') return null
+
+  if (INCLUDEGRAPHICS.test(block.source)) return <Figure block={block} />
 
   if (MATH_ENVIRONMENTS.has(block.protectedLabel ?? '')) {
     return (

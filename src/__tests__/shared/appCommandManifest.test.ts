@@ -23,6 +23,7 @@ const EXPECTED_APP_COMMAND_IDS = [
   'view.toggleSidebar',
   'view.toggleResearchPanel',
   'view.toggleProse',
+  'view.toggleProsePreview',
   'view.toggleLog',
   'view.search.citations',
   'view.search.pdf',

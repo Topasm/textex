@@ -637,7 +637,8 @@
       "app_checkUpdates": "Nach Updates suchen",
       "window_close": "Fenster schließen",
       "app_quit": "TextEx beenden",
-      "view_toggleProse": "Prosaansicht umschalten"
+      "view_toggleProse": "Prosaansicht umschalten",
+      "view_toggleProsePreview": "Prosa-Darstellung umschalten"
     }
   },
   "submissionCheck": {
@@ -1157,6 +1158,8 @@
   "prosePane": {
     "showProse": "Prosaansicht anzeigen",
     "showTex": "TeX-Quelltext anzeigen",
+    "showRendering": "Prosa-Darstellung anzeigen",
+    "showPdf": "PDF anzeigen",
     "noFile": "Öffnen Sie ein .tex-Dokument für die Prosaansicht.",
     "noBody": "Diese Datei hat keinen \\begin{document}-Textkörper.",
     "sourceLabel": "Markdown-Quelltext",
