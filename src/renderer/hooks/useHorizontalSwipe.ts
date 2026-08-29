@@ -12,7 +12,14 @@ import {
  */
 export type SwipeWheelEvent = Pick<
   WheelEvent,
-  'ctrlKey' | 'currentTarget' | 'deltaMode' | 'deltaX' | 'deltaY' | 'shiftKey' | 'target'
+  | 'ctrlKey'
+  | 'currentTarget'
+  | 'deltaMode'
+  | 'deltaX'
+  | 'deltaY'
+  | 'metaKey'
+  | 'shiftKey'
+  | 'target'
 >
 
 /** Line- and page-mode deltas count in rows and screens, so scale them to pixels. */
@@ -91,8 +98,9 @@ export function useHorizontalSwipe(
 
   return useCallback(
     (event: SwipeWheelEvent) => {
-      // Ctrl+wheel is a zoom, on a trackpad a pinch. Never a swipe.
-      if (event.ctrlKey) return
+      // Ctrl/Cmd+wheel belongs to zoom (and Ctrl is how WebKit reports a
+      // trackpad pinch). Never let either chord change the workspace or page.
+      if (event.ctrlKey || event.metaKey) return
 
       const now = monotonicNow()
       // Every wheel event keeps the stream alive, vertical ones included: a

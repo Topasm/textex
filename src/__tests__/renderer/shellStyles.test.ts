@@ -126,4 +126,13 @@ describe('app shell styles', () => {
     }
     expect(readCss(resolve(root, 'components/ProsePane.css'))).not.toContain('.editor-surface')
   })
+
+  it('animates the paired workspace together and respects reduced motion', () => {
+    expect(eagerCss).toContain(".editor-surface[data-prose-mode='true'] > .prose-pane")
+    expect(eagerCss).toContain(".preview-pane[data-workspace-view='prose'] > .prose-preview")
+    expect(eagerCss).toContain('@keyframes workspace-paired-view-enter')
+    expect(eagerCss).toMatch(
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.preview-pane\[data-workspace-view\] > \.prose-preview\s*\{[^}]*animation:\s*none/u
+    )
+  })
 })
