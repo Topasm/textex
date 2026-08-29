@@ -183,3 +183,27 @@ export function tokenizeProse(markdown: string): ProseToken[] {
   flush()
   return tokens
 }
+
+/** Plain text for an alt attribute or an accessible name. */
+export function proseTokensToText(tokens: readonly ProseToken[]): string {
+  return tokens
+    .map((token) => {
+      switch (token.kind) {
+        case 'text':
+          return token.text
+        case 'strong':
+        case 'emphasis':
+        case 'code':
+          return proseTokensToText(token.children)
+        case 'citation':
+          return token.keys.join(', ')
+        case 'reference':
+          return token.target
+        case 'math':
+          return token.tex
+        case 'raw':
+          return ''
+      }
+    })
+    .join('')
+}

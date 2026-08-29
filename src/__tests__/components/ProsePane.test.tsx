@@ -1,10 +1,13 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProsePane } from '../../renderer/components/ProsePane'
 import { ProsePreview } from '../../renderer/components/ProsePreview'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
+import { useProjectStore } from '../../renderer/store/useProjectStore'
+import { useUiStore } from '../../renderer/store/useUiStore'
 import { setActiveEditorAdapter } from '../../renderer/editor/activeEditorAdapter'
 import type { EditorAdapter } from '../../renderer/editor/EditorAdapter'
+import { PROSE_COMMIT_DELAY_MS } from '../../renderer/constants'
 
 const filePath = '/project/main.tex'
 const SOURCE = `\\documentclass{article}
@@ -30,6 +33,7 @@ function source(): HTMLTextAreaElement {
 
 describe('ProsePane', () => {
   beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
     applyEdits.mockClear()
     useEditorStore.getState().resetEditor()
     useEditorStore.getState().openFileInTab(filePath, SOURCE)
@@ -38,6 +42,7 @@ describe('ProsePane', () => {
 
   afterEach(() => {
     cleanup()
+    vi.useRealTimers()
     setActiveEditorAdapter(null)
   })
 
@@ -118,6 +123,67 @@ describe('ProsePane', () => {
     fireEvent.blur(area)
     expect(applyEdits).not.toHaveBeenCalled()
   })
+
+  it('writes back as the author types, without waiting for focus to leave', () => {
+    render(<ProsePane />)
+    const area = source()
+
+    fireEvent.change(area, {
+      target: {
+        value: area.value.replace(
+          'See Figure~\\ref{fig:arch}.',
+          'See Figure~\\ref{fig:arch} for the layout.'
+        )
+      }
+    })
+    expect(applyEdits).not.toHaveBeenCalled()
+
+    act(() => {
+      vi.advanceTimersByTime(PROSE_COMMIT_DELAY_MS)
+    })
+    expect(applyEdits).toHaveBeenCalledOnce()
+  })
+
+  it('commits one edit for a burst of keystrokes', () => {
+    render(<ProsePane />)
+    const area = source()
+    const original = area.value
+
+    for (const suffix of ['a', 'ab', 'abc']) {
+      fireEvent.change(area, {
+        target: { value: original.replace('fig:arch}.', `fig:arch}, ${suffix}.`) }
+      })
+      act(() => {
+        vi.advanceTimersByTime(PROSE_COMMIT_DELAY_MS / 4)
+      })
+    }
+    expect(applyEdits).not.toHaveBeenCalled()
+
+    act(() => {
+      vi.advanceTimersByTime(PROSE_COMMIT_DELAY_MS)
+    })
+    expect(applyEdits).toHaveBeenCalledOnce()
+  })
+
+  it('flushes a pending edit when the view closes', () => {
+    const { unmount } = render(<ProsePane />)
+    const area = source()
+
+    fireEvent.change(area, {
+      target: {
+        value: area.value.replace(
+          'See Figure~\\ref{fig:arch}.',
+          'See Figure~\\ref{fig:arch} for the layout.'
+        )
+      }
+    })
+    // React fires no blur on unmount, so switching back to TeX with the
+    // keyboard used to drop the edit outright.
+    unmount()
+
+    expect(applyEdits).toHaveBeenCalledOnce()
+    expect(applyEdits.mock.calls[0][1][0].text).toContain('for the layout.')
+  })
 })
 
 describe('ProsePreview', () => {
@@ -148,5 +214,147 @@ describe('ProsePreview', () => {
   it('never shows the preamble', () => {
     const { container } = render(<ProsePreview />)
     expect(container.textContent).not.toContain('documentclass')
+  })
+})
+
+describe('ProsePreview figures', () => {
+  const FIGURE = `\\begin{document}
+\\section{Results}
+
+Prose before the figure.
+
+\\begin{figure}[htbp]
+  \\centering
+  \\includegraphics[width=0.8\\linewidth]{images/pipeline.png}
+  \\caption{Our \\textbf{pipeline}.}
+  \\label{fig:one}
+\\end{figure}
+\\end{document}`
+
+  beforeEach(() => {
+    useEditorStore.getState().resetEditor()
+    useEditorStore.getState().openFileInTab('/project/paper.tex', FIGURE)
+    useProjectStore.setState({ projectRoot: '/project' })
+  })
+
+  afterEach(cleanup)
+
+  it('shows the real image, resolved against the project root', async () => {
+    const readFileBase64 = vi
+      .fn()
+      .mockResolvedValue({ data: 'data:image/png;base64,AAAA', mimeType: 'image/png' })
+    Object.assign(window.api, { readFileBase64 })
+
+    render(<ProsePreview />)
+
+    const image = (await screen.findByRole('img')) as HTMLImageElement
+    expect(image.src).toBe('data:image/png;base64,AAAA')
+    expect(readFileBase64).toHaveBeenCalledWith('/project/images/pipeline.png')
+    // The caption keeps its inline formatting.
+    expect(screen.getByText('pipeline').tagName).toBe('STRONG')
+  })
+
+  it('falls back to the source when the graphic cannot be read', async () => {
+    Object.assign(window.api, {
+      readFileBase64: vi.fn().mockRejectedValue(new Error('missing'))
+    })
+    // A path of its own: successful reads are cached across documents.
+    useEditorStore
+      .getState()
+      .openFileInTab('/project/other.tex', FIGURE.replace('pipeline.png', 'absent.png'))
+
+    const { container } = render(<ProsePreview />)
+
+    await vi.waitFor(() => {
+      expect(container.querySelector('.prose-preview__protected')).not.toBeNull()
+    })
+    expect(screen.queryByRole('img')).toBeNull()
+    expect(container.textContent).toContain('includegraphics')
+  })
+})
+
+describe('prose view anchoring', () => {
+  /** Derived rather than hard-coded, so the fixture can grow safely. */
+  const paragraphLine = SOURCE.split('\n').findIndex((line) => line.startsWith('We propose')) + 1
+
+  beforeEach(() => {
+    useEditorStore.getState().resetEditor()
+    useEditorStore.getState().openFileInTab(filePath, SOURCE)
+    useUiStore.setState({ proseAnchor: null })
+    setActiveEditorAdapter({ applyEdits } as unknown as EditorAdapter)
+  })
+
+  afterEach(() => {
+    cleanup()
+    setActiveEditorAdapter(null)
+  })
+
+  it('publishes the block the caret sits in', () => {
+    render(<ProsePane />)
+    const area = source()
+
+    // Put the caret in the paragraph rather than the heading.
+    const offset = area.value.indexOf('See Figure')
+    area.setSelectionRange(offset, offset)
+    fireEvent.select(area)
+
+    expect(useUiStore.getState().proseAnchor).toEqual({
+      line: paragraphLine,
+      origin: 'source'
+    })
+  })
+
+  it('moves the caret when the rendering picks a passage', () => {
+    render(<ProsePane />)
+    const area = source()
+    area.setSelectionRange(0, 0)
+
+    act(() => {
+      useUiStore.getState().setProseAnchor(paragraphLine, 'preview')
+    })
+
+    const caretLine = area.value.slice(0, area.selectionStart).split('\n').length
+    expect(area.value.split('\n')[caretLine - 1]).toContain('We propose')
+  })
+
+  it('ignores its own anchor so the two sides cannot echo', () => {
+    render(<ProsePane />)
+    const area = source()
+    area.setSelectionRange(0, 0)
+
+    act(() => {
+      useUiStore.getState().setProseAnchor(paragraphLine, 'source')
+    })
+
+    expect(area.selectionStart).toBe(0)
+  })
+})
+
+describe('ProsePreview anchoring', () => {
+  beforeEach(() => {
+    useEditorStore.getState().resetEditor()
+    useEditorStore.getState().openFileInTab(filePath, SOURCE)
+    useUiStore.setState({ proseAnchor: null })
+  })
+
+  afterEach(cleanup)
+
+  it('labels every block with the source line it came from', () => {
+    const { container } = render(<ProsePreview />)
+    const lines = [...container.querySelectorAll('[data-prose-line]')].map((node) =>
+      Number(node.getAttribute('data-prose-line'))
+    )
+
+    expect(lines.length).toBeGreaterThan(0)
+    expect(lines).toEqual([...lines].sort((left, right) => left - right))
+  })
+
+  it('publishes a passage when the reader clicks it', () => {
+    const line = SOURCE.split('\n').findIndex((text) => text.startsWith('We propose')) + 1
+    const { container } = render(<ProsePreview />)
+
+    fireEvent.click(container.querySelector(`[data-prose-line="${line}"]`)!)
+
+    expect(useUiStore.getState().proseAnchor).toEqual({ line, origin: 'preview' })
   })
 })

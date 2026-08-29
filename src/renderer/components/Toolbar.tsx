@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react'
 import {
   ArrowLeft,
   ArrowRight,
+  BookOpen,
   House,
   Loader,
   Menu,
@@ -22,13 +23,13 @@ import { useCompileStore } from '../store/useCompileStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { usePdfStore } from '../store/usePdfStore'
 import { useSettingsStore } from '../store/useSettingsStore'
-import { useUiStore } from '../store/useUiStore'
+import { proseViewFor, useUiStore } from '../store/useUiStore'
 import { OmniSearch } from './OmniSearch'
 import { RecentProjectSwitcher } from './RecentProjectSwitcher'
 import PdfZoomDropdown from './PdfZoomDropdown'
 import { ICON_SIZE } from './ui/IconSystem'
 import { withShortcutHint } from '../services/commandSearch'
-import { toggleProjectSidebar, toggleProseMode } from '../services/appCommands'
+import { toggleProjectSidebar, toggleProseMode, toggleProsePreview } from '../services/appCommands'
 import { logError } from '../utils/errorMessage'
 import type { AppCommandId } from '../../shared/types'
 
@@ -120,9 +121,8 @@ const Toolbar = React.memo(function Toolbar({
   const projectRoot = useProjectStore((s) => s.projectRoot)
   const isSidebarOpen = useProjectStore((s) => s.isSidebarOpen)
   const isResearchPanelOpen = useProjectStore((s) => s.isResearchPanelOpen)
-  const isProseMode = useUiStore((state) =>
-    Boolean(filePath && state.proseModePaths.includes(filePath))
-  )
+  const isProseEditor = useUiStore((state) => proseViewFor(state, filePath).editor === 'prose')
+  const isProsePreview = useUiStore((state) => proseViewFor(state, filePath).preview === 'prose')
   const canUseProseMode = Boolean(filePath?.toLowerCase().endsWith('.tex'))
 
   const [pageInputValue, setPageInputValue] = useState('')
@@ -265,19 +265,36 @@ const Toolbar = React.memo(function Toolbar({
             )}
           </button>
 
+          {/* One button per half of the workspace. They are independent, so
+              the author can draft in Markdown with the PDF still in view. */}
           <button
             type="button"
-            className={`toolbar-btn toolbar-prose-toggle${isProseMode ? ' active' : ''}`}
+            className={`toolbar-btn toolbar-prose-toggle${isProseEditor ? ' active' : ''}`}
             onClick={toggleProseMode}
             disabled={!canUseProseMode}
             title={withShortcutHint(
-              t(isProseMode ? 'prosePane.showTex' : 'prosePane.showProse'),
+              t(isProseEditor ? 'prosePane.showTex' : 'prosePane.showProse'),
               'view.toggleProse'
             )}
-            aria-label={t(isProseMode ? 'prosePane.showTex' : 'prosePane.showProse')}
-            aria-pressed={isProseMode}
+            aria-label={t(isProseEditor ? 'prosePane.showTex' : 'prosePane.showProse')}
+            aria-pressed={isProseEditor}
           >
             <Pilcrow size={ICON_SIZE.control} />
+          </button>
+
+          <button
+            type="button"
+            className={`toolbar-btn toolbar-prose-preview-toggle${isProsePreview ? ' active' : ''}`}
+            onClick={toggleProsePreview}
+            disabled={!canUseProseMode}
+            title={withShortcutHint(
+              t(isProsePreview ? 'prosePane.showPdf' : 'prosePane.showRendering'),
+              'view.toggleProsePreview'
+            )}
+            aria-label={t(isProsePreview ? 'prosePane.showPdf' : 'prosePane.showRendering')}
+            aria-pressed={isProsePreview}
+          >
+            <BookOpen size={ICON_SIZE.control} />
           </button>
 
           <div className="toolbar-search-slot">

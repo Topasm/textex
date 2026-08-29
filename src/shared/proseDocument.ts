@@ -239,3 +239,23 @@ export function proseDocumentEdits(
   edits.sort((left, right) => right.range.start.line - left.range.start.line)
   return { status: 'ok', edits }
 }
+
+/** The span whose Markdown covers `line`, or the nearest one above it. */
+export function spanAtMarkdownLine(document: ProseDocumentText, line: number): ProseSpan | null {
+  let best: ProseSpan | null = null
+  for (const span of document.spans) {
+    if (span.startLine > line) break
+    best = span
+  }
+  return best
+}
+
+/** The span produced by the block covering `line` in the `.tex` source. */
+export function spanAtSourceLine(document: ProseDocumentText, line: number): ProseSpan | null {
+  let best: ProseSpan | null = null
+  for (const span of document.spans) {
+    if (span.block.startLine > line) break
+    best = span
+  }
+  return best
+}

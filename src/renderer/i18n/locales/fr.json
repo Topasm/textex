@@ -637,7 +637,8 @@
       "app_checkUpdates": "Rechercher les mises à jour",
       "window_close": "Fermer la fenêtre",
       "app_quit": "Quitter TextEx",
-      "view_toggleProse": "Basculer la vue prose"
+      "view_toggleProse": "Basculer la vue prose",
+      "view_toggleProsePreview": "Basculer le rendu de la prose"
     }
   },
   "submissionCheck": {
@@ -1157,6 +1158,8 @@
   "prosePane": {
     "showProse": "Afficher la vue prose",
     "showTex": "Afficher le source TeX",
+    "showRendering": "Afficher le rendu de la prose",
+    "showPdf": "Afficher le PDF",
     "noFile": "Ouvrez un document .tex pour utiliser la vue prose.",
     "noBody": "Ce fichier n’a pas de corps \\begin{document} à afficher.",
     "sourceLabel": "Source Markdown",

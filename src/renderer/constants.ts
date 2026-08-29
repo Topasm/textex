@@ -5,6 +5,8 @@ export const DEBOUNCE_ZOOM_MS = 150
 export const SYNCTEX_HIGHLIGHT_MS = 1500
 export const SETTINGS_SYNC_DELAY_MS = 500
 export const AUTO_COMPILE_DELAY_MS = 1000
+/** Quiet gap after typing before the prose view writes back into the document. */
+export const PROSE_COMMIT_DELAY_MS = 400
 /** Recent horizontal travel, in pixels, that commits a flick to a tab switch. */
 export const SWIPE_TRIGGER_TRACKPAD = 30
 /** A wheel reporting lines or pages is discrete: one notch already commits. */

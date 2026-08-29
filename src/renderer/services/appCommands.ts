@@ -3,7 +3,7 @@ import { useEditorStore } from '../store/useEditorStore'
 import { usePdfStore } from '../store/usePdfStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { useSettingsStore } from '../store/useSettingsStore'
-import { useUiStore } from '../store/useUiStore'
+import { proseViewFor, useUiStore } from '../store/useUiStore'
 import {
   clearResearchProfileDraft,
   confirmResearchProfileDraftDiscard
@@ -96,6 +96,9 @@ export async function executeAppCommand(
     case 'view.toggleProse':
       toggleProseMode()
       return
+    case 'view.toggleProsePreview':
+      toggleProsePreview()
+      return
     case 'view.toggleLog':
       context.toggleLog()
       return
@@ -147,20 +150,48 @@ export async function executeAppCommand(
  * callers reacting to a compile failure can fall back to a notification
  * instead of silently doing nothing.
  */
+/** The active document, when it is a `.tex` the prose view can project. */
+function proseTarget(): string | null {
+  const { filePath } = useEditorStore.getState()
+  if (!filePath || !filePath.toLowerCase().endsWith('.tex')) return null
+  return filePath
+}
+
 /**
- * Switches the active document between TeX and prose, and puts the caret on
- * the matching place so the author does not lose their spot across the swap.
+ * Switches the editor half between TeX and prose, and puts the caret on the
+ * matching place so the author does not lose their spot across the swap.
+ *
+ * The preview half is left where the author put it: someone drafting in
+ * Markdown against the compiled PDF should not have the PDF taken away.
  */
 export function toggleProseMode(): void {
-  const { filePath, cursorLine } = useEditorStore.getState()
-  if (!filePath || !filePath.toLowerCase().endsWith('.tex')) return
+  const filePath = proseTarget()
+  if (!filePath) return
+
+  const { cursorLine } = useEditorStore.getState()
+  const ui = useUiStore.getState()
+  const enabling = proseViewFor(ui, filePath).editor === 'tex'
+  ui.setProseView(filePath, { editor: enabling ? 'prose' : 'tex' })
+
+  // Switching views keeps the author's place. Entering prose, the caret's line
+  // becomes the anchor the Markdown scrolls to; leaving it, the anchor is
+  // where Monaco lands, so the passage stays put across the swap.
+  if (enabling) {
+    ui.setProseAnchor(cursorLine, 'tex')
+    return
+  }
+  useEditorStore.getState().requestJumpToLine(ui.proseAnchor?.line ?? cursorLine, 1)
+}
+
+/** Switches the preview half between the compiled PDF and the prose rendering. */
+export function toggleProsePreview(): void {
+  const filePath = proseTarget()
+  if (!filePath) return
 
   const ui = useUiStore.getState()
-  const enabling = !ui.proseModePaths.includes(filePath)
-  ui.setProseMode(filePath, enabling)
-
-  // Leaving prose mode: land Monaco on the line the author was reading.
-  if (!enabling) useEditorStore.getState().requestJumpToLine(cursorLine, 1)
+  ui.setProseView(filePath, {
+    preview: proseViewFor(ui, filePath).preview === 'pdf' ? 'prose' : 'pdf'
+  })
 }
 
 export function openProblemsPanel(): boolean {
