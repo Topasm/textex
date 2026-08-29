@@ -2,14 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   executeAppCommand,
   toggleLogPanel,
-  toggleProseMode,
-  toggleProsePreview
+  toggleProseMode
 } from '../../renderer/services/appCommands'
 import { usePdfStore } from '../../renderer/store/usePdfStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
-import { proseViewFor, useUiStore } from '../../renderer/store/useUiStore'
+import { useUiStore } from '../../renderer/store/useUiStore'
 import {
   clearResearchProfileDraft,
   setResearchProfileDraftDirty
@@ -185,10 +184,8 @@ describe('executeAppCommand', () => {
 })
 
 describe('toggleProseMode', () => {
-  const viewOf = (filePath: string) => proseViewFor(useUiStore.getState(), filePath)
-
   beforeEach(() => {
-    useUiStore.setState({ proseViews: {} })
+    useUiStore.setState({ proseModePaths: [] })
     useEditorStore.getState().resetEditor()
   })
 
@@ -197,19 +194,10 @@ describe('toggleProseMode', () => {
     useEditorStore.getState().openFileInTab('/p/b.tex', 'b')
 
     toggleProseMode()
-    expect(viewOf('/p/b.tex').editor).toBe('prose')
-    expect(viewOf('/p/a.tex').editor).toBe('tex')
+    expect(useUiStore.getState().proseModePaths).toEqual(['/p/b.tex'])
 
     useEditorStore.getState().setActiveTab('/p/a.tex')
-    expect(viewOf('/p/b.tex').editor).toBe('prose')
-    expect(viewOf('/p/a.tex').editor).toBe('tex')
-  })
-
-  it('leaves the preview half alone, so Markdown can be drafted against the PDF', () => {
-    useEditorStore.getState().openFileInTab('/p/a.tex', 'a')
-
-    toggleProseMode()
-    expect(viewOf('/p/a.tex')).toEqual({ editor: 'prose', preview: 'pdf' })
+    expect(useUiStore.getState().proseModePaths).toEqual(['/p/b.tex'])
   })
 
   it('puts the caret back in the source when leaving prose mode', () => {
@@ -231,41 +219,6 @@ describe('toggleProseMode', () => {
     useEditorStore.getState().openFileInTab('/p/notes.md', '# notes')
 
     toggleProseMode()
-    expect(useUiStore.getState().proseViews).toEqual({})
-  })
-})
-
-describe('toggleProsePreview', () => {
-  const viewOf = (filePath: string) => proseViewFor(useUiStore.getState(), filePath)
-
-  beforeEach(() => {
-    useUiStore.setState({ proseViews: {} })
-    useEditorStore.getState().resetEditor()
-  })
-
-  it('swaps the PDF for the prose rendering without touching the editor half', () => {
-    useEditorStore.getState().openFileInTab('/p/a.tex', 'a')
-
-    toggleProsePreview()
-    expect(viewOf('/p/a.tex')).toEqual({ editor: 'tex', preview: 'prose' })
-
-    toggleProsePreview()
-    expect(viewOf('/p/a.tex')).toEqual({ editor: 'tex', preview: 'pdf' })
-  })
-
-  it('is remembered across a trip through the editor half', () => {
-    useEditorStore.getState().openFileInTab('/p/a.tex', 'a')
-
-    toggleProsePreview()
-    toggleProseMode()
-    toggleProseMode()
-    expect(viewOf('/p/a.tex').preview).toBe('prose')
-  })
-
-  it('does nothing for a file that is not LaTeX', () => {
-    useEditorStore.getState().openFileInTab('/p/notes.md', '# notes')
-
-    toggleProsePreview()
-    expect(useUiStore.getState().proseViews).toEqual({})
+    expect(useUiStore.getState().proseModePaths).toEqual([])
   })
 })

@@ -637,8 +637,7 @@
       "app_checkUpdates": "업데이트 확인",
       "window_close": "창 닫기",
       "app_quit": "TextEx 종료",
-      "view_toggleProse": "산문 보기 전환",
-      "view_toggleProsePreview": "마크다운 렌더링 전환"
+      "view_toggleProse": "산문 보기 전환"
     }
   },
   "submissionCheck": {
@@ -1158,8 +1157,6 @@
   "prosePane": {
     "showProse": "산문 보기로 전환",
     "showTex": "TeX 소스로 전환",
-    "showRendering": "마크다운 렌더링 보기",
-    "showPdf": "PDF 보기",
     "noFile": "산문 보기를 사용하려면 .tex 문서를 여세요.",
     "noBody": "이 파일에는 표시할 \\begin{document} 본문이 없습니다.",
     "sourceLabel": "마크다운 소스",
