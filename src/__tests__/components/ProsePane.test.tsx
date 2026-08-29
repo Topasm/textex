@@ -334,6 +334,20 @@ describe('prose view anchoring', () => {
 
     const caretLine = area.value.slice(0, area.selectionStart).split('\n').length
     expect(area.value.split('\n')[caretLine - 1]).toContain('We propose')
+    expect(area).toHaveFocus()
+  })
+
+  it('takes focus when a TeX-to-prose switch supplies the source anchor', () => {
+    render(<ProsePane />)
+    const area = source()
+
+    act(() => {
+      useUiStore.getState().setProseAnchor(filePath, paragraphLine, 'tex')
+    })
+
+    expect(area).toHaveFocus()
+    const caretLine = area.value.slice(0, area.selectionStart).split('\n').length
+    expect(area.value.split('\n')[caretLine - 1]).toContain('We propose')
   })
 
   it('ignores its own anchor so the two sides cannot echo', () => {

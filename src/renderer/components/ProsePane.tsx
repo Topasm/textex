@@ -156,6 +156,10 @@ export function ProsePane() {
     // Put the target near the top rather than wherever the caret lands.
     const lineHeight = area.scrollHeight / Math.max(1, area.value.split('\n').length)
     area.scrollTop = Math.max(0, (span.startLine - 2) * lineHeight)
+    // The old surface can be hidden while it still owns DOM focus. Move focus
+    // with the caret so a toolbar/gesture switch, or a rendered-passage click,
+    // is immediately ready for typing without another click.
+    area.focus({ preventScroll: true })
   }, [projection, proseAnchor])
 
   if (!filePath) return <div className="prose-pane prose-pane--empty">{t('prosePane.noFile')}</div>

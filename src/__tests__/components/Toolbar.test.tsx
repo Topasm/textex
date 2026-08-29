@@ -292,5 +292,9 @@ describe('Toolbar', () => {
       'title',
       'Open app menu (Ctrl+Shift+P)'
     )
+    expect(screen.getByRole('button', { name: 'Show prose view' })).toHaveAttribute(
+      'title',
+      'Show prose view (Ctrl+Shift+M)\nSwipe horizontally on the source pane to switch views.'
+    )
   })
 })

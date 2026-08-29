@@ -1157,6 +1157,7 @@
   "prosePane": {
     "showProse": "Mostrar a visão de prosa",
     "showTex": "Mostrar o código TeX",
+    "swipeHint": "Deslize horizontalmente no painel de código para alternar a visualização.",
     "noFile": "Abra um documento .tex para usar a visão de prosa.",
     "noBody": "Este arquivo não tem um corpo \\begin{document} para exibir.",
     "sourceLabel": "Código Markdown",

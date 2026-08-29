@@ -269,10 +269,10 @@ const Toolbar = React.memo(function Toolbar({
             className={`toolbar-btn toolbar-prose-toggle${isProseMode ? ' active' : ''}`}
             onClick={toggleProseMode}
             disabled={!canUseProseMode}
-            title={withShortcutHint(
+            title={`${withShortcutHint(
               t(isProseMode ? 'prosePane.showTex' : 'prosePane.showProse'),
               'view.toggleProse'
-            )}
+            )}\n${t('prosePane.swipeHint')}`}
             aria-label={t(isProseMode ? 'prosePane.showTex' : 'prosePane.showProse')}
             aria-pressed={isProseMode}
           >

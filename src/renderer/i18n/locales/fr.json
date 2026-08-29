@@ -1157,6 +1157,7 @@
   "prosePane": {
     "showProse": "Afficher la vue prose",
     "showTex": "Afficher le source TeX",
+    "swipeHint": "Balayez horizontalement dans le volet source pour changer de vue.",
     "noFile": "Ouvrez un document .tex pour utiliser la vue prose.",
     "noBody": "Ce fichier n’a pas de corps \\begin{document} à afficher.",
     "sourceLabel": "Source Markdown",
