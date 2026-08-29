@@ -155,9 +155,11 @@ function App() {
   const settingsRequested = useUiStore((s) => s.settingsRequested)
   const isProseMode = useUiStore((state) => proseModeFor(state, filePath))
 
-  // A two-finger horizontal swipe over the editor half flips TeX ⇄ prose. The
-  // direction is ignored: there are only two screens, so either way toggles.
-  const handleEditorSwipe = useHorizontalSwipe(useCallback(() => toggleProseMode(), []))
+  // A two-finger horizontal swipe flips the paired workspace TeX/PDF ⇄
+  // Markdown/render. In TeX mode only the editor owns this gesture because the
+  // PDF preview already uses horizontal swipes for page navigation. Once the
+  // Markdown pair is visible, either half can take the author back.
+  const handleWorkspaceSwipe = useHorizontalSwipe(useCallback(() => toggleProseMode(), []))
   // Feature dialogs register themselves; App never inspects the DOM for them.
   const isFeatureModalOpen = useUiStore((s) => s.openFeatureModals.length > 0)
   const hasNotifications = useNotificationStore((s) => s.notifications.length > 0)
@@ -727,7 +729,7 @@ function App() {
                 <div
                   className="editor-surface"
                   data-prose-mode={isProseMode ? 'true' : 'false'}
-                  onWheel={handleEditorSwipe}
+                  onWheel={handleWorkspaceSwipe}
                 >
                   <div className="editor-surface__tex" hidden={isProseMode}>
                     <Suspense
@@ -760,6 +762,8 @@ function App() {
               />
               <div
                 className="preview-pane"
+                data-workspace-view={isProseMode ? 'prose' : 'pdf'}
+                onWheel={isProseMode ? handleWorkspaceSwipe : undefined}
                 style={{
                   width: `${(1 - splitRatio) * 100}%`
                 }}
