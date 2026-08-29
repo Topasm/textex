@@ -44,6 +44,30 @@ describe('ResearchPanel tabs', () => {
     expect(container.querySelectorAll('.research-panel-tab-label')).toHaveLength(4)
   })
 
+  it('steps one tab per horizontal flick, matching the sidebar gesture', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      render(<ResearchPanel onAiDraft={vi.fn()} />)
+      const panel = screen.getByRole('complementary', { name: 'Research panel' })
+
+      // A single flick: a decisive event trailed by its momentum.
+      for (const deltaX of [90, 120, 80, 60, 45]) {
+        fireEvent.wheel(panel, { deltaX, deltaY: 2 })
+        vi.advanceTimersByTime(16)
+      }
+      vi.advanceTimersByTime(400)
+
+      await waitFor(() => expect(useProjectStore.getState().researchPanelTab).toBe('references'))
+
+      fireEvent.wheel(panel, { deltaX: -90, deltaY: 2 })
+      vi.advanceTimersByTime(400)
+
+      await waitFor(() => expect(useProjectStore.getState().researchPanelTab).toBe('chat'))
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('keeps the Chat composer mounted while switching through References', async () => {
     render(<ResearchPanel onAiDraft={vi.fn()} />)
     const input = await screen.findByRole('textbox', { name: 'Research question' })

@@ -306,6 +306,7 @@
   .sidebar-wrapper,
   .sidebar-wrapper .sidebar,
   .sidebar-wrapper .sidebar-resize-handle,
+  .panel-resize-handle,
   .sidebar-wrapper.sidebar-auto-hide::after,
   .sidebar-drawer-backdrop,
   .panel-slide-exit-left,
@@ -331,7 +332,7 @@
   }
 
   .split-divider,
-  .sidebar-resize-handle {
+  .panel-resize-handle {
     background: CanvasText;
   }
 

@@ -187,7 +187,7 @@ function GitPanel() {
   if (!projectRoot) {
     return (
       <div className="git-panel">
-        <div className="git-empty">{t('gitPanel.openFolder')}</div>
+        <div className="panel-empty">{t('gitPanel.openFolder')}</div>
       </div>
     )
   }
@@ -195,7 +195,7 @@ function GitPanel() {
   if (!isRepo) {
     return (
       <div className="git-panel">
-        <div className="git-empty">
+        <div className="panel-empty">
           {t('gitPanel.notRepo')}
           <br />
           <button
@@ -342,7 +342,7 @@ function GitPanel() {
       )}
 
       {staged.length === 0 && unstaged.length === 0 && (
-        <div className="git-empty">{t('gitPanel.noChanges')}</div>
+        <div className="panel-empty">{t('gitPanel.noChanges')}</div>
       )}
 
       <div className="git-commit-section">

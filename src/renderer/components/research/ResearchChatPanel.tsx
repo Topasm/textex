@@ -1265,7 +1265,7 @@ export function ResearchChatPanel({
   )
 
   if (!projectRoot)
-    return <div className="research-empty">{t('researchPanel.chat.openProjectFirst')}</div>
+    return <div className="panel-empty">{t('researchPanel.chat.openProjectFirst')}</div>
 
   const headerStatus = !profile
     ? status

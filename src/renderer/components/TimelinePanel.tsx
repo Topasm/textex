@@ -155,7 +155,7 @@ export function TimelinePanel() {
   if (!activeFilePath) {
     return (
       <div className="timeline-panel">
-        <div className="timeline-empty">{t('timelinePanel.noFile')}</div>
+        <div className="panel-empty">{t('timelinePanel.noFile')}</div>
       </div>
     )
   }
@@ -163,7 +163,7 @@ export function TimelinePanel() {
   if (loading && entries.length === 0) {
     return (
       <div className="timeline-panel">
-        <div className="timeline-empty">{t('timelinePanel.loading')}</div>
+        <div className="panel-empty">{t('timelinePanel.loading')}</div>
       </div>
     )
   }
@@ -171,7 +171,7 @@ export function TimelinePanel() {
   if (entries.length === 0) {
     return (
       <div className="timeline-panel">
-        <div className="timeline-empty">{t('timelinePanel.noHistory')}</div>
+        <div className="panel-empty">{t('timelinePanel.noHistory')}</div>
       </div>
     )
   }

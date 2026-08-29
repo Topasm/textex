@@ -6,7 +6,7 @@
  */
 
 .research-panel {
-  container-name: research-panel;
+  container-name: research-panel panel;
 }
 
 /* Reference cards should never force the panel wider than its container. */
@@ -157,15 +157,6 @@
 }
 
 @container research-panel (max-width: 360px) {
-  .research-panel-tabs > [role='tab'] {
-    flex-basis: 34px;
-    min-width: 34px;
-  }
-
-  .research-panel-tabs .panel-tool-btn {
-    padding-inline: 7px;
-  }
-
   .research-reference-view {
     padding: 7px;
   }

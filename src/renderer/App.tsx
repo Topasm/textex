@@ -511,7 +511,7 @@ function App() {
     <div
       className={sidebarWrapperClass}
       id="project-sidebar"
-      style={{ '--sidebar-shell-width': `${sidebarWidth + 4}px` } as CSSProperties}
+      style={{ '--sidebar-shell-width': `${sidebarWidth + 5}px` } as CSSProperties}
       aria-hidden={sidebarPresence.phase === 'exiting' ? 'true' : undefined}
       inert={sidebarPresence.phase === 'exiting' ? true : undefined}
     >
@@ -542,7 +542,7 @@ function App() {
           <span className="panel-tool-separator" aria-hidden="true" />
           <button
             type="button"
-            className="sidebar-pin-btn panel-tool-btn"
+            className="panel-tool-btn"
             title={autoHideSidebar ? t('sidebar.pinSidebar') : t('sidebar.unpinSidebar')}
             aria-label={autoHideSidebar ? t('sidebar.pinSidebar') : t('sidebar.unpinSidebar')}
             onClick={() => {
@@ -579,7 +579,7 @@ function App() {
         </div>
       </div>
       <div
-        className="sidebar-resize-handle sidebar-left"
+        className="sidebar-resize-handle panel-resize-handle sidebar-left"
         style={sidebarHandleStyle}
         onMouseDown={handleSidebarDividerMouseDown}
         onDoubleClick={handleSidebarDividerDoubleClick}

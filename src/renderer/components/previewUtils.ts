@@ -19,13 +19,13 @@ export const VIRTUALIZATION_THRESHOLD = 10
 /** Debounce delay for persisting scroll position. */
 export const SCROLL_PERSIST_DEBOUNCE_MS = 500
 
-/** Accumulated delta threshold to trigger page navigation in single-page mode (vertical scroll). */
+/**
+ * Accumulated vertical delta that turns a page in single-page mode. Horizontal
+ * flicks go through the shared swipe layer instead and use its own trigger.
+ */
 export const SWIPE_THRESHOLD = 150
 
-/** Lower threshold for pure horizontal scroll (e.g. MX Master thumb wheel). */
-export const SWIPE_THRESHOLD_HORIZONTAL = 30
-
-/** Cooldown between swipe-triggered page navigations. */
+/** Cooldown between vertical-scroll page navigations. */
 export const SWIPE_COOLDOWN_MS = 400
 
 /** Standard A4 page width in PDF points. */

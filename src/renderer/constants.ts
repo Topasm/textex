@@ -5,13 +5,13 @@ export const DEBOUNCE_ZOOM_MS = 150
 export const SYNCTEX_HIGHLIGHT_MS = 1500
 export const SETTINGS_SYNC_DELAY_MS = 500
 export const AUTO_COMPILE_DELAY_MS = 1000
-/** Horizontal travel that commits a trackpad flick to a tab switch. */
+/** Recent horizontal travel, in pixels, that commits a flick to a tab switch. */
 export const SWIPE_TRIGGER_TRACKPAD = 30
-/** A discrete wheel emits fewer, larger steps, so it commits far sooner. */
+/** A wheel reporting lines or pages is discrete: one notch already commits. */
 export const SWIPE_TRIGGER_WHEEL = 5
 /** Quiet gap that ends a flick, momentum tail included. */
 export const SWIPE_GESTURE_IDLE_MS = 120
-/** Floor between two switches, so the slide animation always completes. */
+/** Floor between two switches; must cover the exit plus enter slide below. */
 export const SWIPE_LOCK_MS = 260
 /** Panel tab slide-out, then slide-in from the opposite edge. */
 export const PANEL_SLIDE_EXIT_MS = 100

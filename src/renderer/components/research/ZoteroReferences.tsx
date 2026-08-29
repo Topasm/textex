@@ -921,7 +921,7 @@ export function ZoteroReferences({
 
   if (busy === 'load') {
     return (
-      <div className="research-empty">
+      <div className="panel-empty">
         <Loader className="spin" size={ICON_SIZE.feature} /> Loading Zotero…
       </div>
     )

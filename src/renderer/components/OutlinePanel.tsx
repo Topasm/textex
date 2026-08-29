@@ -194,7 +194,7 @@ function OutlinePanel() {
   if (!filePath) {
     return (
       <div className="outline-panel">
-        <div className="git-empty">{t('outlinePanel.noFile')}</div>
+        <div className="panel-empty">{t('outlinePanel.noFile')}</div>
       </div>
     )
   }
@@ -214,7 +214,7 @@ function OutlinePanel() {
             <Rows3 size={ICON_SIZE.compact} /> {t('outlinePanel.bands')}
           </button>
         </div>
-        <div className="git-empty">{t('outlinePanel.noOutline')}</div>
+        <div className="panel-empty">{t('outlinePanel.noOutline')}</div>
       </div>
     )
   }

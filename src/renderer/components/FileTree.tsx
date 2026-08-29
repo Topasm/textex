@@ -921,7 +921,7 @@ function VirtualizedProjectFileTree({
         />
       )}
       {displayRows.length === 0 ? (
-        <div className="git-empty">{t('fileTree.noFolder')}</div>
+        <div className="panel-empty">{t('fileTree.noFolder')}</div>
       ) : (
         <div
           ref={viewportRef}
@@ -1090,7 +1090,7 @@ function FileTree() {
   if (!directoryTree || directoryTree.length === 0) {
     return (
       <div className="file-tree">
-        <div className="git-empty">{t('fileTree.noFolder')}</div>
+        <div className="panel-empty">{t('fileTree.noFolder')}</div>
       </div>
     )
   }

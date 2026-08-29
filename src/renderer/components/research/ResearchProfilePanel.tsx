@@ -511,12 +511,12 @@ export function ResearchProfilePanel() {
   }
 
   if (!projectRoot) {
-    return <div className="research-empty">{t('researchPanel.profileForm.openProjectFirst')}</div>
+    return <div className="panel-empty">{t('researchPanel.profileForm.openProjectFirst')}</div>
   }
 
   if (loading) {
     return (
-      <div className="research-empty" role="status">
+      <div className="panel-empty" role="status">
         {t('researchPanel.profileForm.loading')}
       </div>
     )

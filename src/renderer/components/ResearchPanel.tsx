@@ -249,7 +249,7 @@ export function ResearchPanel({
       inert={!open ? true : undefined}
     >
       <div
-        className="research-resize-handle"
+        className="research-resize-handle panel-resize-handle"
         onMouseDown={startResize}
         onKeyDown={resizePanelByKeyboard}
         role="separator"

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type React from 'react'
 import { PANEL_SLIDE_ENTER_MS, PANEL_SLIDE_EXIT_MS } from '../constants'
 import { useHorizontalSwipe } from './useHorizontalSwipe'
@@ -43,9 +43,18 @@ export function usePanelTabSwipe<Tab>({
   const exitTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const clearTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
-  // Read through a ref so the wheel handler keeps a stable identity.
+  // Read through a ref so the wheel handler keeps a stable identity. Written
+  // after commit, never during render: a render that never commits must not
+  // leave the handler pointing at a tab the panel never showed.
   const latest = useRef({ tabs, activeTab, onSelect })
-  latest.current = { tabs, activeTab, onSelect }
+  // The tab an in-flight slide is on its way to, so a flick that arrives mid
+  // animation steps on from where the panel is going, not where it still is.
+  const pendingTab = useRef<Tab | null>(null)
+
+  useLayoutEffect(() => {
+    latest.current = { tabs, activeTab, onSelect }
+    if (pendingTab.current === activeTab) pendingTab.current = null
+  })
 
   useEffect(() => {
     return () => {
@@ -55,7 +64,8 @@ export function usePanelTabSwipe<Tab>({
   }, [])
 
   const swipe = useCallback((direction: 1 | -1) => {
-    const { tabs: order, activeTab: current, onSelect: select } = latest.current
+    const { tabs: order, activeTab: shown, onSelect: select } = latest.current
+    const current = pendingTab.current ?? shown
     if (order.length < 2) return
     const index = order.indexOf(current)
     if (index === -1) return
@@ -65,13 +75,19 @@ export function usePanelTabSwipe<Tab>({
     // Drop any in-flight animation before starting the next one.
     clearTimeout(exitTimer.current)
     clearTimeout(clearTimer.current)
+    pendingTab.current = next
 
     const animation = getPanelSlideAnimation(direction)
     setSlideAnim(animation.exit)
     exitTimer.current = setTimeout(() => {
       select(next)
       setSlideAnim(animation.enter)
-      clearTimer.current = setTimeout(() => setSlideAnim(null), PANEL_SLIDE_ENTER_MS)
+      clearTimer.current = setTimeout(() => {
+        // A caller that declined the selection must not leave a phantom tab
+        // behind for the next flick to step from.
+        pendingTab.current = null
+        setSlideAnim(null)
+      }, PANEL_SLIDE_ENTER_MS)
     }, PANEL_SLIDE_EXIT_MS)
   }, [])
 

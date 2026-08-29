@@ -378,8 +378,7 @@ body,
 }
 
 .split-divider:focus-visible,
-.sidebar-resize-handle:focus-visible,
-.research-resize-handle:focus-visible {
+.panel-resize-handle:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
 }
@@ -1333,6 +1332,8 @@ body,
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  /* The strip compacts on the panel it lives in, not on the viewport. */
+  container: panel / inline-size;
 }
 
 .sidebar.sidebar-left {
@@ -1343,63 +1344,16 @@ body,
   border-left: 1px solid var(--border);
 }
 
-.sidebar-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-8) var(--space-16);
-  font-size: var(--font-sm);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-secondary);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
+/* Strip metrics, tool buttons and the resize handle live with the shared
+   `.panel-*` rules further down, so the left sidebar and the right research
+   panel wear the same chrome. */
 
-.sidebar-header button {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  font-size: var(--font-lg);
-  padding: 0 var(--space-4);
-}
-
-.sidebar-header button:hover {
-  color: var(--text-primary);
-}
-
-/* Strip metrics live with the shared `.panel-tabs` rules further down, so the
-   left sidebar and the right research panel wear the same tab bar. */
-
-.sidebar-pin-btn {
-  opacity: 0.6;
-  transition:
-    opacity 0.15s,
-    color 0.15s;
-}
-
-.sidebar-pin-btn:hover {
-  opacity: 1;
-  color: var(--accent);
-}
-
-.sidebar-auto-hide .sidebar-pin-btn {
-  opacity: 0.5;
-}
-
-.sidebar-auto-hide:hover .sidebar-pin-btn {
-  opacity: 0.7;
-}
-
-.sidebar-auto-hide:hover .sidebar-pin-btn:hover {
-  opacity: 1;
-}
-
+/* Like `.research-panel-content`: the shell never scrolls, each view owns one
+   scroller so a tab switch cannot leave two scrollbars stacked. */
 .sidebar-content {
   flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* Tab-swipe transition, shared by the sidebar and the research panel. */
@@ -1451,25 +1405,17 @@ body,
   }
 }
 
+/* Only the inline placement differs: the sidebar handle is a layout column,
+   the research handle overlays the editor edge of a floating panel. */
 .sidebar-resize-handle {
-  width: 4px;
   flex-shrink: 0;
-  background-color: var(--border);
-  cursor: col-resize;
-  transition: background-color 0.15s;
-}
-
-.sidebar-resize-handle:hover,
-.sidebar-resize-handle:active,
-.sidebar-resize-handle:focus-visible {
-  background-color: var(--accent);
 }
 
 /* Sidebar wrapper (normal mode: inline flex child) */
 .sidebar-wrapper {
   display: flex;
   flex-shrink: 0;
-  max-width: var(--sidebar-shell-width, 244px);
+  max-width: var(--sidebar-shell-width, 245px);
   overflow: hidden;
   opacity: 1;
   transition:
@@ -1587,9 +1533,24 @@ body,
   pointer-events: none;
 }
 
+/* Sidebar views scroll like the research views do: the view is the scroller,
+   with a reserved gutter so a tab switch never shifts the rows sideways. A
+   view that opens with a bordered header sits flush under the tab strip. */
+.file-tree,
+.git-panel,
+.outline-panel,
+.timeline-panel,
+.todo-panel {
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
 /* File Tree */
 .file-tree {
-  padding: var(--space-4) 0;
+  padding: 0 0 var(--space-8);
 }
 
 .file-tree-virtualized {
@@ -1599,6 +1560,8 @@ body,
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  /* The virtual viewport below owns the gutter instead. */
+  scrollbar-gutter: auto;
 }
 
 .file-tree-viewport {
@@ -1606,6 +1569,8 @@ body,
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 .file-tree-virtual-space {
@@ -1947,7 +1912,7 @@ body,
 
 /* Git Panel */
 .git-panel {
-  padding: var(--space-8) 0;
+  padding: var(--space-6) 0 var(--space-8);
 }
 
 .git-remote-section {
@@ -2069,14 +2034,7 @@ body,
 }
 
 .git-section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-4) var(--space-12);
-  font-size: var(--font-sm);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-secondary);
+  padding: var(--space-6) var(--space-12) var(--space-4);
 }
 
 .git-section-header span:last-child {
@@ -2190,10 +2148,12 @@ body,
   cursor: not-allowed;
 }
 
-.git-empty {
-  padding: var(--space-12);
-  font-size: var(--font-base);
+/* Empty and "nothing selected" placeholders read the same on both sides. */
+.panel-empty {
+  padding: var(--space-20) var(--space-12);
   color: var(--text-secondary);
+  font-size: var(--font-md);
+  line-height: 1.5;
   text-align: center;
 }
 
@@ -2464,9 +2424,7 @@ body,
 
 /* Structure Panel */
 .outline-panel {
-  padding: var(--space-6) 0;
-  overflow-y: auto;
-  overflow-x: hidden;
+  padding: 0 0 var(--space-8);
 }
 
 .outline-panel-header {
@@ -2887,22 +2845,22 @@ body,
 .research-resize-handle {
   position: absolute;
   inset: 0 auto 0 -3px;
-  width: 5px;
-  cursor: col-resize;
   z-index: 2;
-}
-
-.research-resize-handle:hover {
-  background: var(--accent);
-}
-
-.research-resize-handle:focus-visible {
-  background: var(--accent);
 }
 
 .sidebar-drawer-backdrop {
   display: none;
 }
+
+/* Panel type scale, shared by the sidebar and the research panel. The right
+   panel used to run a step smaller than the left at every tier, which is what
+   made the two sides read as different products:
+     --font-base  list row, entry title, primary input
+     --font-sm    secondary meta under a row, card copy, status line
+     --font-xs    micro chip, small action button, timestamp, count
+     --font-md    quiet explanatory copy (`.panel-empty`, `.research-muted`)
+     --font-2xs   glyphs and numeric pills only
+   Pick the tier by the text's role, not by which panel it sits in. */
 
 /* One tab strip for both panels: `.panel-tabs` is worn by the project sidebar
    and by the research panel, so left and right match icon for icon. */
@@ -2939,8 +2897,8 @@ body,
 }
 
 .panel-tabs > [role='tab'] {
-  flex: 0 0 38px;
-  min-width: 38px;
+  flex: 0 1 38px;
+  min-width: 30px;
   padding-inline: 0;
   font-size: var(--font-sm);
   white-space: nowrap;
@@ -3003,6 +2961,46 @@ body,
   flex-shrink: 0;
   margin-left: auto;
   padding-inline: var(--space-10);
+}
+
+/* Both panels are drag-resized from the edge they share with the editor. The
+   seam is the panel's own 1px border, so the handle stays quiet until it is
+   pointed at or focused. */
+.panel-resize-handle {
+  width: 5px;
+  background-color: transparent;
+  cursor: col-resize;
+  transition: background-color 0.15s;
+}
+
+.panel-resize-handle:hover,
+.panel-resize-handle:active,
+.panel-resize-handle:focus-visible {
+  background-color: var(--accent);
+}
+
+/* Either panel can be dragged narrower than the strip's natural width, so the
+   tabs compact against their own panel rather than the viewport. */
+@container panel (max-width: 360px) {
+  .panel-tabs > [role='tab'] {
+    flex-basis: 34px;
+    min-width: 28px;
+  }
+
+  .panel-tabs .panel-tool-btn {
+    padding-inline: 7px;
+  }
+}
+
+@container panel (max-width: 220px) {
+  .panel-tabs > [role='tab'] {
+    flex-basis: 30px;
+    min-width: 22px;
+  }
+
+  .panel-tabs .panel-tool-btn {
+    padding-inline: var(--space-4);
+  }
 }
 
 .research-panel-content,
@@ -3121,14 +3119,14 @@ body,
 
 .reference-health-heading strong {
   color: var(--text-primary);
-  font-size: var(--font-sm);
+  font-size: var(--font-base);
 }
 
 .reference-health-heading span,
 .reference-health-heading small,
 .reference-health-issues {
   color: var(--text-secondary);
-  font-size: var(--font-2xs);
+  font-size: var(--font-xs);
 }
 
 .reference-health-heading small {
@@ -3175,7 +3173,7 @@ body,
   background: transparent;
   border: 1px solid var(--border);
   border-radius: var(--ui-radius-pill);
-  font-size: var(--font-2xs);
+  font-size: var(--font-xs);
   cursor: pointer;
 }
 
@@ -3199,7 +3197,7 @@ body,
   background: transparent;
   border: 1px solid var(--border);
   border-radius: var(--ui-radius-control);
-  font-size: var(--font-2xs);
+  font-size: var(--font-xs);
   cursor: pointer;
 }
 
@@ -3221,7 +3219,7 @@ body,
 
 .reference-link-state {
   color: var(--text-secondary);
-  font-size: var(--font-2xs);
+  font-size: var(--font-xs);
 }
 
 .reference-link-state.linked {
@@ -3240,7 +3238,7 @@ body,
   color: var(--accent);
   background: color-mix(in srgb, var(--accent) 8%, transparent);
   border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
-  font-size: var(--font-2xs);
+  font-size: var(--font-xs);
 }
 
 .reference-citation-locations {
@@ -3257,7 +3255,7 @@ body,
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: var(--ui-radius-control);
-  font-size: var(--font-2xs);
+  font-size: var(--font-xs);
   cursor: pointer;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -3266,7 +3264,7 @@ body,
 .reference-citation-locations > small {
   flex-basis: 100%;
   color: var(--text-muted);
-  font-size: var(--font-2xs);
+  font-size: var(--font-xs);
 }
 
 .reference-duplicate-warning {
@@ -3277,12 +3275,12 @@ body,
   color: var(--warning, #c98600);
   background: color-mix(in srgb, var(--warning, #c98600) 7%, transparent);
   border-radius: var(--ui-radius-control);
-  font-size: var(--font-2xs);
+  font-size: var(--font-xs);
 }
 
 .reference-duplicate-warning > small {
   color: var(--text-secondary);
-  font-size: var(--font-2xs);
+  font-size: var(--font-xs);
 }
 
 .reference-online-fallback {
@@ -3625,7 +3623,7 @@ button.submission-check-finding:hover {
 .research-profile-section > summary {
   padding: var(--space-10);
   color: var(--text-primary);
-  font-size: var(--font-sm);
+  font-size: var(--font-base);
   font-weight: 700;
   cursor: pointer;
   user-select: none;
@@ -3658,7 +3656,7 @@ button.submission-check-finding:hover {
   min-width: 0;
   gap: var(--space-4);
   color: var(--text-secondary);
-  font-size: var(--font-xs);
+  font-size: var(--font-sm);
 }
 
 .research-profile-field.wide {
@@ -3677,7 +3675,7 @@ button.submission-check-finding:hover {
   border: 1px solid var(--border);
   border-radius: var(--ui-radius-control);
   font: inherit;
-  font-size: var(--font-sm);
+  font-size: var(--font-base);
   outline: 0;
 }
 
@@ -3712,7 +3710,7 @@ button.submission-check-finding:hover {
   gap: var(--space-8);
   margin-bottom: var(--space-8);
   color: var(--text-primary);
-  font-size: var(--font-sm);
+  font-size: var(--font-base);
 }
 
 .research-profile-card-heading strong {
@@ -3777,7 +3775,7 @@ button.submission-check-finding:hover {
   gap: var(--space-4) 10px;
   margin-top: var(--space-8);
   color: var(--text-secondary);
-  font-size: var(--font-xs);
+  font-size: var(--font-sm);
 }
 
 .research-profile-index-controls {
@@ -3797,7 +3795,7 @@ button.submission-check-finding:hover {
 .research-profile-index-error {
   margin-top: 7px;
   color: var(--error);
-  font-size: var(--font-xs);
+  font-size: var(--font-sm);
   overflow-wrap: anywhere;
 }
 
@@ -3825,7 +3823,7 @@ button.submission-check-finding:hover {
 
 .research-profile-save-status {
   color: var(--text-secondary);
-  font-size: var(--font-xs);
+  font-size: var(--font-sm);
 }
 
 .research-search {
@@ -3853,17 +3851,24 @@ button.submission-check-finding:hover {
   outline: 0;
 }
 
+/* `.git-section-header` is the sidebar's section label; it keeps its own
+   full-bleed padding but wears the shared micro-heading type. */
 .research-section-heading,
-.research-subheading {
+.research-subheading,
+.git-section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: var(--space-12) 0 7px;
   color: var(--text-secondary);
   font-size: var(--font-xs);
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
+}
+
+.research-section-heading,
+.research-subheading {
+  margin: var(--space-12) 0 7px;
 }
 
 .research-subheading button {
@@ -3873,16 +3878,10 @@ button.submission-check-finding:hover {
   cursor: pointer;
 }
 
-.research-muted,
-.research-empty {
+.research-muted {
   color: var(--text-secondary);
   font-size: var(--font-md);
   line-height: 1.5;
-}
-
-.research-empty {
-  padding: var(--space-20) var(--space-8);
-  text-align: center;
 }
 
 .reference-card-list {
@@ -3904,7 +3903,7 @@ button.submission-check-finding:hover {
 
 .reference-card strong {
   color: var(--text-primary);
-  font-size: var(--font-md);
+  font-size: var(--font-base);
   line-height: 1.35;
 }
 
@@ -3912,7 +3911,7 @@ button.submission-check-finding:hover {
 .reference-card code {
   overflow: hidden;
   color: var(--text-secondary);
-  font-size: var(--font-xs);
+  font-size: var(--font-sm);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -4067,14 +4066,14 @@ button.submission-check-finding:hover {
 .zotero-inventory-summary strong {
   overflow: hidden;
   color: var(--text-primary);
-  font-size: var(--font-sm);
+  font-size: var(--font-base);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .zotero-inventory-summary span {
   color: var(--text-secondary);
-  font-size: var(--font-xs);
+  font-size: var(--font-sm);
 }
 
 .zotero-inventory-card > div:first-child {
@@ -4171,7 +4170,7 @@ button.submission-check-finding:hover {
   gap: 7px;
   margin-bottom: var(--space-12);
   color: var(--text-secondary);
-  font-size: var(--font-sm);
+  font-size: var(--font-base);
   line-height: 1.4;
 }
 
@@ -4220,7 +4219,7 @@ button.submission-check-finding:hover {
   background: var(--bg-input);
   border: 1px solid var(--border);
   border-radius: var(--ui-radius-control);
-  font-size: var(--font-xs);
+  font-size: var(--font-sm);
   white-space: pre-wrap;
 }
 
@@ -4304,7 +4303,7 @@ button.submission-check-finding:hover {
   margin-top: var(--space-2);
   overflow: hidden;
   color: var(--text-secondary);
-  font-size: var(--font-2xs);
+  font-size: var(--font-xs);
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -4374,7 +4373,7 @@ button.submission-check-finding:hover {
 .research-chat-empty p {
   max-width: 270px;
   margin: var(--space-6) 0 0;
-  font-size: var(--font-sm);
+  font-size: var(--font-md);
   line-height: 1.5;
 }
 
@@ -4450,7 +4449,7 @@ button.submission-check-finding:hover {
 }
 
 .research-chat-message-author strong {
-  font-size: var(--font-xs);
+  font-size: var(--font-sm);
   font-weight: 600;
   letter-spacing: 0.01em;
 }
@@ -4460,7 +4459,7 @@ button.submission-check-finding:hover {
   margin-left: auto;
   overflow: hidden;
   color: color-mix(in srgb, var(--text-secondary) 85%, transparent);
-  font-size: var(--font-2xs);
+  font-size: var(--font-xs);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -4523,7 +4522,7 @@ button.submission-check-finding:hover {
 .research-chat-source-card small {
   margin-top: var(--space-2);
   color: var(--text-secondary);
-  font-size: var(--font-2xs);
+  font-size: var(--font-xs);
 }
 
 .research-chat-source-actions {
@@ -4544,7 +4543,7 @@ button.submission-check-finding:hover {
   border: 1px solid transparent;
   border-radius: var(--ui-radius-control);
   cursor: pointer;
-  font-size: var(--font-2xs);
+  font-size: var(--font-xs);
 }
 
 .research-chat-source-actions button:hover:not(:disabled),
@@ -4574,7 +4573,7 @@ button.submission-check-finding:hover {
   width: fit-content;
   margin: 0 0 14px var(--space-2);
   color: var(--text-secondary);
-  font-size: var(--font-xs);
+  font-size: var(--font-sm);
 }
 
 .research-chat-thinking > svg {
@@ -4650,14 +4649,14 @@ button.submission-check-finding:hover {
 
 .research-zotero-plan-heading strong,
 .research-document-edit-heading strong {
-  font-size: var(--font-md);
+  font-size: var(--font-base);
 }
 
 .research-zotero-plan-heading span,
 .research-document-edit-heading span {
   margin-top: var(--space-2);
   color: var(--text-secondary);
-  font-size: var(--font-2xs);
+  font-size: var(--font-xs);
 }
 
 .research-zotero-plan > p,
@@ -4673,7 +4672,7 @@ button.submission-check-finding:hover {
   padding-left: var(--space-20);
   overflow-y: auto;
   color: var(--text-primary);
-  font-size: var(--font-xs);
+  font-size: var(--font-sm);
   line-height: 1.45;
 }
 
@@ -4727,7 +4726,7 @@ button.submission-check-finding:hover {
   border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
   border-radius: var(--ui-radius-control);
   font-family: var(--font-mono, monospace);
-  font-size: var(--font-2xs);
+  font-size: var(--font-xs);
   line-height: 1.45;
   white-space: pre-wrap;
 }
@@ -4754,7 +4753,7 @@ button.submission-check-finding:hover {
   color: var(--text-secondary);
   background: color-mix(in srgb, var(--accent) 6%, transparent);
   border-left: 2px solid var(--accent);
-  font-size: var(--font-2xs);
+  font-size: var(--font-xs);
 }
 
 .research-chat-queue > div {
@@ -4817,7 +4816,7 @@ button.submission-check-finding:hover {
 .research-chat-context-bar small {
   min-width: 0;
   overflow: hidden;
-  font-size: var(--font-2xs);
+  font-size: var(--font-xs);
   font-weight: 400;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -4877,7 +4876,7 @@ button.submission-check-finding:hover {
   border: 0;
   border-radius: var(--ui-radius-large) var(--ui-radius-large) 0 0;
   font: inherit;
-  font-size: var(--font-md);
+  font-size: var(--font-base);
   line-height: 1.5;
   outline: 0;
   overflow-y: auto;
@@ -4923,7 +4922,7 @@ button.submission-check-finding:hover {
   border-radius: var(--ui-radius-control);
   cursor: pointer;
   font: inherit;
-  font-size: var(--font-2xs);
+  font-size: var(--font-xs);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -4943,7 +4942,7 @@ button.submission-check-finding:hover {
   background: transparent;
   border: 1px solid var(--border);
   border-radius: var(--ui-radius-control);
-  font-size: var(--font-2xs);
+  font-size: var(--font-xs);
 }
 
 .research-chat-execution-bar .research-chat-send {
@@ -5001,7 +5000,7 @@ button.submission-check-finding:hover {
   border: 1px solid transparent;
   border-radius: var(--ui-radius-control);
   cursor: pointer;
-  font-size: var(--font-2xs);
+  font-size: var(--font-xs);
   line-height: 1;
   list-style: none;
 }
@@ -5027,7 +5026,7 @@ button.submission-check-finding:hover {
   flex: 0 0 auto;
   margin-left: auto;
   color: var(--text-secondary);
-  font-size: var(--font-2xs);
+  font-size: var(--font-xs);
 }
 
 .research-chat-send {
@@ -5080,7 +5079,7 @@ button.submission-check-finding:hover {
   display: block;
   margin: 0 1px 7px;
   color: var(--text-primary);
-  font-size: var(--font-xs);
+  font-size: var(--font-sm);
 }
 
 .research-chat-tools-popover .research-primary-action {
@@ -5096,7 +5095,7 @@ button.submission-check-finding:hover {
 .research-chat-tools-popover .research-action-grid button {
   min-width: 0;
   padding: 5px;
-  font-size: var(--font-2xs);
+  font-size: var(--font-xs);
 }
 
 .research-chat-status {
@@ -5107,7 +5106,7 @@ button.submission-check-finding:hover {
   padding: 0;
   background: transparent;
   border: 0;
-  font-size: var(--font-2xs);
+  font-size: var(--font-xs);
   line-height: 1.4;
 }
 
@@ -7521,9 +7520,6 @@ button.submission-check-finding:hover {
 /* ===== TODO Panel ===== */
 .todo-panel {
   padding: var(--space-12);
-  overflow-y: auto;
-  overflow-x: hidden;
-  height: 100%;
   font-size: var(--font-base);
   line-height: 1.6;
 }
@@ -7696,9 +7692,7 @@ button.submission-check-finding:hover {
 
 /* ---- Timeline Panel ---- */
 .timeline-panel {
-  overflow-y: auto;
-  overflow-x: hidden;
-  height: 100%;
+  padding: var(--space-6) 0 var(--space-8);
 }
 
 .timeline-entry {
@@ -7743,13 +7737,6 @@ button.submission-check-finding:hover {
   font-size: var(--font-sm);
   color: var(--text-secondary);
   word-break: break-word;
-}
-
-.timeline-empty {
-  padding: var(--space-12);
-  font-size: var(--font-base);
-  color: var(--text-secondary);
-  text-align: center;
 }
 
 /* ── Section Highlight Bands ─────────────────────────────────────── */

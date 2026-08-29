@@ -245,11 +245,6 @@ html .research-panel {
   background: var(--ui-surface-sidebar);
 }
 
-html .sidebar-header {
-  padding: 7px var(--space-10);
-  background: transparent;
-}
-
 html .panel-tabs > button,
 html .reference-source-tabs > button {
   border-bottom-width: 1px;
@@ -269,8 +264,7 @@ html .file-tree-item.selected {
   box-shadow: inset 2px 0 0 var(--accent);
 }
 
-html .split-divider,
-html .sidebar-resize-handle {
+html .split-divider {
   background: color-mix(in srgb, var(--ui-border) 72%, transparent);
 }
 
@@ -551,6 +545,7 @@ html .history-panel {
   html .toolbar,
   html .tab-bar,
   html .sidebar,
+  html .research-panel,
   html .status-bar,
   html .modal-content,
   html .command-palette,

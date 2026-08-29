@@ -12,6 +12,7 @@ import { useScrollSync } from '../hooks/preview/useScrollSync'
 import { usePdfSearch } from '../hooks/preview/usePdfSearch'
 import { useCitationTooltip } from '../hooks/preview/useCitationTooltip'
 import { useContainerSize } from '../hooks/preview/useContainerSize'
+import { usePreviewPageSwipe } from '../hooks/preview/usePreviewPageSwipe'
 import CitationTooltip from './CitationTooltip'
 import { runtimePerformance } from '../services/runtimePerformance'
 import { normalizeDocumentId } from '../models/documentRegistry'
@@ -23,9 +24,6 @@ import {
 } from './previewGeneration'
 import {
   SCROLL_PERSIST_DEBOUNCE_MS,
-  SWIPE_THRESHOLD,
-  SWIPE_THRESHOLD_HORIZONTAL,
-  SWIPE_COOLDOWN_MS,
   VIRTUALIZATION_THRESHOLD,
   calcPageWidth,
   estimatePageHeight,
@@ -294,73 +292,13 @@ function PreviewPane() {
     }
   }, [projectRoot, viewPositionKey])
 
-  // Slide animation direction for single-page mode
-  const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null)
-
-  // Horizontal scroll / swipe navigation
-  // In continuous mode: horizontal scroll support for mice with horizontal wheels.
-  // In single-page mode: accumulate deltaX/deltaY for page navigation.
-  const swipeAccumRef = useRef(0)
-  const swipeCooldownRef = useRef(false)
+  // Wheel navigation: a horizontal flick turns one page through the shared
+  // gesture layer, vertical travel and continuous-mode scrolling stay local.
+  const { slideDirection, clearSlideDirection, stepPage } = usePreviewPageSwipe({
+    containerRef,
+    pdfViewMode
+  })
   const previousPdfViewModeRef = useRef(pdfViewMode)
-
-  useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
-
-    const handler = (e: WheelEvent): void => {
-      if (e.ctrlKey || e.metaKey) return
-
-      if (pdfViewMode === 'single') {
-        // In single-page mode, accumulate delta for swipe navigation
-        const isHorizontal = Math.abs(e.deltaX) > Math.abs(e.deltaY)
-        const delta = isHorizontal ? e.deltaX : e.deltaY
-        if (delta === 0) return
-        e.preventDefault()
-
-        if (swipeCooldownRef.current) return
-
-        // Use lower threshold for pure horizontal scroll (MX Master thumb wheel)
-        const threshold =
-          isHorizontal && e.deltaY === 0 ? SWIPE_THRESHOLD_HORIZONTAL : SWIPE_THRESHOLD
-
-        swipeAccumRef.current += delta
-        if (Math.abs(swipeAccumRef.current) >= threshold) {
-          const { currentPage: cp, numPages: np } = usePdfStore.getState()
-          const forward = swipeAccumRef.current > 0
-          if (forward && cp < np) {
-            setSlideDirection('left')
-            usePdfStore.getState().setCurrentPage(cp + 1)
-          } else if (!forward && cp > 1) {
-            setSlideDirection('right')
-            usePdfStore.getState().setCurrentPage(cp - 1)
-          }
-          swipeAccumRef.current = 0
-          swipeCooldownRef.current = true
-          setTimeout(() => {
-            swipeCooldownRef.current = false
-          }, SWIPE_COOLDOWN_MS)
-        }
-        return
-      }
-
-      // Continuous mode: Shift + vertical wheel → horizontal scroll
-      if (e.shiftKey && e.deltaY !== 0) {
-        el.scrollLeft += e.deltaY
-        e.preventDefault()
-        return
-      }
-
-      // Horizontal wheel (e.g. MX Master thumb wheel)
-      if (e.deltaX !== 0) {
-        el.scrollLeft += e.deltaX
-        if (e.deltaY === 0) e.preventDefault()
-      }
-    }
-
-    el.addEventListener('wheel', handler, { passive: false })
-    return () => el.removeEventListener('wheel', handler)
-  }, [pdfViewMode])
 
   // Keyboard shortcuts for fit-to-width (Ctrl+0), fit-to-height (Ctrl+9),
   // and arrow key navigation in single-page mode
@@ -382,25 +320,16 @@ function PreviewPane() {
         const tag = (e.target as HTMLElement)?.tagName
         if (tag === 'INPUT' || tag === 'TEXTAREA') return
 
-        const { currentPage: cp, numPages: np } = usePdfStore.getState()
         if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-          if (cp < np) {
-            e.preventDefault()
-            setSlideDirection('left')
-            usePdfStore.getState().setCurrentPage(cp + 1)
-          }
+          if (stepPage(1)) e.preventDefault()
         } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-          if (cp > 1) {
-            e.preventDefault()
-            setSlideDirection('right')
-            usePdfStore.getState().setCurrentPage(cp - 1)
-          }
+          if (stepPage(-1)) e.preventDefault()
         }
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [pdfViewMode])
+  }, [pdfViewMode, stepPage])
 
   // Handle view mode transitions
   useEffect(() => {
@@ -632,7 +561,7 @@ function PreviewPane() {
       return (
         <div
           className={`preview-single-page-container${isDisplayed && slideDirection ? ` preview-slide-${slideDirection}` : ''}`}
-          onAnimationEnd={isDisplayed ? () => setSlideDirection(null) : undefined}
+          onAnimationEnd={isDisplayed ? clearSlideDirection : undefined}
         >
           {renderPage(targetPage, 'single_page')}
         </div>
