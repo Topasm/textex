@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FileCode2 } from 'lucide-react'
+import { Bold, Code2, FileCode2, FileText, Italic, Link2 } from 'lucide-react'
 import { documentRegistry } from '../models/documentRegistry'
 import { useEditorStore } from '../store/useEditorStore'
-import { projectLatexToProse } from '../../shared/proseProjection'
+import { isEditableProseBlock, projectLatexToProse } from '../../shared/proseProjection'
 import {
   proseDocumentEdits,
   proseDocumentText,
@@ -14,6 +14,13 @@ import type { ProseRefusal } from '../../shared/proseDocument'
 import { proseAnchorFor, useUiStore } from '../store/useUiStore'
 import { PROSE_COMMIT_DELAY_MS } from '../constants'
 import { registerPendingDocumentEditFlusher } from '../services/pendingDocumentEdits'
+import {
+  editMarkdownSelection,
+  isMarkdownSelectionFormatted,
+  proseDocumentStats,
+  textareaVisibleLine,
+  type MarkdownInlineFormat
+} from '../utils/proseEditor'
 import { ICON_SIZE } from './ui/IconSystem'
 import './ProsePane.css'
 
@@ -30,7 +37,11 @@ export function ProsePane() {
   const filePath = useEditorStore((state) => state.filePath)
   const revision = useEditorStore((state) => state.revision)
   const areaRef = useRef<HTMLTextAreaElement>(null)
+  const scrollFrameRef = useRef<number | null>(null)
+  const suppressScrollUntilRef = useRef(0)
+  const pendingSelectionRef = useRef<{ start: number; end: number } | null>(null)
   const [refusal, setRefusal] = useState<ProseRefusal | null>(null)
+  const [selection, setSelection] = useState({ start: 0, end: 0 })
   const proseAnchor = useUiStore((state) => proseAnchorFor(state, filePath))
 
   const projection = useMemo(() => {
@@ -52,6 +63,15 @@ export function ProsePane() {
   const projected = projection?.hasBody ? projection.text.markdown : ''
   const [draft, setDraft] = useState(projected)
   const committed = useRef(projected)
+  const stats = useMemo(() => proseDocumentStats(draft), [draft])
+  const activeMarkdownLine = useMemo(
+    () => draft.slice(0, selection.start).split('\n').length,
+    [draft, selection.start]
+  )
+  const activeSpan =
+    projection?.hasBody === true ? spanAtMarkdownLine(projection.text, activeMarkdownLine) : null
+  const formattingDisabled = Boolean(activeSpan && !isEditableProseBlock(activeSpan.block))
+  const syncState = refusal ? 'blocked' : draft === projected ? 'synced' : 'syncing'
 
   // A reprojection after somebody else's edit must not clobber live typing.
   useEffect(() => {
@@ -128,6 +148,12 @@ export function ProsePane() {
     const area = areaRef.current
     const current = pending.current.projection
     if (!area || !current?.hasBody) return
+    setSelection((currentSelection) => {
+      const next = { start: area.selectionStart, end: area.selectionEnd }
+      return currentSelection.start === next.start && currentSelection.end === next.end
+        ? currentSelection
+        : next
+    })
     const line = area.value.slice(0, area.selectionStart).split('\n').length
     const span = spanAtMarkdownLine(current.text, line)
     const path = pending.current.filePath
@@ -135,6 +161,29 @@ export function ProsePane() {
       useUiStore.getState().setProseAnchor(path, span.block.startLine, 'source')
     }
   }, [])
+
+  const publishScroll = useCallback(() => {
+    if (Date.now() < suppressScrollUntilRef.current || scrollFrameRef.current !== null) return
+    scrollFrameRef.current = window.requestAnimationFrame(() => {
+      scrollFrameRef.current = null
+      if (Date.now() < suppressScrollUntilRef.current) return
+      const area = areaRef.current
+      const current = pending.current.projection
+      const path = pending.current.filePath
+      if (!area || !path || !current?.hasBody) return
+      const span = spanAtMarkdownLine(current.text, textareaVisibleLine(area))
+      if (span) {
+        useUiStore.getState().setProseAnchor(path, span.block.startLine, 'source', 'scroll')
+      }
+    })
+  }, [])
+
+  useEffect(
+    () => () => {
+      if (scrollFrameRef.current !== null) window.cancelAnimationFrame(scrollFrameRef.current)
+    },
+    []
+  )
 
   // Follow the rendering, or a mode switch, back to the right passage.
   useEffect(() => {
@@ -147,20 +196,47 @@ export function ProsePane() {
 
     // Everything above the target line, plus the newline that ends it, so the
     // caret lands on the passage rather than just before its break.
-    const preceding = area.value
-      .split('\n')
-      .slice(0, span.startLine - 1)
-      .join('\n')
+    const lines = area.value.split('\n')
+    const lineHeight = area.scrollHeight / Math.max(1, lines.length)
+    suppressScrollUntilRef.current = Date.now() + 120
+    area.scrollTop = Math.max(0, (span.startLine - 2) * lineHeight)
+    if (proseAnchor.intent === 'scroll') return
+
+    const preceding = lines.slice(0, span.startLine - 1).join('\n')
     const offset = span.startLine > 1 ? preceding.length + 1 : 0
     area.setSelectionRange(offset, offset)
-    // Put the target near the top rather than wherever the caret lands.
-    const lineHeight = area.scrollHeight / Math.max(1, area.value.split('\n').length)
-    area.scrollTop = Math.max(0, (span.startLine - 2) * lineHeight)
+    setSelection({ start: offset, end: offset })
     // The old surface can be hidden while it still owns DOM focus. Move focus
     // with the caret so a toolbar/gesture switch, or a rendered-passage click,
     // is immediately ready for typing without another click.
     area.focus({ preventScroll: true })
   }, [projection, proseAnchor])
+
+  useLayoutEffect(() => {
+    const next = pendingSelectionRef.current
+    const area = areaRef.current
+    if (!next || !area) return
+    pendingSelectionRef.current = null
+    area.focus({ preventScroll: true })
+    area.setSelectionRange(next.start, next.end)
+    setSelection(next)
+    publishCaret()
+  }, [draft, publishCaret])
+
+  const formatSelection = useCallback(
+    (format: MarkdownInlineFormat): void => {
+      const area = areaRef.current
+      if (!area || formattingDisabled) return
+      const edit = editMarkdownSelection(area.value, area.selectionStart, area.selectionEnd, format)
+      pendingSelectionRef.current = {
+        start: edit.selectionStart,
+        end: edit.selectionEnd
+      }
+      setRefusal(null)
+      setDraft(edit.text)
+    },
+    [formattingDisabled]
+  )
 
   if (!filePath) return <div className="prose-pane prose-pane--empty">{t('prosePane.noFile')}</div>
   if (!projection?.hasBody) {
@@ -169,6 +245,55 @@ export function ProsePane() {
 
   return (
     <div className="prose-pane">
+      <header className="prose-pane__header">
+        <div className="prose-pane__identity">
+          <FileText size={ICON_SIZE.control} aria-hidden="true" />
+          <span className="prose-pane__title">{t('prosePane.markdown')}</span>
+          <span
+            className={`prose-pane__sync prose-pane__sync--${syncState}`}
+            role="status"
+            aria-live="polite"
+          >
+            <span className="prose-pane__sync-dot" aria-hidden="true" />
+            {t(`prosePane.sync.${syncState}`)}
+          </span>
+        </div>
+        <div className="prose-pane__formatting" role="toolbar" aria-label={t('prosePane.format')}>
+          {(
+            [
+              ['strong', Bold, 'prosePane.bold'],
+              ['emphasis', Italic, 'prosePane.italic'],
+              ['code', Code2, 'prosePane.inlineCode']
+            ] as const
+          ).map(([format, Icon, labelKey]) => {
+            const label = t(labelKey)
+            return (
+              <button
+                key={format}
+                type="button"
+                className="prose-pane__format-button"
+                disabled={formattingDisabled}
+                aria-label={label}
+                aria-pressed={isMarkdownSelectionFormatted(
+                  draft,
+                  selection.start,
+                  selection.end,
+                  format
+                )}
+                title={formattingDisabled ? t('prosePane.protectedFormatting') : label}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => formatSelection(format)}
+              >
+                <Icon size={ICON_SIZE.compact} aria-hidden="true" />
+              </button>
+            )
+          })}
+        </div>
+        <div className="prose-pane__meta" aria-label={t('prosePane.statistics')}>
+          <span>{t('prosePane.words', { count: stats.words })}</span>
+          <span>{t('prosePane.lines', { count: stats.lines })}</span>
+        </div>
+      </header>
       {refusal && (
         <div className="prose-pane__refusal" role="alert">
           <FileCode2 size={ICON_SIZE.compact} aria-hidden="true" />
@@ -184,27 +309,49 @@ export function ProsePane() {
           </button>
         </div>
       )}
-      <textarea
-        ref={areaRef}
-        className="prose-pane__source"
-        value={draft}
-        spellCheck
-        aria-label={t('prosePane.sourceLabel')}
-        onChange={(event) => {
-          setDraft(event.target.value)
-          publishCaret()
-        }}
-        onSelect={publishCaret}
-        onClick={publishCaret}
-        onBlur={commit}
-        onKeyDown={(event) => {
-          if (event.key === 'Escape') {
-            setDraft(committed.current)
+      <div className="prose-pane__canvas">
+        <textarea
+          ref={areaRef}
+          className="prose-pane__source"
+          value={draft}
+          spellCheck
+          aria-label={t('prosePane.sourceLabel')}
+          placeholder={t('prosePane.placeholder')}
+          onChange={(event) => {
             setRefusal(null)
-            event.currentTarget.blur()
-          }
-        }}
-      />
+            setDraft(event.target.value)
+            publishCaret()
+          }}
+          onSelect={publishCaret}
+          onClick={publishCaret}
+          onScroll={publishScroll}
+          onBlur={commit}
+          onKeyDown={(event) => {
+            if ((event.metaKey || event.ctrlKey) && !event.altKey) {
+              const key = event.key.toLowerCase()
+              if (key === 'b' || key === 'i') {
+                event.preventDefault()
+                formatSelection(key === 'b' ? 'strong' : 'emphasis')
+                return
+              }
+            }
+            if (event.key === 'Escape') {
+              setDraft(committed.current)
+              setRefusal(null)
+              event.currentTarget.blur()
+            }
+          }}
+        />
+      </div>
+      <footer className="prose-pane__footer">
+        <span>
+          <Link2 size={ICON_SIZE.micro} aria-hidden="true" />
+          {t('prosePane.canonicalTex')}
+        </span>
+        {activeSpan && (
+          <span>{t('prosePane.sourceLine', { line: activeSpan.block.startLine })}</span>
+        )}
+      </footer>
     </div>
   )
 }

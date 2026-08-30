@@ -5,7 +5,7 @@ import { ProsePreview } from '../../renderer/components/ProsePreview'
 import { documentRegistry } from '../../renderer/models/documentRegistry'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
-import { proseAnchorFor, useUiStore } from '../../renderer/store/useUiStore'
+import { proseAnchorFor, proseModeFor, useUiStore } from '../../renderer/store/useUiStore'
 import { PROSE_COMMIT_DELAY_MS } from '../../renderer/constants'
 
 const filePath = '/project/main.tex'
@@ -58,6 +58,52 @@ describe('ProsePane', () => {
         '\\end{equation}'
       ].join('\n')
     )
+  })
+
+  it('shows compact writing tools, document statistics and TeX sync state', () => {
+    render(<ProsePane />)
+
+    expect(screen.getByRole('toolbar', { name: 'Markdown formatting' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Bold/u })).toBeEnabled()
+    expect(screen.getByRole('status')).toHaveTextContent('Synced to TeX')
+    expect(screen.getByLabelText('Document statistics')).toHaveTextContent(/words/u)
+    expect(screen.getByText('Changes sync safely to TeX')).toBeInTheDocument()
+  })
+
+  it('formats a selection through the safe Markdown-to-TeX round trip', () => {
+    render(<ProsePane />)
+    const area = source()
+    const start = area.value.indexOf('propose')
+    area.setSelectionRange(start, start + 'propose'.length)
+    fireEvent.select(area)
+
+    fireEvent.click(screen.getByRole('button', { name: /Bold/u }))
+    expect(area.value).toContain('We **propose**')
+    fireEvent.blur(area)
+
+    expect(documentRegistry.snapshot(filePath)?.text).toContain('We \\textbf{propose}')
+  })
+
+  it('supports familiar bold and italic keyboard shortcuts', () => {
+    render(<ProsePane />)
+    const area = source()
+    const start = area.value.indexOf('See Figure')
+    area.setSelectionRange(start, start + 3)
+    fireEvent.select(area)
+
+    fireEvent.keyDown(area, { key: 'i', ctrlKey: true })
+    expect(area.value).toContain('*See* Figure')
+  })
+
+  it('disables Markdown formatting inside TeX-controlled blocks', () => {
+    render(<ProsePane />)
+    const area = source()
+    const offset = area.value.indexOf('y = f(x)')
+    area.setSelectionRange(offset, offset)
+    fireEvent.select(area)
+
+    expect(screen.getByRole('button', { name: /Bold/u })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Inline code/u })).toBeDisabled()
   })
 
   it('keeps the preamble, macro and label out of view', () => {
@@ -301,7 +347,7 @@ describe('prose view anchoring', () => {
   beforeEach(() => {
     useEditorStore.getState().resetEditor()
     useEditorStore.getState().openFileInTab(filePath, SOURCE)
-    useUiStore.setState({ proseAnchors: {} })
+    useUiStore.setState({ proseAnchors: {}, proseModeDocumentIds: [] })
   })
 
   afterEach(() => {
@@ -320,6 +366,23 @@ describe('prose view anchoring', () => {
     expect(proseAnchorFor(useUiStore.getState(), filePath)).toEqual({
       line: paragraphLine,
       origin: 'source'
+    })
+  })
+
+  it('publishes the first visible block while scrolling without navigation focus', async () => {
+    render(<ProsePane />)
+    const area = source()
+    area.style.fontSize = '10px'
+    area.style.lineHeight = '2'
+    area.scrollTop = 42
+    fireEvent.scroll(area)
+
+    await vi.waitFor(() => {
+      expect(proseAnchorFor(useUiStore.getState(), filePath)).toEqual({
+        line: paragraphLine,
+        origin: 'source',
+        intent: 'scroll'
+      })
     })
   })
 
@@ -367,7 +430,7 @@ describe('ProsePreview anchoring', () => {
   beforeEach(() => {
     useEditorStore.getState().resetEditor()
     useEditorStore.getState().openFileInTab(filePath, SOURCE)
-    useUiStore.setState({ proseAnchors: {} })
+    useUiStore.setState({ proseAnchors: {}, proseModeDocumentIds: [] })
   })
 
   afterEach(cleanup)
@@ -392,5 +455,42 @@ describe('ProsePreview anchoring', () => {
       line,
       origin: 'preview'
     })
+  })
+
+  it('marks the passage shared with the editor and exposes an edit affordance', () => {
+    const line = SOURCE.split('\n').findIndex((text) => text.startsWith('We propose')) + 1
+    act(() => useUiStore.getState().setProseAnchor(filePath, line, 'source'))
+    const { container } = render(<ProsePreview />)
+
+    const block = container.querySelector(`[data-prose-line="${line}"]`)
+    expect(block).toHaveClass('prose-preview__block--active')
+    expect(block).toHaveAttribute('aria-current', 'location')
+    const markdownActions = screen.getAllByRole('button', {
+      name: 'Edit this block in Markdown'
+    })
+    const texActions = screen.getAllByRole('button', { name: 'Edit this block in TeX' })
+    expect(markdownActions.length + texActions.length).toBe(
+      container.querySelectorAll('[data-prose-line]').length
+    )
+  })
+
+  it('takes a protected block to its canonical TeX source', () => {
+    act(() => useUiStore.getState().setProseMode(filePath, true))
+    render(<ProsePreview />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit this block in TeX' }))
+
+    expect(proseModeFor(useUiStore.getState(), filePath)).toBe(false)
+    expect(proseAnchorFor(useUiStore.getState(), filePath)?.origin).toBe('preview')
+  })
+
+  it('does not echo a scroll anchor back across panes on the same block', () => {
+    act(() => useUiStore.getState().setProseAnchor(filePath, 8, 'source', 'scroll'))
+    const original = proseAnchorFor(useUiStore.getState(), filePath)
+
+    act(() => useUiStore.getState().setProseAnchor(filePath, 8, 'preview', 'scroll'))
+
+    expect(proseAnchorFor(useUiStore.getState(), filePath)).toBe(original)
+    expect(proseAnchorFor(useUiStore.getState(), filePath)?.origin).toBe('source')
   })
 })

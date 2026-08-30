@@ -70,11 +70,13 @@
   "homeScreen": {
     "subtitle": "LaTeX Editor",
     "openFolder": "Open Folder",
+    "learnTextEx": "Learn TextEx",
     "newBlankProject": "New Blank Project",
     "newFromTemplate": "New from Template"
   },
   "loading": {
     "workspace": "Restoring your workspace…",
+    "help": "Loading the TextEx guide…",
     "settings": "Loading settings…",
     "aiDraft": "Loading AI draft…",
     "editor": "Loading editor…",
@@ -169,7 +171,17 @@
       "checkUpdatesNowDesc": "Look for a new TextEx version now. Download and installation still require confirmation.",
       "checkNow": "Check now",
       "language": "Language",
-      "languageDesc": "Choose the display language for the application"
+      "languageDesc": "Choose the display language for the application",
+      "learning": "Learning and help",
+      "learningDesc": "Open the in-app guide or let TextEx introduce useful features gradually.",
+      "openGuide": "TextEx guide",
+      "openGuideDesc": "Review gestures, writing workflows, research tools, and keyboard shortcuts.",
+      "openGuideAction": "Open guide",
+      "featureHints": "Feature hints",
+      "featureHintsDesc": "Restore contextual hints that you previously dismissed.",
+      "resetHints": "Reset hints",
+      "resetHintsDone": "Reset complete",
+      "featureHintsReset": "Feature hints will be shown again in future sessions."
     },
     "appearance": {
       "theme": "Theme",
@@ -633,11 +645,140 @@
       "pdf_zoomReset": "Reset PDF Zoom",
       "pdf_fitWidth": "Fit PDF to Width",
       "pdf_fitHeight": "Fit PDF to Height",
+      "app_help": "Open TextEx Guide",
       "app_settings": "Open Settings",
       "app_checkUpdates": "Check for Updates",
       "window_close": "Close Window",
       "app_quit": "Quit TextEx",
       "view_toggleProse": "Toggle Prose View"
+    }
+  },
+  "learning": {
+    "title": "TextEx Guide",
+    "subtitle": "Learn the editor at your own pace without leaving your paper.",
+    "close": "Close TextEx guide",
+    "openGuide": "Open guide",
+    "searchPlaceholder": "Search gestures, features, or shortcuts…",
+    "searchLabel": "Search the TextEx guide",
+    "navigationLabel": "Guide sections",
+    "tryAction": "Try it",
+    "unavailable": "Not available yet",
+    "searchResults": "Search results",
+    "searchResultsDescription": "Results for “{{query}}” across the TextEx guide.",
+    "noResults": "No matching guide entries were found.",
+    "clearSearch": "Clear search",
+    "resultCount": "Results: {{count}}",
+    "input": {
+      "trackpad": "Trackpad",
+      "alternative": "Alternative"
+    },
+    "shortcutLabels": {
+      "increaseFont": "Increase editor font size",
+      "decreaseFont": "Decrease editor font size",
+      "closeTab": "Close editor tab",
+      "previousTab": "Previous editor tab",
+      "nextTab": "Next editor tab"
+    },
+    "sections": {
+      "tour": {
+        "title": "3-minute tour",
+        "description": "Work through the essential writing flow in the guided demo or your own project."
+      },
+      "quickStart": {
+        "title": "Quick start",
+        "description": "Open a project, compile it, and find any command without memorizing the interface."
+      },
+      "gestures": {
+        "title": "Gestures and navigation",
+        "description": "Use trackpad gestures when convenient; every gesture also has a visible or keyboard alternative."
+      },
+      "writing": {
+        "title": "Writing and PDF",
+        "description": "Move between source, prose, and the compiled paper while keeping your place."
+      },
+      "research": {
+        "title": "References and research",
+        "description": "Check citations, search your library, and prepare the paper for submission."
+      },
+      "ai": {
+        "title": "AI and local agents",
+        "description": "Use Research Chat, Claude Code, or Codex CLI only when you choose to."
+      },
+      "project": {
+        "title": "Projects and export",
+        "description": "Create, version, inspect, and export a contained TextEx project."
+      },
+      "shortcuts": {
+        "title": "Keyboard shortcuts",
+        "description": "The current platform bindings are generated from the same command catalog used by TextEx."
+      }
+    },
+    "items": {
+      "openProject": "Choose a trusted project folder. TextEx restores the last valid TeX tab or opens the most likely root document.",
+      "compileDocument": "Build the active TeX document and keep the previous PDF visible until the new generation is ready.",
+      "commandPalette": "Search all available commands. Commands that need a document, PDF, or project explain what is missing.",
+      "pairedWorkspaceTitle": "TeX/PDF and Markdown/render pair",
+      "pairedWorkspace": "Swipe on the source side to switch both panes together. Swipe either Markdown pane to return.",
+      "pdfPagesTitle": "Turn PDF pages",
+      "pdfPages": "In single-page mode, one deliberate swipe turns exactly one page. Continuous mode keeps scrolling local.",
+      "pdfZoomTitle": "Zoom the PDF",
+      "pdfZoom": "Pinch or use a modified scroll for immediate zoom feedback, then TextEx settles the rendered page.",
+      "panelTabsTitle": "Move between panel tabs",
+      "panelTabs": "Swipe horizontally inside the left Navigator or right Research panel to step through its tabs.",
+      "resizeTitle": "Resize the workspace",
+      "resize": "Drag a divider, double-click it to reset, or focus it and use the arrow keys for precise sizing.",
+      "saveDocument": "Save the active canonical editor buffer. Dirty state is cleared only for the exact saved revision.",
+      "syncTitle": "Source and PDF synchronization",
+      "sync": "Jump from the source cursor to the compiled page, or Ctrl-click the PDF to return to its source line.",
+      "searchPdf": "Search the current compiled PDF without moving the source cursor.",
+      "citationSearch": "Search project bibliography entries, Zotero, and online fallbacks from one workflow.",
+      "submissionCheck": "Run deterministic checks for compilation, references, metadata, and common submission problems.",
+      "researchPanel": "Open References, Chat, project profile, terminal, and compilation problems in the right panel.",
+      "researchChatTitle": "Research Chat",
+      "researchChat": "Attach selected text or project context, choose an API or local CLI model per conversation, and review edits before applying them.",
+      "selectionAiTitle": "Ask from a selection",
+      "selectionAi": "Select TeX text to ask Chat or find sources without copying the passage out of the editor.",
+      "aiSettings": "Configure independent API and Claude Code or Codex CLI connections. Chat may override the default per conversation.",
+      "templates": "Start from a built-in template, import one, or create a reusable project template.",
+      "projectTerminal": "Open the trusted project root in your system terminal without accepting a renderer-supplied path.",
+      "exportDocument": "Export through Pandoc when installed, or create a source-only Overleaf ZIP from the project tools."
+    },
+    "gestures": {
+      "horizontalSwipe": "Two-finger horizontal swipe",
+      "proseAlternative": "Prose button or Mod+Shift+M",
+      "pageSwipe": "Horizontal swipe; vertical swipe in single-page mode",
+      "pageAlternative": "Arrow keys or page controls",
+      "zoomGesture": "Pinch or Mod+scroll",
+      "zoomAlternative": "Zoom menu or Mod+Plus/Minus",
+      "tabsAlternative": "Select a named tab icon",
+      "resizeGesture": "Drag or double-click a divider",
+      "resizeAlternative": "Focus the divider and use arrow keys"
+    },
+    "tour": {
+      "progress": "{{completed}} of {{total}} steps complete",
+      "progressHint": "Check steps manually or use Try it to perform an available action.",
+      "progressLabel": "Guided tour progress",
+      "reset": "Reset tour progress",
+      "editTitle": "Edit the marked sentence",
+      "editDescription": "Change a sentence in main.tex and notice the dirty indicator on its tab.",
+      "compileTitle": "Compile the paper",
+      "compileDescription": "Build the document and wait for a fresh PDF generation.",
+      "proseTitle": "Switch the paired workspace",
+      "proseDescription": "Open Markdown/render mode, then return to TeX/PDF without losing your passage.",
+      "referencesTitle": "Inspect the sample citation",
+      "referencesDescription": "Find lamport1994latex and jump to where it is used in the source.",
+      "syncTitle": "Try source/PDF synchronization",
+      "syncDescription": "Jump around Equation 1 in both directions.",
+      "submissionTitle": "Run Submission Check",
+      "submissionDescription": "Review each finding before changing the paper.",
+      "exportTitle": "Review export options",
+      "exportDescription": "Try a document export or create an Overleaf ZIP from project tools."
+    },
+    "hints": {
+      "workspaceSwipe": "Tip: swipe horizontally on the TeX source to switch the TeX/PDF and Markdown/render pair.",
+      "pdfPageSwipe": "Tip: in single-page mode, a deliberate swipe turns exactly one PDF page.",
+      "panelTabSwipe": "Tip: swipe horizontally in either side panel to move between its tabs.",
+      "sourcePdfSync": "Tip: use source↔PDF sync to keep your place between code and the compiled paper."
     }
   },
   "submissionCheck": {
@@ -1163,6 +1304,29 @@
     "sourceLabel": "Markdown source",
     "previewLabel": "Rendered prose",
     "mathBlock": "Equation",
+    "markdown": "Markdown",
+    "livePreview": "Live preview",
+    "following": "Following editor",
+    "format": "Markdown formatting",
+    "bold": "Bold (Ctrl/Cmd+B)",
+    "italic": "Italic (Ctrl/Cmd+I)",
+    "inlineCode": "Inline code",
+    "protectedFormatting": "This block is edited in TeX.",
+    "statistics": "Document statistics",
+    "words_one": "{{count}} word",
+    "words_other": "{{count}} words",
+    "lines_one": "{{count}} line",
+    "lines_other": "{{count}} lines",
+    "placeholder": "Start writing…",
+    "canonicalTex": "Changes sync safely to TeX",
+    "sourceLine": "TeX line {{line}}",
+    "editBlock": "Edit this block in Markdown",
+    "editBlockTex": "Edit this block in TeX",
+    "sync": {
+      "synced": "Synced to TeX",
+      "syncing": "Syncing…",
+      "blocked": "Needs attention"
+    },
     "discardChange": "Discard",
     "refused": {
       "protectedChanged": "Equations, figures and tables are edited in TeX. That change was not applied.",

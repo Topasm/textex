@@ -9,6 +9,7 @@ import {
 
 const EMPTY_OVERLAYS: AppOverlaySnapshot = {
   commandPalette: false,
+  help: false,
   settings: false,
   aiDraft: false,
   templateGallery: false,
@@ -17,7 +18,7 @@ const EMPTY_OVERLAYS: AppOverlaySnapshot = {
 
 describe('appOverlayPolicy', () => {
   it('blocks the command palette for every modal owner, including lazy loading surfaces', () => {
-    for (const surface of ['settings', 'aiDraft', 'templateGallery'] as const) {
+    for (const surface of ['help', 'settings', 'aiDraft', 'templateGallery'] as const) {
       const snapshot = { ...EMPTY_OVERLAYS, [surface]: true }
       expect(hasBlockingModalOverlay(snapshot)).toBe(true)
       expect(canOpenExclusiveAppOverlay('commandPalette', snapshot)).toBe(false)
@@ -54,7 +55,13 @@ describe('appOverlayPolicy', () => {
     const snapshot = { ...EMPTY_OVERLAYS, featureModal: true }
     expect(hasBlockingModalOverlay(snapshot)).toBe(true)
     expect(shouldSuppressBackgroundSurfaces(snapshot)).toBe(true)
-    for (const target of ['commandPalette', 'settings', 'aiDraft', 'templateGallery'] as const) {
+    for (const target of [
+      'commandPalette',
+      'help',
+      'settings',
+      'aiDraft',
+      'templateGallery'
+    ] as const) {
       expect(canOpenExclusiveAppOverlay(target, snapshot)).toBe(false)
     }
   })

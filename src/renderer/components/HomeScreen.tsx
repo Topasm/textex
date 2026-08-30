@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ICON_SIZE } from './ui/IconSystem'
 import { useTranslation } from 'react-i18next'
-import { Compass, FolderOpen, FileText, FilePlus } from 'lucide-react'
+import { ChevronRight, CircleHelp, Compass, FolderOpen, FileText, FilePlus } from 'lucide-react'
 import type { RecentProject } from '../../shared/types'
 import { logError } from '../utils/errorMessage'
 import { RecentProjectList } from './home/RecentProjectList'
@@ -9,6 +9,7 @@ import { RecentProjectList } from './home/RecentProjectList'
 interface HomeScreenProps {
   onOpenFolder: () => void
   onOpenGuidedDemo: () => void
+  onOpenHelp: () => void
   onNewBlankProject: () => void
   onNewFromTemplate: () => void
 }
@@ -16,6 +17,7 @@ interface HomeScreenProps {
 function HomeScreen({
   onOpenFolder,
   onOpenGuidedDemo,
+  onOpenHelp,
   onNewBlankProject,
   onNewFromTemplate
 }: HomeScreenProps) {
@@ -50,7 +52,7 @@ function HomeScreen({
             data-testid="guided-demo-action"
           >
             <Compass size={ICON_SIZE.feature} />
-            {t('homeScreen.guidedDemo')}
+            {t('toolbar.guidedDemo')}
           </button>
           <button className="home-action-btn" onClick={onNewBlankProject}>
             <FilePlus size={ICON_SIZE.feature} />
@@ -62,6 +64,15 @@ function HomeScreen({
           </button>
         </>
       </div>
+
+      <button type="button" className="home-learn-button" onClick={onOpenHelp}>
+        <span className="home-learn-icon" aria-hidden="true">
+          <CircleHelp size={ICON_SIZE.control} />
+        </span>
+        <span>{t('homeScreen.learnTextEx')}</span>
+        <kbd aria-hidden="true">F1</kbd>
+        <ChevronRight size={ICON_SIZE.compact} aria-hidden="true" />
+      </button>
 
       <RecentProjectList recentProjects={recentProjects} setRecentProjects={setRecentProjects} />
     </div>

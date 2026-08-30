@@ -83,4 +83,20 @@ describe('NotificationCenter', () => {
     view.rerender(<NotificationCenter suppressed={false} />)
     expect(screen.getByText('Export complete')).toBeInTheDocument()
   })
+
+  it('runs dismissal ownership before removing a notification', () => {
+    const onDismiss = vi.fn()
+    useNotificationStore.getState().pushNotification({
+      message: 'Learn this gesture',
+      tone: 'info',
+      timeoutMs: null,
+      onDismiss
+    })
+
+    render(<NotificationCenter />)
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+
+    expect(onDismiss).toHaveBeenCalledOnce()
+    expect(screen.queryByText('Learn this gesture')).not.toBeInTheDocument()
+  })
 })

@@ -31,6 +31,7 @@ const EXPECTED_APP_COMMAND_IDS = [
   'pdf.zoomReset',
   'pdf.fitWidth',
   'pdf.fitHeight',
+  'app.help',
   'app.settings',
   'app.checkUpdates',
   'app.quit',

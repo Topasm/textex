@@ -98,6 +98,27 @@ vi.mock('../../renderer/components/SettingsModal', () => ({
   )
 }))
 
+vi.mock('../../renderer/components/HelpCenter', () => ({
+  HelpCenter: ({
+    onClose,
+    onRunCommand
+  }: {
+    onClose: () => void
+    onRunCommand: (command: 'app.settings') => void
+  }) => (
+    <div role="dialog" aria-label="Mock Help" data-app-overlay-owner="help">
+      <button
+        onClick={() => {
+          onClose()
+          onRunCommand('app.settings')
+        }}
+      >
+        Open Settings from Help
+      </button>
+    </div>
+  )
+}))
+
 vi.mock('../../renderer/components/DraftModal', () => ({
   DraftModal: ({ isOpen, onInsert }: { isOpen: boolean; onInsert: (latex: string) => void }) =>
     isOpen ? (
@@ -174,7 +195,11 @@ describe('App AI Draft flow', () => {
     vi.clearAllMocks()
     shortcutHarness.openCommandPalette = null
     useUiStore.getState().setTemplateGalleryOpen(false)
-    useUiStore.setState({ openFeatureModals: [], settingsRequested: false })
+    useUiStore.setState({
+      openFeatureModals: [],
+      settingsRequested: false,
+      helpRequestedSection: null
+    })
     useSettingsStore.setState((state) => ({
       settings: {
         ...state.settings,
@@ -222,6 +247,18 @@ describe('App AI Draft flow', () => {
 
     act(() => shortcutHarness.openCommandPalette?.())
     expect(screen.queryByRole('dialog', { name: 'Command Palette' })).not.toBeInTheDocument()
+  })
+
+  it('closes Help before dispatching a command that owns another modal', async () => {
+    render(<App />)
+
+    act(() => useUiStore.getState().requestHelp('quick-start'))
+    expect(await screen.findByRole('dialog', { name: 'Mock Help' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Settings from Help' }))
+
+    expect(await screen.findByRole('dialog', { name: 'Mock Settings' })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Mock Help' })).not.toBeInTheDocument()
   })
 
   it('does not open the palette over AI draft or template modal workflows', async () => {

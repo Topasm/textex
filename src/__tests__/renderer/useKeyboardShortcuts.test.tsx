@@ -38,6 +38,9 @@ describe('useKeyboardShortcuts', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'O', ctrlKey: true, shiftKey: true }))
     expect(runCommand).toHaveBeenCalledWith('file.openFolder')
 
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F1' }))
+    expect(runCommand).toHaveBeenCalledWith('app.help')
+
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'P', metaKey: true, shiftKey: true }))
     expect(openCommandPalette).toHaveBeenCalledOnce()
   })

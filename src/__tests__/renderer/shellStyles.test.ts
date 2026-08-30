@@ -127,6 +127,15 @@ describe('app shell styles', () => {
     expect(readCss(resolve(root, 'components/ProsePane.css'))).not.toContain('.editor-surface')
   })
 
+  it('aligns the paired prose content below the source tab and preview chrome', () => {
+    const sourceCss = readCss(resolve(root, 'components/ProsePane.css'))
+    const previewCss = readCss(resolve(root, 'components/ProsePreview.css'))
+
+    expect(eagerCss).toMatch(/html \.tab-bar\s*\{[^}]*height:\s*34px/u)
+    expect(sourceCss).toMatch(/\.prose-pane__header\s*\{[^}]*height:\s*38px/u)
+    expect(previewCss).toMatch(/\.prose-preview__header\s*\{[^}]*height:\s*72px/u)
+  })
+
   it('animates the paired workspace together and respects reduced motion', () => {
     expect(eagerCss).toContain(".editor-surface[data-prose-mode='true'] > .prose-pane")
     expect(eagerCss).toContain(".preview-pane[data-workspace-view='prose'] > .prose-preview")

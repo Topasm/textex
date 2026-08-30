@@ -70,11 +70,13 @@
   "homeScreen": {
     "subtitle": "LaTeX 편집기",
     "openFolder": "폴더 열기",
+    "learnTextEx": "TextEx 배우기",
     "newBlankProject": "새 빈 프로젝트",
     "newFromTemplate": "템플릿에서 새로 만들기"
   },
   "loading": {
     "workspace": "작업 공간을 복원하는 중…",
+    "help": "TextEx 가이드를 불러오는 중…",
     "settings": "설정을 불러오는 중…",
     "aiDraft": "AI 초안을 불러오는 중…",
     "editor": "편집기를 불러오는 중…",
@@ -169,7 +171,17 @@
       "checkUpdatesNowDesc": "새 TextEx 버전을 지금 확인합니다. 다운로드와 설치에는 계속 사용자 확인이 필요합니다.",
       "checkNow": "지금 확인",
       "language": "언어",
-      "languageDesc": "애플리케이션 표시 언어 선택"
+      "languageDesc": "애플리케이션 표시 언어 선택",
+      "learning": "학습 및 도움말",
+      "learningDesc": "앱 내부 가이드를 열거나 TextEx의 유용한 기능을 차례로 안내받습니다.",
+      "openGuide": "TextEx 가이드",
+      "openGuideDesc": "제스처, 집필 흐름, 연구 도구와 키보드 단축키를 확인합니다.",
+      "openGuideAction": "가이드 열기",
+      "featureHints": "기능 힌트",
+      "featureHintsDesc": "이전에 닫은 상황별 기능 힌트를 다시 표시합니다.",
+      "resetHints": "힌트 초기화",
+      "resetHintsDone": "초기화 완료",
+      "featureHintsReset": "다음 세션부터 기능 힌트가 다시 표시됩니다."
     },
     "appearance": {
       "theme": "테마",
@@ -633,11 +645,140 @@
       "pdf_zoomReset": "PDF 배율 초기화",
       "pdf_fitWidth": "PDF 너비에 맞춤",
       "pdf_fitHeight": "PDF 높이에 맞춤",
+      "app_help": "TextEx 가이드 열기",
       "app_settings": "설정 열기",
       "app_checkUpdates": "업데이트 확인",
       "window_close": "창 닫기",
       "app_quit": "TextEx 종료",
       "view_toggleProse": "산문 보기 전환"
+    }
+  },
+  "learning": {
+    "title": "TextEx 가이드",
+    "subtitle": "논문을 벗어나지 않고 필요한 기능을 천천히 익혀 보세요.",
+    "close": "TextEx 가이드 닫기",
+    "openGuide": "가이드 열기",
+    "searchPlaceholder": "제스처, 기능 또는 단축키 검색…",
+    "searchLabel": "TextEx 가이드 검색",
+    "navigationLabel": "가이드 섹션",
+    "tryAction": "직접 실행",
+    "unavailable": "아직 사용할 수 없음",
+    "searchResults": "검색 결과",
+    "searchResultsDescription": "TextEx 가이드에서 ‘{{query}}’ 검색 결과입니다.",
+    "noResults": "일치하는 가이드 항목이 없습니다.",
+    "clearSearch": "검색 지우기",
+    "resultCount": "결과 {{count}}개",
+    "input": {
+      "trackpad": "트랙패드",
+      "alternative": "대체 방법"
+    },
+    "shortcutLabels": {
+      "increaseFont": "편집기 글꼴 크기 키우기",
+      "decreaseFont": "편집기 글꼴 크기 줄이기",
+      "closeTab": "편집기 탭 닫기",
+      "previousTab": "이전 편집기 탭",
+      "nextTab": "다음 편집기 탭"
+    },
+    "sections": {
+      "tour": {
+        "title": "3분 둘러보기",
+        "description": "가이드 데모나 현재 프로젝트에서 핵심 집필 흐름을 순서대로 따라갑니다."
+      },
+      "quickStart": {
+        "title": "빠른 시작",
+        "description": "인터페이스를 외우지 않고 프로젝트를 열고 컴파일하며 원하는 명령을 찾습니다."
+      },
+      "gestures": {
+        "title": "제스처 및 탐색",
+        "description": "편할 때 트랙패드 제스처를 사용하세요. 모든 제스처에는 버튼이나 키보드 대안이 있습니다."
+      },
+      "writing": {
+        "title": "집필 및 PDF",
+        "description": "현재 위치를 유지하며 소스, 산문 보기와 컴파일된 논문 사이를 이동합니다."
+      },
+      "research": {
+        "title": "참고문헌 및 연구",
+        "description": "인용을 점검하고 라이브러리를 검색하며 논문 제출을 준비합니다."
+      },
+      "ai": {
+        "title": "AI 및 로컬 에이전트",
+        "description": "원할 때만 Research Chat, Claude Code 또는 Codex CLI를 사용합니다."
+      },
+      "project": {
+        "title": "프로젝트 및 내보내기",
+        "description": "경계가 보호된 TextEx 프로젝트를 만들고 버전 관리하며 검사하고 내보냅니다."
+      },
+      "shortcuts": {
+        "title": "키보드 단축키",
+        "description": "현재 플랫폼 단축키를 TextEx 명령 카탈로그에서 자동으로 표시합니다."
+      }
+    },
+    "items": {
+      "openProject": "신뢰할 프로젝트 폴더를 선택합니다. 마지막 TeX 탭을 복원하거나 가장 알맞은 루트 문서를 엽니다.",
+      "compileDocument": "활성 TeX 문서를 빌드하고 새 PDF가 준비될 때까지 이전 PDF를 유지합니다.",
+      "commandPalette": "사용 가능한 모든 명령을 검색합니다. 문서, PDF 또는 프로젝트가 필요한 명령은 부족한 조건을 설명합니다.",
+      "pairedWorkspaceTitle": "TeX/PDF와 Markdown/렌더 쌍",
+      "pairedWorkspace": "소스 영역에서 쓸면 두 화면이 함께 전환됩니다. Markdown의 어느 쪽에서든 쓸어 돌아옵니다.",
+      "pdfPagesTitle": "PDF 페이지 넘기기",
+      "pdfPages": "단일 페이지 모드에서 분명하게 한 번 쓸면 정확히 한 페이지를 넘깁니다. 연속 모드에서는 스크롤을 유지합니다.",
+      "pdfZoomTitle": "PDF 확대 및 축소",
+      "pdfZoom": "핀치 또는 보조키 스크롤로 즉시 확대 피드백을 받고, 이후 선명한 페이지로 다시 렌더링합니다.",
+      "panelTabsTitle": "패널 탭 이동",
+      "panelTabs": "왼쪽 탐색기나 오른쪽 연구 패널 안에서 가로로 쓸어 다음 탭으로 이동합니다.",
+      "resizeTitle": "작업 공간 크기 조절",
+      "resize": "구분선을 드래그하고, 두 번 눌러 초기화하거나, 포커스한 뒤 방향키로 정밀 조절합니다.",
+      "saveDocument": "활성 편집기의 기준 버퍼를 저장합니다. 정확히 저장된 리비전만 저장 완료로 처리합니다.",
+      "syncTitle": "소스와 PDF 동기화",
+      "sync": "소스 커서에서 컴파일된 페이지로 이동하거나 PDF를 Ctrl-클릭해 원본 줄로 돌아갑니다.",
+      "searchPdf": "소스 커서를 움직이지 않고 현재 컴파일된 PDF를 검색합니다.",
+      "citationSearch": "한 흐름에서 프로젝트 참고문헌, Zotero와 온라인 대체 검색을 함께 이용합니다.",
+      "submissionCheck": "컴파일, 참고문헌, 메타데이터와 일반적인 제출 문제를 결정론적으로 검사합니다.",
+      "researchPanel": "오른쪽 패널에서 참고문헌, 채팅, 프로젝트 프로필, 터미널과 컴파일 문제를 엽니다.",
+      "researchChatTitle": "Research Chat",
+      "researchChat": "선택 텍스트나 프로젝트 맥락을 첨부하고 대화별 API 또는 로컬 CLI 모델을 고른 뒤, 편집을 적용하기 전에 검토합니다.",
+      "selectionAiTitle": "선택 영역에서 질문하기",
+      "selectionAi": "TeX 텍스트를 선택해 편집기 밖으로 복사하지 않고 채팅에 묻거나 자료를 찾습니다.",
+      "aiSettings": "API와 Claude Code·Codex CLI 연결을 독립적으로 설정합니다. 채팅에서는 대화별로 기본값을 바꿀 수 있습니다.",
+      "templates": "내장 템플릿으로 시작하거나 템플릿을 가져오고 재사용 가능한 프로젝트 템플릿을 만듭니다.",
+      "projectTerminal": "renderer가 전달한 경로를 신뢰하지 않고 검증된 프로젝트 루트를 시스템 터미널에서 엽니다.",
+      "exportDocument": "Pandoc이 있으면 문서로 내보내고, 프로젝트 도구에서는 소스만 포함한 Overleaf ZIP을 만듭니다."
+    },
+    "gestures": {
+      "horizontalSwipe": "두 손가락 가로 스와이프",
+      "proseAlternative": "산문 버튼 또는 Mod+Shift+M",
+      "pageSwipe": "가로 스와이프, 단일 페이지에서는 세로 스와이프",
+      "pageAlternative": "방향키 또는 페이지 컨트롤",
+      "zoomGesture": "핀치 또는 Mod+스크롤",
+      "zoomAlternative": "확대 메뉴 또는 Mod+더하기/빼기",
+      "tabsAlternative": "이름이 표시되는 탭 아이콘 선택",
+      "resizeGesture": "구분선 드래그 또는 더블클릭",
+      "resizeAlternative": "구분선에 포커스하고 방향키 사용"
+    },
+    "tour": {
+      "progress": "{{total}}단계 중 {{completed}}단계 완료",
+      "progressHint": "직접 체크하거나 ‘직접 실행’으로 사용 가능한 동작을 수행하세요.",
+      "progressLabel": "가이드 둘러보기 진행률",
+      "reset": "둘러보기 진행률 초기화",
+      "editTitle": "표시된 문장 편집",
+      "editDescription": "main.tex의 문장을 바꾸고 탭에 저장되지 않음 표시가 나타나는지 확인합니다.",
+      "compileTitle": "논문 컴파일",
+      "compileDescription": "문서를 빌드하고 새 PDF 세대가 준비될 때까지 기다립니다.",
+      "proseTitle": "화면 쌍 전환",
+      "proseDescription": "Markdown/렌더 보기를 열었다가 현재 문단을 잃지 않고 TeX/PDF로 돌아옵니다.",
+      "referencesTitle": "샘플 인용 확인",
+      "referencesDescription": "lamport1994latex를 찾아 소스에서 사용된 위치로 이동합니다.",
+      "syncTitle": "소스/PDF 동기화 사용",
+      "syncDescription": "수식 1 주변을 양방향으로 이동해 봅니다.",
+      "submissionTitle": "제출 검사 실행",
+      "submissionDescription": "논문을 바꾸기 전에 각 발견 항목을 검토합니다.",
+      "exportTitle": "내보내기 옵션 확인",
+      "exportDescription": "문서 내보내기를 실행하거나 프로젝트 도구에서 Overleaf ZIP을 만듭니다."
+    },
+    "hints": {
+      "workspaceSwipe": "팁: TeX 소스에서 가로로 쓸어 TeX/PDF와 Markdown/렌더 쌍을 전환할 수 있습니다.",
+      "pdfPageSwipe": "팁: 단일 페이지 모드에서는 분명하게 한 번 쓸면 PDF 한 페이지만 넘어갑니다.",
+      "panelTabSwipe": "팁: 좌우 패널 안에서 가로로 쓸어 패널 탭 사이를 이동할 수 있습니다.",
+      "sourcePdfSync": "팁: 소스↔PDF 동기화로 코드와 컴파일된 논문에서 같은 위치를 유지할 수 있습니다."
     }
   },
   "submissionCheck": {
@@ -1163,6 +1304,29 @@
     "sourceLabel": "마크다운 소스",
     "previewLabel": "렌더링된 본문",
     "mathBlock": "수식",
+    "markdown": "마크다운",
+    "livePreview": "실시간 미리 보기",
+    "following": "편집 위치 따라가기",
+    "format": "마크다운 서식",
+    "bold": "굵게 (Ctrl/Cmd+B)",
+    "italic": "기울임 (Ctrl/Cmd+I)",
+    "inlineCode": "인라인 코드",
+    "protectedFormatting": "이 블록은 TeX에서 편집합니다.",
+    "statistics": "문서 통계",
+    "words_one": "단어 {{count}}개",
+    "words_other": "단어 {{count}}개",
+    "lines_one": "{{count}}줄",
+    "lines_other": "{{count}}줄",
+    "placeholder": "본문을 작성하세요…",
+    "canonicalTex": "변경 사항을 TeX에 안전하게 동기화",
+    "sourceLine": "TeX {{line}}행",
+    "editBlock": "이 블록을 마크다운에서 편집",
+    "editBlockTex": "이 블록을 TeX에서 편집",
+    "sync": {
+      "synced": "TeX와 동기화됨",
+      "syncing": "동기화 중…",
+      "blocked": "확인 필요"
+    },
     "discardChange": "되돌리기",
     "refused": {
       "protectedChanged": "수식·그림·표는 TeX에서 편집합니다. 해당 변경은 적용되지 않았습니다.",

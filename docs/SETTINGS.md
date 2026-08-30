@@ -15,6 +15,9 @@ TextEx uses a "Zero-Friction" configuration system where settings are applied in
 - **AI credentials**: API keys are never persisted in `localStorage` or the general
   settings mirror. Rust stores them separately with owner-only permissions on Unix.
 - **Scope**: Settings are global across the application.
+- **Learning state**: Dismissed contextual hint IDs and guided-tour checklist progress use the
+  separate bounded `textex-learning-v1` renderer store. They are UI state, are not mirrored to
+  native settings, and contain no document content.
 
 ### Selected Settings Schema (`UserSettings`)
 
@@ -42,7 +45,8 @@ TextEx uses a "Zero-Friction" configuration system where settings are applied in
 The `SettingsModal` component provides a tabbed interface (800×500) for modifying these values. It is accessible via the gear icon in the Toolbar. Modal chrome uses shared `.modal-*` classes. Settings tabs compose the typed `SettingsSection`, `SettingsRow`, `SettingsToggleRow`, `SettingsSelect`, and `SettingsSegmentedControl` primitives, with their common layout in `styles/settings.css`. Feature-specific legacy styles remain in `styles/index.css` until their tabs adopt the shared controls.
 
 **Visible Tauri tabs:**
-- **General** — Interface language, update policy, and application information
+- **General** — Interface language, update policy, application information, opening the TextEx
+  guide, and resetting dismissed feature hints
 - **Appearance** — Theme and PDF display controls. PDF color inversion is an
   independent preference and is never overwritten by changing the application theme.
 - **Editor** — Typography, formatting, layout, and Monaco behavior

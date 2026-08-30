@@ -7161,6 +7161,60 @@ button.submission-check-finding:hover {
   border-color: var(--accent-hover);
 }
 
+.home-learn-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: 36px;
+  margin: -24px 0 28px;
+  padding: var(--space-4) var(--space-8) var(--space-4) var(--space-6);
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--bg-secondary) 72%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  border-radius: var(--ui-radius-pill);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--font-sm);
+  transition:
+    color 120ms,
+    background-color 120ms,
+    border-color 120ms,
+    transform 120ms;
+}
+
+.home-learn-button:hover {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
+  transform: translateY(-1px);
+}
+
+.home-learn-button:active {
+  transform: translateY(0);
+}
+
+.home-learn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-radius: 50%;
+}
+
+.home-learn-button kbd {
+  padding: var(--space-2) var(--space-4);
+  color: var(--text-secondary);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: var(--ui-radius-control);
+  font: inherit;
+  font-size: var(--font-2xs);
+}
+
 .home-recent {
   width: 100%;
   max-width: 720px;
