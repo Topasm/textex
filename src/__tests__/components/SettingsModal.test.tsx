@@ -4,6 +4,7 @@ import { SettingsModal } from '../../renderer/components/SettingsModal'
 import { createDefaultUserSettings } from '../../shared/defaultSettings'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 import { useUiStore } from '../../renderer/store/useUiStore'
+import { useLearningStore } from '../../renderer/store/useLearningStore'
 
 describe('SettingsModal', () => {
   beforeEach(() => {
@@ -15,8 +16,10 @@ describe('SettingsModal', () => {
       updateMetadata: null,
       updateProgress: null,
       updateError: '',
-      updateErrorAction: null
+      updateErrorAction: null,
+      helpRequestedSection: null
     })
+    useLearningStore.setState({ dismissedHintIds: [], completedTourItemIds: [] })
   })
 
   it('renders the Tauri settings tabs', () => {
@@ -49,6 +52,17 @@ describe('SettingsModal', () => {
     expect(useSettingsStore.getState().settings.latexEngine).toBe('pdf-latex')
     expect(screen.getByText(/Use system latexmk in pdfLaTeX mode/)).toBeInTheDocument()
     expect(screen.queryByText('Language Server')).not.toBeInTheDocument()
+  })
+
+  it('opens the in-app guide and restores dismissed feature hints', () => {
+    useLearningStore.setState({ dismissedHintIds: ['workspace-pair-swipe'] })
+    render(<SettingsModal onClose={vi.fn()} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open guide' }))
+    expect(useUiStore.getState().helpRequestedSection).toBe('quick-start')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reset hints' }))
+    expect(useLearningStore.getState().dismissedHintIds).toEqual([])
   })
 
   it('renders and configures the native AI settings flow', async () => {

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 import type { AppUpdateMetadata, DocumentSymbolNode } from '../../shared/types'
+import type { LearnSectionId } from '../../shared/learningIds'
 import { normalizeDocumentId } from '../models/documentRegistry'
 
 export type UpdateStatus =
@@ -15,9 +16,12 @@ export type UpdateStatus =
 export type UpdateErrorAction = 'check' | 'download' | 'restart'
 export type ExportStatus = 'idle' | 'exporting' | 'success' | 'error'
 export type ProseAnchorOrigin = 'source' | 'preview' | 'tex'
+export type ProseAnchorIntent = 'navigate' | 'scroll'
 export interface ProseAnchor {
   line: number
   origin: ProseAnchorOrigin
+  /** Scroll-following never steals focus; omitted anchors are direct navigation. */
+  intent?: ProseAnchorIntent
 }
 
 interface UiState {
@@ -49,6 +53,9 @@ interface UiState {
 
   /** Set by background services that need App to open the settings modal. */
   settingsRequested: boolean
+
+  /** Requested in-app guide section; App owns the exclusive modal surface. */
+  helpRequestedSection: LearnSectionId | null
 
   /**
    * Ids of modal surfaces owned by features rather than by App.
@@ -94,9 +101,16 @@ interface UiState {
   removeExternalChangeConflict: (filePath: string) => void
   requestSettings: () => void
   clearSettingsRequest: () => void
+  requestHelp: (section?: LearnSectionId) => void
+  clearHelpRequest: () => void
   registerFeatureModal: (id: string) => void
   unregisterFeatureModal: (id: string) => void
-  setProseAnchor: (filePath: string, line: number, origin: ProseAnchorOrigin) => void
+  setProseAnchor: (
+    filePath: string,
+    line: number,
+    origin: ProseAnchorOrigin,
+    intent?: ProseAnchorIntent
+  ) => void
   setProseMode: (filePath: string, enabled: boolean) => void
   forgetProseMode: (filePath: string) => void
   moveProseMode: (oldPath: string, newPath: string) => void
@@ -136,6 +150,7 @@ export const useUiStore = create<UiState>()(
     omniSearchFocusMode: null,
     externalChangeConflicts: [],
     settingsRequested: false,
+    helpRequestedSection: null,
     openFeatureModals: [],
     proseModeDocumentIds: [],
     proseAnchors: {},
@@ -167,18 +182,28 @@ export const useUiStore = create<UiState>()(
       })),
     requestSettings: () => set({ settingsRequested: true }),
     clearSettingsRequest: () => set({ settingsRequested: false }),
+    requestHelp: (section = 'quick-start') => set({ helpRequestedSection: section }),
+    clearHelpRequest: () => set({ helpRequestedSection: null }),
     registerFeatureModal: (id) =>
       set((state) =>
         state.openFeatureModals.includes(id)
           ? state
           : { openFeatureModals: [...state.openFeatureModals, id] }
       ),
-    setProseAnchor: (filePath, line, origin) =>
+    setProseAnchor: (filePath, line, origin, intent = 'navigate') =>
       set((state) => {
         const documentId = normalizeDocumentId(filePath)
         const current = state.proseAnchors[documentId]
-        if (current?.line === line && current.origin === origin) return state
-        return { proseAnchors: { ...state.proseAnchors, [documentId]: { line, origin } } }
+        if (
+          current?.line === line &&
+          (current.intent ?? 'navigate') === intent &&
+          (intent === 'scroll' || current.origin === origin)
+        ) {
+          return state
+        }
+        const anchor: ProseAnchor =
+          intent === 'scroll' ? { line, origin, intent } : { line, origin }
+        return { proseAnchors: { ...state.proseAnchors, [documentId]: anchor } }
       }),
     setProseMode: (filePath, enabled) =>
       set((state) => {

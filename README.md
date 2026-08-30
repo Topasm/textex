@@ -81,6 +81,9 @@ chmod +x TextEx_*.AppImage
 - **Open Folder**: Use **Open Folder** on the home screen to select a project directory.
 - **Guided Demo Paper**: Create a disposable, compile-ready paper that walks through citations, Research Chat, submission checks, compiler switching, and Overleaf export.
 - **Use Templates**: Use **New from Template** to start quickly with a pre-configured LaTeX template (article, beamer, thesis, letter, and more).
+- **Learn TextEx**: Open the searchable in-app guide from the home screen, the native **Help** menu,
+  the command palette, or `F1`. It documents trackpad gestures alongside their button and keyboard
+  alternatives, and includes a persistent 3-minute checklist.
 
 <p align="center">
   <img src="docs/images/template-gallery.png" alt="Template gallery with built-in LaTeX templates" width="900" />
@@ -106,6 +109,8 @@ TextEx features a modern Monaco-based editor with:
 - **Auto-Completion**: Intelligent suggestions for commands, environments, labels, and citation keys.
 - **Snippets**: Quickly insert common patterns (e.g., `begin`, `figure`, `table`).
 - **Math Preview**: Lightweight, read-only KaTeX rendering while the cursor is inside `$...$` or `\[...\]`.
+- **Paired prose workspace**: Draft in a focused Markdown projection beside a synchronized live
+  rendering while `.tex` remains the canonical, safely round-tripped document.
 - **Section Highlight**: Color-coded bands for `\section` headings in the gutter.
 - **Visual Table Editor**: Click the CodeLens above any `tabular` to open a visual editor.
 

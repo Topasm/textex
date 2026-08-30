@@ -222,6 +222,13 @@ export const APP_COMMAND_MANIFEST = [
     shortcut: { key: '9', mod: true }
   },
   {
+    id: 'app.help',
+    label: 'Open TextEx Guide',
+    group: 'app',
+    keywords: ['help', 'guide', 'learn', 'tutorial', 'gestures', 'shortcuts'],
+    shortcut: { key: 'F1', mod: false }
+  },
+  {
     id: 'app.settings',
     label: 'Open Settings',
     group: 'app',

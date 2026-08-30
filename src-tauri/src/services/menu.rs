@@ -37,6 +37,7 @@ const RENDERER_COMMANDS: &[&str] = &[
     "pdf.zoomReset",
     "pdf.fitWidth",
     "pdf.fitHeight",
+    "app.help",
     "app.settings",
     "app.checkUpdates",
     "window.close",
@@ -319,6 +320,8 @@ fn window_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<R>> {
 
 fn help_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Submenu<R>> {
     let menu = SubmenuBuilder::new(app, "Help")
+        .item(&command_item(app, "app.help", "TextEx Guide…", Some("F1"))?)
+        .separator()
         .item(&command_item(
             app,
             "help.documentation",

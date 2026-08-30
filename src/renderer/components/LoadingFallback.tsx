@@ -5,7 +5,7 @@ export type LoadingFallbackVariant = 'workspace' | 'pane' | 'modal' | 'panel' | 
 interface LoadingFallbackProps {
   label: string
   variant?: LoadingFallbackVariant
-  overlayOwner?: 'settings' | 'aiDraft' | 'templateGallery'
+  overlayOwner?: 'help' | 'settings' | 'aiDraft' | 'templateGallery'
 }
 
 /** Contextual, accessible feedback for renderer chunks and long-lived UI hydration. */

@@ -1,7 +1,9 @@
-export type ExclusiveAppOverlay = 'commandPalette' | 'settings' | 'aiDraft' | 'templateGallery'
+export type ExclusiveAppOverlay =
+  'commandPalette' | 'help' | 'settings' | 'aiDraft' | 'templateGallery'
 
 export interface AppOverlaySnapshot {
   commandPalette: boolean
+  help: boolean
   settings: boolean
   aiDraft: boolean
   templateGallery: boolean
@@ -22,6 +24,7 @@ const OVERLAY_PRIORITY: readonly ExclusiveAppOverlay[] = [
   'templateGallery',
   'aiDraft',
   'settings',
+  'help',
   'commandPalette'
 ]
 
@@ -32,7 +35,13 @@ export function getTopmostAppOverlay(snapshot: AppOverlaySnapshot): ExclusiveApp
 
 /** Loading fallbacks inherit their owning modal's flag, so they are covered here. */
 export function hasBlockingModalOverlay(snapshot: AppOverlaySnapshot): boolean {
-  return snapshot.featureModal || snapshot.settings || snapshot.aiDraft || snapshot.templateGallery
+  return (
+    snapshot.featureModal ||
+    snapshot.help ||
+    snapshot.settings ||
+    snapshot.aiDraft ||
+    snapshot.templateGallery
+  )
 }
 
 /**

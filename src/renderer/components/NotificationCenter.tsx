@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ICON_SIZE } from './ui/IconSystem'
 import { AlertCircle, AlertTriangle, CheckCircle2, Info, LoaderCircle, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -29,22 +29,28 @@ function NotificationItem({ notification }: { notification: AppNotification }) {
   const { t } = useTranslation()
   const dismissNotification = useNotificationStore((state) => state.dismissNotification)
   const [actionRunning, setActionRunning] = useState(false)
+  const { id: notificationId, onDismiss } = notification
+
+  const dismiss = useCallback((): void => {
+    try {
+      onDismiss?.()
+    } finally {
+      dismissNotification(notificationId)
+    }
+  }, [dismissNotification, notificationId, onDismiss])
 
   useEffect(() => {
     if (notification.timeoutMs === null || notification.timeoutMs <= 0) return
-    const timeout = window.setTimeout(
-      () => dismissNotification(notification.id),
-      notification.timeoutMs
-    )
+    const timeout = window.setTimeout(dismiss, notification.timeoutMs)
     return () => window.clearTimeout(timeout)
-  }, [dismissNotification, notification.id, notification.timeoutMs, notification.updatedAt])
+  }, [dismiss, notification.timeoutMs, notification.updatedAt])
 
   const runAction = async (): Promise<void> => {
     if (!notification.action || actionRunning) return
     setActionRunning(true)
     try {
       await notification.action.run()
-      if (notification.action.dismissOnRun !== false) dismissNotification(notification.id)
+      if (notification.action.dismissOnRun !== false) dismiss()
     } catch {
       // Keep the notification available. Action owners publish any richer
       // follow-up error state through the same stable notification id.
@@ -92,7 +98,7 @@ function NotificationItem({ notification }: { notification: AppNotification }) {
         <button
           type="button"
           className="app-notification-dismiss"
-          onClick={() => dismissNotification(notification.id)}
+          onClick={dismiss}
           aria-label={t('notifications.dismiss')}
           title={t('notifications.dismiss')}
         >

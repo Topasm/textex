@@ -74,3 +74,31 @@
   position: relative;
   z-index: 1;
 }
+
+.settings-secondary-button {
+  padding: var(--space-8) var(--space-12);
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--ui-radius-panel);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--font-base);
+  transition:
+    color 120ms,
+    background-color 120ms,
+    border-color 120ms;
+}
+
+.settings-secondary-button:hover {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 7%, var(--bg-secondary));
+  border-color: var(--accent);
+}
+
+.settings-inline-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+}

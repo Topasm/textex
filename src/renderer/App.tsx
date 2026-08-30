@@ -25,6 +25,7 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { useDragResize } from './hooks/useDragResize'
 import { useAnimatedPresence } from './hooks/useAnimatedPresence'
 import { useHorizontalSwipe } from './hooks/useHorizontalSwipe'
+import { useFeatureHints } from './hooks/useFeatureHints'
 import {
   executeAppCommand,
   toggleLogPanel,
@@ -46,6 +47,7 @@ import { describeNativeError } from './services/nativeErrors'
 import { clearCompileFailure, reportCompileFailure } from './services/compileFeedback'
 import { isFeatureEnabled } from './utils/featureFlags'
 import type { AppCommandId } from '../shared/types'
+import type { LearnSectionId } from '../shared/learningIds'
 import { parseAuxContent } from '../shared/auxparser'
 import { guidedDemoTemplate } from '../shared/templates'
 import { runtimePerformance } from './services/runtimePerformance'
@@ -75,6 +77,9 @@ import { SIDEBAR_WIDTH_MAX, SIDEBAR_WIDTH_MIN, SPLIT_RATIO_MAX, SPLIT_RATIO_MIN 
 // Lazy-load heavy modals and panels that are rarely shown
 const SettingsModal = lazy(() =>
   import('./components/SettingsModal').then((m) => ({ default: m.SettingsModal }))
+)
+const HelpCenter = lazy(() =>
+  import('./components/HelpCenter').then((m) => ({ default: m.HelpCenter }))
 )
 const DraftModal = lazy(() =>
   import('./components/DraftModal').then((m) => ({ default: m.DraftModal }))
@@ -124,6 +129,9 @@ const BibliographyRegistrationDialog = lazy(() =>
 function App() {
   const { t } = useTranslation()
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [isHelpOpen, setIsHelpOpen] = useState(false)
+  const [helpSection, setHelpSection] = useState<LearnSectionId>('quick-start')
+  const [pendingHelpCommand, setPendingHelpCommand] = useState<AppCommandId | null>(null)
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
   useAutoCompile()
   const { handleOpen, handleSave, handleSaveAs } = useFileOps()
@@ -153,7 +161,21 @@ function App() {
   const isTemplateGalleryOpen = useUiStore((s) => s.isTemplateGalleryOpen)
   const updateStatus = useUiStore((s) => s.updateStatus)
   const settingsRequested = useUiStore((s) => s.settingsRequested)
+  const helpRequestedSection = useUiStore((s) => s.helpRequestedSection)
   const isProseMode = useUiStore((state) => proseModeFor(state, filePath))
+  const pdfViewMode = useSettingsStore((s) => s.settings.pdfViewMode ?? 'continuous')
+  const helpHasDocument = Boolean(filePath)
+  const helpHasPdf = Boolean(pdfPath)
+  const helpHasProject = Boolean(projectRoot)
+  const helpContext = useMemo(
+    () => ({
+      document: helpHasDocument,
+      pdf: helpHasPdf,
+      project: helpHasProject
+    }),
+    [helpHasDocument, helpHasPdf, helpHasProject]
+  )
+  const closeHelp = useCallback((): void => setIsHelpOpen(false), [])
 
   // A two-finger horizontal swipe flips the paired workspace TeX/PDF ⇄
   // Markdown/render. In TeX mode only the editor owns this gesture because the
@@ -188,6 +210,7 @@ function App() {
   const overlaySnapshot = useMemo<AppOverlaySnapshot>(
     () => ({
       commandPalette: isCommandPaletteOpen,
+      help: isHelpOpen,
       settings: isSettingsOpen,
       aiDraft: isDraftModalOpen,
       templateGallery: isTemplateGalleryOpen,
@@ -197,6 +220,7 @@ function App() {
       isCommandPaletteOpen,
       isDraftModalOpen,
       isFeatureModalOpen,
+      isHelpOpen,
       isSettingsOpen,
       isTemplateGalleryOpen
     ]
@@ -204,6 +228,16 @@ function App() {
   const commandPaletteVisible =
     isCommandPaletteOpen && canOpenExclusiveAppOverlay('commandPalette', overlaySnapshot)
   const suppressBackgroundSurfaces = shouldSuppressBackgroundSurfaces(overlaySnapshot)
+
+  useFeatureHints({
+    filePath,
+    pdfPath,
+    projectRoot,
+    pdfViewMode,
+    isSidebarOpen,
+    isResearchPanelOpen,
+    suppressed: suppressBackgroundSurfaces
+  })
 
   const handleAiDraft = useCallback(
     (prefill?: string) => {
@@ -365,6 +399,7 @@ function App() {
       )
       if (result) {
         await openProject(result.projectPath)
+        useUiStore.getState().requestHelp('tour')
       }
     } catch (error) {
       logError('App:createGuidedDemo', error)
@@ -389,6 +424,25 @@ function App() {
     setIsSettingsOpen(true)
   }, [overlaySnapshot])
 
+  const handleOpenHelp = useCallback(
+    (section: LearnSectionId = 'quick-start'): void => {
+      // Help may intentionally replace Settings or the command palette, but it
+      // never interrupts a draft, template, or feature-owned modal workflow.
+      if (
+        overlaySnapshot.featureModal ||
+        overlaySnapshot.aiDraft ||
+        overlaySnapshot.templateGallery
+      ) {
+        return
+      }
+      setIsCommandPaletteOpen(false)
+      setIsSettingsOpen(false)
+      setHelpSection(section)
+      setIsHelpOpen(true)
+    },
+    [overlaySnapshot]
+  )
+
   const openCommandPalette = useCallback((): void => {
     if (!canOpenExclusiveAppOverlay('commandPalette', overlaySnapshot)) return
     setIsCommandPaletteOpen(true)
@@ -411,6 +465,7 @@ function App() {
             })
           }
         },
+        openHelp: handleOpenHelp,
         openSettings: handleOpenSettings,
         openTemplateGallery: handleOpenTemplateGallery,
         runAiDraft: () => handleAiDraft(),
@@ -429,6 +484,7 @@ function App() {
       handleExport,
       handleOpen,
       handleOpenFolder,
+      handleOpenHelp,
       handleOpenSettings,
       handleOpenTemplateGallery,
       handleQuitApplication,
@@ -437,6 +493,15 @@ function App() {
       handleSaveAs
     ]
   )
+
+  // A guide action closes its modal first. Dispatch on the following render so
+  // commands that open another exclusive surface read a current overlay
+  // snapshot rather than the Help Center's stale one.
+  useEffect(() => {
+    if (isHelpOpen || !pendingHelpCommand) return
+    setPendingHelpCommand(null)
+    runAppCommand(pendingHelpCommand)
+  }, [isHelpOpen, pendingHelpCommand, runAppCommand])
 
   // ---- Sidebar tab definitions ----
   const allSidebarTabs: { key: SidebarView; label: string; icon: React.ReactNode }[] = [
@@ -459,6 +524,7 @@ function App() {
   useEffect(() => {
     if (!isFeatureModalOpen) return
     setIsCommandPaletteOpen(false)
+    setIsHelpOpen(false)
     setIsSettingsOpen(false)
     setIsDraftModalOpen(false)
     setDraftPrefill(undefined)
@@ -480,6 +546,12 @@ function App() {
     useUiStore.getState().clearSettingsRequest()
     handleOpenSettings()
   }, [handleOpenSettings, settingsRequested])
+
+  useEffect(() => {
+    if (!helpRequestedSection) return
+    useUiStore.getState().clearHelpRequest()
+    handleOpenHelp(helpRequestedSection)
+  }, [handleOpenHelp, helpRequestedSection])
 
   useEffect(() => {
     window.api.onAppCommand(runAppCommand)
@@ -645,6 +717,20 @@ function App() {
           <SettingsModal onClose={() => setIsSettingsOpen(false)} />
         </Suspense>
       )}
+      {isHelpOpen && (
+        <Suspense
+          fallback={
+            <LoadingFallback variant="modal" label={t('loading.help')} overlayOwner="help" />
+          }
+        >
+          <HelpCenter
+            initialSection={helpSection}
+            context={helpContext}
+            onClose={closeHelp}
+            onRunCommand={setPendingHelpCommand}
+          />
+        </Suspense>
+      )}
       {isDraftModalOpen && (
         <Suspense
           fallback={
@@ -698,6 +784,7 @@ function App() {
           <HomeScreen
             onOpenFolder={handleOpenFolder}
             onOpenGuidedDemo={handleOpenGuidedDemo}
+            onOpenHelp={() => handleOpenHelp('quick-start')}
             onNewBlankProject={handleNewBlankProject}
             onNewFromTemplate={handleOpenTemplateGallery}
           />

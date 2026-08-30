@@ -20,6 +20,7 @@ const context = {
   openFile: vi.fn().mockResolvedValue(undefined),
   openFolder: vi.fn().mockResolvedValue(undefined),
   openProjectTerminal: vi.fn().mockResolvedValue(undefined),
+  openHelp: vi.fn(),
   openSettings: vi.fn(),
   openTemplateGallery: vi.fn(),
   runAiDraft: vi.fn(),
@@ -110,10 +111,12 @@ describe('executeAppCommand', () => {
     expect(useSettingsStore.getState().settings.autoHideSidebar).toBe(false)
   })
 
-  it('opens settings and checks for updates through the injected handlers', async () => {
+  it('opens help and settings, then checks for updates through the injected handlers', async () => {
+    await executeAppCommand('app.help', context)
     await executeAppCommand('app.settings', context)
     await executeAppCommand('app.checkUpdates', context)
 
+    expect(context.openHelp).toHaveBeenCalledOnce()
     expect(context.openSettings).toHaveBeenCalledOnce()
     expect(context.checkForUpdates).toHaveBeenCalledOnce()
   })

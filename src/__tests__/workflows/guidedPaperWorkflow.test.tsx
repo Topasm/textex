@@ -15,10 +15,12 @@ describe('guided paper workflow', () => {
 
   it('offers the compile-ready guided paper from the home screen', () => {
     const onOpenGuidedDemo = vi.fn()
+    const onOpenHelp = vi.fn()
     render(
       <HomeScreen
         onOpenFolder={vi.fn()}
         onOpenGuidedDemo={onOpenGuidedDemo}
+        onOpenHelp={onOpenHelp}
         onNewBlankProject={vi.fn()}
         onNewFromTemplate={vi.fn()}
       />
@@ -26,6 +28,9 @@ describe('guided paper workflow', () => {
 
     fireEvent.click(screen.getByTestId('guided-demo-action'))
     expect(onOpenGuidedDemo).toHaveBeenCalledOnce()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Learn TextEx' }))
+    expect(onOpenHelp).toHaveBeenCalledOnce()
   })
 
   it('keeps its engine guard, citation, tour, and project profile together', () => {

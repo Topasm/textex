@@ -1,4 +1,5 @@
 import type { AppCommandId } from '../../shared/types'
+import type { LearnSectionId } from '../../shared/learningIds'
 import { useEditorStore } from '../store/useEditorStore'
 import { usePdfStore } from '../store/usePdfStore'
 import { useProjectStore } from '../store/useProjectStore'
@@ -15,6 +16,7 @@ export interface AppCommandContext {
   openFile: () => Promise<void>
   openFolder: () => Promise<void>
   openProjectTerminal: () => Promise<void>
+  openHelp: (section?: LearnSectionId) => void
   openSettings: () => void
   openTemplateGallery: () => void
   runAiDraft: () => void
@@ -122,6 +124,9 @@ export async function executeAppCommand(
       return
     case 'app.settings':
       context.openSettings()
+      return
+    case 'app.help':
+      context.openHelp()
       return
     case 'app.checkUpdates': {
       await context.checkForUpdates()

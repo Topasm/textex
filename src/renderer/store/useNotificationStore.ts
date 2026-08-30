@@ -14,6 +14,7 @@ export interface AppNotification {
   tone: NotificationTone
   progress?: number | null
   action?: NotificationAction
+  onDismiss?: () => void
   dismissible: boolean
   timeoutMs: number | null
   updatedAt: number
@@ -25,12 +26,16 @@ export interface NotificationInput {
   tone?: NotificationTone
   progress?: number | null
   action?: NotificationAction
+  onDismiss?: () => void
   dismissible?: boolean
   timeoutMs?: number | null
 }
 
 export type NotificationPatch = Partial<
-  Pick<AppNotification, 'message' | 'tone' | 'progress' | 'action' | 'dismissible' | 'timeoutMs'>
+  Pick<
+    AppNotification,
+    'message' | 'tone' | 'progress' | 'action' | 'onDismiss' | 'dismissible' | 'timeoutMs'
+  >
 >
 
 interface NotificationState {
@@ -103,6 +108,7 @@ export const useNotificationStore = create<NotificationState>((set) => ({
       tone,
       progress: clampProgress(input.progress),
       action: input.action,
+      onDismiss: input.onDismiss,
       dismissible: input.dismissible ?? defaultDismissible(tone),
       timeoutMs: input.timeoutMs === undefined ? defaultTimeout(tone) : input.timeoutMs,
       updatedAt: nextNotificationRevision()

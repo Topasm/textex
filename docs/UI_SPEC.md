@@ -44,6 +44,7 @@ ErrorBoundary
     +-- LogPanel
     +-- StatusBar
     +-- SettingsModal (Overlay)
+    +-- HelpCenter (Overlay)
     +-- TemplateGallery (Overlay)
 ```
 
@@ -71,6 +72,9 @@ ErrorBoundary
 - Uses domain Zustand stores and fine-grained selectors rather than a monolithic app store.
 - Accesses native functionality only through the typed `window.api` Tauri adapter.
 - Routes AI Draft and Claude Code/Codex CLI entry points through the Research panel's Chat tab.
+- Owns the searchable in-app Help Center as an exclusive lazy-loaded overlay. Native Help, F1,
+  Home, Settings, the command palette, and contextual hints all open the same surface and may
+  request a specific guide section.
 - Presents updater availability, download progress, errors, and restart actions in a compact
   bottom-centered dock above the status bar. The dock is viewport-fixed, expands upward for
   release notes, and never changes the editor or preview layout.
@@ -180,6 +184,26 @@ ErrorBoundary
   - `automaticLayout: true`
   - `padding: { top: 8 }`
 
+### `ProsePane.tsx` / `ProsePreview.tsx`
+
+- The paired writing workspace replaces TeX/PDF together with editable Markdown/rendered prose;
+  the `.tex` document remains the only canonical buffer and no shadow `.md` file is created.
+- The source pane uses a bounded reading measure, native spellcheck, compact bold/italic/code
+  controls, familiar bold/italic shortcuts, word/line counts, and an explicit pending/synced/error
+  indicator. Formatting is disabled for protected equations, figures, tables, and raw declarations
+  that must be edited in TeX.
+- Source edits are attributed to projected blocks and written back as revision-qualified ranged
+  edits. Preamble, labels, comments, and unsupported LaTeX constructs are never re-serialized.
+- The rendered pane has matching sticky chrome, visible citation/reference chips, KaTeX equations,
+  bounded project figures, and a subtle active-block treatment. Hovering or focusing a rendered
+  block exposes an Edit action that moves editable prose to the Markdown caret and protected
+  equations, figures, tables, or declarations to their canonical TeX source.
+- Caret movement, rendered-block clicks, and scrolling share source-line anchors. Direct
+  navigation moves focus; passive scroll following does not, and programmatic following is
+  suppressed briefly so the two panes cannot echo-scroll each other.
+- A horizontal trackpad gesture still changes the complete TeX/PDF ⇄ Markdown/render pair, and all
+  motion respects the operating system's reduced-motion preference.
+
 ### `FileTree.tsx`
 
 - Uses the native project index when available and falls back to lazy directory
@@ -243,6 +267,7 @@ ErrorBoundary
   `.modal-content` / `.modal-header` / `.modal-footer` CSS classes.
 - Left sidebar with six visible icon tabs; right scrollable content area.
 - **General**: Interface language, update policy, and package-derived application version.
+  It also opens the in-app guide and resets previously dismissed feature hints.
 - **Appearance**: Theme selector cards (Light/Dark/Glass/System), independently controlled
   PDF Night Mode, PDF layout controls, and scroll sync.
 - **Editor**: Font Size range slider with monospace badge, behavior toggles (Word Wrap,
@@ -269,7 +294,8 @@ Displayed when no project is open.
 1. **Brand** — "TextEx" title + "LaTeX Editor" subtitle.
 2. **Action buttons** — "Open Folder" (primary), "Guided Demo Paper", "New Blank Project", and
    "New from Template". The guided action creates the same built-in demo available in the template
-   gallery, including a citation, tour checklist, and project research profile.
+   gallery, including a citation, tour checklist, and project research profile. A compact
+   "Learn TextEx" action opens the guide without creating a project.
 3. **Recent projects list** — pinned and recent entries with open, rename/tag, pin,
    and remove actions.
 
@@ -277,7 +303,35 @@ Opening a folder restores a valid saved TeX tab when possible. With no valid
 session it opens root-level `main.tex`, root-level `root.tex`, another
 root-level `.tex` file, then the first nested `.tex` file in stable tree order.
 
-**Props:** `onOpenFolder`, `onOpenGuidedDemo`, `onNewBlankProject`, `onNewFromTemplate`.
+**Props:** `onOpenFolder`, `onOpenGuidedDemo`, `onOpenHelp`, `onNewBlankProject`,
+`onNewFromTemplate`.
+
+### `HelpCenter.tsx`
+
+- Searchable, keyboard-contained modal for quick start, gestures, writing/PDF, references,
+  Research Chat and local agents, projects/export, and the live shortcut catalog.
+- Search spans localized titles, descriptions, section names, gesture alternatives, and live
+  accelerators. Results keep feature cards and matching shortcuts visibly grouped, show a live
+  count, and can be cleared with the inline control or the first `Escape` press; a second
+  `Escape` closes the modal. `Cmd/Ctrl+F` returns focus to guide search.
+- Generates shortcuts from `APP_COMMAND_MANIFEST` / `RENDERER_SHORTCUT_MANIFEST`; help copy never
+  duplicates accelerator definitions.
+- Shows an unavailable reason when an action needs a document, compiled PDF, or open project.
+  Running an available action closes the guide before dispatching the shared app command.
+- The guided demo opens a persistent manual checklist. Checklist progress and dismissed hints live
+  in the bounded renderer-only `useLearningStore`; they contain no document or account data.
+- `useFeatureHints` queues at most one relevant hint per application session. Hints appear only
+  when no exclusive surface or other notification is active, never time out automatically, and
+  always point to a visible or keyboard alternative for gesture-driven behavior.
+- Gesture documentation distinguishes paired TeX/PDF ⇄ Markdown/render navigation, single-page
+  PDF paging, PDF zoom, side-panel tab swipes, and accessible divider resizing.
+- Visual treatment uses the shared theme surfaces, focus ring, spacing, radius, icon, and elevation
+  tokens. Section counts, contextual requirement labels, a radial tour-progress summary, responsive
+  icon navigation, forced-colors support, and reduced-motion fallbacks remain presentation-only.
+- `learningIds.ts` and `learningHints.ts` contain only the bounded state vocabulary needed by the
+  startup hint hook. The larger translated `learnCatalog.ts`, its derived section indexes, and guide
+  icons remain behind the `HelpCenter` lazy boundary. Search text is normalized once per language,
+  rather than rebuilding every translated entry on each keystroke.
 
 ### `GitPanel.tsx`
 

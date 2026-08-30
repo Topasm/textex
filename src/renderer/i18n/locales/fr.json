@@ -70,11 +70,13 @@
   "homeScreen": {
     "subtitle": "Éditeur LaTeX",
     "openFolder": "Ouvrir un dossier",
+    "learnTextEx": "Découvrir TextEx",
     "newBlankProject": "Nouveau projet vide",
     "newFromTemplate": "Nouveau à partir d'un modèle"
   },
   "loading": {
     "workspace": "Restauration de votre espace de travail…",
+    "help": "Chargement du guide TextEx…",
     "settings": "Chargement des paramètres…",
     "aiDraft": "Chargement du brouillon IA…",
     "editor": "Chargement de l’éditeur…",
@@ -169,7 +171,17 @@
       "checkUpdatesNowDesc": "Recherchez maintenant une nouvelle version de TextEx. Le téléchargement et l’installation nécessitent toujours une confirmation.",
       "checkNow": "Rechercher",
       "language": "Langue",
-      "languageDesc": "Choisissez la langue d'affichage de l'application"
+      "languageDesc": "Choisissez la langue d'affichage de l'application",
+      "learning": "Apprentissage et aide",
+      "learningDesc": "Ouvrez le guide intégré ou laissez TextEx présenter progressivement ses fonctions utiles.",
+      "openGuide": "Guide TextEx",
+      "openGuideDesc": "Consultez les gestes, les flux de rédaction, les outils de recherche et les raccourcis.",
+      "openGuideAction": "Ouvrir le guide",
+      "featureHints": "Astuces de fonctionnalités",
+      "featureHintsDesc": "Restaurez les astuces contextuelles précédemment fermées.",
+      "resetHints": "Réinitialiser les astuces",
+      "resetHintsDone": "Réinitialisation terminée",
+      "featureHintsReset": "Les astuces réapparaîtront lors de prochaines sessions."
     },
     "appearance": {
       "theme": "Thème",
@@ -633,11 +645,140 @@
       "pdf_zoomReset": "Réinitialiser le zoom du PDF",
       "pdf_fitWidth": "Ajuster le PDF à la largeur",
       "pdf_fitHeight": "Ajuster le PDF à la hauteur",
+      "app_help": "Ouvrir le guide TextEx",
       "app_settings": "Ouvrir les paramètres",
       "app_checkUpdates": "Rechercher les mises à jour",
       "window_close": "Fermer la fenêtre",
       "app_quit": "Quitter TextEx",
       "view_toggleProse": "Basculer la vue prose"
+    }
+  },
+  "learning": {
+    "title": "Guide TextEx",
+    "subtitle": "Apprenez l’éditeur à votre rythme sans quitter votre article.",
+    "close": "Fermer le guide TextEx",
+    "openGuide": "Ouvrir le guide",
+    "searchPlaceholder": "Rechercher des gestes, fonctions ou raccourcis…",
+    "searchLabel": "Rechercher dans le guide TextEx",
+    "navigationLabel": "Sections du guide",
+    "tryAction": "Essayer",
+    "unavailable": "Pas encore disponible",
+    "searchResults": "Résultats de recherche",
+    "searchResultsDescription": "Résultats pour « {{query}} » dans le guide TextEx.",
+    "noResults": "Aucune entrée correspondante n’a été trouvée.",
+    "clearSearch": "Effacer la recherche",
+    "resultCount": "Résultats : {{count}}",
+    "input": {
+      "trackpad": "Pavé tactile",
+      "alternative": "Alternative"
+    },
+    "shortcutLabels": {
+      "increaseFont": "Augmenter la taille de police de l’éditeur",
+      "decreaseFont": "Réduire la taille de police de l’éditeur",
+      "closeTab": "Fermer l’onglet de l’éditeur",
+      "previousTab": "Onglet précédent de l’éditeur",
+      "nextTab": "Onglet suivant de l’éditeur"
+    },
+    "sections": {
+      "tour": {
+        "title": "Visite en 3 minutes",
+        "description": "Suivez le flux de rédaction essentiel dans la démo guidée ou votre projet."
+      },
+      "quickStart": {
+        "title": "Démarrage rapide",
+        "description": "Ouvrez un projet, compilez-le et trouvez une commande sans mémoriser l’interface."
+      },
+      "gestures": {
+        "title": "Gestes et navigation",
+        "description": "Utilisez les gestes à votre convenance ; chacun dispose d’une alternative visible ou clavier."
+      },
+      "writing": {
+        "title": "Rédaction et PDF",
+        "description": "Passez de la source à la prose et au document compilé sans perdre votre position."
+      },
+      "research": {
+        "title": "Références et recherche",
+        "description": "Vérifiez les citations, recherchez dans votre bibliothèque et préparez la soumission."
+      },
+      "ai": {
+        "title": "IA et agents locaux",
+        "description": "Utilisez Research Chat, Claude Code ou Codex CLI uniquement quand vous le choisissez."
+      },
+      "project": {
+        "title": "Projets et export",
+        "description": "Créez, versionnez, inspectez et exportez un projet TextEx délimité."
+      },
+      "shortcuts": {
+        "title": "Raccourcis clavier",
+        "description": "Les raccourcis de la plateforme proviennent du catalogue de commandes TextEx."
+      }
+    },
+    "items": {
+      "openProject": "Choisissez un dossier approuvé. TextEx restaure le dernier onglet TeX valide ou ouvre le document racine le plus probable.",
+      "compileDocument": "Compilez le document TeX actif et conservez l’ancien PDF jusqu’à ce que le nouveau soit prêt.",
+      "commandPalette": "Recherchez toutes les commandes ; celles qui exigent un document, un PDF ou un projet indiquent ce qui manque.",
+      "pairedWorkspaceTitle": "Paire TeX/PDF et Markdown/rendu",
+      "pairedWorkspace": "Balayez la source pour changer les deux volets. Balayez l’un des volets Markdown pour revenir.",
+      "pdfPagesTitle": "Tourner les pages du PDF",
+      "pdfPages": "En mode page unique, un geste net tourne exactement une page ; le mode continu conserve le défilement.",
+      "pdfZoomTitle": "Zoom du PDF",
+      "pdfZoom": "Pincez ou faites défiler avec une touche pour un retour immédiat, suivi d’un rendu net.",
+      "panelTabsTitle": "Changer d’onglet de panneau",
+      "panelTabs": "Balayez horizontalement dans le Navigateur gauche ou le panneau Recherche droit.",
+      "resizeTitle": "Redimensionner l’espace",
+      "resize": "Faites glisser un séparateur, double-cliquez pour le réinitialiser ou utilisez les flèches lorsqu’il est ciblé.",
+      "saveDocument": "Enregistrez le tampon canonique actif ; seule la révision exacte enregistrée devient propre.",
+      "syncTitle": "Synchronisation source et PDF",
+      "sync": "Passez du curseur à la page compilée ou faites Ctrl-clic sur le PDF pour revenir à la ligne source.",
+      "searchPdf": "Recherchez dans le PDF compilé sans déplacer le curseur source.",
+      "citationSearch": "Recherchez les références du projet, Zotero et les alternatives en ligne dans un seul flux.",
+      "submissionCheck": "Exécutez des contrôles déterministes de compilation, références, métadonnées et soumission.",
+      "researchPanel": "Ouvrez Références, Chat, profil, terminal et problèmes de compilation dans le panneau droit.",
+      "researchChatTitle": "Research Chat",
+      "researchChat": "Joignez du texte ou le contexte, choisissez une API ou CLI locale par conversation et vérifiez les modifications.",
+      "selectionAiTitle": "Interroger depuis une sélection",
+      "selectionAi": "Sélectionnez du texte TeX pour interroger le Chat ou chercher des sources sans le copier hors de l’éditeur.",
+      "aiSettings": "Configurez séparément API, Claude Code et Codex CLI ; chaque conversation peut remplacer le choix par défaut.",
+      "templates": "Partez d’un modèle intégré, importez-en un ou créez un modèle réutilisable.",
+      "projectTerminal": "Ouvrez la racine validée du projet dans le terminal système.",
+      "exportDocument": "Exportez avec Pandoc lorsqu’il est installé ou créez une archive Overleaf contenant uniquement les sources."
+    },
+    "gestures": {
+      "horizontalSwipe": "Balayage horizontal à deux doigts",
+      "proseAlternative": "Bouton Prose ou Mod+Maj+M",
+      "pageSwipe": "Balayage horizontal ; vertical en page unique",
+      "pageAlternative": "Flèches ou commandes de page",
+      "zoomGesture": "Pincement ou Mod+défilement",
+      "zoomAlternative": "Menu de zoom ou Mod+Plus/Moins",
+      "tabsAlternative": "Sélectionner une icône d’onglet nommée",
+      "resizeGesture": "Glisser ou double-cliquer un séparateur",
+      "resizeAlternative": "Cibler le séparateur et utiliser les flèches"
+    },
+    "tour": {
+      "progress": "{{completed}} étapes sur {{total}} terminées",
+      "progressHint": "Cochez les étapes ou utilisez Essayer pour lancer une action disponible.",
+      "progressLabel": "Progression de la visite guidée",
+      "reset": "Réinitialiser la progression",
+      "editTitle": "Modifier la phrase indiquée",
+      "editDescription": "Modifiez une phrase dans main.tex et observez l’indicateur de modification.",
+      "compileTitle": "Compiler l’article",
+      "compileDescription": "Compilez le document et attendez un nouveau PDF.",
+      "proseTitle": "Changer la paire de vues",
+      "proseDescription": "Ouvrez Markdown/rendu puis revenez à TeX/PDF sans perdre votre passage.",
+      "referencesTitle": "Examiner la citation d’exemple",
+      "referencesDescription": "Trouvez lamport1994latex et accédez à son utilisation dans la source.",
+      "syncTitle": "Essayer la synchronisation source/PDF",
+      "syncDescription": "Naviguez autour de l’équation 1 dans les deux sens.",
+      "submissionTitle": "Lancer le contrôle de soumission",
+      "submissionDescription": "Examinez chaque résultat avant de modifier l’article.",
+      "exportTitle": "Examiner les options d’export",
+      "exportDescription": "Essayez un export ou créez une archive Overleaf."
+    },
+    "hints": {
+      "workspaceSwipe": "Astuce : balayez horizontalement la source TeX pour alterner TeX/PDF et Markdown/rendu.",
+      "pdfPageSwipe": "Astuce : en mode page unique, un geste net tourne une seule page du PDF.",
+      "panelTabSwipe": "Astuce : balayez horizontalement dans un panneau latéral pour changer d’onglet.",
+      "sourcePdfSync": "Astuce : utilisez la synchronisation source↔PDF pour conserver votre position."
     }
   },
   "submissionCheck": {
@@ -1163,6 +1304,29 @@
     "sourceLabel": "Source Markdown",
     "previewLabel": "Prose rendue",
     "mathBlock": "Équation",
+    "markdown": "Markdown",
+    "livePreview": "Aperçu en direct",
+    "following": "Suit l’éditeur",
+    "format": "Mise en forme Markdown",
+    "bold": "Gras (Ctrl/Cmd+B)",
+    "italic": "Italique (Ctrl/Cmd+I)",
+    "inlineCode": "Code en ligne",
+    "protectedFormatting": "Ce bloc se modifie dans TeX.",
+    "statistics": "Statistiques du document",
+    "words_one": "{{count}} mot",
+    "words_other": "{{count}} mots",
+    "lines_one": "{{count}} ligne",
+    "lines_other": "{{count}} lignes",
+    "placeholder": "Commencez à écrire…",
+    "canonicalTex": "Les modifications sont synchronisées avec TeX en toute sécurité",
+    "sourceLine": "Ligne TeX {{line}}",
+    "editBlock": "Modifier ce bloc dans Markdown",
+    "editBlockTex": "Modifier ce bloc dans TeX",
+    "sync": {
+      "synced": "Synchronisé avec TeX",
+      "syncing": "Synchronisation…",
+      "blocked": "Vérification requise"
+    },
     "discardChange": "Annuler",
     "refused": {
       "protectedChanged": "Les équations, figures et tableaux se modifient dans le TeX. Cette modification n’a pas été appliquée.",
