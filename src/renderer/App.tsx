@@ -130,6 +130,7 @@ function App() {
   const { t } = useTranslation()
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isHelpOpen, setIsHelpOpen] = useState(false)
+  const [helpReturnsToSettings, setHelpReturnsToSettings] = useState(false)
   const [helpSection, setHelpSection] = useState<LearnSectionId>('quick-start')
   const [pendingHelpCommand, setPendingHelpCommand] = useState<AppCommandId | null>(null)
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
@@ -175,7 +176,15 @@ function App() {
     }),
     [helpHasDocument, helpHasPdf, helpHasProject]
   )
-  const closeHelp = useCallback((): void => setIsHelpOpen(false), [])
+  const closeHelp = useCallback((): void => {
+    setIsHelpOpen(false)
+    setHelpReturnsToSettings(false)
+  }, [])
+  const returnFromHelpToSettings = useCallback((): void => {
+    setIsHelpOpen(false)
+    setHelpReturnsToSettings(false)
+    setIsSettingsOpen(true)
+  }, [])
 
   // A two-finger horizontal swipe flips the paired workspace TeX/PDF ⇄
   // Markdown/render. In TeX mode only the editor owns this gesture because the
@@ -436,6 +445,7 @@ function App() {
         return
       }
       setIsCommandPaletteOpen(false)
+      setHelpReturnsToSettings(overlaySnapshot.settings)
       setIsSettingsOpen(false)
       setHelpSection(section)
       setIsHelpOpen(true)
@@ -525,6 +535,7 @@ function App() {
     if (!isFeatureModalOpen) return
     setIsCommandPaletteOpen(false)
     setIsHelpOpen(false)
+    setHelpReturnsToSettings(false)
     setIsSettingsOpen(false)
     setIsDraftModalOpen(false)
     setDraftPrefill(undefined)
@@ -681,7 +692,7 @@ function App() {
 
   return (
     <div
-      className={`app-container${isResearchPanelOpen ? ' has-research-panel' : ''}`}
+      className={`app-container${isResearchPanelOpen ? ' has-research-panel' : ''}${isSettingsOpen || isHelpOpen ? ' has-app-page' : ''}`}
       style={appLayoutStyle}
     >
       <Toolbar
@@ -707,11 +718,7 @@ function App() {
       {isSettingsOpen && (
         <Suspense
           fallback={
-            <LoadingFallback
-              variant="modal"
-              label={t('loading.settings')}
-              overlayOwner="settings"
-            />
+            <LoadingFallback variant="page" label={t('loading.settings')} overlayOwner="settings" />
           }
         >
           <SettingsModal onClose={() => setIsSettingsOpen(false)} />
@@ -720,13 +727,14 @@ function App() {
       {isHelpOpen && (
         <Suspense
           fallback={
-            <LoadingFallback variant="modal" label={t('loading.help')} overlayOwner="help" />
+            <LoadingFallback variant="page" label={t('loading.help')} overlayOwner="help" />
           }
         >
           <HelpCenter
             initialSection={helpSection}
             context={helpContext}
             onClose={closeHelp}
+            onBack={helpReturnsToSettings ? returnFromHelpToSettings : undefined}
             onRunCommand={setPendingHelpCommand}
           />
         </Suspense>
@@ -816,7 +824,7 @@ function App() {
                 <div
                   className="editor-surface"
                   data-prose-mode={isProseMode ? 'true' : 'false'}
-                  onWheel={handleWorkspaceSwipe}
+                  onWheelCapture={handleWorkspaceSwipe}
                 >
                   <div className="editor-surface__tex" hidden={isProseMode}>
                     <Suspense
@@ -850,7 +858,7 @@ function App() {
               <div
                 className="preview-pane"
                 data-workspace-view={isProseMode ? 'prose' : 'pdf'}
-                onWheel={isProseMode ? handleWorkspaceSwipe : undefined}
+                onWheelCapture={isProseMode ? handleWorkspaceSwipe : undefined}
                 style={{
                   width: `${(1 - splitRatio) * 100}%`
                 }}

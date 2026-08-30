@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { SettingsModal } from '../../renderer/components/SettingsModal'
 import { createDefaultUserSettings } from '../../shared/defaultSettings'
@@ -23,9 +23,14 @@ describe('SettingsModal', () => {
   })
 
   it('renders the Tauri settings tabs', () => {
-    render(<SettingsModal onClose={vi.fn()} />)
+    const { container } = render(<SettingsModal onClose={vi.fn()} />)
 
     expect(screen.getByRole('heading', { name: 'Settings' })).toBeInTheDocument()
+    expect(container.querySelector('[data-app-page="settings"]')).toHaveClass(
+      'app-page',
+      'settings-page'
+    )
+    expect(container.querySelector('.modal-overlay')).not.toBeInTheDocument()
     expect(screen.getByRole('navigation', { name: 'Settings' })).toHaveClass('settings-sidebar')
     expect(screen.getByRole('button', { name: 'General' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Appearance' })).toBeInTheDocument()
@@ -35,6 +40,26 @@ describe('SettingsModal', () => {
     expect(screen.getByRole('button', { name: 'AI' })).toBeInTheDocument()
     expect(screen.getByText(`TextEx v${__APP_VERSION__}`)).toBeInTheDocument()
     expect(screen.queryByText('Build 2026')).not.toBeInTheDocument()
+  })
+
+  it('searches localized setting copy and filters categories', () => {
+    render(<SettingsModal onClose={vi.fn()} />)
+
+    const search = screen.getByRole('searchbox', { name: 'Search settings' })
+    fireEvent.change(search, { target: { value: 'Zotero' } })
+
+    expect(screen.getByRole('button', { name: 'Integrations' })).toHaveAttribute(
+      'aria-current',
+      'page'
+    )
+    expect(screen.queryByRole('button', { name: 'General' })).not.toBeInTheDocument()
+    expect(screen.getByText('Zotero Integration')).toBeInTheDocument()
+
+    fireEvent.change(search, { target: { value: 'setting that does not exist' } })
+    const emptyState = screen.getByRole('status')
+    expect(emptyState).toHaveTextContent('No settings found')
+    fireEvent.click(within(emptyState).getByRole('button', { name: 'Clear settings search' }))
+    expect(screen.getByRole('button', { name: 'General' })).toBeInTheDocument()
   })
 
   it('switches tabs and updates a persisted setting', () => {
@@ -90,14 +115,14 @@ describe('SettingsModal', () => {
     expect(screen.getByPlaceholderText('sk-...')).toBeInTheDocument()
   })
 
-  it('closes from the close button and overlay', () => {
+  it('closes from the close button without backdrop dismissal', () => {
     const onClose = vi.fn()
     const { container } = render(<SettingsModal onClose={onClose} />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Close' }))
-    fireEvent.click(container.querySelector('.modal-overlay') as HTMLDivElement)
+    fireEvent.click(container.querySelector('.settings-content') as HTMLElement)
 
-    expect(onClose).toHaveBeenCalledTimes(2)
+    expect(onClose).toHaveBeenCalledOnce()
   })
 
   it('keeps interactive update feedback and actions visible inside settings', () => {
@@ -120,7 +145,7 @@ describe('SettingsModal', () => {
     const onClose = vi.fn()
     const view = render(<SettingsModal onClose={onClose} />)
     const dialog = screen.getByRole('dialog', { name: 'Settings' })
-    const closeButton = screen.getByRole('button', { name: 'Close' })
+    const search = screen.getByRole('searchbox', { name: 'Search settings' })
 
     expect(dialog).toHaveAttribute('aria-modal', 'true')
     expect(screen.getByRole('button', { name: 'General' })).toHaveFocus()
@@ -133,13 +158,18 @@ describe('SettingsModal', () => {
     const last = focusable.at(-1)
     expect(last).toBeDefined()
 
-    closeButton.focus()
+    search.focus()
     fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
     expect(last).toHaveFocus()
 
     last?.focus()
     fireEvent.keyDown(document, { key: 'Tab' })
-    expect(closeButton).toHaveFocus()
+    expect(search).toHaveFocus()
+
+    fireEvent.change(search, { target: { value: 'theme' } })
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(search).toHaveValue('')
+    expect(onClose).not.toHaveBeenCalled()
 
     fireEvent.keyDown(document, { key: 'Escape' })
     expect(onClose).toHaveBeenCalledOnce()

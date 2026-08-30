@@ -86,19 +86,6 @@
   .status-bar [data-responsive-priority='secondary'] {
     display: none;
   }
-
-  .settings-modal {
-    max-width: calc(100vw - 24px);
-  }
-
-  .settings-sidebar {
-    width: 176px;
-    padding-inline: 7px;
-  }
-
-  .settings-content {
-    padding: 18px;
-  }
 }
 
 @media (max-width: 760px) {
@@ -169,42 +156,6 @@
     padding: var(--space-12);
   }
 
-  .settings-modal {
-    width: 100%;
-    height: calc(100vh - 24px);
-    max-width: none;
-    max-height: none;
-  }
-
-  .settings-layout {
-    flex-direction: column;
-  }
-
-  .settings-sidebar {
-    width: 100%;
-    flex: 0 0 auto;
-    flex-direction: row;
-    gap: var(--space-4);
-    padding: 7px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    border-right: 0;
-    border-bottom: 1px solid var(--border);
-    scrollbar-width: thin;
-  }
-
-  .settings-tab {
-    width: auto;
-    flex: 0 0 auto;
-    padding: 7px var(--space-10);
-    white-space: nowrap;
-  }
-
-  .settings-content {
-    min-height: 0;
-    padding: var(--space-16);
-  }
-
   .settings-tab-content {
     gap: var(--space-16);
   }
@@ -239,19 +190,6 @@
 
   .modal-overlay {
     padding: var(--space-8);
-  }
-
-  .settings-modal {
-    height: calc(100vh - 16px);
-  }
-
-  .settings-modal .modal-header,
-  .settings-modal .modal-footer {
-    padding: 10px var(--space-12);
-  }
-
-  .settings-content {
-    padding: var(--space-12);
   }
 
   .settings-section {
@@ -327,7 +265,7 @@
 @media (forced-colors: active) {
   .toolbar,
   .status-bar,
-  .settings-modal {
+  .settings-page {
     border-color: CanvasText;
   }
 

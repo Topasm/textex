@@ -1,35 +1,12 @@
-.modal-overlay[data-app-overlay-owner='help'] {
-  background: color-mix(in srgb, var(--modal-backdrop) 92%, transparent);
-}
-
 .help-center {
   --help-accent-soft: color-mix(in srgb, var(--accent) 10%, transparent);
   --help-accent-border: color-mix(in srgb, var(--accent) 28%, var(--border));
-  width: min(1020px, calc(100vw - 48px));
-  height: min(748px, calc(100vh - 56px));
-  max-height: 90vh;
-  overflow: hidden;
-  background: var(--ui-surface-raised);
-  animation: help-dialog-enter 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-@keyframes help-dialog-enter {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.992);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
 }
 
 .help-header {
-  flex: 0 0 auto;
-  min-height: 68px;
-  padding: var(--space-12) var(--space-16) var(--space-12) var(--space-20);
-  background: color-mix(in srgb, var(--ui-surface-raised) 96%, var(--accent) 4%);
+  grid-template-columns: minmax(220px, 268px) minmax(280px, 720px) auto;
+  justify-content: center;
+  gap: clamp(var(--space-16), 3vw, 48px);
 }
 
 .help-heading,
@@ -62,7 +39,7 @@
   box-shadow: inset 0 1px color-mix(in srgb, white 9%, transparent);
 }
 
-.help-heading h2 {
+.help-heading h1 {
   letter-spacing: -0.015em;
 }
 
@@ -77,6 +54,7 @@
 
 .help-header-actions {
   gap: var(--space-8);
+  justify-self: end;
 }
 
 .help-header-actions > kbd {
@@ -96,8 +74,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   padding: 0;
   transition:
     color 120ms,
@@ -109,9 +87,11 @@
   flex: 0 0 auto;
   align-items: center;
   gap: var(--space-8);
-  min-height: 38px;
-  margin: var(--space-12) var(--space-16);
-  padding: 0 var(--space-10);
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  justify-self: center;
+  padding: 0 var(--space-12);
   color: var(--text-secondary);
   background: var(--ui-surface-input);
   border: 1px solid var(--ui-border-strong);
@@ -171,10 +151,11 @@
 
 .help-layout {
   display: grid;
-  grid-template-columns: 228px minmax(0, 1fr);
+  grid-template-columns: 268px minmax(0, 1fr);
+  width: min(1440px, 100%);
   flex: 1;
   min-height: 0;
-  border-top: 1px solid var(--border);
+  margin: 0 auto;
 }
 
 .help-navigation {
@@ -182,7 +163,7 @@
   flex-direction: column;
   gap: var(--space-4);
   min-width: 0;
-  padding: var(--space-14) var(--space-10);
+  padding: var(--space-24) var(--space-16);
   overflow-y: auto;
   background: color-mix(in srgb, var(--ui-surface-panel) 95%, var(--accent) 5%);
   border-right: 1px solid var(--border);
@@ -287,13 +268,18 @@
 
 .help-content {
   min-width: 0;
-  padding: var(--space-24);
+  padding: clamp(var(--space-24), 4vw, 48px);
   overflow-y: auto;
   overscroll-behavior: contain;
   background:
     radial-gradient(circle at 100% 0, var(--help-accent-soft), transparent 240px),
     var(--ui-surface-raised);
   scrollbar-gutter: stable;
+}
+
+.help-content-inner {
+  width: min(1060px, 100%);
+  margin: 0 auto;
 }
 
 .help-section-heading {
@@ -349,7 +335,7 @@
 
 .help-card-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
   gap: var(--space-12);
 }
 
@@ -848,7 +834,7 @@
 
 @media (max-width: 860px) {
   .help-layout {
-    grid-template-columns: 198px minmax(0, 1fr);
+    grid-template-columns: 214px minmax(0, 1fr);
   }
 
   .help-content {
@@ -862,10 +848,15 @@
 }
 
 @media (max-width: 700px) {
-  .help-center {
-    width: calc(100vw - 24px);
-    height: calc(100vh - 28px);
-    max-height: none;
+  .help-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-10) var(--space-16);
+    padding: var(--space-10) var(--space-14);
+  }
+
+  .help-search {
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
 
   .help-layout {
@@ -876,7 +867,7 @@
   .help-navigation {
     flex-direction: row;
     flex: 0 0 auto;
-    padding: var(--space-6) var(--space-8);
+    padding: var(--space-8);
     overflow-x: auto;
     border-right: 0;
     border-bottom: 1px solid var(--border);
@@ -914,7 +905,6 @@
 
 @media (max-width: 520px) {
   .help-header {
-    min-height: 58px;
     padding-inline: var(--space-12);
   }
 
@@ -928,10 +918,6 @@
   .help-nav-label,
   .help-section-index {
     display: none;
-  }
-
-  .help-search {
-    margin: var(--space-8) var(--space-10);
   }
 
   .help-navigation button {

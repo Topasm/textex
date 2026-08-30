@@ -154,6 +154,11 @@
   },
   "settings": {
     "title": "설정",
+    "searchPlaceholder": "설정 검색",
+    "searchLabel": "설정 검색",
+    "clearSearch": "설정 검색 지우기",
+    "noResultsTitle": "일치하는 설정이 없습니다",
+    "noResultsDescription": "“{{query}}”와 일치하는 설정이 없습니다. 다른 검색어를 입력해 보세요.",
     "tabs": {
       "general": "일반",
       "appearance": "모양",
@@ -657,6 +662,7 @@
     "title": "TextEx 가이드",
     "subtitle": "논문을 벗어나지 않고 필요한 기능을 천천히 익혀 보세요.",
     "close": "TextEx 가이드 닫기",
+    "backToSettings": "설정으로 돌아가기",
     "openGuide": "가이드 열기",
     "searchPlaceholder": "제스처, 기능 또는 단축키 검색…",
     "searchLabel": "TextEx 가이드 검색",
@@ -775,7 +781,7 @@
       "exportDescription": "문서 내보내기를 실행하거나 프로젝트 도구에서 Overleaf ZIP을 만듭니다."
     },
     "hints": {
-      "workspaceSwipe": "팁: TeX 소스에서 가로로 쓸어 TeX/PDF와 Markdown/렌더 쌍을 전환할 수 있습니다.",
+      "workspaceSwipe": "팁: 어느 집필 화면에서든 가로로 쓸어 TeX/PDF와 Markdown/렌더 쌍을 상호 전환할 수 있습니다.",
       "pdfPageSwipe": "팁: 단일 페이지 모드에서는 분명하게 한 번 쓸면 PDF 한 페이지만 넘어갑니다.",
       "panelTabSwipe": "팁: 좌우 패널 안에서 가로로 쓸어 패널 탭 사이를 이동할 수 있습니다.",
       "sourcePdfSync": "팁: 소스↔PDF 동기화로 코드와 컴파일된 논문에서 같은 위치를 유지할 수 있습니다."

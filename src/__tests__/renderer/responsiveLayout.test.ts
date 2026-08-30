@@ -9,6 +9,7 @@ const loadingStyles = readFileSync(
   'utf8'
 )
 const responsiveStyles = readFileSync(resolve(root, 'src/renderer/styles/responsive.css'), 'utf8')
+const settingsStyles = readFileSync(resolve(root, 'src/renderer/styles/settings.css'), 'utf8')
 const rendererEntry = readFileSync(resolve(root, 'src/renderer/main.tsx'), 'utf8')
 const tauriConfig = JSON.parse(
   readFileSync(resolve(root, 'src-tauri/tauri.conf.json'), 'utf8')
@@ -30,7 +31,9 @@ describe('responsive desktop layout contract', () => {
     expect(responsiveStyles).toContain('@media (max-width: 840px)')
     expect(responsiveStyles).toContain('.editor-main-content > .editor-pane')
     expect(responsiveStyles).not.toContain('has-terminal-pane')
-    expect(responsiveStyles).toContain('.settings-sidebar')
+    expect(settingsStyles).toContain('@media (max-width: 840px)')
+    expect(settingsStyles).toContain('--settings-navigation-width: 208px')
+    expect(settingsStyles).toContain('.settings-sidebar')
   })
 
   it('keeps the document toolbar as the single draggable desktop chrome row', () => {
@@ -52,7 +55,7 @@ describe('responsive desktop layout contract', () => {
       /\.research-panel\.overlay\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0 0 var\(--research-panel-bottom, 0\) auto;/s
     )
     expect(baseStyles).toMatch(
-      /\.app-container\.has-research-panel > \.toolbar\s*\{[^}]*margin-right:\s*clamp\(320px, var\(--research-panel-width\), 520px\);/s
+      /\.app-container\.has-research-panel:not\(\.has-app-page\) > \.toolbar\s*\{[^}]*margin-right:\s*clamp\(320px, var\(--research-panel-width\), 520px\);/s
     )
     expect(loadingStyles).toMatch(
       /\.preview-pane > \.loading-fallback--panel\s*\{[^}]*position:\s*absolute;/s

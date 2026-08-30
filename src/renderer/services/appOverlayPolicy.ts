@@ -33,7 +33,7 @@ export function getTopmostAppOverlay(snapshot: AppOverlaySnapshot): ExclusiveApp
   return OVERLAY_PRIORITY.find((surface) => snapshot[surface]) ?? null
 }
 
-/** Loading fallbacks inherit their owning modal's flag, so they are covered here. */
+/** Loading fallbacks inherit their owning exclusive surface's flag, so they are covered here. */
 export function hasBlockingModalOverlay(snapshot: AppOverlaySnapshot): boolean {
   return (
     snapshot.featureModal ||
@@ -45,8 +45,8 @@ export function hasBlockingModalOverlay(snapshot: AppOverlaySnapshot): boolean {
 }
 
 /**
- * The palette never covers a modal. A modal may atomically replace the palette,
- * but one modal workflow cannot open on top of another modal workflow.
+ * The palette never covers an exclusive page or modal. Either may atomically
+ * replace the palette, but exclusive workflows never stack on each other.
  */
 export function canOpenExclusiveAppOverlay(
   target: ExclusiveAppOverlay,

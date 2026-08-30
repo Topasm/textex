@@ -154,6 +154,11 @@
   },
   "settings": {
     "title": "Configuración",
+    "searchPlaceholder": "Buscar en la configuración",
+    "searchLabel": "Buscar en la configuración",
+    "clearSearch": "Borrar búsqueda de configuración",
+    "noResultsTitle": "No se encontró ninguna configuración",
+    "noResultsDescription": "Ninguna configuración coincide con «{{query}}». Prueba con otro término.",
     "tabs": {
       "general": "General",
       "appearance": "Apariencia",
@@ -657,6 +662,7 @@
     "title": "Guía de TextEx",
     "subtitle": "Aprende el editor a tu ritmo sin salir de tu artículo.",
     "close": "Cerrar la guía de TextEx",
+    "backToSettings": "Volver a Configuración",
     "openGuide": "Abrir guía",
     "searchPlaceholder": "Buscar gestos, funciones o atajos…",
     "searchLabel": "Buscar en la guía de TextEx",
@@ -775,7 +781,7 @@
       "exportDescription": "Prueba una exportación o crea un ZIP de Overleaf."
     },
     "hints": {
-      "workspaceSwipe": "Consejo: desliza horizontalmente en el código TeX para cambiar el par TeX/PDF y Markdown/renderizado.",
+      "workspaceSwipe": "Consejo: desliza horizontalmente en cualquiera de las vistas de escritura para alternar entre TeX/PDF y Markdown/renderizado.",
       "pdfPageSwipe": "Consejo: en modo de página única, un gesto deliberado pasa una sola página.",
       "panelTabSwipe": "Consejo: desliza horizontalmente en un panel lateral para cambiar de pestaña.",
       "sourcePdfSync": "Consejo: usa la sincronización código↔PDF para conservar tu posición."

@@ -41,8 +41,15 @@ TextEx uses a "Zero-Friction" configuration system where settings are applied in
 | `aiProvider` | `'' \| 'openai' \| 'anthropic' \| 'gemini' \| 'claude-cli' \| 'codex-cli'` | `''` | Native HTTP or isolated CLI provider used by AI actions. |
 | `aiModel` | `string` | `''` | Model identifier for the selected AI provider. |
 
-### Settings Modal
-The `SettingsModal` component provides a tabbed interface (800×500) for modifying these values. It is accessible via the gear icon in the Toolbar. Modal chrome uses shared `.modal-*` classes. Settings tabs compose the typed `SettingsSection`, `SettingsRow`, `SettingsToggleRow`, `SettingsSelect`, and `SettingsSegmentedControl` primitives, with their common layout in `styles/settings.css`. Feature-specific legacy styles remain in `styles/index.css` until their tabs adopt the shared controls.
+### Settings Page
+The internally named `SettingsModal` component presents a route-like, full-workspace settings page below the
+native title bar. It is accessible from the Toolbar and uses the shared `AppPageFrame` rather than
+dialog-card chrome. A fixed header provides localized settings search, the left navigation remains
+visible on desktop, and the selected category scrolls independently in a centered content column.
+Settings tabs compose the typed `SettingsSection`, `SettingsRow`, `SettingsToggleRow`,
+`SettingsSelect`, and `SettingsSegmentedControl` primitives, with their common layout in
+`styles/settings.css`. Feature-specific legacy styles remain in `styles/index.css` until their tabs
+adopt the shared controls.
 
 **Visible Tauri tabs:**
 - **General** — Interface language, update policy, application information, opening the TextEx

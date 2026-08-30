@@ -12,6 +12,14 @@ describe('LoadingFallback', () => {
     expect(status).toHaveClass('loading-fallback--modal')
   })
 
+  it('renders a full workspace page loading surface', () => {
+    render(<LoadingFallback variant="page" label="Loading guide…" overlayOwner="help" />)
+
+    const status = screen.getByRole('status', { name: 'Loading guide…' })
+    expect(status).toHaveClass('loading-fallback--page')
+    expect(status).toHaveAttribute('data-app-overlay-owner', 'help')
+  })
+
   it('keeps compact floating feedback free of decorative skeleton rows', () => {
     const { container } = render(
       <LoadingFallback variant="floating" label="Loading math preview…" />

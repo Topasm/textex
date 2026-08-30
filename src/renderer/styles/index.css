@@ -319,7 +319,7 @@ body,
 }
 
 /* The desktop Research navigation owns the right end of the title-bar row. */
-.app-container.has-research-panel > .toolbar {
+.app-container.has-research-panel:not(.has-app-page) > .toolbar {
   margin-right: clamp(320px, var(--research-panel-width), 520px);
 }
 
@@ -6131,15 +6131,7 @@ button.submission-check-finding:hover {
   color: var(--text-secondary);
 }
 
-/* ---- Settings Modal ---- */
-.settings-modal {
-  width: 800px;
-  height: 500px;
-  max-width: 95vw;
-  max-height: 85vh;
-  overflow: hidden;
-}
-
+/* ---- Settings ---- */
 .settings-layout {
   display: flex;
   flex: 1;

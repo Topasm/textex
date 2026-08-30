@@ -154,6 +154,11 @@
   },
   "settings": {
     "title": "Settings",
+    "searchPlaceholder": "Search settings",
+    "searchLabel": "Search settings",
+    "clearSearch": "Clear settings search",
+    "noResultsTitle": "No settings found",
+    "noResultsDescription": "No settings match “{{query}}”. Try another term.",
     "tabs": {
       "general": "General",
       "appearance": "Appearance",
@@ -657,6 +662,7 @@
     "title": "TextEx Guide",
     "subtitle": "Learn the editor at your own pace without leaving your paper.",
     "close": "Close TextEx guide",
+    "backToSettings": "Back to Settings",
     "openGuide": "Open guide",
     "searchPlaceholder": "Search gestures, features, or shortcuts…",
     "searchLabel": "Search the TextEx guide",
@@ -775,7 +781,7 @@
       "exportDescription": "Try a document export or create an Overleaf ZIP from project tools."
     },
     "hints": {
-      "workspaceSwipe": "Tip: swipe horizontally on the TeX source to switch the TeX/PDF and Markdown/render pair.",
+      "workspaceSwipe": "Tip: swipe horizontally on either writing pane to switch between the TeX/PDF and Markdown/render pairs.",
       "pdfPageSwipe": "Tip: in single-page mode, a deliberate swipe turns exactly one PDF page.",
       "panelTabSwipe": "Tip: swipe horizontally in either side panel to move between its tabs.",
       "sourcePdfSync": "Tip: use source↔PDF sync to keep your place between code and the compiled paper."

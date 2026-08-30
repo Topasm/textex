@@ -1,6 +1,6 @@
 import './LoadingFallback.css'
 
-export type LoadingFallbackVariant = 'workspace' | 'pane' | 'modal' | 'panel' | 'floating'
+export type LoadingFallbackVariant = 'workspace' | 'pane' | 'modal' | 'page' | 'panel' | 'floating'
 
 interface LoadingFallbackProps {
   label: string

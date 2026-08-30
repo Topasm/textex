@@ -26,8 +26,10 @@ vi.mock('../../renderer/components/Toolbar', () => ({
   )
 }))
 
+vi.mock('../../renderer/data/monacoSetup', () => ({}))
+
 vi.mock('../../renderer/components/EditorPane', () => ({
-  default: () => <div data-testid="editor-pane" />
+  default: () => <div data-testid="editor-pane" onWheel={(event) => event.stopPropagation()} />
 }))
 
 vi.mock('../../renderer/components/PreviewPane', () => ({
@@ -35,11 +37,15 @@ vi.mock('../../renderer/components/PreviewPane', () => ({
 }))
 
 vi.mock('../../renderer/components/ProsePane', () => ({
-  ProsePane: () => <div data-testid="markdown-source" />
+  ProsePane: () => (
+    <div data-testid="markdown-source" onWheel={(event) => event.stopPropagation()} />
+  )
 }))
 
 vi.mock('../../renderer/components/ProsePreview', () => ({
-  ProsePreview: () => <div data-testid="markdown-preview" />
+  ProsePreview: () => (
+    <div data-testid="markdown-preview" onWheel={(event) => event.stopPropagation()} />
+  )
 }))
 
 vi.mock('../../renderer/components/LogPanel', () => ({
@@ -101,12 +107,15 @@ vi.mock('../../renderer/components/SettingsModal', () => ({
 vi.mock('../../renderer/components/HelpCenter', () => ({
   HelpCenter: ({
     onClose,
+    onBack,
     onRunCommand
   }: {
     onClose: () => void
+    onBack?: () => void
     onRunCommand: (command: 'app.settings') => void
   }) => (
     <div role="dialog" aria-label="Mock Help" data-app-overlay-owner="help">
+      {onBack && <button onClick={onBack}>Back to Settings</button>}
       <button
         onClick={() => {
           onClose()
@@ -261,6 +270,21 @@ describe('App AI Draft flow', () => {
     expect(screen.queryByRole('dialog', { name: 'Mock Help' })).not.toBeInTheDocument()
   })
 
+  it('returns from Guide to Settings when Settings opened it', async () => {
+    render(<App />)
+
+    fireEvent.click(screen.getByText('Open Settings'))
+    expect(await screen.findByRole('dialog', { name: 'Mock Settings' })).toBeInTheDocument()
+
+    act(() => useUiStore.getState().requestHelp('quick-start'))
+    expect(await screen.findByRole('dialog', { name: 'Mock Help' })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Mock Settings' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back to Settings' }))
+    expect(await screen.findByRole('dialog', { name: 'Mock Settings' })).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Mock Help' })).not.toBeInTheDocument()
+  })
+
   it('does not open the palette over AI draft or template modal workflows', async () => {
     const draftView = render(<App />)
     fireEvent.click(screen.getByText('Open AI Draft'))
@@ -322,11 +346,14 @@ describe('App paired workspace gestures', () => {
     expect(previewSurface).not.toBeNull()
     expect(editorSurface).not.toBeNull()
     expect(previewSurface).toHaveAttribute('data-workspace-view', 'pdf')
+    const editorContent = await screen.findByTestId('editor-pane')
 
     fireEvent.wheel(previewSurface!, { deltaX: 60, deltaY: 2 })
     expect(proseModeFor(useUiStore.getState(), '/project/main.tex')).toBe(false)
 
-    fireEvent.wheel(editorSurface!, { deltaX: 60, deltaY: 2 })
+    // Monaco owns wheel events and stops them during its bubble phase. The
+    // workspace gesture therefore has to observe the capture phase.
+    fireEvent.wheel(editorContent, { deltaX: 60, deltaY: 2 })
     await waitFor(() => {
       expect(proseModeFor(useUiStore.getState(), '/project/main.tex')).toBe(true)
     })
@@ -342,7 +369,7 @@ describe('App paired workspace gestures', () => {
     expect(await screen.findByTestId('markdown-preview')).toBeInTheDocument()
     expect(previewSurface).toHaveAttribute('data-workspace-view', 'prose')
 
-    fireEvent.wheel(previewSurface!, { deltaX: -60, deltaY: 2 })
+    fireEvent.wheel(screen.getByTestId('markdown-preview'), { deltaX: -60, deltaY: 2 })
     await waitFor(() => {
       expect(proseModeFor(useUiStore.getState(), '/project/main.tex')).toBe(false)
     })

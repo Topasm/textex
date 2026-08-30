@@ -43,8 +43,8 @@ ErrorBoundary
     |   |   +-- PreviewPane
     +-- LogPanel
     +-- StatusBar
-    +-- SettingsModal (Overlay)
-    +-- HelpCenter (Overlay)
+    +-- SettingsModal (Full-workspace page)
+    +-- HelpCenter (Full-workspace page)
     +-- TemplateGallery (Overlay)
 ```
 
@@ -203,6 +203,9 @@ ErrorBoundary
   suppressed briefly so the two panes cannot echo-scroll each other.
 - A horizontal trackpad gesture still changes the complete TeX/PDF ⇄ Markdown/render pair, and all
   motion respects the operating system's reduced-motion preference.
+- The paired-view gesture is observed during wheel capture so Monaco and the rendered Markdown
+  surface cannot swallow one side of the transition. The PDF keeps ownership of horizontal
+  gestures while TeX/PDF is visible, preserving single-page navigation.
 
 ### `FileTree.tsx`
 
@@ -263,9 +266,13 @@ ErrorBoundary
   - Cursor position (`Ln X, Col Y`) from Monaco's `onDidChangeCursorPosition`.
 
 ### `SettingsModal.tsx`
-- Modal overlay (800×500) for application settings, using shared `.modal-overlay` /
-  `.modal-content` / `.modal-header` / `.modal-footer` CSS classes.
-- Left sidebar with six visible icon tabs; right scrollable content area.
+- Route-like application page that replaces the workspace below the native title bar. It uses the
+  shared backdrop-free `AppPageFrame`; there is no floating card or outside-click dismissal.
+- Persistent header with title, localized settings search, and close action. `Cmd/Ctrl+F` focuses
+  search; the first `Escape` clears a query and the next closes the page.
+- Left sidebar with six icon tabs and package-derived version; the centered right content column
+  scrolls independently. Search indexes the localized copy for every category and filters the
+  navigation to matching settings.
 - **General**: Interface language, update policy, and package-derived application version.
   It also opens the in-app guide and resets previously dismissed feature hints.
 - **Appearance**: Theme selector cards (Light/Dark/Glass/System), independently controlled
@@ -308,12 +315,16 @@ root-level `.tex` file, then the first nested `.tex` file in stable tree order.
 
 ### `HelpCenter.tsx`
 
-- Searchable, keyboard-contained modal for quick start, gestures, writing/PDF, references,
+- Searchable, keyboard-contained full-workspace page for quick start, gestures, writing/PDF, references,
   Research Chat and local agents, projects/export, and the live shortcut catalog.
+- Shares `AppPageFrame` and the same header/sidebar/content geometry as Settings. The editor toolbar
+  remains as application chrome while the guide replaces the complete workspace below it.
+- When Settings opens the guide, a visible back action plus `Alt+Left` / `Cmd+[` returns to the
+  same Settings page; closing the guide still exits the full-workspace surface.
 - Search spans localized titles, descriptions, section names, gesture alternatives, and live
   accelerators. Results keep feature cards and matching shortcuts visibly grouped, show a live
   count, and can be cleared with the inline control or the first `Escape` press; a second
-  `Escape` closes the modal. `Cmd/Ctrl+F` returns focus to guide search.
+  `Escape` closes the page. `Cmd/Ctrl+F` returns focus to guide search.
 - Generates shortcuts from `APP_COMMAND_MANIFEST` / `RENDERER_SHORTCUT_MANIFEST`; help copy never
   duplicates accelerator definitions.
 - Shows an unavailable reason when an action needs a document, compiled PDF, or open project.
@@ -427,9 +438,11 @@ Components subscribe with fine-grained selectors; there is no monolithic `useApp
   - Success: `#6a9955` (`--success`)
   - Dirty indicator: `#cca700` (yellow dot + save button highlight)
   - Status bar: `#007acc` (blue bar with white text)
-- Shared modal classes: `.modal-overlay`, `.modal-content`, `.modal-header`,
+- Shared dialog classes: `.modal-overlay`, `.modal-content`, `.modal-header`,
   `.modal-body`, `.modal-footer`, `.close-button`, `.primary-button`.
-- Settings-specific classes: `.settings-modal`, `.settings-layout`, `.settings-sidebar`,
+- Shared full-workspace page classes: `.app-page`, `.app-page-header`, `.app-page-title`,
+  `.app-page-close`. Settings and Guide use this shell below the persistent app toolbar.
+- Settings-specific classes: `.settings-page`, `.settings-layout`, `.settings-sidebar`,
   `.settings-tab`, `.settings-content`, `.settings-section`, `.settings-row`,
   `.settings-input`, `.settings-select`, `.settings-toggle-track`, `.settings-theme-card`,
   `.settings-range`, `.settings-badge`, `.settings-status-badge`, etc.

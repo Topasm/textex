@@ -154,6 +154,11 @@
   },
   "settings": {
     "title": "设置",
+    "searchPlaceholder": "搜索设置",
+    "searchLabel": "搜索设置",
+    "clearSearch": "清除设置搜索",
+    "noResultsTitle": "未找到设置",
+    "noResultsDescription": "没有与“{{query}}”匹配的设置。请尝试其他关键词。",
     "tabs": {
       "general": "常规",
       "appearance": "外观",
@@ -657,6 +662,7 @@
     "title": "TextEx 指南",
     "subtitle": "无需离开论文，按自己的节奏熟悉编辑器。",
     "close": "关闭 TextEx 指南",
+    "backToSettings": "返回设置",
     "openGuide": "打开指南",
     "searchPlaceholder": "搜索手势、功能或快捷键…",
     "searchLabel": "搜索 TextEx 指南",
@@ -772,7 +778,7 @@
       "exportDescription": "尝试文档导出或创建 Overleaf ZIP。"
     },
     "hints": {
-      "workspaceSwipe": "提示：在 TeX 源码中水平横扫可切换 TeX/PDF 与 Markdown/渲染视图对。",
+      "workspaceSwipe": "提示：在任一写作视图中水平滑动，即可在 TeX/PDF 与 Markdown/渲染视图之间双向切换。",
       "pdfPageSwipe": "提示：单页模式中一次明确手势只会翻动一页 PDF。",
       "panelTabSwipe": "提示：在任一侧面板内水平横扫可切换标签。",
       "sourcePdfSync": "提示：使用源码↔PDF 同步可在代码与编译论文之间保持位置。"

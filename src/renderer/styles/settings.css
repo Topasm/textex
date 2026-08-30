@@ -1,6 +1,304 @@
 /* Shared settings primitives. Feature-specific settings styles remain colocated
  * with the legacy settings surface until each tab adopts these controls. */
 
+.settings-page {
+  --settings-navigation-width: 248px;
+  --settings-accent-soft: color-mix(in srgb, var(--accent) 10%, transparent);
+  --settings-accent-border: color-mix(in srgb, var(--accent) 28%, var(--border));
+}
+
+.settings-page-header {
+  grid-template-columns: minmax(210px, var(--settings-navigation-width)) minmax(280px, 720px) auto;
+  justify-content: center;
+  gap: clamp(var(--space-16), 3vw, 48px);
+}
+
+.settings-page-mark {
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  background: var(--settings-accent-soft);
+  border: 1px solid var(--settings-accent-border);
+  border-radius: var(--ui-radius-large);
+}
+
+.settings-search {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  align-items: center;
+  gap: var(--space-8);
+  justify-self: center;
+  padding: 0 var(--space-12);
+  color: var(--text-secondary);
+  background: var(--ui-surface-input, var(--bg-input));
+  border: 1px solid var(--ui-border-strong, var(--border));
+  border-radius: var(--ui-radius-panel);
+  transition:
+    color 140ms,
+    background-color 140ms,
+    border-color 140ms,
+    box-shadow 140ms;
+}
+
+.settings-search:focus-within {
+  color: var(--accent);
+  background: var(--ui-surface-raised, var(--bg-primary));
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.settings-search input {
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  color: var(--text-primary);
+  background: transparent;
+  border: 0;
+  outline: 0;
+  font: inherit;
+}
+
+.settings-search input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.82;
+}
+
+.settings-search input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.settings-search-clear {
+  display: inline-flex;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 0;
+  border-radius: var(--ui-radius-control);
+  cursor: pointer;
+}
+
+.settings-search-clear:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.settings-layout {
+  width: min(1440px, 100%);
+  min-height: 0;
+  margin: 0 auto;
+}
+
+.settings-sidebar {
+  width: var(--settings-navigation-width);
+  padding: var(--space-24) var(--space-16) var(--space-16);
+  gap: var(--space-4);
+  background: color-mix(
+    in srgb,
+    var(--ui-surface-panel, var(--bg-secondary)) 96%,
+    var(--accent) 4%
+  );
+}
+
+.settings-tab {
+  position: relative;
+  min-height: 42px;
+  padding: var(--space-8) var(--space-12);
+  border: 1px solid transparent;
+}
+
+.settings-tab::before {
+  position: absolute;
+  inset: 9px auto 9px 0;
+  width: 3px;
+  background: var(--accent);
+  border-radius: 0 var(--ui-radius-pill) var(--ui-radius-pill) 0;
+  content: '';
+  opacity: 0;
+  transform: scaleY(0.55);
+  transition:
+    opacity 120ms,
+    transform 120ms;
+}
+
+.settings-tab.active {
+  color: var(--text-primary);
+  background: var(--settings-accent-soft);
+  border-color: var(--settings-accent-border);
+}
+
+.settings-tab.active::before {
+  opacity: 1;
+  transform: scaleY(1);
+}
+
+.settings-tab.active svg {
+  color: var(--accent);
+}
+
+.settings-content {
+  min-width: 0;
+  padding: clamp(var(--space-24), 4vw, 48px);
+  background:
+    radial-gradient(circle at 100% 0, var(--settings-accent-soft), transparent 280px),
+    var(--ui-surface-raised, var(--bg-primary));
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.settings-content-inner {
+  width: min(900px, 100%);
+  margin: 0 auto;
+}
+
+.settings-sidebar-empty {
+  margin: var(--space-12);
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  line-height: 1.45;
+}
+
+.settings-version {
+  margin-top: auto;
+  padding: var(--space-16) var(--space-12) 0;
+  border-top: 1px solid color-mix(in srgb, var(--border) 74%, transparent);
+}
+
+.settings-empty-state {
+  display: flex;
+  min-height: 320px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: var(--space-10);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.settings-empty-state > svg {
+  color: var(--accent);
+}
+
+.settings-empty-state h2,
+.settings-empty-state p {
+  margin: 0;
+}
+
+.settings-empty-state h2 {
+  color: var(--text-primary);
+  font-size: var(--font-xl);
+}
+
+.settings-empty-state p {
+  max-width: 440px;
+  line-height: 1.5;
+}
+
+.settings-page button:focus-visible,
+.settings-page input:focus-visible,
+.settings-page select:focus-visible,
+.settings-page textarea:focus-visible {
+  outline: 2px solid var(--ui-focus-ring);
+  outline-offset: 2px;
+}
+
+@media (max-width: 840px) {
+  .settings-page {
+    --settings-navigation-width: 208px;
+  }
+
+  .settings-page-header {
+    gap: var(--space-16);
+    padding-inline: var(--space-20);
+  }
+
+  .settings-content {
+    padding: var(--space-24);
+  }
+}
+
+@media (max-width: 760px) {
+  .settings-page-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--space-10) var(--space-16);
+    padding: var(--space-10) var(--space-14);
+  }
+
+  .settings-search {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .settings-layout {
+    flex-direction: column;
+  }
+
+  .settings-sidebar {
+    width: 100%;
+    flex: 0 0 auto;
+    flex-direction: row;
+    gap: var(--space-4);
+    padding: var(--space-8);
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    scrollbar-width: thin;
+  }
+
+  .settings-tab {
+    width: auto;
+    min-height: 38px;
+    flex: 0 0 auto;
+    padding: var(--space-6) var(--space-10);
+    white-space: nowrap;
+  }
+
+  .settings-tab::before {
+    inset: auto var(--space-8) 0;
+    width: auto;
+    height: 2px;
+    transform: scaleX(0.55);
+  }
+
+  .settings-tab.active::before {
+    transform: scaleX(1);
+  }
+
+  .settings-version {
+    display: none;
+  }
+
+  .settings-content {
+    padding: var(--space-20) var(--space-16);
+  }
+}
+
+@media (max-width: 520px) {
+  .settings-page-mark {
+    width: 34px;
+    height: 34px;
+  }
+
+  .settings-content {
+    padding: var(--space-14) var(--space-12);
+  }
+
+  .settings-tab-label {
+    display: none;
+  }
+}
+
 .settings-version {
   color: var(--text-secondary);
   font-size: var(--font-md);

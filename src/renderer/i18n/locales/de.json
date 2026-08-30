@@ -154,6 +154,11 @@
   },
   "settings": {
     "title": "Einstellungen",
+    "searchPlaceholder": "Einstellungen durchsuchen",
+    "searchLabel": "Einstellungen durchsuchen",
+    "clearSearch": "Einstellungssuche löschen",
+    "noResultsTitle": "Keine Einstellungen gefunden",
+    "noResultsDescription": "Keine Einstellungen stimmen mit „{{query}}“ überein. Versuchen Sie einen anderen Begriff.",
     "tabs": {
       "general": "Allgemein",
       "appearance": "Erscheinungsbild",
@@ -657,6 +662,7 @@
     "title": "TextEx-Handbuch",
     "subtitle": "Lernen Sie den Editor in Ihrem Tempo kennen, ohne Ihr Paper zu verlassen.",
     "close": "TextEx-Handbuch schließen",
+    "backToSettings": "Zurück zu den Einstellungen",
     "openGuide": "Handbuch öffnen",
     "searchPlaceholder": "Gesten, Funktionen oder Kürzel suchen…",
     "searchLabel": "TextEx-Handbuch durchsuchen",
@@ -775,7 +781,7 @@
       "exportDescription": "Dokumentexport testen oder ein Overleaf-ZIP erstellen."
     },
     "hints": {
-      "workspaceSwipe": "Tipp: Im TeX-Quelltext horizontal wischen, um zwischen TeX/PDF und Markdown/Vorschau zu wechseln.",
+      "workspaceSwipe": "Tipp: In einer der beiden Schreibansichten horizontal wischen, um zwischen TeX/PDF und Markdown/Vorschau zu wechseln.",
       "pdfPageSwipe": "Tipp: Im Einzelseitenmodus blättert eine eindeutige Geste genau eine PDF-Seite.",
       "panelTabSwipe": "Tipp: In einem Seitenpanel horizontal wischen, um den Tab zu wechseln.",
       "sourcePdfSync": "Tipp: Mit Quelltext↔PDF-Synchronisierung bleibt die Position erhalten."

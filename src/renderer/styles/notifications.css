@@ -17,6 +17,8 @@ body:has(
     .modal-backdrop,
     .table-editor-overlay,
     .loading-fallback--modal,
+    .loading-fallback--page,
+    .app-page,
     .command-palette-overlay
   )
   .notification-center {

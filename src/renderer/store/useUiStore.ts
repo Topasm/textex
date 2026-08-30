@@ -51,10 +51,10 @@ interface UiState {
   // External file change conflicts
   externalChangeConflicts: string[]
 
-  /** Set by background services that need App to open the settings modal. */
+  /** Set by background services that need App to open the settings page. */
   settingsRequested: boolean
 
-  /** Requested in-app guide section; App owns the exclusive modal surface. */
+  /** Requested in-app guide section; App owns the exclusive full-workspace page. */
   helpRequestedSection: LearnSectionId | null
 
   /**

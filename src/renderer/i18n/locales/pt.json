@@ -154,6 +154,11 @@
   },
   "settings": {
     "title": "Configurações",
+    "searchPlaceholder": "Pesquisar configurações",
+    "searchLabel": "Pesquisar configurações",
+    "clearSearch": "Limpar pesquisa de configurações",
+    "noResultsTitle": "Nenhuma configuração encontrada",
+    "noResultsDescription": "Nenhuma configuração corresponde a “{{query}}”. Tente outro termo.",
     "tabs": {
       "general": "Geral",
       "appearance": "Aparência",
@@ -657,6 +662,7 @@
     "title": "Guia do TextEx",
     "subtitle": "Aprenda o editor no seu ritmo sem sair do artigo.",
     "close": "Fechar guia do TextEx",
+    "backToSettings": "Voltar às configurações",
     "openGuide": "Abrir guia",
     "searchPlaceholder": "Buscar gestos, recursos ou atalhos…",
     "searchLabel": "Buscar no guia do TextEx",
@@ -775,7 +781,7 @@
       "exportDescription": "Experimente uma exportação ou crie um ZIP do Overleaf."
     },
     "hints": {
-      "workspaceSwipe": "Dica: deslize horizontalmente na fonte TeX para alternar TeX/PDF e Markdown/renderização.",
+      "workspaceSwipe": "Dica: deslize horizontalmente em qualquer área de escrita para alternar entre TeX/PDF e Markdown/renderização.",
       "pdfPageSwipe": "Dica: no modo página única, um gesto deliberado vira apenas uma página do PDF.",
       "panelTabSwipe": "Dica: deslize horizontalmente em um painel lateral para trocar de aba.",
       "sourcePdfSync": "Dica: use a sincronização fonte↔PDF para manter sua posição."

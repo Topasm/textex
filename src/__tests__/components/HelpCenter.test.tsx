@@ -14,7 +14,7 @@ beforeEach(async () => {
 
 describe('HelpCenter', () => {
   it('opens on a requested section and searches the full learning catalog', () => {
-    render(
+    const { container } = render(
       <HelpCenter
         initialSection="gestures"
         context={FULL_CONTEXT}
@@ -23,6 +23,8 @@ describe('HelpCenter', () => {
       />
     )
 
+    expect(container.querySelector('[data-app-page="help"]')).toHaveClass('app-page', 'help-center')
+    expect(container.querySelector('.modal-overlay')).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Gestures and navigation' })).toBeInTheDocument()
     expect(
       screen.getByRole('heading', { name: 'TeX/PDF and Markdown/render pair' })
@@ -105,6 +107,34 @@ describe('HelpCenter', () => {
 
     fireEvent.keyDown(dialog, { key: 'Escape' })
     expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it('returns to Settings through visible and browser-style back navigation', () => {
+    const onBack = vi.fn()
+    const view = render(
+      <HelpCenter
+        initialSection="quick-start"
+        context={FULL_CONTEXT}
+        onBack={onBack}
+        onClose={vi.fn()}
+        onRunCommand={vi.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back to Settings' }))
+    expect(onBack).toHaveBeenCalledOnce()
+
+    view.rerender(
+      <HelpCenter
+        initialSection="quick-start"
+        context={FULL_CONTEXT}
+        onBack={onBack}
+        onClose={vi.fn()}
+        onRunCommand={vi.fn()}
+      />
+    )
+    fireEvent.keyDown(screen.getByRole('dialog'), { key: 'ArrowLeft', altKey: true })
+    expect(onBack).toHaveBeenCalledTimes(2)
   })
 
   it('supports directional keyboard navigation between guide sections', () => {

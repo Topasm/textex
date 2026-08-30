@@ -41,6 +41,13 @@
   background: var(--modal-backdrop, rgba(0, 0, 0, 0.5));
 }
 
+.loading-fallback--page {
+  position: absolute;
+  z-index: var(--z-modal-loading, 1010);
+  inset: var(--app-toolbar-height) 0 0;
+  background: var(--ui-surface-raised, var(--bg-primary));
+}
+
 .loading-fallback--floating {
   position: absolute;
   z-index: 12;

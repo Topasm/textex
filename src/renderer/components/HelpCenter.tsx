@@ -11,6 +11,7 @@ import {
 } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
+  ArrowLeft,
   ArrowLeftRight,
   ArrowRight,
   Bot,
@@ -58,13 +59,15 @@ import {
 } from '../services/commandSearch'
 import { useLearningStore } from '../store/useLearningStore'
 import { ICON_SIZE } from './ui/IconSystem'
-import { ModalCloseButton, ModalFrame } from './ui/ModalChrome'
+import { ModalCloseButton } from './ui/ModalChrome'
+import { AppPageFrame } from './ui/AppPageFrame'
 import '../styles/help-center.css'
 
 interface HelpCenterProps {
   initialSection?: LearnSectionId
   context: CommandAvailabilityContext
   onClose: () => void
+  onBack?: () => void
   onRunCommand: (command: AppCommandId) => void
 }
 
@@ -344,6 +347,7 @@ export const HelpCenter = memo(function HelpCenter({
   initialSection = 'quick-start',
   context,
   onClose,
+  onBack,
   onRunCommand
 }: HelpCenterProps) {
   const { t } = useTranslation()
@@ -495,6 +499,14 @@ export const HelpCenter = memo(function HelpCenter({
         searchRef.current?.select()
         return
       }
+      if (
+        onBack &&
+        ((event.altKey && event.key === 'ArrowLeft') || (event.metaKey && event.key === '['))
+      ) {
+        event.preventDefault()
+        onBack()
+        return
+      }
       if (event.key !== 'Tab') return
       const dialog = dialogRef.current
       if (!dialog) return
@@ -510,58 +522,73 @@ export const HelpCenter = memo(function HelpCenter({
         first.focus()
       }
     },
-    [onClose, query]
+    [onBack, onClose, query]
   )
 
   return (
-    <ModalFrame
+    <AppPageFrame
       ref={dialogRef}
       owner="help"
       titleId={titleId}
       className="help-center"
-      onClose={onClose}
       onKeyDown={handleDialogKeyDown}
     >
-      <header className="modal-header help-header">
-        <div className="help-heading">
+      <header className="app-page-header help-header">
+        <div className="app-page-title help-heading">
+          {onBack && (
+            <button
+              type="button"
+              className="app-page-back"
+              aria-label={t('learning.backToSettings')}
+              title={t('learning.backToSettings')}
+              onClick={onBack}
+            >
+              <ArrowLeft size={ICON_SIZE.control} aria-hidden="true" />
+            </button>
+          )}
           <span className="help-brand-mark" aria-hidden="true">
             <CircleHelp size={ICON_SIZE.prominent} />
           </span>
           <div>
-            <h2 id={titleId}>{t('learning.title')}</h2>
+            <h1 id={titleId}>{t('learning.title')}</h1>
             <p>{t('learning.subtitle')}</p>
           </div>
         </div>
+
+        <div className="help-search">
+          <Search size={ICON_SIZE.control} aria-hidden="true" />
+          <input
+            ref={searchRef}
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={t('learning.searchPlaceholder')}
+            aria-label={t('learning.searchLabel')}
+          />
+          {query && (
+            <button
+              type="button"
+              className="help-search-clear"
+              aria-label={t('learning.clearSearch')}
+              onClick={() => {
+                setQuery('')
+                searchRef.current?.focus()
+              }}
+            >
+              <X size={ICON_SIZE.compact} aria-hidden="true" />
+            </button>
+          )}
+        </div>
+
         <div className="help-header-actions">
           <kbd aria-hidden="true">F1</kbd>
-          <ModalCloseButton onClick={onClose} label={t('learning.close')} />
+          <ModalCloseButton
+            className="app-page-close"
+            onClick={onClose}
+            label={t('learning.close')}
+          />
         </div>
       </header>
-
-      <div className="help-search">
-        <Search size={ICON_SIZE.control} aria-hidden="true" />
-        <input
-          ref={searchRef}
-          type="search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder={t('learning.searchPlaceholder')}
-          aria-label={t('learning.searchLabel')}
-        />
-        {query && (
-          <button
-            type="button"
-            className="help-search-clear"
-            aria-label={t('learning.clearSearch')}
-            onClick={() => {
-              setQuery('')
-              searchRef.current?.focus()
-            }}
-          >
-            <X size={ICON_SIZE.compact} aria-hidden="true" />
-          </button>
-        )}
-      </div>
 
       <div className="help-layout">
         <nav className="help-navigation" aria-label={t('learning.navigationLabel')}>
@@ -596,89 +623,91 @@ export const HelpCenter = memo(function HelpCenter({
         </nav>
 
         <main ref={contentRef} className="help-content">
-          <div className="help-section-heading">
-            <span className="help-section-icon" aria-hidden="true">
-              <SectionHeadingIcon size={ICON_SIZE.prominent} />
-            </span>
-            <div>
-              {!isSearching && (
-                <span className="help-section-index" aria-hidden="true">
-                  {String(activeSectionNumber).padStart(2, '0')}
+          <div className="help-content-inner">
+            <div className="help-section-heading">
+              <span className="help-section-icon" aria-hidden="true">
+                <SectionHeadingIcon size={ICON_SIZE.prominent} />
+              </span>
+              <div>
+                {!isSearching && (
+                  <span className="help-section-index" aria-hidden="true">
+                    {String(activeSectionNumber).padStart(2, '0')}
+                  </span>
+                )}
+                <h2>{isSearching ? t('learning.searchResults') : t(activeSectionMeta.titleKey)}</h2>
+                <p>
+                  {isSearching
+                    ? t('learning.searchResultsDescription', { query })
+                    : t(activeSectionMeta.descriptionKey)}
+                </p>
+              </div>
+              {isSearching && (
+                <span className="help-results-count" aria-live="polite">
+                  {t('learning.resultCount', { count: resultCount })}
                 </span>
               )}
-              <h2>{isSearching ? t('learning.searchResults') : t(activeSectionMeta.titleKey)}</h2>
-              <p>
-                {isSearching
-                  ? t('learning.searchResultsDescription', { query })
-                  : t(activeSectionMeta.descriptionKey)}
-              </p>
             </div>
-            {isSearching && (
-              <span className="help-results-count" aria-live="polite">
-                {t('learning.resultCount', { count: resultCount })}
-              </span>
-            )}
-          </div>
 
-          {isSearching ? (
-            resultCount > 0 ? (
-              <div className="help-search-groups">
-                {visibleItems.length > 0 && (
-                  <div className="help-card-list">
-                    {visibleItems.map((item) => (
-                      <LearningCard
-                        key={item.id}
-                        item={item}
-                        context={context}
-                        showSectionLabel
-                        onRunCommand={runAndClose}
-                      />
-                    ))}
-                  </div>
-                )}
-                {visibleShortcuts.length > 0 && (
-                  <section className="help-search-shortcuts">
-                    <h3>
-                      <Keyboard size={ICON_SIZE.compact} aria-hidden="true" />
-                      {t('learning.sections.shortcuts.title')}
-                    </h3>
-                    <ShortcutList shortcuts={visibleShortcuts} />
-                  </section>
-                )}
-              </div>
-            ) : (
-              <div className="help-empty">
-                <span className="help-empty-icon" aria-hidden="true">
-                  <Search size={ICON_SIZE.prominent} />
-                </span>
-                <div>
-                  <strong>{t('learning.noResults')}</strong>
-                  <p>{t('learning.searchResultsDescription', { query })}</p>
+            {isSearching ? (
+              resultCount > 0 ? (
+                <div className="help-search-groups">
+                  {visibleItems.length > 0 && (
+                    <div className="help-card-list">
+                      {visibleItems.map((item) => (
+                        <LearningCard
+                          key={item.id}
+                          item={item}
+                          context={context}
+                          showSectionLabel
+                          onRunCommand={runAndClose}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {visibleShortcuts.length > 0 && (
+                    <section className="help-search-shortcuts">
+                      <h3>
+                        <Keyboard size={ICON_SIZE.compact} aria-hidden="true" />
+                        {t('learning.sections.shortcuts.title')}
+                      </h3>
+                      <ShortcutList shortcuts={visibleShortcuts} />
+                    </section>
+                  )}
                 </div>
-                <button type="button" className="help-reset-button" onClick={() => setQuery('')}>
-                  {t('learning.clearSearch')}
-                </button>
+              ) : (
+                <div className="help-empty">
+                  <span className="help-empty-icon" aria-hidden="true">
+                    <Search size={ICON_SIZE.prominent} />
+                  </span>
+                  <div>
+                    <strong>{t('learning.noResults')}</strong>
+                    <p>{t('learning.searchResultsDescription', { query })}</p>
+                  </div>
+                  <button type="button" className="help-reset-button" onClick={() => setQuery('')}>
+                    {t('learning.clearSearch')}
+                  </button>
+                </div>
+              )
+            ) : activeSection === 'tour' ? (
+              <TourChecklist context={context} onRunCommand={runAndClose} />
+            ) : activeSection === 'shortcuts' ? (
+              <ShortcutList shortcuts={allShortcuts} />
+            ) : visibleItems.length > 0 ? (
+              <div className="help-card-list">
+                {visibleItems.map((item) => (
+                  <LearningCard
+                    key={item.id}
+                    item={item}
+                    context={context}
+                    showSectionLabel={false}
+                    onRunCommand={runAndClose}
+                  />
+                ))}
               </div>
-            )
-          ) : activeSection === 'tour' ? (
-            <TourChecklist context={context} onRunCommand={runAndClose} />
-          ) : activeSection === 'shortcuts' ? (
-            <ShortcutList shortcuts={allShortcuts} />
-          ) : visibleItems.length > 0 ? (
-            <div className="help-card-list">
-              {visibleItems.map((item) => (
-                <LearningCard
-                  key={item.id}
-                  item={item}
-                  context={context}
-                  showSectionLabel={false}
-                  onRunCommand={runAndClose}
-                />
-              ))}
-            </div>
-          ) : null}
+            ) : null}
+          </div>
         </main>
       </div>
-    </ModalFrame>
+    </AppPageFrame>
   )
 })

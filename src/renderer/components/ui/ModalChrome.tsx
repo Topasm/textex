@@ -43,14 +43,15 @@ export const ModalFrame = forwardRef<HTMLDivElement, ModalFrameProps>(function M
 interface ModalCloseButtonProps {
   onClick: () => void
   label?: string
+  className?: string
 }
 
-export function ModalCloseButton({ onClick, label }: ModalCloseButtonProps) {
+export function ModalCloseButton({ onClick, label, className = '' }: ModalCloseButtonProps) {
   const { t } = useTranslation()
   return (
     <button
       type="button"
-      className="close-button"
+      className={`close-button${className ? ` ${className}` : ''}`}
       onClick={onClick}
       aria-label={label ?? t('logPanel.close')}
     >
