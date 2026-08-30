@@ -148,31 +148,40 @@ describe('useHorizontalSwipe', () => {
     expect(onSwipe).toHaveBeenCalledTimes(2)
   })
 
-  it('re-arms when a momentum tail decays to a standstill', () => {
+  it('keeps the stream spent when a quiet momentum tail accelerates again', () => {
     const onSwipe = vi.fn()
     const { result } = renderHook(() => useHorizontalSwipe(onSwipe))
 
-    burst(result.current, [120, 40, 20, 8, 3, 1, 0.5, 0.2, 0], { gap: 16 })
-    // The next flick begins before the idle gap, but the tail already ended.
-    act(() => vi.advanceTimersByTime(SWIPE_LOCK_MS))
+    act(() => result.current(wheel(120, 2)))
+    act(() => {
+      // Small non-zero events keep the physical stream alive beyond the old
+      // animation floor. A late acceleration is still momentum, not a new
+      // gesture, until an actual idle gap separates it.
+      for (let index = 0; index < 24; index += 1) {
+        result.current(wheel(1, 0))
+        vi.advanceTimersByTime(16)
+      }
+      result.current(wheel(120, 2))
+    })
+
+    expect(onSwipe).toHaveBeenCalledOnce()
+  })
+
+  it('requires an idle boundary before taking a second flick', () => {
+    const onSwipe = vi.fn()
+    const { result } = renderHook(() => useHorizontalSwipe(onSwipe))
+
+    burst(result.current, MACOS_FLICK, { gap: 16 })
+    burst(result.current, [40, 110, 150, 130, 100, 80], { gap: 16 })
+    expect(onSwipe).toHaveBeenCalledOnce()
+
+    act(() => vi.advanceTimersByTime(SWIPE_GESTURE_IDLE_MS + SWIPE_LOCK_MS))
     act(() => result.current(wheel(120, 2)))
 
     expect(onSwipe).toHaveBeenCalledTimes(2)
   })
 
-  it('takes a second flick thrown while the first tail is still running', () => {
-    const onSwipe = vi.fn()
-    const { result } = renderHook(() => useHorizontalSwipe(onSwipe))
-
-    // The tail is still emitting when the user flicks again: momentum never
-    // speeds back up, so the surge has to count as a fresh gesture.
-    burst(result.current, MACOS_FLICK, { gap: 16 })
-    burst(result.current, [40, 110, 150, 130, 100, 80], { gap: 16 })
-
-    expect(onSwipe).toHaveBeenCalledTimes(2)
-  })
-
-  it('takes a flick back the other way without waiting for the tail to die', () => {
+  it('does not treat a direction reversal inside one stream as another flick', () => {
     const onSwipe = vi.fn()
     const { result } = renderHook(() => useHorizontalSwipe(onSwipe))
 
@@ -182,6 +191,10 @@ describe('useHorizontalSwipe', () => {
     burst(result.current, [-60, -120, -90], { gap: 16 })
 
     expect(onSwipe).toHaveBeenNthCalledWith(1, 1)
+    expect(onSwipe).toHaveBeenCalledOnce()
+
+    act(() => vi.advanceTimersByTime(SWIPE_GESTURE_IDLE_MS + SWIPE_LOCK_MS))
+    act(() => result.current(wheel(-60, 2)))
     expect(onSwipe).toHaveBeenNthCalledWith(2, -1)
   })
 

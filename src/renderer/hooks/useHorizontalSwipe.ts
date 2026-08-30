@@ -36,8 +36,16 @@ const TRAVEL_DECAY = 0.8
 /** Horizontal travel must beat vertical by this much before a tab moves. */
 const AXIS_DOMINANCE = 1.5
 
-/** Momentum only ever slows down, so a jump this steep is the user flicking again. */
-const REACCELERATION = 2
+type SwipeDirection = 1 | -1
+
+interface SwipeSession {
+  consumed: boolean
+  travelX: number
+  travelY: number
+  direction: SwipeDirection | 0
+  lastEventTime: number
+  lastSwipeTime: number
+}
 
 function monotonicNow(): number {
   // Wall-clock jumps (NTP, timezone edits) must not strand the gesture.
@@ -59,7 +67,7 @@ export function wheelDeltaScale(deltaMode: number | undefined): number {
  * scrolled hard against the edge the swipe is heading for it has nothing left to
  * give, so the gesture chains outwards.
  */
-function isInsideHorizontalScroller(event: SwipeWheelEvent, direction: 1 | -1): boolean {
+function isInsideHorizontalScroller(event: SwipeWheelEvent, direction: SwipeDirection): boolean {
   // A native event only carries currentTarget while it is being dispatched.
   const stop = event.currentTarget instanceof Node ? event.currentTarget : null
   let node: Element | null = event.target instanceof Element ? event.target : null
@@ -80,21 +88,22 @@ function isInsideHorizontalScroller(event: SwipeWheelEvent, direction: 1 | -1): 
  *
  * One flick moves exactly one step. A flick reaches the app as a burst of wheel
  * events trailed by a decaying momentum tail, so the gesture stays "spent" until
- * the events either stop for a beat, fade to a standstill, or speed back up
- * because the user flicked again; a faster flick therefore travels further, not
- * twice.
+ * the complete wheel stream stops for a beat. In particular, a noisy tail that
+ * briefly accelerates or reverses must not move a second tab (or toggle a paired
+ * workspace straight back).
  */
 export function useHorizontalSwipe(
-  onSwipe: (direction: 1 | -1) => void
+  onSwipe: (direction: SwipeDirection) => void
 ): (event: SwipeWheelEvent) => void {
-  const armed = useRef(true)
-  const travelX = useRef(0)
-  const travelY = useRef(0)
-  const lastStepX = useRef(0)
-  const lastDirection = useRef(0)
-  // Never 0: at mount that would read as "a swipe just happened" for one lock.
-  const lastEventTime = useRef(Number.NEGATIVE_INFINITY)
-  const lastSwipeTime = useRef(Number.NEGATIVE_INFINITY)
+  const session = useRef<SwipeSession>({
+    consumed: false,
+    travelX: 0,
+    travelY: 0,
+    direction: 0,
+    // Never 0: at mount that would read as recent input for one lock.
+    lastEventTime: Number.NEGATIVE_INFINITY,
+    lastSwipeTime: Number.NEGATIVE_INFINITY
+  })
 
   return useCallback(
     (event: SwipeWheelEvent) => {
@@ -103,17 +112,22 @@ export function useHorizontalSwipe(
       if (event.ctrlKey || event.metaKey) return
 
       const now = monotonicNow()
+      const current = session.current
       // Every wheel event keeps the stream alive, vertical ones included: a
       // diagonal flick must not look idle just because it drifted off axis.
-      const idle = now - lastEventTime.current >= SWIPE_GESTURE_IDLE_MS
-      lastEventTime.current = now
+      const idle = now - current.lastEventTime >= SWIPE_GESTURE_IDLE_MS
+      current.lastEventTime = now
       if (idle) {
-        armed.current = true
-        travelX.current = 0
-        travelY.current = 0
-        lastStepX.current = 0
-        lastDirection.current = 0
+        current.consumed = false
+        current.travelX = 0
+        current.travelY = 0
+        current.direction = 0
       }
+
+      // The momentum tail can contain dozens of events. Once this stream has
+      // chosen an owner or performed a switch, timestamp it above and skip all
+      // remaining axis, DOM, and smoothing work.
+      if (current.consumed) return
 
       const scale = wheelDeltaScale(event.deltaMode)
       // Some engines report Shift+wheel as vertical travel and leave the swap to
@@ -122,64 +136,43 @@ export function useHorizontalSwipe(
       const dx = (swapped ? event.deltaY : event.deltaX) * scale
       const stepX = Math.abs(dx)
       const stepY = swapped ? 0 : Math.abs(event.deltaY * scale)
-      const direction = dx > 0 ? 1 : dx < 0 ? -1 : 0
+      const direction: SwipeDirection | 0 = dx > 0 ? 1 : dx < 0 ? -1 : 0
 
       // Lines and pages only come from a discrete wheel, where one notch is a
       // deliberate step rather than the start of a glide.
       const trigger = scale > 1 ? SWIPE_TRIGGER_WHEEL : SWIPE_TRIGGER_TRACKPAD
 
-      // Reversing mid-stream is a new intent, not the tail of the last flick.
-      if (direction !== 0 && lastDirection.current !== 0 && direction !== lastDirection.current) {
-        if (stepX > trigger / 5) {
-          armed.current = true
-          travelX.current = 0
-          travelY.current = 0
-        }
+      // Before a gesture commits, a direction change replaces the tentative
+      // travel instead of borrowing distance from the opposite direction.
+      // After it commits, the early return above keeps any reversal in the same
+      // physical gesture from triggering a second action.
+      if (direction !== 0 && current.direction !== 0 && direction !== current.direction) {
+        current.travelX = 0
+        current.travelY = 0
       }
+      if (direction !== 0) current.direction = direction
 
-      // Speed of the stream so far, in delta per event, before this one lands.
-      const pace = travelX.current * (1 - TRAVEL_DECAY)
-
-      travelX.current = travelX.current * TRAVEL_DECAY + stepX
-      travelY.current = travelY.current * TRAVEL_DECAY + stepY
-
-      if (travelX.current <= trigger / 5) {
-        // The tail ran out of speed, so the next decisive event starts fresh.
-        armed.current = true
-      } else if (
-        !armed.current &&
-        stepX >= trigger &&
-        // Momentum only ever slows down. Outrunning both the event before it and
-        // the smoothed pace of the stream means the user threw a second flick;
-        // needing both keeps a flick's own ramp-up and a noisy tail out.
-        stepX > lastStepX.current * REACCELERATION &&
-        stepX > pace * REACCELERATION
-      ) {
-        armed.current = true
-      }
-
-      lastStepX.current = stepX
-      lastDirection.current = direction
+      current.travelX = current.travelX * TRAVEL_DECAY + stepX
+      current.travelY = current.travelY * TRAVEL_DECAY + stepY
 
       // A gesture the panel does not own must still decay the travel above, so
       // these checks come after the bookkeeping, not before it.
       if (direction === 0) return
-      if (travelX.current <= travelY.current * AXIS_DOMINANCE) return
-      if (travelX.current < trigger) return
-      if (!armed.current) return
+      if (current.travelX <= current.travelY * AXIS_DOMINANCE) return
+      if (current.travelX < trigger) return
 
       if (isInsideHorizontalScroller(event, direction)) {
         // The inner scroller keeps the whole gesture, edges included.
-        armed.current = false
+        current.consumed = true
         return
       }
 
-      // Stay armed through the floor so a genuine second flick lands late
-      // instead of vanishing; the tail of the first one is still disarmed.
-      if (now - lastSwipeTime.current < SWIPE_LOCK_MS) return
+      // Consume the stream before checking the animation floor. This prevents
+      // an early second gesture from firing late when the floor expires.
+      current.consumed = true
+      if (now - current.lastSwipeTime < SWIPE_LOCK_MS) return
 
-      armed.current = false
-      lastSwipeTime.current = now
+      current.lastSwipeTime = now
       onSwipe(direction)
     },
     [onSwipe]

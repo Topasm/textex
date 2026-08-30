@@ -375,4 +375,35 @@ describe('App paired workspace gestures', () => {
     })
     expect(await screen.findByTestId('pdf-preview')).toBeInTheDocument()
   })
+
+  it('does not bounce back when the same workspace swipe has a noisy momentum tail', async () => {
+    const view = render(<App />)
+    const editorSurface = view.container.querySelector<HTMLElement>('.editor-surface')
+    expect(editorSurface).not.toBeNull()
+    await screen.findByTestId('editor-pane')
+
+    let now = 1_000
+    const clock = vi.spyOn(performance, 'now').mockImplementation(() => now)
+    try {
+      fireEvent.wheel(editorSurface!, { deltaX: 120, deltaY: 2 })
+      expect(proseModeFor(useUiStore.getState(), '/project/main.tex')).toBe(true)
+      await screen.findByTestId('markdown-source')
+
+      // WebKit can emit a long, almost-still tail and then a larger correction
+      // in the opposite direction. It is one physical gesture even though it
+      // outlives the panel animation floor.
+      for (let index = 0; index < 24; index += 1) {
+        now += 16
+        fireEvent.wheel(editorSurface!, { deltaX: 1, deltaY: 0 })
+      }
+      now += 16
+      fireEvent.wheel(editorSurface!, { deltaX: -120, deltaY: 2 })
+
+      expect(proseModeFor(useUiStore.getState(), '/project/main.tex')).toBe(true)
+      expect(screen.getByTestId('markdown-source')).toBeInTheDocument()
+      expect(screen.getByTestId('markdown-preview')).toBeInTheDocument()
+    } finally {
+      clock.mockRestore()
+    }
+  })
 })
