@@ -1006,12 +1006,10 @@ async fn call_cli(
     )
     .await?;
     if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        let message = stderr.trim();
-        return Err(AppError::Ai(if message.is_empty() {
-            format!("{executable} CLI exited unsuccessfully")
-        } else {
-            format!("{executable} CLI failed: {message}")
+        let message = cli_error_output(&output);
+        return Err(AppError::Ai(match message {
+            Some(message) => format!("{executable} CLI failed: {message}"),
+            None => format!("{executable} CLI exited unsuccessfully"),
         }));
     }
     extract_text(
@@ -1039,7 +1037,7 @@ pub async fn check_cli(executable: &str) -> AiCliStatus {
             available: false,
             version: None,
             error: Some(
-                non_empty_output(&output.stderr)
+                cli_error_output(&output)
                     .or_else(|| non_empty_output(&output.stdout))
                     .unwrap_or_else(|| format!("{executable} CLI exited unsuccessfully")),
             ),
@@ -1057,10 +1055,24 @@ fn non_empty_output(bytes: &[u8]) -> Option<String> {
     (!output.is_empty()).then_some(output)
 }
 
+fn cli_error_output(output: &BoundedOutput) -> Option<String> {
+    let message = String::from_utf8_lossy(&output.stderr).trim().to_owned();
+    if output.stderr_truncated {
+        if message.is_empty() {
+            Some("AI CLI diagnostic output was truncated".to_owned())
+        } else {
+            Some(format!("{message}\n[AI CLI diagnostic output truncated]"))
+        }
+    } else {
+        (!message.is_empty()).then_some(message)
+    }
+}
+
 struct BoundedOutput {
     status: std::process::ExitStatus,
     stdout: Vec<u8>,
     stderr: Vec<u8>,
+    stderr_truncated: bool,
 }
 
 async fn run_bounded(
@@ -1137,12 +1149,15 @@ async fn run_bounded(
             wait_for_child,
             write_input,
             read_limited(stdout, MAX_RESPONSE_BYTES),
-            read_limited(stderr, MAX_CLI_ERROR_BYTES)
+            // CLIs may emit verbose progress diagnostics even when they
+            // succeed. Drain that pipe while retaining only a bounded prefix.
+            read_capped(stderr, MAX_CLI_ERROR_BYTES)
         )?;
         Ok(BoundedOutput {
             status,
             stdout,
-            stderr,
+            stderr: stderr.bytes,
+            stderr_truncated: stderr.truncated,
         })
     };
 
@@ -1229,10 +1244,38 @@ where
         .map_err(|_| AppError::Ai("AI CLI output read failed".to_owned()))?;
     if bytes.len() > limit {
         return Err(AppError::Ai(
-            "AI CLI output exceeded the size limit".to_owned(),
+            "AI CLI response exceeded the size limit".to_owned(),
         ));
     }
     Ok(bytes)
+}
+
+struct CappedBytes {
+    bytes: Vec<u8>,
+    truncated: bool,
+}
+
+async fn read_capped<R>(mut reader: R, limit: usize) -> AppResult<CappedBytes>
+where
+    R: tokio::io::AsyncRead + Unpin,
+{
+    let mut bytes = Vec::new();
+    let mut buffer = [0_u8; 8 * 1024];
+    let mut truncated = false;
+    loop {
+        let read = reader
+            .read(&mut buffer)
+            .await
+            .map_err(|_| AppError::Ai("AI CLI output read failed".to_owned()))?;
+        if read == 0 {
+            break;
+        }
+        let remaining = limit.saturating_sub(bytes.len());
+        let retained = remaining.min(read);
+        bytes.extend_from_slice(&buffer[..retained]);
+        truncated |= retained < read;
+    }
+    Ok(CappedBytes { bytes, truncated })
 }
 
 pub async fn open_terminal(
@@ -2044,5 +2087,27 @@ mod tests {
             Some("codex-cli 0.151.0".to_owned())
         );
         assert_eq!(non_empty_output(b" \n\t"), None);
+    }
+
+    #[tokio::test]
+    async fn cli_diagnostics_are_drained_and_truncated_without_failing() {
+        let diagnostics = b"0123456789".to_vec();
+        let captured = read_capped(std::io::Cursor::new(diagnostics), 4)
+            .await
+            .unwrap();
+
+        assert_eq!(captured.bytes, b"0123");
+        assert!(captured.truncated);
+    }
+
+    #[tokio::test]
+    async fn cli_response_still_rejects_oversized_output() {
+        let error = read_limited(std::io::Cursor::new(b"12345"), 4)
+            .await
+            .unwrap_err();
+
+        assert!(error
+            .to_string()
+            .contains("AI CLI response exceeded the size limit"));
     }
 }

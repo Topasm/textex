@@ -165,6 +165,29 @@ describe('ResearchChatPanel', () => {
     })
   })
 
+  it('lists models only for providers with an enabled connection', async () => {
+    window.api.aiHasApiKey = vi
+      .fn()
+      .mockImplementation((provider: string) => Promise.resolve(provider === 'anthropic'))
+    window.api.aiCheckCli = vi.fn().mockResolvedValue({ available: true })
+    window.api.aiCheckCodexCli = vi.fn().mockResolvedValue({ available: false })
+
+    render(<ResearchChatPanel onAiDraft={vi.fn()} />)
+
+    const selector = await screen.findByRole('combobox', { name: 'Research Chat model' })
+    await waitFor(() =>
+      expect(
+        within(selector).getByRole('option', { name: 'Claude Sonnet 4.6' })
+      ).toBeInTheDocument()
+    )
+    expect(within(selector).getByRole('option', { name: 'Claude Sonnet' })).toBeInTheDocument()
+    expect(within(selector).queryByRole('option', { name: 'GPT-5.4' })).not.toBeInTheDocument()
+    expect(
+      within(selector).queryByRole('option', { name: 'Gemini 3.1 Pro Preview' })
+    ).not.toBeInTheDocument()
+    expect(within(selector).queryByRole('option', { name: 'GPT-5.6 Sol' })).not.toBeInTheDocument()
+  })
+
   it('exposes response progress on the message log and keeps draft actions locked', async () => {
     const pendingAnswer = deferred<ResearchChatResponse>()
     window.api.aiResearchChat = vi.fn().mockReturnValue(pendingAnswer.promise)

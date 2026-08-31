@@ -28,12 +28,6 @@ function optionValue(execution: ResearchChatExecution): string {
   return `${execution.provider}:${execution.model}`
 }
 
-function unavailableReason(provider: AiProvider): string {
-  return provider.endsWith('-cli')
-    ? i18n.t('researchPanel.modelSelector.notInstalled')
-    : i18n.t('researchPanel.modelSelector.apiKeyRequired')
-}
-
 export function researchChatExecutionLabel(execution: ResearchChatExecution): string {
   const model =
     AI_MODEL_OPTIONS[execution.provider]?.find((option) => option.value === execution.model)
@@ -91,17 +85,22 @@ export function ResearchChatModelSelector({
     }
   }, [])
 
+  const enabledProviders = useMemo(
+    () => PROVIDERS.filter((provider) => availability[provider] === true),
+    [availability]
+  )
+
   const choices = useMemo(
     () =>
       new Map(
-        PROVIDERS.flatMap((provider) =>
+        enabledProviders.flatMap((provider) =>
           (AI_MODEL_OPTIONS[provider] ?? []).map((model) => {
             const candidate = { provider, model: model.value }
             return [optionValue(candidate), candidate] as const
           })
         )
       ),
-    []
+    [enabledProviders]
   )
 
   const defaultExecution = defaultProvider
@@ -125,27 +124,16 @@ export function ResearchChatModelSelector({
         }
       >
         <option value="">{defaultLabel}</option>
-        {PROVIDERS.map((provider) => (
+        {enabledProviders.map((provider) => (
           <optgroup label={PROVIDER_LABELS[provider]} key={provider}>
-            {(AI_MODEL_OPTIONS[provider] ?? []).map((model) => {
-              const providerAvailable = availability[provider]
-              const suffix =
-                providerAvailable === false
-                  ? ` — ${unavailableReason(provider)}`
-                  : providerAvailable === null
-                    ? ` — ${t('researchPanel.modelSelector.checking')}`
-                    : ''
-              return (
-                <option
-                  disabled={providerAvailable !== true}
-                  key={`${provider}:${model.value}`}
-                  value={optionValue({ provider, model: model.value })}
-                >
-                  {model.label}
-                  {suffix}
-                </option>
-              )
-            })}
+            {(AI_MODEL_OPTIONS[provider] ?? []).map((model) => (
+              <option
+                key={`${provider}:${model.value}`}
+                value={optionValue({ provider, model: model.value })}
+              >
+                {model.label}
+              </option>
+            ))}
           </optgroup>
         ))}
       </select>
