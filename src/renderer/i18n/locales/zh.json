@@ -1247,7 +1247,7 @@
     "performance": "性能采样失败。",
     "systemTerminal": "无法打开终端。",
     "zotero": "Zotero 请求失败。",
-    "ai": "AI 请求失败。",
+    "ai": "AI 请求失败：{{detail}}",
     "settings": "无法保存设置。",
     "updater": "更新程序失败。",
     "recentProjectUnauthorized": "{{path}} 不在受信任的最近项目列表中。",

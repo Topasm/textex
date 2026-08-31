@@ -157,11 +157,13 @@ export function ResearchPanel({
     async (prompt: string) => {
       if (!projectRoot) return
       try {
-        const available =
+        const cliStatus =
           repairCli === 'claude'
             ? await window.api.aiCheckCli()
             : await window.api.aiCheckCodexCli()
-        if (!available) throw new Error(`${repairCliName} was not found.`)
+        if (!cliStatus.available) {
+          throw new Error(cliStatus.error || `${repairCliName} was not found.`)
+        }
         if (repairCli === 'claude') {
           await window.api.aiOpenClaudeTerminal({ workDir: projectRoot, prompt })
         } else {

@@ -43,8 +43,8 @@ describe('ResearchChatPanel', () => {
       }
     }))
     window.api.aiHasApiKey = vi.fn().mockResolvedValue(true)
-    window.api.aiCheckCli = vi.fn().mockResolvedValue(true)
-    window.api.aiCheckCodexCli = vi.fn().mockResolvedValue(true)
+    window.api.aiCheckCli = vi.fn().mockResolvedValue({ available: true })
+    window.api.aiCheckCodexCli = vi.fn().mockResolvedValue({ available: true })
     window.api.researchProfileLoad = vi.fn().mockResolvedValue({
       version: 1,
       paper: {

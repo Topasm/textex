@@ -7,8 +7,8 @@ describe('AiTab', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     window.api.aiHasApiKey = vi.fn().mockResolvedValue(false)
-    window.api.aiCheckCli = vi.fn().mockResolvedValue(false)
-    window.api.aiCheckCodexCli = vi.fn().mockResolvedValue(false)
+    window.api.aiCheckCli = vi.fn().mockResolvedValue({ available: false })
+    window.api.aiCheckCodexCli = vi.fn().mockResolvedValue({ available: false })
     useSettingsStore.setState((state) => ({
       settings: {
         ...state.settings,
@@ -52,8 +52,11 @@ describe('AiTab', () => {
     window.api.aiHasApiKey = vi
       .fn()
       .mockImplementation((provider: string) => Promise.resolve(provider === 'anthropic'))
-    window.api.aiCheckCli = vi.fn().mockResolvedValue(true)
-    window.api.aiCheckCodexCli = vi.fn().mockResolvedValue(false)
+    window.api.aiCheckCli = vi.fn().mockResolvedValue({
+      available: true,
+      version: 'claude 1.0.0'
+    })
+    window.api.aiCheckCodexCli = vi.fn().mockResolvedValue({ available: false })
 
     render(<AiTab />)
 
@@ -66,6 +69,19 @@ describe('AiTab', () => {
     expect(useSettingsStore.getState().settings.aiProvider).toBe('openai')
     expect(screen.getByRole('button', { name: /Claude Code \(CLI\).*Ready/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Codex \(CLI\).*Not installed/ })).toBeInTheDocument()
+  })
+
+  it('shows the CLI runtime failure instead of reporting it as merely not installed', async () => {
+    window.api.aiCheckCodexCli = vi.fn().mockResolvedValue({
+      available: false,
+      error: '/usr/bin/env: node: No such file or directory'
+    })
+
+    render(<AiTab />)
+
+    fireEvent.click(await screen.findByRole('button', { name: /Codex \(CLI\).*Check failed/ }))
+
+    expect(screen.getByText('/usr/bin/env: node: No such file or directory')).toBeInTheDocument()
   })
 
   it('changes the default execution target independently from provider connections', async () => {

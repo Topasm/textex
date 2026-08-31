@@ -1250,7 +1250,7 @@
     "performance": "Performance sampling failed.",
     "systemTerminal": "The terminal could not be opened.",
     "zotero": "The Zotero request failed.",
-    "ai": "The AI request failed.",
+    "ai": "The AI request failed: {{detail}}",
     "settings": "Settings could not be saved.",
     "updater": "The updater failed.",
     "recentProjectUnauthorized": "{{path}} is not in the trusted recent-project list.",

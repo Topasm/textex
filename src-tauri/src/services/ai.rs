@@ -9,7 +9,7 @@ use std::{
 };
 
 #[cfg(unix)]
-use std::io;
+use std::{ffi::CStr, io, mem::MaybeUninit, os::unix::ffi::OsStringExt, ptr};
 
 use futures_util::StreamExt;
 use reqwest::{Client, Response};
@@ -28,8 +28,8 @@ use tokio::{
 use crate::{
     error::{AppError, AppResult},
     models::{
-        AiAction, AiContextEntry, AiCustomProcessRequest, AiLightContext, AiProcessRequest,
-        AiProvider, AiTerminalResult, ResearchChatExecution, ResearchChatRequest,
+        AiAction, AiCliStatus, AiContextEntry, AiCustomProcessRequest, AiLightContext,
+        AiProcessRequest, AiProvider, AiTerminalResult, ResearchChatExecution, ResearchChatRequest,
         ResearchChatResponse, UserSettings, ZoteroMutationDraft, ZoteroPlanRequest,
     },
     services::{research, research_limits},
@@ -37,7 +37,9 @@ use crate::{
 
 const CREDENTIAL_FILE: &str = "ai-credentials.json";
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(180);
-const CLI_TIMEOUT: Duration = Duration::from_secs(120);
+// Paper and repository contexts can take longer than a short selection edit.
+// Keep the process bounded, but allow enough time for a full research answer.
+const CLI_TIMEOUT: Duration = Duration::from_secs(300);
 const CLI_CHECK_TIMEOUT: Duration = Duration::from_secs(5);
 const MAX_INPUT_BYTES: usize = 2 * 1024 * 1024;
 const MAX_RESPONSE_BYTES: usize = 8 * 1024 * 1024;
@@ -1018,8 +1020,8 @@ async fn call_cli(
     )
 }
 
-pub async fn check_cli(executable: &str) -> bool {
-    run_bounded(
+pub async fn check_cli(executable: &str) -> AiCliStatus {
+    match run_bounded(
         executable,
         &["--version".to_owned()],
         None,
@@ -1027,7 +1029,32 @@ pub async fn check_cli(executable: &str) -> bool {
         CLI_CHECK_TIMEOUT,
     )
     .await
-    .is_ok_and(|output| output.status.success())
+    {
+        Ok(output) if output.status.success() => AiCliStatus {
+            available: true,
+            version: non_empty_output(&output.stdout),
+            error: None,
+        },
+        Ok(output) => AiCliStatus {
+            available: false,
+            version: None,
+            error: Some(
+                non_empty_output(&output.stderr)
+                    .or_else(|| non_empty_output(&output.stdout))
+                    .unwrap_or_else(|| format!("{executable} CLI exited unsuccessfully")),
+            ),
+        },
+        Err(error) => AiCliStatus {
+            available: false,
+            version: None,
+            error: Some(error.to_string()),
+        },
+    }
+}
+
+fn non_empty_output(bytes: &[u8]) -> Option<String> {
+    let output = String::from_utf8_lossy(bytes).trim().to_owned();
+    (!output.is_empty()).then_some(output)
 }
 
 struct BoundedOutput {
@@ -1215,10 +1242,11 @@ pub async fn open_terminal(
     prompt: Option<&str>,
 ) -> AppResult<AiTerminalResult> {
     let prompt = validate_terminal_prompt(prompt)?;
-    if !check_cli(executable).await {
-        return Err(AppError::Ai(format!(
-            "{executable} CLI was not found or is unavailable"
-        )));
+    let cli_status = check_cli(executable).await;
+    if !cli_status.available {
+        return Err(AppError::Ai(cli_status.error.unwrap_or_else(|| {
+            format!("{executable} CLI was not found or is unavailable")
+        })));
     }
     let command_label = match (executable, resume) {
         ("claude", true) => "claude --resume",
@@ -1370,7 +1398,7 @@ fn expanded_cli_path() -> Option<OsString> {
     let mut paths = std::env::var_os("PATH")
         .map(|path| std::env::split_paths(&path).collect::<Vec<_>>())
         .unwrap_or_default();
-    if let Some(home) = user_home_directory() {
+    for home in user_home_directories() {
         for candidate in user_cli_path_candidates(&home) {
             push_unique_path(&mut paths, candidate);
         }
@@ -1379,7 +1407,9 @@ fn expanded_cli_path() -> Option<OsString> {
         std::env::var_os("APPDATA").map(|path| PathBuf::from(path).join("npm")),
         std::env::var_os("LOCALAPPDATA").map(|path| PathBuf::from(path).join("pnpm")),
         std::env::var_os("NVM_HOME").map(PathBuf::from),
+        std::env::var_os("NVM_BIN").map(PathBuf::from),
         std::env::var_os("PNPM_HOME").map(PathBuf::from),
+        std::env::var_os("VOLTA_HOME").map(|path| PathBuf::from(path).join("bin")),
     ]
     .into_iter()
     .flatten()
@@ -1398,11 +1428,60 @@ fn expanded_cli_path() -> Option<OsString> {
     std::env::join_paths(paths).ok()
 }
 
-fn user_home_directory() -> Option<PathBuf> {
-    std::env::var_os("USERPROFILE")
-        .or_else(|| std::env::var_os("HOME"))
-        .filter(|path| !path.is_empty())
-        .map(PathBuf::from)
+fn user_home_directories() -> Vec<PathBuf> {
+    let mut homes = Vec::new();
+    for home in [
+        std::env::var_os("USERPROFILE"),
+        std::env::var_os("HOME"),
+        system_user_home_directory().map(OsString::from),
+    ]
+    .into_iter()
+    .flatten()
+    .filter(|path| !path.is_empty())
+    .map(PathBuf::from)
+    {
+        push_unique_path(&mut homes, home);
+    }
+    homes
+}
+
+#[cfg(unix)]
+fn system_user_home_directory() -> Option<PathBuf> {
+    // Desktop launchers may override HOME while the user's version-manager
+    // installation remains under the account home recorded by the OS.
+    let mut passwd = MaybeUninit::<libc::passwd>::uninit();
+    let mut result = ptr::null_mut();
+    let mut buffer = vec![0_u8; 64 * 1024];
+    // SAFETY: every pointer is backed by live writable storage for the duration
+    // of the call. `pw_dir` is copied before `buffer` is dropped.
+    let status = unsafe {
+        libc::getpwuid_r(
+            libc::geteuid(),
+            passwd.as_mut_ptr(),
+            buffer.as_mut_ptr().cast(),
+            buffer.len(),
+            &mut result,
+        )
+    };
+    if status != 0 || result.is_null() {
+        return None;
+    }
+    // SAFETY: a successful getpwuid_r initialized `passwd`, and a non-null
+    // `pw_dir` points to a NUL-terminated string inside `buffer`.
+    let passwd = unsafe { passwd.assume_init() };
+    if passwd.pw_dir.is_null() {
+        return None;
+    }
+    let bytes = unsafe { CStr::from_ptr(passwd.pw_dir) }.to_bytes();
+    if bytes.is_empty() {
+        return None;
+    }
+    Some(PathBuf::from(OsString::from_vec(bytes.to_vec())))
+}
+
+#[cfg(not(unix))]
+fn system_user_home_directory() -> Option<PathBuf> {
+    None
 }
 
 fn user_cli_path_candidates(home: &Path) -> Vec<PathBuf> {
@@ -1415,7 +1494,9 @@ fn user_cli_path_candidates(home: &Path) -> Vec<PathBuf> {
         home.join(".npm-global/bin"),
         home.join(".npm/bin"),
         home.join(".bun/bin"),
+        home.join(".volta/bin"),
         home.join(".linuxbrew/bin"),
+        home.join("Library/pnpm"),
         home.join("AppData/Roaming/npm"),
         home.join("AppData/Local/pnpm"),
         home.join("scoop/shims"),
@@ -1943,7 +2024,25 @@ mod tests {
 
         assert!(candidates.contains(&directory.path().join(".local/bin")));
         assert!(candidates.contains(&directory.path().join(".local/share/mise/shims")));
+        assert!(candidates.contains(&directory.path().join(".volta/bin")));
         assert!(candidates.contains(&directory.path().join("AppData/Roaming/npm")));
         assert!(candidates.contains(&nvm_bin));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn cli_home_candidates_include_the_os_account_home() {
+        if let Some(account_home) = system_user_home_directory() {
+            assert!(user_home_directories().contains(&account_home));
+        }
+    }
+
+    #[test]
+    fn cli_status_output_is_trimmed_and_empty_output_is_omitted() {
+        assert_eq!(
+            non_empty_output(b"codex-cli 0.151.0\n"),
+            Some("codex-cli 0.151.0".to_owned())
+        );
+        assert_eq!(non_empty_output(b" \n\t"), None);
     }
 }

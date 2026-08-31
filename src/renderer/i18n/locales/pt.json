@@ -1250,7 +1250,7 @@
     "performance": "A amostragem de desempenho falhou.",
     "systemTerminal": "Não foi possível abrir o terminal.",
     "zotero": "A solicitação ao Zotero falhou.",
-    "ai": "A solicitação de IA falhou.",
+    "ai": "A solicitação de IA falhou: {{detail}}",
     "settings": "Não foi possível salvar as configurações.",
     "updater": "O atualizador falhou.",
     "recentProjectUnauthorized": "{{path}} não está na lista de projetos recentes confiáveis.",

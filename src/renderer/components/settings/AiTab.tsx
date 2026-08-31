@@ -141,6 +141,9 @@ const AiPromptsEditor = () => {
 }
 
 type ProviderAvailability = Record<AiProvider, boolean | null>
+interface ConnectionError {
+  detail?: string
+}
 
 const INITIAL_AVAILABILITY: ProviderAvailability = {
   anthropic: null,
@@ -172,7 +175,9 @@ export const AiTab = () => {
     initialConnection as AiProvider
   )
   const [availability, setAvailability] = useState<ProviderAvailability>(INITIAL_AVAILABILITY)
-  const [connectionErrors, setConnectionErrors] = useState<Partial<Record<AiProvider, boolean>>>({})
+  const [connectionErrors, setConnectionErrors] = useState<
+    Partial<Record<AiProvider, ConnectionError>>
+  >({})
   const [checkingConnections, setCheckingConnections] = useState(false)
   const [customTargetProvider, setCustomTargetProvider] = useState<AiProvider | null>(null)
   const [apiKey, setApiKey] = useState('')
@@ -183,19 +188,34 @@ export const AiTab = () => {
   const refreshConnections = useCallback(async () => {
     setCheckingConnections(true)
     setConnectionErrors({})
-    const results = await Promise.allSettled([
-      window.api.aiHasApiKey('anthropic'),
-      window.api.aiHasApiKey('openai'),
-      window.api.aiHasApiKey('gemini'),
-      window.api.aiCheckCli(),
-      window.api.aiCheckCodexCli()
-    ])
+    const [anthropicResult, openAiResult, geminiResult, claudeResult, codexResult] =
+      await Promise.allSettled([
+        window.api.aiHasApiKey('anthropic'),
+        window.api.aiHasApiKey('openai'),
+        window.api.aiHasApiKey('gemini'),
+        window.api.aiCheckCli(),
+        window.api.aiCheckCodexCli()
+      ])
     const nextAvailability = { ...INITIAL_AVAILABILITY }
-    const nextErrors: Partial<Record<AiProvider, boolean>> = {}
-    AI_PROVIDER_ORDER.forEach((currentProvider, index) => {
-      const result = results[index]
+    const nextErrors: Partial<Record<AiProvider, ConnectionError>> = {}
+    const apiResults = [anthropicResult, openAiResult, geminiResult] as const
+    const cliResults = [claudeResult, codexResult] as const
+    API_PROVIDERS.forEach((currentProvider, index) => {
+      const result = apiResults[index]
       nextAvailability[currentProvider] = result.status === 'fulfilled' ? result.value : false
-      if (result.status === 'rejected') nextErrors[currentProvider] = true
+      if (result.status === 'rejected') nextErrors[currentProvider] = {}
+    })
+    CLI_PROVIDERS.forEach((currentProvider, offset) => {
+      const result = cliResults[offset]
+      if (result.status === 'rejected') {
+        nextAvailability[currentProvider] = false
+        nextErrors[currentProvider] = {}
+        return
+      }
+      nextAvailability[currentProvider] = result.value.available
+      if (!result.value.available && result.value.error) {
+        nextErrors[currentProvider] = { detail: result.value.error }
+      }
     })
     setAvailability(nextAvailability)
     setConnectionErrors(nextErrors)
@@ -268,7 +288,11 @@ export const AiTab = () => {
     try {
       await window.api.aiSaveApiKey(selectedConnection, apiKey.trim())
       setAvailability((current) => ({ ...current, [selectedConnection]: true }))
-      setConnectionErrors((current) => ({ ...current, [selectedConnection]: false }))
+      setConnectionErrors((current) => {
+        const next = { ...current }
+        delete next[selectedConnection]
+        return next
+      })
       setKeySaved(true)
       setKeyError(null)
       setApiKey('')
@@ -596,7 +620,7 @@ export const AiTab = () => {
                 {connectionErrors[selectedConnection] && (
                   <span className="settings-status-text error settings-status-inline">
                     <span className="settings-status-dot error" />
-                    {t('settings.ai.checkFailed')}
+                    {connectionErrors[selectedConnection]?.detail ?? t('settings.ai.checkFailed')}
                   </span>
                 )}
               </div>

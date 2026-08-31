@@ -1250,7 +1250,7 @@
     "performance": "Die Leistungsmessung ist fehlgeschlagen.",
     "systemTerminal": "Das Terminal konnte nicht geöffnet werden.",
     "zotero": "Die Zotero-Anfrage ist fehlgeschlagen.",
-    "ai": "Die KI-Anfrage ist fehlgeschlagen.",
+    "ai": "Die KI-Anfrage ist fehlgeschlagen: {{detail}}",
     "settings": "Die Einstellungen konnten nicht gespeichert werden.",
     "updater": "Der Updater ist fehlgeschlagen.",
     "recentProjectUnauthorized": "{{path}} steht nicht in der Liste vertrauenswürdiger zuletzt verwendeter Projekte.",

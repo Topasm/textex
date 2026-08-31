@@ -146,8 +146,8 @@ Object.defineProperty(window, 'api', {
     aiCancelResearchChat: vi.fn().mockResolvedValue(true),
     aiPlanZotero: vi.fn(),
     aiUpdateContext: vi.fn(),
-    aiCheckCli: vi.fn(),
-    aiCheckCodexCli: vi.fn(),
+    aiCheckCli: vi.fn().mockResolvedValue({ available: false }),
+    aiCheckCodexCli: vi.fn().mockResolvedValue({ available: false }),
     aiOpenClaudeTerminal: vi.fn(),
     aiOpenCodexTerminal: vi.fn(),
 

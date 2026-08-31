@@ -7,7 +7,7 @@ use tauri::{AppHandle, State};
 use crate::{
     error::{AppError, AppResult},
     models::{
-        AiContextEntry, AiCustomProcessRequest, AiGenerateResult, AiProcessRequest,
+        AiCliStatus, AiContextEntry, AiCustomProcessRequest, AiGenerateResult, AiProcessRequest,
         AiTerminalRequest, AiTerminalResult, BibEntry, ResearchChatAccess, ResearchChatContext,
         ResearchChatContextKind, ResearchChatRequest, ResearchChatResponse, ResearchProfile,
         ResearchReferenceSource, ResearchResource, ResearchResourceKind, SuccessResult,
@@ -978,12 +978,12 @@ pub async fn ai_update_context(
 }
 
 #[tauri::command]
-pub async fn ai_check_cli() -> bool {
+pub async fn ai_check_cli() -> AiCliStatus {
     ai::check_cli("claude").await
 }
 
 #[tauri::command]
-pub async fn ai_check_codex_cli() -> bool {
+pub async fn ai_check_codex_cli() -> AiCliStatus {
     ai::check_cli("codex").await
 }
 

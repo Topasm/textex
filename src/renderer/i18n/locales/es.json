@@ -1250,7 +1250,7 @@
     "performance": "El muestreo de rendimiento falló.",
     "systemTerminal": "No se pudo abrir el terminal.",
     "zotero": "La solicitud a Zotero falló.",
-    "ai": "La solicitud de IA falló.",
+    "ai": "La solicitud de IA falló: {{detail}}",
     "settings": "No se pudieron guardar los ajustes.",
     "updater": "El actualizador falló.",
     "recentProjectUnauthorized": "{{path}} no está en la lista de proyectos recientes de confianza.",

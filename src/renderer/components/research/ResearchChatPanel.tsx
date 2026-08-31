@@ -1236,14 +1236,15 @@ export function ResearchChatPanel({
         })
       )
       try {
-        const available =
+        const cliStatus =
           provider === 'claude' ? await window.api.aiCheckCli() : await window.api.aiCheckCodexCli()
         if (!isCurrentRequest(generation, root)) return
-        if (!available)
+        if (!cliStatus.available)
           throw new Error(
-            t('researchPanel.chat.cliNotFound', {
-              cli: provider === 'claude' ? 'Claude Code' : 'Codex CLI'
-            })
+            cliStatus.error ||
+              t('researchPanel.chat.cliNotFound', {
+                cli: provider === 'claude' ? 'Claude Code' : 'Codex CLI'
+              })
           )
         const result =
           provider === 'claude'

@@ -92,8 +92,8 @@ describe('SettingsModal', () => {
 
   it('renders and configures the native AI settings flow', async () => {
     vi.mocked(window.api.aiHasApiKey).mockResolvedValue(false)
-    vi.mocked(window.api.aiCheckCli).mockResolvedValue(false)
-    vi.mocked(window.api.aiCheckCodexCli).mockResolvedValue(false)
+    vi.mocked(window.api.aiCheckCli).mockResolvedValue({ available: false })
+    vi.mocked(window.api.aiCheckCodexCli).mockResolvedValue({ available: false })
     render(<SettingsModal onClose={vi.fn()} />)
 
     fireEvent.click(screen.getByRole('button', { name: 'AI' }))

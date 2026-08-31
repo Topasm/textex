@@ -82,8 +82,8 @@ export function ResearchChatModelSelector({
         anthropic: results[0].status === 'fulfilled' && results[0].value,
         openai: results[1].status === 'fulfilled' && results[1].value,
         gemini: results[2].status === 'fulfilled' && results[2].value,
-        'claude-cli': results[3].status === 'fulfilled' && results[3].value,
-        'codex-cli': results[4].status === 'fulfilled' && results[4].value
+        'claude-cli': results[3].status === 'fulfilled' && results[3].value.available,
+        'codex-cli': results[4].status === 'fulfilled' && results[4].value.available
       })
     })
     return () => {

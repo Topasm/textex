@@ -1,5 +1,6 @@
 import {
   AppCommandId,
+  AiCliStatus,
   AiContextEntry,
   AiCustomProcessRequest,
   AiProcessRequest,
@@ -262,8 +263,8 @@ export interface DesktopApi {
   aiCancelResearchChat(requestId: string): Promise<boolean>
   aiPlanZotero(request: ZoteroPlanRequest, port?: number): Promise<ZoteroMutationPlan>
   aiUpdateContext(filePath: string, content: string): Promise<AiContextEntry>
-  aiCheckCli(): Promise<boolean>
-  aiCheckCodexCli(): Promise<boolean>
+  aiCheckCli(): Promise<AiCliStatus>
+  aiCheckCodexCli(): Promise<AiCliStatus>
   aiOpenClaudeTerminal(request: ClaudeTerminalRequest): Promise<ClaudeTerminalResult>
   aiOpenCodexTerminal(request: CodexTerminalRequest): Promise<CodexTerminalResult>
 

@@ -1250,7 +1250,7 @@
     "performance": "L'échantillonnage des performances a échoué.",
     "systemTerminal": "Le terminal n'a pas pu être ouvert.",
     "zotero": "La requête Zotero a échoué.",
-    "ai": "La requête IA a échoué.",
+    "ai": "La requête IA a échoué : {{detail}}",
     "settings": "Les paramètres n'ont pas pu être enregistrés.",
     "updater": "Le programme de mise à jour a échoué.",
     "recentProjectUnauthorized": "{{path}} ne figure pas dans la liste des projets récents approuvés.",

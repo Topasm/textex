@@ -466,6 +466,12 @@ export interface ClaudeTerminalRequest {
   prompt?: string
 }
 
+export interface AiCliStatus {
+  available: boolean
+  version?: string
+  error?: string
+}
+
 export interface ClaudeTerminalResult {
   success: boolean
   workDir: string
