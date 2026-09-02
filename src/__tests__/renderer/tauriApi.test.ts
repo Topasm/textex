@@ -985,9 +985,17 @@ describe('Tauri DesktopApi adapter', () => {
       revision: '4'
     }
     const nextChatScope = { ...chatScope, revision: '4' }
+    const itemDetail = {
+      itemKey: 'ABCD2345',
+      abstract: 'We present a latent action model.',
+      publication: 'ICRA',
+      url: null
+    }
     invokeMock
       .mockResolvedValueOnce([library])
       .mockResolvedValueOnce(collectionPage)
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce(itemDetail)
       .mockResolvedValueOnce(added)
       .mockResolvedValueOnce(saved)
       .mockResolvedValueOnce([reference])
@@ -1007,6 +1015,8 @@ describe('Tauri DesktopApi adapter', () => {
     const api = createTauriApi()
     await expect(api.zoteroLibraryTree(23119)).resolves.toEqual([library])
     await expect(api.zoteroCollectionItems('/0/ABC', 0, 50, 23119)).resolves.toEqual(collectionPage)
+    await expect(api.zoteroOpenItem('ABCD2345', 23119)).resolves.toEqual({ success: true })
+    await expect(api.zoteroItemDetail('ABCD2345', 23119)).resolves.toEqual(itemDetail)
     await expect(api.zoteroAddToProject('Smith2026Paper', 23119)).resolves.toEqual(added)
     await expect(api.zoteroSaveOnline(reference, 23119)).resolves.toEqual(saved)
     await expect(api.researchSearchOnline('paper')).resolves.toEqual([reference])
@@ -1027,6 +1037,8 @@ describe('Tauri DesktopApi adapter', () => {
     expect(invokeMock.mock.calls).toEqual([
       ['zotero_library_tree', { port: 23119 }],
       ['zotero_collection_items', { collection: '/0/ABC', offset: 0, limit: 50, port: 23119 }],
+      ['zotero_open_item', { itemKey: 'ABCD2345', port: 23119 }],
+      ['zotero_item_detail', { itemKey: 'ABCD2345', port: 23119 }],
       ['zotero_add_to_project', { citekey: 'Smith2026Paper', port: 23119 }],
       ['zotero_save_online', { reference, port: 23119 }],
       ['research_search_online', { query: 'paper' }],

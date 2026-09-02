@@ -416,6 +416,12 @@ const zoteroCollectionItems: DesktopApi['zoteroCollectionItems'] = (
   port
 ) => invoke(TAURI_COMMANDS.zoteroCollectionItems, { collection, offset, limit, port })
 
+const zoteroOpenItem: DesktopApi['zoteroOpenItem'] = (itemKey, port) =>
+  invoke(TAURI_COMMANDS.zoteroOpenItem, { itemKey, port })
+
+const zoteroItemDetail: DesktopApi['zoteroItemDetail'] = (itemKey, port) =>
+  invoke(TAURI_COMMANDS.zoteroItemDetail, { itemKey, port })
+
 const zoteroAddToProject: DesktopApi['zoteroAddToProject'] = (citekey, port) =>
   invoke(TAURI_COMMANDS.zoteroAddToProject, { citekey, port })
 
@@ -696,6 +702,8 @@ const tauriDesktopApi = {
   zoteroSyncCollection,
   zoteroLibraryTree,
   zoteroCollectionItems,
+  zoteroOpenItem,
+  zoteroItemDetail,
   zoteroAddToProject,
   zoteroSaveOnline,
   zoteroApplyMutationPlan,

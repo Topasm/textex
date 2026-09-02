@@ -36,6 +36,7 @@ import {
   ZoteroSaveResult,
   ZoteroLibrary,
   ZoteroCollectionItemsPage,
+  ZoteroItemDetail,
   OnlineReference,
   ReferenceAddResult,
   ResearchConfig,
@@ -230,6 +231,8 @@ export interface DesktopApi {
     limit?: number,
     port?: number
   ): Promise<ZoteroCollectionItemsPage>
+  zoteroOpenItem(itemKey: string, port?: number): Promise<{ success: boolean }>
+  zoteroItemDetail(itemKey: string, port?: number): Promise<ZoteroItemDetail>
   zoteroAddToProject(citekey: string, port?: number): Promise<ReferenceAddResult>
   zoteroSaveOnline(reference: OnlineReference, port?: number): Promise<ZoteroSaveResult>
   zoteroApplyMutationPlan(plan: ZoteroMutationPlan): Promise<ZoteroMutationResult>

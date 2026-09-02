@@ -264,6 +264,8 @@ pub fn run() {
             commands::zotero::zotero_sync_collection,
             commands::zotero::zotero_library_tree,
             commands::zotero::zotero_collection_items,
+            commands::zotero::zotero_open_item,
+            commands::zotero::zotero_item_detail,
             commands::zotero::zotero_add_to_project,
             commands::zotero::zotero_save_online,
             commands::zotero::zotero_apply_mutation_plan,

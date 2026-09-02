@@ -215,6 +215,9 @@ export interface AppUpdateDownloadProgress {
 
 export type AppUpdateActionResult = { success: true } | { success: false; error: string }
 
+/** Ordering of the unified reference list in the Research panel. */
+export type ReferenceSortOrder = 'natural' | 'title' | 'author' | 'year' | 'citations'
+
 export interface UserSettings {
   theme: 'system' | 'dark' | 'light' | 'high-contrast' | 'glass'
   fontSize: number
@@ -251,6 +254,7 @@ export interface UserSettings {
   sectionHighlightEnabled?: boolean
   sectionHighlightColors?: string[]
   bibGroupMode?: 'flat' | 'author' | 'year' | 'type' | 'custom'
+  referenceSortOrder?: ReferenceSortOrder
   lineNumbers?: boolean
   tabSize?: number
   recentProjects?: RecentProject[]
@@ -524,6 +528,17 @@ export interface ZoteroCollectionItem {
   type: string
   doi: string | null
   arxivId: string | null
+}
+
+/**
+ * Fields the collection pages deliberately omit, fetched only when a reference
+ * row is opened so a 100-item page stays small.
+ */
+export interface ZoteroItemDetail {
+  itemKey: string
+  abstract: string | null
+  publication: string | null
+  url: string | null
 }
 
 export interface ZoteroCollectionItemsPage {

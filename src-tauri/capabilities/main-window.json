@@ -83,6 +83,8 @@
     "allow-zotero-sync-collection",
     "allow-zotero-library-tree",
     "allow-zotero-collection-items",
+    "allow-zotero-open-item",
+    "allow-zotero-item-detail",
     "allow-zotero-add-to-project",
     "allow-zotero-save-online",
     "allow-zotero-apply-mutation-plan",

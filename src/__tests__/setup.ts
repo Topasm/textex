@@ -175,6 +175,10 @@ Object.defineProperty(window, 'api', {
       offset: 0,
       limit: 50
     }),
+    zoteroOpenItem: vi.fn().mockResolvedValue({ success: true }),
+    zoteroItemDetail: vi
+      .fn()
+      .mockResolvedValue({ itemKey: '', abstract: null, publication: null, url: null }),
     zoteroAddToProject: vi.fn(),
     zoteroSaveOnline: vi.fn(),
     zoteroApplyMutationPlan: vi.fn(),

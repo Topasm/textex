@@ -3,9 +3,9 @@ use tauri::{AppHandle, Manager, State};
 use crate::{
     error::{AppError, AppResult},
     models::{
-        OnlineReference, ReferenceAddResult, ZoteroCollectionItemsPage, ZoteroLibrary,
-        ZoteroMutationPlan, ZoteroMutationResult, ZoteroSaveResult, ZoteroSearchResult,
-        ZoteroSyncResult,
+        OnlineReference, ReferenceAddResult, SuccessResult, ZoteroCollectionItemsPage,
+        ZoteroItemDetail, ZoteroLibrary, ZoteroMutationPlan, ZoteroMutationResult,
+        ZoteroSaveResult, ZoteroSearchResult, ZoteroSyncResult,
     },
     services::{
         project_index::ProjectIndexState,
@@ -40,6 +40,19 @@ pub async fn zotero_collection_items(
     port: Option<u16>,
 ) -> AppResult<ZoteroCollectionItemsPage> {
     zotero::collection_items(&collection, offset, limit, port).await
+}
+
+#[tauri::command]
+pub async fn zotero_open_item(item_key: String, port: Option<u16>) -> AppResult<SuccessResult> {
+    zotero::open_item(&item_key, port).await
+}
+
+#[tauri::command]
+pub async fn zotero_item_detail(
+    item_key: String,
+    port: Option<u16>,
+) -> AppResult<ZoteroItemDetail> {
+    zotero::item_detail(&item_key, port).await
 }
 
 #[tauri::command]

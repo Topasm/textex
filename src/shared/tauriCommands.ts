@@ -76,6 +76,8 @@ export const TAURI_COMMANDS = {
   zoteroSyncCollection: 'zotero_sync_collection',
   zoteroLibraryTree: 'zotero_library_tree',
   zoteroCollectionItems: 'zotero_collection_items',
+  zoteroOpenItem: 'zotero_open_item',
+  zoteroItemDetail: 'zotero_item_detail',
   zoteroAddToProject: 'zotero_add_to_project',
   zoteroSaveOnline: 'zotero_save_online',
   zoteroApplyMutationPlan: 'zotero_apply_mutation_plan',

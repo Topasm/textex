@@ -187,6 +187,17 @@ pub struct ZoteroCollectionItem {
     pub arxiv_id: Option<String>,
 }
 
+/// On-demand detail for one Zotero item. The collection pages stay lean, so the
+/// abstract and its publication context are fetched only when a row is opened.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ZoteroItemDetail {
+    pub item_key: String,
+    pub r#abstract: Option<String>,
+    pub publication: Option<String>,
+    pub url: Option<String>,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZoteroCollectionItemsPage {
@@ -531,6 +542,8 @@ pub struct UserSettings {
     pub section_highlight_enabled: bool,
     pub section_highlight_colors: Vec<String>,
     pub bib_group_mode: BibGroupMode,
+    #[serde(default)]
+    pub reference_sort_order: ReferenceSortOrder,
     pub line_numbers: bool,
     pub tab_size: u8,
     pub recent_projects: Vec<RecentProject>,
@@ -592,6 +605,7 @@ impl Default for UserSettings {
                 "#d19a66".to_owned(),
             ],
             bib_group_mode: BibGroupMode::Flat,
+            reference_sort_order: ReferenceSortOrder::Natural,
             line_numbers: true,
             tab_size: 4,
             recent_projects: Vec::new(),
@@ -1037,6 +1051,19 @@ pub enum BibGroupMode {
     Year,
     Type,
     Custom,
+}
+
+/// Ordering of the unified reference list. `Natural` keeps the order each
+/// source delivers, which is the project index order for bibliography entries.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ReferenceSortOrder {
+    #[default]
+    Natural,
+    Title,
+    Author,
+    Year,
+    Citations,
 }
 
 #[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]

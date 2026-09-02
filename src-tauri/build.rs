@@ -70,6 +70,8 @@ fn main() {
         "zotero_sync_collection",
         "zotero_library_tree",
         "zotero_collection_items",
+        "zotero_open_item",
+        "zotero_item_detail",
         "zotero_add_to_project",
         "zotero_save_online",
         "zotero_apply_mutation_plan",

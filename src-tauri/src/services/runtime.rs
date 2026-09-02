@@ -39,7 +39,15 @@ struct TerminalCommandSpec {
 
 pub async fn open_external(url: &str) -> AppResult<SuccessResult> {
     let parsed = validate_external_url(url)?;
-    let mut command = external_open_command(parsed.as_str());
+    launch_uri(parsed.as_str()).await
+}
+
+/// Hands an already-validated URI to the platform opener. Callers own the
+/// scheme decision: the renderer may never pass a raw URI here, so every entry
+/// point either validates against the external allowlist or builds the URI
+/// itself from validated parts.
+pub(crate) async fn launch_uri(uri: &str) -> AppResult<SuccessResult> {
+    let mut command = external_open_command(uri);
     command
         .stdin(Stdio::null())
         .stdout(Stdio::null())

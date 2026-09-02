@@ -12,15 +12,16 @@ use tokio::sync::Mutex;
 use crate::{
     error::{AppError, AppResult},
     models::{
-        OnlineReference, ReferenceAddResult, ZoteroCollection, ZoteroCollectionItem,
-        ZoteroCollectionItemsPage, ZoteroLibrary, ZoteroMutationCollectionRef, ZoteroMutationDraft,
-        ZoteroMutationDraftOperation, ZoteroMutationOperation, ZoteroMutationPlan,
-        ZoteroMutationResult, ZoteroSaveResult, ZoteroSearchResult, ZoteroSyncResult,
+        OnlineReference, ReferenceAddResult, SuccessResult, ZoteroCollection, ZoteroCollectionItem,
+        ZoteroCollectionItemsPage, ZoteroItemDetail, ZoteroLibrary, ZoteroMutationCollectionRef,
+        ZoteroMutationDraft, ZoteroMutationDraftOperation, ZoteroMutationOperation,
+        ZoteroMutationPlan, ZoteroMutationResult, ZoteroSaveResult, ZoteroSearchResult,
+        ZoteroSyncResult,
     },
     services::{
         filesystem, references,
         research::{self, ProjectCommit, ResearchState},
-        research_limits,
+        research_limits, runtime,
     },
     state::AppState,
 };
@@ -36,6 +37,8 @@ const MAX_SEARCH_LENGTH: usize = 1_024;
 const MAX_CITEKEYS: usize = 10_000;
 const MAX_COLLECTION_EXPORT_BYTES: usize = 50 * 1024 * 1024;
 const MAX_COLLECTIONS: usize = 10_000;
+const MAX_ABSTRACT_CHARS: usize = 4_000;
+const MAX_DETAIL_CHARS: usize = 512;
 const MAX_COLLECTION_ITEMS_PAGE: u32 = 100;
 const DEFAULT_COLLECTION_ITEMS_PAGE: u32 = 50;
 const MAX_LOCAL_API_RESPONSE_BYTES: usize = 2 * 1024 * 1024;
@@ -140,6 +143,12 @@ struct LocalItemData {
     doi: String,
     #[serde(default)]
     archive_location: String,
+    #[serde(default)]
+    abstract_note: String,
+    #[serde(default)]
+    publication_title: String,
+    #[serde(default)]
+    url: String,
     #[serde(default)]
     tags: Vec<LocalTag>,
     #[serde(default)]
@@ -252,6 +261,48 @@ pub async fn library_tree(port: Option<u16>) -> AppResult<Vec<ZoteroLibrary>> {
         item_count,
         collections,
     }])
+}
+
+/// Reveals one item in the Zotero desktop application. The renderer sends only
+/// the item key; the `zotero://` URI is assembled here so no caller can hand the
+/// platform opener an arbitrary scheme.
+pub async fn open_item(item_key: &str, port: Option<u16>) -> AppResult<SuccessResult> {
+    let key = local_item_key(item_key)?;
+    // Confirming the key against the running library keeps a stale row from
+    // launching Zotero onto nothing, and reports a useful error instead.
+    local_item_by_key(&key, port).await?;
+    runtime::launch_uri(&format!("zotero://select/library/items/{key}")).await
+}
+
+/// Fetches the fields the collection pages deliberately omit. Item pages carry
+/// up to 100 records, so abstracts are pulled one row at a time instead.
+pub async fn item_detail(item_key: &str, port: Option<u16>) -> AppResult<ZoteroItemDetail> {
+    let key = local_item_key(item_key)?;
+    let envelope = local_item_by_key(&key, port).await?;
+    Ok(ZoteroItemDetail {
+        item_key: key,
+        r#abstract: optional_detail(&envelope.data.abstract_note, MAX_ABSTRACT_CHARS),
+        publication: optional_detail(&envelope.data.publication_title, MAX_DETAIL_CHARS),
+        url: optional_detail(&envelope.data.url, MAX_DETAIL_CHARS),
+    })
+}
+
+/// Accepts either a bare item key or the `/0/KEY` form the renderer uses for
+/// collections, so callers never have to strip the library prefix themselves.
+fn local_item_key(item_key: &str) -> AppResult<String> {
+    let key = item_key.rsplit('/').next().unwrap_or_default().trim();
+    if !valid_local_key(key) {
+        return Err(AppError::Zotero(format!("invalid Zotero item key: {key}")));
+    }
+    Ok(key.to_owned())
+}
+
+fn optional_detail(value: &str, limit: usize) -> Option<String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    Some(trimmed.chars().take(limit).collect())
 }
 
 fn library_collections(
@@ -2232,6 +2283,34 @@ mod tests {
                 }),
             },
         }
+    }
+
+    #[test]
+    fn accepts_prefixed_item_keys_and_rejects_anything_else() {
+        assert_eq!(local_item_key("ABCD2345").unwrap(), "ABCD2345");
+        assert_eq!(local_item_key("/0/ABCD2345").unwrap(), "ABCD2345");
+        // Lowercase, wrong length, and path traversal are all outside the
+        // Zotero key alphabet, so the URI can never be steered elsewhere.
+        assert!(local_item_key("abcd2345").is_err());
+        assert!(local_item_key("ABCD234").is_err());
+        assert!(local_item_key("../../etc").is_err());
+        assert!(local_item_key("").is_err());
+    }
+
+    #[test]
+    fn trims_item_detail_fields_and_drops_empty_ones() {
+        assert_eq!(
+            optional_detail("  Robotics: Science and Systems  ", MAX_DETAIL_CHARS),
+            Some("Robotics: Science and Systems".to_owned())
+        );
+        assert_eq!(optional_detail("   ", MAX_DETAIL_CHARS), None);
+        assert_eq!(
+            optional_detail(&"a".repeat(MAX_ABSTRACT_CHARS + 100), MAX_ABSTRACT_CHARS)
+                .unwrap()
+                .chars()
+                .count(),
+            MAX_ABSTRACT_CHARS
+        );
     }
 
     #[test]
