@@ -68,6 +68,20 @@ describe('responsive desktop layout contract', () => {
     )
   })
 
+  it('leaves nothing but the grab rail on screen when the research panel auto-hides', () => {
+    // The rail is the panel's own left edge, so its children have to be hidden
+    // or the panel's padding and first control column stay visible.
+    expect(baseStyles).toMatch(
+      /\.research-panel\.overlay\.research-panel-auto-hide\.research-panel-entered > \*\s*\{[^}]*opacity:\s*0;/s
+    )
+    expect(baseStyles).toMatch(
+      /\.research-panel\.overlay\.research-panel-auto-hide\.research-panel-entered:hover > \*\s*\{[^}]*opacity:\s*1;/s
+    )
+    expect(baseStyles).toMatch(
+      /\.research-panel\.overlay\.research-panel-auto-hide\.research-panel-entered\s*\{[^}]*background:\s*transparent;/s
+    )
+  })
+
   it('disables resize handles while compact CSS overrides stored pane sizes', () => {
     expect(responsiveStyles).toMatch(
       /\.sidebar-wrapper \.sidebar-resize-handle\s*\{\s*display: none;/

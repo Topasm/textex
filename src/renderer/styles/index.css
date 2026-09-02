@@ -5326,8 +5326,28 @@ button.submission-check-finding:hover {
 }
 
 .research-panel.overlay.research-panel-auto-hide.research-panel-entered {
+  background: transparent;
+  border-left-color: transparent;
   box-shadow: none;
   transform: translateX(calc(100% - 16px));
+}
+
+/*
+ * Only the grab bar may show while the panel is hidden. The 16px rail that
+ * stays on screen is the panel's own left edge, so without this it exposed the
+ * panel padding and the first column of its content — checkboxes and row status
+ * icons — which reads as a panel that failed to hide. The left sidebar already
+ * hides this way: a neutral rail, with the panel itself invisible behind it.
+ */
+.research-panel.overlay.research-panel-auto-hide.research-panel-entered > * {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 140ms ease;
+}
+
+.research-panel.overlay.research-panel-auto-hide.research-panel-entered:hover > * {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .research-panel.overlay.research-panel-auto-hide.research-panel-entered::after {
@@ -5348,6 +5368,8 @@ button.submission-check-finding:hover {
 }
 
 .research-panel.overlay.research-panel-auto-hide.research-panel-entered:hover {
+  background: var(--sidebar-bg);
+  border-left-color: var(--border);
   box-shadow: -8px 0 24px var(--shadow-color);
   transform: translateX(0);
 }
