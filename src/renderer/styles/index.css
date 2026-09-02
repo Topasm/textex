@@ -4003,12 +4003,29 @@ button.submission-check-finding:hover {
 
 .research-config-row {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
   gap: var(--space-6);
   margin-bottom: var(--space-8);
 }
 
-.research-config-row button {
+.research-config-row > .zotero-collection-picker {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.research-config-row .reference-sort-select {
+  height: 28px;
+  max-width: 108px;
+  padding: 0 var(--space-4);
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--ui-radius-control);
+  cursor: pointer;
+}
+
+.research-config-row > button {
   display: grid;
   place-items: center;
   width: 30px;
@@ -4020,12 +4037,60 @@ button.submission-check-finding:hover {
   cursor: pointer;
 }
 
-.zotero-collection-tree {
-  max-height: 180px;
-  margin-bottom: var(--space-8);
-  overflow: auto;
+.zotero-collection-picker {
+  position: relative;
+}
+
+.zotero-collection-trigger {
+  display: flex;
+  width: 100%;
+  height: 28px;
+  align-items: center;
+  gap: var(--space-6);
+  padding: 0 var(--space-6);
+  color: var(--text-primary);
+  font-size: var(--font-sm);
+  background: var(--bg-secondary);
   border: 1px solid var(--border);
+  border-radius: var(--ui-radius-control);
+  cursor: pointer;
+}
+
+.zotero-collection-trigger-name {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zotero-collection-trigger small {
+  color: var(--text-secondary);
+  font-size: var(--font-xs);
+}
+
+.zotero-collection-popover {
+  position: absolute;
+  z-index: 240;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  min-width: 240px;
+  padding: var(--space-4);
+  background: var(--ui-surface-raised, var(--chrome-elevated-bg));
+  border: 1px solid var(--ui-border-strong, var(--chrome-border));
   border-radius: var(--ui-radius-panel);
+  box-shadow: var(--ui-shadow-popover, 0 4px 14px var(--shadow-color));
+}
+
+.zotero-collection-tree {
+  max-height: 320px;
+  overflow: auto;
+}
+
+.zotero-sync-options {
+  margin-bottom: var(--space-8);
 }
 
 .zotero-collection-tree > button {
@@ -4141,6 +4206,68 @@ button.submission-check-finding:hover {
   gap: var(--space-6);
 }
 
+.reference-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+
+.reference-row-head {
+  display: grid;
+  align-items: center;
+  gap: var(--space-6);
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+}
+
+.reference-row-head strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reference-row-origin {
+  color: var(--text-secondary);
+  font-size: var(--font-2xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.reference-row-origin.cited {
+  color: var(--accent);
+}
+
+.reference-row-origin.missing {
+  color: var(--error);
+}
+
+.reference-row-meta {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: var(--font-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reference-row-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  margin-top: var(--space-6);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--border);
+}
+
+.reference-row-abstract {
+  max-height: 168px;
+  margin: 0;
+  overflow-y: auto;
+  color: var(--text-primary);
+  font-size: var(--font-sm);
+  line-height: 1.5;
+}
+
 .zotero-project-state {
   color: var(--text-secondary);
 }
@@ -4230,37 +4357,6 @@ button.submission-check-finding:hover {
   color: var(--text-secondary);
   font-size: var(--font-base);
   line-height: 1.4;
-}
-
-.zotero-collection-list {
-  max-height: 180px;
-  overflow: auto;
-}
-
-.zotero-collection-branch > button {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  gap: var(--space-6);
-  padding: 5px;
-  color: var(--text-primary);
-  background: transparent;
-  border: 0;
-  border-radius: var(--ui-radius-control);
-  cursor: pointer;
-  text-align: left;
-}
-
-.zotero-collection-branch > button:hover {
-  background: var(--bg-hover);
-}
-
-.zotero-collection-branch > button span {
-  flex: 1;
-}
-
-.zotero-collection-children {
-  padding-left: var(--space-14);
 }
 
 .research-sync-button {

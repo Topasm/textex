@@ -33,9 +33,16 @@ one current-paper manager:
 
 - The health summary compares citations used in project `.tex` files, every project `.bib` entry,
   and the Zotero library. It reports cited, missing-bibliography, unused, and not-linked states.
-- **My Library** and its nested collection hierarchy use lazy authoritative counts. Selecting a
-  collection loads its papers and shows whether each item is cited, only in the project, or only in
-  Zotero.
+  Issue detail is collapsed behind a single count until it is asked for.
+- **One list.** Project bibliography entries, the selected collection's papers, Zotero search hits
+  and `\cite` keys with no bibliography entry are merged into a single sorted list, one row per
+  paper, each carrying a state badge. Rows are keyed by Zotero item key and then by citation key,
+  so a paper described by two sources never appears twice.
+- **My Library** and its nested collection hierarchy live behind the collection picker at the top
+  of the panel, with lazy authoritative counts. Selecting a collection loads its papers into the
+  same list.
+- The sort control orders the list by title, author, year or citation count; the choice is a user
+  setting and persists across projects and restarts.
 - The shared search checks the project and Zotero first. When both return no matches, **Search
   Crossref / arXiv** opens Online as a secondary view. **Add & cite** merges an online result into
   `references.bib`; **Save to library** requests Zotero write authorization and creates a permanent
@@ -76,6 +83,28 @@ a library tree that has not loaded — stays selected and is reported as
 unconfirmed. Only a reachable library that lists collections without the saved
 key clears the setting, because that is the one case where the collection is
 really gone.
+
+### Reference row interaction
+
+A row never writes to the document or the bibliography by itself:
+
+| Input | Result |
+|---|---|
+| Click / <kbd>Enter</kbd> | Selects the row and expands it in place: abstract, citation locations, duplicate warnings, and the explicit action buttons |
+| Double-click | Reveals the item in the Zotero desktop application |
+| Right-click / <kbd>Shift</kbd>+<kbd>F10</kbd> | Opens the actions menu: preview, insert citation, add to bibliography, add and cite, open in Zotero, add to chat |
+| Drag | Unchanged — drops a citation into the editor or the chat |
+
+Inserting a citation and adding to the bibliography are separate actions. `Add to bibliography`
+writes the entry without touching the open document; `Add and cite` does both.
+
+The abstract is fetched per item the first time a row is expanded and cached for the session; the
+collection pages stay lean.
+
+### Settings that persist
+
+Selecting a collection or toggling either sync switch writes `.textex/research.json` immediately —
+there is no separate save step, and no save button.
 
 ### Inserting Citations (Inline Search)
 1.  Press `Ctrl+Shift+C` (or `Cmd+Shift+C` on macOS) to focus the citation search bar in the toolbar, or click it directly.
@@ -127,6 +156,8 @@ Ports: Zotero = `23119`, Juris-M = `24119`, or user-defined.
 | `zotero_collections` | Renderer -> Rust | `(port)` | `ZoteroCollection[]` |
 | `zotero_library_tree` | Renderer -> Rust | `(port)` | `ZoteroLibrary[]` |
 | `zotero_collection_items` | Renderer -> Rust | `(collection, offset, limit, port)` | `ZoteroCollectionItemsPage` |
+| `zotero_open_item` | Renderer -> Rust | `(itemKey, port)` | `SuccessResult` |
+| `zotero_item_detail` | Renderer -> Rust | `(itemKey, port)` | `ZoteroItemDetail` |
 | `zotero_add_to_project` | Renderer -> Rust | `(citekey, port)` | `ReferenceAddResult` |
 | `zotero_sync_collection` | Renderer -> Rust | `(collection, target, port)` | `ZoteroSyncResult` |
 | `zotero_save_online` | Renderer -> Rust | `(reference, port)` | `ZoteroSaveResult` |
@@ -140,6 +171,15 @@ example `/0/8CV58ZVD`). It caps the response at
 `.bib` target only after the complete UTF-8 export has arrived. Sync requests
 are serialized, their target is validated before download, and a successful
 write invalidates the generation-cached reference index immediately.
+
+`zotero_open_item` takes only an item key. The `zotero://select/library/items/{key}` URI is
+assembled in Rust after the key is validated against the Zotero key alphabet and confirmed against
+the running library, so the renderer can never hand the platform opener an arbitrary scheme —
+`open_external` still refuses everything but `https`, `http` and `mailto`.
+
+`zotero_item_detail` reads one item through the Local API and returns its abstract (truncated to
+4,000 characters), publication and URL. It exists so that abstracts are never carried in the
+100-item collection pages.
 
 Collection browsing uses only Zotero's loopback Local API. The Rust service validates collection
 keys, caps pages at 100 top-level bibliographic items, batches Better BibTeX citekey resolution,

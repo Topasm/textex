@@ -1068,9 +1068,7 @@
     },
     "zotero": {
       "label": "Zotero references",
-      "saveSettings": "Save research settings",
       "syncCollection": "Synchronize selected collection",
-      "settingsSaved": "Research settings saved.",
       "synchronized": "Synchronized {{count}} entry to {{file}}.",
       "synchronized_other": "Synchronized {{count}} entries to {{file}}.",
       "noReferenceMatches": "No matching project or Zotero references found.",
@@ -1078,8 +1076,7 @@
       "addedWithoutCitation": "Added @{{citekey}} to the project bibliography, but the editor changed before citation insertion.",
       "healthLabel": "Current paper reference health",
       "currentPaper": "Current paper",
-      "healthSummary": "{{cited}} cited · {{bibliography}} bib · {{count}} issue",
-      "healthSummary_other": "{{cited}} cited · {{bibliography}} bib · {{count}} issues",
+      "healthSummary": "{{cited}} cited · {{bibliography}} in bibliography",
       "crossCheckUnavailable": "Cross-check unavailable",
       "linkedToZotero": "{{count}} linked to Zotero",
       "linkedToZotero_other": "{{count}} linked to Zotero",
@@ -1103,8 +1100,6 @@
       "syncOnOpen": "Sync once when this project opens",
       "searchPlaceholder": "Search project & Zotero",
       "searchLabel": "Search project and Zotero",
-      "localResultsLabel": "Local reference search results",
-      "managerItemsLabel": "Reference manager items",
       "missingFromBibliography": "Used in TeX but missing from every project bibliography.",
       "findSource": "Find source",
       "citekeyUnavailable": "Citekey unavailable",
@@ -1124,7 +1119,26 @@
       "cancel": "Cancel",
       "sync": "Sync",
       "autoSync": "Keep synchronized while the project is open",
-      "collectionUnavailable": "Zotero has not confirmed the saved collection {{collection}} yet. It stays selected and syncs as soon as Zotero responds."
+      "collectionUnavailable": "Zotero has not confirmed the saved collection {{collection}} yet. It stays selected and syncs as soon as Zotero responds.",
+      "loading": "Loading Zotero…",
+      "loadingPapers": "Loading papers…",
+      "showMoreCollections": "Show {{count}} more collection",
+      "showMoreCollections_other": "Show {{count}} more collections",
+      "noCollectionSelected": "Choose a collection",
+      "inventorySummary": "{{total}} in this collection · {{inProject}} in the paper",
+      "referencesLabel": "References",
+      "issuesToggle": "⚠ {{count}} issue",
+      "issuesToggle_other": "⚠ {{count}} issues",
+      "sortLabel": "Sort references",
+      "addedToBibliography": "Added @{{citekey}} to the project bibliography.",
+      "sort": {
+        "natural": "Default order",
+        "title": "Title",
+        "author": "Author",
+        "year": "Newest first",
+        "citations": "Most cited"
+      },
+      "collectionTrigger": "Zotero collection: {{name}}"
     },
     "profileForm": {
       "resourceKind": {
@@ -1224,6 +1238,18 @@
       "addToCollections": "add to {{collections}}",
       "removeFromCollections": "remove from {{collections}}",
       "updateItem": "{{title}}: {{changes}}"
+    },
+    "referenceRow": {
+      "preview": "Preview",
+      "collapse": "Collapse",
+      "insertCitation": "Insert citation",
+      "addToBibliography": "Add to bibliography",
+      "addAndCite": "Add and cite",
+      "openInZotero": "Open in Zotero",
+      "originMissing": "NOT IN BIBLIOGRAPHY",
+      "abstractLoading": "Loading abstract…",
+      "abstractUnavailable": "No abstract in Zotero.",
+      "menuLabel": "Actions for {{name}}"
     }
   },
   "errors": {

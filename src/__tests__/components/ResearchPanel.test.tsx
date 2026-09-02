@@ -74,7 +74,7 @@ describe('ResearchPanel tabs', () => {
     fireEvent.change(input, { target: { value: 'Keep this draft across tabs.' } })
 
     fireEvent.click(screen.getByRole('tab', { name: 'References' }))
-    await screen.findByRole('region', { name: 'Reference manager items' })
+    await screen.findByRole('region', { name: 'References' })
     fireEvent.click(screen.getByRole('tab', { name: 'Chat' }))
 
     expect(screen.getByRole('textbox', { name: 'Research question' })).toHaveValue(
@@ -241,7 +241,7 @@ describe('ResearchPanel tabs', () => {
     expect(screen.getByText('Compilation Log')).toBeInTheDocument()
   })
 
-  it('exposes the unified reference manager as the References scroll region', async () => {
+  it('exposes one merged reference list as the References scroll region', async () => {
     useProjectStore.setState({
       researchPanelTab: 'references',
       researchReferenceSource: 'project',
@@ -261,14 +261,14 @@ describe('ResearchPanel tabs', () => {
     window.api.zoteroLibraryTree = vi.fn().mockResolvedValue([])
     render(<ResearchPanel onAiDraft={vi.fn()} />)
 
-    const list = await screen.findByRole('region', { name: 'Reference manager items' })
+    const list = await screen.findByRole('region', { name: 'References' })
     expect(list).toHaveClass('reference-card-list')
     expect(list).toHaveAttribute('tabindex', '0')
     expect(within(list).getByText('First paper')).toBeInTheDocument()
     expect(within(list).getByText('Second paper')).toBeInTheDocument()
   })
 
-  it('keeps Zotero search results in a dedicated scroll region', async () => {
+  it('keeps Zotero search results in the same merged region', async () => {
     useProjectStore.setState({
       researchPanelTab: 'references',
       researchReferenceSource: 'zotero',
@@ -303,7 +303,7 @@ describe('ResearchPanel tabs', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Search' }))
     await waitFor(() => expect(window.api.zoteroSearch).toHaveBeenCalledWith('robot', 23_119))
-    const list = screen.getByRole('region', { name: 'Local reference search results' })
+    const list = screen.getByRole('region', { name: 'References' })
     expect(list).toHaveClass('reference-card-list')
     expect(list).toHaveAttribute('tabindex', '0')
     expect(within(list).getAllByRole('article')).toHaveLength(2)

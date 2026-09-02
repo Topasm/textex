@@ -1068,9 +1068,7 @@
     },
     "zotero": {
       "label": "Zotero 参考文献",
-      "saveSettings": "保存研究设置",
       "syncCollection": "同步所选合集",
-      "settingsSaved": "已保存研究设置。",
       "synchronized": "已将 {{count}} 个条目同步到 {{file}}。",
       "synchronized_other": "已将 {{count}} 个条目同步到 {{file}}。",
       "noReferenceMatches": "未找到匹配的项目或 Zotero 参考文献。",
@@ -1078,8 +1076,7 @@
       "addedWithoutCitation": "已将 @{{citekey}} 添加到项目书目，但在插入引用前编辑器发生了变化。",
       "healthLabel": "当前论文的参考文献健康度",
       "currentPaper": "当前论文",
-      "healthSummary": "已引用 {{cited}} · 书目 {{bibliography}} · 问题 {{count}}",
-      "healthSummary_other": "已引用 {{cited}} · 书目 {{bibliography}} · 问题 {{count}}",
+      "healthSummary": "已引用 {{cited}} · 参考文献 {{bibliography}}",
       "crossCheckUnavailable": "无法核对",
       "linkedToZotero": "已关联 Zotero {{count}} 项",
       "linkedToZotero_other": "已关联 Zotero {{count}} 项",
@@ -1103,8 +1100,6 @@
       "syncOnOpen": "打开此项目时同步一次",
       "searchPlaceholder": "搜索项目与 Zotero",
       "searchLabel": "搜索项目与 Zotero",
-      "localResultsLabel": "本地参考文献搜索结果",
-      "managerItemsLabel": "文献管理器条目",
       "missingFromBibliography": "在 TeX 中使用，但所有项目书目中均无此条目。",
       "findSource": "查找来源",
       "citekeyUnavailable": "无引用键",
@@ -1124,7 +1119,26 @@
       "cancel": "取消",
       "sync": "同步",
       "autoSync": "在项目打开期间保持同步",
-      "collectionUnavailable": "Zotero 尚未确认已保存的分类 {{collection}}。该选择将保留，并在 Zotero 响应后同步。"
+      "collectionUnavailable": "Zotero 尚未确认已保存的分类 {{collection}}。该选择将保留，并在 Zotero 响应后同步。",
+      "loading": "正在加载 Zotero…",
+      "loadingPapers": "正在加载论文…",
+      "showMoreCollections": "再显示 {{count}} 个分类",
+      "showMoreCollections_other": "再显示 {{count}} 个分类",
+      "noCollectionSelected": "选择分类",
+      "inventorySummary": "此分类 {{total}} 篇 · 论文中 {{inProject}} 篇",
+      "referencesLabel": "参考文献",
+      "issuesToggle": "⚠ {{count}} 个问题",
+      "issuesToggle_other": "⚠ {{count}} 个问题",
+      "sortLabel": "参考文献排序",
+      "addedToBibliography": "已将 @{{citekey}} 添加到项目参考文献。",
+      "sort": {
+        "natural": "默认顺序",
+        "title": "标题",
+        "author": "作者",
+        "year": "最新优先",
+        "citations": "引用最多"
+      },
+      "collectionTrigger": "Zotero 分类：{{name}}"
     },
     "profileForm": {
       "resourceKind": {
@@ -1224,6 +1238,18 @@
       "addToCollections": "添加到 {{collections}}",
       "removeFromCollections": "从 {{collections}} 中移除",
       "updateItem": "{{title}}：{{changes}}"
+    },
+    "referenceRow": {
+      "preview": "预览",
+      "collapse": "收起",
+      "insertCitation": "插入引用",
+      "addToBibliography": "仅添加到参考文献",
+      "addAndCite": "添加并引用",
+      "openInZotero": "在 Zotero 中打开",
+      "originMissing": "不在参考文献中",
+      "abstractLoading": "正在加载摘要…",
+      "abstractUnavailable": "Zotero 中没有摘要。",
+      "menuLabel": "{{name}} 的操作"
     }
   },
   "errors": {

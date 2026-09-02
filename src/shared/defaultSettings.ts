@@ -49,6 +49,7 @@ export function createDefaultUserSettings(): UserSettings {
     sectionHighlightEnabled: false,
     sectionHighlightColors: [...DEFAULT_SECTION_HIGHLIGHT_COLORS],
     bibGroupMode: 'flat',
+    referenceSortOrder: 'natural',
     lineNumbers: true,
     tabSize: 4,
     recentProjects: [],

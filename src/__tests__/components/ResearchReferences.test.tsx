@@ -27,6 +27,19 @@ const config = {
   autoSync: false
 }
 
+/** The collection tree now lives behind a trigger, so tests must open it. */
+async function openCollectionPicker(): Promise<void> {
+  fireEvent.click(await screen.findByRole('button', { name: /Zotero collection:/ }))
+}
+
+/** Rows are collapsed until selected; details and actions live in the expansion. */
+async function expandRow(title: string | RegExp): Promise<HTMLElement> {
+  const row = (await screen.findByText(title)).closest('article')
+  if (!row) throw new Error(`No reference row for ${String(title)}`)
+  fireEvent.click(row)
+  return row
+}
+
 const libraryTree = (
   collections: Array<{
     key: string
@@ -71,6 +84,7 @@ describe('Research reference sources', () => {
     render(<ZoteroReferences />)
     await waitFor(() => expect(window.api.researchLoadConfig).toHaveBeenCalledOnce())
     act(() => useProjectStore.getState().setProjectRoot('/project-b'))
+    await openCollectionPicker()
 
     expect(await screen.findByText('Project B papers')).toBeInTheDocument()
     await act(async () => {
@@ -141,7 +155,6 @@ describe('Research reference sources', () => {
     render(<ZoteroReferences />)
 
     expect(screen.getByText('Loading Zotero…')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Save research settings' })).not.toBeInTheDocument()
     expect(
       screen.queryByRole('textbox', { name: 'Search project and Zotero' })
     ).not.toBeInTheDocument()
@@ -165,7 +178,7 @@ describe('Research reference sources', () => {
 
     render(<ZoteroReferences />)
 
-    const card = (await screen.findByText('Local paper')).closest('article')
+    const card = await expandRow('Local paper')
     expect(card).toHaveTextContent('CITED ×2')
     expect(card).toHaveTextContent('Zotero unavailable')
     expect(card).not.toHaveTextContent('Not linked to Zotero')
@@ -196,7 +209,7 @@ describe('Research reference sources', () => {
 
     render(<ZoteroReferences />)
 
-    fireEvent.click(await screen.findByRole('button', { name: 'CITED ×1' }))
+    await expandRow('Located paper')
     fireEvent.click(screen.getByRole('button', { name: 'main.tex:7' }))
     expect(useEditorStore.getState().pendingJump).toEqual({ line: 7, column: 1 })
   })
@@ -233,7 +246,9 @@ describe('Research reference sources', () => {
 
     render(<ZoteroReferences onOpenProblems={onOpenProblems} onOpenSubmission={onOpenSubmission} />)
 
-    expect(await screen.findAllByText(/Possible duplicate:/)).toHaveLength(2)
+    await expandRow('Duplicate paper copy')
+    expect(await screen.findAllByText(/Possible duplicate:/)).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button', { name: /issue/ }))
     fireEvent.click(screen.getByRole('button', { name: '⚠ 1 compile problem' }))
     expect(onOpenProblems).toHaveBeenCalledOnce()
     fireEvent.click(screen.getByRole('button', { name: 'Submission check' }))
@@ -262,6 +277,7 @@ describe('Research reference sources', () => {
         settings: { ...state.settings, zoteroPort: 23_120 }
       }))
     })
+    await openCollectionPicker()
 
     expect(await screen.findByText('New port')).toBeInTheDocument()
     await act(async () => {
@@ -319,6 +335,7 @@ describe('Research reference sources', () => {
     )
 
     render(<ZoteroReferences />)
+    await openCollectionPicker()
 
     const parent = await screen.findByRole('treeitem', { name: /Parent/ })
     expect(parent).toHaveAttribute('aria-expanded', 'false')
@@ -347,12 +364,13 @@ describe('Research reference sources', () => {
       )
 
     render(<ZoteroReferences />)
+    await openCollectionPicker()
 
     const root = await screen.findByRole('treeitem', { name: /My Library/ })
     expect(root).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('button', { name: 'Synchronize selected collection' })).toBeDisabled()
     expect(
-      screen.queryByRole('checkbox', { name: 'Keep synchronized when this project opens' })
+      screen.queryByRole('checkbox', { name: 'Sync once when this project opens' })
     ).not.toBeInTheDocument()
   })
 
@@ -370,10 +388,11 @@ describe('Research reference sources', () => {
     )
 
     render(<ZoteroReferences />)
+    await openCollectionPicker()
 
     await screen.findByRole('treeitem', { name: /Collection 000/ })
     expect(screen.getAllByRole('treeitem')).toHaveLength(201)
-    fireEvent.click(screen.getByRole('button', { name: 'Show more collections (50)' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Show 50 more collections' }))
     expect(screen.getAllByRole('treeitem')).toHaveLength(251)
   })
 
@@ -387,6 +406,7 @@ describe('Research reference sources', () => {
     )
 
     render(<ZoteroReferences />)
+    await openCollectionPicker()
 
     const first = await screen.findByRole('treeitem', { name: /Cycle A/ })
     expect(screen.getAllByRole('treeitem')).toHaveLength(2)
@@ -455,17 +475,20 @@ describe('Research reference sources', () => {
 
     render(<ZoteroReferences />)
 
-    expect(await screen.findByRole('treeitem', { name: /My Library.*438/ })).toBeInTheDocument()
-    expect(screen.getByText(/1 cited · 1 bib · 1 issue/)).toBeInTheDocument()
+    expect(await screen.findByText(/1 cited · 1 in bibliography/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /issue/ }))
     expect(screen.getByText(/1 missing bibliography/)).toBeInTheDocument()
-    expect(await screen.findByText('2 papers')).toBeInTheDocument()
-    expect(screen.getByText(/1 in project · 1 Zotero only/)).toBeInTheDocument()
+    expect(await screen.findByText(/2 in this collection · 1 in the paper/)).toBeInTheDocument()
     expect(screen.getByText('Project paper').closest('article')).toHaveTextContent('CITED ×2')
     expect(screen.getByText('Zotero-only paper').closest('article')).toHaveTextContent(
       'ZOTERO ONLY'
     )
+    await openCollectionPicker()
+    expect(await screen.findByRole('treeitem', { name: /My Library.*438/ })).toBeInTheDocument()
+    fireEvent.keyDown(screen.getByRole('treeitem', { name: /My Library.*438/ }), { key: 'Escape' })
 
     fireEvent.click(screen.getByRole('button', { name: 'Missing 1' }))
+    await expandRow('@missing2026')
     fireEvent.click(screen.getByRole('button', { name: 'Find source' }))
     await waitFor(() => expect(window.api.zoteroSearch).toHaveBeenCalledWith('missing2026', 23_119))
   })
@@ -650,7 +673,8 @@ describe('Research reference sources', () => {
     window.api.zoteroLibraryTree = vi.fn().mockResolvedValue([])
 
     render(<ReferencesPanel onAddToChat={onAddToChat} />)
-    fireEvent.click(await screen.findByRole('button', { name: 'Add Project Paper to Chat' }))
+    await expandRow('Project Paper')
+    fireEvent.click(screen.getByRole('button', { name: 'Add Project Paper to Chat' }))
 
     expect(onAddToChat).toHaveBeenCalledWith({
       source: 'project',
@@ -715,8 +739,8 @@ describe('Research reference sources', () => {
     const search = await screen.findByRole('textbox', { name: 'Search project and Zotero' })
     fireEvent.change(search, { target: { value: 'zotero paper' } })
     fireEvent.click(screen.getByRole('button', { name: 'Search' }))
-    const addToChat = await screen.findByRole('button', { name: 'Add Zotero Paper to Chat' })
-    fireEvent.click(addToChat)
+    await expandRow('Zotero Paper')
+    fireEvent.click(screen.getByRole('button', { name: 'Add Zotero Paper to Chat' }))
 
     expect(onAddToChat).toHaveBeenCalledWith({
       source: 'zotero',
@@ -731,7 +755,7 @@ describe('Research reference sources', () => {
     })
     expect(referenceActions.addReferenceAtCursor).not.toHaveBeenCalled()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add & cite' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add and cite' }))
     expect(
       await screen.findByText(
         'Added @zotero2026 to the project bibliography, but the editor changed before citation insertion.'
@@ -754,6 +778,7 @@ describe('Research reference sources', () => {
       .mockResolvedValue({ items: [], totalResults: 48, offset: 0, limit: 50 })
 
     render(<ZoteroReferences />)
+    await openCollectionPicker()
     fireEvent.click(await screen.findByRole('treeitem', { name: /icra_2027/ }))
 
     await waitFor(() =>
@@ -877,6 +902,8 @@ describe('Research reference sources', () => {
       })
 
       expect(screen.queryByText(/has not confirmed the saved collection/)).not.toBeInTheDocument()
+      // Fake timers are still installed, so open the picker synchronously.
+      fireEvent.click(screen.getByRole('button', { name: /Zotero collection:/ }))
       expect(screen.getByRole('treeitem', { name: /icra_2027/ })).toHaveAttribute(
         'aria-selected',
         'true'

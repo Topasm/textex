@@ -1068,9 +1068,7 @@
     },
     "zotero": {
       "label": "Zotero 참고문헌",
-      "saveSettings": "연구 설정 저장",
       "syncCollection": "선택한 컬렉션 동기화",
-      "settingsSaved": "연구 설정을 저장했습니다.",
       "synchronized": "{{file}}에 항목 {{count}}개를 동기화했습니다.",
       "synchronized_other": "{{file}}에 항목 {{count}}개를 동기화했습니다.",
       "noReferenceMatches": "일치하는 프로젝트 또는 Zotero 참고문헌이 없습니다.",
@@ -1078,8 +1076,7 @@
       "addedWithoutCitation": "@{{citekey}}을(를) 프로젝트 서지에 추가했지만, 인용을 삽입하기 전에 편집기가 변경되었습니다.",
       "healthLabel": "현재 논문 참고문헌 상태",
       "currentPaper": "현재 논문",
-      "healthSummary": "인용 {{cited}} · 서지 {{bibliography}} · 문제 {{count}}",
-      "healthSummary_other": "인용 {{cited}} · 서지 {{bibliography}} · 문제 {{count}}",
+      "healthSummary": "인용 {{cited}} · 서지 {{bibliography}}",
       "crossCheckUnavailable": "대조할 수 없음",
       "linkedToZotero": "Zotero에 {{count}}개 연결됨",
       "linkedToZotero_other": "Zotero에 {{count}}개 연결됨",
@@ -1103,8 +1100,6 @@
       "syncOnOpen": "이 프로젝트를 열 때 한 번 동기화",
       "searchPlaceholder": "프로젝트와 Zotero 검색",
       "searchLabel": "프로젝트와 Zotero 검색",
-      "localResultsLabel": "로컬 참고문헌 검색 결과",
-      "managerItemsLabel": "참고문헌 관리자 항목",
       "missingFromBibliography": "TeX에서 사용되지만 모든 프로젝트 서지에 없습니다.",
       "findSource": "원본 찾기",
       "citekeyUnavailable": "인용 키 없음",
@@ -1124,7 +1119,26 @@
       "cancel": "취소",
       "sync": "동기화",
       "autoSync": "프로젝트가 열려 있는 동안 계속 동기화",
-      "collectionUnavailable": "Zotero가 저장된 컬렉션 {{collection}}을(를) 아직 확인해 주지 않았습니다. 선택은 유지되며 Zotero가 응답하면 동기화됩니다."
+      "collectionUnavailable": "Zotero가 저장된 컬렉션 {{collection}}을(를) 아직 확인해 주지 않았습니다. 선택은 유지되며 Zotero가 응답하면 동기화됩니다.",
+      "loading": "Zotero 불러오는 중…",
+      "loadingPapers": "논문 불러오는 중…",
+      "showMoreCollections": "컬렉션 {{count}}개 더 보기",
+      "showMoreCollections_other": "컬렉션 {{count}}개 더 보기",
+      "noCollectionSelected": "컬렉션 선택",
+      "inventorySummary": "이 컬렉션 {{total}}편 · 논문에 {{inProject}}편",
+      "referencesLabel": "참고문헌",
+      "issuesToggle": "⚠ 문제 {{count}}건",
+      "issuesToggle_other": "⚠ 문제 {{count}}건",
+      "sortLabel": "참고문헌 정렬",
+      "addedToBibliography": "@{{citekey}}을(를) 프로젝트 서지에 추가했습니다.",
+      "sort": {
+        "natural": "기본 순서",
+        "title": "제목",
+        "author": "저자",
+        "year": "최신순",
+        "citations": "인용 많은 순"
+      },
+      "collectionTrigger": "Zotero 컬렉션: {{name}}"
     },
     "profileForm": {
       "resourceKind": {
@@ -1224,6 +1238,18 @@
       "addToCollections": "{{collections}}에 추가",
       "removeFromCollections": "{{collections}}에서 제거",
       "updateItem": "{{title}}: {{changes}}"
+    },
+    "referenceRow": {
+      "preview": "미리보기",
+      "collapse": "접기",
+      "insertCitation": "인용 삽입",
+      "addToBibliography": "서지에만 추가",
+      "addAndCite": "추가하고 인용",
+      "openInZotero": "Zotero에서 열기",
+      "originMissing": "서지에 없음",
+      "abstractLoading": "초록 불러오는 중…",
+      "abstractUnavailable": "Zotero에 초록이 없습니다.",
+      "menuLabel": "{{name}} 작업"
     }
   },
   "errors": {

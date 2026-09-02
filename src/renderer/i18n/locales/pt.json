@@ -1068,9 +1068,7 @@
     },
     "zotero": {
       "label": "Referências do Zotero",
-      "saveSettings": "Salvar configurações de pesquisa",
       "syncCollection": "Sincronizar a coleção selecionada",
-      "settingsSaved": "Configurações de pesquisa salvas.",
       "synchronized": "{{count}} entrada sincronizada com {{file}}.",
       "synchronized_other": "{{count}} entradas sincronizadas com {{file}}.",
       "noReferenceMatches": "Nenhuma referência do projeto ou do Zotero encontrada.",
@@ -1078,8 +1076,7 @@
       "addedWithoutCitation": "@{{citekey}} foi adicionado à bibliografia do projeto, mas o editor mudou antes da inserção da citação.",
       "healthLabel": "Situação das referências do artigo atual",
       "currentPaper": "Artigo atual",
-      "healthSummary": "{{cited}} citadas · {{bibliography}} bib · {{count}} problema",
-      "healthSummary_other": "{{cited}} citadas · {{bibliography}} bib · {{count}} problemas",
+      "healthSummary": "{{cited}} citadas · {{bibliography}} na bibliografia",
       "crossCheckUnavailable": "Verificação indisponível",
       "linkedToZotero": "{{count}} vinculada ao Zotero",
       "linkedToZotero_other": "{{count}} vinculadas ao Zotero",
@@ -1103,8 +1100,6 @@
       "syncOnOpen": "Sincronizar uma vez ao abrir este projeto",
       "searchPlaceholder": "Pesquisar no projeto e no Zotero",
       "searchLabel": "Pesquisar no projeto e no Zotero",
-      "localResultsLabel": "Resultados da pesquisa local de referências",
-      "managerItemsLabel": "Itens do gerenciador de referências",
       "missingFromBibliography": "Usada no TeX, mas ausente de todas as bibliografias do projeto.",
       "findSource": "Encontrar fonte",
       "citekeyUnavailable": "Chave de citação indisponível",
@@ -1124,7 +1119,26 @@
       "cancel": "Cancelar",
       "sync": "Sincronizar",
       "autoSync": "Manter sincronizado enquanto o projeto estiver aberto",
-      "collectionUnavailable": "O Zotero ainda não confirmou a coleção salva {{collection}}. Ela continua selecionada e será sincronizada assim que o Zotero responder."
+      "collectionUnavailable": "O Zotero ainda não confirmou a coleção salva {{collection}}. Ela continua selecionada e será sincronizada assim que o Zotero responder.",
+      "loading": "Carregando o Zotero…",
+      "loadingPapers": "Carregando artigos…",
+      "showMoreCollections": "Mostrar mais {{count}} coleção",
+      "showMoreCollections_other": "Mostrar mais {{count}} coleções",
+      "noCollectionSelected": "Escolher uma coleção",
+      "inventorySummary": "{{total}} nesta coleção · {{inProject}} no artigo",
+      "referencesLabel": "Referências",
+      "issuesToggle": "⚠ {{count}} problema",
+      "issuesToggle_other": "⚠ {{count}} problemas",
+      "sortLabel": "Ordenar referências",
+      "addedToBibliography": "@{{citekey}} adicionado à bibliografia do projeto.",
+      "sort": {
+        "natural": "Ordem padrão",
+        "title": "Título",
+        "author": "Autor",
+        "year": "Mais recentes primeiro",
+        "citations": "Mais citados"
+      },
+      "collectionTrigger": "Coleção do Zotero: {{name}}"
     },
     "profileForm": {
       "resourceKind": {
@@ -1224,6 +1238,18 @@
       "addToCollections": "adicionar a {{collections}}",
       "removeFromCollections": "remover de {{collections}}",
       "updateItem": "{{title}}: {{changes}}"
+    },
+    "referenceRow": {
+      "preview": "Pré-visualizar",
+      "collapse": "Recolher",
+      "insertCitation": "Inserir citação",
+      "addToBibliography": "Adicionar à bibliografia",
+      "addAndCite": "Adicionar e citar",
+      "openInZotero": "Abrir no Zotero",
+      "originMissing": "FORA DA BIBLIOGRAFIA",
+      "abstractLoading": "Carregando o resumo…",
+      "abstractUnavailable": "Sem resumo no Zotero.",
+      "menuLabel": "Ações para {{name}}"
     }
   },
   "errors": {
