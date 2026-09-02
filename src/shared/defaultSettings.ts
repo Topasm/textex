@@ -45,6 +45,7 @@ export function createDefaultUserSettings(): UserSettings {
     mathPreviewEnabled: true,
     pdfInvertMode: false,
     autoHideSidebar: false,
+    autoHideResearchPanel: false,
     showStatusBar: true,
     sectionHighlightEnabled: false,
     sectionHighlightColors: [...DEFAULT_SECTION_HIGHLIGHT_COLORS],

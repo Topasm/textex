@@ -538,6 +538,7 @@ pub struct UserSettings {
     pub math_preview_enabled: bool,
     pub pdf_invert_mode: bool,
     pub auto_hide_sidebar: bool,
+    pub auto_hide_research_panel: bool,
     pub show_status_bar: bool,
     pub section_highlight_enabled: bool,
     pub section_highlight_colors: Vec<String>,
@@ -593,6 +594,7 @@ impl Default for UserSettings {
             math_preview_enabled: true,
             pdf_invert_mode: false,
             auto_hide_sidebar: false,
+            auto_hide_research_panel: false,
             show_status_bar: true,
             section_highlight_enabled: false,
             section_highlight_colors: vec![
@@ -1425,6 +1427,7 @@ mod tests {
     fn user_settings_default_to_the_bundled_compiler_and_accept_pdf_latex() {
         let defaults = serde_json::to_value(UserSettings::default()).expect("serialize settings");
         assert_eq!(defaults["latexEngine"], "tectonic");
+        assert_eq!(defaults["autoHideResearchPanel"], false);
 
         let settings: UserSettings = serde_json::from_value(serde_json::json!({
             "latexEngine": "pdf-latex",

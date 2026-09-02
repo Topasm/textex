@@ -3021,6 +3021,10 @@ body,
   padding-inline: var(--space-10);
 }
 
+.panel-tabs .panel-tool-btn + .panel-tool-btn {
+  margin-left: 0;
+}
+
 /* Both panels are drag-resized from the edge they share with the editor. The
    seam is the panel's own 1px border, so the handle stays quiet until it is
    pointed at or focused. */
@@ -5319,6 +5323,52 @@ button.submission-check-finding:hover {
   opacity: 0;
   transform: translateX(20px);
   pointer-events: none;
+}
+
+.research-panel.overlay.research-panel-auto-hide.research-panel-entered {
+  box-shadow: none;
+  transform: translateX(calc(100% - 16px));
+}
+
+.research-panel.overlay.research-panel-auto-hide.research-panel-entered::after {
+  position: absolute;
+  top: 50%;
+  left: 5px;
+  width: 3px;
+  height: 34px;
+  background: var(--text-secondary);
+  border-radius: var(--ui-radius-pill);
+  content: '';
+  opacity: 0.28;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition:
+    opacity 140ms ease,
+    background-color 140ms ease;
+}
+
+.research-panel.overlay.research-panel-auto-hide.research-panel-entered:hover {
+  box-shadow: -8px 0 24px var(--shadow-color);
+  transform: translateX(0);
+}
+
+.research-panel.overlay.research-panel-auto-hide.research-panel-entered:hover::after {
+  background: var(--accent);
+  opacity: 0.8;
+}
+
+.research-panel.overlay.research-panel-auto-hide.research-panel-entered .research-resize-handle {
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.2s ease,
+    background-color 0.15s;
+}
+
+.research-panel.overlay.research-panel-auto-hide.research-panel-entered:hover
+  .research-resize-handle {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .research-panel-view:not([hidden]) {

@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ICON_SIZE } from './ui/IconSystem'
-import { BookOpen, MessageSquare, PanelRightClose, ScrollText, Settings2 } from 'lucide-react'
+import {
+  BookOpen,
+  MessageSquare,
+  PanelRightClose,
+  Pin,
+  PinOff,
+  ScrollText,
+  Settings2
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useCompileStore } from '../store/useCompileStore'
 import { useProjectStore, type ResearchPanelTab } from '../store/useProjectStore'
@@ -60,6 +68,8 @@ export function ResearchPanel({
   const pendingResearchSelection = useProjectStore((state) => state.pendingResearchSelection)
   const diagnostics = useCompileStore((state) => state.diagnostics)
   const aiProvider = useSettingsStore((state) => state.settings.aiProvider)
+  const autoHide = useSettingsStore((state) => state.settings.autoHideResearchPanel)
+  const visible = open || Boolean(autoHide)
   const problemCount = diagnostics.length
   const problemsLabel =
     problemCount === 0
@@ -73,11 +83,11 @@ export function ResearchPanel({
   )
   const [pendingChatPrompt, setPendingChatPrompt] = useState<PendingChatPrompt | null>(null)
   const [mountedTabs, setMountedTabs] = useState<Set<ResearchPanelTab>>(() =>
-    open ? new Set([tab]) : new Set()
+    visible ? new Set([tab]) : new Set()
   )
   const nextChatReferenceToken = useRef(0)
   const nextChatPromptToken = useRef(0)
-  const startResize = useResearchPanelResize(panelRef, open)
+  const startResize = useResearchPanelResize(panelRef, visible)
   const repairCli = aiProvider === 'claude-cli' ? 'claude' : 'codex'
   const repairCliName = repairCli === 'claude' ? 'Claude Code' : 'Codex CLI'
 
@@ -102,12 +112,12 @@ export function ResearchPanel({
   }, [projectRoot])
 
   useEffect(() => {
-    if (!open) return
+    if (!visible) return
     setMountedTabs((current) => {
       if (current.has(tab)) return current
       return new Set(current).add(tab)
     })
-  }, [open, tab])
+  }, [tab, visible])
 
   const leaveProfile = useCallback(() => {
     if (tab !== 'profile') return true
@@ -237,18 +247,18 @@ export function ResearchPanel({
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [closePanel, isCompact, open])
 
-  if (!open && presencePhase !== 'exiting') return null
+  if (!visible && presencePhase !== 'exiting') return null
 
   return (
     <aside
       ref={panelRef}
       id="research-panel"
-      className={`research-panel overlay research-panel-${presencePhase}`}
+      className={`research-panel overlay research-panel-${presencePhase}${autoHide ? ' research-panel-auto-hide' : ''}`}
       style={{ width }}
       onWheel={handleWheel}
       aria-label={t('researchPanel.label')}
-      aria-hidden={!open}
-      inert={!open ? true : undefined}
+      aria-hidden={!visible}
+      inert={!visible ? true : undefined}
     >
       <div
         className="research-resize-handle panel-resize-handle"
@@ -352,13 +362,27 @@ export function ResearchPanel({
         <span className="panel-tool-separator" aria-hidden="true" />
         <button
           type="button"
-          className="research-panel-close panel-tool-btn"
-          onClick={closePanel}
-          title={t('researchPanel.close')}
-          aria-label={t('researchPanel.close')}
+          className="research-panel-pin panel-tool-btn"
+          title={autoHide ? t('researchPanel.pin') : t('researchPanel.unpin')}
+          aria-label={autoHide ? t('researchPanel.pin') : t('researchPanel.unpin')}
+          onClick={() => {
+            useSettingsStore.getState().updateSetting('autoHideResearchPanel', !autoHide)
+            if (autoHide && !open) useProjectStore.getState().openResearchPanel()
+          }}
         >
-          <PanelRightClose size={ICON_SIZE.compact} />
+          {autoHide ? <Pin size={ICON_SIZE.compact} /> : <PinOff size={ICON_SIZE.compact} />}
         </button>
+        {!autoHide && (
+          <button
+            type="button"
+            className="research-panel-close panel-tool-btn"
+            onClick={closePanel}
+            title={t('researchPanel.close')}
+            aria-label={t('researchPanel.close')}
+          >
+            <PanelRightClose size={ICON_SIZE.compact} />
+          </button>
+        )}
       </div>
       <div className={`research-panel-content${slideAnim ? ` panel-slide-${slideAnim}` : ''}`}>
         {mountedTabs.has('chat') && (

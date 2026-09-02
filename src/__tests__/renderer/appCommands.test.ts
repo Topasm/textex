@@ -49,8 +49,15 @@ describe('executeAppCommand', () => {
     })
     usePdfStore.setState({ zoomLevel: 100, fitRequest: null })
     useSettingsStore.setState({
-      settings: { ...useSettingsStore.getState().settings, autoHideSidebar: false }
+      settings: {
+        ...useSettingsStore.getState().settings,
+        autoHideSidebar: false,
+        autoHideResearchPanel: false
+      }
     })
+    window.api.saveSettings = vi
+      .fn()
+      .mockImplementation(async () => useSettingsStore.getState().settings)
   })
 
   it('routes file commands through the injected handlers', async () => {
@@ -109,6 +116,17 @@ describe('executeAppCommand', () => {
 
     expect(useProjectStore.getState().isSidebarOpen).toBe(true)
     expect(useSettingsStore.getState().settings.autoHideSidebar).toBe(false)
+  })
+
+  it('pins an auto-hidden research panel when the shared toggle is invoked', async () => {
+    useSettingsStore.setState({
+      settings: { ...useSettingsStore.getState().settings, autoHideResearchPanel: true }
+    })
+
+    await executeAppCommand('view.toggleResearchPanel', context)
+
+    expect(useProjectStore.getState().isResearchPanelOpen).toBe(true)
+    expect(useSettingsStore.getState().settings.autoHideResearchPanel).toBe(false)
   })
 
   it('opens help and settings, then checks for updates through the injected handlers', async () => {

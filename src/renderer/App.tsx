@@ -158,6 +158,7 @@ function App() {
   const settings = useSettingsStore((s) => s.settings)
   const gitEnabled = isFeatureEnabled(settings, 'git')
   const autoHideSidebar = useSettingsStore((s) => s.settings.autoHideSidebar)
+  const autoHideResearchPanel = useSettingsStore((s) => s.settings.autoHideResearchPanel)
   const showStatusBar = useSettingsStore((s) => s.settings.showStatusBar)
   const isTemplateGalleryOpen = useUiStore((s) => s.isTemplateGalleryOpen)
   const updateStatus = useUiStore((s) => s.updateStatus)
@@ -201,7 +202,9 @@ function App() {
   const [isDraftModalOpen, setIsDraftModalOpen] = useState(false)
   const [draftPrefill, setDraftPrefill] = useState<string | undefined>(undefined)
   const sidebarPresence = useAnimatedPresence(isSidebarOpen || Boolean(autoHideSidebar))
-  const researchPresence = useAnimatedPresence(isResearchPanelOpen)
+  const researchPresence = useAnimatedPresence(
+    isResearchPanelOpen || Boolean(autoHideResearchPanel)
+  )
 
   useEffect(() => {
     if (!projectRoot || !isSidebarOpen || autoHideSidebar) return
@@ -692,7 +695,7 @@ function App() {
 
   return (
     <div
-      className={`app-container${isResearchPanelOpen ? ' has-research-panel' : ''}${isSettingsOpen || isHelpOpen ? ' has-app-page' : ''}`}
+      className={`app-container${isResearchPanelOpen && !autoHideResearchPanel ? ' has-research-panel' : ''}${isSettingsOpen || isHelpOpen ? ' has-app-page' : ''}`}
       style={appLayoutStyle}
     >
       <Toolbar

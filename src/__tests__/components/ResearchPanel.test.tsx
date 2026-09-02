@@ -6,6 +6,7 @@ import { clearResearchProfileDraft } from '../../renderer/services/researchProfi
 import { useNotificationStore } from '../../renderer/store/useNotificationStore'
 import { useCompileStore } from '../../renderer/store/useCompileStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
+import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 
 describe('ResearchPanel tabs', () => {
   beforeEach(() => {
@@ -18,6 +19,12 @@ describe('ResearchPanel tabs', () => {
       researchPanelTab: 'chat'
     })
     useCompileStore.setState({ diagnostics: [], logs: '', logViewMode: 'structured' })
+    useSettingsStore.setState((state) => ({
+      settings: { ...state.settings, autoHideResearchPanel: false }
+    }))
+    window.api.saveSettings = vi
+      .fn()
+      .mockImplementation(async () => useSettingsStore.getState().settings)
     window.api.researchProfileLoad = vi.fn().mockResolvedValue({
       version: 1,
       paper: { title: '', authors: [] },
@@ -42,6 +49,37 @@ describe('ResearchPanel tabs', () => {
     expect(screen.getByRole('tab', { name: 'References' })).toHaveAttribute('title', 'References')
     expect(screen.getByRole('tab', { name: 'Profile' })).toHaveAttribute('title', 'Project profile')
     expect(container.querySelectorAll('.research-panel-tab-label')).toHaveLength(4)
+  })
+
+  it('auto-hides when unpinned and pins open again from the panel toolbar', () => {
+    const { container } = render(<ResearchPanel onAiDraft={vi.fn()} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Unpin research panel (auto-hide)' }))
+
+    expect(useSettingsStore.getState().settings.autoHideResearchPanel).toBe(true)
+    expect(container.querySelector('.research-panel')).toHaveClass('research-panel-auto-hide')
+    expect(screen.getByRole('button', { name: 'Pin research panel' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pin research panel' }))
+
+    expect(useSettingsStore.getState().settings.autoHideResearchPanel).toBe(false)
+    expect(container.querySelector('.research-panel')).not.toHaveClass('research-panel-auto-hide')
+  })
+
+  it('keeps an auto-hidden edge available while closed and opens when pinned', () => {
+    useProjectStore.setState({ isResearchPanelOpen: false })
+    useSettingsStore.setState((state) => ({
+      settings: { ...state.settings, autoHideResearchPanel: true }
+    }))
+    const { container } = render(<ResearchPanel onAiDraft={vi.fn()} />)
+
+    expect(container.querySelector('.research-panel')).toHaveClass('research-panel-auto-hide')
+    expect(screen.queryByRole('button', { name: 'Close research panel' })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pin research panel' }))
+
+    expect(useProjectStore.getState().isResearchPanelOpen).toBe(true)
+    expect(useSettingsStore.getState().settings.autoHideResearchPanel).toBe(false)
   })
 
   it('steps one tab per horizontal flick, matching the sidebar gesture', async () => {

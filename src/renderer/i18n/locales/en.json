@@ -230,6 +230,8 @@
       "vimModeDesc": "Vim-style keybindings",
       "autoHideSidebar": "Auto-hide Sidebar",
       "autoHideSidebarDesc": "Sidebar slides away and reappears on hover",
+      "autoHideResearchPanel": "Auto-hide Research Panel",
+      "autoHideResearchPanelDesc": "Research panel slides away and reappears on hover",
       "mathPreview": "Math Preview",
       "mathPreviewDesc": "Show a lightweight read-only preview when the cursor is inside a math expression",
       "sectionHighlight": "Section Highlight",
@@ -819,6 +821,8 @@
     "label": "Research panel",
     "open": "Open research panel",
     "close": "Close research panel",
+    "pin": "Pin research panel",
+    "unpin": "Unpin research panel (auto-hide)",
     "resize": "Resize research panel",
     "tabs": {
       "chat": "Chat",

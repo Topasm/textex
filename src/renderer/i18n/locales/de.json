@@ -230,6 +230,8 @@
       "vimModeDesc": "Vim-Tastenkürzel (demnächst verfügbar)",
       "autoHideSidebar": "Seitenleiste automatisch ausblenden",
       "autoHideSidebarDesc": "Seitenleiste wird ausgeblendet und erscheint beim Überfahren wieder",
+      "autoHideResearchPanel": "Forschungsbereich automatisch ausblenden",
+      "autoHideResearchPanelDesc": "Der Forschungsbereich wird ausgeblendet und erscheint beim Überfahren wieder",
       "mathPreview": "Mathe-Vorschau",
       "mathPreviewDesc": "Leichte schreibgeschützte Vorschau für den mathematischen Ausdruck anzeigen",
       "sectionHighlight": "Abschnittshervorhebung",
@@ -819,6 +821,8 @@
     "label": "Forschungsbereich",
     "open": "Forschungsbereich öffnen",
     "close": "Forschungsbereich schließen",
+    "pin": "Forschungsbereich anheften",
+    "unpin": "Forschungsbereich lösen (automatisch ausblenden)",
     "resize": "Größe des Forschungsbereichs ändern",
     "tabs": {
       "chat": "Chat",

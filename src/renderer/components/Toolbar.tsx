@@ -28,7 +28,7 @@ import { RecentProjectSwitcher } from './RecentProjectSwitcher'
 import PdfZoomDropdown from './PdfZoomDropdown'
 import { ICON_SIZE } from './ui/IconSystem'
 import { withShortcutHint } from '../services/commandSearch'
-import { toggleProjectSidebar, toggleProseMode } from '../services/appCommands'
+import { toggleProjectSidebar, toggleProseMode, toggleResearchPanel } from '../services/appCommands'
 import { logError } from '../utils/errorMessage'
 import type { AppCommandId } from '../../shared/types'
 
@@ -382,7 +382,7 @@ const Toolbar = React.memo(function Toolbar({
             <button
               type="button"
               className="toolbar-btn toolbar-research-toggle"
-              onClick={() => useProjectStore.getState().openResearchPanel('references')}
+              onClick={() => toggleResearchPanel('references')}
               title={withShortcutHint(t('researchPanel.open'), 'view.toggleResearchPanel')}
               aria-label={t('researchPanel.open')}
               aria-controls="research-panel"

@@ -230,6 +230,8 @@
       "vimModeDesc": "Vim 스타일 키 바인딩 (출시 예정)",
       "autoHideSidebar": "사이드바 자동 숨김",
       "autoHideSidebarDesc": "사이드바가 숨겨졌다가 마우스를 올리면 다시 나타남",
+      "autoHideResearchPanel": "연구 패널 자동 숨김",
+      "autoHideResearchPanelDesc": "연구 패널이 숨겨졌다가 마우스를 올리면 다시 나타남",
       "mathPreview": "수식 미리보기",
       "mathPreviewDesc": "수식 안에 커서가 있을 때 가벼운 읽기 전용 미리보기 표시",
       "sectionHighlight": "섹션 강조",
@@ -819,6 +821,8 @@
     "label": "연구 패널",
     "open": "연구 패널 열기",
     "close": "연구 패널 닫기",
+    "pin": "연구 패널 고정",
+    "unpin": "연구 패널 고정 해제 (자동 숨김)",
     "resize": "연구 패널 크기 조절",
     "tabs": {
       "chat": "Chat",

@@ -2,7 +2,7 @@ import type { AppCommandId } from '../../shared/types'
 import type { LearnSectionId } from '../../shared/learningIds'
 import { useEditorStore } from '../store/useEditorStore'
 import { usePdfStore } from '../store/usePdfStore'
-import { useProjectStore } from '../store/useProjectStore'
+import { useProjectStore, type ResearchPanelTab } from '../store/useProjectStore'
 import { useSettingsStore } from '../store/useSettingsStore'
 import { proseAnchorFor, proseModeFor, useUiStore } from '../store/useUiStore'
 import {
@@ -51,6 +51,24 @@ export function toggleProjectSidebar(): void {
   projectStore.toggleSidebar()
 }
 
+export function toggleResearchPanel(tab?: ResearchPanelTab): void {
+  const projectStore = useProjectStore.getState()
+  const settingsStore = useSettingsStore.getState()
+
+  if (settingsStore.settings.autoHideResearchPanel) {
+    settingsStore.updateSetting('autoHideResearchPanel', false)
+    projectStore.openResearchPanel(tab)
+    return
+  }
+
+  if (!projectStore.isResearchPanelOpen && tab) {
+    projectStore.openResearchPanel(tab)
+    return
+  }
+
+  projectStore.toggleResearchPanel()
+}
+
 export async function executeAppCommand(
   command: AppCommandId,
   context: AppCommandContext
@@ -93,7 +111,7 @@ export async function executeAppCommand(
       toggleProjectSidebar()
       return
     case 'view.toggleResearchPanel':
-      useProjectStore.getState().toggleResearchPanel()
+      toggleResearchPanel()
       return
     case 'view.toggleProse':
       toggleProseMode()

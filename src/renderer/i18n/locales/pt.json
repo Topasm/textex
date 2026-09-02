@@ -230,6 +230,8 @@
       "vimModeDesc": "Atalhos de teclado estilo Vim (em breve)",
       "autoHideSidebar": "Ocultar barra lateral automaticamente",
       "autoHideSidebarDesc": "A barra lateral se oculta e reaparece ao passar o mouse",
+      "autoHideResearchPanel": "Ocultar painel de pesquisa automaticamente",
+      "autoHideResearchPanelDesc": "O painel de pesquisa se oculta e reaparece ao passar o mouse",
       "mathPreview": "Pré-visualização matemática",
       "mathPreviewDesc": "Mostrar uma pré-visualização leve e somente leitura da expressão matemática",
       "sectionHighlight": "Destaque de seções",
@@ -819,6 +821,8 @@
     "label": "Painel de pesquisa",
     "open": "Abrir painel de pesquisa",
     "close": "Fechar painel de pesquisa",
+    "pin": "Fixar painel de pesquisa",
+    "unpin": "Desfixar painel de pesquisa (ocultar automaticamente)",
     "resize": "Redimensionar o painel de pesquisa",
     "tabs": {
       "chat": "Chat",

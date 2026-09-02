@@ -250,6 +250,7 @@ export interface UserSettings {
   mathPreviewEnabled?: boolean
   pdfInvertMode?: boolean
   autoHideSidebar?: boolean
+  autoHideResearchPanel?: boolean
   showStatusBar?: boolean
   sectionHighlightEnabled?: boolean
   sectionHighlightColors?: string[]

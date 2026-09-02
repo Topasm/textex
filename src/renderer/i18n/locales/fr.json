@@ -230,6 +230,8 @@
       "vimModeDesc": "Raccourcis clavier style Vim (bientôt disponible)",
       "autoHideSidebar": "Masquage auto de la barre latérale",
       "autoHideSidebarDesc": "La barre latérale se masque et réapparaît au survol",
+      "autoHideResearchPanel": "Masquage auto du panneau de recherche",
+      "autoHideResearchPanelDesc": "Le panneau de recherche se masque et réapparaît au survol",
       "mathPreview": "Aperçu mathématique",
       "mathPreviewDesc": "Afficher un aperçu léger en lecture seule de l'expression mathématique",
       "sectionHighlight": "Surlignage des sections",
@@ -819,6 +821,8 @@
     "label": "Panneau de recherche",
     "open": "Ouvrir le panneau de recherche",
     "close": "Fermer le panneau de recherche",
+    "pin": "Épingler le panneau de recherche",
+    "unpin": "Désépingler le panneau de recherche (masquage auto)",
     "resize": "Redimensionner le panneau de recherche",
     "tabs": {
       "chat": "Discussion",

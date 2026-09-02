@@ -230,6 +230,8 @@
       "vimModeDesc": "Atajos de teclado estilo Vim (próximamente)",
       "autoHideSidebar": "Ocultar barra lateral automáticamente",
       "autoHideSidebarDesc": "La barra lateral se oculta y reaparece al pasar el cursor",
+      "autoHideResearchPanel": "Ocultar panel de investigación automáticamente",
+      "autoHideResearchPanelDesc": "El panel de investigación se oculta y reaparece al pasar el cursor",
       "mathPreview": "Vista previa de matemáticas",
       "mathPreviewDesc": "Mostrar una vista previa ligera de solo lectura de la expresión matemática",
       "sectionHighlight": "Resaltado de secciones",
@@ -819,6 +821,8 @@
     "label": "Panel de investigación",
     "open": "Abrir el panel de investigación",
     "close": "Cerrar el panel de investigación",
+    "pin": "Fijar panel de investigación",
+    "unpin": "Desfijar panel de investigación (ocultar automáticamente)",
     "resize": "Cambiar el tamaño del panel de investigación",
     "tabs": {
       "chat": "Chat",

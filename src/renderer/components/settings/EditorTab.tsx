@@ -178,6 +178,12 @@ export const EditorTab = () => {
           onChange={(checked) => updateSetting('autoHideSidebar', checked)}
         />
         <SettingsToggleRow
+          label={t('settings.editor.autoHideResearchPanel')}
+          description={t('settings.editor.autoHideResearchPanelDesc')}
+          checked={!!settings.autoHideResearchPanel}
+          onChange={(checked) => updateSetting('autoHideResearchPanel', checked)}
+        />
+        <SettingsToggleRow
           label={t('settings.editor.mathPreview')}
           description={t('settings.editor.mathPreviewDesc')}
           checked={settings.mathPreviewEnabled !== false}
