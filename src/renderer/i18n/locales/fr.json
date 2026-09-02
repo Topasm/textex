@@ -411,18 +411,14 @@
     "newGroup": "+ Nouveau groupe",
     "ungrouped": "Non groupé",
     "filterPlaceholder": "Filtrer les citations...",
-    "groupBy": "Grouper les citations par",
-    "flat": "Liste plate",
-    "byAuthor": "Par auteur",
-    "byYear": "Par année",
-    "byType": "Par type",
-    "custom": "Personnalisé",
     "noTitle": "(sans titre)",
     "unknownAuthor": "Auteur inconnu",
     "removeFromGroup": "Retirer du groupe",
     "projectReferences": "Références du projet",
     "deleteGroup": "Supprimer le groupe",
-    "insertNamedCitation": "Insérer une citation de {{name}}"
+    "insertNamedCitation": "Insérer une citation de {{name}}",
+    "addToNamedGroup": "Ajouter à « {{name}} »",
+    "noGroups": "Aucun groupe de citations. Créez-en un, puis classez-y des références depuis la liste ci-dessous."
   },
   "outlinePanel": {
     "noFile": "Aucun fichier ouvert.",

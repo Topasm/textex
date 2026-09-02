@@ -260,7 +260,6 @@ export interface UserSettings {
   showStatusBar?: boolean
   sectionHighlightEnabled?: boolean
   sectionHighlightColors?: string[]
-  bibGroupMode?: 'flat' | 'author' | 'year' | 'type' | 'custom'
   referenceSortOrder?: ReferenceSortOrder
   zoteroSyncMode?: ZoteroSyncMode
   lineNumbers?: boolean

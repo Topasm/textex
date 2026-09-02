@@ -533,7 +533,6 @@ pub struct UserSettings {
     pub show_status_bar: bool,
     pub section_highlight_enabled: bool,
     pub section_highlight_colors: Vec<String>,
-    pub bib_group_mode: BibGroupMode,
     #[serde(default)]
     pub reference_sort_order: ReferenceSortOrder,
     #[serde(default)]
@@ -598,7 +597,6 @@ impl Default for UserSettings {
                 "#56b6c2".to_owned(),
                 "#d19a66".to_owned(),
             ],
-            bib_group_mode: BibGroupMode::Flat,
             reference_sort_order: ReferenceSortOrder::Natural,
             zotero_sync_mode: ZoteroSyncMode::Continuous,
             line_numbers: true,
@@ -1035,17 +1033,6 @@ pub struct AiTerminalResult {
 #[derive(Clone, Debug, Serialize)]
 pub struct AiGenerateResult {
     pub latex: String,
-}
-
-#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
-#[serde(rename_all = "lowercase")]
-pub enum BibGroupMode {
-    #[default]
-    Flat,
-    Author,
-    Year,
-    Type,
-    Custom,
 }
 
 /// How the configured collection is mirrored into the managed `.bib` file.

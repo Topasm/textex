@@ -1,22 +1,14 @@
 import { useTranslation } from 'react-i18next'
-
-type BibGroupMode = 'flat' | 'author' | 'year' | 'type' | 'custom'
+import { FolderPlus } from 'lucide-react'
+import { ICON_SIZE } from '../ui/IconSystem'
 
 interface BibPanelHeaderProps {
   filter: string
   onFilterChange: (value: string) => void
-  groupMode: BibGroupMode
-  onGroupModeChange: (mode: BibGroupMode) => void
-  customGroupsAvailable?: boolean
+  onCreateGroup: () => void
 }
 
-export function BibPanelHeader({
-  filter,
-  onFilterChange,
-  groupMode,
-  onGroupModeChange,
-  customGroupsAvailable = true
-}: BibPanelHeaderProps) {
+export function BibPanelHeader({ filter, onFilterChange, onCreateGroup }: BibPanelHeaderProps) {
   const { t } = useTranslation()
 
   return (
@@ -24,20 +16,19 @@ export function BibPanelHeader({
       <input
         type="text"
         placeholder={t('bibPanel.filterPlaceholder')}
+        aria-label={t('bibPanel.filterPlaceholder')}
         value={filter}
-        onChange={(e) => onFilterChange(e.target.value)}
+        onChange={(event) => onFilterChange(event.target.value)}
       />
-      <select
-        value={groupMode}
-        onChange={(e) => onGroupModeChange(e.target.value as BibGroupMode)}
-        title={t('bibPanel.groupBy')}
+      <button
+        type="button"
+        className="bib-new-group-btn"
+        onClick={onCreateGroup}
+        title={t('bibPanel.newGroup')}
+        aria-label={t('bibPanel.newGroup')}
       >
-        <option value="flat">{t('bibPanel.flat')}</option>
-        <option value="author">{t('bibPanel.byAuthor')}</option>
-        <option value="year">{t('bibPanel.byYear')}</option>
-        <option value="type">{t('bibPanel.byType')}</option>
-        {customGroupsAvailable && <option value="custom">{t('bibPanel.custom')}</option>}
-      </select>
+        <FolderPlus size={ICON_SIZE.compact} aria-hidden="true" />
+      </button>
     </div>
   )
 }

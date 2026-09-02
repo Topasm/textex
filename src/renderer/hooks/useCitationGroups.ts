@@ -3,44 +3,6 @@ import { useProjectStore } from '../store/useProjectStore'
 import type { BibEntry, CitationGroup } from '../../shared/types'
 import { logError } from '../utils/errorMessage'
 
-type BibGroupMode = 'flat' | 'author' | 'year' | 'type' | 'custom'
-
-interface GroupedBib {
-  label: string
-  entries: BibEntry[]
-}
-
-function extractGroupKey(entry: BibEntry, mode: BibGroupMode): string {
-  switch (mode) {
-    case 'author': {
-      const author = entry.author?.split(/\band\b/i)[0]?.trim() ?? 'Unknown'
-      return author.split(',')[0]?.trim() || author
-    }
-    case 'year':
-      return entry.year || 'Unknown'
-    case 'type':
-      return entry.type || 'misc'
-    default:
-      return ''
-  }
-}
-
-function groupEntries(entries: BibEntry[], mode: BibGroupMode): GroupedBib[] {
-  if (mode === 'flat' || mode === 'custom') {
-    return [{ label: '', entries }]
-  }
-
-  const buckets: Record<string, BibEntry[]> = {}
-  for (const entry of entries) {
-    const key = extractGroupKey(entry, mode)
-    ;(buckets[key] ??= []).push(entry)
-  }
-
-  return Object.entries(buckets)
-    .map(([label, entries]) => ({ label, entries }))
-    .sort((a, b) => b.entries.length - a.entries.length)
-}
-
 export function useCitationGroupOps() {
   const citationGroups = useProjectStore((s) => s.citationGroups)
   const setCitationGroups = useProjectStore((s) => s.setCitationGroups)
@@ -126,6 +88,3 @@ export function useCitationGroupOps() {
     assignedKeys
   }
 }
-
-export { groupEntries }
-export type { GroupedBib, BibGroupMode }

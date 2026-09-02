@@ -411,18 +411,14 @@
     "newGroup": "+ 새 그룹",
     "ungrouped": "미분류",
     "filterPlaceholder": "인용 필터...",
-    "groupBy": "인용 그룹 기준",
-    "flat": "플랫",
-    "byAuthor": "저자별",
-    "byYear": "연도별",
-    "byType": "유형별",
-    "custom": "사용자 지정",
     "noTitle": "(제목 없음)",
     "unknownAuthor": "알 수 없는 저자",
     "removeFromGroup": "그룹에서 제거",
     "projectReferences": "프로젝트 참고문헌",
     "deleteGroup": "그룹 삭제",
-    "insertNamedCitation": "{{name}} 인용 삽입"
+    "insertNamedCitation": "{{name}} 인용 삽입",
+    "addToNamedGroup": "“{{name}}”에 추가",
+    "noGroups": "아직 인용 그룹이 없습니다. 그룹을 만든 뒤 아래 목록에서 참고문헌을 넣으세요."
   },
   "outlinePanel": {
     "noFile": "열린 파일이 없습니다.",

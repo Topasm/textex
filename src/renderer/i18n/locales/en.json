@@ -411,18 +411,14 @@
     "newGroup": "+ New Group",
     "ungrouped": "Ungrouped",
     "filterPlaceholder": "Filter citations...",
-    "groupBy": "Group citations by",
-    "flat": "Flat",
-    "byAuthor": "By Author",
-    "byYear": "By Year",
-    "byType": "By Type",
-    "custom": "Custom",
     "noTitle": "(no title)",
     "unknownAuthor": "Unknown Author",
     "removeFromGroup": "Remove from group",
     "projectReferences": "Project references",
     "deleteGroup": "Delete group",
-    "insertNamedCitation": "Insert a citation for {{name}}"
+    "insertNamedCitation": "Insert a citation for {{name}}",
+    "addToNamedGroup": "Add to “{{name}}”",
+    "noGroups": "No citation groups yet. Create one, then file references into it from the list below."
   },
   "outlinePanel": {
     "noFile": "No file open.",

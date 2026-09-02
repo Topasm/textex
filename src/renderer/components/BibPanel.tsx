@@ -2,27 +2,31 @@ import { useState, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useEditorStore } from '../store/useEditorStore'
 import { useProjectStore } from '../store/useProjectStore'
-import { useSettingsStore } from '../store/useSettingsStore'
 import type { BibEntry } from '../../shared/types'
 import { BibPanelHeader } from './bib/BibPanelHeader'
 import { BibGroupHeader } from './bib/BibGroupHeader'
 import { BibEntryCard } from './bib/BibEntryCard'
-import { useCitationGroupOps, groupEntries } from '../hooks/useCitationGroups'
-import type { BibGroupMode } from '../hooks/useCitationGroups'
+import { useCitationGroupOps } from '../hooks/useCitationGroups'
 import type { ReferenceDragPayload } from './research/referenceActions'
 
 interface BibPanelProps {
   onAddToChat?: (payload: ReferenceDragPayload) => void
 }
 
+/**
+ * Citation groups: named sets of project references that can be cited together.
+ *
+ * This panel used to offer flat/author/year/type views of the whole
+ * bibliography as well, which is what the References list already shows — same
+ * entries, one sorted list, plus Zotero linkage and health. Groups are the one
+ * thing References cannot express, so this panel does only that.
+ */
 function BibPanel({ onAddToChat }: BibPanelProps) {
   const { t } = useTranslation()
   const bibEntries = useProjectStore((s) => s.bibEntries)
-  const configuredGroupMode = useSettingsStore((s) => s.settings.bibGroupMode) as BibGroupMode
-  const bibGroupMode = configuredGroupMode
-  const updateSetting = useSettingsStore((s) => s.updateSetting)
-  const filter = useProjectStore((s) => s.researchSearchQuery)
-  const setFilter = useProjectStore((s) => s.setResearchSearchQuery)
+  // A local filter: the References list has its own search box, and sharing one
+  // store field made a query typed in one panel appear in the other.
+  const [filter, setFilter] = useState('')
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
 
   const {
@@ -41,31 +45,27 @@ function BibPanel({ onAddToChat }: BibPanelProps) {
 
   const filtered = useMemo(
     () =>
-      bibEntries.filter((e) => {
+      bibEntries.filter((entry) => {
         if (!filter) return true
-        const q = filter.toLowerCase()
+        const needle = filter.toLowerCase()
         return (
-          e.key.toLowerCase().includes(q) ||
-          e.title.toLowerCase().includes(q) ||
-          e.author.toLowerCase().includes(q)
+          entry.key.toLowerCase().includes(needle) ||
+          entry.title.toLowerCase().includes(needle) ||
+          entry.author.toLowerCase().includes(needle)
         )
       }),
     [bibEntries, filter]
   )
 
-  const groups = useMemo(() => groupEntries(filtered, bibGroupMode), [filtered, bibGroupMode])
   const toggle = useCallback(
     (label: string) => setCollapsed((prev) => ({ ...prev, [label]: !prev[label] })),
     []
   )
 
   const ungroupedEntries = useMemo(
-    () => filtered.filter((e) => !assignedKeys.has(e.key)),
+    () => filtered.filter((entry) => !assignedKeys.has(entry.key)),
     [filtered, assignedKeys]
   )
-
-  const lastGroupId =
-    citationGroups.length > 0 ? citationGroups[citationGroups.length - 1].id : null
 
   if (bibEntries.length === 0) {
     return (
@@ -75,125 +75,72 @@ function BibPanel({ onAddToChat }: BibPanelProps) {
     )
   }
 
-  // ---- Custom groups view ----
-  if (bibGroupMode === 'custom') {
-    const entryMap = new Map(filtered.map((e) => [e.key, e]))
+  const entryMap = new Map(filtered.map((entry) => [entry.key, entry]))
 
-    return (
-      <div className="bib-panel">
-        <BibPanelHeader
-          filter={filter}
-          onFilterChange={setFilter}
-          groupMode={bibGroupMode}
-          customGroupsAvailable
-          onGroupModeChange={(mode) => updateSetting('bibGroupMode', mode)}
-        />
-        <div className="bib-custom-toolbar">
-          <button className="bib-new-group-btn" onClick={createGroup}>
-            {t('bibPanel.newGroup')}
-          </button>
-        </div>
-        <div
-          className="bib-list"
-          role="region"
-          aria-label={t('bibPanel.projectReferences')}
-          tabIndex={0}
-        >
-          {citationGroups.map((group) => {
-            const groupEntries = group.citekeys
-              .map((k) => entryMap.get(k))
-              .filter((e): e is BibEntry => e !== undefined)
-
-            return (
-              <div key={group.id} className="bib-group">
-                <BibGroupHeader
-                  label={group.name}
-                  count={groupEntries.length}
-                  isCollapsed={!!collapsed[group.id]}
-                  onToggle={() => toggle(group.id)}
-                  citekeys={group.citekeys}
-                  isCustom
-                  onRename={(name) => renameGroup(group.id, name)}
-                  onDelete={() => deleteGroup(group.id)}
-                />
-                {!collapsed[group.id] &&
-                  groupEntries.map((entry) => (
-                    <BibEntryCard
-                      key={entry.key}
-                      entry={entry}
-                      onInsert={handleInsert}
-                      onRemove={() => removeFromGroup(group.id, entry.key)}
-                      onAddToChat={onAddToChat}
-                    />
-                  ))}
-              </div>
-            )
-          })}
-
-          {ungroupedEntries.length > 0 && (
-            <div className="bib-group">
-              <BibGroupHeader
-                label={t('bibPanel.ungrouped')}
-                count={ungroupedEntries.length}
-                isCollapsed={!!collapsed['__ungrouped__']}
-                onToggle={() => toggle('__ungrouped__')}
-              />
-              {!collapsed['__ungrouped__'] &&
-                ungroupedEntries.map((entry) => (
-                  <BibEntryCard
-                    key={entry.key}
-                    entry={entry}
-                    onInsert={handleInsert}
-                    onAdd={lastGroupId ? () => addToGroup(lastGroupId, entry.key) : undefined}
-                    addTitle={`Add to "${citationGroups[citationGroups.length - 1]?.name}"`}
-                    onAddToChat={onAddToChat}
-                  />
-                ))}
-            </div>
-          )}
-        </div>
-      </div>
-    )
-  }
-
-  // ---- Standard (flat / author / year / type) view ----
   return (
     <div className="bib-panel">
-      <BibPanelHeader
-        filter={filter}
-        onFilterChange={setFilter}
-        groupMode={bibGroupMode}
-        customGroupsAvailable
-        onGroupModeChange={(mode) => updateSetting('bibGroupMode', mode)}
-      />
+      <BibPanelHeader filter={filter} onFilterChange={setFilter} onCreateGroup={createGroup} />
       <div
         className="bib-list"
         role="region"
         aria-label={t('bibPanel.projectReferences')}
         tabIndex={0}
       >
-        {groups.map((group) => (
-          <div key={group.label || '__flat__'} className="bib-group">
-            {bibGroupMode !== 'flat' && (
+        {citationGroups.length === 0 && <p className="panel-empty">{t('bibPanel.noGroups')}</p>}
+        {citationGroups.map((group) => {
+          const entries = group.citekeys
+            .map((key) => entryMap.get(key))
+            .filter((entry): entry is BibEntry => entry !== undefined)
+
+          return (
+            <div key={group.id} className="bib-group">
               <BibGroupHeader
-                label={group.label}
-                count={group.entries.length}
-                isCollapsed={!!collapsed[group.label]}
-                onToggle={() => toggle(group.label)}
-                citekeys={group.entries.map((e) => e.key)}
+                label={group.name}
+                count={entries.length}
+                isCollapsed={!!collapsed[group.id]}
+                onToggle={() => toggle(group.id)}
+                citekeys={group.citekeys}
+                isCustom
+                onRename={(name) => renameGroup(group.id, name)}
+                onDelete={() => deleteGroup(group.id)}
               />
-            )}
-            {!collapsed[group.label] &&
-              group.entries.map((entry) => (
+              {!collapsed[group.id] &&
+                entries.map((entry) => (
+                  <BibEntryCard
+                    key={entry.key}
+                    entry={entry}
+                    onInsert={handleInsert}
+                    onRemove={() => removeFromGroup(group.id, entry.key)}
+                    onAddToChat={onAddToChat}
+                  />
+                ))}
+            </div>
+          )
+        })}
+
+        {ungroupedEntries.length > 0 && (
+          <div className="bib-group">
+            <BibGroupHeader
+              label={t('bibPanel.ungrouped')}
+              count={ungroupedEntries.length}
+              isCollapsed={!!collapsed['__ungrouped__']}
+              onToggle={() => toggle('__ungrouped__')}
+            />
+            {!collapsed['__ungrouped__'] &&
+              ungroupedEntries.map((entry) => (
                 <BibEntryCard
                   key={entry.key}
                   entry={entry}
                   onInsert={handleInsert}
+                  // Every group is offered, so filing an entry no longer means
+                  // guessing which one "add" would pick.
+                  groups={citationGroups.map((group) => ({ id: group.id, name: group.name }))}
+                  onAddToGroup={(groupId) => addToGroup(groupId, entry.key)}
                   onAddToChat={onAddToChat}
                 />
               ))}
           </div>
-        ))}
+        )}
       </div>
     </div>
   )

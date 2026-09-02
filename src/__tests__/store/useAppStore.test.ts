@@ -40,8 +40,7 @@ const initialSettings = {
     autoCompile: true,
     spellCheckEnabled: false,
     zoteroEnabled: false,
-    zoteroPort: 23119,
-    bibGroupMode: 'flat'
+    zoteroPort: 23119
   } as UserSettings
 }
 

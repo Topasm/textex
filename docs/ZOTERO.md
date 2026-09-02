@@ -51,8 +51,12 @@ one current-paper manager:
 Exact cross-check matching is DOI first, then arXiv identifier, then Better BibTeX citekey.
 Normalized title and year are displayed as a possible match for review, never linked
 automatically.
-Existing custom project citation groups remain available through the compact **Project citation
-groups** action above the health summary.
+**Project citation groups** is a separate view, reached from the action in the panel's top row. It
+does the one thing this list cannot: naming sets of project references so a whole set can be cited
+at once by dragging its group header. It used to also offer flat/author/year/type views of the same
+entries the References list already shows, and its filter box wrote to the same store field as the
+search box here, so a query typed in one appeared in the other. Both are gone; the view is groups
+and nothing else.
 
 Collection synchronization atomically replaces `zotero.bib`; individually selected and online
 items are atomically merged into `references.bib`. These separate managed files prevent a full

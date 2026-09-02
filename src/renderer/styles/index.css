@@ -5842,20 +5842,11 @@ button.submission-check-finding:hover {
   border-color: var(--accent);
 }
 
-.bib-panel-header select {
-  background-color: var(--bg-input);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-  border-radius: var(--ui-radius-control);
-  padding: var(--space-4) var(--space-6);
-  font-size: var(--font-md);
-  cursor: pointer;
+.bib-panel-header .bib-new-group-btn {
+  display: grid;
+  width: 30px;
   flex-shrink: 0;
-}
-
-.bib-panel-header select:focus {
-  outline: none;
-  border-color: var(--accent);
+  place-items: center;
 }
 
 .bib-list {
@@ -5980,14 +5971,7 @@ button.submission-check-finding:hover {
 }
 
 /* Custom citation groups */
-.bib-custom-toolbar {
-  padding: var(--space-6) var(--space-8);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-
 .bib-new-group-btn {
-  width: 100%;
   padding: 5px var(--space-8);
   border: 1px dashed var(--border);
   border-radius: var(--ui-radius-control);

@@ -48,7 +48,6 @@ export function createDefaultUserSettings(): UserSettings {
     showStatusBar: true,
     sectionHighlightEnabled: false,
     sectionHighlightColors: [...DEFAULT_SECTION_HIGHLIGHT_COLORS],
-    bibGroupMode: 'flat',
     referenceSortOrder: 'natural',
     zoteroSyncMode: 'continuous',
     lineNumbers: true,

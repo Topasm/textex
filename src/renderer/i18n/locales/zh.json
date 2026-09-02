@@ -411,18 +411,14 @@
     "newGroup": "+ 新建分组",
     "ungrouped": "未分组",
     "filterPlaceholder": "筛选引文...",
-    "groupBy": "引文分组方式",
-    "flat": "平铺",
-    "byAuthor": "按作者",
-    "byYear": "按年份",
-    "byType": "按类型",
-    "custom": "自定义",
     "noTitle": "（无标题）",
     "unknownAuthor": "未知作者",
     "removeFromGroup": "从分组中移除",
     "projectReferences": "项目参考文献",
     "deleteGroup": "删除分组",
-    "insertNamedCitation": "插入 {{name}} 的引用"
+    "insertNamedCitation": "插入 {{name}} 的引用",
+    "addToNamedGroup": "添加到“{{name}}”",
+    "noGroups": "还没有引用分组。先新建一个，再从下方列表把参考文献加进去。"
   },
   "outlinePanel": {
     "noFile": "没有打开的文件。",

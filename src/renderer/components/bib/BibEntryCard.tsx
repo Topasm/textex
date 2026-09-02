@@ -14,9 +14,9 @@ interface BibEntryCardProps {
   onInsert: (citeText: string) => void
   /** If provided, shows a remove button */
   onRemove?: () => void
-  /** If provided, shows an add button with this label */
-  onAdd?: () => void
-  addTitle?: string
+  /** Groups this entry can be filed into, offered from the context menu. */
+  groups?: Array<{ id: string; name: string }>
+  onAddToGroup?: (groupId: string) => void
   onAddToChat?: (payload: ReturnType<typeof buildProjectReferenceDragPayload>) => void
 }
 
@@ -32,8 +32,8 @@ export const BibEntryCard = React.memo(function BibEntryCard({
   entry,
   onInsert,
   onRemove,
-  onAdd,
-  addTitle,
+  groups,
+  onAddToGroup,
   onAddToChat
 }: BibEntryCardProps) {
   const { t } = useTranslation()
@@ -72,13 +72,15 @@ export const BibEntryCard = React.memo(function BibEntryCard({
         run: () => onAddToChat(buildProjectReferenceDragPayload(entry))
       })
     }
-    if (onAdd) {
-      items.push({
-        id: 'add-to-group',
-        label: addTitle ?? t('bibPanel.newGroup'),
-        icon: <Plus size={ICON_SIZE.micro} />,
-        run: onAdd
-      })
+    if (onAddToGroup) {
+      for (const group of groups ?? []) {
+        items.push({
+          id: `add-to-group:${group.id}`,
+          label: t('bibPanel.addToNamedGroup', { name: group.name }),
+          icon: <Plus size={ICON_SIZE.micro} />,
+          run: () => onAddToGroup(group.id)
+        })
+      }
     }
     if (onRemove) {
       items.push({
@@ -141,17 +143,6 @@ export const BibEntryCard = React.memo(function BibEntryCard({
             aria-label={t('bibPanel.removeFromGroup')}
           >
             <X size={ICON_SIZE.micro} />
-          </button>
-        )}
-        {onAdd && (
-          <button
-            type="button"
-            className="bib-entry-action-btn bib-entry-add-btn"
-            onClick={onAdd}
-            title={addTitle}
-            aria-label={addTitle}
-          >
-            +
           </button>
         )}
       </div>

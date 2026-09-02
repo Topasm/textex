@@ -411,18 +411,14 @@
     "newGroup": "+ Neue Gruppe",
     "ungrouped": "Nicht gruppiert",
     "filterPlaceholder": "Zitate filtern...",
-    "groupBy": "Zitate gruppieren nach",
-    "flat": "Flach",
-    "byAuthor": "Nach Autor",
-    "byYear": "Nach Jahr",
-    "byType": "Nach Typ",
-    "custom": "Benutzerdefiniert",
     "noTitle": "(kein Titel)",
     "unknownAuthor": "Unbekannter Autor",
     "removeFromGroup": "Aus Gruppe entfernen",
     "projectReferences": "Projektreferenzen",
     "deleteGroup": "Gruppe löschen",
-    "insertNamedCitation": "Zitat für {{name}} einfügen"
+    "insertNamedCitation": "Zitat für {{name}} einfügen",
+    "addToNamedGroup": "Zu „{{name}}“ hinzufügen",
+    "noGroups": "Noch keine Zitatgruppen. Legen Sie eine an und ordnen Sie ihr Einträge aus der Liste unten zu."
   },
   "outlinePanel": {
     "noFile": "Keine Datei geöffnet.",
