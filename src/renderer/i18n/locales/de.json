@@ -421,7 +421,8 @@
     "unknownAuthor": "Unbekannter Autor",
     "removeFromGroup": "Aus Gruppe entfernen",
     "projectReferences": "Projektreferenzen",
-    "deleteGroup": "Gruppe löschen"
+    "deleteGroup": "Gruppe löschen",
+    "insertNamedCitation": "Zitat für {{name}} einfügen"
   },
   "outlinePanel": {
     "noFile": "Keine Datei geöffnet.",

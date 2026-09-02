@@ -421,7 +421,8 @@
     "unknownAuthor": "未知作者",
     "removeFromGroup": "从分组中移除",
     "projectReferences": "项目参考文献",
-    "deleteGroup": "删除分组"
+    "deleteGroup": "删除分组",
+    "insertNamedCitation": "插入 {{name}} 的引用"
   },
   "outlinePanel": {
     "noFile": "没有打开的文件。",

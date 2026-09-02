@@ -2458,7 +2458,8 @@ body,
   gap: var(--space-8);
   padding: var(--space-4) var(--space-12);
   font-size: var(--font-base);
-  cursor: pointer;
+  /* The card is a drag source, not a button: clicking it must not cite. */
+  cursor: grab;
   transition: background-color 0.1s;
 }
 
@@ -5918,7 +5919,7 @@ button.submission-check-finding:hover {
 .bib-entry {
   padding: var(--space-8) var(--space-12);
   border-bottom: 1px solid var(--border);
-  cursor: pointer;
+  cursor: grab;
   transition: background-color 0.15s;
 }
 

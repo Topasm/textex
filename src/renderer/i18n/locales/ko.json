@@ -421,7 +421,8 @@
     "unknownAuthor": "알 수 없는 저자",
     "removeFromGroup": "그룹에서 제거",
     "projectReferences": "프로젝트 참고문헌",
-    "deleteGroup": "그룹 삭제"
+    "deleteGroup": "그룹 삭제",
+    "insertNamedCitation": "{{name}} 인용 삽입"
   },
   "outlinePanel": {
     "noFile": "열린 파일이 없습니다.",
