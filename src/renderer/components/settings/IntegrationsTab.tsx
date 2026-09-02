@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import { Link, RefreshCw } from 'lucide-react'
 import { Toggle } from './Toggle'
+import { SettingsSelect } from './SettingsControls'
 import { useProjectStore } from '../../store/useProjectStore'
 
 const ZoteroStatusProbe = ({ port }: { port: number }) => {
@@ -118,6 +119,34 @@ export const IntegrationsTab = () => {
                       {t('settings.integrations.status')}
                     </span>
                     <ZoteroStatusProbe port={settings.zoteroPort} />
+                  </div>
+                </div>
+                <div style={{ marginTop: 14 }}>
+                  <div className="settings-flex-row">
+                    <div>
+                      <label className="settings-label settings-no-mb" htmlFor="zotero-sync-mode">
+                        {t('settings.integrations.syncMode')}
+                      </label>
+                      <p className="settings-section-description">
+                        {t('settings.integrations.syncModeDesc')}
+                      </p>
+                    </div>
+                    <SettingsSelect
+                      id="zotero-sync-mode"
+                      value={settings.zoteroSyncMode ?? 'continuous'}
+                      onChange={(event) =>
+                        updateSetting(
+                          'zoteroSyncMode',
+                          event.target.value as NonNullable<typeof settings.zoteroSyncMode>
+                        )
+                      }
+                    >
+                      <option value="continuous">
+                        {t('settings.integrations.syncModeContinuous')}
+                      </option>
+                      <option value="open">{t('settings.integrations.syncModeOpen')}</option>
+                      <option value="off">{t('settings.integrations.syncModeOff')}</option>
+                    </SettingsSelect>
                   </div>
                 </div>
                 <div style={{ marginTop: 14 }}>

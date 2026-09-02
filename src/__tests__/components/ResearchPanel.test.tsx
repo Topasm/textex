@@ -292,9 +292,7 @@ describe('ResearchPanel tabs', () => {
       version: 1,
       referencesFile: 'references.bib',
       zoteroFile: 'zotero.bib',
-      zoteroCollection: null,
-      syncOnOpen: false,
-      autoSync: false
+      zoteroCollection: null
     })
     window.api.zoteroLibraryTree = vi.fn().mockResolvedValue([])
     render(<ResearchPanel onAiDraft={vi.fn()} />)
@@ -316,9 +314,7 @@ describe('ResearchPanel tabs', () => {
       version: 1,
       referencesFile: 'references.bib',
       zoteroFile: 'zotero.bib',
-      zoteroCollection: null,
-      syncOnOpen: false,
-      autoSync: false
+      zoteroCollection: null
     })
     window.api.zoteroLibraryTree = vi.fn().mockResolvedValue([])
     window.api.zoteroSearch = vi.fn().mockResolvedValue([

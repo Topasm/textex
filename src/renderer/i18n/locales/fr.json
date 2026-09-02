@@ -349,7 +349,12 @@
       "gitIntegration": "Intégration Git",
       "gitDesc": "Afficher le panneau Git, les informations de branche et le statut des fichiers.",
       "citeOnlineToZotero": "Enregistrer les articles en ligne dans Zotero lors de la citation",
-      "citeOnlineToZoteroHint": "Demande à Zotero l’autorisation d’écriture locale, puis utilise la clé Better BibTeX."
+      "citeOnlineToZoteroHint": "Demande à Zotero l’autorisation d’écriture locale, puis utilise la clé Better BibTeX.",
+      "syncMode": "Synchronisation de la collection",
+      "syncModeDesc": "Comment la collection choisie dans le panneau Research est répercutée dans le fichier .bib géré du projet.",
+      "syncModeContinuous": "Garder synchronisé tant qu’un projet est ouvert",
+      "syncModeOpen": "Synchroniser une fois à l’ouverture d’un projet",
+      "syncModeOff": "Synchronisation manuelle uniquement"
     },
     "automation": {
       "compilerTools": "Compilateur et outils",
@@ -1101,7 +1106,6 @@
       "submissionCheck": "Vérification de soumission",
       "collectionsLabel": "Collections Zotero",
       "noCollections": "Aucune collection Zotero trouvée.",
-      "syncOnOpen": "Synchroniser une fois à l’ouverture de ce projet",
       "searchPlaceholder": "Rechercher dans le projet et Zotero",
       "searchLabel": "Rechercher dans le projet et Zotero",
       "missingFromBibliography": "Utilisée dans TeX mais absente de toutes les bibliographies du projet.",
@@ -1122,7 +1126,6 @@
       "syncTarget": "Cible : {{file}}",
       "cancel": "Annuler",
       "sync": "Synchroniser",
-      "autoSync": "Garder synchronisé tant que le projet est ouvert",
       "collectionUnavailable": "Zotero n’a pas encore confirmé la collection enregistrée {{collection}}. Elle reste sélectionnée et sera synchronisée dès que Zotero répondra.",
       "loading": "Chargement de Zotero…",
       "loadingPapers": "Chargement des articles…",

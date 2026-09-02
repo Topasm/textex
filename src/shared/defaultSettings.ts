@@ -51,6 +51,7 @@ export function createDefaultUserSettings(): UserSettings {
     sectionHighlightColors: [...DEFAULT_SECTION_HIGHLIGHT_COLORS],
     bibGroupMode: 'flat',
     referenceSortOrder: 'natural',
+    zoteroSyncMode: 'continuous',
     lineNumbers: true,
     tabSize: 4,
     recentProjects: [],

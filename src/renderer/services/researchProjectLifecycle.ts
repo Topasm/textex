@@ -20,6 +20,8 @@ export function invalidateResearchProjectOpenSync(): void {
  * Runs the optional Zotero collection sync once for one published project-open
  * lifecycle. The generation and root checks prevent an older async result from
  * refreshing bibliography state after a project transition (including A-B-A).
+ * Whether it runs at all is the `zoteroSyncMode` user setting; the project file
+ * only names the collection.
  */
 export async function syncResearchOnProjectOpen(projectRoot: string): Promise<void> {
   const generation = ++researchOpenGeneration
@@ -43,12 +45,15 @@ export async function syncResearchOnProjectOpen(projectRoot: string): Promise<vo
 }
 
 async function runResearchOpenSync(projectRoot: string, isCurrent: () => boolean): Promise<void> {
+  const settings = useSettingsStore.getState().settings
+  if ((settings.zoteroSyncMode ?? 'continuous') === 'off') return
+
   const config = await window.api.researchLoadConfig()
-  if (!isCurrent() || !config.syncOnOpen || !config.zoteroCollection || !config.zoteroFile) {
+  if (!isCurrent() || !config.zoteroCollection || !config.zoteroFile) {
     return
   }
 
-  const port = useSettingsStore.getState().settings.zoteroPort
+  const port = settings.zoteroPort
   await window.api.zoteroSyncCollection(
     config.zoteroCollection,
     projectFilePath(projectRoot, config.zoteroFile),

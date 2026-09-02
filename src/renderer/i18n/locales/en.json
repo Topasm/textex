@@ -349,7 +349,12 @@
       "gitIntegration": "Git Integration",
       "gitDesc": "Show git panel, branch info, and file status.",
       "citeOnlineToZotero": "Save online papers to Zotero when citing",
-      "citeOnlineToZoteroHint": "Ask Zotero for local write permission, then use the Better BibTeX key."
+      "citeOnlineToZoteroHint": "Ask Zotero for local write permission, then use the Better BibTeX key.",
+      "syncMode": "Collection sync",
+      "syncModeDesc": "How the collection selected in the Research panel is mirrored into the project’s managed .bib file.",
+      "syncModeContinuous": "Keep synchronized while a project is open",
+      "syncModeOpen": "Sync once when a project opens",
+      "syncModeOff": "Manual sync only"
     },
     "automation": {
       "compilerTools": "Compiler & Tools",
@@ -1101,7 +1106,6 @@
       "submissionCheck": "Submission check",
       "collectionsLabel": "Zotero collections",
       "noCollections": "No Zotero collections found.",
-      "syncOnOpen": "Sync once when this project opens",
       "searchPlaceholder": "Search project & Zotero",
       "searchLabel": "Search project and Zotero",
       "missingFromBibliography": "Used in TeX but missing from every project bibliography.",
@@ -1122,7 +1126,6 @@
       "syncTarget": "Target: {{file}}",
       "cancel": "Cancel",
       "sync": "Sync",
-      "autoSync": "Keep synchronized while the project is open",
       "collectionUnavailable": "Zotero has not confirmed the saved collection {{collection}} yet. It stays selected and syncs as soon as Zotero responds.",
       "loading": "Loading Zotero…",
       "loadingPapers": "Loading papers…",

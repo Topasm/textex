@@ -215,6 +215,13 @@ export interface AppUpdateDownloadProgress {
 
 export type AppUpdateActionResult = { success: true } | { success: false; error: string }
 
+/**
+ * How the configured Zotero collection is mirrored into the managed `.bib`.
+ * `open` exports once per project open; `continuous` also rewrites the file
+ * whenever the collection changes while the project is open.
+ */
+export type ZoteroSyncMode = 'off' | 'open' | 'continuous'
+
 /** Ordering of the unified reference list in the Research panel. */
 export type ReferenceSortOrder = 'natural' | 'title' | 'author' | 'year' | 'citations'
 
@@ -256,6 +263,7 @@ export interface UserSettings {
   sectionHighlightColors?: string[]
   bibGroupMode?: 'flat' | 'author' | 'year' | 'type' | 'custom'
   referenceSortOrder?: ReferenceSortOrder
+  zoteroSyncMode?: ZoteroSyncMode
   lineNumbers?: boolean
   tabSize?: number
   recentProjects?: RecentProject[]
@@ -580,12 +588,6 @@ export interface ResearchConfig {
   referencesFile: string
   zoteroFile: string
   zoteroCollection: string | null
-  syncOnOpen: boolean
-  /**
-   * Mirrors the configured collection into the managed file whenever the
-   * Zotero panel observes the collection change while a project is open.
-   */
-  autoSync: boolean
 }
 
 /** A person associated with the paper-level research profile. */

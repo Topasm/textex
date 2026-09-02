@@ -349,7 +349,12 @@
       "gitIntegration": "Git 연동",
       "gitDesc": "Git 패널, 브랜치 정보 및 파일 상태를 표시합니다.",
       "citeOnlineToZotero": "인용할 때 온라인 논문을 Zotero에 저장",
-      "citeOnlineToZoteroHint": "Zotero에 로컬 쓰기 권한을 요청한 뒤 Better BibTeX 키를 사용합니다."
+      "citeOnlineToZoteroHint": "Zotero에 로컬 쓰기 권한을 요청한 뒤 Better BibTeX 키를 사용합니다.",
+      "syncMode": "컬렉션 동기화",
+      "syncModeDesc": "Research 패널에서 선택한 컬렉션을 프로젝트의 관리 .bib 파일에 어떻게 반영할지 정합니다.",
+      "syncModeContinuous": "프로젝트가 열려 있는 동안 계속 동기화",
+      "syncModeOpen": "프로젝트를 열 때 한 번 동기화",
+      "syncModeOff": "수동 동기화만"
     },
     "automation": {
       "compilerTools": "컴파일러 및 도구",
@@ -1101,7 +1106,6 @@
       "submissionCheck": "제출 점검",
       "collectionsLabel": "Zotero 컬렉션",
       "noCollections": "Zotero 컬렉션이 없습니다.",
-      "syncOnOpen": "이 프로젝트를 열 때 한 번 동기화",
       "searchPlaceholder": "프로젝트와 Zotero 검색",
       "searchLabel": "프로젝트와 Zotero 검색",
       "missingFromBibliography": "TeX에서 사용되지만 모든 프로젝트 서지에 없습니다.",
@@ -1122,7 +1126,6 @@
       "syncTarget": "대상: {{file}}",
       "cancel": "취소",
       "sync": "동기화",
-      "autoSync": "프로젝트가 열려 있는 동안 계속 동기화",
       "collectionUnavailable": "Zotero가 저장된 컬렉션 {{collection}}을(를) 아직 확인해 주지 않았습니다. 선택은 유지되며 Zotero가 응답하면 동기화됩니다.",
       "loading": "Zotero 불러오는 중…",
       "loadingPapers": "논문 불러오는 중…",

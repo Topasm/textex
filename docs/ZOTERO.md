@@ -64,19 +64,18 @@ counts are fetched lazily from Zotero's `Total-Results` header. Unknown counts a
 
 ### Keeping a collection current
 
-Selecting a collection and toggling either sync switch writes
-`.textex/research.json` immediately, so the choice survives closing and
-reopening the project without a separate save step.
+Selecting a collection writes `.textex/research.json` immediately, so the
+choice survives closing and reopening the project without a separate save step.
+The sync mode itself is the global **Collection sync** setting.
 
-- **Sync once when this project opens** exports the configured collection to
-  `zotero.bib` during project open. A failed open-sync (for example, Zotero not
-  running yet) is reported as a notification instead of being dropped.
-- **Keep synchronized while the project is open** polls the configured
-  collection every 15 seconds through `zotero_collection_items` with a
-  zero-length page, which returns only the authoritative `Total-Results` count.
-  Every observed change refreshes the panel's cross-check inventories and
-  rewrites the managed `zotero.bib`. Zotero exposes no change feed, so polling
-  the count is the cheapest reliable signal.
+- The open-time export runs during project open. A failure (for example, Zotero
+  not running yet) is reported as a notification instead of being dropped.
+- Continuous mode polls the configured collection every 15 seconds through
+  `zotero_collection_items` with a zero-length page, which returns only the
+  authoritative `Total-Results` count. Every observed change refreshes the
+  panel's cross-check inventories and rewrites the managed `zotero.bib`. Zotero
+  exposes no change feed, so polling the count is the cheapest reliable signal.
+  The inventory refresh runs in every mode; only the file write is gated.
 
 A saved collection that Zotero has not confirmed yet — an unreachable Zotero, or
 a library tree that has not loaded — stays selected and is reported as
@@ -101,10 +100,22 @@ writes the entry without touching the open document; `Add and cite` does both.
 The abstract is fetched per item the first time a row is expanded and cached for the session; the
 collection pages stay lean.
 
-### Settings that persist
+### What is stored where
 
-Selecting a collection or toggling either sync switch writes `.textex/research.json` immediately —
-there is no separate save step, and no save button.
+The project file `.textex/research.json` names the collection and the two managed `.bib` files, and
+nothing else — selecting a collection writes it immediately, with no save step and no save button.
+
+How that collection is mirrored is a user setting, **Settings → Integrations → Collection sync**,
+applied to every project:
+
+| Mode | Behavior |
+|---|---|
+| Keep synchronized while a project is open (default) | Exports on project open, then rewrites the managed file whenever the collection changes |
+| Sync once when a project opens | Exports on project open only |
+| Manual sync only | Never writes on its own; the panel shows the manual sync button |
+
+The manual sync button appears in the panel whenever the mode is not continuous. Configs written by
+earlier versions still carry `syncOnOpen` and `autoSync`; those fields are ignored.
 
 ### Inserting Citations (Inline Search)
 1.  Press `Ctrl+Shift+C` (or `Cmd+Shift+C` on macOS) to focus the citation search bar in the toolbar, or click it directly.

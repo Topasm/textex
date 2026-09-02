@@ -1043,7 +1043,6 @@ mod tests {
         state.set_project_root(root.clone()).unwrap();
         let config = ResearchConfig {
             zotero_collection: Some("/0/8CV58ZVD".to_owned()),
-            sync_on_open: true,
             ..ResearchConfig::default()
         };
 
@@ -1053,7 +1052,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn loads_a_config_written_before_the_auto_sync_field_existed() {
+    async fn loads_a_config_that_still_carries_the_retired_sync_switches() {
         let project = tempfile::tempdir().unwrap();
         let root = dunce::canonicalize(project.path()).unwrap();
         let state = AppState::default();
@@ -1073,9 +1072,9 @@ mod tests {
 
         let loaded = load_config(&state).await.unwrap();
 
+        // `syncOnOpen` moved to user settings; the leftover field is ignored
+        // rather than failing the whole document.
         assert_eq!(loaded.zotero_collection.as_deref(), Some("/0/8CV58ZVD"));
-        assert!(loaded.sync_on_open);
-        assert!(!loaded.auto_sync);
     }
 
     #[tokio::test]

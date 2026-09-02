@@ -349,7 +349,12 @@
       "gitIntegration": "Git-Integration",
       "gitDesc": "Git-Panel, Branch-Informationen und Dateistatus anzeigen.",
       "citeOnlineToZotero": "Online-Artikel beim Zitieren in Zotero speichern",
-      "citeOnlineToZoteroHint": "Fragt Zotero nach lokaler Schreibberechtigung und verwendet dann den Better-BibTeX-Schlüssel."
+      "citeOnlineToZoteroHint": "Fragt Zotero nach lokaler Schreibberechtigung und verwendet dann den Better-BibTeX-Schlüssel.",
+      "syncMode": "Sammlungssynchronisierung",
+      "syncModeDesc": "Wie die im Research-Panel gewählte Sammlung in die verwaltete .bib-Datei des Projekts übertragen wird.",
+      "syncModeContinuous": "Synchron halten, solange ein Projekt geöffnet ist",
+      "syncModeOpen": "Einmal beim Öffnen eines Projekts synchronisieren",
+      "syncModeOff": "Nur manuelle Synchronisierung"
     },
     "automation": {
       "compilerTools": "Compiler & Werkzeuge",
@@ -1101,7 +1106,6 @@
       "submissionCheck": "Einreichungsprüfung",
       "collectionsLabel": "Zotero-Sammlungen",
       "noCollections": "Keine Zotero-Sammlungen gefunden.",
-      "syncOnOpen": "Beim Öffnen dieses Projekts einmal synchronisieren",
       "searchPlaceholder": "Projekt & Zotero durchsuchen",
       "searchLabel": "Projekt und Zotero durchsuchen",
       "missingFromBibliography": "Wird in TeX verwendet, fehlt aber in jeder Projektbibliografie.",
@@ -1122,7 +1126,6 @@
       "syncTarget": "Ziel: {{file}}",
       "cancel": "Abbrechen",
       "sync": "Synchronisieren",
-      "autoSync": "Synchron halten, solange das Projekt geöffnet ist",
       "collectionUnavailable": "Zotero hat die gespeicherte Sammlung {{collection}} noch nicht bestätigt. Sie bleibt ausgewählt und wird synchronisiert, sobald Zotero antwortet.",
       "loading": "Zotero wird geladen…",
       "loadingPapers": "Einträge werden geladen…",

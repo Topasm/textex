@@ -22,9 +22,14 @@ const config = {
   version: 1 as const,
   referencesFile: 'references.bib',
   zoteroFile: 'zotero.bib',
-  zoteroCollection: null,
-  syncOnOpen: false,
-  autoSync: false
+  zoteroCollection: null
+}
+
+/** The manual sync button is hidden while sync runs continuously. */
+function useManualSync(): void {
+  useSettingsStore.setState((state) => ({
+    settings: { ...state.settings, zoteroSyncMode: 'off' }
+  }))
 }
 
 /** The collection tree now lives behind a trigger, so tests must open it. */
@@ -60,7 +65,7 @@ describe('Research reference sources', () => {
       researchReferenceSource: 'project'
     })
     useSettingsStore.setState((state) => ({
-      settings: { ...state.settings, zoteroPort: 23_119 }
+      settings: { ...state.settings, zoteroPort: 23_119, zoteroSyncMode: 'continuous' }
     }))
     useCompileStore.setState({ diagnostics: [] })
     useEditorStore.getState().resetEditor()
@@ -352,10 +357,10 @@ describe('Research reference sources', () => {
   })
 
   it('does not offer sync for a collection that no longer exists in Zotero', async () => {
+    useManualSync()
     window.api.researchLoadConfig = vi.fn().mockResolvedValue({
       ...config,
-      zoteroCollection: '/0/DELETED',
-      syncOnOpen: true
+      zoteroCollection: '/0/DELETED'
     })
     window.api.zoteroLibraryTree = vi
       .fn()
@@ -494,6 +499,7 @@ describe('Research reference sources', () => {
   })
 
   it('previews the exact managed bibliography diff before collection sync', async () => {
+    useManualSync()
     const selectedConfig = { ...config, zoteroCollection: '/0/PAPERS' }
     window.api.researchLoadConfig = vi.fn().mockResolvedValue(selectedConfig)
     window.api.zoteroLibraryTree = vi
@@ -561,6 +567,7 @@ describe('Research reference sources', () => {
   })
 
   it('blocks collection sync when the managed bibliography cannot be parsed', async () => {
+    useManualSync()
     const selectedConfig = { ...config, zoteroCollection: '/0/PAPERS' }
     window.api.researchLoadConfig = vi.fn().mockResolvedValue(selectedConfig)
     window.api.zoteroLibraryTree = vi
@@ -763,7 +770,7 @@ describe('Research reference sources', () => {
     ).toBeInTheDocument()
     expect(screen.queryByText(/and inserted its citation/)).not.toBeInTheDocument()
   })
-  it('persists a collection choice and its sync switches without a separate save step', async () => {
+  it('persists a collection choice without a separate save step', async () => {
     window.api.researchLoadConfig = vi.fn().mockResolvedValue(config)
     window.api.researchSaveConfig = vi
       .fn()
@@ -787,50 +794,31 @@ describe('Research reference sources', () => {
       )
     )
 
-    fireEvent.click(
-      await screen.findByRole('checkbox', { name: 'Sync once when this project opens' })
-    )
-    await waitFor(() =>
-      expect(window.api.researchSaveConfig).toHaveBeenCalledWith(
-        expect.objectContaining({ zoteroCollection: '/0/ICRA', syncOnOpen: true })
-      )
-    )
-
-    fireEvent.click(
-      screen.getByRole('checkbox', { name: 'Keep synchronized while the project is open' })
-    )
-    await waitFor(() =>
-      expect(window.api.researchSaveConfig).toHaveBeenCalledWith(
-        expect.objectContaining({ zoteroCollection: '/0/ICRA', autoSync: true })
-      )
-    )
+    // Sync behaviour is a user setting now, so the panel writes nothing else.
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
   })
 
   it('keeps a saved collection selected when Zotero has not answered yet', async () => {
     window.api.researchLoadConfig = vi.fn().mockResolvedValue({
       ...config,
-      zoteroCollection: '/0/ICRA',
-      syncOnOpen: true
+      zoteroCollection: '/0/ICRA'
     })
     window.api.zoteroLibraryTree = vi.fn().mockRejectedValue(new Error('Zotero is not running'))
 
     render(<ZoteroReferences />)
 
-    const syncOnOpen = await screen.findByRole('checkbox', {
-      name: 'Sync once when this project opens'
-    })
-    expect(syncOnOpen).toBeChecked()
-    expect(screen.getByText(/has not confirmed the saved collection \/0\/ICRA/)).toBeInTheDocument()
+    expect(
+      await screen.findByText(/has not confirmed the saved collection \/0\/ICRA/)
+    ).toBeInTheDocument()
   })
 
-  it('mirrors an observed Zotero change into the managed file while auto sync is on', async () => {
+  it('mirrors an observed Zotero change into the managed file while sync is continuous', async () => {
     vi.useFakeTimers()
     try {
       let totalResults = 36
       window.api.researchLoadConfig = vi.fn().mockResolvedValue({
         ...config,
-        zoteroCollection: '/0/ICRA',
-        autoSync: true
+        zoteroCollection: '/0/ICRA'
       })
       window.api.zoteroLibraryTree = vi
         .fn()
@@ -878,8 +866,7 @@ describe('Research reference sources', () => {
     try {
       window.api.researchLoadConfig = vi.fn().mockResolvedValue({
         ...config,
-        zoteroCollection: '/0/ICRA',
-        syncOnOpen: true
+        zoteroCollection: '/0/ICRA'
       })
       window.api.zoteroLibraryTree = vi
         .fn()

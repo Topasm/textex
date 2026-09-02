@@ -948,9 +948,7 @@ describe('Tauri DesktopApi adapter', () => {
       version: 1 as const,
       referencesFile: 'references.bib',
       zoteroFile: 'zotero.bib',
-      zoteroCollection: '/0/ABC',
-      syncOnOpen: true,
-      autoSync: false
+      zoteroCollection: '/0/ABC'
     }
     const profile = {
       version: 1 as const,

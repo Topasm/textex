@@ -24,9 +24,7 @@ const defaultResearchConfig: ResearchConfig = {
   version: 1,
   referencesFile: 'references.bib',
   zoteroFile: 'zotero.bib',
-  zoteroCollection: null,
-  syncOnOpen: false,
-  autoSync: false
+  zoteroCollection: null
 }
 
 function deferred<T>(): {
@@ -86,7 +84,7 @@ describe('openProject', () => {
       entryCount: 1
     })
     useSettingsStore.setState((state) => ({
-      settings: { ...state.settings, zoteroPort: 23_119 }
+      settings: { ...state.settings, zoteroPort: 23_119, zoteroSyncMode: 'continuous' }
     }))
   })
 
@@ -378,8 +376,7 @@ describe('openProject', () => {
   it('runs sync-on-open once from the project lifecycle without mounting research UI', async () => {
     vi.mocked(window.api.researchLoadConfig).mockResolvedValue({
       ...defaultResearchConfig,
-      zoteroCollection: '/0/RESEARCH',
-      syncOnOpen: true
+      zoteroCollection: '/0/RESEARCH'
     })
 
     await openProject(projectRoot, { autoOpenFirstTex: false })
@@ -394,12 +391,27 @@ describe('openProject', () => {
     expect(window.api.zoteroSyncCollection).toHaveBeenCalledOnce()
   })
 
+  it('skips the open sync when the user set manual sync only', async () => {
+    useSettingsStore.setState((state) => ({
+      settings: { ...state.settings, zoteroSyncMode: 'off' }
+    }))
+    vi.mocked(window.api.researchLoadConfig).mockResolvedValue({
+      ...defaultResearchConfig,
+      zoteroCollection: '/0/RESEARCH'
+    })
+
+    await openProject(projectRoot, { autoOpenFirstTex: false })
+
+    // The mode is read before the project config, so neither call happens.
+    expect(window.api.researchLoadConfig).not.toHaveBeenCalled()
+    expect(window.api.zoteroSyncCollection).not.toHaveBeenCalled()
+  })
+
   it('reports a failed sync-on-open instead of dropping it silently', async () => {
     useNotificationStore.getState().clearNotifications()
     vi.mocked(window.api.researchLoadConfig).mockResolvedValue({
       ...defaultResearchConfig,
-      zoteroCollection: '/0/RESEARCH',
-      syncOnOpen: true
+      zoteroCollection: '/0/RESEARCH'
     })
     vi.mocked(window.api.zoteroSyncCollection).mockRejectedValue(new Error('Zotero is not running'))
 
@@ -424,8 +436,7 @@ describe('openProject', () => {
     await openProject('/workspace/second-sync', { autoOpenFirstTex: false })
     firstConfig.resolve({
       ...defaultResearchConfig,
-      zoteroCollection: '/0/STALE',
-      syncOnOpen: true
+      zoteroCollection: '/0/STALE'
     })
     await Promise.resolve()
     await Promise.resolve()

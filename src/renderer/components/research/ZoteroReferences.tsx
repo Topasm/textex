@@ -57,9 +57,7 @@ const DEFAULT_CONFIG: ResearchConfig = {
   version: 1,
   referencesFile: 'references.bib',
   zoteroFile: 'zotero.bib',
-  zoteroCollection: null,
-  syncOnOpen: false,
-  autoSync: false
+  zoteroCollection: null
 }
 
 const REFERENCE_SORT_ORDERS: ReferenceSortOrder[] = [
@@ -109,6 +107,7 @@ export function ZoteroReferences({
   const bibEntries = useProjectStore((state) => state.bibEntries)
   const port = useSettingsStore((state) => state.settings.zoteroPort)
   const sortOrder = useSettingsStore((state) => state.settings.referenceSortOrder ?? 'natural')
+  const syncMode = useSettingsStore((state) => state.settings.zoteroSyncMode ?? 'continuous')
   const updateSetting = useSettingsStore((state) => state.updateSetting)
   const compileDiagnosticCount = useCompileStore((state) => state.diagnostics.length)
   const [results, setResults] = useState<ZoteroSearchResult[]>([])
@@ -229,7 +228,7 @@ export function ZoteroReferences({
           loadedConfig.zoteroCollection !== null &&
           !configuredCollectionExists
         const effectiveConfig = collectionDeleted
-          ? { ...loadedConfig, zoteroCollection: null, syncOnOpen: false, autoSync: false }
+          ? { ...loadedConfig, zoteroCollection: null }
           : loadedConfig
         setConfig(effectiveConfig)
         setConfiguredCollectionUnavailable(
@@ -557,7 +556,7 @@ export function ZoteroReferences({
     const generation = scopeGeneration.current
     const root = projectRoot
     const apiPort = port
-    const autoSync = config.autoSync
+    const continuous = syncMode === 'continuous'
     const zoteroFile = config.zoteroFile
     return watchZoteroCollection({
       collectionKey,
@@ -569,7 +568,7 @@ export function ZoteroReferences({
         if (!isCurrentScope(generation, root, apiPort)) return
         invalidateZoteroInventory(apiPort)
         setInventoryRefreshToken((current) => current + 1)
-        if (!autoSync || !root || !targetFile) return
+        if (!continuous || !root || !targetFile) return
         // A manual sync, save, or an earlier automatic sync owns the managed
         // file until it finishes; the next poll picks the change up again.
         if (autoSyncInFlight.current || operationInFlight.current) return
@@ -597,7 +596,6 @@ export function ZoteroReferences({
       onError: () => undefined
     })
   }, [
-    config.autoSync,
     config.zoteroCollection,
     config.zoteroFile,
     configuredCollectionItemCount,
@@ -605,6 +603,7 @@ export function ZoteroReferences({
     loaded,
     port,
     projectRoot,
+    syncMode,
     t,
     targetFile,
     zoteroAvailable
@@ -1124,7 +1123,7 @@ export function ZoteroReferences({
             <FileCheck2 size={ICON_SIZE.compact} />
           </button>
         )}
-        {!config.autoSync && (
+        {syncMode !== 'continuous' && (
           <button
             type="button"
             onClick={() => void prepareSyncPreview()}
@@ -1140,32 +1139,12 @@ export function ZoteroReferences({
           </button>
         )}
       </div>
-      {config.zoteroCollection && (
-        <div className="zotero-sync-options">
-          {configuredCollectionUnavailable && (
-            <p className="research-muted" role="status">
-              {t('researchPanel.zotero.collectionUnavailable', {
-                collection: config.zoteroCollection
-              })}
-            </p>
-          )}
-          <label className="research-check-row">
-            <input
-              type="checkbox"
-              checked={config.syncOnOpen}
-              onChange={(event) => persistConfig({ ...config, syncOnOpen: event.target.checked })}
-            />
-            {t('researchPanel.zotero.syncOnOpen')}
-          </label>
-          <label className="research-check-row">
-            <input
-              type="checkbox"
-              checked={config.autoSync}
-              onChange={(event) => persistConfig({ ...config, autoSync: event.target.checked })}
-            />
-            {t('researchPanel.zotero.autoSync')}
-          </label>
-        </div>
+      {config.zoteroCollection && configuredCollectionUnavailable && (
+        <p className="research-muted zotero-collection-notice" role="status">
+          {t('researchPanel.zotero.collectionUnavailable', {
+            collection: config.zoteroCollection
+          })}
+        </p>
       )}
       <section className="reference-health" aria-label={t('researchPanel.zotero.healthLabel')}>
         <div className="reference-health-heading">

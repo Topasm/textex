@@ -349,7 +349,12 @@
       "gitIntegration": "Git 集成",
       "gitDesc": "显示 Git 面板、分支信息和文件状态。",
       "citeOnlineToZotero": "引用时将在线论文保存到 Zotero",
-      "citeOnlineToZoteroHint": "向 Zotero 请求本地写入权限，然后使用 Better BibTeX 键。"
+      "citeOnlineToZoteroHint": "向 Zotero 请求本地写入权限，然后使用 Better BibTeX 键。",
+      "syncMode": "分类同步",
+      "syncModeDesc": "在 Research 面板中选择的分类如何同步到项目的托管 .bib 文件。",
+      "syncModeContinuous": "项目打开期间保持同步",
+      "syncModeOpen": "打开项目时同步一次",
+      "syncModeOff": "仅手动同步"
     },
     "automation": {
       "compilerTools": "编译器和工具",
@@ -1101,7 +1106,6 @@
       "submissionCheck": "投稿检查",
       "collectionsLabel": "Zotero 合集",
       "noCollections": "未找到 Zotero 合集。",
-      "syncOnOpen": "打开此项目时同步一次",
       "searchPlaceholder": "搜索项目与 Zotero",
       "searchLabel": "搜索项目与 Zotero",
       "missingFromBibliography": "在 TeX 中使用，但所有项目书目中均无此条目。",
@@ -1122,7 +1126,6 @@
       "syncTarget": "目标：{{file}}",
       "cancel": "取消",
       "sync": "同步",
-      "autoSync": "在项目打开期间保持同步",
       "collectionUnavailable": "Zotero 尚未确认已保存的分类 {{collection}}。该选择将保留，并在 Zotero 响应后同步。",
       "loading": "正在加载 Zotero…",
       "loadingPapers": "正在加载论文…",

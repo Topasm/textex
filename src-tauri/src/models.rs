@@ -247,12 +247,6 @@ pub struct ResearchConfig {
     pub references_file: String,
     pub zotero_file: String,
     pub zotero_collection: Option<String>,
-    pub sync_on_open: bool,
-    /// Mirrors the configured collection into the managed file whenever the
-    /// Zotero panel observes the collection change. Older configs predate the
-    /// field, so it defaults instead of failing the whole document.
-    #[serde(default)]
-    pub auto_sync: bool,
 }
 
 impl Default for ResearchConfig {
@@ -262,8 +256,6 @@ impl Default for ResearchConfig {
             references_file: "references.bib".to_owned(),
             zotero_file: "zotero.bib".to_owned(),
             zotero_collection: None,
-            sync_on_open: false,
-            auto_sync: false,
         }
     }
 }
@@ -545,6 +537,8 @@ pub struct UserSettings {
     pub bib_group_mode: BibGroupMode,
     #[serde(default)]
     pub reference_sort_order: ReferenceSortOrder,
+    #[serde(default)]
+    pub zotero_sync_mode: ZoteroSyncMode,
     pub line_numbers: bool,
     pub tab_size: u8,
     pub recent_projects: Vec<RecentProject>,
@@ -608,6 +602,7 @@ impl Default for UserSettings {
             ],
             bib_group_mode: BibGroupMode::Flat,
             reference_sort_order: ReferenceSortOrder::Natural,
+            zotero_sync_mode: ZoteroSyncMode::Continuous,
             line_numbers: true,
             tab_size: 4,
             recent_projects: Vec::new(),
@@ -1053,6 +1048,16 @@ pub enum BibGroupMode {
     Year,
     Type,
     Custom,
+}
+
+/// How the configured collection is mirrored into the managed `.bib` file.
+#[derive(Clone, Copy, Debug, Default, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ZoteroSyncMode {
+    Off,
+    Open,
+    #[default]
+    Continuous,
 }
 
 /// Ordering of the unified reference list. `Natural` keeps the order each
