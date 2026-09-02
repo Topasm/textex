@@ -82,6 +82,13 @@ describe('responsive desktop layout contract', () => {
     )
   })
 
+  it('lets a long file name truncate instead of pushing the row actions over it', () => {
+    expect(baseStyles).toMatch(
+      /\.file-tree-name\s*\{[^}]*min-width:\s*0;[^}]*white-space:\s*nowrap;/s
+    )
+    expect(baseStyles).toMatch(/\.file-tree-actions\s*\{[^}]*flex-shrink:\s*0;/s)
+  })
+
   it('disables resize handles while compact CSS overrides stored pane sizes', () => {
     expect(responsiveStyles).toMatch(
       /\.sidebar-wrapper \.sidebar-resize-handle\s*\{\s*display: none;/

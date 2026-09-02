@@ -1750,9 +1750,18 @@ body,
   transition: transform 0.12s ease;
 }
 
+/*
+ * A flex item defaults to `min-width: auto`, so without this the name refuses
+ * to shrink below the widest unbreakable part of the file name: the row grows
+ * past the sidebar, the name wraps onto a second line, and the hover actions
+ * end up sitting on top of it.
+ */
 .file-tree-name {
+  min-width: 0;
+  flex: 1 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .file-tree-children {

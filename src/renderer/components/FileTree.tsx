@@ -391,7 +391,9 @@ function FileTreeNode({ entry, depth, gitFiles, onChanged, showGenerated }: File
           <span className="file-tree-disclosure-spacer" aria-hidden="true" />
         )}
         {getFileIcon(entry.name, entry.type, expanded)}
-        <span className="file-tree-name">{entry.name}</span>
+        <span className="file-tree-name" title={entry.name}>
+          {entry.name}
+        </span>
         <span className="file-tree-actions">
           {entry.type === 'directory' && (
             <>
@@ -633,7 +635,9 @@ const ProjectFileTreeRow = memo(function ProjectFileTreeRow({
           <span className="file-tree-disclosure-spacer" aria-hidden="true" />
         )}
         {getFileIcon(entry.name, entry.type, expanded)}
-        <span className="file-tree-name">{entry.name}</span>
+        <span className="file-tree-name" title={entry.name}>
+          {entry.name}
+        </span>
         <span className="file-tree-actions">
           {entry.type === 'directory' && (
             <>
