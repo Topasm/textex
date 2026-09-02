@@ -1364,7 +1364,6 @@
     "lines_one": "{{count}} line",
     "lines_other": "{{count}} lines",
     "placeholder": "Start writing…",
-    "canonicalTex": "Changes sync safely to TeX",
     "sourceLine": "TeX line {{line}}",
     "editBlock": "Edit this block in Markdown",
     "editBlockTex": "Edit this block in TeX",

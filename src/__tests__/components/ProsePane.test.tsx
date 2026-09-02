@@ -67,7 +67,9 @@ describe('ProsePane', () => {
     expect(screen.getByRole('button', { name: /Bold/u })).toBeEnabled()
     expect(screen.getByRole('status')).toHaveTextContent('Synced to TeX')
     expect(screen.getByLabelText('Document statistics')).toHaveTextContent(/words/u)
-    expect(screen.getByText('Changes sync safely to TeX')).toBeInTheDocument()
+    // The header status is the only sync indicator; the footer used to repeat
+    // it as a static claim that stayed cheerful even while an edit was blocked.
+    expect(screen.queryByText('Changes sync safely to TeX')).not.toBeInTheDocument()
   })
 
   it('formats a selection through the safe Markdown-to-TeX round trip', () => {

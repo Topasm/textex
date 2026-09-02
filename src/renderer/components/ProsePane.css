@@ -39,8 +39,7 @@
 
 .prose-pane__identity,
 .prose-pane__meta,
-.prose-pane__formatting,
-.prose-pane__footer > span {
+.prose-pane__formatting {
   display: flex;
   align-items: center;
 }
@@ -212,29 +211,6 @@
   border: 1px solid var(--ui-border);
   border-radius: var(--ui-radius-control);
   cursor: pointer;
-}
-
-.prose-pane__footer {
-  display: flex;
-  height: 26px;
-  box-sizing: border-box;
-  justify-content: space-between;
-  gap: var(--space-8);
-  align-items: center;
-  padding: var(--space-4) var(--space-10);
-  overflow: hidden;
-  color: var(--text-secondary);
-  font-size: var(--font-xs);
-  background: var(--ui-surface-panel);
-  border-top: 1px solid var(--ui-border);
-}
-
-.prose-pane__footer > span {
-  min-width: 0;
-  gap: var(--space-4);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 @container (max-width: 390px) {

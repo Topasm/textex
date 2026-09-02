@@ -1364,7 +1364,6 @@
     "lines_one": "{{count}} 行",
     "lines_other": "{{count}} 行",
     "placeholder": "开始写作…",
-    "canonicalTex": "更改会安全同步到 TeX",
     "sourceLine": "TeX 第 {{line}} 行",
     "editBlock": "在 Markdown 中编辑此区块",
     "editBlockTex": "在 TeX 中编辑此区块",

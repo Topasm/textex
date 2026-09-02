@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Bold, Code2, FileCode2, FileText, Italic, Link2 } from 'lucide-react'
+import { Bold, Code2, FileCode2, FileText, Italic } from 'lucide-react'
 import { documentRegistry } from '../models/documentRegistry'
 import { useEditorStore } from '../store/useEditorStore'
 import { isEditableProseBlock, projectLatexToProse } from '../../shared/proseProjection'
@@ -292,6 +292,9 @@ export function ProsePane() {
         <div className="prose-pane__meta" aria-label={t('prosePane.statistics')}>
           <span>{t('prosePane.words', { count: stats.words })}</span>
           <span>{t('prosePane.lines', { count: stats.lines })}</span>
+          {activeSpan && (
+            <span>{t('prosePane.sourceLine', { line: activeSpan.block.startLine })}</span>
+          )}
         </div>
       </header>
       {refusal && (
@@ -343,15 +346,6 @@ export function ProsePane() {
           }}
         />
       </div>
-      <footer className="prose-pane__footer">
-        <span>
-          <Link2 size={ICON_SIZE.micro} aria-hidden="true" />
-          {t('prosePane.canonicalTex')}
-        </span>
-        {activeSpan && (
-          <span>{t('prosePane.sourceLine', { line: activeSpan.block.startLine })}</span>
-        )}
-      </footer>
     </div>
   )
 }

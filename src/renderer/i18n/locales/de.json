@@ -1364,7 +1364,6 @@
     "lines_one": "{{count}} Zeile",
     "lines_other": "{{count}} Zeilen",
     "placeholder": "Beginnen Sie zu schreiben…",
-    "canonicalTex": "Änderungen werden sicher mit TeX synchronisiert",
     "sourceLine": "TeX-Zeile {{line}}",
     "editBlock": "Diesen Block in Markdown bearbeiten",
     "editBlockTex": "Diesen Block in TeX bearbeiten",
