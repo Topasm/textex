@@ -237,6 +237,11 @@ pub struct ResearchConfig {
     pub zotero_file: String,
     pub zotero_collection: Option<String>,
     pub sync_on_open: bool,
+    /// Mirrors the configured collection into the managed file whenever the
+    /// Zotero panel observes the collection change. Older configs predate the
+    /// field, so it defaults instead of failing the whole document.
+    #[serde(default)]
+    pub auto_sync: bool,
 }
 
 impl Default for ResearchConfig {
@@ -247,6 +252,7 @@ impl Default for ResearchConfig {
             zotero_file: "zotero.bib".to_owned(),
             zotero_collection: None,
             sync_on_open: false,
+            auto_sync: false,
         }
     }
 }

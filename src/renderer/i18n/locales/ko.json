@@ -150,7 +150,12 @@
     "compileFailed": "컴파일 실패 — {{reason}}",
     "compileProblem": "{{line}}행: {{message}}",
     "viewProblems": "문제 보기",
-    "openSettings": "설정 열기"
+    "openSettings": "설정 열기",
+    "researchSyncOnOpenFailed": "프로젝트를 열 때 Zotero 동기화에 실패했습니다: {{error}}",
+    "clipboardImageInserted": "클립보드 이미지를 {{file}}(으)로 붙여 넣었습니다.",
+    "clipboardImageFailed": "클립보드 이미지를 붙여 넣지 못했습니다: {{error}}",
+    "clipboardImageNoProject": "이미지를 붙여 넣기 전에 프로젝트를 여세요.",
+    "clipboardImageTooLarge": "{{limit}}보다 큰 클립보드 이미지는 가져올 수 없습니다."
   },
   "settings": {
     "title": "설정",
@@ -1095,7 +1100,7 @@
       "submissionCheck": "제출 점검",
       "collectionsLabel": "Zotero 컬렉션",
       "noCollections": "Zotero 컬렉션이 없습니다.",
-      "syncOnOpen": "이 프로젝트를 열 때 동기화 유지",
+      "syncOnOpen": "이 프로젝트를 열 때 한 번 동기화",
       "searchPlaceholder": "프로젝트와 Zotero 검색",
       "searchLabel": "프로젝트와 Zotero 검색",
       "localResultsLabel": "로컬 참고문헌 검색 결과",
@@ -1117,7 +1122,9 @@
       "syncUnresolved_other": "항목 {{count}}개가 아직 Better BibTeX 인용 키를 기다리고 있습니다.",
       "syncTarget": "대상: {{file}}",
       "cancel": "취소",
-      "sync": "동기화"
+      "sync": "동기화",
+      "autoSync": "프로젝트가 열려 있는 동안 계속 동기화",
+      "collectionUnavailable": "Zotero가 저장된 컬렉션 {{collection}}을(를) 아직 확인해 주지 않았습니다. 선택은 유지되며 Zotero가 응답하면 동기화됩니다."
     },
     "profileForm": {
       "resourceKind": {

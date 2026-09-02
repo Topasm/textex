@@ -49,11 +49,33 @@ groups** action above the health summary.
 
 Collection synchronization atomically replaces `zotero.bib`; individually selected and online
 items are atomically merged into `references.bib`. These separate managed files prevent a full
-collection refresh from deleting individually added references. A collection can be configured to
-sync when its project opens. Manual sync first compares the selected collection with the managed
-target and shows new, removed, and unchanged citekeys; the file is not replaced until confirmation.
-Collection papers load 50 at a time, while visible tree counts are fetched lazily from Zotero's
-`Total-Results` header. Unknown counts are displayed as `…`, never as zero.
+collection refresh from deleting individually added references. Manual sync first compares the
+selected collection with the managed target and shows new, removed, and unchanged citekeys; the
+file is not replaced until confirmation. Collection papers load 50 at a time, while visible tree
+counts are fetched lazily from Zotero's `Total-Results` header. Unknown counts are displayed as
+`…`, never as zero.
+
+### Keeping a collection current
+
+Selecting a collection and toggling either sync switch writes
+`.textex/research.json` immediately, so the choice survives closing and
+reopening the project without a separate save step.
+
+- **Sync once when this project opens** exports the configured collection to
+  `zotero.bib` during project open. A failed open-sync (for example, Zotero not
+  running yet) is reported as a notification instead of being dropped.
+- **Keep synchronized while the project is open** polls the configured
+  collection every 15 seconds through `zotero_collection_items` with a
+  zero-length page, which returns only the authoritative `Total-Results` count.
+  Every observed change refreshes the panel's cross-check inventories and
+  rewrites the managed `zotero.bib`. Zotero exposes no change feed, so polling
+  the count is the cheapest reliable signal.
+
+A saved collection that Zotero has not confirmed yet — an unreachable Zotero, or
+a library tree that has not loaded — stays selected and is reported as
+unconfirmed. Only a reachable library that lists collections without the saved
+key clears the setting, because that is the one case where the collection is
+really gone.
 
 ### Inserting Citations (Inline Search)
 1.  Press `Ctrl+Shift+C` (or `Cmd+Shift+C` on macOS) to focus the citation search bar in the toolbar, or click it directly.

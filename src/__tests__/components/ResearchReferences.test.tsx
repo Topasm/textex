@@ -23,7 +23,8 @@ const config = {
   referencesFile: 'references.bib',
   zoteroFile: 'zotero.bib',
   zoteroCollection: null,
-  syncOnOpen: false
+  syncOnOpen: false,
+  autoSync: false
 }
 
 const libraryTree = (
@@ -737,5 +738,151 @@ describe('Research reference sources', () => {
       )
     ).toBeInTheDocument()
     expect(screen.queryByText(/and inserted its citation/)).not.toBeInTheDocument()
+  })
+  it('persists a collection choice and its sync switches without a separate save step', async () => {
+    window.api.researchLoadConfig = vi.fn().mockResolvedValue(config)
+    window.api.researchSaveConfig = vi
+      .fn()
+      .mockImplementation(async (saved: typeof config) => saved)
+    window.api.zoteroLibraryTree = vi
+      .fn()
+      .mockResolvedValue(
+        libraryTree([{ key: '/0/ICRA', name: 'icra_2027', parentKey: null, itemCount: 48 }])
+      )
+    window.api.zoteroCollectionItems = vi
+      .fn()
+      .mockResolvedValue({ items: [], totalResults: 48, offset: 0, limit: 50 })
+
+    render(<ZoteroReferences />)
+    fireEvent.click(await screen.findByRole('treeitem', { name: /icra_2027/ }))
+
+    await waitFor(() =>
+      expect(window.api.researchSaveConfig).toHaveBeenCalledWith(
+        expect.objectContaining({ zoteroCollection: '/0/ICRA' })
+      )
+    )
+
+    fireEvent.click(
+      await screen.findByRole('checkbox', { name: 'Sync once when this project opens' })
+    )
+    await waitFor(() =>
+      expect(window.api.researchSaveConfig).toHaveBeenCalledWith(
+        expect.objectContaining({ zoteroCollection: '/0/ICRA', syncOnOpen: true })
+      )
+    )
+
+    fireEvent.click(
+      screen.getByRole('checkbox', { name: 'Keep synchronized while the project is open' })
+    )
+    await waitFor(() =>
+      expect(window.api.researchSaveConfig).toHaveBeenCalledWith(
+        expect.objectContaining({ zoteroCollection: '/0/ICRA', autoSync: true })
+      )
+    )
+  })
+
+  it('keeps a saved collection selected when Zotero has not answered yet', async () => {
+    window.api.researchLoadConfig = vi.fn().mockResolvedValue({
+      ...config,
+      zoteroCollection: '/0/ICRA',
+      syncOnOpen: true
+    })
+    window.api.zoteroLibraryTree = vi.fn().mockRejectedValue(new Error('Zotero is not running'))
+
+    render(<ZoteroReferences />)
+
+    const syncOnOpen = await screen.findByRole('checkbox', {
+      name: 'Sync once when this project opens'
+    })
+    expect(syncOnOpen).toBeChecked()
+    expect(screen.getByText(/has not confirmed the saved collection \/0\/ICRA/)).toBeInTheDocument()
+  })
+
+  it('mirrors an observed Zotero change into the managed file while auto sync is on', async () => {
+    vi.useFakeTimers()
+    try {
+      let totalResults = 36
+      window.api.researchLoadConfig = vi.fn().mockResolvedValue({
+        ...config,
+        zoteroCollection: '/0/ICRA',
+        autoSync: true
+      })
+      window.api.zoteroLibraryTree = vi
+        .fn()
+        .mockResolvedValue(
+          libraryTree([{ key: '/0/ICRA', name: 'icra_2027', parentKey: null, itemCount: 36 }])
+        )
+      window.api.zoteroCollectionItems = vi
+        .fn()
+        .mockImplementation(async (_key: string, _offset: number, limit: number) => ({
+          items: [],
+          totalResults,
+          offset: 0,
+          limit
+        }))
+      window.api.zoteroSyncCollection = vi.fn().mockResolvedValue({
+        filePath: '/project-a/zotero.bib',
+        bytesWritten: 100,
+        entryCount: 48
+      })
+      window.api.findBibInProject = vi.fn().mockResolvedValue([])
+
+      render(<ZoteroReferences />)
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100)
+      })
+      expect(window.api.zoteroSyncCollection).not.toHaveBeenCalled()
+
+      totalResults = 48
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(20_000)
+      })
+
+      expect(window.api.zoteroSyncCollection).toHaveBeenCalledWith(
+        '/0/ICRA',
+        '/project-a/zotero.bib',
+        23_119
+      )
+      expect(window.api.findBibInProject).toHaveBeenCalledWith('/project-a')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+  it('restores the saved collection once Zotero becomes reachable', async () => {
+    vi.useFakeTimers()
+    try {
+      window.api.researchLoadConfig = vi.fn().mockResolvedValue({
+        ...config,
+        zoteroCollection: '/0/ICRA',
+        syncOnOpen: true
+      })
+      window.api.zoteroLibraryTree = vi
+        .fn()
+        .mockRejectedValueOnce(new Error('Zotero is not running'))
+        .mockResolvedValue(
+          libraryTree([{ key: '/0/ICRA', name: 'icra_2027', parentKey: null, itemCount: 48 }])
+        )
+      window.api.zoteroCollectionItems = vi
+        .fn()
+        .mockResolvedValue({ items: [], totalResults: 48, offset: 0, limit: 50 })
+
+      render(<ZoteroReferences />)
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(100)
+      })
+      expect(screen.getByText(/has not confirmed the saved collection/)).toBeInTheDocument()
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(20_000)
+      })
+
+      expect(screen.queryByText(/has not confirmed the saved collection/)).not.toBeInTheDocument()
+      expect(screen.getByRole('treeitem', { name: /icra_2027/ })).toHaveAttribute(
+        'aria-selected',
+        'true'
+      )
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

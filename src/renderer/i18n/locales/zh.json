@@ -150,7 +150,12 @@
     "compileFailed": "编译失败 — {{reason}}",
     "compileProblem": "第 {{line}} 行：{{message}}",
     "viewProblems": "查看问题",
-    "openSettings": "打开设置"
+    "openSettings": "打开设置",
+    "researchSyncOnOpenFailed": "打开项目时的 Zotero 同步失败：{{error}}",
+    "clipboardImageInserted": "已将剪贴板图片粘贴为 {{file}}。",
+    "clipboardImageFailed": "无法粘贴剪贴板图片：{{error}}",
+    "clipboardImageNoProject": "粘贴图片前请先打开项目。",
+    "clipboardImageTooLarge": "无法导入大于 {{limit}} 的剪贴板图片。"
   },
   "settings": {
     "title": "设置",
@@ -702,7 +707,10 @@
         "title": "写作与 PDF",
         "description": "在源码、正文和编译论文之间切换，同时保持当前位置。"
       },
-      "research": { "title": "参考文献与研究", "description": "检查引用、搜索文献库并准备投稿。" },
+      "research": {
+        "title": "参考文献与研究",
+        "description": "检查引用、搜索文献库并准备投稿。"
+      },
       "ai": {
         "title": "AI 与本地代理",
         "description": "仅在你选择时使用 Research Chat、Claude Code 或 Codex CLI。"
@@ -1092,7 +1100,7 @@
       "submissionCheck": "投稿检查",
       "collectionsLabel": "Zotero 合集",
       "noCollections": "未找到 Zotero 合集。",
-      "syncOnOpen": "打开此项目时保持同步",
+      "syncOnOpen": "打开此项目时同步一次",
       "searchPlaceholder": "搜索项目与 Zotero",
       "searchLabel": "搜索项目与 Zotero",
       "localResultsLabel": "本地参考文献搜索结果",
@@ -1114,7 +1122,9 @@
       "syncUnresolved_other": "{{count}} 个条目仍在等待 Better BibTeX 引用键。",
       "syncTarget": "目标：{{file}}",
       "cancel": "取消",
-      "sync": "同步"
+      "sync": "同步",
+      "autoSync": "在项目打开期间保持同步",
+      "collectionUnavailable": "Zotero 尚未确认已保存的分类 {{collection}}。该选择将保留，并在 Zotero 响应后同步。"
     },
     "profileForm": {
       "resourceKind": {

@@ -1,5 +1,8 @@
+import i18n from '../i18n'
+import { useNotificationStore } from '../store/useNotificationStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { useSettingsStore } from '../store/useSettingsStore'
+import { describeNativeError } from './nativeErrors'
 
 let researchOpenGeneration = 0
 
@@ -23,6 +26,23 @@ export async function syncResearchOnProjectOpen(projectRoot: string): Promise<vo
   const isCurrent = (): boolean =>
     generation === researchOpenGeneration && useProjectStore.getState().projectRoot === projectRoot
 
+  try {
+    await runResearchOpenSync(projectRoot, isCurrent)
+  } catch (error) {
+    // The sync is optional, but silently dropping its failure made an
+    // unreachable Zotero look like a forgotten project setting.
+    if (!isCurrent()) return
+    useNotificationStore.getState().pushNotification({
+      id: 'research-open-sync:failed',
+      tone: 'warning',
+      message: i18n.t('notifications.researchSyncOnOpenFailed', {
+        error: describeNativeError(error)
+      })
+    })
+  }
+}
+
+async function runResearchOpenSync(projectRoot: string, isCurrent: () => boolean): Promise<void> {
   const config = await window.api.researchLoadConfig()
   if (!isCurrent() || !config.syncOnOpen || !config.zoteroCollection || !config.zoteroFile) {
     return

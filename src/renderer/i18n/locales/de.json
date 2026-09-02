@@ -150,7 +150,12 @@
     "compileFailed": "Kompilierung fehlgeschlagen — {{reason}}",
     "compileProblem": "Zeile {{line}}: {{message}}",
     "viewProblems": "Probleme anzeigen",
-    "openSettings": "Einstellungen öffnen"
+    "openSettings": "Einstellungen öffnen",
+    "researchSyncOnOpenFailed": "Zotero-Synchronisierung beim Öffnen des Projekts fehlgeschlagen: {{error}}",
+    "clipboardImageInserted": "Zwischenablage-Bild als {{file}} eingefügt.",
+    "clipboardImageFailed": "Das Bild aus der Zwischenablage konnte nicht eingefügt werden: {{error}}",
+    "clipboardImageNoProject": "Öffnen Sie ein Projekt, bevor Sie ein Bild einfügen.",
+    "clipboardImageTooLarge": "Bilder aus der Zwischenablage über {{limit}} können nicht importiert werden."
   },
   "settings": {
     "title": "Einstellungen",
@@ -1095,7 +1100,7 @@
       "submissionCheck": "Einreichungsprüfung",
       "collectionsLabel": "Zotero-Sammlungen",
       "noCollections": "Keine Zotero-Sammlungen gefunden.",
-      "syncOnOpen": "Beim Öffnen dieses Projekts synchron halten",
+      "syncOnOpen": "Beim Öffnen dieses Projekts einmal synchronisieren",
       "searchPlaceholder": "Projekt & Zotero durchsuchen",
       "searchLabel": "Projekt und Zotero durchsuchen",
       "localResultsLabel": "Ergebnisse der lokalen Referenzsuche",
@@ -1117,7 +1122,9 @@
       "syncUnresolved_other": "{{count}} Einträge warten noch auf einen Better-BibTeX-Zitierschlüssel.",
       "syncTarget": "Ziel: {{file}}",
       "cancel": "Abbrechen",
-      "sync": "Synchronisieren"
+      "sync": "Synchronisieren",
+      "autoSync": "Synchron halten, solange das Projekt geöffnet ist",
+      "collectionUnavailable": "Zotero hat die gespeicherte Sammlung {{collection}} noch nicht bestätigt. Sie bleibt ausgewählt und wird synchronisiert, sobald Zotero antwortet."
     },
     "profileForm": {
       "resourceKind": {

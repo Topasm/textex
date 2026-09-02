@@ -185,7 +185,8 @@ Object.defineProperty(window, 'api', {
       referencesFile: 'references.bib',
       zoteroFile: 'zotero.bib',
       zoteroCollection: null,
-      syncOnOpen: false
+      syncOnOpen: false,
+      autoSync: false
     }),
     researchSaveConfig: vi.fn(),
     researchProfileLoad: vi.fn().mockResolvedValue({

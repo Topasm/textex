@@ -3,8 +3,9 @@ import type { EditorAdapter } from '../../editor/EditorAdapter'
 import { useProjectStore } from '../../store/useProjectStore'
 import { generateFigureSnippet } from '../../utils/figureSnippet'
 import { IMAGE_EXTENSIONS } from '../../utils/imageExtensions'
+import { importImageIntoProject, MAX_IMPORTED_IMAGE_BYTES } from '../../utils/imageImport'
 
-export const MAX_DROPPED_IMAGE_BYTES = 50 * 1024 * 1024
+export const MAX_DROPPED_IMAGE_BYTES = MAX_IMPORTED_IMAGE_BYTES
 
 export function droppedImageFileName(name: string): string | null {
   const sourceName = name.split(/[\\/]/).pop()?.trim()
@@ -51,16 +52,9 @@ export function useSmartImageDrop() {
       }
 
       try {
-        const separator = projectRoot.includes('\\') ? '\\' : '/'
-        const imagesDirectory = `${projectRoot}${separator}images`
-        await window.api.createDirectory(imagesDirectory)
-
-        const destinationPath = `${imagesDirectory}${separator}${fileName}`
         const bytes = new Uint8Array(await file.arrayBuffer())
-        const imported = await window.api.writeFileBinary(destinationPath, bytes)
-        const importedFileName = imported.filePath.split(/[\\/]/).pop() || fileName
-
-        const snippet = generateFigureSnippet(`images/${importedFileName}`, importedFileName)
+        const imported = await importImageIntoProject(projectRoot, fileName, bytes)
+        const snippet = generateFigureSnippet(imported.relativePath, imported.fileName)
         const targetPosition = editorAdapter.getPositionAtClientPoint(event.clientX, event.clientY)
 
         if (targetPosition) {

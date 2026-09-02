@@ -28,7 +28,15 @@ import { useProjectStore } from '../../store/useProjectStore'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import { useEditorStore } from '../../store/useEditorStore'
 import { useCompileStore } from '../../store/useCompileStore'
-import { cacheZoteroInventory, getCachedZoteroInventory } from '../../services/zoteroInventoryCache'
+import {
+  cacheZoteroInventory,
+  getCachedZoteroInventory,
+  invalidateZoteroInventory
+} from '../../services/zoteroInventoryCache'
+import {
+  watchZoteroCollection,
+  ZOTERO_WATCH_INTERVAL_MS
+} from '../../services/zoteroCollectionWatcher'
 import { navigateToDiagnostic } from '../../services/diagnosticNavigation'
 import { describeNativeError } from '../../services/nativeErrors'
 import {
@@ -59,7 +67,8 @@ const DEFAULT_CONFIG: ResearchConfig = {
   referencesFile: 'references.bib',
   zoteroFile: 'zotero.bib',
   zoteroCollection: null,
-  syncOnOpen: false
+  syncOnOpen: false,
+  autoSync: false
 }
 
 const COLLECTION_PAGE_SIZE = 200
@@ -157,6 +166,8 @@ export function ZoteroReferences({
   const [libraryInventoryLoaded, setLibraryInventoryLoaded] = useState(false)
   const [libraryInventoryError, setLibraryInventoryError] = useState('')
   const [zoteroAvailable, setZoteroAvailable] = useState<boolean | null>(null)
+  const [configuredCollectionUnavailable, setConfiguredCollectionUnavailable] = useState(false)
+  const [inventoryRefreshToken, setInventoryRefreshToken] = useState(0)
   const [healthFilter, setHealthFilter] = useState<HealthFilter>('all')
   const [lastLocalSearch, setLastLocalSearch] = useState('')
   const [busy, setBusy] = useState<'load' | 'search' | 'save' | 'sync' | string | null>('load')
@@ -165,6 +176,8 @@ export function ZoteroReferences({
   const operationInFlight = useRef(false)
   const collectionRefs = useRef(new Map<string, HTMLButtonElement>())
   const requestedCounts = useRef(new Set<string>())
+  const persistSequence = useRef(0)
+  const autoSyncInFlight = useRef(false)
 
   const isCurrentScope = useCallback((generation: number, root: string | null, apiPort: number) => {
     return (
@@ -199,6 +212,8 @@ export function ZoteroReferences({
     setLibraryInventoryLoaded(false)
     setLibraryInventoryError('')
     setZoteroAvailable(null)
+    setConfiguredCollectionUnavailable(false)
+    setInventoryRefreshToken(0)
     setHealthFilter('all')
     setLastLocalSearch('')
     requestedCounts.current.clear()
@@ -235,11 +250,22 @@ export function ZoteroReferences({
         const configuredCollectionExists = loadedCollections.some(
           (collection) => collection.key === loadedConfig.zoteroCollection
         )
-        const effectiveConfig =
-          !zoteroResult.zoteroError && !configuredCollectionExists
-            ? { ...loadedConfig, zoteroCollection: null, syncOnOpen: false }
-            : loadedConfig
+        // A reachable library that lists collections is authoritative: the
+        // saved collection really is gone. An unreachable or still-empty Zotero
+        // is not, so the saved selection must survive until Zotero can confirm
+        // it — otherwise a slow Zotero start silently drops the project setting.
+        const collectionDeleted =
+          !zoteroResult.zoteroError &&
+          loadedCollections.length > 0 &&
+          loadedConfig.zoteroCollection !== null &&
+          !configuredCollectionExists
+        const effectiveConfig = collectionDeleted
+          ? { ...loadedConfig, zoteroCollection: null, syncOnOpen: false, autoSync: false }
+          : loadedConfig
         setConfig(effectiveConfig)
+        setConfiguredCollectionUnavailable(
+          effectiveConfig.zoteroCollection !== null && !configuredCollectionExists
+        )
         setSelectedCollectionKey(
           configuredCollectionExists
             ? effectiveConfig.zoteroCollection
@@ -352,6 +378,7 @@ export function ZoteroReferences({
     () => collections.find((collection) => collection.key === config.zoteroCollection) ?? null,
     [collections, config.zoteroCollection]
   )
+  const configuredCollectionItemCount = configuredCollection?.itemCount ?? null
   const viewedCollection = useMemo(() => {
     if (library && selectedCollectionKey === library.key) {
       return {
@@ -534,7 +561,15 @@ export function ZoteroReferences({
     return () => {
       cancelled = true
     }
-  }, [isCurrentScope, loaded, port, projectRoot, selectedCollectionKey, updateCollectionCount])
+  }, [
+    inventoryRefreshToken,
+    isCurrentScope,
+    loaded,
+    port,
+    projectRoot,
+    selectedCollectionKey,
+    updateCollectionCount
+  ])
 
   useEffect(() => {
     if (!loaded) return
@@ -577,7 +612,118 @@ export function ZoteroReferences({
     return () => {
       cancelled = true
     }
-  }, [isCurrentScope, libraryKey, loaded, port, projectRoot])
+  }, [inventoryRefreshToken, isCurrentScope, libraryKey, loaded, port, projectRoot])
+
+  /**
+   * Keeps the panel current with Zotero while a project is open. Zotero has no
+   * change feed, so the configured collection is polled for its item count and
+   * every observed change refreshes the cross-check inventories — and rewrites
+   * the managed bibliography when the project opted into automatic sync.
+   */
+  useEffect(() => {
+    const collectionKey = config.zoteroCollection
+    if (!loaded || !collectionKey || zoteroAvailable === false) return
+    const generation = scopeGeneration.current
+    const root = projectRoot
+    const apiPort = port
+    const autoSync = config.autoSync
+    const zoteroFile = config.zoteroFile
+    return watchZoteroCollection({
+      collectionKey,
+      port: apiPort,
+      // Seeding with the count already on screen lets the very first poll
+      // report a change instead of spending one interval on a baseline.
+      initialTotalResults: configuredCollectionItemCount,
+      onChange: async () => {
+        if (!isCurrentScope(generation, root, apiPort)) return
+        invalidateZoteroInventory(apiPort)
+        setInventoryRefreshToken((current) => current + 1)
+        if (!autoSync || !root || !targetFile) return
+        // A manual sync, save, or an earlier automatic sync owns the managed
+        // file until it finishes; the next poll picks the change up again.
+        if (autoSyncInFlight.current || operationInFlight.current) return
+        autoSyncInFlight.current = true
+        try {
+          const result = await window.api.zoteroSyncCollection(collectionKey, targetFile, apiPort)
+          if (!isCurrentScope(generation, root, apiPort)) return
+          const entries = await window.api.findBibInProject(root)
+          if (!isCurrentScope(generation, root, apiPort)) return
+          useProjectStore.getState().setBibEntries(entries)
+          useProjectStore.getState().invalidateDirectory(root)
+          setMessage(
+            t('researchPanel.zotero.synchronized', {
+              count: result.entryCount,
+              file: zoteroFile
+            })
+          )
+        } catch (error) {
+          if (isCurrentScope(generation, root, apiPort)) setMessage(describeNativeError(error))
+        } finally {
+          autoSyncInFlight.current = false
+        }
+      },
+      // A transient Zotero outage must not replace an actionable panel message.
+      onError: () => undefined
+    })
+  }, [
+    config.autoSync,
+    config.zoteroCollection,
+    config.zoteroFile,
+    configuredCollectionItemCount,
+    isCurrentScope,
+    loaded,
+    port,
+    projectRoot,
+    t,
+    targetFile,
+    zoteroAvailable
+  ])
+
+  /**
+   * Recovers the panel when Zotero starts after the project. Opening a project
+   * before Zotero is ready used to leave the saved collection permanently
+   * unresolved, which looked exactly like a lost setting.
+   */
+  useEffect(() => {
+    if (!loaded) return
+    if (zoteroAvailable !== false && !configuredCollectionUnavailable) return
+    const generation = scopeGeneration.current
+    const root = projectRoot
+    const apiPort = port
+    const collectionKey = config.zoteroCollection
+    let cancelled = false
+    const timer = setInterval(() => {
+      void window.api.zoteroLibraryTree(apiPort).then(
+        (loadedLibraries) => {
+          if (cancelled || !isCurrentScope(generation, root, apiPort)) return
+          if (loadedLibraries.length === 0) return
+          setLibraries(loadedLibraries)
+          setZoteroAvailable(true)
+          const loadedCollections = loadedLibraries.flatMap((library) => library.collections)
+          if (!collectionKey) return
+          if (!loadedCollections.some((collection) => collection.key === collectionKey)) return
+          setConfiguredCollectionUnavailable(false)
+          setSelectedCollectionKey(collectionKey)
+          setExpandedCollections(
+            expandedZoteroAncestors(orderZoteroCollections(loadedCollections), collectionKey)
+          )
+        },
+        () => undefined
+      )
+    }, ZOTERO_WATCH_INTERVAL_MS)
+    return () => {
+      cancelled = true
+      clearInterval(timer)
+    }
+  }, [
+    config.zoteroCollection,
+    configuredCollectionUnavailable,
+    isCurrentScope,
+    loaded,
+    port,
+    projectRoot,
+    zoteroAvailable
+  ])
 
   const handleCollectionKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLButtonElement>, row: ZoteroCollectionRow, index: number) => {
@@ -853,6 +999,33 @@ export function ZoteroReferences({
     syncPreviewBusy,
     targetFile
   ])
+
+  /**
+   * Writes one settings change straight to `.textex/research.json`. The panel
+   * used to keep the collection and its sync switches in component state until
+   * the explicit save button ran, so reopening the project restored whatever
+   * was last written rather than what the user picked.
+   */
+  const persistConfig = useCallback(
+    (next: ResearchConfig) => {
+      setConfig(next)
+      const generation = scopeGeneration.current
+      const root = projectRoot
+      const apiPort = port
+      const requested = ++persistSequence.current
+      void window.api.researchSaveConfig(next).then(
+        (saved) => {
+          if (isCurrentScope(generation, root, apiPort) && requested === persistSequence.current) {
+            setConfig(saved)
+          }
+        },
+        (error: unknown) => {
+          if (isCurrentScope(generation, root, apiPort)) setMessage(describeNativeError(error))
+        }
+      )
+    },
+    [isCurrentScope, port, projectRoot]
+  )
 
   const saveConfig = useCallback(async () => {
     if (operationInFlight.current) return
@@ -1134,7 +1307,8 @@ export function ZoteroReferences({
                 onKeyDown={(event) => handleCollectionKeyDown(event, row, index)}
                 onClick={() => {
                   setSelectedCollectionKey(row.collection.key)
-                  setConfig((current) => ({ ...current, zoteroCollection: row.collection.key }))
+                  setConfiguredCollectionUnavailable(false)
+                  persistConfig({ ...config, zoteroCollection: row.collection.key })
                   setResults([])
                   if (row.hasChildren) {
                     if (
@@ -1196,17 +1370,32 @@ export function ZoteroReferences({
           ) : null}
         </div>
       )}
-      {configuredCollection && (
-        <label className="research-check-row">
-          <input
-            type="checkbox"
-            checked={config.syncOnOpen}
-            onChange={(event) =>
-              setConfig((current) => ({ ...current, syncOnOpen: event.target.checked }))
-            }
-          />
-          {t('researchPanel.zotero.syncOnOpen')}
-        </label>
+      {config.zoteroCollection && (
+        <>
+          {configuredCollectionUnavailable && (
+            <p className="research-muted" role="status">
+              {t('researchPanel.zotero.collectionUnavailable', {
+                collection: config.zoteroCollection
+              })}
+            </p>
+          )}
+          <label className="research-check-row">
+            <input
+              type="checkbox"
+              checked={config.syncOnOpen}
+              onChange={(event) => persistConfig({ ...config, syncOnOpen: event.target.checked })}
+            />
+            {t('researchPanel.zotero.syncOnOpen')}
+          </label>
+          <label className="research-check-row">
+            <input
+              type="checkbox"
+              checked={config.autoSync}
+              onChange={(event) => persistConfig({ ...config, autoSync: event.target.checked })}
+            />
+            {t('researchPanel.zotero.autoSync')}
+          </label>
+        </>
       )}
       <form className="research-search" onSubmit={search}>
         <input

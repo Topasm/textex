@@ -150,7 +150,12 @@
     "compileFailed": "Falló la compilación — {{reason}}",
     "compileProblem": "línea {{line}}: {{message}}",
     "viewProblems": "Ver problemas",
-    "openSettings": "Abrir ajustes"
+    "openSettings": "Abrir ajustes",
+    "researchSyncOnOpenFailed": "Falló la sincronización con Zotero al abrir el proyecto: {{error}}",
+    "clipboardImageInserted": "Se pegó la imagen del portapapeles como {{file}}.",
+    "clipboardImageFailed": "No se pudo pegar la imagen del portapapeles: {{error}}",
+    "clipboardImageNoProject": "Abre un proyecto antes de pegar una imagen.",
+    "clipboardImageTooLarge": "No se pueden importar imágenes del portapapeles de más de {{limit}}."
   },
   "settings": {
     "title": "Configuración",
@@ -1095,7 +1100,7 @@
       "submissionCheck": "Comprobación de envío",
       "collectionsLabel": "Colecciones de Zotero",
       "noCollections": "No se encontraron colecciones de Zotero.",
-      "syncOnOpen": "Mantener sincronizado al abrir este proyecto",
+      "syncOnOpen": "Sincronizar una vez al abrir este proyecto",
       "searchPlaceholder": "Buscar en el proyecto y Zotero",
       "searchLabel": "Buscar en el proyecto y en Zotero",
       "localResultsLabel": "Resultados de la búsqueda local de referencias",
@@ -1117,7 +1122,9 @@
       "syncUnresolved_other": "{{count}} elementos aún esperan una clave de cita de Better BibTeX.",
       "syncTarget": "Destino: {{file}}",
       "cancel": "Cancelar",
-      "sync": "Sincronizar"
+      "sync": "Sincronizar",
+      "autoSync": "Mantener sincronizado mientras el proyecto esté abierto",
+      "collectionUnavailable": "Zotero aún no ha confirmado la colección guardada {{collection}}. Sigue seleccionada y se sincronizará en cuanto Zotero responda."
     },
     "profileForm": {
       "resourceKind": {

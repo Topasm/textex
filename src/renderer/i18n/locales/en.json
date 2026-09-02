@@ -150,7 +150,12 @@
     "compileFailed": "Compile failed — {{reason}}",
     "compileProblem": "line {{line}}: {{message}}",
     "viewProblems": "View problems",
-    "openSettings": "Open settings"
+    "openSettings": "Open settings",
+    "researchSyncOnOpenFailed": "Zotero sync on project open failed: {{error}}",
+    "clipboardImageInserted": "Pasted clipboard image as {{file}}.",
+    "clipboardImageFailed": "Could not paste the clipboard image: {{error}}",
+    "clipboardImageNoProject": "Open a project before pasting an image.",
+    "clipboardImageTooLarge": "Clipboard images larger than {{limit}} cannot be imported."
   },
   "settings": {
     "title": "Settings",
@@ -1095,7 +1100,7 @@
       "submissionCheck": "Submission check",
       "collectionsLabel": "Zotero collections",
       "noCollections": "No Zotero collections found.",
-      "syncOnOpen": "Keep synchronized when this project opens",
+      "syncOnOpen": "Sync once when this project opens",
       "searchPlaceholder": "Search project & Zotero",
       "searchLabel": "Search project and Zotero",
       "localResultsLabel": "Local reference search results",
@@ -1117,7 +1122,9 @@
       "syncUnresolved_other": "{{count}} items are still waiting for a Better BibTeX citekey.",
       "syncTarget": "Target: {{file}}",
       "cancel": "Cancel",
-      "sync": "Sync"
+      "sync": "Sync",
+      "autoSync": "Keep synchronized while the project is open",
+      "collectionUnavailable": "Zotero has not confirmed the saved collection {{collection}} yet. It stays selected and syncs as soon as Zotero responds."
     },
     "profileForm": {
       "resourceKind": {

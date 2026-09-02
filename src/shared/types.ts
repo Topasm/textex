@@ -565,6 +565,11 @@ export interface ResearchConfig {
   zoteroFile: string
   zoteroCollection: string | null
   syncOnOpen: boolean
+  /**
+   * Mirrors the configured collection into the managed file whenever the
+   * Zotero panel observes the collection change while a project is open.
+   */
+  autoSync: boolean
 }
 
 /** A person associated with the paper-level research profile. */

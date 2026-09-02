@@ -5,6 +5,7 @@ import {
   openProject
 } from '../../renderer/utils/openProject'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
+import { useNotificationStore } from '../../renderer/store/useNotificationStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 import {
@@ -24,7 +25,8 @@ const defaultResearchConfig: ResearchConfig = {
   referencesFile: 'references.bib',
   zoteroFile: 'zotero.bib',
   zoteroCollection: null,
-  syncOnOpen: false
+  syncOnOpen: false,
+  autoSync: false
 }
 
 function deferred<T>(): {
@@ -390,6 +392,24 @@ describe('openProject', () => {
       )
     )
     expect(window.api.zoteroSyncCollection).toHaveBeenCalledOnce()
+  })
+
+  it('reports a failed sync-on-open instead of dropping it silently', async () => {
+    useNotificationStore.getState().clearNotifications()
+    vi.mocked(window.api.researchLoadConfig).mockResolvedValue({
+      ...defaultResearchConfig,
+      zoteroCollection: '/0/RESEARCH',
+      syncOnOpen: true
+    })
+    vi.mocked(window.api.zoteroSyncCollection).mockRejectedValue(new Error('Zotero is not running'))
+
+    await openProject(projectRoot, { autoOpenFirstTex: false })
+
+    await vi.waitFor(() =>
+      expect(useNotificationStore.getState().notifications.at(-1)?.message).toContain(
+        'Zotero is not running'
+      )
+    )
   })
 
   it('does not start an older project sync after a newer project lifecycle wins', async () => {

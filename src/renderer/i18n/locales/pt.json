@@ -150,7 +150,12 @@
     "compileFailed": "Falha na compilação — {{reason}}",
     "compileProblem": "linha {{line}}: {{message}}",
     "viewProblems": "Ver problemas",
-    "openSettings": "Abrir configurações"
+    "openSettings": "Abrir configurações",
+    "researchSyncOnOpenFailed": "A sincronização com o Zotero ao abrir o projeto falhou: {{error}}",
+    "clipboardImageInserted": "Imagem da área de transferência colada como {{file}}.",
+    "clipboardImageFailed": "Não foi possível colar a imagem da área de transferência: {{error}}",
+    "clipboardImageNoProject": "Abra um projeto antes de colar uma imagem.",
+    "clipboardImageTooLarge": "Imagens da área de transferência maiores que {{limit}} não podem ser importadas."
   },
   "settings": {
     "title": "Configurações",
@@ -1095,7 +1100,7 @@
       "submissionCheck": "Verificação de submissão",
       "collectionsLabel": "Coleções do Zotero",
       "noCollections": "Nenhuma coleção do Zotero encontrada.",
-      "syncOnOpen": "Manter sincronizado ao abrir este projeto",
+      "syncOnOpen": "Sincronizar uma vez ao abrir este projeto",
       "searchPlaceholder": "Pesquisar no projeto e no Zotero",
       "searchLabel": "Pesquisar no projeto e no Zotero",
       "localResultsLabel": "Resultados da pesquisa local de referências",
@@ -1117,7 +1122,9 @@
       "syncUnresolved_other": "{{count}} itens ainda aguardam uma chave de citação do Better BibTeX.",
       "syncTarget": "Destino: {{file}}",
       "cancel": "Cancelar",
-      "sync": "Sincronizar"
+      "sync": "Sincronizar",
+      "autoSync": "Manter sincronizado enquanto o projeto estiver aberto",
+      "collectionUnavailable": "O Zotero ainda não confirmou a coleção salva {{collection}}. Ela continua selecionada e será sincronizada assim que o Zotero responder."
     },
     "profileForm": {
       "resourceKind": {

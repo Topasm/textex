@@ -150,7 +150,12 @@
     "compileFailed": "Échec de la compilation — {{reason}}",
     "compileProblem": "ligne {{line}} : {{message}}",
     "viewProblems": "Voir les problèmes",
-    "openSettings": "Ouvrir les paramètres"
+    "openSettings": "Ouvrir les paramètres",
+    "researchSyncOnOpenFailed": "La synchronisation Zotero à l’ouverture du projet a échoué : {{error}}",
+    "clipboardImageInserted": "Image du presse-papiers collée sous le nom {{file}}.",
+    "clipboardImageFailed": "Impossible de coller l’image du presse-papiers : {{error}}",
+    "clipboardImageNoProject": "Ouvrez un projet avant de coller une image.",
+    "clipboardImageTooLarge": "Les images du presse-papiers de plus de {{limit}} ne peuvent pas être importées."
   },
   "settings": {
     "title": "Paramètres",
@@ -1095,7 +1100,7 @@
       "submissionCheck": "Vérification de soumission",
       "collectionsLabel": "Collections Zotero",
       "noCollections": "Aucune collection Zotero trouvée.",
-      "syncOnOpen": "Garder synchronisé à l’ouverture de ce projet",
+      "syncOnOpen": "Synchroniser une fois à l’ouverture de ce projet",
       "searchPlaceholder": "Rechercher dans le projet et Zotero",
       "searchLabel": "Rechercher dans le projet et Zotero",
       "localResultsLabel": "Résultats de la recherche locale de références",
@@ -1117,7 +1122,9 @@
       "syncUnresolved_other": "{{count}} éléments attendent encore une clé de citation Better BibTeX.",
       "syncTarget": "Cible : {{file}}",
       "cancel": "Annuler",
-      "sync": "Synchroniser"
+      "sync": "Synchroniser",
+      "autoSync": "Garder synchronisé tant que le projet est ouvert",
+      "collectionUnavailable": "Zotero n’a pas encore confirmé la collection enregistrée {{collection}}. Elle reste sélectionnée et sera synchronisée dès que Zotero répondra."
     },
     "profileForm": {
       "resourceKind": {

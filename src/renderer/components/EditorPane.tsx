@@ -17,6 +17,7 @@ import { useContentChangeCoordinator } from '../hooks/editor/useContentChangeCoo
 import { usePackageDetection } from '../hooks/editor/usePackageDetection'
 import { useMathPreview } from '../hooks/editor/useMathPreview'
 import { useSmartImageDrop } from '../hooks/editor/useSmartImageDrop'
+import { useClipboardImagePaste } from '../hooks/editor/useClipboardImagePaste'
 import { useSectionHighlight } from '../hooks/editor/useSectionHighlight'
 import { useEditorCommands } from '../hooks/editor/useEditorCommands'
 import { useTableEditor } from '../hooks/editor/useTableEditor'
@@ -118,6 +119,7 @@ function EditorPane() {
   const mathData = useMathPreview({ editorRef, enabled: mathPreviewEnabled })
   useSectionHighlight({ editorRef, monacoRef })
   const { handleDrop: handleSmartImageDrop } = useSmartImageDrop()
+  const { handlePaste: handleClipboardImagePaste } = useClipboardImagePaste()
   const [showMathPreview, setShowMathPreview] = useState(true)
   const [selectionAiToolbarSelection, setSelectionAiToolbarSelection] = useState<Selection | null>(
     null
@@ -428,6 +430,11 @@ function EditorPane() {
       <div
         style={{ height: '100%', display: 'flex' }}
         onBeforeInputCapture={() => runtimePerformance.beginInput()}
+        onPasteCapture={(e) => {
+          // Capture phase: an image paste must be claimed before Monaco's own
+          // textarea listener turns the clipboard into text.
+          void handleClipboardImagePaste(e, editorAdapterRef.current)
+        }}
         onDragOver={(e) => {
           e.preventDefault()
           e.dataTransfer.dropEffect = 'copy'

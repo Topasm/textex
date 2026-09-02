@@ -1053,6 +1053,32 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn loads_a_config_written_before_the_auto_sync_field_existed() {
+        let project = tempfile::tempdir().unwrap();
+        let root = dunce::canonicalize(project.path()).unwrap();
+        let state = AppState::default();
+        state.set_project_root(root.clone()).unwrap();
+        std::fs::create_dir_all(root.join(".textex")).unwrap();
+        std::fs::write(
+            root.join(".textex/research.json"),
+            r#"{
+  "version": 1,
+  "referencesFile": "references.bib",
+  "zoteroFile": "zotero.bib",
+  "zoteroCollection": "/0/8CV58ZVD",
+  "syncOnOpen": true
+}"#,
+        )
+        .unwrap();
+
+        let loaded = load_config(&state).await.unwrap();
+
+        assert_eq!(loaded.zotero_collection.as_deref(), Some("/0/8CV58ZVD"));
+        assert!(loaded.sync_on_open);
+        assert!(!loaded.auto_sync);
+    }
+
+    #[tokio::test]
     async fn adds_online_reference_once_and_reports_duplicate_doi() {
         let project = tempfile::tempdir().unwrap();
         let root = dunce::canonicalize(project.path()).unwrap();

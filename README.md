@@ -139,11 +139,13 @@ Enable **Scroll Sync** in Settings > Appearance to keep the editor and PDF align
   <img src="docs/images/synctex-highlight.png" alt="SyncTeX highlight showing source-to-PDF jump" width="900" />
 </p>
 
-### Inserting Images (Smart Drop)
-- Simply **drag and drop** an image file from your computer directly into the editor.
+### Inserting Images (Smart Drop & Paste)
+- Simply **drag and drop** an image file from your computer directly into the editor, or
+  **paste** a screenshot or copied image with `Ctrl+V` (`Cmd+V` on macOS).
 - TextEx will automatically:
-  1. Copy the image to an `images/` folder in your project.
-  2. Insert a complete `\begin{figure} ... \end{figure}` snippet.
+  1. Copy the image to an `images/` folder in your project. A pasted bitmap with no file name
+     is saved as `pasted-YYYYMMDD-HHMMSS` plus the clipboard's own image extension.
+  2. Insert a complete `\begin{figure} ... \end{figure}` snippet at the cursor.
 
 ### Managing Citations
 - **BibTeX Support**: TextEx detects `.bib` files and auto-completes `\cite{...}` keys.
