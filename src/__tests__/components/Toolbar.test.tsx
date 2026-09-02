@@ -149,6 +149,50 @@ describe('Toolbar', () => {
     expect(window.api.toggleMaximizeWindow).toHaveBeenCalledOnce()
   })
 
+  it('maximizes on a toolbar double-click on macOS, where the title bar is hidden', () => {
+    document.documentElement.dataset.platform = 'darwin'
+    const { container } = render(<Toolbar {...defaultProps} />)
+    const searchSlot = container.querySelector('.toolbar-search-slot')
+
+    fireEvent.mouseDown(searchSlot!, { button: 0, detail: 1 })
+    expect(window.api.startWindowDragging).toHaveBeenCalledOnce()
+
+    fireEvent.mouseDown(searchSlot!, { button: 0, detail: 2 })
+
+    expect(window.api.toggleMaximizeWindow).toHaveBeenCalledOnce()
+    expect(window.api.startWindowDragging).toHaveBeenCalledOnce()
+  })
+
+  it('maximizes from the double-click event when a drag session swallowed the mousedown', () => {
+    document.documentElement.dataset.platform = 'darwin'
+    const { container } = render(<Toolbar {...defaultProps} />)
+    const searchSlot = container.querySelector('.toolbar-search-slot')
+
+    fireEvent.doubleClick(searchSlot!, { button: 0 })
+
+    expect(window.api.toggleMaximizeWindow).toHaveBeenCalledOnce()
+  })
+
+  it('toggles once when one double-click arrives on both event paths', () => {
+    const { container } = render(<Toolbar {...defaultProps} />)
+    const searchSlot = container.querySelector('.toolbar-search-slot')
+
+    fireEvent.mouseDown(searchSlot!, { button: 0, detail: 2 })
+    fireEvent.doubleClick(searchSlot!, { button: 0 })
+
+    expect(window.api.toggleMaximizeWindow).toHaveBeenCalledOnce()
+  })
+
+  it('never claims a double-click that lands on an interactive control', () => {
+    render(<Toolbar {...defaultProps} />)
+    const save = screen.getByRole('button', { name: /Quick Save/ })
+
+    fireEvent.mouseDown(save, { button: 0, detail: 2 })
+    fireEvent.doubleClick(save, { button: 0 })
+
+    expect(window.api.toggleMaximizeWindow).not.toHaveBeenCalled()
+  })
+
   it('exposes all eight frameless resize directions', () => {
     const { container } = render(<Toolbar {...defaultProps} />)
 

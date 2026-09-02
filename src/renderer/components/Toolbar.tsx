@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useCallback, useRef, useState } from 'react'
 import {
   ArrowLeft,
   ArrowRight,
@@ -58,6 +58,9 @@ const TOOLBAR_NO_DRAG_SELECTOR = [
   '.omni-search-wrapper',
   '[data-no-drag]'
 ].join(', ')
+
+/** Dedupe window for one physical double-click arriving on two event paths. */
+const DOUBLE_CLICK_TOGGLE_GUARD_MS = 250
 
 const WINDOW_RESIZE_HANDLES = [
   ['north', 'North'],
@@ -173,18 +176,43 @@ const Toolbar = React.memo(function Toolbar({
     }
   }, [])
 
+  /**
+   * Double-clicking structural toolbar space maximizes or restores the window
+   * on every platform. macOS hides its title bar behind the overlay chrome, so
+   * without this the system's own double-click-to-zoom never applies here.
+   *
+   * A native drag session can swallow either the second mousedown or the
+   * synthesized dblclick, so both events request the toggle and this guard
+   * keeps one physical double-click from toggling twice.
+   */
+  const lastMaximizeToggleAt = useRef(0)
+  const toggleWindowMaximize = useCallback(() => {
+    const now = Date.now()
+    if (now - lastMaximizeToggleAt.current < DOUBLE_CLICK_TOGGLE_GUARD_MS) return
+    lastMaximizeToggleAt.current = now
+    void window.api.toggleMaximizeWindow().catch(() => undefined)
+  }, [])
+
   const handleToolbarMouseDown = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
       if (event.button !== 0 || isNoDragTarget(event.target)) return
 
       event.preventDefault()
-      if (customWindowChrome && event.detail === 2) {
-        void window.api.toggleMaximizeWindow().catch(() => undefined)
+      if (event.detail === 2) {
+        toggleWindowMaximize()
         return
       }
       void window.api.startWindowDragging().catch(() => undefined)
     },
-    [customWindowChrome]
+    [toggleWindowMaximize]
+  )
+
+  const handleToolbarDoubleClick = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      if (event.button !== 0 || isNoDragTarget(event.target)) return
+      toggleWindowMaximize()
+    },
+    [toggleWindowMaximize]
   )
 
   return (
@@ -194,6 +222,7 @@ const Toolbar = React.memo(function Toolbar({
         className="toolbar"
         data-custom-window-chrome={customWindowChrome ? 'true' : 'false'}
         onMouseDown={handleToolbarMouseDown}
+        onDoubleClick={handleToolbarDoubleClick}
       >
         <div className="toolbar-left">
           {customWindowChrome && (
