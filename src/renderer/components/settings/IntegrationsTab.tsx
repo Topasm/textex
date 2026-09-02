@@ -2,10 +2,9 @@ import React from 'react'
 import { ICON_SIZE } from '../ui/IconSystem'
 import { useTranslation } from 'react-i18next'
 import { useSettingsStore } from '../../store/useSettingsStore'
-import { Link, RefreshCw } from 'lucide-react'
+import { Link } from 'lucide-react'
 import { Toggle } from './Toggle'
 import { SettingsSelect } from './SettingsControls'
-import { useProjectStore } from '../../store/useProjectStore'
 
 const ZoteroStatusProbe = ({ port }: { port: number }) => {
   const { t } = useTranslation()
@@ -51,36 +50,6 @@ export const IntegrationsTab = () => {
   const { t } = useTranslation()
   const settings = useSettingsStore((state) => state.settings)
   const updateSetting = useSettingsStore((state) => state.updateSetting)
-  const projectRoot = useProjectStore((state) => state.projectRoot)
-  const setBibEntries = useProjectStore((state) => state.setBibEntries)
-  const invalidateDirectory = useProjectStore((state) => state.invalidateDirectory)
-  const [syncStatus, setSyncStatus] = React.useState<
-    | { state: 'idle' | 'syncing' }
-    | { state: 'success'; count: number }
-    | { state: 'error'; message: string }
-  >({ state: 'idle' })
-
-  const syncCollection = async () => {
-    if (!projectRoot || !settings.zoteroCollection.trim()) return
-    setSyncStatus({ state: 'syncing' })
-    try {
-      const result = await window.api.zoteroSyncCollection(
-        settings.zoteroCollection.trim(),
-        undefined,
-        settings.zoteroPort
-      )
-      const entries = await window.api.parseBibFile(result.filePath)
-      setBibEntries(entries)
-      invalidateDirectory(projectRoot)
-      setSyncStatus({ state: 'success', count: result.entryCount })
-    } catch (error) {
-      setSyncStatus({
-        state: 'error',
-        message: error instanceof Error ? error.message : String(error)
-      })
-    }
-  }
-
   return (
     <div className="settings-tab-content settings-animate-in">
       <div className="settings-section">
@@ -164,45 +133,6 @@ export const IntegrationsTab = () => {
                       onChange={(checked) => updateSetting('citeOnlineToZotero', checked)}
                     />
                   </div>
-                </div>
-                <div style={{ marginTop: 14 }}>
-                  <label className="settings-label" htmlFor="zotero-collection">
-                    {t('settings.integrations.collectionPath')}
-                  </label>
-                  <div className="settings-flex-row">
-                    <input
-                      id="zotero-collection"
-                      type="text"
-                      value={settings.zoteroCollection}
-                      onChange={(event) => updateSetting('zoteroCollection', event.target.value)}
-                      placeholder="/0/8CV58ZVD"
-                      className="settings-input"
-                    />
-                    <button
-                      type="button"
-                      className="primary-button settings-nowrap"
-                      onClick={syncCollection}
-                      disabled={
-                        !projectRoot ||
-                        !settings.zoteroCollection.trim() ||
-                        syncStatus.state === 'syncing'
-                      }
-                    >
-                      <RefreshCw size={ICON_SIZE.compact} aria-hidden="true" />
-                      {syncStatus.state === 'syncing'
-                        ? t('settings.integrations.syncing')
-                        : t('settings.integrations.syncCollection')}
-                    </button>
-                  </div>
-                  <p className="settings-section-description" aria-live="polite">
-                    {!projectRoot
-                      ? t('settings.integrations.openProjectToSync')
-                      : syncStatus.state === 'success'
-                        ? t('settings.integrations.syncSuccess', { count: syncStatus.count })
-                        : syncStatus.state === 'error'
-                          ? t('settings.integrations.syncError', { error: syncStatus.message })
-                          : t('settings.integrations.collectionPathDesc')}
-                  </p>
                 </div>
               </>
             )}

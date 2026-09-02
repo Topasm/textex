@@ -25,7 +25,6 @@ export function createDefaultUserSettings(): UserSettings {
     autoUpdateEnabled: true,
     zoteroEnabled: false,
     zoteroPort: 23119,
-    zoteroCollection: '',
     citeOnlineToZotero: false,
     aiEnabled: false,
     aiProvider: '',

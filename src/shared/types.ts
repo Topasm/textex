@@ -237,7 +237,6 @@ export interface UserSettings {
   autoUpdateEnabled: boolean
   zoteroEnabled: boolean
   zoteroPort: number
-  zoteroCollection: string
   citeOnlineToZotero: boolean
   aiEnabled?: boolean
   aiProvider: 'openai' | 'anthropic' | 'gemini' | 'claude-cli' | 'codex-cli' | ''

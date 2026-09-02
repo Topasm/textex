@@ -289,12 +289,12 @@ export function ProsePane() {
             )
           })}
         </div>
+        {/* The TeX line lives in the preview header beside this one; prose mode
+            always shows both panes, so repeating it here would print the same
+            number twice a few pixels apart. */}
         <div className="prose-pane__meta" aria-label={t('prosePane.statistics')}>
           <span>{t('prosePane.words', { count: stats.words })}</span>
           <span>{t('prosePane.lines', { count: stats.lines })}</span>
-          {activeSpan && (
-            <span>{t('prosePane.sourceLine', { line: activeSpan.block.startLine })}</span>
-          )}
         </div>
       </header>
       {refusal && (
