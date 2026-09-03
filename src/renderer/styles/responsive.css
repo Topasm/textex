@@ -6,6 +6,90 @@
  * degrade without horizontal page overflow.
  */
 
+/*
+ * Toolbar collapse, driven by the toolbar's own rendered width.
+ *
+ * The `@media` breakpoints below react to viewport width only, but the
+ * research panel shrinks the toolbar by reserving up to 520px with
+ * `margin-right` (see `.app-container.has-research-panel > .toolbar`)
+ * regardless of how wide the window is. Without a container query, opening
+ * or resizing that panel can leave the toolbar's own content (SyncTeX
+ * buttons, page nav, filename) with nowhere to go, so it overlaps or gets
+ * covered by the panel instead of collapsing. `.toolbar` establishes an
+ * inline-size container (see index.css), so these mirror the same
+ * thresholds against its actual box and apply on top of the viewport rules.
+ */
+@container app-toolbar (max-width: 1020px) {
+  .toolbar {
+    gap: 5px;
+    padding-inline: var(--space-8);
+  }
+
+  .toolbar .file-name {
+    display: none;
+  }
+
+  .toolbar-search-slot {
+    margin-left: var(--space-2);
+  }
+
+  .toolbar-search-slot .omni-search-wrapper {
+    width: 100%;
+  }
+
+  .toolbar-search-slot .omni-search-input,
+  .toolbar-search-slot .omni-search-input:focus {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 96px;
+  }
+
+  .toolbar .omni-search-dropdown {
+    width: min(400px, calc(100vw - 16px));
+  }
+}
+
+@container app-toolbar (max-width: 840px) {
+  .toolbar {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .toolbar-page-label,
+  .toolbar-page-nav + .toolbar-separator {
+    display: none;
+  }
+}
+
+@container app-toolbar (max-width: 760px) {
+  .toolbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .toolbar-center {
+    display: none;
+  }
+
+  .toolbar-right {
+    grid-column: 2;
+  }
+}
+
+@container app-toolbar (max-width: 560px) {
+  .toolbar [data-responsive-priority='secondary'],
+  .toolbar [data-responsive-priority='compact'] {
+    display: none;
+  }
+
+  .toolbar-left {
+    gap: var(--space-2);
+  }
+
+  .toolbar-btn,
+  .toolbar button {
+    padding-inline: 5px;
+  }
+}
+
 @media (max-width: 1020px) {
   .toolbar {
     gap: 5px;

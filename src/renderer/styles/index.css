@@ -462,6 +462,14 @@ body,
   background-color: var(--chrome-bg);
   border-bottom: 1px solid var(--chrome-border);
   user-select: none;
+  /* The research panel reserves space with margin-right (see
+     .app-container.has-research-panel > .toolbar), which can shrink this
+     bar well below the viewport width. Size the collapse breakpoints in
+     responsive.css off the toolbar's own rendered width (container query)
+     instead of only the viewport, so opening/resizing that panel can't
+     leave buttons with nowhere to go. */
+  container-name: app-toolbar;
+  container-type: inline-size;
 }
 
 [data-platform='darwin'] .toolbar {
