@@ -140,7 +140,10 @@ function parseInline(text: string): InlineToken[] {
   return tokens
 }
 
-function renderInline(text: string, keyPrefix: string): ReactNode[] {
+/** Renders inline bold/italic/code/link spans. Exported for reuse by other
+ * line-level markdown renderers (e.g. the Notes panel's live-preview lines)
+ * that don't need MarkdownText's block parsing. */
+export function renderInline(text: string, keyPrefix: string): ReactNode[] {
   return parseInline(text).map((token, index) => {
     const key = `${keyPrefix}-${index}`
     switch (token.kind) {

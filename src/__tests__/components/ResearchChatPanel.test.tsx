@@ -449,7 +449,8 @@ describe('ResearchChatPanel', () => {
     fireEvent.change(input, { target: { value: '/zotero diffusion policy' } })
     fireEvent.click(screen.getByRole('button', { name: 'Send' }))
     expect(useProjectStore.getState()).toMatchObject({
-      researchPanelTab: 'references',
+      isSidebarOpen: true,
+      sidebarView: 'references',
       researchReferenceSource: 'zotero',
       researchSearchQuery: 'diffusion policy'
     })
@@ -457,7 +458,10 @@ describe('ResearchChatPanel', () => {
 
     fireEvent.change(input, { target: { value: '/todo' } })
     fireEvent.click(screen.getByRole('button', { name: 'Send' }))
-    expect(useProjectStore.getState()).toMatchObject({ isSidebarOpen: true, sidebarView: 'todo' })
+    expect(useProjectStore.getState()).toMatchObject({
+      isResearchPanelOpen: true,
+      researchPanelTab: 'notes'
+    })
 
     fireEvent.change(input, { target: { value: '/outline' } })
     fireEvent.click(screen.getByRole('button', { name: 'Send' }))
@@ -482,7 +486,8 @@ describe('ResearchChatPanel', () => {
     fireEvent.change(input, { target: { value: '/find-sources manipulation evidence' } })
     fireEvent.click(screen.getByRole('button', { name: 'Send' }))
     expect(useProjectStore.getState()).toMatchObject({
-      researchPanelTab: 'references',
+      isSidebarOpen: true,
+      sidebarView: 'references',
       researchReferenceSource: 'project',
       researchSearchQuery: 'manipulation evidence'
     })
@@ -490,7 +495,8 @@ describe('ResearchChatPanel', () => {
     fireEvent.change(input, { target: { value: '/submission-check' } })
     fireEvent.click(screen.getByRole('button', { name: 'Send' }))
     expect(useProjectStore.getState()).toMatchObject({
-      researchPanelTab: 'references',
+      isSidebarOpen: true,
+      sidebarView: 'references',
       researchReferenceSource: 'submission'
     })
     expect(window.api.aiResearchChat).not.toHaveBeenCalled()

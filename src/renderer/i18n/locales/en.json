@@ -60,7 +60,7 @@
     "files": "Files",
     "bib": "Bib",
     "outline": "Outline",
-    "notes": "Notes",
+    "references": "References",
     "timeline": "Timeline",
     "git": "Git",
     "pinSidebar": "Pin sidebar",
@@ -447,14 +447,12 @@
     "exportOverleafFailed": "Could not create Overleaf ZIP: {{reason}}",
     "namePlaceholder": "name"
   },
-  "todoPanel": {
-    "openProject": "Open a project to use TODO",
+  "notesPanel": {
+    "openProject": "Open a project to use Notes",
     "loading": "Loading…",
-    "createTodo": "Create TODO.md",
-    "deleteItem": "Delete item",
-    "deleteLine": "Delete line",
-    "inputPlaceholder": "Enter: note · Shift+Enter: task",
-    "add": "Add"
+    "create": "Create TODO.md",
+    "addLine": "Add line",
+    "deleteLine": "Delete this empty line"
   },
   "timelinePanel": {
     "noFile": "No file open",
@@ -820,7 +818,7 @@
     "resize": "Resize research panel",
     "tabs": {
       "chat": "Chat",
-      "references": "References",
+      "notes": "Notes",
       "profile": "Profile",
       "projectProfile": "Project profile"
     },

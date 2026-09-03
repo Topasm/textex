@@ -382,7 +382,7 @@ const Toolbar = React.memo(function Toolbar({
             <button
               type="button"
               className="toolbar-btn toolbar-research-toggle"
-              onClick={() => toggleResearchPanel('references')}
+              onClick={() => toggleResearchPanel('chat')}
               title={withShortcutHint(t('researchPanel.open'), 'view.toggleResearchPanel')}
               aria-label={t('researchPanel.open')}
               aria-controls="research-panel"

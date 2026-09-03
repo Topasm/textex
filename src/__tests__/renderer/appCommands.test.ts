@@ -159,8 +159,8 @@ describe('executeAppCommand', () => {
     await executeAppCommand('compile.submissionCheck', context)
 
     expect(useProjectStore.getState()).toMatchObject({
-      isResearchPanelOpen: true,
-      researchPanelTab: 'references',
+      isSidebarOpen: true,
+      sidebarView: 'references',
       researchReferenceSource: 'submission'
     })
   })

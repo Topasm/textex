@@ -6,7 +6,7 @@ describe('research panel project state', () => {
     useProjectStore.setState({
       projectRoot: null,
       isResearchPanelOpen: false,
-      researchPanelTab: 'references',
+      researchPanelTab: 'chat',
       researchPanelWidth: 380,
       researchReferenceSource: 'project',
       researchSearchQuery: '',
@@ -26,7 +26,7 @@ describe('research panel project state', () => {
     useProjectStore.getState().setProjectRoot('/two')
     expect(useProjectStore.getState()).toMatchObject({
       isResearchPanelOpen: false,
-      researchPanelTab: 'references',
+      researchPanelTab: 'chat',
       researchReferenceSource: 'project'
     })
 

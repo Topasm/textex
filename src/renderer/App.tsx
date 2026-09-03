@@ -8,7 +8,7 @@ import {
   type CSSProperties
 } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FolderTree, ListTree, StickyNote, Clock, GitBranch, Pin, PinOff } from 'lucide-react'
+import { FolderTree, ListTree, BookOpen, Clock, GitBranch, Pin, PinOff } from 'lucide-react'
 import Toolbar from './components/Toolbar'
 import StatusBar from './components/StatusBar'
 import TabBar from './components/TabBar'
@@ -96,8 +96,10 @@ const ResearchPanel = lazy(() =>
 const FileTree = lazy(() => import('./components/FileTree'))
 const OutlinePanel = lazy(() => import('./components/OutlinePanel'))
 const GitPanel = lazy(() => import('./components/GitPanel'))
-const TodoPanel = lazy(() =>
-  import('./components/TodoPanel').then((module) => ({ default: module.TodoPanel }))
+const ReferencesPanel = lazy(() =>
+  import('./components/research/ReferencesPanel').then((module) => ({
+    default: module.ReferencesPanel
+  }))
 )
 const TimelinePanel = lazy(() =>
   import('./components/TimelinePanel').then((module) => ({ default: module.TimelinePanel }))
@@ -520,7 +522,11 @@ function App() {
   const allSidebarTabs: { key: SidebarView; label: string; icon: React.ReactNode }[] = [
     { key: 'files', label: t('sidebar.files'), icon: <FolderTree size={ICON_SIZE.compact} /> },
     { key: 'outline', label: t('sidebar.outline'), icon: <ListTree size={ICON_SIZE.compact} /> },
-    { key: 'todo', label: t('sidebar.notes'), icon: <StickyNote size={ICON_SIZE.compact} /> },
+    {
+      key: 'references',
+      label: t('sidebar.references'),
+      icon: <BookOpen size={ICON_SIZE.compact} />
+    },
     { key: 'timeline', label: t('sidebar.timeline'), icon: <Clock size={ICON_SIZE.compact} /> },
     { key: 'git', label: t('sidebar.git'), icon: <GitBranch size={ICON_SIZE.compact} /> }
   ]
@@ -666,7 +672,21 @@ function App() {
             {sidebarView === 'files' && <FileTree />}
             {sidebarView === 'git' && <GitPanel />}
             {sidebarView === 'outline' && <OutlinePanel />}
-            {sidebarView === 'todo' && <TodoPanel />}
+            {sidebarView === 'references' && (
+              <ReferencesPanel
+                onAddToChat={(payload) => {
+                  if (!useProjectStore.getState().projectRoot) {
+                    useNotificationStore.getState().pushNotification({
+                      tone: 'warning',
+                      message: t('researchPanel.openProjectForChatReference')
+                    })
+                    return
+                  }
+                  useProjectStore.getState().queueChatReference(payload)
+                }}
+                onOpenProblems={() => useProjectStore.getState().openResearchPanel('problems')}
+              />
+            )}
             {sidebarView === 'timeline' && <TimelinePanel />}
           </Suspense>
         </div>

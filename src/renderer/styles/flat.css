@@ -370,7 +370,6 @@ html .home-recent-item-tag-save,
 html .outline-highlight-toggle.active,
 html .research-chat-send,
 html .research-profile-save,
-html .todo-panel__add-btn,
 html .update-banner button:not(.update-dismiss):not(.update-release-link) {
   color: var(--accent-contrast);
 }

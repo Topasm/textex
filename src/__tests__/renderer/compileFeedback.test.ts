@@ -26,7 +26,7 @@ describe('compile failure feedback', () => {
     clearResearchProfileDraft()
     useNotificationStore.setState({ notifications: [] })
     useCompileStore.setState({ diagnostics: [], compileStatus: 'error' })
-    useProjectStore.setState({ isResearchPanelOpen: false, researchPanelTab: 'references' })
+    useProjectStore.setState({ isResearchPanelOpen: false, researchPanelTab: 'chat' })
     useUiStore.setState({ settingsRequested: false })
   })
 

@@ -60,7 +60,7 @@
     "files": "Arquivos",
     "bib": "Bib",
     "outline": "Sumário",
-    "notes": "Notas",
+    "references": "Referências",
     "timeline": "Linha do tempo",
     "git": "Git",
     "pinSidebar": "Fixar barra lateral",
@@ -447,14 +447,12 @@
     "exportOverleafFailed": "Não foi possível criar o ZIP do Overleaf: {{reason}}",
     "namePlaceholder": "nome"
   },
-  "todoPanel": {
-    "openProject": "Abra um projeto para usar TODO",
+  "notesPanel": {
+    "openProject": "Abra um projeto para usar Notas",
     "loading": "Carregando…",
-    "createTodo": "Criar TODO.md",
-    "deleteItem": "Excluir item",
-    "deleteLine": "Excluir linha",
-    "inputPlaceholder": "Enter: nota · Shift+Enter: tarefa",
-    "add": "Adicionar"
+    "create": "Criar TODO.md",
+    "addLine": "Adicionar linha",
+    "deleteLine": "Excluir esta linha vazia"
   },
   "timelinePanel": {
     "noFile": "Nenhum arquivo aberto",
@@ -820,7 +818,7 @@
     "resize": "Redimensionar o painel de pesquisa",
     "tabs": {
       "chat": "Chat",
-      "references": "Referências",
+      "notes": "Notas",
       "profile": "Perfil",
       "projectProfile": "Perfil do projeto"
     },

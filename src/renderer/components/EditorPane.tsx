@@ -224,8 +224,7 @@ function EditorPane() {
     const query = selected.content.replace(/\s+/gu, ' ').trim().slice(0, 512)
     const store = useProjectStore.getState()
     store.setResearchSearchQuery(query)
-    store.setResearchReferenceSource('project')
-    store.openResearchPanel('references')
+    store.openReferences('project')
     hideSelectionAiToolbar()
   }, [canOpenResearchTool, hideSelectionAiToolbar, projectRoot, selectedResearchText])
 

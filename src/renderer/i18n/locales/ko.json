@@ -60,7 +60,7 @@
     "files": "파일",
     "bib": "참고문헌",
     "outline": "개요",
-    "notes": "노트",
+    "references": "참고문헌",
     "timeline": "타임라인",
     "git": "Git",
     "pinSidebar": "사이드바 고정",
@@ -447,14 +447,12 @@
     "exportOverleafFailed": "Overleaf ZIP을 만들지 못했습니다: {{reason}}",
     "namePlaceholder": "이름"
   },
-  "todoPanel": {
-    "openProject": "TODO를 사용하려면 프로젝트를 여세요",
+  "notesPanel": {
+    "openProject": "노트를 사용하려면 프로젝트를 여세요",
     "loading": "로딩 중…",
-    "createTodo": "TODO.md 만들기",
-    "deleteItem": "항목 삭제",
-    "deleteLine": "줄 삭제",
-    "inputPlaceholder": "Enter: 메모 · Shift+Enter: 할 일",
-    "add": "추가"
+    "create": "TODO.md 만들기",
+    "addLine": "줄 추가",
+    "deleteLine": "이 빈 줄 삭제"
   },
   "timelinePanel": {
     "noFile": "열린 파일 없음",
@@ -820,7 +818,7 @@
     "resize": "연구 패널 크기 조절",
     "tabs": {
       "chat": "Chat",
-      "references": "참고문헌",
+      "notes": "노트",
       "profile": "프로필",
       "projectProfile": "프로젝트 프로필"
     },

@@ -702,43 +702,38 @@ export function ResearchChatPanel({
           return true
         case 'references':
           projectStore.setResearchSearchQuery(query)
-          projectStore.setResearchReferenceSource('project')
-          projectStore.openResearchPanel('references')
+          projectStore.openReferences('project')
           setPrompt('')
           return true
         case 'zotero':
           projectStore.setResearchSearchQuery(query)
-          projectStore.setResearchReferenceSource('zotero')
-          projectStore.openResearchPanel('references')
+          projectStore.openReferences('zotero')
           setPrompt('')
           return true
         case 'online':
           projectStore.setResearchSearchQuery(query)
-          projectStore.setResearchReferenceSource('online')
-          projectStore.openResearchPanel('references')
+          projectStore.openReferences('online')
           setPrompt('')
           return true
         case 'find-sources':
           projectStore.setResearchSearchQuery(query)
-          projectStore.setResearchReferenceSource('project')
-          projectStore.openResearchPanel('references')
+          projectStore.openReferences('project')
           setPrompt('')
           return true
         case 'submission-check':
-          projectStore.setResearchReferenceSource('submission')
-          projectStore.openResearchPanel('references')
+          projectStore.openReferences('submission')
           setPrompt('')
           return true
-        case 'todo':
         case 'outline':
-          projectStore.setSidebarView(command.id)
+          projectStore.setSidebarView('outline')
           if (!projectStore.isSidebarOpen) projectStore.toggleSidebar()
           setPrompt('')
-          setStatus(
-            command.id === 'todo'
-              ? t('researchPanel.chat.openedTodo')
-              : t('researchPanel.chat.openedOutline')
-          )
+          setStatus(t('researchPanel.chat.openedOutline'))
+          return true
+        case 'todo':
+          projectStore.openResearchPanel('notes')
+          setPrompt('')
+          setStatus(t('researchPanel.chat.openedTodo'))
           return true
         case 'draft':
           setPrompt('')

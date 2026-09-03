@@ -44,7 +44,7 @@ describe('IconSystemProvider', () => {
       'TabBar.tsx',
       'StatusBar.tsx',
       'TimelinePanel.tsx',
-      'TodoPanel.tsx',
+      'research/NotesPanel.tsx',
       'OutlinePanel.tsx',
       'LogPanel.tsx',
       'GitPanel.tsx',

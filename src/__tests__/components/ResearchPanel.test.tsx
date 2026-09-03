@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ResearchPanel } from '../../renderer/components/ResearchPanel'
 import { TEXTEX_REFERENCE_MIME } from '../../renderer/components/research/referenceActions'
@@ -46,7 +46,7 @@ describe('ResearchPanel tabs', () => {
     const { container } = render(<ResearchPanel onAiDraft={vi.fn()} />)
 
     expect(screen.getByRole('tab', { name: 'Chat' })).toHaveAttribute('title', 'Chat')
-    expect(screen.getByRole('tab', { name: 'References' })).toHaveAttribute('title', 'References')
+    expect(screen.getByRole('tab', { name: 'Notes' })).toHaveAttribute('title', 'Notes')
     expect(screen.getByRole('tab', { name: 'Profile' })).toHaveAttribute('title', 'Project profile')
     expect(container.querySelectorAll('.research-panel-tab-label')).toHaveLength(4)
   })
@@ -95,7 +95,7 @@ describe('ResearchPanel tabs', () => {
       }
       vi.advanceTimersByTime(400)
 
-      await waitFor(() => expect(useProjectStore.getState().researchPanelTab).toBe('references'))
+      await waitFor(() => expect(useProjectStore.getState().researchPanelTab).toBe('notes'))
 
       fireEvent.wheel(panel, { deltaX: -90, deltaY: 2 })
       vi.advanceTimersByTime(400)
@@ -106,13 +106,13 @@ describe('ResearchPanel tabs', () => {
     }
   })
 
-  it('keeps the Chat composer mounted while switching through References', async () => {
+  it('keeps the Chat composer mounted while switching through Notes', async () => {
     render(<ResearchPanel onAiDraft={vi.fn()} />)
     const input = await screen.findByRole('textbox', { name: 'Research question' })
     fireEvent.change(input, { target: { value: 'Keep this draft across tabs.' } })
 
-    fireEvent.click(screen.getByRole('tab', { name: 'References' }))
-    await screen.findByRole('region', { name: 'References' })
+    fireEvent.click(screen.getByRole('tab', { name: 'Notes' }))
+    await screen.findByRole('button', { name: 'Create TODO.md' })
     fireEvent.click(screen.getByRole('tab', { name: 'Chat' }))
 
     expect(screen.getByRole('textbox', { name: 'Research question' })).toHaveValue(
@@ -127,7 +127,7 @@ describe('ResearchPanel tabs', () => {
     const title = await screen.findByLabelText('Title')
     fireEvent.change(title, { target: { value: 'Unsaved title' } })
 
-    fireEvent.click(screen.getByRole('tab', { name: 'References' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Notes' }))
 
     expect(confirm).toHaveBeenCalledOnce()
     expect(useProjectStore.getState().researchPanelTab).toBe('profile')
@@ -279,72 +279,8 @@ describe('ResearchPanel tabs', () => {
     expect(screen.getByText('Compilation Log')).toBeInTheDocument()
   })
 
-  it('exposes one merged reference list as the References scroll region', async () => {
-    useProjectStore.setState({
-      researchPanelTab: 'references',
-      researchReferenceSource: 'project',
-      bibEntries: [
-        { key: 'one', type: 'article', title: 'First paper', author: 'Ada', year: '2024' },
-        { key: 'two', type: 'article', title: 'Second paper', author: 'Grace', year: '2025' }
-      ]
-    })
-    window.api.researchLoadConfig = vi.fn().mockResolvedValue({
-      version: 1,
-      referencesFile: 'references.bib',
-      zoteroFile: 'zotero.bib',
-      zoteroCollection: null
-    })
-    window.api.zoteroLibraryTree = vi.fn().mockResolvedValue([])
-    render(<ResearchPanel onAiDraft={vi.fn()} />)
-
-    const list = await screen.findByRole('region', { name: 'References' })
-    expect(list).toHaveClass('reference-card-list')
-    expect(list).toHaveAttribute('tabindex', '0')
-    expect(within(list).getByText('First paper')).toBeInTheDocument()
-    expect(within(list).getByText('Second paper')).toBeInTheDocument()
-  })
-
-  it('keeps Zotero search results in the same merged region', async () => {
-    useProjectStore.setState({
-      researchPanelTab: 'references',
-      researchReferenceSource: 'zotero',
-      researchSearchQuery: 'robot'
-    })
-    window.api.researchLoadConfig = vi.fn().mockResolvedValue({
-      version: 1,
-      referencesFile: 'references.bib',
-      zoteroFile: 'zotero.bib',
-      zoteroCollection: null
-    })
-    window.api.zoteroLibraryTree = vi.fn().mockResolvedValue([])
-    window.api.zoteroSearch = vi.fn().mockResolvedValue([
-      {
-        citekey: 'robot2025',
-        title: 'Robot Paper',
-        author: 'Ada',
-        year: '2025',
-        type: 'article'
-      },
-      {
-        citekey: 'vision2026',
-        title: 'Vision Paper',
-        author: 'Grace',
-        year: '2026',
-        type: 'article'
-      }
-    ])
-    render(<ResearchPanel onAiDraft={vi.fn()} />)
-
-    fireEvent.click(await screen.findByRole('button', { name: 'Search' }))
-    await waitFor(() => expect(window.api.zoteroSearch).toHaveBeenCalledWith('robot', 23_119))
-    const list = screen.getByRole('region', { name: 'References' })
-    expect(list).toHaveClass('reference-card-list')
-    expect(list).toHaveAttribute('tabindex', '0')
-    expect(within(list).getAllByRole('article')).toHaveLength(2)
-  })
-
   it('accepts a reference on the Chat tab and switches only after drop', async () => {
-    useProjectStore.setState({ researchPanelTab: 'references' })
+    useProjectStore.setState({ researchPanelTab: 'notes' })
     render(<ResearchPanel onAiDraft={vi.fn()} />)
     const chatTab = screen.getByRole('tab', { name: 'Chat' })
     const payload = JSON.stringify({
@@ -360,7 +296,7 @@ describe('ResearchPanel tabs', () => {
 
     fireEvent.dragEnter(chatTab, { dataTransfer })
     expect(chatTab).toHaveClass('drop-active')
-    expect(useProjectStore.getState().researchPanelTab).toBe('references')
+    expect(useProjectStore.getState().researchPanelTab).toBe('notes')
 
     fireEvent.drop(chatTab, { dataTransfer })
 
@@ -373,7 +309,7 @@ describe('ResearchPanel tabs', () => {
   })
 
   it('rejects an invalid Chat-tab drop without switching tabs', () => {
-    useProjectStore.setState({ researchPanelTab: 'references' })
+    useProjectStore.setState({ researchPanelTab: 'notes' })
     render(<ResearchPanel onAiDraft={vi.fn()} />)
     const chatTab = screen.getByRole('tab', { name: 'Chat' })
 
@@ -381,7 +317,7 @@ describe('ResearchPanel tabs', () => {
       dataTransfer: { getData: () => '{not-json' }
     })
 
-    expect(useProjectStore.getState().researchPanelTab).toBe('references')
+    expect(useProjectStore.getState().researchPanelTab).toBe('notes')
     expect(useNotificationStore.getState().notifications).toEqual([
       expect.objectContaining({
         tone: 'error',

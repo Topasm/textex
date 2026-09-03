@@ -60,7 +60,7 @@
     "files": "Dateien",
     "bib": "Bib",
     "outline": "Gliederung",
-    "notes": "Notizen",
+    "references": "Referenzen",
     "timeline": "Zeitverlauf",
     "git": "Git",
     "pinSidebar": "Seitenleiste anheften",
@@ -447,14 +447,12 @@
     "exportOverleafFailed": "Overleaf-ZIP konnte nicht erstellt werden: {{reason}}",
     "namePlaceholder": "Name"
   },
-  "todoPanel": {
-    "openProject": "Öffnen Sie ein Projekt, um TODO zu nutzen",
+  "notesPanel": {
+    "openProject": "Öffnen Sie ein Projekt, um Notizen zu nutzen",
     "loading": "Wird geladen…",
-    "createTodo": "TODO.md erstellen",
-    "deleteItem": "Element löschen",
-    "deleteLine": "Zeile löschen",
-    "inputPlaceholder": "Enter: Notiz · Shift+Enter: Aufgabe",
-    "add": "Hinzufügen"
+    "create": "TODO.md erstellen",
+    "addLine": "Zeile hinzufügen",
+    "deleteLine": "Diese leere Zeile löschen"
   },
   "timelinePanel": {
     "noFile": "Keine Datei geöffnet",
@@ -820,7 +818,7 @@
     "resize": "Größe des Forschungsbereichs ändern",
     "tabs": {
       "chat": "Chat",
-      "references": "Referenzen",
+      "notes": "Notizen",
       "profile": "Profil",
       "projectProfile": "Projektprofil"
     },

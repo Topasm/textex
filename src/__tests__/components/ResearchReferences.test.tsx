@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { OnlineReferences } from '../../renderer/components/research/OnlineReferences'
 import { ReferencesPanel } from '../../renderer/components/research/ReferencesPanel'
@@ -69,6 +69,54 @@ describe('Research reference sources', () => {
     }))
     useCompileStore.setState({ diagnostics: [] })
     useEditorStore.getState().resetEditor()
+  })
+
+  it('exposes one merged reference list as the References scroll region', async () => {
+    useProjectStore.setState({
+      bibEntries: [
+        { key: 'one', type: 'article', title: 'First paper', author: 'Ada', year: '2024' },
+        { key: 'two', type: 'article', title: 'Second paper', author: 'Grace', year: '2025' }
+      ]
+    })
+    window.api.researchLoadConfig = vi.fn().mockResolvedValue(config)
+    window.api.zoteroLibraryTree = vi.fn().mockResolvedValue([])
+    render(<ZoteroReferences />)
+
+    const list = await screen.findByRole('region', { name: 'References' })
+    expect(list).toHaveClass('reference-card-list')
+    expect(list).toHaveAttribute('tabindex', '0')
+    expect(within(list).getByText('First paper')).toBeInTheDocument()
+    expect(within(list).getByText('Second paper')).toBeInTheDocument()
+  })
+
+  it('keeps Zotero search results in the same merged region', async () => {
+    useProjectStore.setState({ researchReferenceSource: 'zotero', researchSearchQuery: 'robot' })
+    window.api.researchLoadConfig = vi.fn().mockResolvedValue(config)
+    window.api.zoteroLibraryTree = vi.fn().mockResolvedValue([])
+    window.api.zoteroSearch = vi.fn().mockResolvedValue([
+      {
+        citekey: 'robot2025',
+        title: 'Robot Paper',
+        author: 'Ada',
+        year: '2025',
+        type: 'article'
+      },
+      {
+        citekey: 'vision2026',
+        title: 'Vision Paper',
+        author: 'Grace',
+        year: '2026',
+        type: 'article'
+      }
+    ])
+    render(<ZoteroReferences />)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Search' }))
+    await waitFor(() => expect(window.api.zoteroSearch).toHaveBeenCalledWith('robot', 23_119))
+    const list = screen.getByRole('region', { name: 'References' })
+    expect(list).toHaveClass('reference-card-list')
+    expect(list).toHaveAttribute('tabindex', '0')
+    expect(within(list).getAllByRole('article')).toHaveLength(2)
   })
 
   it('ignores a late Zotero load from the previous project', async () => {

@@ -1605,8 +1605,7 @@ body,
 .file-tree,
 .git-panel,
 .outline-panel,
-.timeline-panel,
-.todo-panel {
+.timeline-panel {
   height: 100%;
   overflow-x: hidden;
   overflow-y: auto;
@@ -7917,14 +7916,19 @@ button.submission-check-finding:hover {
   opacity: 0.7;
 }
 
-/* ===== TODO Panel ===== */
-.todo-panel {
+/* ===== Notes Panel ===== */
+.notes-panel {
+  height: 100%;
   padding: var(--space-12);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   font-size: var(--font-base);
   line-height: 1.6;
 }
 
-.todo-panel--empty {
+.notes-panel--empty {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -7956,35 +7960,42 @@ button.submission-check-finding:hover {
   transform: scale(1.05);
 }
 
-.todo-panel__header {
+.notes-panel__header {
   margin: var(--space-12) 0 var(--space-6);
+  padding: 1px var(--space-4);
   color: var(--text-primary);
   font-weight: 600;
+  border-radius: var(--ui-radius-control);
+  cursor: text;
 }
 
-.todo-panel__header:first-child {
+.notes-panel__header:hover {
+  background-color: var(--bg-hover);
+}
+
+.notes-panel__header:first-child {
   margin-top: 0;
 }
 
-.todo-panel h1.todo-panel__header {
+.notes-panel h1.notes-panel__header {
   font-size: var(--font-2xl);
 }
 
-.todo-panel h2.todo-panel__header {
+.notes-panel h2.notes-panel__header {
   font-size: var(--font-lg);
 }
 
-.todo-panel h3.todo-panel__header {
+.notes-panel h3.notes-panel__header {
   font-size: var(--font-lg);
 }
 
-.todo-panel h4.todo-panel__header,
-.todo-panel h5.todo-panel__header,
-.todo-panel h6.todo-panel__header {
+.notes-panel h4.notes-panel__header,
+.notes-panel h5.notes-panel__header,
+.notes-panel h6.notes-panel__header {
   font-size: var(--font-base);
 }
 
-.todo-panel__blockquote {
+.notes-panel__blockquote {
   margin: var(--space-4) 0;
   padding: var(--space-4) var(--space-8) var(--space-4) var(--space-12);
   border-left: 3px solid var(--accent);
@@ -7992,102 +8003,106 @@ button.submission-check-finding:hover {
   color: var(--text-secondary);
   font-size: var(--font-md);
   border-radius: 0 var(--ui-radius-control) var(--ui-radius-control) 0;
+  cursor: text;
 }
 
-.todo-panel__item {
+.notes-panel__item {
   display: flex;
   align-items: flex-start;
   gap: var(--space-8);
   padding: 3px var(--space-4);
   border-radius: var(--ui-radius-control);
-  cursor: pointer;
   transition: background-color 0.1s;
 }
 
-.todo-panel__item:hover {
+.notes-panel__item:hover {
   background-color: var(--bg-hover);
 }
 
-.todo-panel__item input[type='checkbox'] {
+.notes-panel__item input[type='checkbox'] {
   margin-top: 3px;
   accent-color: var(--accent);
   cursor: pointer;
   flex-shrink: 0;
 }
 
-.todo-panel__item-delete {
-  opacity: 0;
-  color: var(--text-secondary);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0 var(--space-4);
-  margin-left: auto;
-  transition:
-    opacity 0.1s,
-    color 0.1s;
-  font-size: var(--font-xl);
-  line-height: 1;
+.notes-panel__item-label {
+  flex: 1;
+  cursor: text;
 }
 
-.todo-panel__item:hover .todo-panel__item-delete {
-  opacity: 1;
-}
-
-.todo-panel__item-delete:hover {
-  color: var(--error);
-}
-
-.todo-panel__item--done span {
+.notes-panel__item--done .notes-panel__item-label {
   text-decoration: line-through;
   color: var(--text-secondary);
   opacity: 0.7;
 }
 
-.todo-panel__text {
+.notes-panel__text {
   margin: var(--space-2) 0;
+  padding: 1px var(--space-4);
   color: var(--text-primary);
-}
-
-.todo-panel__blank {
-  height: 8px;
-}
-
-.todo-panel__input-row {
-  display: flex;
-  gap: var(--space-8);
-  margin-top: var(--space-12);
-  padding-top: var(--space-12);
-  border-top: 1px solid var(--border);
-}
-
-.todo-panel__input {
-  flex: 1;
-  padding: var(--space-4) var(--space-8);
-  font-size: var(--font-base);
-  background-color: var(--bg-input);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
   border-radius: var(--ui-radius-control);
+  cursor: text;
 }
 
-.todo-panel__input:focus {
+.notes-panel__text:hover {
+  background-color: var(--bg-hover);
+}
+
+.notes-panel__blank {
+  height: 14px;
+  cursor: text;
+}
+
+.notes-panel__line-input {
+  display: block;
+  width: 100%;
+  padding: 1px var(--space-4);
+  overflow: hidden;
+  resize: none;
+  color: var(--text-primary);
+  background-color: var(--bg-hover);
+  border: 1px solid var(--accent);
+  border-radius: var(--ui-radius-control);
   outline: none;
-  border-color: var(--accent);
+  font: inherit;
+  line-height: inherit;
 }
 
-.todo-panel__add-btn {
-  padding: var(--space-4) var(--space-12);
-  background-color: var(--accent);
-  color: white;
+.notes-panel__add-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+  margin-top: var(--space-8);
+  padding: var(--space-4);
+  color: var(--text-secondary);
+  background: none;
   border: none;
   border-radius: var(--ui-radius-control);
   cursor: pointer;
-  font-size: var(--font-base);
+  font-size: var(--font-sm);
 }
 
-.todo-panel__add-btn:hover {
-  background-color: var(--accent-hover);
+.notes-panel__add-line:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-hover);
+}
+
+.notes-panel__delete-active {
+  margin-top: var(--space-4);
+  padding: var(--space-2) var(--space-8);
+  color: var(--text-secondary);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--ui-radius-control);
+  cursor: pointer;
+  font-size: var(--font-xs);
+}
+
+.notes-panel__delete-active:hover {
+  color: var(--error);
+  border-color: var(--error);
 }
 
 /* ---- Timeline Panel ---- */

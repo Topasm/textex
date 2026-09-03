@@ -60,7 +60,7 @@
     "files": "文件",
     "bib": "文献",
     "outline": "大纲",
-    "notes": "笔记",
+    "references": "参考文献",
     "timeline": "时间线",
     "git": "Git",
     "pinSidebar": "固定侧边栏",
@@ -447,14 +447,12 @@
     "exportOverleafFailed": "无法创建 Overleaf ZIP：{{reason}}",
     "namePlaceholder": "名称"
   },
-  "todoPanel": {
-    "openProject": "打开一个项目以使用 TODO",
+  "notesPanel": {
+    "openProject": "打开一个项目以使用笔记",
     "loading": "加载中…",
-    "createTodo": "创建 TODO.md",
-    "deleteItem": "删除项目",
-    "deleteLine": "删除行",
-    "inputPlaceholder": "Enter：笔记 · Shift+Enter：任务",
-    "add": "添加"
+    "create": "创建 TODO.md",
+    "addLine": "添加一行",
+    "deleteLine": "删除这一空行"
   },
   "timelinePanel": {
     "noFile": "没有打开的文件",
@@ -820,7 +818,7 @@
     "resize": "调整研究面板大小",
     "tabs": {
       "chat": "聊天",
-      "references": "参考文献",
+      "notes": "笔记",
       "profile": "配置",
       "projectProfile": "项目配置"
     },

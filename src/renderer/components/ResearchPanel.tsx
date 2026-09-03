@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ICON_SIZE } from './ui/IconSystem'
 import {
-  BookOpen,
   MessageSquare,
   PanelRightClose,
   Pin,
   PinOff,
   ScrollText,
-  Settings2
+  Settings2,
+  StickyNote
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useCompileStore } from '../store/useCompileStore'
@@ -25,7 +25,7 @@ import {
   confirmResearchProfileDraftDiscard
 } from '../services/researchProfileDraft'
 import { ResearchChatPanel } from './research/ResearchChatPanel'
-import { ReferencesPanel } from './research/ReferencesPanel'
+import { NotesPanel } from './research/NotesPanel'
 import { ResearchProfilePanel } from './research/ResearchProfilePanel'
 import LogPanel from './LogPanel'
 import {
@@ -35,24 +35,12 @@ import {
 } from './research/referenceActions'
 
 /** Swipe order, matching the tab strip left to right. */
-const RESEARCH_TAB_ORDER: ResearchPanelTab[] = ['chat', 'references', 'profile', 'problems']
+const RESEARCH_TAB_ORDER: ResearchPanelTab[] = ['chat', 'notes', 'profile', 'problems']
 
 interface ResearchPanelProps {
   onAiDraft: () => void
   onCompile?: () => Promise<void>
   presencePhase?: AnimatedPresencePhase
-}
-
-export interface PendingChatReference {
-  token: number
-  projectRoot: string
-  payload: ReferenceDragPayload
-}
-
-export interface PendingChatPrompt {
-  token: number
-  projectRoot: string
-  prompt: string
 }
 
 export function ResearchPanel({
@@ -66,6 +54,11 @@ export function ResearchPanel({
   const width = useProjectStore((state) => state.researchPanelWidth)
   const projectRoot = useProjectStore((state) => state.projectRoot)
   const pendingResearchSelection = useProjectStore((state) => state.pendingResearchSelection)
+  // References moved to the left sidebar and Problems (LogPanel) queues its
+  // own "fix with chat" handoffs, so these are queued in the store — the
+  // sidebar and this panel are siblings, not parent/child.
+  const pendingChatReference = useProjectStore((state) => state.pendingChatReference)
+  const pendingChatPrompt = useProjectStore((state) => state.pendingChatPrompt)
   const diagnostics = useCompileStore((state) => state.diagnostics)
   const aiProvider = useSettingsStore((state) => state.settings.aiProvider)
   const autoHide = useSettingsStore((state) => state.settings.autoHideResearchPanel)
@@ -78,15 +71,9 @@ export function ResearchPanel({
   const panelRef = useRef<HTMLDivElement>(null)
   const [isCompact, setIsCompact] = useState(() => window.innerWidth < 1200)
   const [chatDropActive, setChatDropActive] = useState(false)
-  const [pendingChatReference, setPendingChatReference] = useState<PendingChatReference | null>(
-    null
-  )
-  const [pendingChatPrompt, setPendingChatPrompt] = useState<PendingChatPrompt | null>(null)
   const [mountedTabs, setMountedTabs] = useState<Set<ResearchPanelTab>>(() =>
     visible ? new Set([tab]) : new Set()
   )
-  const nextChatReferenceToken = useRef(0)
-  const nextChatPromptToken = useRef(0)
   const startResize = useResearchPanelResize(panelRef, visible)
   const repairCli = aiProvider === 'claude-cli' ? 'claude' : 'codex'
   const repairCliName = repairCli === 'claude' ? 'Claude Code' : 'Codex CLI'
@@ -107,8 +94,6 @@ export function ResearchPanel({
 
   useEffect(() => {
     setChatDropActive(false)
-    setPendingChatReference(null)
-    setPendingChatPrompt(null)
   }, [projectRoot])
 
   useEffect(() => {
@@ -127,7 +112,7 @@ export function ResearchPanel({
   }, [tab])
 
   const queueChatReference = useCallback(
-    (payload: ReferenceDragPayload) => {
+    (payload: unknown) => {
       if (!projectRoot) {
         useNotificationStore.getState().pushNotification({
           tone: 'warning',
@@ -135,32 +120,9 @@ export function ResearchPanel({
         })
         return
       }
-      if (!leaveProfile()) return
-      nextChatReferenceToken.current += 1
-      setPendingChatReference({
-        token: nextChatReferenceToken.current,
-        projectRoot,
-        payload
-      })
-      useProjectStore.getState().setResearchPanelTab('chat')
+      useProjectStore.getState().queueChatReference(payload)
     },
-    [leaveProfile, projectRoot, t]
-  )
-
-  const queueChatPrompt = useCallback(
-    (prompt: string) => {
-      if (!projectRoot || !prompt.trim()) return
-      if (!leaveProfile()) return
-      nextChatPromptToken.current += 1
-      setPendingChatPrompt({
-        token: nextChatPromptToken.current,
-        projectRoot,
-        prompt
-      })
-      setMountedTabs((current) => new Set(current).add('chat'))
-      useProjectStore.getState().setResearchPanelTab('chat')
-    },
-    [leaveProfile, projectRoot]
+    [projectRoot, t]
   )
 
   const openRepairCli = useCallback(
@@ -315,16 +277,16 @@ export function ResearchPanel({
         <button
           type="button"
           role="tab"
-          id="research-tab-references"
-          aria-controls="research-tabpanel-references"
-          aria-label={t('researchPanel.tabs.references')}
-          aria-selected={tab === 'references'}
-          title={t('researchPanel.tabs.references')}
-          className={tab === 'references' ? 'active' : ''}
-          onClick={() => selectTab('references')}
+          id="research-tab-notes"
+          aria-controls="research-tabpanel-notes"
+          aria-label={t('researchPanel.tabs.notes')}
+          aria-selected={tab === 'notes'}
+          title={t('researchPanel.tabs.notes')}
+          className={tab === 'notes' ? 'active' : ''}
+          onClick={() => selectTab('notes')}
         >
-          <BookOpen size={ICON_SIZE.compact} />
-          <span className="research-panel-tab-label">{t('researchPanel.tabs.references')}</span>
+          <StickyNote size={ICON_SIZE.compact} />
+          <span className="research-panel-tab-label">{t('researchPanel.tabs.notes')}</span>
         </button>
         <button
           type="button"
@@ -405,32 +367,35 @@ export function ResearchPanel({
                 useProjectStore.getState().consumeResearchSelection(token)
               }
               incomingReference={
-                pendingChatReference?.projectRoot === projectRoot ? pendingChatReference : null
+                pendingChatReference?.projectRoot === projectRoot
+                  ? {
+                      token: pendingChatReference.token,
+                      projectRoot: pendingChatReference.projectRoot,
+                      payload: pendingChatReference.payload as ReferenceDragPayload
+                    }
+                  : null
               }
-              onIncomingReferenceConsumed={(token) => {
-                setPendingChatReference((current) => (current?.token === token ? null : current))
-              }}
+              onIncomingReferenceConsumed={(token) =>
+                useProjectStore.getState().consumeChatReference(token)
+              }
               incomingPrompt={
                 pendingChatPrompt?.projectRoot === projectRoot ? pendingChatPrompt : null
               }
-              onIncomingPromptConsumed={(token) => {
-                setPendingChatPrompt((current) => (current?.token === token ? null : current))
-              }}
+              onIncomingPromptConsumed={(token) =>
+                useProjectStore.getState().consumeChatPrompt(token)
+              }
             />
           </div>
         )}
-        {mountedTabs.has('references') && (
+        {mountedTabs.has('notes') && (
           <div
-            id="research-tabpanel-references"
+            id="research-tabpanel-notes"
             className="research-panel-view"
             role="tabpanel"
-            aria-labelledby="research-tab-references"
-            hidden={tab !== 'references'}
+            aria-labelledby="research-tab-notes"
+            hidden={tab !== 'notes'}
           >
-            <ReferencesPanel
-              onAddToChat={queueChatReference}
-              onOpenProblems={() => selectTab('problems')}
-            />
+            <NotesPanel />
           </div>
         )}
         {mountedTabs.has('profile') && (
@@ -453,7 +418,7 @@ export function ResearchPanel({
             hidden={tab !== 'problems'}
           >
             <LogPanel
-              onFixWithChat={queueChatPrompt}
+              onFixWithChat={(prompt) => useProjectStore.getState().queueChatPrompt(prompt)}
               onFixWithCli={openRepairCli}
               cliName={repairCliName}
             />

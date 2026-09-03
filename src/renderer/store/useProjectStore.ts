@@ -20,9 +20,13 @@ import type {
 import type { AuxCitationMap } from '../../shared/auxparser'
 import type { GitStatusResult } from '../types/api'
 import { applyProjectIndexDelta, projectPathKey } from '../services/projectIndex'
+import {
+  clearResearchProfileDraft,
+  confirmResearchProfileDraftDiscard
+} from '../services/researchProfileDraft'
 
-export type SidebarView = 'files' | 'git' | 'outline' | 'todo' | 'timeline'
-export type ResearchPanelTab = 'chat' | 'references' | 'profile' | 'problems'
+export type SidebarView = 'files' | 'git' | 'outline' | 'references' | 'timeline'
+export type ResearchPanelTab = 'chat' | 'notes' | 'profile' | 'problems'
 export type ReferenceSource = 'project' | 'zotero' | 'online' | 'submission'
 
 export interface BibliographyRegistrationRequest {
@@ -41,6 +45,27 @@ export interface ResearchSelectionRequest {
   content: string
   startLine: number
   endLine: number
+}
+
+/**
+ * Queued cross-panel handoffs to Research Chat. `payload`/`prompt` originate
+ * from the References view (left sidebar) or the Problems view (right
+ * panel); both now live outside Research Chat's own panel, so the store is
+ * the shared channel instead of a prop passed down from a common parent.
+ * The reference payload's real shape (`ReferenceDragPayload`) lives in
+ * `components/research/referenceActions.ts`, which itself depends on this
+ * store — consumers there import the type and narrow at the point of use.
+ */
+export interface PendingChatReference {
+  token: number
+  projectRoot: string
+  payload: unknown
+}
+
+export interface PendingChatPrompt {
+  token: number
+  projectRoot: string
+  prompt: string
 }
 
 interface PersistedResearchPanelState {
@@ -65,6 +90,10 @@ interface ProjectState {
   researchSearchQuery: string
   pendingResearchSelection: ResearchSelectionRequest | null
   researchSelectionToken: number
+  pendingChatReference: PendingChatReference | null
+  chatReferenceToken: number
+  pendingChatPrompt: PendingChatPrompt | null
+  chatPromptToken: number
   bibliographyRegistrationRequest: BibliographyRegistrationRequest | null
   researchPanelStates: Record<string, PersistedResearchPanelState>
 
@@ -102,9 +131,15 @@ interface ProjectState {
   setResearchPanelTab: (tab: ResearchPanelTab) => void
   setResearchPanelWidth: (width: number) => void
   setResearchReferenceSource: (source: ReferenceSource) => void
+  /** Opens the left sidebar to the References view, optionally switching its source. */
+  openReferences: (source?: ReferenceSource) => void
   setResearchSearchQuery: (query: string) => void
   queueResearchSelection: (request: Omit<ResearchSelectionRequest, 'token'>) => void
   consumeResearchSelection: (token: number) => void
+  queueChatReference: (payload: unknown) => void
+  consumeChatReference: (token: number) => void
+  queueChatPrompt: (prompt: string) => void
+  consumeChatPrompt: (token: number) => void
   setBibliographyRegistrationRequest: (request: BibliographyRegistrationRequest | null) => void
   setBibEntries: (entries: BibEntry[]) => void
   setCitationGroups: (groups: CitationGroup[]) => void
@@ -128,12 +163,16 @@ export const useProjectStore = create<ProjectState>()(
       sidebarView: 'files',
       sidebarWidth: SIDEBAR_DEFAULT_WIDTH,
       isResearchPanelOpen: false,
-      researchPanelTab: 'references',
+      researchPanelTab: 'chat',
       researchPanelWidth: RESEARCH_PANEL_DEFAULT_WIDTH,
       researchReferenceSource: 'project',
       researchSearchQuery: '',
       pendingResearchSelection: null,
       researchSelectionToken: 0,
+      pendingChatReference: null,
+      chatReferenceToken: 0,
+      pendingChatPrompt: null,
+      chatPromptToken: 0,
       bibliographyRegistrationRequest: null,
       researchPanelStates: {},
 
@@ -155,11 +194,13 @@ export const useProjectStore = create<ProjectState>()(
             directoryRefreshVersions: {},
             projectIndex: null,
             isResearchPanelOpen: saved?.open ?? false,
-            researchPanelTab: saved?.tab ?? 'references',
+            researchPanelTab: saved?.tab ?? 'chat',
             researchPanelWidth: saved?.width ?? RESEARCH_PANEL_DEFAULT_WIDTH,
             researchReferenceSource: saved?.source ?? 'project',
             researchSearchQuery: '',
             pendingResearchSelection: null,
+            pendingChatReference: null,
+            pendingChatPrompt: null,
             bibliographyRegistrationRequest: null
           }
         }),
@@ -209,6 +250,12 @@ export const useProjectStore = create<ProjectState>()(
         ),
       setResearchReferenceSource: (source) =>
         set((state) => persistResearchPanelState(state, { source })),
+      openReferences: (source) =>
+        set((state) => ({
+          sidebarView: 'references',
+          isSidebarOpen: true,
+          researchReferenceSource: source ?? state.researchReferenceSource
+        })),
       setResearchSearchQuery: (researchSearchQuery) => set({ researchSearchQuery }),
       queueResearchSelection: (request) =>
         set((state) => {
@@ -222,6 +269,44 @@ export const useProjectStore = create<ProjectState>()(
         set((state) => ({
           pendingResearchSelection:
             state.pendingResearchSelection?.token === token ? null : state.pendingResearchSelection
+        })),
+      queueChatReference: (payload) =>
+        set((state) => {
+          if (!state.projectRoot) return state
+          if (state.researchPanelTab === 'profile' && !confirmResearchProfileDraftDiscard()) {
+            return state
+          }
+          if (state.researchPanelTab === 'profile') clearResearchProfileDraft()
+          const token = state.chatReferenceToken + 1
+          return {
+            ...persistResearchPanelState(state, { open: true, tab: 'chat' }),
+            chatReferenceToken: token,
+            pendingChatReference: { token, projectRoot: state.projectRoot, payload }
+          }
+        }),
+      consumeChatReference: (token) =>
+        set((state) => ({
+          pendingChatReference:
+            state.pendingChatReference?.token === token ? null : state.pendingChatReference
+        })),
+      queueChatPrompt: (prompt) =>
+        set((state) => {
+          if (!state.projectRoot || !prompt.trim()) return state
+          if (state.researchPanelTab === 'profile' && !confirmResearchProfileDraftDiscard()) {
+            return state
+          }
+          if (state.researchPanelTab === 'profile') clearResearchProfileDraft()
+          const token = state.chatPromptToken + 1
+          return {
+            ...persistResearchPanelState(state, { open: true, tab: 'chat' }),
+            chatPromptToken: token,
+            pendingChatPrompt: { token, projectRoot: state.projectRoot, prompt }
+          }
+        }),
+      consumeChatPrompt: (token) =>
+        set((state) => ({
+          pendingChatPrompt:
+            state.pendingChatPrompt?.token === token ? null : state.pendingChatPrompt
         })),
       setBibliographyRegistrationRequest: (bibliographyRegistrationRequest) =>
         set({ bibliographyRegistrationRequest }),
@@ -245,15 +330,27 @@ export const useProjectStore = create<ProjectState>()(
         researchPanelStates: state.researchPanelStates
       }),
       onRehydrateStorage: () => (state) => {
-        // Migrate removed sidebar views
-        if (state && (state.sidebarView as string) === 'memo') {
-          state.sidebarView = 'todo'
+        if (!state) return
+        // Migrate removed sidebar views. Notes/Todo moved to the research
+        // panel's "notes" tab, so its old sidebar slot falls back to files.
+        if ((state.sidebarView as string) === 'memo' || (state.sidebarView as string) === 'todo') {
+          state.sidebarView = 'files'
         }
-        if (state && (state.sidebarView as string) === 'structure') {
+        if ((state.sidebarView as string) === 'structure') {
           state.sidebarView = 'outline'
         }
-        if (state && (state.sidebarView as string) === 'bib') {
+        if ((state.sidebarView as string) === 'bib') {
           state.sidebarView = 'files'
+        }
+        // References moved from the research panel to the sidebar; redirect
+        // any per-project restore that still points at the retired tab.
+        if (state.researchPanelStates) {
+          for (const key of Object.keys(state.researchPanelStates)) {
+            const saved = state.researchPanelStates[key]
+            if (saved && (saved.tab as string) === 'references') {
+              state.researchPanelStates[key] = { ...saved, tab: 'chat' }
+            }
+          }
         }
       }
     }

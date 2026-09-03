@@ -195,7 +195,7 @@ describe('EditorPane selection AI toolbar', () => {
     useProjectStore.setState({
       projectRoot: '/tmp',
       isResearchPanelOpen: false,
-      researchPanelTab: 'references',
+      researchPanelTab: 'chat',
       researchReferenceSource: 'project',
       researchSearchQuery: '',
       pendingResearchSelection: null,
@@ -457,8 +457,8 @@ describe('EditorPane selection AI toolbar', () => {
     await user.click(await screen.findByRole('button', { name: 'Find Sources' }))
 
     expect(useProjectStore.getState()).toMatchObject({
-      isResearchPanelOpen: true,
-      researchPanelTab: 'references',
+      isSidebarOpen: true,
+      sidebarView: 'references',
       researchReferenceSource: 'project',
       researchSearchQuery: 'supporting claim with context'
     })
