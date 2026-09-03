@@ -4637,7 +4637,103 @@ button.submission-check-finding:hover {
   overflow-wrap: anywhere;
   font-size: var(--font-base);
   line-height: 1.6;
-  white-space: pre-wrap;
+}
+
+.research-chat-message-text > :first-child {
+  margin-top: 0;
+}
+
+.research-chat-message-text > :last-child {
+  margin-bottom: 0;
+}
+
+.research-chat-message-text p {
+  margin: 0 0 var(--space-8);
+}
+
+.research-chat-message-text h1,
+.research-chat-message-text h2,
+.research-chat-message-text h3,
+.research-chat-message-text h4,
+.research-chat-message-text h5,
+.research-chat-message-text h6 {
+  margin: var(--space-14) 0 var(--space-6);
+  color: var(--text-primary);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.research-chat-message-text h1 {
+  font-size: var(--font-lg);
+}
+
+.research-chat-message-text h2 {
+  font-size: var(--font-md);
+}
+
+.research-chat-message-text h3,
+.research-chat-message-text h4,
+.research-chat-message-text h5,
+.research-chat-message-text h6 {
+  font-size: var(--font-base);
+}
+
+.research-chat-message-text ul,
+.research-chat-message-text ol {
+  margin: 0 0 var(--space-8);
+  padding-left: var(--space-20);
+}
+
+.research-chat-message-text li {
+  margin: var(--space-2) 0;
+}
+
+.research-chat-message-text li > p {
+  margin: 0;
+}
+
+.research-chat-message-text blockquote {
+  margin: var(--space-8) 0;
+  padding: var(--space-4) var(--space-10);
+  color: var(--text-secondary);
+  border-left: 2px solid var(--border);
+}
+
+.research-chat-message-text pre.markdown-code-block {
+  margin: var(--space-8) 0;
+  padding: var(--space-8) var(--space-10);
+  overflow-x: auto;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--ui-radius-control);
+  font-size: var(--font-sm);
+  line-height: 1.5;
+}
+
+.research-chat-message-text pre.markdown-code-block code {
+  padding: 0;
+  background: none;
+  border: 0;
+  font-size: inherit;
+}
+
+.research-chat-message-text code.markdown-inline-code {
+  padding: 1px 5px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--ui-radius-subtle);
+  font-size: var(--font-sm);
+}
+
+.research-chat-message-text .markdown-link {
+  display: inline;
+  padding: 0;
+  color: var(--accent);
+  background: none;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
 }
 
 .research-chat-sources {
@@ -4731,6 +4827,7 @@ button.submission-check-finding:hover {
   display: flex;
   min-height: 28px;
   align-items: center;
+  gap: var(--space-4);
   margin-top: var(--space-4);
 }
 
@@ -4789,8 +4886,7 @@ button.submission-check-finding:hover {
   height: 1px;
 }
 
-.research-zotero-plan,
-.research-document-edit {
+.research-zotero-plan {
   flex-shrink: 0;
   margin: var(--space-8) 0;
   padding: var(--space-8) 10px;
@@ -4800,8 +4896,7 @@ button.submission-check-finding:hover {
   border-radius: 0;
 }
 
-.research-zotero-plan-heading,
-.research-document-edit-heading {
+.research-zotero-plan-heading {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -4809,26 +4904,21 @@ button.submission-check-finding:hover {
 }
 
 .research-zotero-plan-heading strong,
-.research-zotero-plan-heading span,
-.research-document-edit-heading strong,
-.research-document-edit-heading span {
+.research-zotero-plan-heading span {
   display: block;
 }
 
-.research-zotero-plan-heading strong,
-.research-document-edit-heading strong {
+.research-zotero-plan-heading strong {
   font-size: var(--font-base);
 }
 
-.research-zotero-plan-heading span,
-.research-document-edit-heading span {
+.research-zotero-plan-heading span {
   margin-top: var(--space-2);
   color: var(--text-secondary);
   font-size: var(--font-xs);
 }
 
-.research-zotero-plan > p,
-.research-document-edit > p {
+.research-zotero-plan > p {
   margin: var(--space-8) 0 5px;
   color: var(--text-secondary);
   font-size: var(--font-sm);
@@ -4850,16 +4940,14 @@ button.submission-check-finding:hover {
   border-top: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
 }
 
-.research-zotero-plan-actions,
-.research-document-edit-actions {
+.research-zotero-plan-actions {
   display: flex;
   justify-content: flex-end;
   gap: 5px;
   margin-top: 9px;
 }
 
-.research-zotero-plan-actions button,
-.research-document-edit-actions button {
+.research-zotero-plan-actions button {
   display: inline-flex;
   gap: var(--space-4);
   align-items: center;
@@ -4872,31 +4960,69 @@ button.submission-check-finding:hover {
   font-size: var(--font-xs);
 }
 
-.research-zotero-plan-actions button.primary,
-.research-document-edit-actions button.primary {
+.research-zotero-plan-actions button.primary {
   color: var(--text-primary);
   border-color: var(--accent);
 }
 
-.research-zotero-plan-actions button:disabled,
-.research-document-edit-actions button:disabled {
+.research-zotero-plan-actions button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
 }
 
-.research-document-edit pre {
-  max-height: 150px;
-  margin: var(--space-6) 0 0;
-  padding: 7px var(--space-8);
-  overflow: auto;
+.research-chat-edit-flash-line {
+  animation: fadeOutBackground 4s ease-out forwards;
+  border-left: 3px solid var(--git-added, #6a9955);
+  --synctex-flash-bg: color-mix(in srgb, var(--git-added, #6a9955) 22%, transparent);
+}
+
+.research-chat-edit-flash-gutter {
+  animation: fadeOutBackground 4s ease-out forwards;
+  --synctex-flash-bg: color-mix(in srgb, var(--git-added, #6a9955) 22%, transparent);
+}
+
+.research-chat-applied-notice {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-6);
+  margin: var(--space-8) 0;
+  padding: var(--space-6) var(--space-10);
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--git-added, #6a9955) 8%, transparent);
+  border-left: 2px solid var(--git-added, #6a9955);
+  font-size: var(--font-xs);
+}
+
+.research-chat-applied-notice svg {
+  flex-shrink: 0;
+  color: var(--git-added, #6a9955);
+}
+
+.research-chat-applied-notice span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.research-chat-applied-notice button {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-4);
+  margin-left: auto;
+  padding: var(--space-2) var(--space-6);
   color: var(--text-primary);
   background: var(--bg-input);
-  border: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+  border: 1px solid var(--border);
   border-radius: var(--ui-radius-control);
-  font-family: var(--font-mono, monospace);
+  cursor: pointer;
   font-size: var(--font-xs);
-  line-height: 1.45;
-  white-space: pre-wrap;
+}
+
+.research-chat-applied-notice button:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent);
 }
 
 .research-chat-composer {

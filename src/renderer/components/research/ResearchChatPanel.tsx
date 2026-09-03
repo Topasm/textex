@@ -30,6 +30,7 @@ import type {
   ZoteroMutationPlan
 } from '../../../shared/types'
 import { getActiveEditorAdapter } from '../../editor/activeEditorAdapter'
+import { MarkdownText } from '../ui/MarkdownText'
 import { describeNativeError } from '../../services/nativeErrors'
 import { documentRegistry, normalizeDocumentId } from '../../models/documentRegistry'
 import {
@@ -45,8 +46,7 @@ import {
   buildPendingResearchChatDocumentEdit,
   buildResearchChatDocumentEditRequest,
   isResearchChatDocumentWithinEditLimit,
-  unwrapResearchChatDocumentEdit,
-  type PendingResearchChatDocumentEdit
+  unwrapResearchChatDocumentEdit
 } from '../../services/researchChatDocumentEdit'
 import {
   appendResearchChatSessionMessages,
@@ -116,10 +116,18 @@ interface SelectionChatContext {
   content: string
 }
 
+interface LastAppliedDocumentEdit {
+  filePath: string
+  fileName: string
+  previousText: string
+  usedAdapter: boolean
+}
+
 const DOCUMENT_CONTEXT_LIMIT = 24_000
 const HISTORY_LIMIT = 12
 const REFERENCE_SEARCH_QUERY_LIMIT = 512
 const PROMPT_QUEUE_LIMIT = 8
+const APPLIED_EDIT_NOTICE_MS = 10_000
 
 // Ids are stable; both the button copy and the prompt it inserts are
 // translated so the composer is filled in the author's language.
@@ -171,8 +179,8 @@ export function ResearchChatPanel({
   const [busy, setBusy] = useState(false)
   const [actionBusy, setActionBusy] = useState('')
   const [pendingZoteroPlan, setPendingZoteroPlan] = useState<ZoteroMutationPlan | null>(null)
-  const [pendingDocumentEdit, setPendingDocumentEdit] =
-    useState<PendingResearchChatDocumentEdit | null>(null)
+  const [lastAppliedEdit, setLastAppliedEdit] = useState<LastAppliedDocumentEdit | null>(null)
+  const appliedEditToken = useRef(0)
   const [dropActive, setDropActive] = useState(false)
   const [sessionReadyRoot, setSessionReadyRoot] = useState<string | null>(null)
   const loadGeneration = useRef(0)
@@ -368,7 +376,8 @@ export function ResearchChatPanel({
     setBusy(false)
     setActionBusy('')
     setPendingZoteroPlan(null)
-    setPendingDocumentEdit(null)
+    setLastAppliedEdit(null)
+    appliedEditToken.current += 1
     setDropActive(false)
     setSessionReadyRoot(null)
     consumedIncomingToken.current = null
@@ -494,7 +503,10 @@ export function ResearchChatPanel({
 
   useEffect(() => {
     const hadDocument = Boolean(previousFilePath.current)
-    if (previousFilePath.current !== filePath) setPendingDocumentEdit(null)
+    if (previousFilePath.current !== filePath) {
+      setLastAppliedEdit(null)
+      appliedEditToken.current += 1
+    }
     previousFilePath.current = filePath
     setSelectedContexts((current) => {
       const hasDocument = current.has('document')
@@ -780,6 +792,10 @@ export function ResearchChatPanel({
       if (queuedQuestion === undefined) setPrompt('')
       historyIndexRef.current = null
       historyDraftRef.current = ''
+      // Re-anchor to the bottom for this turn even if the reader had scrolled
+      // up to review earlier history — sending (or auto-sending a queued)
+      // question means they want to see it and the reply that follows.
+      shouldAutoScrollRef.current = true
       const root = projectRoot
       const generation = ++requestGeneration.current
       requestSerial.current += 1
@@ -903,6 +919,7 @@ export function ResearchChatPanel({
       if (!isCurrentAction(generation, root)) return
       invalidateZoteroInventory(useSettingsStore.getState().settings.zoteroPort)
       setPendingZoteroPlan(null)
+      shouldAutoScrollRef.current = true
       setMessages((current) =>
         appendResearchChatSessionMessages(current, {
           role: 'assistant',
@@ -925,6 +942,7 @@ export function ResearchChatPanel({
   const cancelZoteroPlan = useCallback(() => {
     if (!pendingZoteroPlan || actionInFlight.current) return
     setPendingZoteroPlan(null)
+    shouldAutoScrollRef.current = true
     setMessages((current) =>
       appendResearchChatSessionMessages(current, {
         role: 'assistant',
@@ -1012,8 +1030,13 @@ export function ResearchChatPanel({
     [isCurrentAction, projectRoot, t]
   )
 
-  const prepareDocumentEdit = useCallback(
-    async (content: string, key: string) => {
+  // Fetches the AI-recommended rewrite and applies it to the active document
+  // in one step (no separate "prepare then review" screen). The changed
+  // range is briefly highlighted in the editor so the writer can see what
+  // moved without having to compare a text preview by eye; the normal
+  // undo stack (Ctrl+Z) is the safety net instead of a discard button.
+  const applyDocumentEditNow = useCallback(
+    async (content: string, key: string, compileAfterApply: boolean) => {
       const editor = useEditorStore.getState()
       const activePath = editor.activeFilePath
       if (!activePath || !projectRoot || actionInFlight.current) return
@@ -1055,10 +1078,84 @@ export function ResearchChatPanel({
           setStatus(t('researchPanel.chat.noSourceChange'))
           return
         }
-        setPendingDocumentEdit(
-          buildPendingResearchChatDocumentEdit(activePath, snapshot, proposedText)
-        )
-        setStatus(t('researchPanel.chat.reviewSourceChange'))
+
+        const pending = buildPendingResearchChatDocumentEdit(activePath, snapshot, proposedText)
+        const adapter = getActiveEditorAdapter()
+        const adapterMatches =
+          adapter?.getDocumentId() != null &&
+          normalizeDocumentId(adapter.getDocumentId()!) === normalizeDocumentId(activePath)
+        const usedAdapter = Boolean(adapter && adapterMatches)
+
+        if (adapter && adapterMatches) {
+          const lastLine = Math.max(1, adapter.getLineCount())
+          const applied = adapter.applyEdits('research-chat-document-edit', [
+            {
+              range: {
+                start: { line: 1, column: 1 },
+                end: { line: lastLine, column: adapter.getLineMaxColumn(lastLine) }
+              },
+              text: proposedText,
+              forceMoveMarkers: true
+            }
+          ])
+          if (!applied) {
+            setStatus(t('researchPanel.chat.editApplyFailed'))
+            return
+          }
+          adapter.focus()
+
+          const endLine = pending.startLine + Math.max(pending.addedLines, 1) - 1
+          adapter.revealPosition({ line: pending.startLine, column: 1 }, { center: true })
+          const decoration = adapter.setDecorations('research-chat-document-edit', [
+            {
+              range: {
+                start: { line: pending.startLine, column: 1 },
+                end: { line: endLine, column: 1 }
+              },
+              isWholeLine: true,
+              className: 'research-chat-edit-flash-line',
+              marginClassName: 'research-chat-edit-flash-gutter'
+            }
+          ])
+          setTimeout(() => decoration.dispose(), 4000)
+        } else {
+          const updated = editor.updateActiveDocument(proposedText, 'programmatic')
+          if (!updated) {
+            setStatus(t('researchPanel.chat.editApplyFailed'))
+            return
+          }
+        }
+
+        const fileName = activePath.split(/[\\/]/u).at(-1) || 'document'
+
+        // Offer a quick "check ✓ / undo" affordance instead of a discard
+        // review step — the previous text is enough to revert immediately.
+        const editToken = ++appliedEditToken.current
+        setLastAppliedEdit({
+          filePath: activePath,
+          fileName,
+          previousText: snapshot.text,
+          usedAdapter
+        })
+        setTimeout(() => {
+          if (appliedEditToken.current === editToken) setLastAppliedEdit(null)
+        }, APPLIED_EDIT_NOTICE_MS)
+
+        if (compileAfterApply && onCompile) {
+          setStatus(t('researchPanel.chat.appliedCompiling', { file: fileName }))
+          await onCompile()
+          if (!isCurrentAction(generation, root)) return
+          const compileStatus = useCompileStore.getState().compileStatus
+          setStatus(
+            compileStatus === 'success'
+              ? t('researchPanel.chat.appliedCompiled', { file: fileName })
+              : compileStatus === 'error'
+                ? t('researchPanel.chat.appliedCompileFailed', { file: fileName })
+                : t('researchPanel.chat.appliedCompileStale', { file: fileName })
+          )
+        } else {
+          setStatus(t('researchPanel.chat.appliedNoCompile', { file: fileName }))
+        }
       } catch (error) {
         if (isCurrentAction(generation, root)) {
           setStatus(describeNativeError(error))
@@ -1070,85 +1167,35 @@ export function ResearchChatPanel({
         }
       }
     },
-    [isCurrentAction, projectRoot, t]
+    [isCurrentAction, onCompile, projectRoot, t]
   )
 
-  const discardDocumentEdit = useCallback(() => {
-    setPendingDocumentEdit(null)
-    setStatus(t('researchPanel.chat.editDiscarded'))
-  }, [t])
+  const undoLastAppliedEdit = useCallback(() => {
+    if (!lastAppliedEdit || actionInFlight.current) return
+    const editor = useEditorStore.getState()
+    if (editor.activeFilePath !== lastAppliedEdit.filePath) {
+      setStatus(t('researchPanel.chat.undoStale'))
+      return
+    }
 
-  const applyDocumentEdit = useCallback(
-    async (compileAfterApply: boolean) => {
-      if (!pendingDocumentEdit) return
-      const editor = useEditorStore.getState()
-      const model = documentRegistry.getModel(pendingDocumentEdit.filePath)
-      if (
-        editor.activeFilePath !== pendingDocumentEdit.filePath ||
-        !model?.isCurrent(pendingDocumentEdit.snapshot)
-      ) {
-        setPendingDocumentEdit(null)
-        setStatus(t('researchPanel.chat.editStale'))
-        return
-      }
-
-      const adapter = getActiveEditorAdapter()
-      const adapterMatches =
-        adapter?.getDocumentId() != null &&
-        normalizeDocumentId(adapter.getDocumentId()!) ===
-          normalizeDocumentId(pendingDocumentEdit.filePath)
-      if (adapter && adapterMatches) {
-        const lastLine = Math.max(1, adapter.getLineCount())
-        const applied = adapter.applyEdits('research-chat-document-edit', [
-          {
-            range: {
-              start: { line: 1, column: 1 },
-              end: { line: lastLine, column: adapter.getLineMaxColumn(lastLine) }
-            },
-            text: pendingDocumentEdit.proposedText,
-            forceMoveMarkers: true
-          }
-        ])
-        if (!applied) {
-          setStatus('The editor could not apply this change. Prepare the edit again.')
-          return
-        }
-        adapter.focus()
-      } else {
-        const updated = editor.updateActiveDocument(
-          pendingDocumentEdit.proposedText,
-          'programmatic'
-        )
-        if (!updated) {
-          setStatus('The editor could not apply this change. Prepare the edit again.')
-          return
-        }
-      }
-
-      const fileName = pendingDocumentEdit.filePath.split(/[\\/]/u).at(-1) || 'document'
-      setPendingDocumentEdit(null)
-      if (compileAfterApply && onCompile) {
-        setActionBusy('document-compile')
-        setStatus(t('researchPanel.chat.appliedCompiling', { file: fileName }))
-        try {
-          await onCompile()
-          const compileStatus = useCompileStore.getState().compileStatus
-          setStatus(
-            compileStatus === 'success'
-              ? t('researchPanel.chat.appliedCompiled', { file: fileName })
-              : compileStatus === 'error'
-                ? t('researchPanel.chat.appliedCompileFailed', { file: fileName })
-                : t('researchPanel.chat.appliedCompileStale', { file: fileName })
-          )
-        } finally {
-          setActionBusy('')
-        }
-        return
-      }
-      setStatus(t('researchPanel.chat.appliedNoCompile', { file: fileName }))
-    },
-    [onCompile, pendingDocumentEdit, t]
-  )
+    const adapter = getActiveEditorAdapter()
+    const adapterMatches =
+      lastAppliedEdit.usedAdapter &&
+      adapter?.getDocumentId() != null &&
+      normalizeDocumentId(adapter.getDocumentId()!) ===
+        normalizeDocumentId(lastAppliedEdit.filePath)
+    const reverted = adapterMatches
+      ? adapter!.undo()
+      : editor.updateActiveDocument(lastAppliedEdit.previousText, 'programmatic')
+    if (!reverted) {
+      setStatus(t('researchPanel.chat.undoStale'))
+      return
+    }
+    if (adapterMatches) adapter?.focus()
+    setLastAppliedEdit(null)
+    appliedEditToken.current += 1
+    setStatus(t('researchPanel.chat.editUndone', { file: lastAppliedEdit.fileName }))
+  }, [lastAppliedEdit, t])
 
   const navigatePromptHistory = useCallback(
     (direction: 'previous' | 'next'): boolean => {
@@ -1197,7 +1244,8 @@ export function ResearchChatPanel({
       queuedPromptsRef.current = []
       historyIndexRef.current = null
       historyDraftRef.current = ''
-      setPendingDocumentEdit(null)
+      setLastAppliedEdit(null)
+      appliedEditToken.current += 1
       referenceContextsRef.current = []
       setReferenceContexts([])
       setSelectedContexts(
@@ -1386,7 +1434,7 @@ export function ResearchChatPanel({
                     )}
                   </div>
                 )}
-                <p className="research-chat-message-text">{message.content}</p>
+                <MarkdownText className="research-chat-message-text" text={message.content} />
                 {message.sources && message.sources.length > 0 && (
                   <div
                     className="research-chat-sources"
@@ -1446,14 +1494,45 @@ export function ResearchChatPanel({
                       type="button"
                       disabled={!filePath || Boolean(actionBusy)}
                       onClick={() =>
-                        void prepareDocumentEdit(message.content, `document-edit:${index}`)
+                        void applyDocumentEditNow(message.content, `document-edit:${index}`, false)
                       }
                     >
-                      <FileText size={ICON_SIZE.micro} aria-hidden="true" />
+                      {actionBusy === `document-edit:${index}` ? (
+                        <LoaderCircle className="spin" size={ICON_SIZE.micro} aria-hidden="true" />
+                      ) : (
+                        <FileText size={ICON_SIZE.micro} aria-hidden="true" />
+                      )}
                       {actionBusy === `document-edit:${index}`
                         ? t('researchPanel.chat.preparingEditShort')
                         : t('researchPanel.chat.prepareDocumentEdit')}
                     </button>
+                    {onCompile && (
+                      <button
+                        className="research-chat-insert-answer"
+                        type="button"
+                        disabled={!filePath || Boolean(actionBusy)}
+                        onClick={() =>
+                          void applyDocumentEditNow(
+                            message.content,
+                            `document-edit-compile:${index}`,
+                            true
+                          )
+                        }
+                      >
+                        {actionBusy === `document-edit-compile:${index}` ? (
+                          <LoaderCircle
+                            className="spin"
+                            size={ICON_SIZE.micro}
+                            aria-hidden="true"
+                          />
+                        ) : (
+                          <FileText size={ICON_SIZE.micro} aria-hidden="true" />
+                        )}
+                        {actionBusy === `document-edit-compile:${index}`
+                          ? t('researchPanel.chat.preparingEditShort')
+                          : t('researchPanel.chat.applyAndCompile')}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -1474,59 +1553,15 @@ export function ResearchChatPanel({
         <div className="research-chat-message-end" ref={messageEndRef} aria-hidden="true" />
       </div>
 
-      {pendingDocumentEdit && (
-        <section
-          className="research-document-edit"
-          aria-label={t('researchPanel.chat.documentPreview')}
-        >
-          <div className="research-document-edit-heading">
-            <div>
-              <strong>{t('researchPanel.chat.documentPreview')}</strong>
-              <span>
-                {t('researchPanel.chat.documentPreviewMeta', {
-                  file: pendingDocumentEdit.filePath.split(/[\\/]/u).at(-1),
-                  line: pendingDocumentEdit.startLine,
-                  removed: pendingDocumentEdit.removedLines,
-                  added: pendingDocumentEdit.addedLines
-                })}
-              </span>
-            </div>
-            <ShieldCheck size={ICON_SIZE.feature} aria-hidden="true" />
-          </div>
-          <p>{t('researchPanel.chat.documentPreviewNotice')}</p>
-          <pre>
-            {pendingDocumentEdit.excerpt}
-            {pendingDocumentEdit.excerptTruncated ? '\n…' : ''}
-          </pre>
-          <div className="research-document-edit-actions">
-            <button type="button" onClick={discardDocumentEdit}>
-              <X size={ICON_SIZE.micro} /> {t('researchPanel.chat.discard')}
-            </button>
-            <button
-              className="primary"
-              type="button"
-              disabled={Boolean(actionBusy)}
-              onClick={() => void applyDocumentEdit(false)}
-            >
-              <ShieldCheck size={ICON_SIZE.micro} /> {t('researchPanel.chat.applyChanges')}
-            </button>
-            {onCompile && (
-              <button
-                className="primary"
-                type="button"
-                disabled={Boolean(actionBusy)}
-                onClick={() => void applyDocumentEdit(true)}
-              >
-                {actionBusy === 'document-compile' ? (
-                  <LoaderCircle className="spin" size={ICON_SIZE.micro} />
-                ) : (
-                  <FileText size={ICON_SIZE.micro} />
-                )}{' '}
-                {t('researchPanel.chat.applyAndCompile')}
-              </button>
-            )}
-          </div>
-        </section>
+      {lastAppliedEdit && (
+        <div className="research-chat-applied-notice" role="status">
+          <ShieldCheck size={ICON_SIZE.micro} aria-hidden="true" />
+          <span>{t('researchPanel.chat.editApplied', { file: lastAppliedEdit.fileName })}</span>
+          <button type="button" onClick={undoLastAppliedEdit}>
+            <RotateCcw size={ICON_SIZE.micro} aria-hidden="true" />
+            {t('researchPanel.chat.undo')}
+          </button>
+        </div>
       )}
 
       {pendingZoteroPlan && (

@@ -211,6 +211,12 @@ export class MonacoEditorAdapter implements EditorAdapter {
     )
   }
 
+  undo(): boolean {
+    if (!this.editor.getModel()) return false
+    this.editor.trigger('research-chat-undo', 'undo', null)
+    return true
+  }
+
   setDiagnostics(owner: string, diagnostics: readonly EditorDiagnostic[]): void {
     const model = this.editor.getModel()
     if (!model) return

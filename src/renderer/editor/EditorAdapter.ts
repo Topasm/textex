@@ -117,6 +117,8 @@ export interface EditorAdapter {
   revealPosition(position: EditorPosition, options?: EditorRevealOptions): void
 
   applyEdits(source: string, edits: readonly EditorTextEdit[]): boolean
+  /** Reverts the most recent edit on this editor's own undo stack (e.g. Ctrl+Z). */
+  undo(): boolean
   setDiagnostics(owner: string, diagnostics: readonly EditorDiagnostic[]): void
   setDecorations(owner: string, decorations: readonly EditorDecoration[]): EditorDisposable
   clearDecorations(owner: string): void

@@ -290,7 +290,7 @@ describe('ResearchChatPanel', () => {
     )
   })
 
-  it('prepares and explicitly applies a Chat recommendation to the active document', async () => {
+  it('applies a Chat recommendation to the active document and compiles immediately', async () => {
     window.api.aiResearchChat = vi
       .fn()
       .mockResolvedValue(chatResponse('Guard the pdfLaTeX-only primitives with ifPDFTeX.'))
@@ -306,9 +306,9 @@ describe('ResearchChatPanel', () => {
     fireEvent.change(input, { target: { value: 'Fix the XeLaTeX error.' } })
     fireEvent.keyDown(input, { key: 'Enter' })
     await screen.findByText('Guard the pdfLaTeX-only primitives with ifPDFTeX.')
-    fireEvent.click(screen.getByRole('button', { name: 'Prepare document edit' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Apply & compile' }))
 
-    const preview = await screen.findByLabelText('Document change preview')
+    await waitFor(() => expect(onCompile).toHaveBeenCalledOnce())
     expect(window.api.aiProcessCustom).toHaveBeenCalledWith(
       expect.objectContaining({
         selectedText: '\\section{Method} Draft',
@@ -316,19 +316,19 @@ describe('ResearchChatPanel', () => {
         command: expect.stringContaining('Guard the pdfLaTeX-only primitives')
       })
     )
-    expect(documentRegistry.snapshot('/project/paper.tex')?.text).toBe('\\section{Method} Draft')
-
-    fireEvent.click(within(preview).getByRole('button', { name: 'Apply & compile' }))
-    await waitFor(() => expect(onCompile).toHaveBeenCalledOnce())
     expect(documentRegistry.snapshot('/project/paper.tex')?.text).toBe(
       '\\usepackage{iftex}\n\\ifPDFTeX\nDraft\n\\fi'
     )
     expect(useEditorStore.getState().isDirty).toBe(true)
-    expect(screen.queryByLabelText('Document change preview')).not.toBeInTheDocument()
     expect(screen.getByText('Applied and compiled paper.tex successfully.')).toBeVisible()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+    expect(documentRegistry.snapshot('/project/paper.tex')?.text).toBe('\\section{Method} Draft')
+    expect(screen.getByText('Reverted the change to paper.tex.')).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Undo' })).not.toBeInTheDocument()
   })
 
-  it('rejects a prepared document edit when the source changes during generation', async () => {
+  it('rejects a Chat document edit when the source changes during generation', async () => {
     const pendingEdit = deferred<string>()
     window.api.aiResearchChat = vi
       .fn()
@@ -340,7 +340,7 @@ describe('ResearchChatPanel', () => {
     fireEvent.change(input, { target: { value: 'Fix the source.' } })
     fireEvent.keyDown(input, { key: 'Enter' })
     await screen.findByText('Update the current LaTeX source.')
-    fireEvent.click(screen.getByRole('button', { name: 'Prepare document edit' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Apply to document' }))
     await waitFor(() => expect(window.api.aiProcessCustom).toHaveBeenCalledOnce())
 
     act(() => {
@@ -351,7 +351,6 @@ describe('ResearchChatPanel', () => {
       await pendingEdit.promise
     })
 
-    expect(screen.queryByLabelText('Document change preview')).not.toBeInTheDocument()
     expect(documentRegistry.snapshot('/project/paper.tex')?.text).toBe('User changed the document.')
     expect(
       screen.getByText('The document changed while the edit was being prepared. Try again.')
@@ -935,7 +934,7 @@ describe('ResearchChatPanel', () => {
     await waitFor(() => expect(window.api.researchAddOnline).toHaveBeenCalledWith(compactReference))
     expect(useEditorStore.getState().pendingInsertText).toBe('\\cite{lovelace2025dropped}')
 
-    expect(screen.getByRole('button', { name: 'Prepare document edit' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Apply to document' })).toBeEnabled()
     await waitFor(() =>
       expect(window.api.researchChatSessionSave).toHaveBeenCalledWith(
         expect.objectContaining({ projectRoot: '/project' }),
