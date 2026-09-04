@@ -137,6 +137,19 @@ function App() {
   const [helpSection, setHelpSection] = useState<LearnSectionId>('quick-start')
   const [pendingHelpCommand, setPendingHelpCommand] = useState<AppCommandId | null>(null)
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
+  // Auto-hide shows the sidebar as an absolutely-positioned overlay on
+  // hover, so it never pushes the editor. Pinning switches it to a normal
+  // flex child with a real (animated) width — starting from the auto-hide
+  // rail's 16px, not the overlay's already-visible width. Suppressing the
+  // width/opacity transition for one frame around that specific switch
+  // avoids a visible squeeze-then-settle glitch; see sidebarWrapperClass.
+  const [sidebarModeSwitching, setSidebarModeSwitching] = useState(false)
+  const suppressSidebarTransition = useCallback(() => {
+    setSidebarModeSwitching(true)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => setSidebarModeSwitching(false))
+    })
+  }, [])
   useAutoCompile()
   useContinuousZoteroSync()
   const { handleOpen, handleSave, handleSaveAs } = useFileOps()
@@ -607,7 +620,7 @@ function App() {
   const sidebarHandleStyle = autoHideSidebar
     ? { left: `${sidebarWidth}px`, right: 'auto' }
     : undefined
-  const sidebarWrapperClass = `sidebar-wrapper sidebar-left sidebar-shell-${sidebarPresence.phase}${autoHideSidebar ? ' sidebar-auto-hide' : ''}`
+  const sidebarWrapperClass = `sidebar-wrapper sidebar-left sidebar-shell-${sidebarPresence.phase}${autoHideSidebar ? ' sidebar-auto-hide' : ''}${sidebarModeSwitching ? ' sidebar-mode-switching' : ''}`
   const sidebarElement = (
     <div
       className={sidebarWrapperClass}
@@ -647,6 +660,7 @@ function App() {
             title={autoHideSidebar ? t('sidebar.pinSidebar') : t('sidebar.unpinSidebar')}
             aria-label={autoHideSidebar ? t('sidebar.pinSidebar') : t('sidebar.unpinSidebar')}
             onClick={() => {
+              suppressSidebarTransition()
               if (autoHideSidebar) {
                 useSettingsStore.getState().updateSetting('autoHideSidebar', false)
                 if (!useProjectStore.getState().isSidebarOpen) {

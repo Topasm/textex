@@ -1512,6 +1512,17 @@ body,
   transition: none;
 }
 
+/* Switching auto-hide <-> pinned changes the sidebar's own positioning
+   scheme (absolute overlay vs. a real flex width starting from the
+   auto-hide rail's 16px), so animating that specific change reads as a
+   squeeze/overlap glitch rather than a smooth resize. Suppress transitions
+   for the one frame around that switch; see suppressSidebarTransition. */
+.sidebar-wrapper.sidebar-mode-switching,
+.sidebar-wrapper.sidebar-mode-switching .sidebar,
+.sidebar-wrapper.sidebar-mode-switching .sidebar-resize-handle {
+  transition: none !important;
+}
+
 .sidebar-wrapper.sidebar-auto-hide {
   position: relative;
   z-index: 20;
@@ -2914,7 +2925,13 @@ body,
   background: var(--sidebar-bg);
   border-left: 1px solid var(--border);
   z-index: 16;
-  container-type: inline-size;
+  /* Named to match .sidebar's `container: panel / inline-size` so the
+     shared @container panel (max-width: 360px/220px) tab-compaction rules
+     (index.css, "Either panel can be dragged narrower...") apply here too
+     instead of only on the left sidebar. Without the matching name, this
+     panel's own tab strip never compacted at its own min-width and could
+     crowd/overlap its icons. */
+  container: panel / inline-size;
 }
 
 .research-resize-handle {
