@@ -45,9 +45,9 @@ import {
 import {
   buildPendingResearchChatDocumentEdit,
   buildResearchChatDocumentEditRequest,
-  isResearchChatDocumentWithinEditLimit,
-  unwrapResearchChatDocumentEdit
+  isResearchChatDocumentWithinEditLimit
 } from '../../services/researchChatDocumentEdit'
+import type { DocumentRevisionSnapshot } from '../../models/documentModel'
 import {
   appendResearchChatSessionMessages,
   compactResearchChatMessageContent,
@@ -56,6 +56,8 @@ import {
   researchChatSessionScope
 } from '../../services/researchChatSession'
 import { invalidateZoteroInventory } from '../../services/zoteroInventoryCache'
+import { invalidateZoteroItemDetails } from '../../services/zoteroItemDetailCache'
+import { useZoteroSyncStore } from '../../store/useZoteroSyncStore'
 import {
   authorContext,
   paperContext,
@@ -120,6 +122,7 @@ interface LastAppliedDocumentEdit {
   filePath: string
   fileName: string
   previousText: string
+  appliedSnapshot: DocumentRevisionSnapshot
   usedAdapter: boolean
 }
 
@@ -913,6 +916,8 @@ export function ResearchChatPanel({
       const result = await window.api.zoteroApplyMutationPlan(plan)
       if (!isCurrentAction(generation, root)) return
       invalidateZoteroInventory(useSettingsStore.getState().settings.zoteroPort)
+      invalidateZoteroItemDetails()
+      useZoteroSyncStore.getState().markDataChanged()
       setPendingZoteroPlan(null)
       shouldAutoScrollRef.current = true
       setMessages((current) =>
@@ -1064,39 +1069,20 @@ export function ResearchChatPanel({
           setStatus(t('researchPanel.chat.documentChangedDuringEdit'))
           return
         }
-        const proposedText = unwrapResearchChatDocumentEdit(response)
-        if (!proposedText.trim()) {
-          setStatus(t('researchPanel.chat.emptyEdit'))
-          return
-        }
-        if (proposedText === snapshot.text) {
-          setStatus(t('researchPanel.chat.noSourceChange'))
-          return
-        }
-
-        const pending = buildPendingResearchChatDocumentEdit(activePath, snapshot, proposedText)
+        const pending = buildPendingResearchChatDocumentEdit(activePath, snapshot, response)
         const adapter = getActiveEditorAdapter()
         const adapterMatches =
           adapter?.getDocumentId() != null &&
           normalizeDocumentId(adapter.getDocumentId()!) === normalizeDocumentId(activePath)
         const usedAdapter = Boolean(adapter && adapterMatches)
 
+        const appliedSnapshot = editor.applyDocumentEdits(activePath, 'programmatic', pending.edits)
+        if (!appliedSnapshot) {
+          setStatus(t('researchPanel.chat.editApplyFailed'))
+          return
+        }
+
         if (adapter && adapterMatches) {
-          const lastLine = Math.max(1, adapter.getLineCount())
-          const applied = adapter.applyEdits('research-chat-document-edit', [
-            {
-              range: {
-                start: { line: 1, column: 1 },
-                end: { line: lastLine, column: adapter.getLineMaxColumn(lastLine) }
-              },
-              text: proposedText,
-              forceMoveMarkers: true
-            }
-          ])
-          if (!applied) {
-            setStatus(t('researchPanel.chat.editApplyFailed'))
-            return
-          }
           adapter.focus()
 
           const endLine = pending.startLine + Math.max(pending.addedLines, 1) - 1
@@ -1113,12 +1099,6 @@ export function ResearchChatPanel({
             }
           ])
           setTimeout(() => decoration.dispose(), 4000)
-        } else {
-          const updated = editor.updateActiveDocument(proposedText, 'programmatic')
-          if (!updated) {
-            setStatus(t('researchPanel.chat.editApplyFailed'))
-            return
-          }
         }
 
         const fileName = activePath.split(/[\\/]/u).at(-1) || 'document'
@@ -1130,6 +1110,7 @@ export function ResearchChatPanel({
           filePath: activePath,
           fileName,
           previousText: snapshot.text,
+          appliedSnapshot,
           usedAdapter
         })
         setTimeout(() => {
@@ -1169,6 +1150,12 @@ export function ResearchChatPanel({
     if (!lastAppliedEdit || actionInFlight.current) return
     const editor = useEditorStore.getState()
     if (editor.activeFilePath !== lastAppliedEdit.filePath) {
+      setStatus(t('researchPanel.chat.undoStale'))
+      return
+    }
+    const model = documentRegistry.getModel(lastAppliedEdit.filePath)
+    if (!model?.isCurrent(lastAppliedEdit.appliedSnapshot)) {
+      setLastAppliedEdit(null)
       setStatus(t('researchPanel.chat.undoStale'))
       return
     }

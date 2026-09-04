@@ -9,6 +9,7 @@ import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 import { useCompileStore } from '../../renderer/store/useCompileStore'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
 import { invalidateZoteroInventory } from '../../renderer/services/zoteroInventoryCache'
+import { useZoteroSyncStore } from '../../renderer/store/useZoteroSyncStore'
 
 function deferred<T>() {
   let resolve!: (value: T) => void
@@ -68,6 +69,7 @@ describe('Research reference sources', () => {
       settings: { ...state.settings, zoteroPort: 23_119, zoteroSyncMode: 'continuous' }
     }))
     useCompileStore.setState({ diagnostics: [] })
+    useZoteroSyncStore.setState({ dataRevision: 0, configurationRevision: 0 })
     useEditorStore.getState().resetEditor()
   })
 
@@ -860,54 +862,34 @@ describe('Research reference sources', () => {
     ).toBeInTheDocument()
   })
 
-  it('mirrors an observed Zotero change into the managed file while sync is continuous', async () => {
-    vi.useFakeTimers()
-    try {
-      let totalResults = 36
-      window.api.researchLoadConfig = vi.fn().mockResolvedValue({
-        ...config,
-        zoteroCollection: '/0/ICRA'
-      })
-      window.api.zoteroLibraryTree = vi
-        .fn()
-        .mockResolvedValue(
-          libraryTree([{ key: '/0/ICRA', name: 'icra_2027', parentKey: null, itemCount: 36 }])
-        )
-      window.api.zoteroCollectionItems = vi
-        .fn()
-        .mockImplementation(async (_key: string, _offset: number, limit: number) => ({
-          items: [],
-          totalResults,
-          offset: 0,
-          limit
-        }))
-      window.api.zoteroSyncCollection = vi.fn().mockResolvedValue({
-        filePath: '/project-a/zotero.bib',
-        bytesWritten: 100,
-        entryCount: 48
-      })
-      window.api.findBibInProject = vi.fn().mockResolvedValue([])
-
-      render(<ZoteroReferences />)
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(100)
-      })
-      expect(window.api.zoteroSyncCollection).not.toHaveBeenCalled()
-
-      totalResults = 48
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(20_000)
-      })
-
-      expect(window.api.zoteroSyncCollection).toHaveBeenCalledWith(
-        '/0/ICRA',
-        '/project-a/zotero.bib',
-        23_119
+  it('refreshes panel inventories after the project coordinator publishes a sync', async () => {
+    let totalResults = 36
+    window.api.researchLoadConfig = vi.fn().mockResolvedValue({
+      ...config,
+      zoteroCollection: '/0/ICRA'
+    })
+    window.api.zoteroLibraryTree = vi
+      .fn()
+      .mockResolvedValue(
+        libraryTree([{ key: '/0/ICRA', name: 'icra_2027', parentKey: null, itemCount: 36 }])
       )
-      expect(window.api.findBibInProject).toHaveBeenCalledWith('/project-a')
-    } finally {
-      vi.useRealTimers()
-    }
+    window.api.zoteroCollectionItems = vi
+      .fn()
+      .mockImplementation(async (_key: string, _offset: number, limit: number) => ({
+        items: [],
+        totalResults,
+        offset: 0,
+        limit
+      }))
+
+    render(<ZoteroReferences />)
+    expect(await screen.findByText(/36 in this collection/)).toBeVisible()
+
+    totalResults = 48
+    act(() => useZoteroSyncStore.getState().markDataChanged())
+
+    expect(await screen.findByText(/48 in this collection/)).toBeVisible()
+    expect(window.api.zoteroSyncCollection).not.toHaveBeenCalled()
   })
   it('restores the saved collection once Zotero becomes reachable', async () => {
     vi.useFakeTimers()

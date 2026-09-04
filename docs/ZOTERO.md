@@ -75,11 +75,12 @@ The sync mode itself is the global **Collection sync** setting.
 - The open-time export runs during project open. A failure (for example, Zotero
   not running yet) is reported as a notification instead of being dropped.
 - Continuous mode polls the configured collection every 15 seconds through
-  `zotero_collection_items` with a zero-length page, which returns only the
-  authoritative `Total-Results` count. Every observed change refreshes the
-  panel's cross-check inventories and rewrites the managed `zotero.bib`. Zotero
-  exposes no change feed, so polling the count is the cheapest reliable signal.
-  The inventory refresh runs in every mode; only the file write is gated.
+  `zotero_collection_items` with a zero-length page. The project-level
+  coordinator remains active when the References sidebar is closed and uses
+  Zotero's `Last-Modified-Version` library revision, with `Total-Results` as a
+  compatibility fallback. A successful change refreshes panel caches and
+  atomically rewrites the managed `zotero.bib`; failed revisions remain pending
+  and are retried on the next poll.
 
 A saved collection that Zotero has not confirmed yet — an unreachable Zotero, or
 a library tree that has not loaded — stays selected and is reported as

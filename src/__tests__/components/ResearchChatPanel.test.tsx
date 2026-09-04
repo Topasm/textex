@@ -11,6 +11,10 @@ import { useCompileStore } from '../../renderer/store/useCompileStore'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
+import {
+  INITIAL_AI_PROVIDER_AVAILABILITY,
+  useAiProviderAvailabilityStore
+} from '../../renderer/store/useAiProviderAvailabilityStore'
 import type { ResearchChatResponse } from '../../shared/types'
 
 function deferred<T>() {
@@ -35,6 +39,12 @@ describe('ResearchChatPanel', () => {
     useEditorStore.getState().openFileInTab('/project/paper.tex', '\\section{Method} Draft')
     useCompileStore.setState({ compileStatus: 'idle' })
     useProjectStore.setState({ projectRoot: '/project' })
+    useAiProviderAvailabilityStore.setState({
+      availability: INITIAL_AI_PROVIDER_AVAILABILITY,
+      checked: false,
+      checking: false,
+      refreshGeneration: 0
+    })
     useSettingsStore.setState((state) => ({
       settings: {
         ...state.settings,
@@ -84,7 +94,11 @@ describe('ResearchChatPanel', () => {
     window.api.aiResearchChat = vi
       .fn()
       .mockResolvedValue(chatResponse('It is implemented in [Official code].'))
-    window.api.aiProcessCustom = vi.fn().mockResolvedValue('\\section{Method} Revised draft')
+    window.api.aiProcessCustom = vi.fn().mockResolvedValue(
+      JSON.stringify({
+        edits: [{ oldText: '\\section{Method} Draft', newText: '\\section{Method} Revised draft' }]
+      })
+    )
     window.api.aiPlanZotero = vi.fn()
     window.api.zoteroApplyMutationPlan = vi.fn()
     window.api.researchChatSessionLoad = vi.fn().mockImplementation(async () => ({
@@ -186,6 +200,40 @@ describe('ResearchChatPanel', () => {
       within(selector).queryByRole('option', { name: 'Gemini 3.1 Pro Preview' })
     ).not.toBeInTheDocument()
     expect(within(selector).queryByRole('option', { name: 'GPT-5.6 Sol' })).not.toBeInTheDocument()
+  })
+
+  it('refreshes enabled models when the window regains focus', async () => {
+    window.api.aiHasApiKey = vi.fn().mockResolvedValue(false)
+    window.api.aiCheckCli = vi.fn().mockResolvedValue({ available: true })
+    window.api.aiCheckCodexCli = vi.fn().mockResolvedValue({ available: false })
+    render(<ResearchChatPanel onAiDraft={vi.fn()} />)
+    const selector = await screen.findByRole('combobox', { name: 'Research Chat model' })
+    await waitFor(() =>
+      expect(
+        within(selector).queryByRole('option', { name: 'GPT-5.6 Sol' })
+      ).not.toBeInTheDocument()
+    )
+
+    window.api.aiCheckCodexCli = vi.fn().mockResolvedValue({ available: true })
+    act(() => window.dispatchEvent(new Event('focus')))
+
+    expect(await within(selector).findByRole('option', { name: 'GPT-5.6 Sol' })).toBeInTheDocument()
+  })
+
+  it('selects an enabled model when the configured default is unavailable', async () => {
+    useSettingsStore.setState((state) => ({
+      settings: { ...state.settings, aiProvider: 'openai', aiModel: 'gpt-5.4' }
+    }))
+    window.api.aiHasApiKey = vi
+      .fn()
+      .mockImplementation((provider: string) => Promise.resolve(provider === 'anthropic'))
+    window.api.aiCheckCli = vi.fn().mockResolvedValue({ available: false })
+    window.api.aiCheckCodexCli = vi.fn().mockResolvedValue({ available: false })
+    render(<ResearchChatPanel onAiDraft={vi.fn()} />)
+
+    const selector = await screen.findByRole('combobox', { name: 'Research Chat model' })
+    await waitFor(() => expect(selector).toHaveValue('anthropic:claude-sonnet-4-6'))
+    expect(within(selector).queryByRole('option', { name: /Default.*GPT-5.4/u })).toBeNull()
   })
 
   it('exposes response progress on the message log and keeps draft actions locked', async () => {
@@ -294,9 +342,16 @@ describe('ResearchChatPanel', () => {
     window.api.aiResearchChat = vi
       .fn()
       .mockResolvedValue(chatResponse('Guard the pdfLaTeX-only primitives with ifPDFTeX.'))
-    window.api.aiProcessCustom = vi
-      .fn()
-      .mockResolvedValue('\\usepackage{iftex}\n\\ifPDFTeX\nDraft\n\\fi')
+    window.api.aiProcessCustom = vi.fn().mockResolvedValue(
+      JSON.stringify({
+        edits: [
+          {
+            oldText: '\\section{Method} Draft',
+            newText: '\\usepackage{iftex}\n\\ifPDFTeX\nDraft\n\\fi'
+          }
+        ]
+      })
+    )
     const onCompile = vi.fn().mockImplementation(async () => {
       useCompileStore.getState().setCompileStatus('success')
     })
@@ -347,13 +402,48 @@ describe('ResearchChatPanel', () => {
       useEditorStore.getState().updateActiveDocument('User changed the document.', 'editor')
     })
     await act(async () => {
-      pendingEdit.resolve('AI changed the document.')
+      pendingEdit.resolve(
+        JSON.stringify({
+          edits: [{ oldText: '\\section{Method} Draft', newText: 'AI changed the document.' }]
+        })
+      )
       await pendingEdit.promise
     })
 
     expect(documentRegistry.snapshot('/project/paper.tex')?.text).toBe('User changed the document.')
     expect(
       screen.getByText('The document changed while the edit was being prepared. Try again.')
+    ).toBeVisible()
+  })
+
+  it('does not undo user changes made after a Chat document edit', async () => {
+    window.api.aiResearchChat = vi.fn().mockResolvedValue(chatResponse('Improve the method.'))
+    window.api.aiProcessCustom = vi
+      .fn()
+      .mockResolvedValue(
+        JSON.stringify({ edits: [{ oldText: 'Draft', newText: 'Revised draft' }] })
+      )
+    render(<ResearchChatPanel onAiDraft={vi.fn()} />)
+    const input = await screen.findByRole('textbox', { name: 'Research question' })
+
+    fireEvent.change(input, { target: { value: 'Improve it.' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    await screen.findByText('Improve the method.')
+    fireEvent.click(screen.getByRole('button', { name: 'Apply to document' }))
+    await screen.findByRole('button', { name: 'Undo' })
+
+    act(() => {
+      useEditorStore.getState().updateActiveDocument('\\section{Method} User follow-up', 'editor')
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+
+    expect(documentRegistry.snapshot('/project/paper.tex')?.text).toBe(
+      '\\section{Method} User follow-up'
+    )
+    expect(
+      screen.getByText(
+        "This change can no longer be undone from here. Use the editor's undo instead."
+      )
     ).toBeVisible()
   })
 

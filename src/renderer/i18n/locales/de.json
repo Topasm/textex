@@ -152,6 +152,7 @@
     "viewProblems": "Probleme anzeigen",
     "openSettings": "Einstellungen öffnen",
     "researchSyncOnOpenFailed": "Zotero-Synchronisierung beim Öffnen des Projekts fehlgeschlagen: {{error}}",
+    "researchContinuousSyncFailed": "Laufende Zotero-Synchronisierung fehlgeschlagen: {{error}}",
     "clipboardImageInserted": "Zwischenablage-Bild als {{file}} eingefügt.",
     "clipboardImageFailed": "Das Bild aus der Zwischenablage konnte nicht eingefügt werden: {{error}}",
     "clipboardImageNoProject": "Öffnen Sie ein Projekt, bevor Sie ein Bild einfügen.",

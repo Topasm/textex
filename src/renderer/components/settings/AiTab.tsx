@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ICON_SIZE } from '../ui/IconSystem'
 import { useTranslation } from 'react-i18next'
 import { useSettingsStore } from '../../store/useSettingsStore'
+import { useAiProviderAvailabilityStore } from '../../store/useAiProviderAvailabilityStore'
 import type { AiProvider, UserSettings } from '../../../shared/types'
 import {
   AlertCircle,
@@ -218,6 +219,7 @@ export const AiTab = () => {
       }
     })
     setAvailability(nextAvailability)
+    useAiProviderAvailabilityStore.getState().setAvailability(nextAvailability)
     setConnectionErrors(nextErrors)
     setCheckingConnections(false)
   }, [])
@@ -287,6 +289,7 @@ export const AiTab = () => {
     if (AI_PROVIDER_INFO[selectedConnection].kind !== 'api' || !apiKey.trim()) return
     try {
       await window.api.aiSaveApiKey(selectedConnection, apiKey.trim())
+      useAiProviderAvailabilityStore.getState().markAvailable(selectedConnection)
       setAvailability((current) => ({ ...current, [selectedConnection]: true }))
       setConnectionErrors((current) => {
         const next = { ...current }

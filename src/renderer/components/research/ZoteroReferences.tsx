@@ -21,10 +21,8 @@ import {
   getCachedZoteroInventory,
   invalidateZoteroInventory
 } from '../../services/zoteroInventoryCache'
-import {
-  watchZoteroCollection,
-  ZOTERO_WATCH_INTERVAL_MS
-} from '../../services/zoteroCollectionWatcher'
+import { ZOTERO_WATCH_INTERVAL_MS } from '../../services/zoteroCollectionWatcher'
+import { invalidateZoteroItemDetails } from '../../services/zoteroItemDetailCache'
 import { navigateToDiagnostic } from '../../services/diagnosticNavigation'
 import { describeNativeError } from '../../services/nativeErrors'
 import {
@@ -52,6 +50,7 @@ import {
 } from '../../services/zoteroReferenceInventory'
 import { CollectionPicker } from './CollectionPicker'
 import { ReferenceRow } from './ReferenceRow'
+import { useZoteroSyncStore } from '../../store/useZoteroSyncStore'
 
 const DEFAULT_CONFIG: ResearchConfig = {
   version: 1,
@@ -109,6 +108,7 @@ export function ZoteroReferences({
   const sortOrder = useSettingsStore((state) => state.settings.referenceSortOrder ?? 'natural')
   const syncMode = useSettingsStore((state) => state.settings.zoteroSyncMode ?? 'continuous')
   const updateSetting = useSettingsStore((state) => state.updateSetting)
+  const zoteroDataRevision = useZoteroSyncStore((state) => state.dataRevision)
   const compileDiagnosticCount = useCompileStore((state) => state.diagnostics.length)
   const [results, setResults] = useState<ZoteroSearchResult[]>([])
   const [libraries, setLibraries] = useState<ZoteroLibrary[]>([])
@@ -142,7 +142,6 @@ export function ZoteroReferences({
   const collectionRefs = useRef(new Map<string, HTMLButtonElement>())
   const requestedCounts = useRef(new Set<string>())
   const persistSequence = useRef(0)
-  const autoSyncInFlight = useRef(false)
 
   const isCurrentScope = useCallback((generation: number, root: string | null, apiPort: number) => {
     return (
@@ -346,7 +345,6 @@ export function ZoteroReferences({
     () => collections.find((collection) => collection.key === config.zoteroCollection) ?? null,
     [collections, config.zoteroCollection]
   )
-  const configuredCollectionItemCount = configuredCollection?.itemCount ?? null
   const viewedCollection = useMemo(() => {
     if (library && selectedCollectionKey === library.key) {
       return {
@@ -372,11 +370,9 @@ export function ZoteroReferences({
         inventory: inventory?.items ?? [],
         searchResults: results,
         query,
-        filter: healthFilter,
-        sort: sortOrder,
         zoteroReady
       }),
-    [healthFilter, inventory, query, referenceHealth, results, sortOrder, zoteroReady]
+    [inventory, query, referenceHealth, results, zoteroReady]
   )
   const visibleRows = useMemo(
     () => filterAndSortReferenceRows(allRows, healthFilter, sortOrder, zoteroReady),
@@ -544,70 +540,23 @@ export function ZoteroReferences({
     }
   }, [inventoryRefreshToken, isCurrentScope, libraryKey, loaded, port, projectRoot])
 
-  /**
-   * Keeps the panel current with Zotero while a project is open. Zotero has no
-   * change feed, so the configured collection is polled for its item count and
-   * every observed change refreshes the cross-check inventories — and rewrites
-   * the managed bibliography when the project opted into automatic sync.
-   */
+  // The project-level coordinator owns polling even while this sidebar is
+  // closed. When it publishes a successful sync, refresh only panel-local data.
   useEffect(() => {
-    const collectionKey = config.zoteroCollection
-    if (!loaded || !collectionKey || zoteroAvailable === false) return
-    const generation = scopeGeneration.current
-    const root = projectRoot
-    const apiPort = port
-    const continuous = syncMode === 'continuous'
-    const zoteroFile = config.zoteroFile
-    return watchZoteroCollection({
-      collectionKey,
-      port: apiPort,
-      // Seeding with the count already on screen lets the very first poll
-      // report a change instead of spending one interval on a baseline.
-      initialTotalResults: configuredCollectionItemCount,
-      onChange: async () => {
-        if (!isCurrentScope(generation, root, apiPort)) return
-        invalidateZoteroInventory(apiPort)
-        setInventoryRefreshToken((current) => current + 1)
-        if (!continuous || !root || !targetFile) return
-        // A manual sync, save, or an earlier automatic sync owns the managed
-        // file until it finishes; the next poll picks the change up again.
-        if (autoSyncInFlight.current || operationInFlight.current) return
-        autoSyncInFlight.current = true
-        try {
-          const result = await window.api.zoteroSyncCollection(collectionKey, targetFile, apiPort)
-          if (!isCurrentScope(generation, root, apiPort)) return
-          const entries = await window.api.findBibInProject(root)
-          if (!isCurrentScope(generation, root, apiPort)) return
-          useProjectStore.getState().setBibEntries(entries)
-          useProjectStore.getState().invalidateDirectory(root)
-          setMessage(
-            t('researchPanel.zotero.synchronized', {
-              count: result.entryCount,
-              file: zoteroFile
-            })
-          )
-        } catch (error) {
-          if (isCurrentScope(generation, root, apiPort)) setMessage(describeNativeError(error))
-        } finally {
-          autoSyncInFlight.current = false
-        }
-      },
-      // A transient Zotero outage must not replace an actionable panel message.
-      onError: () => undefined
-    })
-  }, [
-    config.zoteroCollection,
-    config.zoteroFile,
-    configuredCollectionItemCount,
-    isCurrentScope,
-    loaded,
-    port,
-    projectRoot,
-    syncMode,
-    t,
-    targetFile,
-    zoteroAvailable
-  ])
+    if (!loaded || zoteroDataRevision === 0) return
+    requestedCounts.current.clear()
+    setLibraries((current) =>
+      current.map((library) => ({
+        ...library,
+        itemCount: null,
+        collections: library.collections.map((collection) => ({
+          ...collection,
+          itemCount: null
+        }))
+      }))
+    )
+    setInventoryRefreshToken((current) => current + 1)
+  }, [loaded, zoteroDataRevision])
 
   /**
    * Recovers the panel when Zotero starts after the project. Opening a project
@@ -897,16 +846,16 @@ export function ZoteroReferences({
       if (!isCurrentScope(generation, root, apiPort)) return
       setInventory((current) =>
         current
-          ? {
-              items: [
-                ...current.items,
-                ...page.items.filter(
-                  (item) =>
-                    !current.items.some((currentItem) => currentItem.itemKey === item.itemKey)
-                )
-              ],
-              totalResults: page.totalResults
-            }
+          ? (() => {
+              const currentKeys = new Set(current.items.map((item) => item.itemKey))
+              return {
+                items: [
+                  ...current.items,
+                  ...page.items.filter((item) => !currentKeys.has(item.itemKey))
+                ],
+                totalResults: page.totalResults
+              }
+            })()
           : { items: page.items, totalResults: page.totalResults }
       )
     } catch (error) {
@@ -981,6 +930,7 @@ export function ZoteroReferences({
         (saved) => {
           if (isCurrentScope(generation, root, apiPort) && requested === persistSequence.current) {
             setConfig(saved)
+            useZoteroSyncStore.getState().markConfigurationChanged()
           }
         },
         (error: unknown) => {
@@ -1012,6 +962,9 @@ export function ZoteroReferences({
         useProjectStore.getState().setBibEntries(entries)
         useProjectStore.getState().invalidateDirectory(root)
       }
+      invalidateZoteroInventory(apiPort)
+      invalidateZoteroItemDetails()
+      useZoteroSyncStore.getState().markDataChanged()
       setMessage(
         t('researchPanel.zotero.synchronized', {
           count: result.entryCount,

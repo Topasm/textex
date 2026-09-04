@@ -39,6 +39,7 @@ function settingsForNative(settings: UserSettings): Partial<UserSettings> {
 function syncToMain(): void {
   clearTimeout(syncTimer)
   syncTimer = setTimeout(() => {
+    if (typeof window === 'undefined' || !window.api?.saveSettings) return
     const settings = useSettingsStore.getState().settings
     // Recent projects are maintained through validated native commands. Keep
     // every other setting mirrored natively so a different desktop shell can

@@ -1,8 +1,7 @@
 /**
- * Polls one Zotero collection for size changes while the reference panel is
- * open. Zotero exposes no change feed, so the cheapest reliable signal is the
- * `totalResults` header of a zero-length item page: it costs one request and
- * reports every addition or removal without transferring the collection.
+ * Polls one Zotero collection for library changes. Zotero exposes its library
+ * revision in `Last-Modified-Version`; `totalResults` remains a compatibility
+ * fallback for local API versions that omit that header.
  */
 
 export const ZOTERO_WATCH_INTERVAL_MS = 15_000
@@ -10,6 +9,8 @@ export const ZOTERO_WATCH_INTERVAL_MS = 15_000
 export interface ZoteroCollectionChange {
   totalResults: number
   previousTotalResults: number
+  libraryVersion: number | null
+  previousLibraryVersion: number | null
 }
 
 export interface ZoteroCollectionWatchOptions {
@@ -17,6 +18,7 @@ export interface ZoteroCollectionWatchOptions {
   port: number
   /** Baseline the caller already observed, so the first poll can report a change. */
   initialTotalResults?: number | null
+  initialLibraryVersion?: number | null
   intervalMs?: number
   onChange: (change: ZoteroCollectionChange) => void | Promise<void>
   onError?: (error: unknown) => void
@@ -29,7 +31,13 @@ export interface ZoteroCollectionWatchOptions {
  */
 export function watchZoteroCollection(options: ZoteroCollectionWatchOptions): () => void {
   const intervalMs = options.intervalMs ?? ZOTERO_WATCH_INTERVAL_MS
-  let observedTotal = options.initialTotalResults ?? null
+  let observed: { totalResults: number; libraryVersion: number | null } | null =
+    options.initialTotalResults == null
+      ? null
+      : {
+          totalResults: options.initialTotalResults,
+          libraryVersion: options.initialLibraryVersion ?? null
+        }
   let stopped = false
   let timer: ReturnType<typeof setTimeout> | undefined
 
@@ -42,11 +50,26 @@ export function watchZoteroCollection(options: ZoteroCollectionWatchOptions): ()
     try {
       const page = await window.api.zoteroCollectionItems(options.collectionKey, 0, 0, options.port)
       if (stopped) return
-      const previousTotalResults = observedTotal
-      observedTotal = page.totalResults
-      if (previousTotalResults !== null && previousTotalResults !== page.totalResults) {
-        await options.onChange({ totalResults: page.totalResults, previousTotalResults })
+      const current = {
+        totalResults: page.totalResults,
+        libraryVersion: page.libraryVersion ?? null
       }
+      const previous = observed
+      const changed =
+        previous !== null &&
+        (previous.libraryVersion !== null && current.libraryVersion !== null
+          ? previous.libraryVersion !== current.libraryVersion
+          : previous.totalResults !== current.totalResults)
+      if (changed && previous) {
+        await options.onChange({
+          ...current,
+          previousTotalResults: previous.totalResults,
+          previousLibraryVersion: previous.libraryVersion
+        })
+      }
+      // Commit the observation only after the consumer has handled it. A
+      // rejected sync therefore retries the same Zotero revision next poll.
+      observed = current
     } catch (error) {
       if (!stopped) options.onError?.(error)
     }

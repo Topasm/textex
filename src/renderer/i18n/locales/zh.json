@@ -152,6 +152,7 @@
     "viewProblems": "查看问题",
     "openSettings": "打开设置",
     "researchSyncOnOpenFailed": "打开项目时的 Zotero 同步失败：{{error}}",
+    "researchContinuousSyncFailed": "Zotero 持续同步失败：{{error}}",
     "clipboardImageInserted": "已将剪贴板图片粘贴为 {{file}}。",
     "clipboardImageFailed": "无法粘贴剪贴板图片：{{error}}",
     "clipboardImageNoProject": "粘贴图片前请先打开项目。",

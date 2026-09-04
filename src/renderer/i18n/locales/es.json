@@ -152,6 +152,7 @@
     "viewProblems": "Ver problemas",
     "openSettings": "Abrir ajustes",
     "researchSyncOnOpenFailed": "Falló la sincronización con Zotero al abrir el proyecto: {{error}}",
+    "researchContinuousSyncFailed": "Falló la sincronización continua con Zotero: {{error}}",
     "clipboardImageInserted": "Se pegó la imagen del portapapeles como {{file}}.",
     "clipboardImageFailed": "No se pudo pegar la imagen del portapapeles: {{error}}",
     "clipboardImageNoProject": "Abre un proyecto antes de pegar una imagen.",

@@ -15,6 +15,7 @@ import TabBar from './components/TabBar'
 import PreviewErrorBoundary from './components/PreviewErrorBoundary'
 import { LoadingFallback } from './components/LoadingFallback'
 import { useAutoCompile } from './hooks/useAutoCompile'
+import { useContinuousZoteroSync } from './hooks/useContinuousZoteroSync'
 import { useFileOps } from './hooks/useFileOps'
 import { useSessionRestore } from './hooks/useSessionRestore'
 import { useIpcListeners } from './hooks/useIpcListeners'
@@ -137,6 +138,7 @@ function App() {
   const [pendingHelpCommand, setPendingHelpCommand] = useState<AppCommandId | null>(null)
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
   useAutoCompile()
+  useContinuousZoteroSync()
   const { handleOpen, handleSave, handleSaveAs } = useFileOps()
 
   useEffect(() => {

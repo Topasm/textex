@@ -7,8 +7,9 @@ import type { ZoteroItemDetail } from '../../shared/types'
  */
 
 const MAX_CACHED_DETAILS = 64
+const DETAIL_TTL_MS = 5 * 60 * 1000
 
-const details = new Map<string, ZoteroItemDetail>()
+const details = new Map<string, { detail: ZoteroItemDetail; expiresAt: number }>()
 const inFlight = new Map<string, Promise<ZoteroItemDetail>>()
 
 function cacheKey(port: number, itemKey: string): string {
@@ -17,7 +18,7 @@ function cacheKey(port: number, itemKey: string): string {
 
 function remember(key: string, detail: ZoteroItemDetail): void {
   details.delete(key)
-  details.set(key, detail)
+  details.set(key, { detail, expiresAt: Date.now() + DETAIL_TTL_MS })
   while (details.size > MAX_CACHED_DETAILS) {
     const oldest = details.keys().next().value
     if (oldest === undefined) break
@@ -26,12 +27,19 @@ function remember(key: string, detail: ZoteroItemDetail): void {
 }
 
 export function getCachedZoteroItemDetail(port: number, itemKey: string): ZoteroItemDetail | null {
-  return details.get(cacheKey(port, itemKey)) ?? null
+  const key = cacheKey(port, itemKey)
+  const cached = details.get(key)
+  if (!cached) return null
+  if (cached.expiresAt <= Date.now()) {
+    details.delete(key)
+    return null
+  }
+  return cached.detail
 }
 
 export function loadZoteroItemDetail(port: number, itemKey: string): Promise<ZoteroItemDetail> {
   const key = cacheKey(port, itemKey)
-  const cached = details.get(key)
+  const cached = getCachedZoteroItemDetail(port, itemKey)
   if (cached) return Promise.resolve(cached)
   const pending = inFlight.get(key)
   if (pending) return pending

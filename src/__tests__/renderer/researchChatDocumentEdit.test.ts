@@ -2,8 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { DocumentSnapshot } from '../../renderer/models/documentModel'
 import {
   buildPendingResearchChatDocumentEdit,
-  buildResearchChatDocumentEditRequest,
-  unwrapResearchChatDocumentEdit
+  buildResearchChatDocumentEditRequest
 } from '../../renderer/services/researchChatDocumentEdit'
 
 const snapshot: DocumentSnapshot = Object.freeze({
@@ -13,7 +12,7 @@ const snapshot: DocumentSnapshot = Object.freeze({
 })
 
 describe('Research Chat document edits', () => {
-  it('builds a complete-document request without renderer state', () => {
+  it('requests minimal structured replacements without renderer state', () => {
     const request = buildResearchChatDocumentEditRequest(
       'Guard the pdfLaTeX-only commands.',
       '/project/main.tex',
@@ -27,20 +26,16 @@ describe('Research Chat document edits', () => {
       lightContext: { filePath: '/project/main.tex' }
     })
     expect(request.command).toContain('Guard the pdfLaTeX-only commands.')
+    expect(request.command).toContain('Do not return the complete document')
   })
 
-  it('unwraps a whole fenced LaTeX response but preserves ordinary source', () => {
-    expect(unwrapResearchChatDocumentEdit('```latex\n\\section{Fixed}\n```')).toBe(
-      '\\section{Fixed}'
-    )
-    expect(unwrapResearchChatDocumentEdit('\\section{Fixed}\n')).toBe('\\section{Fixed}\n')
-  })
-
-  it('summarizes only the changed line range for approval', () => {
+  it('builds minimal editor ranges and summarizes the changed lines', () => {
     const edit = buildPendingResearchChatDocumentEdit(
       '/project/main.tex',
       snapshot,
-      ['before', 'replacement one', 'replacement two', 'after'].join('\n')
+      JSON.stringify({
+        edits: [{ oldText: 'replace me', newText: 'replacement one\nreplacement two' }]
+      })
     )
 
     expect(edit).toMatchObject({
@@ -51,5 +46,41 @@ describe('Research Chat document edits', () => {
       excerptTruncated: false
     })
     expect(edit.snapshot).toBe(snapshot)
+    expect(edit.proposedText).toBe('before\nreplacement one\nreplacement two\nafter')
+    expect(edit.edits).toEqual([
+      {
+        range: {
+          start: { line: 2, column: 1 },
+          end: { line: 2, column: 11 }
+        },
+        text: 'replacement one\nreplacement two',
+        forceMoveMarkers: true
+      }
+    ])
+  })
+
+  it('rejects ambiguous, missing, and overlapping replacements', () => {
+    expect(() =>
+      buildPendingResearchChatDocumentEdit('/project/main.tex', snapshot, '{"edits":[]}')
+    ).toThrow('invalid number')
+    expect(() =>
+      buildPendingResearchChatDocumentEdit(
+        '/project/main.tex',
+        snapshot,
+        JSON.stringify({ edits: [{ oldText: 'missing', newText: 'fixed' }] })
+      )
+    ).toThrow('unique passage')
+    expect(() =>
+      buildPendingResearchChatDocumentEdit(
+        '/project/main.tex',
+        snapshot,
+        JSON.stringify({
+          edits: [
+            { oldText: 'replace me', newText: 'fixed' },
+            { oldText: 'me', newText: 'value' }
+          ]
+        })
+      )
+    ).toThrow('overlapping')
   })
 })

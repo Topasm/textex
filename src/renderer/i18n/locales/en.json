@@ -152,6 +152,7 @@
     "viewProblems": "View problems",
     "openSettings": "Open settings",
     "researchSyncOnOpenFailed": "Zotero sync on project open failed: {{error}}",
+    "researchContinuousSyncFailed": "Continuous Zotero sync failed: {{error}}",
     "clipboardImageInserted": "Pasted clipboard image as {{file}}.",
     "clipboardImageFailed": "Could not paste the clipboard image: {{error}}",
     "clipboardImageNoProject": "Open a project before pasting an image.",

@@ -25,6 +25,7 @@ describe('ResearchPanel tabs', () => {
     window.api.saveSettings = vi
       .fn()
       .mockImplementation(async () => useSettingsStore.getState().settings)
+    window.api.readDirectory = vi.fn().mockResolvedValue([])
     window.api.researchProfileLoad = vi.fn().mockResolvedValue({
       version: 1,
       paper: { title: '', authors: [] },

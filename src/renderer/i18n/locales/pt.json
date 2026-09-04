@@ -152,6 +152,7 @@
     "viewProblems": "Ver problemas",
     "openSettings": "Abrir configurações",
     "researchSyncOnOpenFailed": "A sincronização com o Zotero ao abrir o projeto falhou: {{error}}",
+    "researchContinuousSyncFailed": "A sincronização contínua com o Zotero falhou: {{error}}",
     "clipboardImageInserted": "Imagem da área de transferência colada como {{file}}.",
     "clipboardImageFailed": "Não foi possível colar a imagem da área de transferência: {{error}}",
     "clipboardImageNoProject": "Abra um projeto antes de colar uma imagem.",

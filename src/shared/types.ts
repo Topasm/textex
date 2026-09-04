@@ -553,6 +553,8 @@ export interface ZoteroCollectionItemsPage {
   totalResults: number
   offset: number
   limit: number
+  /** Zotero library revision from Last-Modified-Version, when the local API provides it. */
+  libraryVersion?: number | null
 }
 
 export interface OnlineReference {

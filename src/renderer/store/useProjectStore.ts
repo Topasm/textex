@@ -24,6 +24,7 @@ import {
   clearResearchProfileDraft,
   confirmResearchProfileDraftDiscard
 } from '../services/researchProfileDraft'
+import type { ReferenceDragPayload } from '../services/referencePayload'
 
 export type SidebarView = 'files' | 'git' | 'outline' | 'references' | 'timeline'
 export type ResearchPanelTab = 'chat' | 'notes' | 'profile' | 'problems'
@@ -52,14 +53,13 @@ export interface ResearchSelectionRequest {
  * from the References view (left sidebar) or the Problems view (right
  * panel); both now live outside Research Chat's own panel, so the store is
  * the shared channel instead of a prop passed down from a common parent.
- * The reference payload's real shape (`ReferenceDragPayload`) lives in
- * `components/research/referenceActions.ts`, which itself depends on this
- * store — consumers there import the type and narrow at the point of use.
+ * The reference payload is a runtime-neutral service contract so this store
+ * never needs to depend on a component module.
  */
 export interface PendingChatReference {
   token: number
   projectRoot: string
-  payload: unknown
+  payload: ReferenceDragPayload
 }
 
 export interface PendingChatPrompt {
@@ -136,7 +136,7 @@ interface ProjectState {
   setResearchSearchQuery: (query: string) => void
   queueResearchSelection: (request: Omit<ResearchSelectionRequest, 'token'>) => void
   consumeResearchSelection: (token: number) => void
-  queueChatReference: (payload: unknown) => void
+  queueChatReference: (payload: ReferenceDragPayload) => void
   consumeChatReference: (token: number) => void
   queueChatPrompt: (prompt: string) => void
   consumeChatPrompt: (token: number) => void

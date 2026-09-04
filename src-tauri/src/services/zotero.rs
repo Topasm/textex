@@ -366,6 +366,7 @@ pub async fn collection_items(
     let total_results = response_total_results(&response).ok_or_else(|| {
         AppError::Zotero("Zotero collection response omitted Total-Results".to_owned())
     })?;
+    let library_version = response_library_version(&response);
     let bytes = bounded_response(response, MAX_LOCAL_API_RESPONSE_BYTES).await?;
     let page: Vec<LocalItemEnvelope> = serde_json::from_slice(&bytes)
         .map_err(|error| AppError::Zotero(format!("invalid local item response: {error}")))?;
@@ -402,6 +403,7 @@ pub async fn collection_items(
         total_results,
         offset,
         limit: requested_limit,
+        library_version,
     })
 }
 
@@ -1150,6 +1152,14 @@ fn response_total_results(response: &reqwest::Response) -> Option<u32> {
         .get("Total-Results")
         .and_then(|value| value.to_str().ok())
         .and_then(|value| value.parse::<u32>().ok())
+}
+
+fn response_library_version(response: &reqwest::Response) -> Option<u64> {
+    response
+        .headers()
+        .get("Last-Modified-Version")
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.parse::<u64>().ok())
 }
 
 async fn search_local_items(query: &str, port: Option<u16>) -> AppResult<Vec<LocalItemEnvelope>> {

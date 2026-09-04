@@ -152,6 +152,7 @@
     "viewProblems": "문제 보기",
     "openSettings": "설정 열기",
     "researchSyncOnOpenFailed": "프로젝트를 열 때 Zotero 동기화에 실패했습니다: {{error}}",
+    "researchContinuousSyncFailed": "Zotero 지속 동기화에 실패했습니다: {{error}}",
     "clipboardImageInserted": "클립보드 이미지를 {{file}}(으)로 붙여 넣었습니다.",
     "clipboardImageFailed": "클립보드 이미지를 붙여 넣지 못했습니다: {{error}}",
     "clipboardImageNoProject": "이미지를 붙여 넣기 전에 프로젝트를 여세요.",

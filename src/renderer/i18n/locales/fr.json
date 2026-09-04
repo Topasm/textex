@@ -152,6 +152,7 @@
     "viewProblems": "Voir les problèmes",
     "openSettings": "Ouvrir les paramètres",
     "researchSyncOnOpenFailed": "La synchronisation Zotero à l’ouverture du projet a échoué : {{error}}",
+    "researchContinuousSyncFailed": "La synchronisation Zotero continue a échoué : {{error}}",
     "clipboardImageInserted": "Image du presse-papiers collée sous le nom {{file}}.",
     "clipboardImageFailed": "Impossible de coller l’image du presse-papiers : {{error}}",
     "clipboardImageNoProject": "Ouvrez un projet avant de coller une image.",

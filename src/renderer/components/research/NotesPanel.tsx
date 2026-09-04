@@ -6,6 +6,7 @@ import { useProjectStore } from '../../store/useProjectStore'
 import { logError } from '../../utils/errorMessage'
 import { ICON_SIZE } from '../ui/IconSystem'
 import { renderInline } from '../ui/MarkdownText'
+import { describeNativeError } from '../../services/nativeErrors'
 
 /**
  * A freeform Markdown notepad, saved to `TODO.md` at the project root.
@@ -59,65 +60,132 @@ export function NotesPanel() {
   const [exists, setExists] = useState(true)
   const [loading, setLoading] = useState(true)
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
+  const [loadedProjectRoot, setLoadedProjectRoot] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState('')
+  const [reloadToken, setReloadToken] = useState(0)
 
-  const filePath = projectRoot ? `${projectRoot}/TODO.md` : null
   const linesRef = useRef<string[]>([])
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const activeFieldRef = useRef<HTMLTextAreaElement | null>(null)
   const pendingFocus = useRef<{ index: number; caret: number } | null>(null)
+  const activeFilePath = useRef<string | null>(null)
+  const loadGeneration = useRef(0)
+  const pendingSaves = useRef(new Map<string, string>())
+  const saveInFlight = useRef(false)
 
   useEffect(() => {
     linesRef.current = lines
   }, [lines])
 
-  const scheduleSave = useCallback(
-    (next: string[]) => {
-      if (!filePath) return
-      if (saveTimer.current) clearTimeout(saveTimer.current)
-      saveTimer.current = setTimeout(() => {
-        void window.api.saveFile(next.join('\n'), filePath).catch((err) => {
+  const drainSaves = useCallback(async () => {
+    if (saveInFlight.current) return
+    saveInFlight.current = true
+    try {
+      while (pendingSaves.current.size > 0) {
+        const next = pendingSaves.current.entries().next().value as [string, string] | undefined
+        if (!next) break
+        const [path, content] = next
+        pendingSaves.current.delete(path)
+        try {
+          await window.api.saveFile(content, path)
+        } catch (err) {
           logError('NotesPanel:save', err)
-        })
-      }, SAVE_DEBOUNCE_MS)
+        }
+      }
+    } finally {
+      saveInFlight.current = false
+    }
+  }, [])
+
+  const enqueueSave = useCallback(
+    (path: string, content: string) => {
+      pendingSaves.current.set(path, content)
+      void drainSaves()
     },
-    [filePath]
+    [drainSaves]
   )
 
-  const loadFile = useCallback(async () => {
-    if (!filePath) return
-    setLoading(true)
-    setActiveIndex(null)
-    try {
-      const result = await window.api.readFile(filePath)
-      const next = result.content.split('\n')
-      setLines(next)
-      linesRef.current = next
-      setExists(true)
-    } catch (err) {
-      logError('NotesPanel:load', err)
-      setExists(false)
-      setLines([])
-      linesRef.current = []
-    }
-    setLoading(false)
-  }, [filePath])
+  const scheduleSave = useCallback(
+    (next: string[]) => {
+      const path = activeFilePath.current
+      if (!path) return
+      if (saveTimer.current) clearTimeout(saveTimer.current)
+      saveTimer.current = setTimeout(() => {
+        saveTimer.current = null
+        enqueueSave(path, next.join('\n'))
+      }, SAVE_DEBOUNCE_MS)
+    },
+    [enqueueSave]
+  )
 
   useEffect(() => {
-    void loadFile()
-  }, [loadFile])
+    const generation = ++loadGeneration.current
+    setLoading(true)
+    setLoadedProjectRoot(null)
+    setLoadError('')
+    setActiveIndex(null)
+    activeFilePath.current = null
+    if (!projectRoot) return
+    const root = projectRoot
+    const separator = root.includes('\\') ? '\\' : '/'
+    const defaultPath = `${root.replace(/[\\/]$/, '')}${separator}TODO.md`
+
+    void window.api
+      .readDirectory(root)
+      .then(async (entries) => {
+        if (generation !== loadGeneration.current) return
+        const existing = entries.find(
+          (entry) => entry.type === 'file' && entry.name.toLocaleLowerCase('en-US') === 'todo.md'
+        )
+        if (!existing) {
+          activeFilePath.current = defaultPath
+          setExists(false)
+          setLines([])
+          linesRef.current = []
+          return
+        }
+        activeFilePath.current = existing.path
+        const result = await window.api.readFile(existing.path)
+        if (generation !== loadGeneration.current) return
+        const next = result.content.split('\n')
+        setLines(next)
+        linesRef.current = next
+        setExists(true)
+      })
+      .catch((err) => {
+        if (generation !== loadGeneration.current) return
+        logError('NotesPanel:load', err)
+        // A directory/read failure is not proof that TODO.md is absent. Keep
+        // the panel in a safe non-editable state instead of offering overwrite.
+        activeFilePath.current = null
+        setLoadError(describeNativeError(err))
+        setExists(true)
+        setLines([])
+        linesRef.current = []
+      })
+      .finally(() => {
+        if (generation !== loadGeneration.current) return
+        setLoadedProjectRoot(root)
+        setLoading(false)
+      })
+
+    return () => {
+      if (loadGeneration.current === generation) loadGeneration.current += 1
+    }
+  }, [projectRoot, reloadToken])
 
   // Flush a pending debounced save immediately when the panel unmounts or
   // the project changes, so the last keystrokes are never silently dropped.
   useEffect(() => {
+    const path = activeFilePath.current
     return () => {
       if (saveTimer.current) {
         clearTimeout(saveTimer.current)
-        if (filePath) {
-          void window.api.saveFile(linesRef.current.join('\n'), filePath).catch(() => undefined)
-        }
+        saveTimer.current = null
+        if (path) enqueueSave(path, linesRef.current.join('\n'))
       }
     }
-  }, [filePath])
+  }, [enqueueSave, loadedProjectRoot])
 
   useEffect(() => {
     if (!pendingFocus.current || pendingFocus.current.index !== activeIndex) return
@@ -136,6 +204,7 @@ export function NotesPanel() {
   }, [])
 
   const handleCreate = useCallback(async () => {
+    const filePath = activeFilePath.current
     if (!filePath) return
     const initial = ['# Notes', '', '']
     try {
@@ -147,7 +216,7 @@ export function NotesPanel() {
     } catch (err) {
       logError('NotesPanel:create', err)
     }
-  }, [activateLine, filePath])
+  }, [activateLine])
 
   const addLineAtEnd = useCallback(() => {
     setLines((current) => {
@@ -284,10 +353,21 @@ export function NotesPanel() {
     )
   }
 
-  if (loading) {
+  if (loading || loadedProjectRoot !== projectRoot) {
     return (
       <div className="notes-panel notes-panel--empty">
         <p>{t('notesPanel.loading')}</p>
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="notes-panel notes-panel--empty">
+        <p>{loadError}</p>
+        <button type="button" onClick={() => setReloadToken((current) => current + 1)}>
+          {t('notifications.retry')}
+        </button>
       </div>
     )
   }

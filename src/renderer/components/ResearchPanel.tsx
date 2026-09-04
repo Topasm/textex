@@ -28,11 +28,8 @@ import { ResearchChatPanel } from './research/ResearchChatPanel'
 import { NotesPanel } from './research/NotesPanel'
 import { ResearchProfilePanel } from './research/ResearchProfilePanel'
 import LogPanel from './LogPanel'
-import {
-  parseReferenceDragData,
-  TEXTEX_REFERENCE_MIME,
-  type ReferenceDragPayload
-} from './research/referenceActions'
+import { parseReferenceDragData, TEXTEX_REFERENCE_MIME } from './research/referenceActions'
+import type { ReferenceDragPayload } from '../services/referencePayload'
 
 /** Swipe order, matching the tab strip left to right. */
 const RESEARCH_TAB_ORDER: ResearchPanelTab[] = ['chat', 'notes', 'profile', 'problems']
@@ -112,7 +109,7 @@ export function ResearchPanel({
   }, [tab])
 
   const queueChatReference = useCallback(
-    (payload: unknown) => {
+    (payload: ReferenceDragPayload) => {
       if (!projectRoot) {
         useNotificationStore.getState().pushNotification({
           tone: 'warning',
@@ -371,7 +368,7 @@ export function ResearchPanel({
                   ? {
                       token: pendingChatReference.token,
                       projectRoot: pendingChatReference.projectRoot,
-                      payload: pendingChatReference.payload as ReferenceDragPayload
+                      payload: pendingChatReference.payload
                     }
                   : null
               }

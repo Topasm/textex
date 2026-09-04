@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { watchZoteroCollection } from '../../renderer/services/zoteroCollectionWatcher'
 
-function page(totalResults: number) {
-  return { items: [], totalResults, offset: 0, limit: 0 }
+function page(totalResults: number, libraryVersion: number | null = null) {
+  return { items: [], totalResults, offset: 0, limit: 0, libraryVersion }
 }
 
 describe('watchZoteroCollection', () => {
@@ -34,7 +34,12 @@ describe('watchZoteroCollection', () => {
     expect(onChange).not.toHaveBeenCalled()
 
     await vi.advanceTimersByTimeAsync(1_000)
-    expect(onChange).toHaveBeenCalledWith({ totalResults: 48, previousTotalResults: 36 })
+    expect(onChange).toHaveBeenCalledWith({
+      totalResults: 48,
+      previousTotalResults: 36,
+      libraryVersion: null,
+      previousLibraryVersion: null
+    })
 
     stop()
   })
@@ -55,7 +60,12 @@ describe('watchZoteroCollection', () => {
     await vi.advanceTimersByTimeAsync(1_000)
     expect(onChange).not.toHaveBeenCalled()
     await vi.advanceTimersByTimeAsync(1_000)
-    expect(onChange).toHaveBeenCalledWith({ totalResults: 11, previousTotalResults: 10 })
+    expect(onChange).toHaveBeenCalledWith({
+      totalResults: 11,
+      previousTotalResults: 10,
+      libraryVersion: null,
+      previousLibraryVersion: null
+    })
 
     stop()
   })
@@ -79,7 +89,61 @@ describe('watchZoteroCollection', () => {
     await vi.advanceTimersByTimeAsync(3_000)
 
     expect(onError).toHaveBeenCalledOnce()
-    expect(onChange).toHaveBeenCalledWith({ totalResults: 6, previousTotalResults: 5 })
+    expect(onChange).toHaveBeenCalledWith({
+      totalResults: 6,
+      previousTotalResults: 5,
+      libraryVersion: null,
+      previousLibraryVersion: null
+    })
+    stop()
+  })
+
+  it('detects metadata edits when the collection size stays the same', async () => {
+    const onChange = vi.fn()
+    window.api.zoteroCollectionItems = vi
+      .fn()
+      .mockResolvedValueOnce(page(12, 80))
+      .mockResolvedValueOnce(page(12, 81))
+    const stop = watchZoteroCollection({
+      collectionKey: '/0/PAPERS',
+      port: 23_119,
+      intervalMs: 1_000,
+      onChange
+    })
+
+    await vi.advanceTimersByTimeAsync(2_000)
+
+    expect(onChange).toHaveBeenCalledWith({
+      totalResults: 12,
+      previousTotalResults: 12,
+      libraryVersion: 81,
+      previousLibraryVersion: 80
+    })
+    stop()
+  })
+
+  it('retries an unhandled revision after the change callback fails', async () => {
+    const onChange = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('sync busy'))
+      .mockResolvedValueOnce(undefined)
+    const onError = vi.fn()
+    window.api.zoteroCollectionItems = vi
+      .fn()
+      .mockResolvedValueOnce(page(12, 80))
+      .mockResolvedValue(page(12, 81))
+    const stop = watchZoteroCollection({
+      collectionKey: '/0/PAPERS',
+      port: 23_119,
+      intervalMs: 1_000,
+      onChange,
+      onError
+    })
+
+    await vi.advanceTimersByTimeAsync(3_000)
+
+    expect(onChange).toHaveBeenCalledTimes(2)
+    expect(onError).toHaveBeenCalledOnce()
     stop()
   })
 

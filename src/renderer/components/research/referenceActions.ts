@@ -5,6 +5,9 @@ import { useProjectStore } from '../../store/useProjectStore'
 import { queueBibliographyRegistration } from '../../services/bibliographyRegistration'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import { documentRegistry } from '../../models/documentRegistry'
+import type { ReferenceDragMetadata, ReferenceDragPayload } from '../../services/referencePayload'
+
+export type { ReferenceDragMetadata, ReferenceDragPayload } from '../../services/referencePayload'
 
 export const TEXTEX_REFERENCE_MIME = 'application/x-textex-reference'
 export const TEXTEX_ZOTERO_COLLECTION_MIME = 'application/x-textex-zotero-collection'
@@ -14,22 +17,6 @@ export interface ZoteroCollectionDragPayload {
   collection: ZoteroCollection
   port?: number
 }
-
-export interface ReferenceDragMetadata {
-  title?: string
-  authors?: string[]
-  year?: string
-  type?: string
-  doi?: string
-  arxivId?: string
-  url?: string
-  abstract?: string
-}
-
-export type ReferenceDragPayload =
-  | { source: 'project'; citekey: string; metadata?: ReferenceDragMetadata }
-  | { source: 'zotero'; citekey: string; port?: number; metadata?: ReferenceDragMetadata }
-  | { source: 'online'; reference: OnlineReference }
 
 export function buildProjectReferenceDragPayload(entry: BibEntry): ReferenceDragPayload {
   return {

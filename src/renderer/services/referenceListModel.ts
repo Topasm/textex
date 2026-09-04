@@ -59,6 +59,8 @@ export interface ReferenceListInput {
   zoteroReady: boolean
 }
 
+type ReferenceCollectionInput = Omit<ReferenceListInput, 'filter' | 'sort'>
+
 const ORIGIN_RANK: Record<ReferenceOrigin, number> = {
   cited: 0,
   bibliography: 1,
@@ -75,7 +77,7 @@ export interface ReferenceFilterCounts {
 }
 
 /** Every row the current sources describe, merged and query-narrowed but unfiltered. */
-export function collectReferenceRows(input: ReferenceListInput): ReferenceRow[] {
+export function collectReferenceRows(input: ReferenceCollectionInput): ReferenceRow[] {
   const normalizedQuery = input.query.trim().toLocaleLowerCase('en-US')
   return normalizedQuery ? searchRows(input, normalizedQuery) : browseRows(input)
 }
@@ -116,7 +118,7 @@ export function buildReferenceRows(input: ReferenceListInput): ReferenceRow[] {
 }
 
 /** Rows shown with no active query: the collection, the bibliography, and gaps. */
-function browseRows(input: ReferenceListInput): ReferenceRow[] {
+function browseRows(input: ReferenceCollectionInput): ReferenceRow[] {
   const merge = new ReferenceMerge()
   for (const status of input.health.project) {
     merge.add(projectRow(status))
@@ -153,7 +155,7 @@ function browseRows(input: ReferenceListInput): ReferenceRow[] {
  * abstracts, tags and full text, so a local substring test would throw away
  * legitimate answers the user just asked for.
  */
-function searchRows(input: ReferenceListInput, normalizedQuery: string): ReferenceRow[] {
+function searchRows(input: ReferenceCollectionInput, normalizedQuery: string): ReferenceRow[] {
   const merge = new ReferenceMerge()
   for (const status of input.health.project) {
     const row = projectRow(status)
@@ -323,28 +325,33 @@ function matchesQuery(row: ReferenceRow, normalizedQuery: string): boolean {
 
 function sortRows(rows: ReferenceRow[], sort: ReferenceSortOrder): ReferenceRow[] {
   if (sort === 'natural') return rows
-  const collator = new Intl.Collator('en-US', { sensitivity: 'base', numeric: true })
   return [...rows].sort((left, right) => {
     switch (sort) {
       case 'title':
-        return collator.compare(left.title, right.title)
+        return REFERENCE_COLLATOR.compare(left.title, right.title)
       case 'author':
         return (
-          collator.compare(left.author, right.author) || collator.compare(left.title, right.title)
+          REFERENCE_COLLATOR.compare(left.author, right.author) ||
+          REFERENCE_COLLATOR.compare(left.title, right.title)
         )
       case 'year':
         // Newest first, and undated rows sink instead of leading the list.
         return (
           (Number(right.year) || 0) - (Number(left.year) || 0) ||
-          collator.compare(left.title, right.title)
+          REFERENCE_COLLATOR.compare(left.title, right.title)
         )
       case 'citations':
-        return right.citationCount - left.citationCount || collator.compare(left.title, right.title)
+        return (
+          right.citationCount - left.citationCount ||
+          REFERENCE_COLLATOR.compare(left.title, right.title)
+        )
       default:
         return 0
     }
   })
 }
+
+const REFERENCE_COLLATOR = new Intl.Collator('en-US', { sensitivity: 'base', numeric: true })
 
 function normalizeCitekey(citekey: string | null): string {
   return (citekey ?? '').trim().toLocaleLowerCase('en-US')
