@@ -12,7 +12,7 @@ import { closeEditorTab } from '../services/documentClose'
 
 interface KeyboardShortcutsOpts {
   runCommand: (command: AppCommandId) => void
-  openCommandPalette: () => void
+  openCommandPalette: (mode?: 'commands' | 'files') => void
 }
 
 /**
@@ -31,7 +31,8 @@ export function useKeyboardShortcuts(opts: KeyboardShortcutsOpts): void {
     }
 
     const rendererHandlers: Record<RendererShortcutId, () => void> = {
-      'commandPalette.open': openCommandPalette,
+      'commandPalette.open': () => openCommandPalette(),
+      'files.open': () => openCommandPalette('files'),
       'font.increase': () => useSettingsStore.getState().increaseFontSize(),
       'font.decrease': () => useSettingsStore.getState().decreaseFontSize(),
       'tab.close': () => {

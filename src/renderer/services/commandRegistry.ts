@@ -21,6 +21,7 @@ export class CommandRegistry {
   }
 
   handleKeyDown(e: KeyboardEvent): void {
+    if (e.defaultPrevented || e.isComposing) return
     const mod = e.ctrlKey || e.metaKey
     for (const cmd of this.commands) {
       if (this.matches(e, cmd.binding, mod)) {

@@ -607,18 +607,6 @@ body,
   justify-self: center;
 }
 
-.toolbar-search-slot {
-  display: flex;
-  flex: 1 1 auto;
-  align-items: center;
-  min-width: 0;
-  margin-left: var(--space-4);
-}
-
-.toolbar-search-slot .omni-search-wrapper {
-  width: min(100%, 420px);
-}
-
 .toolbar-sync-controls {
   display: flex;
   align-items: center;
@@ -1386,6 +1374,15 @@ body,
 }
 
 /* PDF Page styling */
+.editor-preview-selection {
+  background-color: color-mix(in srgb, var(--accent) 25%, transparent);
+  outline: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.preview-buffered-page .textLayer {
+  z-index: 1;
+}
+
 .react-pdf__Page {
   margin-bottom: var(--space-16);
   box-shadow: 0 4px 6px -1px var(--shadow-color);
@@ -3835,7 +3832,6 @@ button.submission-check-finding:hover {
 }
 
 .research-profile-add,
-.research-profile-suggest,
 .research-profile-index,
 .research-profile-save {
   display: inline-flex;
@@ -3855,11 +3851,6 @@ button.submission-check-finding:hover {
   align-self: flex-start;
 }
 
-.research-profile-suggest {
-  align-self: flex-start;
-}
-
-.research-profile-suggest:disabled,
 .research-profile-index:disabled {
   cursor: default;
   opacity: 0.55;
@@ -5605,357 +5596,6 @@ button.submission-check-finding:hover {
   background-color: rgba(255, 165, 0, 0.6) !important;
   outline: 2px solid orange;
   border-radius: var(--ui-radius-subtle);
-}
-
-/* OmniSearch (Unified Toolbar Search) */
-.omni-search-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 0;
-}
-
-.omni-search-mode-btn-wrapper {
-  position: relative;
-}
-
-.omni-search-mode-btn {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-4) var(--space-6);
-  font-size: var(--font-md);
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-  border-right: none;
-  border-radius: var(--ui-radius-control) 0 0 var(--ui-radius-control);
-  cursor: pointer;
-  height: 28px;
-}
-
-.omni-search-mode-btn:hover {
-  background-color: var(--bg-hover);
-}
-
-.omni-search-mode-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  min-width: 200px;
-  background-color: var(--modal-bg, var(--bg-secondary));
-  border: 1px solid var(--border);
-  border-radius: var(--ui-radius-large);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-  z-index: 210;
-  padding: var(--space-4);
-}
-
-.omni-search-mode-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-8);
-  width: 100%;
-  padding: var(--space-6) 10px;
-  font-size: var(--font-base);
-  color: var(--text-primary);
-  background: none;
-  border: none;
-  border-radius: var(--ui-radius-control);
-  cursor: pointer;
-  text-align: left;
-}
-
-.omni-search-mode-item:hover {
-  background-color: var(--bg-hover);
-}
-
-.omni-search-mode-item.active {
-  background-color: var(--sidebar-selected);
-}
-
-.omni-search-mode-item kbd {
-  margin-left: auto;
-  font-size: var(--font-sm);
-  color: var(--text-secondary);
-  background-color: var(--bg-secondary);
-  padding: 1px 5px;
-  border-radius: var(--ui-radius-subtle);
-  border: 1px solid var(--border);
-}
-
-.omni-search-input {
-  width: 260px;
-  padding: var(--space-4) 10px;
-  font-size: var(--font-base);
-  border: 1px solid var(--border);
-  background-color: var(--bg-input, var(--bg-secondary));
-  color: var(--text-primary);
-  border-radius: 0 var(--ui-radius-control) var(--ui-radius-control) 0;
-  height: 28px;
-  transition:
-    border-color 0.15s,
-    width 0.2s;
-}
-
-.omni-search-input:focus {
-  width: 360px;
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
-}
-
-.omni-search-badge {
-  position: absolute;
-  right: 26px;
-  background: var(--accent);
-  color: white;
-  font-size: var(--font-xs);
-  font-weight: 600;
-  padding: 1px 5px;
-  border-radius: var(--ui-radius-pill);
-  pointer-events: none;
-}
-
-.omni-search-clear {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-left: var(--space-2);
-  padding: var(--space-2);
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  border-radius: var(--ui-radius-subtle);
-}
-
-.omni-search-clear:hover {
-  color: var(--text-primary);
-  background-color: var(--bg-hover);
-}
-
-.omni-search-dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  width: 400px;
-  max-height: 320px;
-  overflow-y: auto;
-  background-color: var(--modal-bg, var(--bg-secondary));
-  border: 1px solid var(--border);
-  border-radius: var(--ui-radius-large);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-  z-index: 200;
-  padding: var(--space-4);
-}
-
-.omni-search-result {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-8);
-  padding: var(--space-6) var(--space-8);
-  border-radius: var(--ui-radius-control);
-  cursor: pointer;
-}
-
-.omni-search-result.highlighted {
-  background-color: var(--bg-hover);
-}
-
-.omni-search-result.selected {
-  background-color: var(--sidebar-selected);
-}
-
-.omni-search-result input[type='checkbox'] {
-  margin-top: 3px;
-  cursor: pointer;
-}
-
-.omni-search-result-text {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.omni-search-result-title {
-  font-size: var(--font-base);
-  font-weight: 500;
-  color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.omni-search-result-meta {
-  font-size: var(--font-sm);
-  color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.omni-search-footer {
-  font-size: var(--font-sm);
-  text-align: center;
-  color: var(--text-secondary);
-  padding: var(--space-6) var(--space-8) var(--space-4);
-}
-
-.omni-search-message {
-  text-align: center;
-  color: var(--text-secondary);
-  padding: var(--space-12) var(--space-8);
-  font-size: var(--font-md);
-}
-
-.omni-search-pdf-controls {
-  display: flex;
-  align-items: center;
-  gap: var(--space-6);
-  padding: var(--space-6) var(--space-8);
-}
-
-.omni-search-pdf-count {
-  font-size: var(--font-md);
-  color: var(--text-secondary);
-  white-space: nowrap;
-  min-width: 60px;
-  text-align: center;
-}
-
-.omni-search-pdf-controls button {
-  padding: var(--space-2) var(--space-8);
-  font-size: var(--font-md);
-  background-color: var(--bg-toolbar);
-  color: var(--text-primary);
-  border: none;
-  border-radius: var(--ui-radius-subtle);
-  cursor: pointer;
-}
-
-.omni-search-pdf-controls button:hover {
-  background-color: var(--bg-hover);
-}
-
-.omni-search-pdf-controls button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.omni-search-tex-nav {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-6) var(--space-8);
-  border-bottom: 1px solid var(--border);
-  margin-bottom: var(--space-2);
-}
-
-.omni-search-tex-count {
-  font-size: var(--font-md);
-  color: var(--text-secondary);
-  white-space: nowrap;
-  min-width: 50px;
-}
-
-.omni-search-tex-nav button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-2) var(--space-4);
-  background-color: var(--bg-toolbar);
-  color: var(--text-primary);
-  border: none;
-  border-radius: var(--ui-radius-subtle);
-  cursor: pointer;
-}
-
-.omni-search-tex-nav button:hover {
-  background-color: var(--bg-hover);
-}
-
-.omni-search-tex-nav button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.omni-search-tex-result {
-  gap: var(--space-6);
-  align-items: center;
-  font-family: var(--font-mono, monospace);
-  font-size: var(--font-md);
-}
-
-.omni-search-line-number {
-  min-width: 36px;
-  text-align: right;
-  color: var(--text-secondary);
-  font-size: var(--font-sm);
-  flex-shrink: 0;
-}
-
-.omni-search-line-text {
-  flex: 1;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--text-primary);
-}
-
-/* OmniSearch Home Mode */
-.omni-search-home-mode .omni-search-input {
-  width: 340px;
-  border-radius: 0 var(--ui-radius-control) var(--ui-radius-control) 0;
-}
-
-.omni-search-home-mode .omni-search-input:focus {
-  width: 480px;
-}
-
-.omni-search-home-mode .omni-search-dropdown {
-  width: 520px;
-}
-
-.omni-search-home-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-4) var(--space-8);
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-right: none;
-  border-radius: var(--ui-radius-control) 0 0 var(--ui-radius-control);
-  color: var(--text-secondary);
-  height: 28px;
-}
-
-.omni-search-home-result {
-  display: flex;
-  align-items: center;
-  gap: var(--space-10);
-}
-
-.omni-search-home-result-icon {
-  flex-shrink: 0;
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-}
-
-.omni-search-home-badge {
-  flex-shrink: 0;
-  font-size: var(--font-xs);
-  font-weight: 600;
-  padding: 1px 7px;
-  border-radius: var(--ui-radius-pill);
-  background-color: var(--bg-secondary);
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
 }
 
 /* Bib Panel */
@@ -8611,4 +8251,57 @@ button.submission-check-finding:hover {
   to {
     transform: translateX(0);
   }
+}
+
+/* Search stays next to the content it searches. */
+.local-search-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-8);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--ui-radius-control);
+  max-width: 100%;
+  min-width: 0;
+}
+.local-search-bar input {
+  flex: 1;
+  min-width: 60px;
+  padding: var(--space-4);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--ui-radius-control);
+}
+.local-search-bar button,
+.local-search-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--ui-radius-control);
+  cursor: pointer;
+}
+.local-search-bar button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.local-search-bar [role='status'] {
+  white-space: nowrap;
+  font-size: var(--font-sm);
+}
+.preview-container > .local-search-bar,
+.preview-container > .local-search-toggle {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  align-self: flex-end;
+  flex-shrink: 0;
+}
+.prose-pane > .local-search-toggle {
+  align-self: flex-end;
 }

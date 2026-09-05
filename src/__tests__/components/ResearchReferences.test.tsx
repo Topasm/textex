@@ -1,3 +1,5 @@
+import { requestLocalSearch } from '../../renderer/services/localSearch'
+import { useUiStore } from '../../renderer/store/useUiStore'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { OnlineReferences } from '../../renderer/components/research/OnlineReferences'
@@ -57,6 +59,7 @@ const libraryTree = (
 
 describe('Research reference sources', () => {
   beforeEach(() => {
+    useUiStore.setState({ searchRequest: null })
     invalidateZoteroInventory()
     vi.restoreAllMocks()
     useProjectStore.setState({
@@ -71,6 +74,21 @@ describe('Research reference sources', () => {
     useCompileStore.setState({ diagnostics: [] })
     useZoteroSyncStore.setState({ dataRevision: 0, configurationRevision: 0 })
     useEditorStore.getState().resetEditor()
+  })
+
+  it('returns from online search and focuses the local reference search on request', async () => {
+    useProjectStore.setState({ researchReferenceSource: 'online' })
+    window.api.researchLoadConfig = vi.fn().mockResolvedValue(config)
+    window.api.zoteroLibraryTree = vi.fn().mockResolvedValue([])
+    render(<ReferencesPanel />)
+    act(() => {
+      useProjectStore.getState().openReferences('project')
+      requestLocalSearch('references')
+    })
+    await waitFor(() =>
+      expect(screen.getByRole('textbox', { name: 'Search project and Zotero' })).toHaveFocus()
+    )
+    expect(useUiStore.getState().searchRequest).toBeNull()
   })
 
   it('exposes one merged reference list as the References scroll region', async () => {

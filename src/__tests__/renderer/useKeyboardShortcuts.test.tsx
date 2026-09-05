@@ -43,6 +43,8 @@ describe('useKeyboardShortcuts', () => {
 
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'P', metaKey: true, shiftKey: true }))
     expect(openCommandPalette).toHaveBeenCalledOnce()
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', ctrlKey: true }))
+    expect(openCommandPalette).toHaveBeenLastCalledWith('files')
   })
 
   it('does not close a dirty tab with Ctrl/Cmd+W when discard is cancelled', () => {

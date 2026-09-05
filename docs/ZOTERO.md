@@ -138,12 +138,12 @@ When TextEx creates a managed bibliography that is not registered in the active 
 shows a BibTeX/BibLaTeX change preview. The editor is changed only after confirmation and only if
 the document has not changed since the preview was created.
 
-### OmniSearch prefixes
+### Reference search
 
-- `/r` or `/c`: project references
-- `/z`: Zotero
-- `/o`, `/online`, or `/paper`: Crossref and arXiv
-- `/p`: PDF text search (unchanged)
+Open References to search the project and connected Zotero library. The Search
+Citations command focuses this input. Use the online search action for Crossref
+and arXiv. PDF text search is available inside the PDF viewer; the toolbar no
+longer contains a shared search input or slash-prefix modes.
 
 ### Show in Zotero
 Click the "Show in Zotero" button in search results to open the paper in the Zotero app.

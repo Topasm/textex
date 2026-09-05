@@ -20,7 +20,7 @@ A **free**, **local-first** Tauri desktop LaTeX editor. TextEx runs on your mach
 | **Live PDF Preview** | Auto-compile on save with instant split-pane preview |
 | **Scroll Sync** | Bidirectional scroll synchronization between editor and PDF |
 | **SyncTeX** | Ctrl+Click to jump between source code and PDF positions |
-| **OmniSearch** | Unified search across citations, PDF content, and editor text |
+| **Search** | Document/PDF find, reference search, and quick file opening |
 | **Monaco Editor** | Syntax highlighting, auto-completion, snippets, Vim mode |
 | **Multi-File Projects** | Sidebar file tree with generated outputs hidden, tab bar, `\input`/`\include` navigation |
 | **Citations** | BibTeX auto-complete + Zotero integration |
@@ -132,6 +132,7 @@ Enable **Scroll Sync** in Settings > Appearance to keep the editor and PDF align
 - Built-in feedback loop prevention — no bouncing or jittering.
 
 ### SyncTeX (Click-to-Jump)
+- **PDF selection → source highlight**: Drag to select PDF text and highlight the corresponding TeX passage. Switching to Markdown selects the same sentence or paragraph. Text that differs from the source, such as macros or equations, falls back to source-line highlighting. This temporary selection is not saved to the file.
 - **Code to PDF**: Click the "Sync Code to PDF" toolbar button to highlight the current line in the PDF.
 - **PDF to Code**: `Ctrl+Click` anywhere on the PDF to jump to the corresponding source line.
 
@@ -152,18 +153,13 @@ Enable **Scroll Sync** in Settings > Appearance to keep the editor and PDF align
 - **Citation Tooltips**: Hover over a citation in the PDF preview to see title, author, and year.
 - **Zotero Integration**:
   1. Ensure Zotero with Better BibTeX is running.
-  2. Open **References** in the right Research panel to search the project and Zotero together; Crossref/arXiv appears as an online fallback.
-  3. Drag a paper into the editor, or use `/r`, `/z`, and `/o` in OmniSearch.
+  2. Open **References** in the left sidebar to search the project and Zotero together; Crossref/arXiv appears as an online fallback.
+  3. Drag a paper into the editor or use its citation action in References.
   4. Save online results to Zotero independently, or add them directly to the project bibliography.
 
 ### Productivity Tools
 
-<p align="center">
-  <img src="docs/images/omnisearch.png" alt="OmniSearch dialog with search results" width="900" />
-</p>
-
-- **OmniSearch**: Search across files, citations, and PDF text; use `/` for focused workflows and
-  `>` for the same context-aware application commands exposed by the command palette.
+- **Search**: Find text inside the active TeX/Markdown editor or PDF viewer; search papers in References. Open project files with `Ctrl/Cmd+P`, and commands with `Ctrl/Cmd+Shift+P`.
 - **Todo Panel**: Track writing tasks in the sidebar.
 - **Notes Panel**: Track TODO items and keep project memos.
 - **Timeline**: View local file history and revert to any previous save.

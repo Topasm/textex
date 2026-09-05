@@ -8,10 +8,6 @@ import { usePdfStore } from '../../renderer/store/usePdfStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 import { useUiStore } from '../../renderer/store/useUiStore'
 
-vi.mock('../../renderer/components/OmniSearch', () => ({
-  OmniSearch: () => <div data-testid="omni-search-mock">Search citations...</div>
-}))
-
 const defaultProps = {
   onSave: vi.fn(),
   onCompile: vi.fn(),
@@ -134,30 +130,30 @@ describe('Toolbar', () => {
 
   it('uses one typed drag path for structural space without hijacking interactive controls', () => {
     const { container } = render(<Toolbar {...defaultProps} />)
-    const searchSlot = container.querySelector('.toolbar-search-slot')
+    const toolbarSpace = container.querySelector('.toolbar-left')
     const save = screen.getByRole('button', { name: /Quick Save/ })
 
     expect(container.querySelector('[data-tauri-drag-region]')).not.toBeInTheDocument()
 
-    fireEvent.mouseDown(searchSlot!, { button: 0, detail: 1 })
+    fireEvent.mouseDown(toolbarSpace!, { button: 0, detail: 1 })
     expect(window.api.startWindowDragging).toHaveBeenCalledOnce()
 
     fireEvent.mouseDown(save, { button: 0, detail: 1 })
     expect(window.api.startWindowDragging).toHaveBeenCalledOnce()
 
-    fireEvent.mouseDown(searchSlot!, { button: 0, detail: 2 })
+    fireEvent.mouseDown(toolbarSpace!, { button: 0, detail: 2 })
     expect(window.api.toggleMaximizeWindow).toHaveBeenCalledOnce()
   })
 
   it('maximizes on a toolbar double-click on macOS, where the title bar is hidden', () => {
     document.documentElement.dataset.platform = 'darwin'
     const { container } = render(<Toolbar {...defaultProps} />)
-    const searchSlot = container.querySelector('.toolbar-search-slot')
+    const toolbarSpace = container.querySelector('.toolbar-left')
 
-    fireEvent.mouseDown(searchSlot!, { button: 0, detail: 1 })
+    fireEvent.mouseDown(toolbarSpace!, { button: 0, detail: 1 })
     expect(window.api.startWindowDragging).toHaveBeenCalledOnce()
 
-    fireEvent.mouseDown(searchSlot!, { button: 0, detail: 2 })
+    fireEvent.mouseDown(toolbarSpace!, { button: 0, detail: 2 })
 
     expect(window.api.toggleMaximizeWindow).toHaveBeenCalledOnce()
     expect(window.api.startWindowDragging).toHaveBeenCalledOnce()
@@ -166,19 +162,19 @@ describe('Toolbar', () => {
   it('maximizes from the double-click event when a drag session swallowed the mousedown', () => {
     document.documentElement.dataset.platform = 'darwin'
     const { container } = render(<Toolbar {...defaultProps} />)
-    const searchSlot = container.querySelector('.toolbar-search-slot')
+    const toolbarSpace = container.querySelector('.toolbar-left')
 
-    fireEvent.doubleClick(searchSlot!, { button: 0 })
+    fireEvent.doubleClick(toolbarSpace!, { button: 0 })
 
     expect(window.api.toggleMaximizeWindow).toHaveBeenCalledOnce()
   })
 
   it('toggles once when one double-click arrives on both event paths', () => {
     const { container } = render(<Toolbar {...defaultProps} />)
-    const searchSlot = container.querySelector('.toolbar-search-slot')
+    const toolbarSpace = container.querySelector('.toolbar-left')
 
-    fireEvent.mouseDown(searchSlot!, { button: 0, detail: 2 })
-    fireEvent.doubleClick(searchSlot!, { button: 0 })
+    fireEvent.mouseDown(toolbarSpace!, { button: 0, detail: 2 })
+    fireEvent.doubleClick(toolbarSpace!, { button: 0 })
 
     expect(window.api.toggleMaximizeWindow).toHaveBeenCalledOnce()
   })
@@ -213,7 +209,7 @@ describe('Toolbar', () => {
       'data-custom-window-chrome',
       'false'
     )
-    expect(screen.queryByRole('button', { name: 'Open app menu' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Open app menu' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Minimize window' })).not.toBeInTheDocument()
     expect(container.querySelector('.window-resize-handles')).not.toBeInTheDocument()
   })
@@ -234,10 +230,12 @@ describe('Toolbar', () => {
     expect(screen.queryByTitle(/Toggle log/)).not.toBeInTheDocument()
   })
 
-  it('shows OmniSearch with default citations mode', () => {
+  it('opens file search without a permanent search input', () => {
     useProjectStore.setState({ projectRoot: '/test' })
     render(<Toolbar {...defaultProps} />)
-    expect(screen.getByTestId('omni-search-mock')).toHaveTextContent('Search citations...')
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Quick Open' }))
+    expect(defaultProps.onOpenCommandPalette).toHaveBeenCalledWith('files')
   })
 
   it('shows the return home button only when a project is open', () => {
@@ -270,13 +268,15 @@ describe('Toolbar', () => {
     expect(screen.getByRole('button', { name: /Sync Code to PDF/ })).toBeDisabled()
   })
 
-  it('OmniSearch is always visible regardless of zoteroEnabled setting', () => {
+  it('keeps quick open independent of the Zotero setting', () => {
     useProjectStore.setState({ projectRoot: '/test' })
     useSettingsStore.setState({
       settings: { ...useSettingsStore.getState().settings, zoteroEnabled: false }
     })
     render(<Toolbar {...defaultProps} />)
-    expect(screen.getByTestId('omni-search-mock')).toHaveTextContent('Search citations...')
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Quick Open' }))
+    expect(defaultProps.onOpenCommandPalette).toHaveBeenCalledWith('files')
   })
 
   it('hides PDF toolbar controls when showPdfToolbarControls is false', () => {

@@ -140,7 +140,7 @@ vi.mock('../../renderer/hooks/editor/useEditorDiagnostics', () => ({
   useEditorDiagnostics: () => vi.fn()
 }))
 vi.mock('../../renderer/hooks/editor/usePendingActions', () => ({
-  usePendingActions: () => {}
+  usePendingActions: () => () => {}
 }))
 vi.mock('../../renderer/hooks/editor/useContentChangeCoordinator', () => ({
   useContentChangeCoordinator: () => {}

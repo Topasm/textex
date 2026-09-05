@@ -1,8 +1,11 @@
+import { MarkdownSearch } from './search/MarkdownSearch'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Bold, Code2, FileCode2, FileText, Italic } from 'lucide-react'
-import { documentRegistry } from '../models/documentRegistry'
+import { documentRegistry, normalizeDocumentId } from '../models/documentRegistry'
 import { useEditorStore } from '../store/useEditorStore'
+import { useCompileStore } from '../store/useCompileStore'
+import { findPreviewText } from '../utils/previewSelection'
 import { isEditableProseBlock, projectLatexToProse } from '../../shared/proseProjection'
 import {
   proseDocumentEdits,
@@ -36,6 +39,8 @@ export function ProsePane() {
   const { t } = useTranslation()
   const filePath = useEditorStore((state) => state.filePath)
   const revision = useEditorStore((state) => state.revision)
+  const previewHighlight = useEditorStore((state) => state.previewSourceHighlight)
+  const pdfRevision = useCompileStore((state) => state.pdfRevision)
   const areaRef = useRef<HTMLTextAreaElement>(null)
   const scrollFrameRef = useRef<number | null>(null)
   const suppressScrollUntilRef = useRef(0)
@@ -212,6 +217,46 @@ export function ProsePane() {
     area.focus({ preventScroll: true })
   }, [projection, proseAnchor])
 
+  // The PDF and Markdown are alternate views. Carry the selected passage
+  // across the switch, using the projection's source spans rather than line
+  // numbers from the generated Markdown.
+  useEffect(() => {
+    const area = areaRef.current
+    if (
+      !area ||
+      !filePath ||
+      !previewHighlight ||
+      !projection?.hasBody ||
+      draft !== projected ||
+      normalizeDocumentId(previewHighlight.filePath) !== normalizeDocumentId(filePath) ||
+      previewHighlight.revision !== revision ||
+      previewHighlight.pdfRevision !== pdfRevision
+    )
+      return
+    const spans = projection.text.spans.filter(
+      ({ block }) =>
+        block.endLine >= previewHighlight.range.start.line &&
+        block.startLine <= previewHighlight.range.end.line
+    )
+    const first = spans[0]
+    const last = spans.at(-1)
+    if (!first || !last) return
+    const lines = projected.split('\n')
+    const offset = lines
+      .slice(0, first.startLine - 1)
+      .reduce((total, line) => total + line.length + 1, 0)
+    const passage = lines.slice(first.startLine - 1, last.endLine).join('\n')
+    const match = findPreviewText(passage, previewHighlight.text)
+    const start = offset + (match?.start ?? 0)
+    const end = offset + (match?.end ?? passage.length)
+    area.focus({ preventScroll: true })
+    area.setSelectionRange(start, end)
+    setSelection({ start, end })
+    const lineHeight = area.scrollHeight / Math.max(1, lines.length)
+    suppressScrollUntilRef.current = Date.now() + 120
+    area.scrollTop = Math.max(0, (first.startLine - 2) * lineHeight)
+  }, [draft, filePath, pdfRevision, previewHighlight, projected, projection, revision])
+
   useLayoutEffect(() => {
     const next = pendingSelectionRef.current
     const area = areaRef.current
@@ -312,6 +357,7 @@ export function ProsePane() {
           </button>
         </div>
       )}
+      <MarkdownSearch key={filePath} text={draft} areaRef={areaRef} />
       <div className="prose-pane__canvas">
         <textarea
           ref={areaRef}

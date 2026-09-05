@@ -9,7 +9,7 @@
    the protected release environment.
 3. Extend the renderer bundle CI budget into deterministic runtime startup,
    input-to-frame, and edit-to-PDF budgets.
-4. Continue splitting large filesystem, compiler, FileTree, and OmniSearch
+4. Continue splitting large filesystem, compiler, FileTree, and reference-panel
    modules along tested responsibility boundaries.
 
 ## Completed architectural work
@@ -23,3 +23,5 @@
 - Native AI HTTP/CLI, research, and safe system-terminal launch
 - macOS close-to-hide with explicit, dirty-aware application quit
 - Split Zustand stores with fine-grained selectors
+- Context-specific search surfaces and cached full-document PDF search
+- Production-browser PDF zoom, selection, search, and generation regression tests

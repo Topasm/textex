@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.web.json",
+  "compilerOptions": { "rootDir": ".", "noEmit": true, "composite": false },
+  "include": ["tests/browser/**/*.ts", "tests/browser/**/*.tsx", "src/renderer/**/*.d.ts"]
+}

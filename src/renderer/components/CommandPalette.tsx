@@ -1,3 +1,9 @@
+import { useProjectStore } from '../store/useProjectStore'
+import { searchProjectFiles } from '../services/projectIndex'
+import { openIndexedFile } from '../services/quickOpen'
+import { useNotificationStore } from '../store/useNotificationStore'
+import { errorMessage } from '../utils/errorMessage'
+import type { ShortcutBinding } from '../../shared/appCommandManifest'
 import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { ICON_SIZE } from './ui/IconSystem'
 import { CornerDownLeft, Search, X } from 'lucide-react'
@@ -7,14 +13,26 @@ import {
   createCommandSearchEntries,
   formatCommandShortcut,
   searchCommandEntries,
-  type CommandAvailabilityContext,
-  type CommandSearchEntry
+  type CommandAvailabilityContext
 } from '../services/commandSearch'
 import './CommandPalette.css'
 
 export { formatCommandShortcut } from '../services/commandSearch'
 
+type PaletteMode = 'commands' | 'files'
+interface PaletteEntry {
+  command: { id: string; group: string; shortcut?: ShortcutBinding }
+  label: string
+  groupLabel: string
+  enabled: boolean
+  unavailableLabel?: string
+  commandId?: AppCommandId
+  filePath?: string
+}
+
 interface CommandPaletteProps {
+  mode?: PaletteMode
+  onModeChange?: (mode: PaletteMode) => void
   isOpen: boolean
   onClose: () => void
   onRunCommand: (command: AppCommandId) => void
@@ -37,11 +55,15 @@ const FOCUSABLE_SELECTOR = [
 
 export function CommandPalette({
   isOpen,
+  mode = 'commands',
+  onModeChange,
   onClose,
   onRunCommand,
   context = DEFAULT_CONTEXT
 }: CommandPaletteProps) {
   const { t } = useTranslation()
+  const projectRoot = useProjectStore((state) => state.projectRoot)
+  const projectIndex = useProjectStore((state) => state.projectIndex)
   const [query, setQuery] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -58,11 +80,28 @@ export function CommandPalette({
 
   const commands = useMemo(() => createCommandSearchEntries(t, context), [context, t])
 
-  const filteredCommands = useMemo(() => searchCommandEntries(commands, query), [commands, query])
+  const filteredCommands: PaletteEntry[] = useMemo(() => {
+    if (mode === 'commands')
+      return searchCommandEntries(commands, query).map((entry) => ({
+        ...entry,
+        commandId: entry.command.id
+      }))
+    const entries = projectIndex?.root === projectRoot ? projectIndex.entries : []
+    const files = query.trim()
+      ? searchProjectFiles(entries, query)
+      : entries.filter((entry) => entry.type === 'file').slice(0, 50)
+    return files.map((file) => ({
+      command: { id: file.path, group: 'file' },
+      filePath: file.path,
+      label: file.relativePath,
+      groupLabel: t('localSearch.files'),
+      enabled: true
+    }))
+  }, [commands, query, mode, projectIndex, projectRoot, t])
 
   useEffect(() => {
     setActiveIndex(0)
-  }, [query])
+  }, [query, mode, projectRoot])
 
   useEffect(() => {
     if (!isOpen) return
@@ -114,7 +153,7 @@ export function CommandPalette({
       document.removeEventListener('keydown', handleDocumentKeyDown)
       if (previouslyFocused?.isConnected) previouslyFocused.focus()
     }
-  }, [isOpen])
+  }, [isOpen, mode, projectRoot])
 
   useEffect(() => {
     if (activeIndex < filteredCommands.length) return
@@ -135,10 +174,17 @@ export function CommandPalette({
     ? `${listboxId}-option-${activeIndex}`
     : undefined
 
-  const execute = (entry: CommandSearchEntry): void => {
+  const execute = (entry: PaletteEntry): void => {
     if (!entry.enabled) return
     onClose()
-    onRunCommand(entry.command.id)
+    if (entry.commandId) onRunCommand(entry.commandId)
+    else if (entry.filePath)
+      void openIndexedFile(entry.filePath).catch((error) => {
+        useNotificationStore.getState().pushNotification({
+          tone: 'error',
+          message: t('localSearch.openFailed', { reason: errorMessage(error) })
+        })
+      })
   }
 
   const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>): void => {
@@ -182,7 +228,17 @@ export function CommandPalette({
         tabIndex={-1}
       >
         <div className="command-palette-header">
-          <h2 id={titleId}>{t('commandPalette.title')}</h2>
+          <h2 id={titleId}>{t(mode === 'files' ? 'localSearch.files' : 'commandPalette.title')}</h2>
+          {onModeChange && (
+            <button
+              type="button"
+              className="command-palette-close"
+              onClick={() => onModeChange(mode === 'files' ? 'commands' : 'files')}
+              disabled={mode === 'commands' && !projectRoot}
+            >
+              {t(mode === 'files' ? 'commandPalette.title' : 'localSearch.files')}
+            </button>
+          )}
           <button
             type="button"
             className="command-palette-close"
@@ -203,8 +259,10 @@ export function CommandPalette({
             aria-controls={listboxId}
             aria-activedescendant={activeOptionId}
             aria-describedby={statusId}
-            aria-label={t('commandPalette.searchLabel')}
-            placeholder={t('commandPalette.placeholder')}
+            aria-label={t(mode === 'files' ? 'localSearch.files' : 'commandPalette.searchLabel')}
+            placeholder={t(
+              mode === 'files' ? 'localSearch.filePlaceholder' : 'commandPalette.placeholder'
+            )}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={handleInputKeyDown}
@@ -219,7 +277,7 @@ export function CommandPalette({
             aria-atomic="true"
           >
             {filteredCommands.length > 0
-              ? t('omniSearch.resultCount', { count: filteredCommands.length })
+              ? t('localSearch.resultCount', { count: filteredCommands.length })
               : t('commandPalette.noResults')}
           </span>
         </div>
@@ -235,7 +293,7 @@ export function CommandPalette({
               const previous = filteredCommands[index - 1]
               const showGroup = !previous || previous.command.group !== entry.command.group
               const shortcut =
-                'shortcut' in entry.command
+                entry.command.shortcut !== undefined
                   ? formatCommandShortcut(entry.command.shortcut)
                   : undefined
               const optionId = `${listboxId}-option-${index}`

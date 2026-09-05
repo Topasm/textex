@@ -1,3 +1,4 @@
+import { useLocalSearchRequest } from '../hooks/useLocalSearchRequest'
 import Editor, { BeforeMount, OnMount } from '@monaco-editor/react'
 import { useFeatureModal } from '../hooks/useFeatureModal'
 import { memo, useEffect, useRef, useState, useCallback, useMemo, lazy, Suspense } from 'react'
@@ -13,6 +14,7 @@ import { useDocumentSymbols } from '../hooks/editor/useDocumentSymbols'
 import { useCompletion } from '../hooks/editor/useCompletion'
 import { useEditorDiagnostics } from '../hooks/editor/useEditorDiagnostics'
 import { usePendingActions } from '../hooks/editor/usePendingActions'
+import { usePreviewSourceHighlight } from '../hooks/editor/usePreviewSourceHighlight'
 import { useContentChangeCoordinator } from '../hooks/editor/useContentChangeCoordinator'
 import { usePackageDetection } from '../hooks/editor/usePackageDetection'
 import { useMathPreview } from '../hooks/editor/useMathPreview'
@@ -102,7 +104,13 @@ function EditorPane() {
   )
   const { refreshOutline } = useDocumentSymbols()
   const refreshEditorDiagnostics = useEditorDiagnostics(editorAdapterRef)
-  usePendingActions(editorAdapterRef)
+  const refreshSearch = useLocalSearchRequest('document', () => {
+    if (!editorRef.current || editorAdapterRef.current?.getDocumentId() !== filePath) return false
+    editorRef.current.trigger('search', 'actions.find', {})
+    return true
+  })
+  const refreshPendingActions = usePendingActions(editorAdapterRef)
+  const refreshPreviewSourceHighlight = usePreviewSourceHighlight(editorAdapterRef)
   const { detectPackages } = usePackageDetection()
   // Coordinated content-change analysis pipeline:
   // Replaces 3 independent debounce timers with a single scheduler
@@ -275,6 +283,9 @@ function EditorPane() {
     aiEnabledKeyRef.current = editor.createContextKey('textex.aiEnabled', aiEnabled)
     monacoRef.current = monaco
     refreshEditorDiagnostics()
+    refreshPreviewSourceHighlight()
+    refreshPendingActions()
+    refreshSearch()
     cursorDisposableRef.current = editor.onDidChangeCursorPosition((e) => {
       setCursorPosition(e.position.lineNumber, e.position.column)
     })
@@ -359,7 +370,10 @@ function EditorPane() {
     editorAdapter.setDocumentId(filePath)
     const buffer = editorAdapter.getDocumentBuffer()
     if (filePath && buffer) documentRegistry.bindBuffer(filePath, buffer)
-  }, [filePath])
+    refreshPreviewSourceHighlight()
+    refreshPendingActions()
+    refreshSearch()
+  }, [filePath, refreshPreviewSourceHighlight, refreshPendingActions, refreshSearch])
 
   // Keep the aiEnabled context key in sync with settings
   useEffect(() => {

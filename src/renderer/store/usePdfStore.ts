@@ -10,10 +10,6 @@ interface PdfState {
   // PDF Search
   pdfSearchVisible: boolean
   pdfSearchQuery: string
-  pdfMatchCount: number
-  pdfCurrentMatch: number
-  pdfSearchNextRequest: number | null
-  pdfSearchPrevRequest: number | null
 
   // Sync request from toolbar to PreviewPane
   syncToCodeRequest: number | null
@@ -41,10 +37,6 @@ interface PdfState {
   setSynctexHighlight: (highlight: { page: number; x: number; y: number } | null) => void
   setPdfSearchVisible: (visible: boolean) => void
   setPdfSearchQuery: (query: string) => void
-  setPdfMatchCount: (count: number) => void
-  setPdfCurrentMatch: (index: number) => void
-  requestPdfSearchNext: () => void
-  requestPdfSearchPrev: () => void
   triggerSyncToCode: () => void
   setCurrentPage: (page: number) => void
   setNumPages: (n: number) => void
@@ -91,10 +83,6 @@ export const usePdfStore = create<PdfState>()(
       synctexHighlight: null,
       pdfSearchVisible: false,
       pdfSearchQuery: '',
-      pdfMatchCount: 0,
-      pdfCurrentMatch: 0,
-      pdfSearchNextRequest: null,
-      pdfSearchPrevRequest: null,
       syncToCodeRequest: null,
       currentPage: 1,
       numPages: 0,
@@ -115,10 +103,6 @@ export const usePdfStore = create<PdfState>()(
         set({ synctexHighlight: highlight ? { ...highlight, timestamp: Date.now() } : null }),
       setPdfSearchVisible: (pdfSearchVisible) => set({ pdfSearchVisible }),
       setPdfSearchQuery: (pdfSearchQuery) => set({ pdfSearchQuery }),
-      setPdfMatchCount: (pdfMatchCount) => set({ pdfMatchCount }),
-      setPdfCurrentMatch: (pdfCurrentMatch) => set({ pdfCurrentMatch }),
-      requestPdfSearchNext: () => set({ pdfSearchNextRequest: Date.now() }),
-      requestPdfSearchPrev: () => set({ pdfSearchPrevRequest: Date.now() }),
       triggerSyncToCode: () => set({ syncToCodeRequest: Date.now() }),
       setCurrentPage: (page) => set({ currentPage: page }),
       setNumPages: (n) => set({ numPages: n }),

@@ -58,7 +58,6 @@ describe('flat renderer presentation contract', () => {
     for (const selector of [
       'html .modal-content',
       'html .command-palette',
-      'html .omni-search-dropdown',
       'html .settings-section',
       'html .research-profile-section',
       'html .home-recent-item'

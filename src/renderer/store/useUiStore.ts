@@ -24,6 +24,13 @@ export interface ProseAnchor {
   intent?: ProseAnchorIntent
 }
 
+export type LocalSearchTarget = 'document' | 'pdf' | 'references'
+export interface LocalSearchRequest {
+  target: LocalSearchTarget
+  projectRoot: string | null
+  filePath: string | null
+}
+
 interface UiState {
   // AI Draft modal
   isDraftModalOpen: boolean
@@ -44,9 +51,7 @@ interface UiState {
   // Document symbols
   documentSymbols: DocumentSymbolNode[]
 
-  // OmniSearch focus request
-  omniSearchFocusRequested: boolean
-  omniSearchFocusMode: 'file' | 'cite' | 'zotero' | 'online' | 'pdf' | 'tex' | null
+  searchRequest: LocalSearchRequest | null
 
   // External file change conflicts
   externalChangeConflicts: string[]
@@ -95,8 +100,7 @@ interface UiState {
   setUpdateError: (error: string, action?: UpdateErrorAction | null) => void
   setExportStatus: (status: ExportStatus) => void
   setDocumentSymbols: (symbols: DocumentSymbolNode[]) => void
-  requestOmniSearchFocus: (mode?: 'file' | 'cite' | 'zotero' | 'online' | 'pdf' | 'tex') => void
-  clearOmniSearchFocus: () => void
+  setSearchRequest: (request: LocalSearchRequest | null) => void
   addExternalChangeConflict: (filePath: string) => void
   removeExternalChangeConflict: (filePath: string) => void
   requestSettings: () => void
@@ -146,8 +150,7 @@ export const useUiStore = create<UiState>()(
     updateErrorAction: null,
     exportStatus: 'idle',
     documentSymbols: [],
-    omniSearchFocusRequested: false,
-    omniSearchFocusMode: null,
+    searchRequest: null,
     externalChangeConflicts: [],
     settingsRequested: false,
     helpRequestedSection: null,
@@ -167,9 +170,7 @@ export const useUiStore = create<UiState>()(
       set({ updateError, updateErrorAction }),
     setExportStatus: (exportStatus) => set({ exportStatus }),
     setDocumentSymbols: (documentSymbols) => set({ documentSymbols }),
-    requestOmniSearchFocus: (mode) =>
-      set({ omniSearchFocusRequested: true, omniSearchFocusMode: mode ?? 'cite' }),
-    clearOmniSearchFocus: () => set({ omniSearchFocusRequested: false, omniSearchFocusMode: null }),
+    setSearchRequest: (searchRequest) => set({ searchRequest }),
     addExternalChangeConflict: (filePath) =>
       set((state) => ({
         externalChangeConflicts: state.externalChangeConflicts.includes(filePath)

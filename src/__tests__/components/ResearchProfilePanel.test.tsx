@@ -239,43 +239,54 @@ describe('ResearchProfilePanel', () => {
     expect(screen.getByLabelText('Title')).toHaveValue('Project B')
   })
 
-  it('automatically fills only empty metadata fields from the active .tex document', async () => {
-    useEditorStore
-      .getState()
-      .openFileInTab(
-        '/project/paper.tex',
-        String.raw`\title{Suggested Title}\author{Ada Lovelace \and Grace Hopper}\doi{10.1234/example}\arxiv{2401.12345}`
-      )
-    window.api.researchProfileLoad = vi.fn().mockResolvedValue({
-      ...emptyProfile,
-      paper: { title: 'Existing Title', authors: [] }
-    })
-
+  it('keeps profile fields empty when opening, editing, or switching LaTeX documents', async () => {
+    const metadata = String.raw`\title{Document title}\author{Ada Lovelace}\doi{10.1234/example}\arxiv{2401.12345}`
+    useEditorStore.getState().openFileInTab('/project/paper.tex', metadata)
     render(<ResearchProfilePanel />)
-    await screen.findByDisplayValue('Existing Title')
+    await screen.findByLabelText('Title')
 
-    expect(screen.getByLabelText('Title')).toHaveValue('Existing Title')
-    await waitFor(() => expect(screen.getByLabelText('DOI')).toHaveValue('10.1234/example'))
-    expect(screen.getByLabelText('arXiv')).toHaveValue('2401.12345')
-    expect(screen.getAllByLabelText('Name').map((input) => input.getAttribute('value'))).toEqual([
-      'Ada Lovelace',
-      'Grace Hopper'
-    ])
-    expect(screen.getByText(/Filled from paper\.tex:/)).toHaveTextContent('DOI, arXiv, authors')
-    expect(hasUnsavedResearchProfileDraft()).toBe(true)
+    const expectEmpty = () => {
+      for (const label of ['Title', 'DOI', 'arXiv'])
+        expect(screen.getByLabelText(label)).toHaveValue('')
+      expect(screen.queryByLabelText('Name')).not.toBeInTheDocument()
+      expect(hasUnsavedResearchProfileDraft()).toBe(false)
+    }
+    expectEmpty()
+    act(() => useEditorStore.getState().updateActiveDocument(`${metadata}\nEdited`))
+    expectEmpty()
+    act(() => useEditorStore.getState().openFileInTab('/project/other.tex', metadata))
+    expectEmpty()
+    expect(
+      screen.queryByRole('button', { name: 'Fill empty fields from document' })
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText(/fields are filled from explicit commands/)).not.toBeInTheDocument()
   })
 
-  it('does not restore an auto-filled field after the user explicitly clears it', async () => {
+  it('preserves saved metadata and lets the user clear it without restoring document values', async () => {
     useEditorStore
       .getState()
-      .openFileInTab('/project/paper.tex', String.raw`\title{Suggested Title}`)
-
+      .openFileInTab('/project/paper.tex', String.raw`\title{Document title}`)
+    window.api.researchProfileLoad = vi.fn().mockResolvedValue({
+      ...emptyProfile,
+      paper: {
+        title: 'Saved title',
+        doi: '10.1234/saved',
+        arxiv: '2401.12345',
+        authors: [{ id: 'ada', name: 'Ada' }]
+      }
+    })
     render(<ResearchProfilePanel />)
-    const title = await screen.findByDisplayValue('Suggested Title')
+    const title = await screen.findByDisplayValue('Saved title')
+    expect(screen.getByLabelText('DOI')).toHaveValue('10.1234/saved')
+    expect(screen.getByLabelText('arXiv')).toHaveValue('2401.12345')
+    expect(screen.getByLabelText('Name')).toHaveValue('Ada')
+    expect(hasUnsavedResearchProfileDraft()).toBe(false)
     fireEvent.change(title, { target: { value: '' } })
-
-    await waitFor(() => expect(screen.getByLabelText('Title')).toHaveValue(''))
-    expect(screen.getByRole('button', { name: 'Fill empty fields from document' })).toBeEnabled()
+    act(() =>
+      useEditorStore.getState().updateActiveDocument(String.raw`\title{Changed document title}`)
+    )
+    expect(title).toHaveValue('')
+    expect(hasUnsavedResearchProfileDraft()).toBe(true)
   })
 
   it('keeps DOI and arXiv in an optional publication identifiers section', async () => {

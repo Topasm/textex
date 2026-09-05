@@ -49,19 +49,30 @@ export default defineConfig({
     outDir: resolve(__dirname, 'out/tauri-renderer'),
     emptyOutDir: true,
     target: process.env.TAURI_ENV_PLATFORM === 'windows' ? 'chrome105' : 'safari13',
-    minify: isTauriDebug ? false : 'esbuild',
+    minify: !isTauriDebug,
     sourcemap: isTauriDebug,
     chunkSizeWarningLimit: 1500,
-    rollupOptions: {
+    rolldownOptions: {
       input: resolve(__dirname, 'src/renderer/index.html'),
       output: {
-        onlyExplicitManualChunks: true,
-        manualChunks: {
-          'monaco-editor': ['@monaco-editor/react'],
-          katex: ['katex'],
-          'vendor-react': ['react', 'react-dom', 'zustand'],
-          'vendor-i18n': ['i18next', 'react-i18next'],
-          'vendor-ui': ['lucide-react']
+        codeSplitting: {
+          // Keep lazy editor/PDF dependencies out of the initial UI chunks.
+          includeDependenciesRecursively: false,
+          groups: [
+            {
+              name: 'monaco-editor',
+              test: /node_modules\/(@monaco-editor\/(react|loader)|state-local)\//
+            },
+            { name: 'katex', test: /node_modules\/katex\// },
+            // CommonJS shims must travel with React, or manual splitting can
+            // make them depend on the app entry before it has initialized.
+            {
+              name: 'vendor-react',
+              test: /node_modules\/(react|react-dom|zustand|scheduler|use-sync-external-store)\//
+            },
+            { name: 'vendor-i18n', test: /node_modules\/(i18next|react-i18next)\// },
+            { name: 'vendor-ui', test: /node_modules\/lucide-react\// }
+          ]
         }
       }
     }

@@ -106,6 +106,7 @@ const FOCUSABLE_SELECTOR = [
 
 const RENDERER_SHORTCUT_LABEL_KEYS: Record<RendererShortcutId, string> = {
   'commandPalette.open': 'commandPalette.title',
+  'files.open': 'localSearch.files',
   'font.increase': 'learning.shortcutLabels.increaseFont',
   'font.decrease': 'learning.shortcutLabels.decreaseFont',
   'tab.close': 'learning.shortcutLabels.closeTab',

@@ -6,7 +6,7 @@ import type {
   DocumentSnapshot
 } from '../models/documentModel'
 import { documentRegistry } from '../models/documentRegistry'
-import type { EditorTextEdit } from '../editor/EditorAdapter'
+import type { EditorRange, EditorTextEdit } from '../editor/EditorAdapter'
 import { flushPendingDocumentEdits } from '../services/pendingDocumentEdits'
 
 interface OpenFileData {
@@ -28,6 +28,21 @@ interface RestoreFilesInTabsOptions {
   expectedTabMutationEpoch: number
 }
 
+export interface PreviewSourceHighlight {
+  filePath: string
+  revision: number
+  pdfRevision: number
+  range: EditorRange
+  text: string
+}
+
+export interface PendingJumpTarget {
+  documentId: string
+  revision: number
+  pdfRevision: number
+  tabMutationEpoch: number
+}
+
 interface EditorState {
   filePath: string | null
   activeFilePath: string | null
@@ -38,8 +53,15 @@ interface EditorState {
 
   cursorLine: number
   cursorColumn: number
-  pendingJump: { line: number; column: number; skipFocus?: boolean } | null
+  pendingJump: {
+    line: number
+    column: number
+    skipFocus?: boolean
+    target?: PendingJumpTarget
+  } | null
   pendingInsertText: string | null
+  previewSourceHighlight: PreviewSourceHighlight | null
+  setPreviewSourceHighlight: (highlight: PreviewSourceHighlight | null) => void
 
   _sessionOpenPaths: string[]
   _sessionActiveFile: string | null
@@ -58,7 +80,12 @@ interface EditorState {
   closeTab: (filePath: string) => void
   setActiveTab: (filePath: string) => void
   setCursorPosition: (line: number, column: number) => void
-  requestJumpToLine: (line: number, column: number, skipFocus?: boolean) => void
+  requestJumpToLine: (
+    line: number,
+    column: number,
+    skipFocus?: boolean,
+    target?: PendingJumpTarget
+  ) => void
   clearPendingJump: () => void
   requestInsertAtCursor: (text: string) => void
   clearPendingInsert: () => void
@@ -114,6 +141,7 @@ const emptyEditorState = {
   cursorColumn: 1,
   pendingJump: null,
   pendingInsertText: null,
+  previewSourceHighlight: null,
   _sessionOpenPaths: [] as string[],
   _sessionActiveFile: null,
   _sessionCursors: {} as Record<string, { cursorLine: number; cursorColumn: number }>
@@ -123,6 +151,7 @@ export const useEditorStore = create<EditorState>()(
   persist(
     subscribeWithSelector((set, get) => ({
       ...emptyEditorState,
+      setPreviewSourceHighlight: (previewSourceHighlight) => set({ previewSourceHighlight }),
 
       updateActiveDocument: (text, source = 'programmatic') => {
         const state = get()
@@ -350,8 +379,8 @@ export const useEditorStore = create<EditorState>()(
       },
 
       setCursorPosition: (cursorLine, cursorColumn) => set({ cursorLine, cursorColumn }),
-      requestJumpToLine: (line, column, skipFocus) =>
-        set({ pendingJump: { line, column, skipFocus } }),
+      requestJumpToLine: (line, column, skipFocus, target) =>
+        set({ pendingJump: { line, column, skipFocus, ...(target ? { target } : {}) } }),
       clearPendingJump: () => set({ pendingJump: null }),
       requestInsertAtCursor: (text) => set({ pendingInsertText: text }),
       clearPendingInsert: () => set({ pendingInsertText: null }),

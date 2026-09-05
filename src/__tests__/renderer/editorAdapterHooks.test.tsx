@@ -2,11 +2,13 @@ import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { EditorAdapter } from '../../renderer/editor/EditorAdapter'
 import { usePendingActions } from '../../renderer/hooks/editor/usePendingActions'
+import { useCompileStore } from '../../renderer/store/useCompileStore'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
 
 function createAdapter() {
   const decorationDisposable = { dispose: vi.fn() }
   const adapter = {
+    getDocumentId: vi.fn(() => '/project/main.tex'),
     getPosition: vi.fn(() => ({ line: 3, column: 5 })),
     applyEdits: vi.fn(() => true),
     focus: vi.fn(),
@@ -72,5 +74,57 @@ describe('EditorAdapter hook integration', () => {
     expect(decorationDisposable.dispose).toHaveBeenCalledTimes(1)
     expect(useEditorStore.getState().pendingJump).toBeNull()
     vi.useRealTimers()
+  })
+})
+
+describe('scoped pending PDF jumps', () => {
+  beforeEach(() => {
+    useEditorStore.getState().resetEditor()
+    useEditorStore.getState().openFileInTab('/project/main.tex', 'Source')
+    useCompileStore.setState({ pdfRevision: 1 })
+  })
+  function request() {
+    const state = useEditorStore.getState()
+    state.requestJumpToLine(1, 3, false, {
+      documentId: '/project/main.tex',
+      revision: state.revision,
+      pdfRevision: 1,
+      tabMutationEpoch: state.tabMutationEpoch
+    })
+  }
+  it('waits until the adapter is bound to the intended document', () => {
+    const { adapter, decorationDisposable } = createAdapter()
+    const ref = { current: null as EditorAdapter | null }
+    const { result, unmount } = renderHook(() => usePendingActions(ref))
+    act(request)
+    expect(useEditorStore.getState().pendingJump).not.toBeNull()
+    ref.current = adapter
+    vi.mocked(adapter.getDocumentId).mockReturnValue('/project/other.tex')
+    act(() => result.current())
+    expect(adapter.revealPosition).not.toHaveBeenCalled()
+    vi.mocked(adapter.getDocumentId).mockReturnValue('/project/main.tex')
+    act(() => result.current())
+    expect(adapter.revealPosition).toHaveBeenCalledWith(
+      { line: 1, column: 3 },
+      { center: true, focus: true }
+    )
+    expect(useEditorStore.getState().pendingJump).toBeNull()
+    unmount()
+    expect(decorationDisposable.dispose).toHaveBeenCalledTimes(1)
+  })
+  it.each(['edit', 'tab', 'pdf'] as const)('discards a pending jump after %s changes', (change) => {
+    const { adapter } = createAdapter()
+    const ref = { current: null as EditorAdapter | null }
+    const { result } = renderHook(() => usePendingActions(ref))
+    act(request)
+    act(() => {
+      if (change === 'edit') useEditorStore.getState().updateActiveDocument('Changed')
+      if (change === 'tab') useEditorStore.getState().openFileInTab('/project/other.tex', 'Other')
+      if (change === 'pdf') useCompileStore.setState({ pdfRevision: 2 })
+    })
+    ref.current = adapter
+    act(() => result.current())
+    expect(adapter.revealPosition).not.toHaveBeenCalled()
+    expect(useEditorStore.getState().pendingJump).toBeNull()
   })
 })

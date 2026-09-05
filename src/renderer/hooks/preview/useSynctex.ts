@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useEditorStore } from '../../store/useEditorStore'
 import { usePdfStore } from '../../store/usePdfStore'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import { SYNCTEX_HIGHLIGHT_MS } from '../../constants'
-import type { SyncTeXInverseResult } from '../../../shared/types'
+import { capturePdfSourceContext, preparePdfSource } from '../../services/pdfSourceNavigation'
+import { previewSourceRange } from '../../utils/previewSelection'
 import { logError } from '../../utils/errorMessage'
 
 interface PageViewportInfo {
@@ -24,44 +25,47 @@ export interface SynctexState {
   handleContainerClick: (e: React.MouseEvent<HTMLDivElement>) => void
 }
 
-function jumpToSynctexResult(result: SyncTeXInverseResult): void {
-  const line = result.line
-  const column = result.column || 1
-  const editorState = useEditorStore.getState()
-
-  if (editorState.filePath === result.file) {
-    editorState.requestJumpToLine(line, column)
-    return
-  }
-
-  if (editorState.openFiles[result.file]) {
-    editorState.setActiveTab(result.file)
-    setTimeout(() => useEditorStore.getState().requestJumpToLine(line, column), 50)
-    return
-  }
-
-  window.api
-    .readFile(result.file)
-    .then((fileResult) => {
-      useEditorStore.getState().openFileInTab(fileResult.filePath, fileResult.content)
-      setTimeout(() => useEditorStore.getState().requestJumpToLine(line, column), 50)
-    })
-    .catch((error) => logError('SyncTeX:openInverseTarget', error))
-}
-
-function requestInverseSync(filePath: string, page: number, pdfX: number, pdfY: number): void {
-  window.api
-    .synctexInverse(filePath, page, pdfX, pdfY)
-    .then((result) => {
-      if (result) jumpToSynctexResult(result)
-    })
-    .catch((error) => logError('SyncTeX:inverse', error))
-}
-
 export function useSynctex(
   containerRef: React.RefObject<HTMLDivElement | null>,
-  pageViewportsRef: React.RefObject<Map<number, PageViewportInfo>>
+  pageViewportsRef: React.RefObject<Map<number, PageViewportInfo>>,
+  displayedRevision: number
 ): SynctexState {
+  const inverseRequestRef = useRef(0)
+  useEffect(
+    () => () => {
+      inverseRequestRef.current++
+    },
+    [displayedRevision]
+  )
+  const requestInverseSync = useCallback(
+    async (page: number, pdfX: number, pdfY: number) => {
+      const requestId = ++inverseRequestRef.current
+      const context = capturePdfSourceContext(displayedRevision)
+      if (!context || !Number.isFinite(pdfX) || !Number.isFinite(pdfY)) return
+      const current = () => requestId === inverseRequestRef.current && context.isCurrent()
+      try {
+        const result = await window.api.synctexInverse(context.sourcePath, page, pdfX, pdfY)
+        if (!current() || !result) return
+        const prepared = await preparePdfSource(result.file, current)
+        if (!prepared) return
+        const range = previewSourceRange(prepared.text, '', result.line, result.line)
+        if (!range) return
+        const snapshot = prepared.activate()
+        if (!snapshot) return
+        const state = useEditorStore.getState()
+        const column = Math.min(Math.max(1, result.column || 1), range.end.column)
+        state.requestJumpToLine(result.line, column, false, {
+          documentId: snapshot.documentId,
+          revision: snapshot.revision,
+          pdfRevision: context.pdfRevision,
+          tabMutationEpoch: state.tabMutationEpoch
+        })
+      } catch (error) {
+        if (current()) logError('SyncTeX:inverse', error)
+      }
+    },
+    [displayedRevision]
+  )
   const synctexHighlight = usePdfStore((s) => s.synctexHighlight)
   const [highlights, setHighlights] = useState<SynctexHighlights>({
     lineStyle: null,
@@ -172,9 +176,6 @@ export function useSynctex(
 
   // Sync PDF → Code: find most visible page and inverse synctex from its center
   const handleSyncToCode = useCallback(() => {
-    const filePath = useEditorStore.getState().filePath
-    if (!filePath) return
-
     const container = containerRef.current
     if (!container || !pageViewportsRef.current) return
 
@@ -218,16 +219,13 @@ export function useSynctex(
     const pdfX = centerX / scale
     const pdfY = centerY / scale
 
-    requestInverseSync(filePath, bestPage, pdfX, pdfY)
-  }, [containerRef, pageViewportsRef])
+    void requestInverseSync(bestPage, pdfX, pdfY)
+  }, [containerRef, pageViewportsRef, requestInverseSync])
 
   // Ctrl+Click inverse SyncTeX handler
   const handleContainerClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       if (!(e.ctrlKey || e.metaKey)) return
-
-      const filePath = useEditorStore.getState().filePath
-      if (!filePath) return
 
       const container = containerRef.current
       if (!container || !pageViewportsRef.current) return
@@ -263,9 +261,9 @@ export function useSynctex(
       const pdfX = clickX / scale
       const pdfY = clickY / scale
 
-      requestInverseSync(filePath, targetPageNumber, pdfX, pdfY)
+      void requestInverseSync(targetPageNumber, pdfX, pdfY)
     },
-    [containerRef, pageViewportsRef]
+    [containerRef, pageViewportsRef, requestInverseSync]
   )
 
   // Listen for sync requests from toolbar

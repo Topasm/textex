@@ -22,7 +22,7 @@ import type {
   EditorVisibleLineRange
 } from './EditorAdapter'
 
-type MonacoInstance = typeof import('monaco-editor')
+type MonacoInstance = Pick<typeof import('monaco-editor'), 'editor' | 'MarkerSeverity'>
 
 interface DecorationEntry {
   collection: monacoEditor.IEditorDecorationsCollection

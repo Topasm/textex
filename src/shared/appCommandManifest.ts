@@ -268,6 +268,7 @@ export const RENDERER_SHORTCUT_MANIFEST = [
     id: 'commandPalette.open',
     shortcut: { key: ['p', 'P'], mod: true, shift: true }
   },
+  { id: 'files.open', shortcut: { key: 'p', mod: true } },
   { id: 'font.increase', shortcut: { key: ['=', '+'], mod: true, alt: true } },
   { id: 'font.decrease', shortcut: { key: '-', mod: true, alt: true } },
   { id: 'tab.close', shortcut: { key: 'w', mod: true } },

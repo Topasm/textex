@@ -136,6 +136,7 @@ function App() {
   const [helpReturnsToSettings, setHelpReturnsToSettings] = useState(false)
   const [helpSection, setHelpSection] = useState<LearnSectionId>('quick-start')
   const [pendingHelpCommand, setPendingHelpCommand] = useState<AppCommandId | null>(null)
+  const [paletteMode, setPaletteMode] = useState<'commands' | 'files'>('commands')
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
   // Auto-hide shows the sidebar as an absolutely-positioned overlay on
   // hover, so it never pushes the editor. Pinning switches it to a normal
@@ -473,10 +474,14 @@ function App() {
     [overlaySnapshot]
   )
 
-  const openCommandPalette = useCallback((): void => {
-    if (!canOpenExclusiveAppOverlay('commandPalette', overlaySnapshot)) return
-    setIsCommandPaletteOpen(true)
-  }, [overlaySnapshot])
+  const openCommandPalette = useCallback(
+    (mode: 'commands' | 'files' = 'commands'): void => {
+      if (!canOpenExclusiveAppOverlay('commandPalette', overlaySnapshot)) return
+      setPaletteMode(mode)
+      setIsCommandPaletteOpen(true)
+    },
+    [overlaySnapshot]
+  )
 
   const runAppCommand = useCallback(
     (command: AppCommandId): void => {
@@ -739,9 +744,6 @@ function App() {
         onCompile={handleCompile}
         onOpenFolder={handleOpenFolder}
         onReturnHome={handleCloseProject}
-        onNewFromTemplate={handleOpenTemplateGallery}
-        onAiDraft={handleAiDraft}
-        onRunCommand={runAppCommand}
         onOpenCommandPalette={openCommandPalette}
         onOpenSettings={handleOpenSettings}
       />
@@ -813,6 +815,8 @@ function App() {
       {commandPaletteVisible && (
         <Suspense fallback={null}>
           <CommandPalette
+            mode={paletteMode}
+            onModeChange={setPaletteMode}
             isOpen
             onClose={() => setIsCommandPaletteOpen(false)}
             onRunCommand={runAppCommand}

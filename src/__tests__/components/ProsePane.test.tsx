@@ -4,6 +4,7 @@ import { ProsePane } from '../../renderer/components/ProsePane'
 import { ProsePreview } from '../../renderer/components/ProsePreview'
 import { documentRegistry } from '../../renderer/models/documentRegistry'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
+import { useCompileStore } from '../../renderer/store/useCompileStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { proseAnchorFor, proseModeFor, useUiStore } from '../../renderer/store/useUiStore'
 import { PROSE_COMMIT_DELAY_MS } from '../../renderer/constants'
@@ -58,6 +59,35 @@ describe('ProsePane', () => {
         '\\end{equation}'
       ].join('\n')
     )
+  })
+
+  it('carries a PDF passage selection into its projected Markdown text', () => {
+    useCompileStore.setState({ pdfRevision: 7 })
+    useEditorStore.getState().setPreviewSourceHighlight({
+      filePath,
+      revision: useEditorStore.getState().revision,
+      pdfRevision: 7,
+      range: { start: { line: 9, column: 1 }, end: { line: 9, column: 11 } },
+      text: 'See Figure'
+    })
+    render(<ProsePane />)
+    const area = source()
+    expect(area.value.slice(area.selectionStart, area.selectionEnd)).toBe('See Figure')
+    expect(area).toHaveFocus()
+    expect(documentRegistry.snapshot(filePath)?.text).toBe(SOURCE)
+  })
+
+  it('does not restore a PDF selection from an older source revision', () => {
+    useCompileStore.setState({ pdfRevision: 7 })
+    useEditorStore.getState().setPreviewSourceHighlight({
+      filePath,
+      revision: useEditorStore.getState().revision - 1,
+      pdfRevision: 7,
+      range: { start: { line: 9, column: 1 }, end: { line: 9, column: 11 } },
+      text: 'See Figure'
+    })
+    render(<ProsePane />)
+    expect(source().selectionStart).toBe(source().selectionEnd)
   })
 
   it('shows compact writing tools, document statistics and TeX sync state', () => {

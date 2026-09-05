@@ -1,4 +1,6 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { useProjectStore } from '../../renderer/store/useProjectStore'
+import { useEditorStore } from '../../renderer/store/useEditorStore'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { CommandPalette, formatCommandShortcut } from '../../renderer/components/CommandPalette'
 import i18n from '../../renderer/i18n'
@@ -111,5 +113,43 @@ describe('formatCommandShortcut', () => {
   it('formats the platform modifier without renderer dependencies', () => {
     expect(formatCommandShortcut({ key: 'p', mod: true, shift: true }, false)).toBe('Ctrl+Shift+P')
     expect(formatCommandShortcut({ key: 'p', mod: true, shift: true }, true)).toBe('⌘⇧P')
+  })
+})
+
+describe('quick open palette', () => {
+  beforeEach(() => {
+    useEditorStore.getState().resetEditor()
+    useProjectStore.getState().setProjectRoot('/project')
+    useProjectStore.getState().setProjectIndex({
+      root: '/project',
+      generation: 1,
+      entries: ['main.tex', 'chapter.tex'].map((name) => ({
+        path: `/project/${name}`,
+        name,
+        relativePath: name,
+        parentRelativePath: '',
+        type: 'file'
+      }))
+    })
+  })
+  it('filters indexed files and opens the selected result from the keyboard', async () => {
+    window.api.readFile = vi
+      .fn()
+      .mockResolvedValue({ filePath: '/project/chapter.tex', content: 'Chapter' })
+    const close = vi.fn()
+    render(<CommandPalette isOpen mode="files" onClose={close} onRunCommand={vi.fn()} />)
+    const input = screen.getByRole('combobox', { name: 'Quick Open' })
+    expect(input).toHaveFocus()
+    expect(screen.getAllByRole('option')).toHaveLength(2)
+    fireEvent.change(input, { target: { value: 'chapter' } })
+    expect(screen.getAllByRole('option')).toHaveLength(1)
+    fireEvent.keyDown(input, { key: 'Enter' })
+    await waitFor(() => expect(useEditorStore.getState().filePath).toBe('/project/chapter.tex'))
+    expect(close).toHaveBeenCalledOnce()
+  })
+  it('drops old project results when the project changes', () => {
+    render(<CommandPalette isOpen mode="files" onClose={vi.fn()} onRunCommand={vi.fn()} />)
+    act(() => useProjectStore.getState().setProjectRoot('/other'))
+    expect(screen.queryByRole('option', { name: 'main.tex' })).not.toBeInTheDocument()
   })
 })

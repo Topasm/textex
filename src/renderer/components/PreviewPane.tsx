@@ -1,7 +1,9 @@
+import { PdfSearchBar } from './search/PdfSearchBar'
+import { requestLocalSearch } from '../services/localSearch'
 import { memo, useMemo, useRef, useCallback, useState, useEffect, useReducer } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Document, Page, pdfjs } from 'react-pdf'
-import type { PDFPageProxy } from 'pdfjs-dist'
+import { Document, pdfjs } from 'react-pdf'
+import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist'
 import { useCompileStore } from '../store/useCompileStore'
 import { usePdfStore } from '../store/usePdfStore'
 import { useSettingsStore } from '../store/useSettingsStore'
@@ -10,10 +12,12 @@ import { usePreviewZoom } from '../hooks/preview/usePreviewZoom'
 import { useSynctex } from '../hooks/preview/useSynctex'
 import { useScrollSync } from '../hooks/preview/useScrollSync'
 import { usePdfSearch } from '../hooks/preview/usePdfSearch'
+import { usePdfSelection } from '../hooks/preview/usePdfSelection'
 import { useCitationTooltip } from '../hooks/preview/useCitationTooltip'
 import { useContainerSize } from '../hooks/preview/useContainerSize'
 import { usePreviewPageSwipe } from '../hooks/preview/usePreviewPageSwipe'
 import CitationTooltip from './CitationTooltip'
+import BufferedPdfPage from './BufferedPdfPage'
 import { runtimePerformance } from '../services/runtimePerformance'
 import { normalizeDocumentId } from '../models/documentRegistry'
 import { projectPathKey } from '../services/projectIndex'
@@ -100,10 +104,21 @@ function PreviewPane() {
   // Extracted hooks
   const { containerWidth, ctrlHeld } = useContainerSize(containerRef)
   const { transientScale } = usePreviewZoom(containerRef)
-  const { highlights, handleContainerClick } = useSynctex(containerRef, pageViewportsRef)
+  const { highlights, handleContainerClick } = useSynctex(
+    containerRef,
+    pageViewportsRef,
+    displayedRevision
+  )
   useScrollSync({ containerRef, pageViewportsRef, containerWidth, pdfRevision: displayedRevision })
-  // usePdfSearch handles DOM highlighting and communicates with OmniSearch via store
-  usePdfSearch(containerRef, numPages)
+  useEffect(() => {
+    usePdfStore.getState().setPdfSearchQuery('')
+    return () => {
+      usePdfStore.getState().setPdfSearchVisible(false)
+      usePdfStore.getState().setPdfSearchQuery('')
+    }
+  }, [pdfDocumentId, projectRoot])
+  const search = usePdfSearch(containerRef, displayedGeneration?.document, displayedRevision)
+  usePdfSelection(containerRef, pageViewportsRef, displayedRevision)
   const { tooltipData } = useCitationTooltip(containerRef, displayedRevision)
 
   /** Calculate estimated height for a page. */
@@ -133,7 +148,8 @@ function PreviewPane() {
   /** Compute which pages are currently in the viewport using O(log N) binary search. */
   const computeVisiblePages = useCallback(() => {
     const container = containerRef.current
-    if (!container || numPages === 0 || cumulativeHeights.length === 0) return
+    if (pdfViewMode === 'single' || !container || numPages === 0 || cumulativeHeights.length === 0)
+      return
 
     const scrollTop = container.scrollTop
     const viewportHeight = container.clientHeight
@@ -152,7 +168,7 @@ function PreviewPane() {
       if (prev.start === range.start && prev.end === range.end) return prev
       return range
     })
-  }, [numPages, cumulativeHeights])
+  }, [numPages, cumulativeHeights, pdfViewMode])
 
   // scrollToPage: scroll the container so the given page is at the top
   const scrollToPage = useCallback(
@@ -437,14 +453,16 @@ function PreviewPane() {
   )
 
   const handleDocumentLoadSuccess = useCallback(
-    (generationRevision: number, loadedNumPages: number) => {
+    (generationRevision: number, document: PDFDocumentProxy) => {
+      const loadedNumPages = document.numPages
       const currentGeneration = generationStateRef.current.displayed
       const isInitialDisplayedLoad =
         currentGeneration?.revision === generationRevision && currentGeneration.numPages === null
       dispatchGeneration({
         type: 'documentLoaded',
         revision: generationRevision,
-        numPages: loadedNumPages
+        numPages: loadedNumPages,
+        document
       })
       if (isInitialDisplayedLoad) {
         setPdfError(null)
@@ -543,7 +561,7 @@ function PreviewPane() {
 
     const targetPage = clampPage(currentPage, generationNumPages)
     const renderPage = (pageNumber: number, keyPrefix: string): React.ReactNode => (
-      <Page
+      <BufferedPdfPage
         key={`${keyPrefix}_${pageNumber}`}
         pageNumber={pageNumber}
         width={pageWidth}
@@ -609,10 +627,19 @@ function PreviewPane() {
     <div
       ref={containerRef}
       className={`preview-container${ctrlHeld ? ' preview-synctex-cursor' : ''}${pdfInvertMode ? ' preview-invert' : ''}${pdfViewMode === 'single' ? ' preview-single-mode' : ''}`}
+      onKeyDown={(event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
+          event.preventDefault()
+          event.stopPropagation()
+          requestLocalSearch('pdf')
+        }
+      }}
+      tabIndex={-1}
       onScroll={handleScroll}
       onClick={handleContainerClick}
       style={{ position: 'relative' }}
     >
+      {displayedGeneration && <PdfSearchBar search={search} />}
       {compileStatus === 'error' && !displayedGeneration ? (
         <div className="preview-center preview-error">
           <p>{t('previewPane.compileFailed')}</p>
@@ -662,8 +689,8 @@ function PreviewPane() {
                 >
                   <Document
                     file={generation.file}
-                    onLoadSuccess={({ numPages: loadedNumPages }) =>
-                      handleDocumentLoadSuccess(generation.revision, loadedNumPages)
+                    onLoadSuccess={(document) =>
+                      handleDocumentLoadSuccess(generation.revision, document)
                     }
                     onLoadError={(error) => handleDocumentLoadError(generation.revision, error)}
                     loading={

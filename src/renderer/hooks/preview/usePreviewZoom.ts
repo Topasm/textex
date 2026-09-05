@@ -45,7 +45,12 @@ export function usePreviewZoom(
       }, DEBOUNCE_ZOOM_MS)
     }
     el.addEventListener('wheel', handler, { passive: false })
-    return () => el.removeEventListener('wheel', handler)
+    return () => {
+      el.removeEventListener('wheel', handler)
+      if (transientTimerRef.current) clearTimeout(transientTimerRef.current)
+      transientTimerRef.current = null
+      pendingZoomRef.current = null
+    }
   }, [containerRef])
 
   return { transientScale }

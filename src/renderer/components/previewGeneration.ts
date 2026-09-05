@@ -1,8 +1,11 @@
+import type { PDFDocumentProxy } from 'pdfjs-dist'
+
 export interface PdfGeneration {
   revision: number
   path: string
   file: { data: Uint8Array }
   numPages: number | null
+  document?: PDFDocumentProxy
 }
 
 interface RequestedPdfGeneration {
@@ -20,7 +23,7 @@ export type PdfGenerationAction =
   | { type: 'clear' }
   | { type: 'request'; revision: number; path: string }
   | { type: 'loaded'; generation: PdfGeneration }
-  | { type: 'documentLoaded'; revision: number; numPages: number }
+  | { type: 'documentLoaded'; revision: number; numPages: number; document?: PDFDocumentProxy }
   | { type: 'ready'; revision: number }
   | { type: 'failed'; revision: number }
 
@@ -64,13 +67,21 @@ export function reducePdfGeneration(
       if (state.displayed?.revision === action.revision) {
         return {
           ...state,
-          displayed: { ...state.displayed, numPages: action.numPages }
+          displayed: {
+            ...state.displayed,
+            numPages: action.numPages,
+            ...(action.document ? { document: action.document } : {})
+          }
         }
       }
       if (state.pending?.revision === action.revision) {
         return {
           ...state,
-          pending: { ...state.pending, numPages: action.numPages }
+          pending: {
+            ...state.pending,
+            numPages: action.numPages,
+            ...(action.document ? { document: action.document } : {})
+          }
         }
       }
       return state

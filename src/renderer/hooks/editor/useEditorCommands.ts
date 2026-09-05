@@ -1,6 +1,4 @@
 import { useCallback, useRef } from 'react'
-import { usePdfStore } from '../../store/usePdfStore'
-import { useUiStore } from '../../store/useUiStore'
 import { formatLatex } from '../../utils/formatter'
 import { HIDDEN_EDITOR_ACTIONS } from '../../constants'
 import type { editor as monacoEditor } from 'monaco-editor'
@@ -15,25 +13,6 @@ export function useEditorCommands() {
   const formatRequestIdRef = useRef(0)
 
   return useCallback((editor: monacoEditor.IStandaloneCodeEditor, monaco: MonacoInstance) => {
-    // Ctrl+F: Sync Search — triggers both editor find widget AND PDF search bar
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF, () => {
-      const selection = editor.getSelection()
-      const model = editor.getModel()
-      const pdfState = usePdfStore.getState()
-
-      pdfState.setPdfSearchVisible(true)
-
-      if (selection && model && !selection.isEmpty()) {
-        const text = model.getValueInRange(selection)
-        if (text.trim().length > 0) {
-          pdfState.setPdfSearchQuery(text)
-          useUiStore.getState().requestOmniSearchFocus('pdf')
-        }
-      }
-
-      editor.trigger('source', 'actions.find', {})
-    })
-
     // Shift+Alt+F: Format document
     editor.addCommand(monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyF, async () => {
       const model = editor.getModel()

@@ -1,3 +1,4 @@
+import { commonLines } from './lineMatches'
 import { markdownProseToLatex } from './proseInline'
 import { isEditableProseBlock, type ProseBlock, type ProseDocument } from './proseProjection'
 
@@ -63,45 +64,6 @@ export function proseDocumentText(document: ProseDocument): ProseDocumentText {
   }
 
   return { markdown: lines.join('\n'), spans }
-}
-
-/**
- * Longest common subsequence over lines.
- *
- * Small enough for a document's worth of lines, and exact: an author who edits
- * one sentence must not have a neighbouring paragraph attributed to them.
- */
-function commonLines(left: readonly string[], right: readonly string[]): Array<[number, number]> {
-  const rows = left.length
-  const columns = right.length
-  const table: number[][] = Array.from({ length: rows + 1 }, () =>
-    new Array<number>(columns + 1).fill(0)
-  )
-
-  for (let row = rows - 1; row >= 0; row -= 1) {
-    for (let column = columns - 1; column >= 0; column -= 1) {
-      table[row][column] =
-        left[row] === right[column]
-          ? table[row + 1][column + 1] + 1
-          : Math.max(table[row + 1][column], table[row][column + 1])
-    }
-  }
-
-  const pairs: Array<[number, number]> = []
-  let row = 0
-  let column = 0
-  while (row < rows && column < columns) {
-    if (left[row] === right[column]) {
-      pairs.push([row, column])
-      row += 1
-      column += 1
-    } else if (table[row + 1][column] >= table[row][column + 1]) {
-      row += 1
-    } else {
-      column += 1
-    }
-  }
-  return pairs
 }
 
 /**

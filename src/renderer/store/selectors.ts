@@ -85,6 +85,4 @@ export const useUpdateVersion = () => useUiStore((s) => s.updateMetadata?.versio
 export const useUpdateProgress = () => useUiStore((s) => s.updateProgress)
 export const useExportStatus = () => useUiStore((s) => s.exportStatus)
 export const useDocumentSymbols = () => useUiStore((s) => s.documentSymbols)
-export const useOmniSearchFocusRequested = () => useUiStore((s) => s.omniSearchFocusRequested)
-export const useOmniSearchFocusMode = () => useUiStore((s) => s.omniSearchFocusMode)
 export const useIsTemplateGalleryOpen = () => useUiStore((s) => s.isTemplateGalleryOpen)

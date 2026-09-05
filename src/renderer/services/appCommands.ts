@@ -1,3 +1,4 @@
+import { requestLocalSearch } from './localSearch'
 import type { AppCommandId } from '../../shared/types'
 import type { LearnSectionId } from '../../shared/learningIds'
 import { useEditorStore } from '../store/useEditorStore'
@@ -103,7 +104,7 @@ export async function executeAppCommand(
       context.runAiDraft()
       return
     case 'edit.find':
-      useUiStore.getState().requestOmniSearchFocus('tex')
+      requestLocalSearch('document')
       return
     case 'view.toggleSidebar':
       toggleProjectSidebar()
@@ -118,10 +119,10 @@ export async function executeAppCommand(
       context.toggleLog()
       return
     case 'view.search.citations':
-      useUiStore.getState().requestOmniSearchFocus('cite')
+      if (openReferenceSearch()) requestLocalSearch('references')
       return
     case 'view.search.pdf':
-      useUiStore.getState().requestOmniSearchFocus('pdf')
+      requestLocalSearch('pdf')
       return
     case 'pdf.zoomIn':
       usePdfStore.getState().zoomIn()
@@ -218,4 +219,13 @@ export function toggleLogPanel(): void {
     return
   }
   openProblemsPanel()
+}
+
+function openReferenceSearch(): boolean {
+  const project = useProjectStore.getState()
+  if (!project.projectRoot) return false
+  const settings = useSettingsStore.getState()
+  if (settings.settings.autoHideSidebar) settings.updateSetting('autoHideSidebar', false)
+  project.openReferences('project')
+  return true
 }

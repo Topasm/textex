@@ -119,7 +119,7 @@ function commandMatchScore(entry: CommandSearchEntry, query: string, tokens: str
   return 40
 }
 
-/** Search the shared command catalog. A leading `>` is accepted for OmniSearch. */
+/** Search the shared command catalog. A leading `>` is accepted for command queries. */
 export function searchCommandEntries(
   entries: readonly CommandSearchEntry[],
   rawQuery: string

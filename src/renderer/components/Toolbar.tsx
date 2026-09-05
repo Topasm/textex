@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   ArrowRight,
   House,
+  FolderOpen,
   Loader,
   Menu,
   Minus,
@@ -23,24 +24,19 @@ import { useProjectStore } from '../store/useProjectStore'
 import { usePdfStore } from '../store/usePdfStore'
 import { useSettingsStore } from '../store/useSettingsStore'
 import { proseModeFor, useUiStore } from '../store/useUiStore'
-import { OmniSearch } from './OmniSearch'
 import { RecentProjectSwitcher } from './RecentProjectSwitcher'
 import PdfZoomDropdown from './PdfZoomDropdown'
 import { ICON_SIZE } from './ui/IconSystem'
 import { withShortcutHint } from '../services/commandSearch'
 import { toggleProjectSidebar, toggleProseMode, toggleResearchPanel } from '../services/appCommands'
 import { logError } from '../utils/errorMessage'
-import type { AppCommandId } from '../../shared/types'
 
 interface ToolbarProps {
   onSave: () => void
   onCompile: () => void
   onOpenFolder: () => void
   onReturnHome: () => void
-  onNewFromTemplate: () => void
-  onAiDraft: (prefill?: string) => void
-  onRunCommand: (command: AppCommandId) => void
-  onOpenCommandPalette: () => void
+  onOpenCommandPalette: (mode?: 'commands' | 'files') => void
   onOpenSettings: () => void
 }
 
@@ -55,7 +51,6 @@ const TOOLBAR_NO_DRAG_SELECTOR = [
   '[role="menuitemradio"]',
   '.menu-dropdown',
   '.toolbar-pdf-controls',
-  '.omni-search-wrapper',
   '[data-no-drag]'
 ].join(', ')
 
@@ -106,9 +101,6 @@ const Toolbar = React.memo(function Toolbar({
   onCompile,
   onOpenFolder,
   onReturnHome,
-  onNewFromTemplate,
-  onAiDraft,
-  onRunCommand,
   onOpenCommandPalette,
   onOpenSettings
 }: ToolbarProps) {
@@ -225,18 +217,16 @@ const Toolbar = React.memo(function Toolbar({
         onDoubleClick={handleToolbarDoubleClick}
       >
         <div className="toolbar-left">
-          {customWindowChrome && (
-            <button
-              type="button"
-              className="toolbar-btn toolbar-app-menu"
-              onClick={onOpenCommandPalette}
-              title={withShortcutHint(t('toolbar.appMenu'), 'commandPalette.open')}
-              aria-label={t('toolbar.appMenu')}
-              data-no-drag
-            >
-              <Menu size={ICON_SIZE.control} />
-            </button>
-          )}
+          <button
+            type="button"
+            className="toolbar-btn toolbar-app-menu"
+            onClick={() => onOpenCommandPalette()}
+            title={withShortcutHint(t('toolbar.appMenu'), 'commandPalette.open')}
+            aria-label={t('toolbar.appMenu')}
+            data-no-drag
+          >
+            <Menu size={ICON_SIZE.control} />
+          </button>
           {projectRoot && (
             <>
               <button
@@ -308,15 +298,17 @@ const Toolbar = React.memo(function Toolbar({
             <Pilcrow size={ICON_SIZE.control} />
           </button>
 
-          <div className="toolbar-search-slot">
-            <OmniSearch
-              onOpenFolder={onOpenFolder}
-              onNewFromTemplate={onNewFromTemplate}
-              onAiDraft={onAiDraft}
-              onOpenSettings={onOpenSettings}
-              onRunCommand={onRunCommand}
-            />
-          </div>
+          {projectRoot && (
+            <button
+              type="button"
+              className="toolbar-btn"
+              onClick={() => onOpenCommandPalette('files')}
+              title={withShortcutHint(t('localSearch.files'), 'files.open')}
+              aria-label={t('localSearch.files')}
+            >
+              <FolderOpen size={ICON_SIZE.control} />
+            </button>
+          )}
         </div>
 
         <div className="toolbar-center" data-responsive-priority="secondary">

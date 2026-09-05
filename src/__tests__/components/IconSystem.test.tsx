@@ -55,9 +55,9 @@ describe('IconSystemProvider', () => {
       'TableEditorModal.tsx',
       'bib/BibEntryCard.tsx',
       'bib/BibGroupHeader.tsx',
-      'omnisearch-panels/CitationSearchPanel.tsx',
-      'omnisearch-panels/ZoteroSearchPanel.tsx',
-      'omnisearch-panels/PdfSearchPanel.tsx'
+      'search/LocalSearchBar.tsx',
+      'search/PdfSearchBar.tsx',
+      'search/MarkdownSearch.tsx'
     ]
 
     for (const componentPath of componentPaths) {

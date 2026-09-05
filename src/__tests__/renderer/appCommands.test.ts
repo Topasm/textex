@@ -36,12 +36,12 @@ describe('executeAppCommand', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useUiStore.setState({
-      omniSearchFocusRequested: false,
-      omniSearchFocusMode: null,
+      searchRequest: null,
       updateStatus: 'idle'
     })
     clearResearchProfileDraft()
     useProjectStore.setState({
+      projectRoot: '/project',
       isSidebarOpen: false,
       isResearchPanelOpen: false,
       researchPanelTab: 'chat',
@@ -78,17 +78,19 @@ describe('executeAppCommand', () => {
 
   it('updates search focus and layout stores for view commands', async () => {
     await executeAppCommand('edit.find', context)
-    expect(useUiStore.getState().omniSearchFocusMode).toBe('tex')
+    expect(useUiStore.getState().searchRequest?.target).toBe('document')
 
     await executeAppCommand('view.search.citations', context)
-    expect(useUiStore.getState().omniSearchFocusMode).toBe('cite')
+    expect(useUiStore.getState().searchRequest?.target).toBe('references')
 
     await executeAppCommand('view.search.pdf', context)
-    expect(useUiStore.getState().omniSearchFocusMode).toBe('pdf')
+    expect(useUiStore.getState().searchRequest?.target).toBe('pdf')
 
+    const sidebarWasOpen = useProjectStore.getState().isSidebarOpen
     await executeAppCommand('view.toggleSidebar', context)
-    expect(useProjectStore.getState().isSidebarOpen).toBe(true)
+    expect(useProjectStore.getState().isSidebarOpen).toBe(!sidebarWasOpen)
 
+    expect(useProjectStore.getState().sidebarView).toBe('references')
     await executeAppCommand('view.toggleResearchPanel', context)
     expect(useProjectStore.getState().isResearchPanelOpen).toBe(true)
   })

@@ -1,3 +1,4 @@
+import { useUiStore } from '../../store/useUiStore'
 import { useEffect, useState } from 'react'
 import { ArrowLeft, BookMarked, FileCheck2, Globe2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -16,6 +17,7 @@ interface ReferencesPanelProps {
 
 export function ReferencesPanel({ onAddToChat, onOpenProblems }: ReferencesPanelProps = {}) {
   const { t } = useTranslation()
+  const searchRequest = useUiStore((state) => state.searchRequest)
   const requestedSource = useProjectStore((state) => state.researchReferenceSource)
   const [secondaryView, setSecondaryView] = useState<'local' | 'groups' | 'online' | 'submission'>(
     requestedSource === 'online' || requestedSource === 'submission' ? requestedSource : 'local'
@@ -26,6 +28,10 @@ export function ReferencesPanel({ onAddToChat, onOpenProblems }: ReferencesPanel
       requestedSource === 'online' || requestedSource === 'submission' ? requestedSource : 'local'
     )
   }, [requestedSource])
+
+  useEffect(() => {
+    if (searchRequest?.target === 'references') setSecondaryView('local')
+  }, [searchRequest])
 
   if (secondaryView !== 'local') {
     const online = secondaryView === 'online'

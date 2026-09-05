@@ -10,18 +10,15 @@ const shortcutHarness = vi.hoisted(() => ({ openCommandPalette: null as (() => v
 
 vi.mock('../../renderer/components/Toolbar', () => ({
   default: ({
-    onAiDraft,
-    onOpenSettings,
-    onNewFromTemplate
+    onOpenCommandPalette,
+    onOpenSettings
   }: {
-    onAiDraft: () => void
+    onOpenCommandPalette: () => void
     onOpenSettings: () => void
-    onNewFromTemplate: () => void
   }) => (
     <div>
-      <button onClick={() => onAiDraft()}>Open AI Draft</button>
+      <button onClick={() => onOpenCommandPalette()}>Open Commands</button>
       <button onClick={onOpenSettings}>Open Settings</button>
-      <button onClick={onNewFromTemplate}>Open Templates</button>
     </div>
   )
 }))
@@ -228,7 +225,8 @@ describe('App AI Draft flow', () => {
   it('routes AI Draft insertion through cursor insertion instead of replacing the document', async () => {
     render(<App />)
 
-    fireEvent.click(screen.getByText('Open AI Draft'))
+    fireEvent.click(screen.getByText('Open Commands'))
+    fireEvent.click(await screen.findByRole('option', { name: 'Create AI Draft' }))
     fireEvent.click(await screen.findByText('Insert Draft'))
 
     expect(useEditorStore.getState().requestInsertAtCursor).toHaveBeenCalledWith('generated latex')
@@ -287,7 +285,8 @@ describe('App AI Draft flow', () => {
 
   it('does not open the palette over AI draft or template modal workflows', async () => {
     const draftView = render(<App />)
-    fireEvent.click(screen.getByText('Open AI Draft'))
+    fireEvent.click(screen.getByText('Open Commands'))
+    fireEvent.click(await screen.findByRole('option', { name: 'Create AI Draft' }))
     expect(await screen.findByRole('dialog', { name: 'Mock AI Draft' })).toBeInTheDocument()
 
     act(() => shortcutHarness.openCommandPalette?.())
@@ -295,7 +294,8 @@ describe('App AI Draft flow', () => {
     draftView.unmount()
 
     render(<App />)
-    fireEvent.click(screen.getByText('Open Templates'))
+    fireEvent.click(screen.getByText('Open Commands'))
+    fireEvent.click(await screen.findByRole('option', { name: 'New from Template' }))
     expect(await screen.findByRole('dialog', { name: 'Mock Templates' })).toBeInTheDocument()
 
     act(() => shortcutHarness.openCommandPalette?.())

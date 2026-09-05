@@ -1,3 +1,4 @@
+import { useLocalSearchRequest } from '../../hooks/useLocalSearchRequest'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ICON_SIZE } from '../ui/IconSystem'
 import type { FormEvent } from 'react'
@@ -101,6 +102,13 @@ export function ZoteroReferences({
 }: ZoteroReferencesProps = {}) {
   const { t } = useTranslation()
   const projectRoot = useProjectStore((state) => state.projectRoot)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const refreshSearch = useLocalSearchRequest('references', () => {
+    if (!searchInputRef.current) return false
+    searchInputRef.current.focus()
+    searchInputRef.current.select()
+    return true
+  })
   const query = useProjectStore((state) => state.researchSearchQuery)
   const setQuery = useProjectStore((state) => state.setResearchSearchQuery)
   const bibEntries = useProjectStore((state) => state.bibEntries)
@@ -984,6 +992,10 @@ export function ZoteroReferences({
     }
   }, [config.zoteroCollection, config.zoteroFile, isCurrentScope, port, projectRoot, t, targetFile])
 
+  useEffect(() => {
+    if (busy !== 'load') refreshSearch()
+  }, [busy, refreshSearch])
+
   if (busy === 'load') {
     return (
       <div className="panel-empty">
@@ -1196,6 +1208,7 @@ export function ZoteroReferences({
       </section>
       <form className="research-search" onSubmit={search}>
         <input
+          ref={searchInputRef}
           value={query}
           onChange={(event) => {
             setQuery(event.target.value)

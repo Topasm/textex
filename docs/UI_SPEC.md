@@ -6,7 +6,7 @@ The application uses a horizontal split-pane layout:
 
 ```
 +----------------------------------------------------------+
-|  Toolbar: [Home] [Save] [Compile]  [OmniSearch]          |
+|  Toolbar: [Home] [Save] [Compile]  [Quick Open]          |
 |           [Sync] [Page] [Zoom]   file.tex (dot = dirty) [Log] |
 +----------------------------+-----------------------------+
 |                            |                             |
@@ -147,9 +147,9 @@ ErrorBoundary
   - `Save` calls `window.api.saveFile(...)` / `saveFileAs(...)` through shared app commands.
   - `Compile` triggers manual compilation.
 - Center group:
-  - `OmniSearch` stays visible as the primary command/search surface.
-  - `/` selects research/search workflows; `>` searches the same translated, context-aware
-    `APP_COMMAND_MANIFEST` catalog used by the command palette.
+  - Quick Open (`Ctrl/Cmd+P`) opens a file palette using the project index.
+  - The command palette (`Ctrl/Cmd+Shift+P`) retains the translated, context-aware
+    `APP_COMMAND_MANIFEST` catalog; both modes can be switched inside the palette.
   - Unavailable app commands remain discoverable and explain which document, PDF, or project
     context is required instead of silently doing nothing.
 - Right group:
@@ -159,7 +159,7 @@ ErrorBoundary
   - Current file badge (`Untitled` fallback, dirty dot when unsaved)
   - `Log` toggle button
 - Other commands (`Open`, `Open Folder`, `Save As`, `New from Template`, `Export`,
-  `Settings`) are reached through the home screen, OmniSearch, or keyboard shortcuts.
+  `Settings`) are reached through the home screen, command palette, or keyboard shortcuts.
 - Save, compile, and SyncTeX controls are disabled until their required document or PDF exists,
   avoiding controls that appear actionable but can only return without doing work.
 - The file tree and command palette can open the trusted project root in the system terminal.
@@ -232,6 +232,27 @@ ErrorBoundary
   - **Scroll position preservation** on recompile: tracks `scrollTop` via a ref
     and restores it in `requestAnimationFrame` after the new PDF loads.
   - Container width measured via `ResizeObserver` for responsive page sizing.
+  - Zoom and resize retain a scaled copy of each mounted page's last complete
+    canvas until the new render succeeds. Buffers are scoped to the page and PDF
+    generation, and stale zoom completions cannot replace them. Text selection
+    and annotations remain above the bitmap buffer.
+    The temporary buffer is capped at two million pixels (8 MB RGBA per mounted
+    page), is hidden once the full-resolution render succeeds, and releases its
+    pixels when unmounted.
+  - Selecting PDF text highlights the corresponding TeX source without taking
+    focus from the PDF. Selection endpoints use inverse SyncTeX through the
+    compiled document; unique text matches refine the source range, otherwise
+    the matching source lines are highlighted. Selections spanning different
+    source files are not combined into a misleading range.
+  - The temporary selection carries into the Markdown editor when switching
+    views, using the projection's source spans. It is not saved as an annotation
+    or a source edit. Source edits and PDF generation changes invalidate the
+    highlight; stale asynchronous selection results are discarded.
+  - PDF → Code and Ctrl/Cmd+click share the selection revision guards and use
+    the compiled root even when an include tab is active. Pending jumps wait for
+    the editor to bind the target document; edits, tab changes, and new PDF
+    generations cancel outdated jumps. Buffered Markdown edits are flushed
+    before source activation.
 - Loading state: semi-transparent overlay with spinner during compilation
   (shown over the existing PDF so the previous output remains visible).
 - Error state: "Compilation failed. Check the log panel." (only when no PDF exists).
@@ -453,3 +474,24 @@ Components subscribe with fine-grained selectors; there is no monolithic `useApp
   `.home-action-btn`, `.home-recent`, `.home-recent-grid`, `.home-recent-tile`,
   `.home-recent-tile-icon`, `.home-recent-tile-name`, `.home-recent-tile-path`,
   `.home-recent-tile-date`, `.home-recent-tile-remove`.
+
+## Search locations
+
+- Document Find (`Ctrl/Cmd+F`, including the Edit menu) opens the active editor's
+  search UI: Monaco's find widget for TeX or a local search bar for Markdown.
+- PDF Find opens inside the preview. Enter/Shift+Enter navigate matches; Escape
+  closes the bar and removes highlights. Search covers every page, counts individual
+  occurrences, and navigates to results outside the viewport in both continuous and
+  single-page modes. Extracted text is cached per PDF document. Highlights track
+  character positions across text spans and are repainted after zoom or virtualization
+  without modifying selectable text. Results from outdated queries or PDF generations
+  are discarded; pending hidden generations never contribute results.
+  Highlight painting indexes rendered pages once and batches geometry reads before
+  inserting overlays, keeping DOM work independent of off-screen result counts.
+- Search Citations opens References and focuses the project/Zotero input; the
+  existing online search action opens Crossref/arXiv. This uses the left sidebar
+  and does not switch away from a research profile draft in the right panel.
+- Quick Open lists and filters project files, reuses unsaved open buffers, and
+  discards asynchronous reads superseded by another open, project, or tab change.
+- The top bar has no permanent search input. Search bars and the palette remain
+  reachable by mouse as well as keyboard.

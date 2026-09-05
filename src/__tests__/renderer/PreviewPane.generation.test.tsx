@@ -22,7 +22,9 @@ vi.mock('../../renderer/hooks/preview/useSynctex', () => ({
 }))
 
 vi.mock('../../renderer/hooks/preview/useScrollSync', () => ({ useScrollSync: () => {} }))
-vi.mock('../../renderer/hooks/preview/usePdfSearch', () => ({ usePdfSearch: () => {} }))
+vi.mock('../../renderer/hooks/preview/usePdfSearch', () => ({
+  usePdfSearch: () => ({ searchVisible: false })
+}))
 vi.mock('../../renderer/hooks/preview/useCitationTooltip', () => ({
   useCitationTooltip: () => ({ tooltipData: null })
 }))
