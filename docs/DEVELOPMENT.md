@@ -38,7 +38,7 @@ Clippy with Linux dependencies installed.
 npm run check              # TypeScript, ESLint, Prettier, Rust format
 npm run test               # Vitest
 npm run test:workflow      # Focused cross-component paper/Git workflows
-npx playwright install chromium
+npx playwright install chromium webkit
 npm run test:browser       # Production-bundled PDF/Monaco/Markdown regression tests
 npm run pre-commit         # Full local JavaScript/TypeScript gate
 cargo test --locked --manifest-path src-tauri/Cargo.toml
@@ -54,10 +54,12 @@ Vitest tests under `src/__tests__/`.
 workers, PDF text/annotation layers, and deterministic PDF fixtures. It checks
 zoom frame continuity, source selection, Markdown selection, and PDF generation
 replacement, plus full-document search across 24 pages in continuous and single-page
-views, including repeated occurrences. Only the native file/SyncTeX responses are stubbed. These Chromium
-tests run in the `PDF Browser Regression` workflow; they do not replace packaged
-Tauri tests on Windows, macOS, or Linux. Install Playwright's system dependencies
-with `npx playwright install --with-deps chromium` on a supported Linux host.
+views, including repeated occurrences. Only the native file/SyncTeX responses are stubbed.
+The `PDF Browser Regression` workflow runs Chromium on Linux and WebKit on macOS,
+including an assertion on the actual dragged PDF text selection. These tests do not
+replace packaged Tauri tests on Windows, macOS, or Linux. Install Playwright's system
+dependencies with `npx playwright install --with-deps chromium webkit` on a supported
+host, or run one engine with `npm run test:browser -- --project=chromium` (or `webkit`).
 
 ## Dependency compatibility
 

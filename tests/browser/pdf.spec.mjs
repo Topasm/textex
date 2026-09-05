@@ -74,6 +74,7 @@ test('PDF drag selection highlights real Monaco and carries into Markdown', asyn
   await page.mouse.down()
   await page.mouse.move(bounds.x + bounds.width - 1, bounds.y + bounds.height / 2, { steps: 20 })
   await page.mouse.up()
+  await expect.poll(() => page.evaluate(() => window.getSelection()?.toString())).toContain('efficient method')
   await expect(page.getByTestId('source-highlight')).toContainText('efficient method')
   await expect(page.locator('.monaco-editor .editor-preview-selection')).toBeVisible()
   await page.getByRole('button', { name: 'Toggle Markdown' }).click()
