@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { ICON_SIZE } from '../ui/IconSystem'
 
 interface Props {
+  id?: string
   label: string
   statusText?: string
   busy?: boolean
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export function LocalSearchBar({
+  id,
   label,
   statusText,
   busy = false,
@@ -38,6 +40,7 @@ export function LocalSearchBar({
   }, [ref])
   return (
     <div
+      id={id}
       className="local-search-bar"
       role="search"
       aria-label={label}

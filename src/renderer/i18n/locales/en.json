@@ -508,7 +508,16 @@
     "compileNotStarted": "Compilation was not started: {{reason}}",
     "saveFailedSkippingCompile": "Save failed, so the compile was skipped: {{reason}}",
     "reviewInChat": "Review problems in Research Chat",
-    "fixWithCli": "Fix problems with {{cli}}"
+    "fixWithCli": "Fix problems with {{cli}}",
+    "inlineFix": "Fix",
+    "inlineFixBusy": "Fixing…",
+    "inlineFixSetup": "Enable and configure AI in Settings > Integrations to fix this problem.",
+    "inlineFixUnsupported": "This problem needs a readable TeX source line and a smaller source passage.",
+    "inlineFixInvalid": "AI returned an invalid replacement. No changes were applied.",
+    "inlineFixApplied": "Fix applied to the editor. Review the change and compile to check it; use Undo to revert.",
+    "inlineFixStale": "The document or compilation changed. Run Fix again on the current problem.",
+    "inlineFixUnchanged": "AI could not fix this problem within the source passage. No changes were applied.",
+    "inlineFixUndo": "Undo"
   },
   "localSearch": {
     "searching": "Searching PDF…",
@@ -1319,5 +1328,53 @@
       "protectedChanged": "Equations, figures and tables are edited in TeX. That change was not applied.",
       "structureChanged": "Adding, removing or reordering sections is done in TeX. That change was not applied."
     }
+  },
+  "aiEditReview": {
+    "title": "Review edit",
+    "stale": "Document changed; verify the latest edit.",
+    "checking": "Checking compilation…",
+    "verified": "This document revision compiled successfully. Review meaning and citation support separately.",
+    "failed": "Compilation failed. Check Problems.",
+    "unverified": "Applied · compilation unverified",
+    "changes": "Changes",
+    "before": "Before",
+    "after": "After",
+    "check": "Compile to check",
+    "checkShort": "Check"
+  },
+  "referenceEvidence": {
+    "abstractOnly": "Abstract context only. Full-text and page support have not been verified.",
+    "metadataOnly": "Bibliographic metadata only. Full-text support for the claim has not been verified.",
+    "openSource": "Check original source",
+    "citedPassages": "Cited passages in this document",
+    "show": "Inspect citation support"
+  },
+  "citationEvidence": {
+    "title": "Link PDF evidence",
+    "scope": "Checks whether the excerpt occurs in the PDF. Review whether it supports your claim yourself.",
+    "projectRequired": "Open a project first.",
+    "pdf": "Reference PDF",
+    "choose": "Choose a PDF",
+    "noPdfs": "Add a reference PDF to the project folder, then reopen this section.",
+    "page": "PDF page",
+    "read": "Read page",
+    "pageCount": "Page {{page}} / {{count}}",
+    "pageText": "Page text · select an excerpt",
+    "quote": "Excerpt",
+    "noMatch": "The excerpt does not match this page.",
+    "save": "Save excerpt",
+    "busy": "Processing PDF evidence…",
+    "saved": "Saved excerpt · not rechecked",
+    "matched": "The excerpt matched the page text at the last check.",
+    "changed": "The PDF has changed since saving. Review the evidence again.",
+    "recheck": "Open page and recheck",
+    "stale": "The project changed; the operation was stopped.",
+    "invalidFile": "Cannot read the evidence file. Check the existing file.",
+    "unsupported": "This PDF is unsupported or exceeds the processing limit.",
+    "invalidPage": "Choose a valid PDF and page number.",
+    "noText": "No extractable text. OCR for scanned PDFs is not supported yet.",
+    "remove": "Remove excerpt",
+    "scopeLabel": "What is checked",
+    "recheckShort": "Recheck"
   }
 }

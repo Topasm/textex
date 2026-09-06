@@ -508,7 +508,16 @@
     "compileNotStarted": "La compilation n'a pas démarré : {{reason}}",
     "saveFailedSkippingCompile": "L'enregistrement a échoué, la compilation a donc été ignorée : {{reason}}",
     "reviewInChat": "Examiner les problèmes dans le chat de recherche",
-    "fixWithCli": "Corriger les problèmes avec {{cli}}"
+    "fixWithCli": "Corriger les problèmes avec {{cli}}",
+    "inlineFix": "Corriger",
+    "inlineFixBusy": "Correction…",
+    "inlineFixSetup": "Activez et configurez l’IA dans Paramètres > Intégrations.",
+    "inlineFixUnsupported": "Une ligne source TeX lisible et un passage plus court sont nécessaires.",
+    "inlineFixInvalid": "La correction IA est invalide. Aucune modification appliquée.",
+    "inlineFixApplied": "Correction appliquée dans l’éditeur. Vérifiez puis compilez. Vous pouvez annuler.",
+    "inlineFixStale": "Le document ou la compilation a changé. Relancez la correction.",
+    "inlineFixUnchanged": "L’IA n’a pas pu corriger le problème dans ce passage.",
+    "inlineFixUndo": "Annuler"
   },
   "localSearch": {
     "searching": "Recherche dans le PDF…",
@@ -1319,5 +1328,53 @@
       "protectedChanged": "Les équations, figures et tableaux se modifient dans le TeX. Cette modification n’a pas été appliquée.",
       "structureChanged": "L’ajout, la suppression et le réordonnancement des sections se font dans le TeX. Cette modification n’a pas été appliquée."
     }
+  },
+  "aiEditReview": {
+    "title": "Vérifier la modification",
+    "stale": "Document modifié ; vérifier à nouveau.",
+    "checking": "Vérification de la compilation…",
+    "verified": "Cette version a été compilée. Vérifiez séparément le contenu et les sources.",
+    "failed": "Échec de compilation. Consultez les problèmes.",
+    "unverified": "Appliqué · compilation non vérifiée",
+    "changes": "Modifications",
+    "before": "Avant",
+    "after": "Après",
+    "check": "Vérifier par compilation",
+    "checkShort": "Vérifier"
+  },
+  "referenceEvidence": {
+    "abstractOnly": "Résumé uniquement. Le texte intégral et les pages ne sont pas vérifiés.",
+    "metadataOnly": "Métadonnées uniquement. Les preuves dans le texte intégral ne sont pas vérifiées.",
+    "openSource": "Vérifier la source originale",
+    "citedPassages": "Passages cités dans ce document",
+    "show": "Examiner les sources"
+  },
+  "citationEvidence": {
+    "title": "Lier une preuve PDF",
+    "scope": "Vérifie la présence de l’extrait dans le PDF. Vérifiez vous-même s’il étaye votre affirmation.",
+    "projectRequired": "Ouvrez d’abord un projet.",
+    "pdf": "PDF de référence",
+    "choose": "Choisir un PDF",
+    "noPdfs": "Ajoutez un PDF au projet, puis rouvrez cette section.",
+    "page": "Page PDF",
+    "read": "Lire la page",
+    "pageCount": "Page {{page}} / {{count}}",
+    "pageText": "Texte de la page · sélectionner un extrait",
+    "quote": "Extrait",
+    "noMatch": "L’extrait ne correspond pas à cette page.",
+    "save": "Enregistrer l’extrait",
+    "busy": "Traitement de la preuve PDF…",
+    "saved": "Extrait enregistré · non revérifié",
+    "matched": "L’extrait correspondait à la page lors de la dernière vérification.",
+    "changed": "Le PDF a changé depuis l’enregistrement. Revérifiez la preuve.",
+    "recheck": "Ouvrir la page et vérifier",
+    "stale": "Le projet a changé ; opération arrêtée.",
+    "invalidFile": "Fichier de preuves illisible. Vérifiez le fichier existant.",
+    "unsupported": "Ce PDF n’est pas pris en charge ou dépasse la limite de traitement.",
+    "invalidPage": "Choisissez un PDF et un numéro de page valides.",
+    "noText": "Aucun texte extractible. L’OCR des PDF numérisés n’est pas encore pris en charge.",
+    "remove": "Supprimer l’extrait",
+    "scopeLabel": "Portée de la vérification",
+    "recheckShort": "Revérifier"
   }
 }

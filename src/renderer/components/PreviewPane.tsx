@@ -1,3 +1,4 @@
+import { PdfToolbar } from './PdfToolbar'
 import { PdfSearchBar } from './search/PdfSearchBar'
 import { requestLocalSearch } from '../services/localSearch'
 import { memo, useMemo, useRef, useCallback, useState, useEffect, useReducer } from 'react'
@@ -639,7 +640,7 @@ function PreviewPane() {
       onClick={handleContainerClick}
       style={{ position: 'relative' }}
     >
-      {displayedGeneration && <PdfSearchBar search={search} />}
+      <PdfToolbar>{displayedGeneration && <PdfSearchBar search={search} />}</PdfToolbar>
       {compileStatus === 'error' && !displayedGeneration ? (
         <div className="preview-center preview-error">
           <p>{t('previewPane.compileFailed')}</p>

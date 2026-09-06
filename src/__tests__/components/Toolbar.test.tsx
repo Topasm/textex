@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import Toolbar from '../../renderer/components/Toolbar'
+import { PdfToolbar } from '../../renderer/components/PdfToolbar'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
 import { useCompileStore } from '../../renderer/store/useCompileStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
@@ -54,9 +55,14 @@ afterEach(() => {
   delete document.documentElement.dataset.platform
 })
 
-describe('Toolbar', () => {
+describe('Workspace toolbars', () => {
   it('renders the slim document toolbar actions', () => {
-    const { container } = render(<Toolbar {...defaultProps} />)
+    const { container } = render(
+      <>
+        <Toolbar {...defaultProps} />
+        <PdfToolbar />
+      </>
+    )
     expect(screen.getByTitle(/Quick Save/)).toBeInTheDocument()
     expect(screen.getByTitle(/Compile LaTeX/)).toBeInTheDocument()
     expect(screen.queryByTitle(/Toggle log/)).not.toBeInTheDocument()
@@ -85,31 +91,56 @@ describe('Toolbar', () => {
   })
 
   it('does not render the old file operations dropdown', () => {
-    render(<Toolbar {...defaultProps} />)
+    render(
+      <>
+        <Toolbar {...defaultProps} />
+        <PdfToolbar />
+      </>
+    )
     expect(screen.queryByTitle(/File operations/)).not.toBeInTheDocument()
   })
 
   it('shows Untitled when no file is open', () => {
-    render(<Toolbar {...defaultProps} />)
+    render(
+      <>
+        <Toolbar {...defaultProps} />
+        <PdfToolbar />
+      </>
+    )
     expect(screen.getByText('Untitled')).toBeInTheDocument()
   })
 
   it('calls onSave when Quick Save button is clicked', () => {
     useEditorStore.setState({ filePath: '/project/main.tex' })
-    render(<Toolbar {...defaultProps} />)
+    render(
+      <>
+        <Toolbar {...defaultProps} />
+        <PdfToolbar />
+      </>
+    )
     fireEvent.click(screen.getByTitle(/Quick Save/))
     expect(defaultProps.onSave).toHaveBeenCalledOnce()
   })
 
   it('calls onCompile when Compile button is clicked', () => {
     useEditorStore.setState({ filePath: '/project/main.tex' })
-    render(<Toolbar {...defaultProps} />)
+    render(
+      <>
+        <Toolbar {...defaultProps} />
+        <PdfToolbar />
+      </>
+    )
     fireEvent.click(screen.getByTitle(/Compile LaTeX/))
     expect(defaultProps.onCompile).toHaveBeenCalledOnce()
   })
 
   it('opens the command palette from the custom app-menu affordance', () => {
-    render(<Toolbar {...defaultProps} />)
+    render(
+      <>
+        <Toolbar {...defaultProps} />
+        <PdfToolbar />
+      </>
+    )
 
     fireEvent.click(screen.getByRole('button', { name: 'Open app menu' }))
 
@@ -117,7 +148,12 @@ describe('Toolbar', () => {
   })
 
   it('routes custom window controls through the typed desktop boundary', () => {
-    render(<Toolbar {...defaultProps} />)
+    render(
+      <>
+        <Toolbar {...defaultProps} />
+        <PdfToolbar />
+      </>
+    )
 
     fireEvent.click(screen.getByRole('button', { name: 'Minimize window' }))
     fireEvent.click(screen.getByRole('button', { name: 'Maximize or restore window' }))
@@ -129,7 +165,12 @@ describe('Toolbar', () => {
   })
 
   it('uses one typed drag path for structural space without hijacking interactive controls', () => {
-    const { container } = render(<Toolbar {...defaultProps} />)
+    const { container } = render(
+      <>
+        <Toolbar {...defaultProps} />
+        <PdfToolbar />
+      </>
+    )
     const toolbarSpace = container.querySelector('.toolbar-left')
     const save = screen.getByRole('button', { name: /Quick Save/ })
 
@@ -147,7 +188,12 @@ describe('Toolbar', () => {
 
   it('maximizes on a toolbar double-click on macOS, where the title bar is hidden', () => {
     document.documentElement.dataset.platform = 'darwin'
-    const { container } = render(<Toolbar {...defaultProps} />)
+    const { container } = render(
+      <>
+        <Toolbar {...defaultProps} />
+        <PdfToolbar />
+      </>
+    )
     const toolbarSpace = container.querySelector('.toolbar-left')
 
     fireEvent.mouseDown(toolbarSpace!, { button: 0, detail: 1 })
@@ -161,7 +207,12 @@ describe('Toolbar', () => {
 
   it('maximizes from the double-click event when a drag session swallowed the mousedown', () => {
     document.documentElement.dataset.platform = 'darwin'
-    const { container } = render(<Toolbar {...defaultProps} />)
+    const { container } = render(
+      <>
+        <Toolbar {...defaultProps} />
+        <PdfToolbar />
+      </>
+    )
     const toolbarSpace = container.querySelector('.toolbar-left')
 
     fireEvent.doubleClick(toolbarSpace!, { button: 0 })
@@ -170,7 +221,12 @@ describe('Toolbar', () => {
   })
 
   it('toggles once when one double-click arrives on both event paths', () => {
-    const { container } = render(<Toolbar {...defaultProps} />)
+    const { container } = render(
+      <>
+        <Toolbar {...defaultProps} />
+        <PdfToolbar />
+      </>
+    )
     const toolbarSpace = container.querySelector('.toolbar-left')
 
     fireEvent.mouseDown(toolbarSpace!, { button: 0, detail: 2 })
@@ -180,7 +236,12 @@ describe('Toolbar', () => {
   })
 
   it('never claims a double-click that lands on an interactive control', () => {
-    render(<Toolbar {...defaultProps} />)
+    render(
+      <>
+        <Toolbar {...defaultProps} />
+        <PdfToolbar />
+      </>
+    )
     const save = screen.getByRole('button', { name: /Quick Save/ })
 
     fireEvent.mouseDown(save, { button: 0, detail: 2 })
@@ -190,7 +251,12 @@ describe('Toolbar', () => {
   })
 
   it('exposes all eight frameless resize directions', () => {
-    const { container } = render(<Toolbar {...defaultProps} />)
+    const { container } = render(
+      <>
+        <Toolbar {...defaultProps} />
+        <PdfToolbar />
+      </>
+    )
 
     expect(container.querySelectorAll('.window-resize-handle')).toHaveLength(8)
     fireEvent.mouseDown(container.querySelector('.window-resize-handle-south-east')!, {
@@ -203,7 +269,12 @@ describe('Toolbar', () => {
   it('keeps native macOS traffic lights and omits custom window chrome', () => {
     document.documentElement.dataset.platform = 'darwin'
 
-    const { container } = render(<Toolbar {...defaultProps} />)
+    const { container } = render(
+      <>
+        <Toolbar {...defaultProps} />
+        <PdfToolbar />
+      </>
+    )
 
     expect(container.querySelector('.toolbar')).toHaveAttribute(
       'data-custom-window-chrome',
@@ -223,7 +294,12 @@ describe('Toolbar', () => {
       }
     })
 
-    render(<Toolbar {...defaultProps} />)
+    render(
+      <>
+        <Toolbar {...defaultProps} />
+        <PdfToolbar />
+      </>
+    )
 
     expect(screen.queryByTitle(/AI Assistant/)).not.toBeInTheDocument()
     expect(screen.queryByTitle(/Terminal pane/)).not.toBeInTheDocument()
@@ -232,7 +308,12 @@ describe('Toolbar', () => {
 
   it('opens file search without a permanent search input', () => {
     useProjectStore.setState({ projectRoot: '/test' })
-    render(<Toolbar {...defaultProps} />)
+    render(
+      <>
+        <Toolbar {...defaultProps} />
+        <PdfToolbar />
+      </>
+    )
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Quick Open' }))
     expect(defaultProps.onOpenCommandPalette).toHaveBeenCalledWith('files')
@@ -240,13 +321,23 @@ describe('Toolbar', () => {
 
   it('shows the return home button only when a project is open', () => {
     useProjectStore.setState({ projectRoot: '/test' })
-    render(<Toolbar {...defaultProps} />)
+    render(
+      <>
+        <Toolbar {...defaultProps} />
+        <PdfToolbar />
+      </>
+    )
     expect(screen.getByTitle('Return to home screen')).toBeInTheDocument()
   })
 
   it('offers an accessible left-sidebar toggle for an open project', () => {
     useProjectStore.setState({ projectRoot: '/test', isSidebarOpen: false })
-    render(<Toolbar {...defaultProps} />)
+    render(
+      <>
+        <Toolbar {...defaultProps} />
+        <PdfToolbar />
+      </>
+    )
 
     const toggle = screen.getByRole('button', { name: 'Toggle Sidebar' })
     expect(toggle).toHaveAttribute('aria-controls', 'project-sidebar')
@@ -259,8 +350,26 @@ describe('Toolbar', () => {
     expect(toggle).toHaveClass('active')
   })
 
+  it('places PDF controls inside the PDF toolbar, outside the app toolbar', () => {
+    const { container } = render(
+      <>
+        <Toolbar {...defaultProps} />
+        <PdfToolbar />
+      </>
+    )
+    expect(container.querySelector('.toolbar .toolbar-pdf-controls')).toBeNull()
+    expect(screen.getByRole('toolbar', { name: 'PDF' })).toContainElement(
+      screen.getByTitle(/Zoom level/)
+    )
+  })
+
   it('disables document actions until their required document output exists', () => {
-    render(<Toolbar {...defaultProps} />)
+    render(
+      <>
+        <Toolbar {...defaultProps} />
+        <PdfToolbar />
+      </>
+    )
 
     expect(screen.getByRole('button', { name: /Quick Save/ })).toBeDisabled()
     expect(screen.getByRole('button', { name: /Compile LaTeX/ })).toBeDisabled()
@@ -273,7 +382,12 @@ describe('Toolbar', () => {
     useSettingsStore.setState({
       settings: { ...useSettingsStore.getState().settings, zoteroEnabled: false }
     })
-    render(<Toolbar {...defaultProps} />)
+    render(
+      <>
+        <Toolbar {...defaultProps} />
+        <PdfToolbar />
+      </>
+    )
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Quick Open' }))
     expect(defaultProps.onOpenCommandPalette).toHaveBeenCalledWith('files')
@@ -283,7 +397,12 @@ describe('Toolbar', () => {
     useSettingsStore.setState({
       settings: { ...useSettingsStore.getState().settings, showPdfToolbarControls: false }
     })
-    render(<Toolbar {...defaultProps} />)
+    render(
+      <>
+        <Toolbar {...defaultProps} />
+        <PdfToolbar />
+      </>
+    )
     expect(screen.queryByTitle(/Sync PDF to Code/)).not.toBeInTheDocument()
     expect(screen.queryByTitle(/Sync Code to PDF/)).not.toBeInTheDocument()
     expect(screen.queryByTitle(/Zoom level/)).not.toBeInTheDocument()
@@ -294,7 +413,12 @@ describe('Toolbar', () => {
     useEditorStore.setState({ filePath })
     useUiStore.getState().setProseMode(filePath, true)
 
-    render(<Toolbar {...defaultProps} />)
+    render(
+      <>
+        <Toolbar {...defaultProps} />
+        <PdfToolbar />
+      </>
+    )
 
     expect(screen.queryByTitle(/Sync PDF to Code/)).not.toBeInTheDocument()
     expect(screen.queryByTitle(/Sync Code to PDF/)).not.toBeInTheDocument()
@@ -304,7 +428,12 @@ describe('Toolbar', () => {
   it('renders fractional zoom values as integer percentages', () => {
     usePdfStore.setState({ zoomLevel: 92.00965826511386 })
 
-    render(<Toolbar {...defaultProps} />)
+    render(
+      <>
+        <Toolbar {...defaultProps} />
+        <PdfToolbar />
+      </>
+    )
 
     expect(screen.getByTitle(/Zoom level/)).toHaveTextContent('92%')
   })
@@ -312,7 +441,12 @@ describe('Toolbar', () => {
   it('highlights the rounded preset when opening the zoom dropdown', () => {
     usePdfStore.setState({ zoomLevel: 99.6 })
 
-    render(<Toolbar {...defaultProps} />)
+    render(
+      <>
+        <Toolbar {...defaultProps} />
+        <PdfToolbar />
+      </>
+    )
     fireEvent.click(screen.getByTitle(/Zoom level/))
 
     const presetButtons = screen.getAllByRole('button', { name: '100%' })
@@ -322,7 +456,12 @@ describe('Toolbar', () => {
   })
 
   it('teaches each accelerator in the control tooltip', () => {
-    render(<Toolbar {...defaultProps} />)
+    render(
+      <>
+        <Toolbar {...defaultProps} />
+        <PdfToolbar />
+      </>
+    )
 
     // The label stays free of key names so it reads correctly on every
     // platform; the tooltip adds the binding the manifest actually holds.

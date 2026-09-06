@@ -353,6 +353,9 @@ describe('ResearchChatPanel', () => {
       })
     )
     const onCompile = vi.fn().mockImplementation(async () => {
+      useCompileStore
+        .getState()
+        .setPdfPath('/project/paper.pdf', documentRegistry.snapshot('/project/paper.tex')!)
       useCompileStore.getState().setCompileStatus('success')
     })
     render(<ResearchChatPanel onAiDraft={vi.fn()} onCompile={onCompile} />)
@@ -440,11 +443,8 @@ describe('ResearchChatPanel', () => {
     expect(documentRegistry.snapshot('/project/paper.tex')?.text).toBe(
       '\\section{Method} User follow-up'
     )
-    expect(
-      screen.getByText(
-        "This change can no longer be undone from here. Use the editor's undo instead."
-      )
-    ).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeDisabled()
+    expect(screen.getByText('Document changed; verify the latest edit.')).toBeVisible()
   })
 
   it('sends selected paper, document, author, and repository contexts', async () => {

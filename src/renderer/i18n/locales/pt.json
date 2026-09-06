@@ -508,7 +508,16 @@
     "compileNotStarted": "A compilação não foi iniciada: {{reason}}",
     "saveFailedSkippingCompile": "Falha ao salvar, portanto a compilação foi ignorada: {{reason}}",
     "reviewInChat": "Revisar os problemas no chat de pesquisa",
-    "fixWithCli": "Corrigir os problemas com {{cli}}"
+    "fixWithCli": "Corrigir os problemas com {{cli}}",
+    "inlineFix": "Corrigir",
+    "inlineFixBusy": "Corrigindo…",
+    "inlineFixSetup": "Ative e configure a IA em Configurações > Integrações.",
+    "inlineFixUnsupported": "É necessária uma linha TeX legível e um trecho menor.",
+    "inlineFixInvalid": "A correção da IA é inválida. Nenhuma alteração foi aplicada.",
+    "inlineFixApplied": "Correção aplicada no editor. Revise e compile para verificar. Você pode desfazer.",
+    "inlineFixStale": "O documento ou a compilação mudou. Tente corrigir o problema atual novamente.",
+    "inlineFixUnchanged": "A IA não conseguiu corrigir o problema neste trecho.",
+    "inlineFixUndo": "Desfazer"
   },
   "localSearch": {
     "searching": "Buscando no PDF…",
@@ -1319,5 +1328,53 @@
       "protectedChanged": "Equações, figuras e tabelas são editadas no TeX. Essa alteração não foi aplicada.",
       "structureChanged": "Adicionar, remover ou reordenar seções é feito no TeX. Essa alteração não foi aplicada."
     }
+  },
+  "aiEditReview": {
+    "title": "Rever alteração",
+    "stale": "O documento mudou; verifique novamente.",
+    "checking": "Verificando compilação…",
+    "verified": "Esta versão foi compilada. Verifique o conteúdo e as fontes separadamente.",
+    "failed": "Falha na compilação. Veja os problemas.",
+    "unverified": "Aplicado · compilação não verificada",
+    "changes": "Alterações",
+    "before": "Antes",
+    "after": "Depois",
+    "check": "Verificar compilação",
+    "checkShort": "Verificar"
+  },
+  "referenceEvidence": {
+    "abstractOnly": "Apenas resumo. O texto completo e as páginas não foram verificados.",
+    "metadataOnly": "Apenas metadados. O suporte no texto completo não foi verificado.",
+    "openSource": "Verificar fonte original",
+    "citedPassages": "Trechos citados neste documento",
+    "show": "Verificar suporte da citação"
+  },
+  "citationEvidence": {
+    "title": "Vincular evidência PDF",
+    "scope": "Verifica se o trecho existe no PDF. Avalie se ele sustenta sua afirmação.",
+    "projectRequired": "Abra um projeto primeiro.",
+    "pdf": "PDF de referência",
+    "choose": "Escolher PDF",
+    "noPdfs": "Adicione um PDF ao projeto e reabra esta seção.",
+    "page": "Página PDF",
+    "read": "Ler página",
+    "pageCount": "Página {{page}} / {{count}}",
+    "pageText": "Texto da página · selecionar trecho",
+    "quote": "Trecho",
+    "noMatch": "O trecho não corresponde a esta página.",
+    "save": "Salvar trecho",
+    "busy": "Processando evidência PDF…",
+    "saved": "Trecho salvo · não verificado",
+    "matched": "O trecho correspondeu à página na última verificação.",
+    "changed": "O PDF mudou desde que foi salvo. Revise a evidência.",
+    "recheck": "Abrir página e verificar",
+    "stale": "O projeto mudou; operação interrompida.",
+    "invalidFile": "Não foi possível ler o arquivo de evidências. Verifique o arquivo existente.",
+    "unsupported": "Este PDF não é compatível ou excede o limite de processamento.",
+    "invalidPage": "Escolha um PDF e um número de página válidos.",
+    "noText": "Nenhum texto extraível. OCR de PDFs digitalizados ainda não é suportado.",
+    "remove": "Remover trecho",
+    "scopeLabel": "Escopo da verificação",
+    "recheckShort": "Rever"
   }
 }

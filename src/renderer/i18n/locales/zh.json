@@ -508,7 +508,16 @@
     "compileNotStarted": "编译未启动：{{reason}}",
     "saveFailedSkippingCompile": "保存失败，已跳过编译：{{reason}}",
     "reviewInChat": "在研究对话中查看问题",
-    "fixWithCli": "使用 {{cli}} 修复问题"
+    "fixWithCli": "使用 {{cli}} 修复问题",
+    "inlineFix": "修复",
+    "inlineFixBusy": "修复中…",
+    "inlineFixSetup": "请在设置 > 集成中启用并配置 AI。",
+    "inlineFixUnsupported": "需要可读取的 TeX 源代码行和更小的修改范围。",
+    "inlineFixInvalid": "AI 修改内容格式无效，未应用任何更改。",
+    "inlineFixApplied": "已在编辑器中应用修改。请检查并编译验证，也可以撤销。",
+    "inlineFixStale": "文档或编译结果已更改，请对当前问题重新修复。",
+    "inlineFixUnchanged": "AI 无法在此源代码范围内修复问题，未应用更改。",
+    "inlineFixUndo": "撤销"
   },
   "localSearch": {
     "searching": "正在搜索 PDF…",
@@ -1319,5 +1328,53 @@
       "protectedChanged": "公式、图和表需在 TeX 中编辑。该修改未被应用。",
       "structureChanged": "章节的增删与重排需在 TeX 中完成。该修改未被应用。"
     }
+  },
+  "aiEditReview": {
+    "title": "检查修改",
+    "stale": "文档已更改，请重新检查。",
+    "checking": "正在检查编译…",
+    "verified": "此文档版本已编译成功。请另外核实内容和引用依据。",
+    "failed": "编译失败，请检查问题列表。",
+    "unverified": "已应用 · 编译未验证",
+    "changes": "修改内容",
+    "before": "修改前",
+    "after": "修改后",
+    "check": "编译检查",
+    "checkShort": "验证"
+  },
+  "referenceEvidence": {
+    "abstractOnly": "仅有摘要信息，尚未核实全文及页码依据。",
+    "metadataOnly": "仅关联书目信息，尚未核实支持论述的全文依据。",
+    "openSource": "核查原始来源",
+    "citedPassages": "此文档的引用位置",
+    "show": "检查引用依据"
+  },
+  "citationEvidence": {
+    "title": "关联 PDF 正文依据",
+    "scope": "检查摘录是否存在于 PDF 中。请自行判断是否支持论述。",
+    "projectRequired": "请先打开项目。",
+    "pdf": "参考 PDF",
+    "choose": "选择 PDF",
+    "noPdfs": "请将参考 PDF 加入项目文件夹，然后重新打开此区域。",
+    "page": "PDF 页码",
+    "read": "读取页面",
+    "pageCount": "第 {{page}} / {{count}} 页",
+    "pageText": "页面正文 · 选择摘录",
+    "quote": "摘录",
+    "noMatch": "摘录与此页正文不匹配。",
+    "save": "保存摘录",
+    "busy": "正在处理 PDF 依据…",
+    "saved": "已保存摘录 · 尚未复核",
+    "matched": "最近一次检查中，摘录与页面正文匹配。",
+    "changed": "PDF 自保存后已更改，请重新审阅依据。",
+    "recheck": "打开页面并复核",
+    "stale": "项目已更改，操作已停止。",
+    "invalidFile": "无法读取依据文件，请检查现有文件。",
+    "unsupported": "此 PDF 不受支持或超出处理限制。",
+    "invalidPage": "请选择有效的 PDF 和页码。",
+    "noText": "没有可提取的文本，暂不支持扫描 PDF 的 OCR。",
+    "remove": "删除摘录",
+    "scopeLabel": "核查范围",
+    "recheckShort": "复核"
   }
 }

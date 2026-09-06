@@ -6,6 +6,9 @@ import { useEditorStore } from '../../renderer/store/useEditorStore'
 import { useNotificationStore } from '../../renderer/store/useNotificationStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
 
+vi.mock('../../renderer/services/inlineDiagnosticFix', () => ({ fixDiagnosticInline: vi.fn() }))
+import { fixDiagnosticInline } from '../../renderer/services/inlineDiagnosticFix'
+
 describe('LogPanel diagnostic navigation', () => {
   beforeEach(() => {
     vi.mocked(window.api.readFile).mockReset()
@@ -24,6 +27,22 @@ describe('LogPanel diagnostic navigation', () => {
         }
       ]
     })
+  })
+
+  it('fixes an individual problem without invoking Chat or CLI', async () => {
+    vi.mocked(fixDiagnosticInline).mockResolvedValue({ status: 'applied' })
+    const chat = vi.fn()
+    const cli = vi.fn()
+    render(<LogPanel onFixWithChat={chat} onFixWithCli={cli} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Fix' }))
+    await waitFor(() =>
+      expect(fixDiagnosticInline).toHaveBeenCalledWith(useCompileStore.getState().diagnostics[0])
+    )
+    await waitFor(() =>
+      expect(useNotificationStore.getState().notifications.at(-1)?.tone).toBe('success')
+    )
+    expect(chat).not.toHaveBeenCalled()
+    expect(cli).not.toHaveBeenCalled()
   })
 
   it('opens the diagnostic file before jumping to its reported line and column', async () => {

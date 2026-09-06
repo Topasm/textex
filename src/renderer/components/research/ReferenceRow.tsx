@@ -1,3 +1,7 @@
+import { ReferenceEvidence } from './ReferenceEvidence'
+import { useEditorStore } from '../../store/useEditorStore'
+import { documentRegistry } from '../../models/documentRegistry'
+import { parseCitationUsages } from '../../services/citationUsageOverlay'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -6,6 +10,7 @@ import {
   Circle,
   ExternalLink,
   MessageSquarePlus,
+  MoreHorizontal,
   Plus,
   Search
 } from 'lucide-react'
@@ -98,6 +103,8 @@ export function ReferenceRow({
   onAddToChat
 }: ReferenceRowProps) {
   const { t } = useTranslation()
+  useEditorStore((state) => state.revision)
+  useEditorStore((state) => state.openFiles)
   const articleRef = useRef<HTMLElement | null>(null)
   const [menuAnchor, setMenuAnchor] = useState<ContextMenuAnchor | null>(null)
   const [detail, setDetail] = useState<ZoteroItemDetail | null>(() =>
@@ -205,16 +212,23 @@ export function ReferenceRow({
       className={`reference-card reference-row${expanded ? ' expanded' : ''}${row.broken ? ' broken' : ''}`}
       tabIndex={0}
       aria-expanded={expanded}
-      draggable={payload !== null}
+      draggable={payload !== null && !expanded}
       onDragStart={(event) => payload && setReferenceDragData(event, payload)}
-      onClick={() => onToggleExpanded(row.id)}
-      onDoubleClick={() => row.itemKey && onOpenInZotero(row)}
+      onClick={(event) => {
+        // Portal menu clicks bubble through React, but do not belong to the card surface.
+        if (event.currentTarget.contains(event.target as Node)) onToggleExpanded(row.id)
+      }}
+      onDoubleClick={(event) => {
+        if (event.currentTarget.contains(event.target as Node) && row.itemKey) onOpenInZotero(row)
+      }}
       onContextMenu={(event) => {
+        if ((event.target as HTMLElement).closest('textarea, input, select')) return
         event.preventDefault()
         event.stopPropagation()
         openMenu(event.clientX, event.clientY)
       }}
       onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault()
           onToggleExpanded(row.id)
@@ -250,33 +264,61 @@ export function ReferenceRow({
       </span>
 
       {expanded && (
-        <div className="reference-row-detail">
+        <div
+          className="reference-row-detail"
+          onClick={(event) => event.stopPropagation()}
+          onDoubleClick={(event) => event.stopPropagation()}
+        >
           {row.broken ? (
             <p className="research-muted">{t('researchPanel.zotero.missingFromBibliography')}</p>
           ) : detailLoading ? (
             <p className="research-muted">{t('researchPanel.referenceRow.abstractLoading')}</p>
           ) : detail?.abstract ? (
-            <p className="reference-row-abstract">{detail.abstract}</p>
+            <ReferenceEvidence citekey={row.citekey} abstract={detail.abstract} url={detail.url} />
           ) : row.itemKey ? (
             <p className="research-muted">{t('researchPanel.referenceRow.abstractUnavailable')}</p>
           ) : null}
 
+          {!detail?.abstract && (
+            <ReferenceEvidence
+              citekey={row.citekey}
+              url={
+                detail?.url ??
+                (row.entry?.doi
+                  ? `https://doi.org/${row.entry.doi}`
+                  : row.entry?.arxivId
+                    ? `https://arxiv.org/abs/${row.entry.arxivId}`
+                    : null)
+              }
+            />
+          )}
           {row.citationLocations.length > 0 && (
             <div
               className="reference-citation-locations"
               aria-label={t('researchPanel.referenceCard.citationLocations')}
             >
+              <strong>{t('referenceEvidence.citedPassages')}</strong>
               {row.citationLocations.map((location, index) => (
-                <button
-                  type="button"
+                <div
+                  className="reference-citation-location"
                   key={`${location.file}:${location.line}:${index}`}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    onOpenLocation(location)
-                  }}
                 >
-                  {citationLocationLabel(location.file, projectRoot)}:{location.line}
-                </button>
+                  <button
+                    className="workspace-button workspace-button-quiet"
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onOpenLocation(location)
+                    }}
+                  >
+                    {citationLocationLabel(location.file, projectRoot)}:{location.line}
+                  </button>
+                  <CitationPassage
+                    file={location.file}
+                    line={location.line}
+                    citekey={row.citekey}
+                  />
+                </div>
               ))}
             </div>
           )}
@@ -320,37 +362,44 @@ export function ReferenceRow({
               </button>
             ) : inProject ? (
               <button type="button" disabled={!row.citekey} onClick={() => onCite(row)}>
-                <Plus size={ICON_SIZE.micro} /> {t('researchPanel.referenceRow.insertCitation')}
+                <Plus size={ICON_SIZE.micro} />{' '}
+                <span>{t('researchPanel.referenceRow.insertCitation')}</span>
               </button>
             ) : (
-              <>
-                <button
-                  type="button"
-                  disabled={!row.citable || busy}
-                  onClick={() => onAddToBibliography(row)}
-                >
-                  <BookPlus size={ICON_SIZE.micro} />{' '}
-                  {t('researchPanel.referenceRow.addToBibliography')}
-                </button>
-                <button
-                  type="button"
-                  disabled={!row.citable || busy}
-                  onClick={() => onAddAndCite(row)}
-                >
-                  <Plus size={ICON_SIZE.micro} /> {t('researchPanel.referenceRow.addAndCite')}
-                </button>
-              </>
+              <button
+                type="button"
+                disabled={!row.citable || busy}
+                onClick={() => onAddAndCite(row)}
+              >
+                <Plus size={ICON_SIZE.micro} />{' '}
+                <span>{t('researchPanel.referenceRow.addAndCite')}</span>
+              </button>
             )}
             {onAddToChat && payload && (
               <button
                 type="button"
+                className="workspace-button-icon"
+                title={t('researchPanel.referenceCard.addToChat')}
                 onClick={() => onAddToChat(payload)}
                 aria-label={t('researchPanel.referenceCard.addNamedToChat', { name: row.title })}
               >
-                <MessageSquarePlus size={ICON_SIZE.micro} />{' '}
-                {t('researchPanel.referenceCard.addToChat')}
+                <MessageSquarePlus size={ICON_SIZE.compact} />
               </button>
             )}
+            <button
+              type="button"
+              className="workspace-button-icon"
+              aria-label={t('researchPanel.referenceRow.menuLabel', { name: row.title })}
+              title={t('researchPanel.referenceRow.menuLabel', { name: row.title })}
+              aria-haspopup="menu"
+              aria-expanded={menuAnchor !== null}
+              onClick={(event) => {
+                const rect = event.currentTarget.getBoundingClientRect()
+                openMenu(rect.right, rect.bottom)
+              }}
+            >
+              <MoreHorizontal size={ICON_SIZE.compact} />
+            </button>
           </div>
         </div>
       )}
@@ -368,4 +417,27 @@ export function ReferenceRow({
       )}
     </article>
   )
+}
+
+function CitationPassage({
+  file,
+  line,
+  citekey
+}: {
+  file: string
+  line: number
+  citekey: string | null
+}) {
+  const text = documentRegistry.getModel(file)?.snapshot().text
+  if (!text || !citekey) return null
+  const locations = parseCitationUsages(text, file).find(
+    (usage) => usage.citekey === citekey
+  )?.locations
+  if (!locations?.some((location) => location.line === line)) return null
+  const excerpt = text
+    .split('\n')
+    .slice(Math.max(0, line - 2), line + 1)
+    .join('\n')
+    .slice(0, 1200)
+  return <span className="reference-citation-passage">{excerpt}</span>
 }

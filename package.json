@@ -1,6 +1,6 @@
 {
   "name": "textex",
-  "version": "1.2.15",
+  "version": "1.2.16",
   "description": "A self-contained Tauri desktop LaTeX editor built with Rust, React, and Tectonic",
   "desktopName": "TextEx.desktop",
   "bin": {

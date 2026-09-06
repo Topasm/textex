@@ -508,7 +508,16 @@
     "compileNotStarted": "Die Kompilierung wurde nicht gestartet: {{reason}}",
     "saveFailedSkippingCompile": "Speichern fehlgeschlagen, die Kompilierung wurde übersprungen: {{reason}}",
     "reviewInChat": "Probleme im Research Chat prüfen",
-    "fixWithCli": "Probleme mit {{cli}} beheben"
+    "fixWithCli": "Probleme mit {{cli}} beheben",
+    "inlineFix": "Korrigieren",
+    "inlineFixBusy": "Korrektur läuft…",
+    "inlineFixSetup": "Aktivieren und konfigurieren Sie KI unter Einstellungen > Integrationen.",
+    "inlineFixUnsupported": "Eine lesbare TeX-Quellzeile und ein kleinerer Textabschnitt sind erforderlich.",
+    "inlineFixInvalid": "Die KI-Korrektur ist ungültig. Es wurden keine Änderungen angewendet.",
+    "inlineFixApplied": "Korrektur im Editor angewendet. Prüfen und kompilieren Sie den Text. Rückgängig ist verfügbar.",
+    "inlineFixStale": "Dokument oder Kompilierung geändert. Starten Sie die Korrektur erneut.",
+    "inlineFixUnchanged": "Die KI konnte das Problem in diesem Abschnitt nicht beheben.",
+    "inlineFixUndo": "Rückgängig"
   },
   "localSearch": {
     "searching": "PDF wird durchsucht…",
@@ -1319,5 +1328,53 @@
       "protectedChanged": "Formeln, Abbildungen und Tabellen werden im TeX bearbeitet. Diese Änderung wurde nicht übernommen.",
       "structureChanged": "Abschnitte werden im TeX hinzugefügt, entfernt oder umsortiert. Diese Änderung wurde nicht übernommen."
     }
+  },
+  "aiEditReview": {
+    "title": "Änderung prüfen",
+    "stale": "Dokument geändert; erneut prüfen.",
+    "checking": "Kompilierung wird geprüft…",
+    "verified": "Diese Dokumentversion wurde kompiliert. Inhalt und Quellen separat prüfen.",
+    "failed": "Kompilierung fehlgeschlagen. Probleme prüfen.",
+    "unverified": "Angewendet · Kompilierung ungeprüft",
+    "changes": "Änderungen",
+    "before": "Vorher",
+    "after": "Nachher",
+    "check": "Kompilierung prüfen",
+    "checkShort": "Prüfen"
+  },
+  "referenceEvidence": {
+    "abstractOnly": "Nur Abstract. Volltext und Seitenbelege sind ungeprüft.",
+    "metadataOnly": "Nur bibliografische Daten. Belege im Volltext sind ungeprüft.",
+    "openSource": "Originalquelle prüfen",
+    "citedPassages": "Zitierte Stellen in diesem Dokument",
+    "show": "Belege prüfen"
+  },
+  "citationEvidence": {
+    "title": "PDF-Beleg verknüpfen",
+    "scope": "Prüft, ob der Auszug im PDF vorkommt. Prüfen Sie selbst, ob er Ihre Aussage stützt.",
+    "projectRequired": "Zuerst ein Projekt öffnen.",
+    "pdf": "Referenz-PDF",
+    "choose": "PDF auswählen",
+    "noPdfs": "Ein Referenz-PDF zum Projekt hinzufügen und diesen Bereich erneut öffnen.",
+    "page": "PDF-Seite",
+    "read": "Seite lesen",
+    "pageCount": "Seite {{page}} / {{count}}",
+    "pageText": "Seitentext · Auszug markieren",
+    "quote": "Auszug",
+    "noMatch": "Der Auszug stimmt nicht mit dieser Seite überein.",
+    "save": "Auszug speichern",
+    "busy": "PDF-Beleg wird verarbeitet…",
+    "saved": "Gespeicherter Auszug · ungeprüft",
+    "matched": "Der Auszug stimmte bei der letzten Prüfung mit dem Seitentext überein.",
+    "changed": "Das PDF wurde seit dem Speichern geändert. Beleg erneut prüfen.",
+    "recheck": "Seite öffnen und prüfen",
+    "stale": "Das Projekt wurde gewechselt; Vorgang abgebrochen.",
+    "invalidFile": "Belegdatei nicht lesbar. Bestehende Datei prüfen.",
+    "unsupported": "Dieses PDF wird nicht unterstützt oder überschreitet das Verarbeitungslimit.",
+    "invalidPage": "Gültiges PDF und gültige Seitenzahl wählen.",
+    "noText": "Kein extrahierbarer Text. OCR für gescannte PDFs wird noch nicht unterstützt.",
+    "remove": "Auszug entfernen",
+    "scopeLabel": "Prüfumfang",
+    "recheckShort": "Prüfen"
   }
 }

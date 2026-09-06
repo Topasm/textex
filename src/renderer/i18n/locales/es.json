@@ -508,7 +508,16 @@
     "compileNotStarted": "No se inició la compilación: {{reason}}",
     "saveFailedSkippingCompile": "Falló el guardado, por lo que se omitió la compilación: {{reason}}",
     "reviewInChat": "Revisar los problemas en el chat de investigación",
-    "fixWithCli": "Corregir los problemas con {{cli}}"
+    "fixWithCli": "Corregir los problemas con {{cli}}",
+    "inlineFix": "Corregir",
+    "inlineFixBusy": "Corrigiendo…",
+    "inlineFixSetup": "Activa y configura la IA en Ajustes > Integraciones.",
+    "inlineFixUnsupported": "Se necesita una línea TeX legible y un fragmento más pequeño.",
+    "inlineFixInvalid": "La corrección de IA no es válida. No se aplicaron cambios.",
+    "inlineFixApplied": "Corrección aplicada en el editor. Revísala y compila para comprobarla. Puedes deshacerla.",
+    "inlineFixStale": "El documento o la compilación cambió. Vuelve a corregir el problema actual.",
+    "inlineFixUnchanged": "La IA no pudo corregir el problema dentro de este fragmento.",
+    "inlineFixUndo": "Deshacer"
   },
   "localSearch": {
     "searching": "Buscando en PDF…",
@@ -1319,5 +1328,53 @@
       "protectedChanged": "Las ecuaciones, figuras y tablas se editan en TeX. Ese cambio no se aplicó.",
       "structureChanged": "Añadir, eliminar o reordenar secciones se hace en TeX. Ese cambio no se aplicó."
     }
+  },
+  "aiEditReview": {
+    "title": "Revisar cambio",
+    "stale": "El documento cambió; vuelve a verificar.",
+    "checking": "Verificando compilación…",
+    "verified": "Esta versión se compiló correctamente. Revisa el contenido y las fuentes por separado.",
+    "failed": "Error de compilación. Revisa los problemas.",
+    "unverified": "Aplicado · compilación sin verificar",
+    "changes": "Cambios",
+    "before": "Antes",
+    "after": "Después",
+    "check": "Verificar compilación",
+    "checkShort": "Verificar"
+  },
+  "referenceEvidence": {
+    "abstractOnly": "Solo resumen. El texto completo y las páginas no se han verificado.",
+    "metadataOnly": "Solo metadatos. El respaldo en el texto completo no se ha verificado.",
+    "openSource": "Revisar fuente original",
+    "citedPassages": "Pasajes citados en este documento",
+    "show": "Revisar respaldo de la cita"
+  },
+  "citationEvidence": {
+    "title": "Vincular evidencia PDF",
+    "scope": "Comprueba si el extracto aparece en el PDF. Revisa si respalda tu afirmación.",
+    "projectRequired": "Abre primero un proyecto.",
+    "pdf": "PDF de referencia",
+    "choose": "Elegir PDF",
+    "noPdfs": "Añade un PDF al proyecto y vuelve a abrir esta sección.",
+    "page": "Página PDF",
+    "read": "Leer página",
+    "pageCount": "Página {{page}} / {{count}}",
+    "pageText": "Texto de la página · seleccionar extracto",
+    "quote": "Extracto",
+    "noMatch": "El extracto no coincide con esta página.",
+    "save": "Guardar extracto",
+    "busy": "Procesando evidencia PDF…",
+    "saved": "Extracto guardado · sin verificar",
+    "matched": "El extracto coincidió con la página en la última comprobación.",
+    "changed": "El PDF cambió desde que se guardó. Revisa la evidencia.",
+    "recheck": "Abrir página y verificar",
+    "stale": "El proyecto cambió; operación detenida.",
+    "invalidFile": "No se puede leer el archivo de evidencia. Revisa el archivo existente.",
+    "unsupported": "Este PDF no es compatible o supera el límite de procesamiento.",
+    "invalidPage": "Elige un PDF y un número de página válidos.",
+    "noText": "No hay texto extraíble. El OCR de PDF escaneados aún no es compatible.",
+    "remove": "Eliminar extracto",
+    "scopeLabel": "Alcance de la verificación",
+    "recheckShort": "Revisar"
   }
 }

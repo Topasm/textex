@@ -1,7 +1,5 @@
-import React, { useCallback, useRef, useState } from 'react'
+import React, { useCallback, useRef } from 'react'
 import {
-  ArrowLeft,
-  ArrowRight,
   House,
   FolderOpen,
   Loader,
@@ -21,15 +19,12 @@ import type { WindowResizeDirection } from '../types/api'
 import { useEditorStore } from '../store/useEditorStore'
 import { useCompileStore } from '../store/useCompileStore'
 import { useProjectStore } from '../store/useProjectStore'
-import { usePdfStore } from '../store/usePdfStore'
 import { useSettingsStore } from '../store/useSettingsStore'
 import { proseModeFor, useUiStore } from '../store/useUiStore'
 import { RecentProjectSwitcher } from './RecentProjectSwitcher'
-import PdfZoomDropdown from './PdfZoomDropdown'
 import { ICON_SIZE } from './ui/IconSystem'
 import { withShortcutHint } from '../services/commandSearch'
 import { toggleProjectSidebar, toggleProseMode, toggleResearchPanel } from '../services/appCommands'
-import { logError } from '../utils/errorMessage'
 
 interface ToolbarProps {
   onSave: () => void
@@ -99,74 +94,23 @@ function WindowResizeHandles() {
 const Toolbar = React.memo(function Toolbar({
   onSave,
   onCompile,
-  onOpenFolder,
   onReturnHome,
-  onOpenCommandPalette,
-  onOpenSettings
+  onOpenCommandPalette
 }: ToolbarProps) {
   const { t } = useTranslation()
   const filePath = useEditorStore((s) => s.filePath)
   const isDirty = useEditorStore((s) => s.isDirty)
   const compileStatus = useCompileStore((s) => s.compileStatus)
-  const pdfPath = useCompileStore((s) => s.pdfPath)
   const settings = useSettingsStore((s) => s.settings)
-  const currentPage = usePdfStore((s) => s.currentPage)
-  const numPages = usePdfStore((s) => s.numPages)
   const projectRoot = useProjectStore((s) => s.projectRoot)
   const isSidebarOpen = useProjectStore((s) => s.isSidebarOpen)
   const isResearchPanelOpen = useProjectStore((s) => s.isResearchPanelOpen)
   const isProseMode = useUiStore((state) => proseModeFor(state, filePath))
   const canUseProseMode = Boolean(filePath?.toLowerCase().endsWith('.tex'))
-  const showPdfControls = settings.showPdfToolbarControls !== false && !isProseMode
 
-  const [pageInputValue, setPageInputValue] = useState('')
-  const [isPageInputFocused, setIsPageInputFocused] = useState(false)
   const customWindowChrome = usesCustomWindowChrome()
 
   const fileName = filePath ? filePath.split(/[\\/]/).pop() : t('toolbar.untitled')
-
-  // Sync Handlers
-  const handleSyncToCode = useCallback(() => {
-    usePdfStore.getState().triggerSyncToCode()
-  }, [])
-
-  const handleSyncToPdf = useCallback(() => {
-    const editorState = useEditorStore.getState()
-    if (!editorState.filePath) return
-    window.api
-      .synctexForward(editorState.filePath, editorState.cursorLine)
-      .then((result) => {
-        if (result) {
-          usePdfStore.getState().setSynctexHighlight(result)
-        }
-      })
-      .catch((error) => logError('SyncTeX:forward', error))
-  }, [])
-
-  const handlePageInputFocus = useCallback(() => {
-    setPageInputValue(String(currentPage))
-    setIsPageInputFocused(true)
-  }, [currentPage])
-
-  const handlePageInputBlur = useCallback(() => {
-    setIsPageInputFocused(false)
-    const page = parseInt(pageInputValue, 10)
-    if (!isNaN(page) && page >= 1 && page <= numPages) {
-      const { scrollToPage } = usePdfStore.getState()
-      if (scrollToPage) scrollToPage(page)
-    }
-    setPageInputValue('')
-  }, [pageInputValue, numPages])
-
-  const handlePageInputKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      e.currentTarget.blur()
-    } else if (e.key === 'Escape') {
-      setPageInputValue('')
-      setIsPageInputFocused(false)
-      e.currentTarget.blur()
-    }
-  }, [])
 
   /**
    * Double-clicking structural toolbar space maximizes or restores the window
@@ -311,61 +255,9 @@ const Toolbar = React.memo(function Toolbar({
           )}
         </div>
 
-        <div className="toolbar-center" data-responsive-priority="secondary">
-          {showPdfControls && (
-            <div className="toolbar-sync-controls">
-              <button
-                className="toolbar-btn toolbar-compact-btn"
-                onClick={handleSyncToCode}
-                disabled={!pdfPath}
-                title={t('toolbar.syncPdfToCode')}
-                aria-label={t('toolbar.syncPdfToCode')}
-              >
-                <ArrowLeft size={ICON_SIZE.compact} />
-              </button>
-              <button
-                className="toolbar-btn toolbar-compact-btn"
-                onClick={handleSyncToPdf}
-                disabled={!filePath}
-                title={t('toolbar.syncCodeToPdf')}
-                aria-label={t('toolbar.syncCodeToPdf')}
-              >
-                <ArrowRight size={ICON_SIZE.compact} />
-              </button>
-            </div>
-          )}
-        </div>
+        <div className="toolbar-center" data-responsive-priority="secondary"></div>
 
         <div className="toolbar-right">
-          {showPdfControls && (
-            <div className="toolbar-pdf-controls" data-responsive-priority="compact">
-              {numPages > 0 && (
-                <>
-                  <span className="toolbar-page-nav">
-                    <input
-                      className="toolbar-page-input"
-                      type="text"
-                      inputMode="numeric"
-                      value={isPageInputFocused ? pageInputValue : String(currentPage)}
-                      onChange={(e) => setPageInputValue(e.target.value.replace(/\D/g, ''))}
-                      onFocus={handlePageInputFocus}
-                      onBlur={handlePageInputBlur}
-                      onKeyDown={handlePageInputKeyDown}
-                      title={t('toolbar.goToPage')}
-                      aria-label={t('toolbar.goToPage')}
-                    />
-                    <span className="toolbar-page-label">
-                      {t('toolbar.pageOf')} {numPages}
-                    </span>
-                  </span>
-                  <span className="toolbar-separator" />
-                </>
-              )}
-
-              <PdfZoomDropdown />
-            </div>
-          )}
-
           <span className="file-name" data-responsive-priority="tertiary" title={fileName}>
             {isDirty && <span className="dirty-dot" />}
             {fileName}
@@ -382,6 +274,7 @@ const Toolbar = React.memo(function Toolbar({
               id="research-panel-toggle"
             >
               <PanelRightOpen size={ICON_SIZE.control} />
+              <span>{t('researchPanel.label')}</span>
             </button>
           )}
           {customWindowChrome && (

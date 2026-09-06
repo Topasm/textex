@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useId, useRef } from 'react'
 import { Search } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useLocalSearchRequest } from '../../hooks/useLocalSearchRequest'
@@ -9,6 +9,7 @@ import { ICON_SIZE } from '../ui/IconSystem'
 
 export function PdfSearchBar({ search }: { search: PdfSearchState }) {
   const { t } = useTranslation()
+  const searchId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
   const toggleRef = useRef<HTMLButtonElement>(null)
   useLocalSearchRequest('pdf', () => {
@@ -17,41 +18,49 @@ export function PdfSearchBar({ search }: { search: PdfSearchState }) {
     inputRef.current?.select()
     return true
   })
-  if (!search.searchVisible)
-    return (
+  return (
+    <>
       <button
         ref={toggleRef}
         type="button"
         className="local-search-toggle"
         aria-label={t('localSearch.pdf')}
-        onClick={() => usePdfStore.getState().setPdfSearchVisible(true)}
+        aria-expanded={search.searchVisible}
+        aria-controls={search.searchVisible ? searchId : undefined}
+        onClick={() =>
+          search.searchVisible
+            ? search.handleSearchClose()
+            : usePdfStore.getState().setPdfSearchVisible(true)
+        }
       >
         <Search size={ICON_SIZE.control} />
       </button>
-    )
-  return (
-    <LocalSearchBar
-      label={t('localSearch.pdf')}
-      busy={search.isSearching}
-      statusText={
-        search.isSearching
-          ? t('localSearch.searching')
-          : search.searchFailed
-            ? t('localSearch.failed')
-            : undefined
-      }
-      query={search.searchQuery}
-      count={search.searchMatches.length}
-      index={search.currentMatchIndex}
-      inputRef={inputRef}
-      onQuery={search.setSearchQuery}
-      onStep={(direction) =>
-        direction === 1 ? search.handleSearchNext() : search.handleSearchPrev()
-      }
-      onClose={() => {
-        search.handleSearchClose()
-        requestAnimationFrame(() => toggleRef.current?.focus())
-      }}
-    />
+      {search.searchVisible && (
+        <LocalSearchBar
+          id={searchId}
+          label={t('localSearch.pdf')}
+          busy={search.isSearching}
+          statusText={
+            search.isSearching
+              ? t('localSearch.searching')
+              : search.searchFailed
+                ? t('localSearch.failed')
+                : undefined
+          }
+          query={search.searchQuery}
+          count={search.searchMatches.length}
+          index={search.currentMatchIndex}
+          inputRef={inputRef}
+          onQuery={search.setSearchQuery}
+          onStep={(direction) =>
+            direction === 1 ? search.handleSearchNext() : search.handleSearchPrev()
+          }
+          onClose={() => {
+            search.handleSearchClose()
+            requestAnimationFrame(() => toggleRef.current?.focus())
+          }}
+        />
+      )}
+    </>
   )
 }

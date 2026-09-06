@@ -508,7 +508,16 @@
     "compileNotStarted": "컴파일을 시작하지 못했습니다: {{reason}}",
     "saveFailedSkippingCompile": "저장에 실패하여 컴파일을 건너뛰었습니다: {{reason}}",
     "reviewInChat": "리서치 채팅에서 문제 검토",
-    "fixWithCli": "{{cli}}(으)로 문제 수정"
+    "fixWithCli": "{{cli}}(으)로 문제 수정",
+    "inlineFix": "Fix",
+    "inlineFixBusy": "수정 중…",
+    "inlineFixSetup": "설정 > 통합에서 AI를 활성화하고 연결을 설정해 주세요.",
+    "inlineFixUnsupported": "읽을 수 있는 TeX 소스 줄과 더 작은 수정 범위가 필요합니다.",
+    "inlineFixInvalid": "AI 수정안의 형식이 올바르지 않아 적용하지 않았습니다.",
+    "inlineFixApplied": "편집기에 수정안을 적용했습니다. 변경 내용을 확인하고 컴파일해 주세요. 실행 취소로 되돌릴 수 있습니다.",
+    "inlineFixStale": "문서 또는 컴파일 결과가 바뀌었습니다. 현재 오류에서 Fix를 다시 눌러 주세요.",
+    "inlineFixUnchanged": "해당 소스 범위 안에서 수정안을 찾지 못해 변경하지 않았습니다.",
+    "inlineFixUndo": "실행 취소"
   },
   "localSearch": {
     "searching": "PDF 검색 중…",
@@ -1319,5 +1328,53 @@
       "protectedChanged": "수식·그림·표는 TeX에서 편집합니다. 해당 변경은 적용되지 않았습니다.",
       "structureChanged": "절의 추가·삭제·순서 변경은 TeX에서 합니다. 해당 변경은 적용되지 않았습니다."
     }
+  },
+  "aiEditReview": {
+    "title": "수정 확인",
+    "stale": "문서가 변경되어 다시 확인해야 합니다.",
+    "checking": "컴파일 확인 중…",
+    "verified": "수정한 문서 버전의 컴파일이 통과했습니다. 내용과 인용 근거는 별도로 확인하세요.",
+    "failed": "컴파일에 실패했습니다. 문제 목록을 확인하세요.",
+    "unverified": "수정됨 · 컴파일 확인 전",
+    "changes": "변경 내용",
+    "before": "수정 전",
+    "after": "수정 후",
+    "check": "컴파일로 확인",
+    "checkShort": "검증"
+  },
+  "referenceEvidence": {
+    "abstractOnly": "초록에서 제공된 정보입니다. 본문·페이지 근거는 아직 확인되지 않았습니다.",
+    "metadataOnly": "서지정보만 연결되어 있습니다. 주장을 뒷받침하는 본문 근거는 아직 확인되지 않았습니다.",
+    "openSource": "원문에서 근거 확인",
+    "citedPassages": "이 문서의 인용 위치",
+    "show": "인용 근거 확인"
+  },
+  "citationEvidence": {
+    "title": "PDF 본문 근거 연결",
+    "scope": "PDF에서 발췌문이 존재하는지 확인합니다. 주장을 뒷받침하는지는 직접 검토하세요.",
+    "projectRequired": "프로젝트를 먼저 여세요.",
+    "pdf": "참고 PDF",
+    "choose": "PDF 선택",
+    "noPdfs": "프로젝트 폴더에 참고 PDF를 추가한 뒤 이 영역을 다시 여세요.",
+    "page": "PDF 페이지",
+    "read": "페이지 읽기",
+    "pageCount": "{{page}} / {{count}} 페이지",
+    "pageText": "페이지 본문 · 드래그하여 발췌",
+    "quote": "발췌문",
+    "noMatch": "이 페이지 본문과 일치하지 않습니다.",
+    "save": "발췌문 저장",
+    "busy": "PDF 근거 처리 중…",
+    "saved": "저장된 발췌 · 재확인 전",
+    "matched": "최근 확인에서 발췌문이 페이지 본문과 일치했습니다.",
+    "changed": "PDF가 저장 당시와 달라졌습니다. 근거를 다시 검토하세요.",
+    "recheck": "페이지 열고 재확인",
+    "stale": "프로젝트가 바뀌어 작업을 중단했습니다.",
+    "invalidFile": "근거 저장 파일을 읽을 수 없습니다. 기존 파일을 확인하세요.",
+    "unsupported": "이 PDF는 처리 범위를 초과하거나 지원되지 않습니다.",
+    "invalidPage": "올바른 PDF와 페이지 번호를 선택하세요.",
+    "noText": "추출 가능한 텍스트가 없습니다. 스캔 PDF의 OCR은 아직 지원하지 않습니다.",
+    "remove": "발췌문 삭제",
+    "scopeLabel": "확인 범위",
+    "recheckShort": "재확인"
   }
 }

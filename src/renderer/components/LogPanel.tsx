@@ -1,3 +1,5 @@
+import { AiEditReview } from './AiEditReview'
+import type { InlineFixResult } from '../services/inlineDiagnosticFix'
 import React, { useEffect, useRef, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -8,7 +10,8 @@ import {
   LoaderCircle,
   MessageSquareText,
   SquareTerminal,
-  TriangleAlert
+  TriangleAlert,
+  WandSparkles
 } from 'lucide-react'
 import { useCompileStore } from '../store/useCompileStore'
 import type { Diagnostic, DiagnosticSeverity } from '../../shared/types'
@@ -16,15 +19,25 @@ import { navigateToDiagnostic } from '../services/diagnosticNavigation'
 import { ICON_SIZE } from './ui/IconSystem'
 import { buildDiagnosticRepairPrompt } from '../services/diagnosticRepair'
 
+import { fixDiagnosticInline } from '../services/inlineDiagnosticFix'
+import { useNotificationStore } from '../store/useNotificationStore'
+import { errorMessage } from '../utils/errorMessage'
+
 type SeverityFilter = 'error' | 'warning' | 'info'
 
 interface LogPanelProps {
+  onCompile?: () => Promise<void>
   onFixWithChat?: (prompt: string) => void
   onFixWithCli?: (prompt: string) => Promise<void>
   cliName?: string
 }
 
-function LogPanel({ onFixWithChat, onFixWithCli, cliName = 'Codex CLI' }: LogPanelProps) {
+function LogPanel({
+  onCompile,
+  onFixWithChat,
+  onFixWithCli,
+  cliName = 'Codex CLI'
+}: LogPanelProps) {
   const { t } = useTranslation()
   const logs = useCompileStore((s) => s.logs)
   const diagnostics = useCompileStore((s) => s.diagnostics)
@@ -36,6 +49,44 @@ function LogPanel({ onFixWithChat, onFixWithCli, cliName = 'Codex CLI' }: LogPan
     new Set(['error', 'warning', 'info'])
   )
   const [cliBusy, setCliBusy] = useState(false)
+  const [appliedFix, setAppliedFix] = useState<InlineFixResult | null>(null)
+  const [fixing, setFixing] = useState<Diagnostic | null>(null)
+  const compileStatus = useCompileStore((s) => s.compileStatus)
+
+  const fixInline = async (diagnostic: Diagnostic): Promise<void> => {
+    if (fixing) return
+    setFixing(diagnostic)
+    try {
+      const result = await fixDiagnosticInline(diagnostic)
+      if (result.review) setAppliedFix(result)
+      useNotificationStore.getState().pushNotification({
+        tone: result.status === 'applied' ? 'success' : 'info',
+        timeoutMs: result.undo && !result.review ? null : undefined,
+        action:
+          result.undo && !result.review
+            ? {
+                label: t('logPanel.inlineFixUndo'),
+                run: () => {
+                  if (!result.undo?.())
+                    useNotificationStore.getState().pushNotification({
+                      tone: 'info',
+                      message: t('logPanel.inlineFixStale')
+                    })
+                }
+              }
+            : undefined,
+        message: t(
+          `logPanel.inlineFix${result.status === 'applied' ? 'Applied' : result.status === 'stale' ? 'Stale' : 'Unchanged'}`
+        )
+      })
+    } catch (error) {
+      useNotificationStore
+        .getState()
+        .pushNotification({ tone: 'error', message: errorMessage(error) })
+    } finally {
+      setFixing(null)
+    }
+  }
 
   const errorCount = useMemo(
     () => diagnostics.filter((d) => d.severity === 'error').length,
@@ -119,6 +170,16 @@ function LogPanel({ onFixWithChat, onFixWithCli, cliName = 'Codex CLI' }: LogPan
 
   return (
     <section className="log-panel log-panel-embedded" aria-labelledby="log-panel-title">
+      {appliedFix?.review && (
+        <AiEditReview
+          key={`${appliedFix.review.projectRoot}:${appliedFix.review.filePath}:${appliedFix.review.appliedSnapshot.revision}`}
+          edit={appliedFix.review}
+          onCompile={onCompile}
+          onUndo={() => {
+            if (appliedFix.undo?.()) setAppliedFix(null)
+          }}
+        />
+      )}
       <div className="log-panel-header">
         <span id="log-panel-title">{t('logPanel.compilationLog')}</span>
         <div className="log-actions">
@@ -190,6 +251,9 @@ function LogPanel({ onFixWithChat, onFixWithCli, cliName = 'Codex CLI' }: LogPan
         ) : (
           <StructuredProblems
             diagnostics={diagnostics}
+            fixing={fixing}
+            fixDisabled={Boolean(fixing) || compileStatus === 'compiling'}
+            onFix={(diagnostic) => void fixInline(diagnostic)}
             activeFilters={activeFilters}
             collapsedFiles={collapsedFiles}
             errorCount={errorCount}
@@ -208,6 +272,9 @@ function LogPanel({ onFixWithChat, onFixWithCli, cliName = 'Codex CLI' }: LogPan
 }
 
 interface StructuredProblemsProps {
+  fixing: Diagnostic | null
+  fixDisabled: boolean
+  onFix: (diagnostic: Diagnostic) => void
   diagnostics: Diagnostic[]
   activeFilters: Set<SeverityFilter>
   collapsedFiles: Set<string>
@@ -223,6 +290,9 @@ interface StructuredProblemsProps {
 
 const StructuredProblems = React.memo(function StructuredProblems({
   diagnostics,
+  fixing,
+  fixDisabled,
+  onFix,
   activeFilters,
   collapsedFiles,
   errorCount,
@@ -339,21 +409,43 @@ const StructuredProblems = React.memo(function StructuredProblems({
               </button>
               <div id={groupId} className="log-file-entries" hidden={isCollapsed}>
                 {items.map((d, i) => (
-                  <button
-                    type="button"
+                  <div
+                    className="log-entry-row"
                     key={`${d.line}:${d.column ?? 1}:${d.severity}:${d.message}:${i}`}
-                    className={`log-entry log-entry-${d.severity}`}
-                    onClick={() => onEntryClick(d)}
-                    aria-label={`${d.severity}, ${file}, ${t('logPanel.ln')} ${d.line}${d.column ? `:${d.column}` : ''}, ${d.message}`}
-                    title={file}
                   >
-                    <span className="log-entry-icon">{severityIcon(d.severity)}</span>
-                    <span className="log-entry-location">
-                      {t('logPanel.ln')} {d.line}
-                      {d.column ? `:${d.column}` : ''}
-                    </span>
-                    <span className="log-entry-message">{d.message}</span>
-                  </button>
+                    <button
+                      type="button"
+                      className={`log-entry log-entry-${d.severity}`}
+                      onClick={() => onEntryClick(d)}
+                      aria-label={`${d.severity}, ${file}, ${t('logPanel.ln')} ${d.line}${d.column ? `:${d.column}` : ''}, ${d.message}`}
+                      title={file}
+                    >
+                      <span className="log-entry-icon">{severityIcon(d.severity)}</span>
+                      <span className="log-entry-message">{d.message}</span>
+                      <span className="log-entry-location">
+                        {t('logPanel.ln')} {d.line}
+                        {d.column ? `:${d.column}` : ''}
+                      </span>
+                    </button>
+                    {d.severity !== 'info' && d.file && d.line > 0 && (
+                      <button
+                        type="button"
+                        className="log-inline-fix workspace-button"
+                        disabled={fixDisabled}
+                        onClick={() => onFix(d)}
+                        aria-label={t('logPanel.inlineFix')}
+                        aria-busy={fixing === d}
+                        title={t(fixing === d ? 'logPanel.inlineFixBusy' : 'logPanel.inlineFix')}
+                      >
+                        {fixing === d ? (
+                          <LoaderCircle className="spin" size={ICON_SIZE.compact} />
+                        ) : (
+                          <WandSparkles size={ICON_SIZE.compact} />
+                        )}
+                        {t('logPanel.inlineFix')}
+                      </button>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>

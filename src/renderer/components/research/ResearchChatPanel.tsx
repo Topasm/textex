@@ -1,3 +1,6 @@
+import { ReferenceEvidence } from './ReferenceEvidence'
+import { AiEditReview } from '../AiEditReview'
+import { currentAiEdit, isAiEditCompiled, type AiEditReviewData } from '../../services/aiEditReview'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { ICON_SIZE } from '../ui/IconSystem'
 import { useTranslation } from 'react-i18next'
@@ -119,6 +122,7 @@ interface SelectionChatContext {
 }
 
 interface LastAppliedDocumentEdit {
+  review: AiEditReviewData
   filePath: string
   fileName: string
   previousText: string
@@ -130,7 +134,6 @@ const DOCUMENT_CONTEXT_LIMIT = 24_000
 const HISTORY_LIMIT = 12
 const REFERENCE_SEARCH_QUERY_LIMIT = 512
 const PROMPT_QUEUE_LIMIT = 8
-const APPLIED_EDIT_NOTICE_MS = 10_000
 
 // Ids are stable; both the button copy and the prompt it inserts are
 // translated so the composer is filled in the author's language.
@@ -200,6 +203,18 @@ export function ResearchChatPanel({
   const sessionScopeRef = useRef<ResearchChatSessionScope | null>(null)
   const sessionMutationQueue = useRef<Promise<void>>(Promise.resolve())
   const composerInputRef = useRef<HTMLTextAreaElement>(null)
+  const toolsRef = useRef<HTMLDetailsElement>(null)
+
+  useEffect(() => {
+    const closeToolsOutside = (event: PointerEvent): void => {
+      const menu = toolsRef.current
+      if (menu?.open && event.target instanceof Node && !menu.contains(event.target)) {
+        menu.open = false
+      }
+    }
+    document.addEventListener('pointerdown', closeToolsOutside)
+    return () => document.removeEventListener('pointerdown', closeToolsOutside)
+  }, [])
   const messageEndRef = useRef<HTMLDivElement>(null)
   const shouldAutoScrollRef = useRef(true)
   const previousFilePath = useRef(filePath)
@@ -1103,19 +1118,23 @@ export function ResearchChatPanel({
 
         const fileName = activePath.split(/[\\/]/u).at(-1) || 'document'
 
-        // Offer a quick "check ✓ / undo" affordance instead of a discard
-        // review step — the previous text is enough to revert immediately.
-        const editToken = ++appliedEditToken.current
+        // Keep the revision-bound review available until another edit or dismissal.
+        ++appliedEditToken.current
         setLastAppliedEdit({
+          review: {
+            filePath: activePath,
+            projectRoot: root,
+            appliedSnapshot,
+            before: snapshot.text,
+            after: appliedSnapshot.text,
+            isCurrent: currentAiEdit(activePath, appliedSnapshot)
+          },
           filePath: activePath,
           fileName,
           previousText: snapshot.text,
           appliedSnapshot,
           usedAdapter
         })
-        setTimeout(() => {
-          if (appliedEditToken.current === editToken) setLastAppliedEdit(null)
-        }, APPLIED_EDIT_NOTICE_MS)
 
         if (compileAfterApply && onCompile) {
           setStatus(t('researchPanel.chat.appliedCompiling', { file: fileName }))
@@ -1123,7 +1142,8 @@ export function ResearchChatPanel({
           if (!isCurrentAction(generation, root)) return
           const compileStatus = useCompileStore.getState().compileStatus
           setStatus(
-            compileStatus === 'success'
+            currentAiEdit(activePath, appliedSnapshot)() &&
+              isAiEditCompiled(appliedSnapshot, useCompileStore.getState())
               ? t('researchPanel.chat.appliedCompiled', { file: fileName })
               : compileStatus === 'error'
                 ? t('researchPanel.chat.appliedCompileFailed', { file: fileName })
@@ -1438,6 +1458,14 @@ export function ResearchChatPanel({
                             <b>{source.label}</b>
                             <small>{source.citekey ? `@${source.citekey}` : source.source}</small>
                           </div>
+                          <details className="research-chat-source-evidence">
+                            <summary>{t('referenceEvidence.show')}</summary>
+                            <ReferenceEvidence
+                              citekey={source.citekey}
+                              abstract={source.onlineReference?.abstract}
+                              url={source.onlineReference?.url}
+                            />
+                          </details>
                           <div className="research-chat-source-actions">
                             {source.referenceSource === 'online' && source.onlineReference && (
                               <button
@@ -1536,14 +1564,12 @@ export function ResearchChatPanel({
       </div>
 
       {lastAppliedEdit && (
-        <div className="research-chat-applied-notice" role="status">
-          <ShieldCheck size={ICON_SIZE.micro} aria-hidden="true" />
-          <span>{t('researchPanel.chat.editApplied', { file: lastAppliedEdit.fileName })}</span>
-          <button type="button" onClick={undoLastAppliedEdit}>
-            <RotateCcw size={ICON_SIZE.micro} aria-hidden="true" />
-            {t('researchPanel.chat.undo')}
-          </button>
-        </div>
+        <AiEditReview
+          key={`${lastAppliedEdit.review.projectRoot}:${lastAppliedEdit.filePath}:${lastAppliedEdit.appliedSnapshot.revision}`}
+          edit={lastAppliedEdit.review}
+          onUndo={undoLastAppliedEdit}
+          onCompile={onCompile}
+        />
       )}
 
       {pendingZoteroPlan && (
@@ -1807,7 +1833,23 @@ export function ResearchChatPanel({
                 <Slash size={ICON_SIZE.micro} aria-hidden="true" />{' '}
                 {t('researchPanel.chat.commands')}
               </button>
-              <details className="research-chat-tools">
+              <details
+                ref={toolsRef}
+                className="research-chat-tools"
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape' && event.currentTarget.open) {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    event.currentTarget.open = false
+                    event.currentTarget.querySelector('summary')?.focus()
+                  }
+                }}
+                onBlur={(event) => {
+                  if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                    event.currentTarget.open = false
+                  }
+                }}
+              >
                 <summary>
                   <Wrench size={ICON_SIZE.micro} aria-hidden="true" />{' '}
                   {t('researchPanel.chat.tools')}

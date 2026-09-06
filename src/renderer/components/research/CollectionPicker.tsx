@@ -81,7 +81,17 @@ export function CollectionPicker({
   }, [onOpenChange, open])
 
   return (
-    <div className="zotero-collection-picker" ref={rootRef}>
+    <div
+      className="zotero-collection-picker"
+      ref={rootRef}
+      onKeyDown={(event) => {
+        if (event.key !== 'Escape' || !open) return
+        event.preventDefault()
+        event.stopPropagation()
+        onOpenChange(false)
+        triggerRef.current?.focus()
+      }}
+    >
       <button
         ref={triggerRef}
         type="button"
@@ -104,16 +114,7 @@ export function CollectionPicker({
       </button>
 
       {open && (
-        <div
-          id={popoverId}
-          className="zotero-collection-popover"
-          onKeyDown={(event) => {
-            if (event.key !== 'Escape') return
-            event.preventDefault()
-            onOpenChange(false)
-            triggerRef.current?.focus()
-          }}
-        >
+        <div id={popoverId} className="zotero-collection-popover">
           <div
             className="zotero-collection-tree"
             role="tree"

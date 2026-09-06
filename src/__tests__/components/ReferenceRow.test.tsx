@@ -7,6 +7,10 @@ import { invalidateZoteroItemDetails } from '../../renderer/services/zoteroItemD
 import { useEditorStore } from '../../renderer/store/useEditorStore'
 import type { BibEntry, ZoteroCollectionItem } from '../../shared/types'
 
+vi.mock('../../renderer/components/research/CitationEvidencePanel', () => ({
+  default: () => <textarea aria-label="Evidence excerpt" />
+}))
+
 const entry: BibEntry = {
   key: 'zhang2025laps',
   type: 'article',
@@ -130,6 +134,14 @@ describe('ReferenceRow', () => {
     expect(screen.getByRole('menuitem', { name: 'Add to bibliography' })).toBeDisabled()
   })
 
+  it('keeps secondary actions available through the visible More button', () => {
+    const { onAddToBibliography, onToggleExpanded } = renderRow('zotero', true)
+    fireEvent.click(screen.getByRole('button', { name: `Actions for ${item.title}` }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Add to bibliography' }))
+    expect(onAddToBibliography).toHaveBeenCalledOnce()
+    expect(onToggleExpanded).not.toHaveBeenCalled()
+  })
+
   it('loads the abstract once when expanded and reuses the cache afterwards', async () => {
     const view = renderRow('zotero', true).view
 
@@ -159,3 +171,52 @@ function within(menu: HTMLElement, name: string): HTMLElement {
   if (!(item instanceof HTMLElement)) throw new Error(`No menu item named ${name}`)
   return item
 }
+
+it('connects a citation to its current passage and hides stale line excerpts', () => {
+  useEditorStore.getState().resetEditor()
+  useEditorStore
+    .getState()
+    .openFileInTab('/project/main.tex', 'A supported claim \\cite{zhang2025laps}.')
+  const row = {
+    ...rowFor('project'),
+    citationCount: 1,
+    citationLocations: [{ file: '/project/main.tex', line: 1 }]
+  }
+  const open = vi.fn()
+  render(
+    <ReferenceRow
+      row={row}
+      projectRoot="/project"
+      port={23119}
+      expanded
+      busy={false}
+      zoteroState="ready"
+      onToggleExpanded={vi.fn()}
+      onCite={vi.fn()}
+      onAddToBibliography={vi.fn()}
+      onAddAndCite={vi.fn()}
+      onOpenInZotero={vi.fn()}
+      onOpenLocation={open}
+      onFindSource={vi.fn()}
+    />
+  )
+  expect(screen.getByText('A supported claim \\cite{zhang2025laps}.')).toBeVisible()
+  fireEvent.click(screen.getByRole('button', { name: /main.tex:1/ }))
+  expect(open).toHaveBeenCalledWith({ file: '/project/main.tex', line: 1 })
+  act(() => {
+    useEditorStore.getState().updateActiveDocument('Unrelated replacement')
+  })
+  expect(screen.queryByText('A supported claim \\cite{zhang2025laps}.')).not.toBeInTheDocument()
+  expect(screen.queryByText('Unrelated replacement')).not.toBeInTheDocument()
+})
+
+it('keeps evidence text selection and typing independent of the reference row actions', async () => {
+  const { row, onToggleExpanded } = renderRow('project', true)
+  fireEvent.click(screen.getByRole('button', { name: 'Link PDF evidence' }))
+  const excerpt = await screen.findByRole('textbox', { name: 'Evidence excerpt' })
+  expect(row).toHaveAttribute('draggable', 'false')
+  expect(fireEvent.keyDown(excerpt, { key: ' ' })).toBe(true)
+  expect(fireEvent.keyDown(excerpt, { key: 'Enter' })).toBe(true)
+  expect(fireEvent.contextMenu(excerpt)).toBe(true)
+  expect(onToggleExpanded).not.toHaveBeenCalled()
+})

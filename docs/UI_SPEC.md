@@ -86,12 +86,12 @@ ErrorBoundary
 ### `ResearchPanel.tsx`
 
 - Resizable and collapsible right-side panel, persisted per project and closed by default.
-- On desktop its navigation rail occupies the right end of the 40 px title-bar row, while the
-  document page/zoom controls retain their existing toolbar group to the left. Below 1200 px the
-  panel returns below the title bar as a compact overlay so window controls remain reachable.
-- Left Navigator and right Research navigation are both icon-only. Every icon remains a named
-  button/tab through `aria-label` and `title`; active state uses the same accent underline rather
-  than mixing labelled and unlabelled top-level navigation.
+- On desktop its navigation rail occupies the right end of the 40 px title-bar row. PDF page,
+  zoom, source synchronization and search controls belong to the sticky PDF toolbar inside the
+  preview. The global toolbar contains document/project actions. Below 1200 px the Research
+  panel returns below the title bar as an overlay so window controls remain reachable.
+- Left Navigator and right Research tabs display icons and text labels, with accessible names
+  and the same active underline.
 - Uses an overlay with backdrop and Escape dismissal below 1200 px.
 - Visited tabs remain mounted while the panel is open, so Chat requests, queued prompts, draft
   text, and the Zotero inventory survive tab switches without repeating native work.
@@ -268,6 +268,12 @@ ErrorBoundary
   - Severity filter buttons (errors/warnings/info) to toggle visibility.
   - Problem count shown in tab label: `Problems (5)`.
   - Click any diagnostic to jump editor to that line.
+  - Each located error or warning offers **Fix**, using the configured AI provider
+    inside the app. It replaces at most 21 source lines around the diagnostic in
+    the editor buffer, then offers **Undo**. Changes remain unsaved for review;
+    compile again to verify them (normal auto-compile settings still apply).
+    Project, tab, document, and compile changes invalidate pending results. Invalid
+    or unchanged AI responses do not modify the source. AI must be enabled in Settings.
 - Header actions can prefill Research Chat or launch the configured Claude Code/Codex CLI with bounded,
   shell-safe diagnostic and raw-log context.
 - "Clear" resets the bounded log content.
@@ -495,3 +501,69 @@ Components subscribe with fine-grained selectors; there is no monolithic `useApp
   discards asynchronous reads superseded by another open, project, or tab change.
 - The top bar has no permanent search input. Search bars and the palette remain
   reachable by mouse as well as keyboard.
+
+### Applied AI edits and citation support
+
+- Chat document edits and inline diagnostic Fix share a persistent review card: before/after,
+  revision-bound Undo, and Compile to check. Applying text is not reported as verification.
+  Successful verification requires a successful PDF compile for the same document revision.
+  A later edit invalidates the card; included files without matching compile provenance remain
+  unverified. Compilation success does not verify factual claims or citation support.
+- Reference details show current open-buffer citation passages next to file/line navigation.
+  A passage is shown only while that line still contains the citation key. Closed files retain
+  navigation without showing a potentially stale excerpt.
+- Reference details and Chat source cards explicitly distinguish abstract context from metadata
+  alone. Original HTTP(S) source links can be opened for inspection; neither state claims verified
+  full-text/page evidence. Project PDFs can be inspected through the PDF citation evidence flow below.
+
+### PDF citation evidence
+
+- References with a citation key expose **Link PDF evidence** in the reference details and Chat
+  source cards. The section loads on demand; opening ordinary reference metadata does not parse PDFs.
+- Expanded reference cards allow text selection and editing; collapsed cards retain reference drag
+  and drop. Keyboard input in evidence fields does not trigger the parent card navigation.
+- Choose a PDF already inside the project and a physical PDF page number (1-based, not a printed
+  page label). The extracted page text supports selecting an excerpt; an editable excerpt must
+  match that page after Unicode compatibility and whitespace normalization. No fuzzy matching or
+  AI-generated quotations are used.
+- Saving re-reads the PDF and checks its SHA-256 before adding the citekey, relative PDF path, page,
+  excerpt, hash and save time to `citation-evidence.json` in the project root. Invalid existing evidence files
+  are never replaced. In-app writes are serialized. The file can be tracked with the project.
+- Saved excerpts start as **not rechecked** when reopened. **Open page and recheck** reads the source
+  again and reports changed bytes or a matching excerpt; it also displays the page text. Removing
+  an excerpt removes only that evidence record, leaving the reference and PDF intact.
+- A text match records that the excerpt occurred in the source at the last check; it does not prove
+  that the source supports an author's claim. Scanned PDFs without text need external OCR, and
+  encrypted/unsupported PDFs report an error. Each read is limited to a single page, at most
+  100,000 extracted characters and a 24 MB base64 transfer; each excerpt is limited to 4,000
+  characters and the evidence file to 500 entries.
+- Every PDF read and evidence write uses `DesktopApi` with native project/symlink containment.
+  Changing projects or closing the section cancels pending work and releases PDF resources.
+
+### Workspace alignment and control density
+
+- `workspace-controls.css` follows the theme/responsive styles and owns workspace control geometry:
+  40 px headers (including their borders), 28 px icon buttons, and 32 px form/action controls.
+- The PDF toolbar stays on one line. Its search button stays mounted, and search opens in a
+  width-bounded popover below the toolbar without moving the PDF canvas. Escape restores focus
+  to the search button. Search inputs and internal arrows share one outer boundary.
+- Diagnostic rows allocate a flexible message column and a fixed Fix column. The severity icon,
+  first text line and Fix control align; source line metadata sits beneath the message. A busy
+  Fix keeps the same width and exposes its busy state accessibly.
+- AI edit cards place filename, Undo and Check in one header, with verification status below and
+  before/after content collapsed by default. Short/icon labels retain descriptive accessible names.
+- Expanded reference titles wrap fully. Metadata and details follow the title content column;
+  location navigation is separate from the selectable citation passage. Primary citation actions,
+  Chat and More form one stable row; secondary operations remain available in the context menu.
+- Evidence forms put the page number and Read action together. Page text can be collapsed, scope
+  explanation is disclosed on demand, and a successful save closes the excerpt editor and restores
+  focus to Read. Saved records use a compact recheck/delete action row.
+- Chromium/WebKit browser coverage uses production styles and checks narrow PDF search geometry,
+  compact card alignment, themes, keyboard focus, and absence of horizontal overflow.
+- Reference manager controls give the collection trigger its own full-width row at panel widths
+  up to 420 px. Sorting and secondary icons share the next row; the collection popover uses the
+  entire toolbar width. Escape closes it from both the trigger and the tree. Health and inventory
+  summaries use spacing instead of nested boxes, and search uses a single 32 px control boundary.
+- Chat model selection, Stop and Send share a 32 px baseline. The composer uses one outer surface
+  without internal separator lines. Auxiliary tools open within the composer width, with actions
+  in a vertical list; Escape returns focus to Tools, and outside pointer/focus closes the popover.

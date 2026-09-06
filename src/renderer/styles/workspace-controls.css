@@ -1,0 +1,676 @@
+/* Workspace geometry and controls. Loaded after theme and responsive layers. */
+:root {
+  --app-toolbar-height: 40px;
+  --workspace-icon-button-size: 28px;
+  --workspace-control-height: 32px;
+}
+
+.workspace-button,
+.reference-row .reference-card-actions > button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+  min-width: 0;
+  height: var(--workspace-control-height);
+  padding: 0 var(--space-10);
+  color: var(--text-primary);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--ui-radius-control);
+  font: inherit;
+  font-size: var(--font-md);
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.workspace-button:hover:not(:disabled),
+.reference-row .reference-card-actions > button:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+.workspace-button:disabled,
+.reference-row .reference-card-actions > button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.workspace-button:focus-visible,
+.reference-row .reference-card-actions > button:focus-visible {
+  outline: 2px solid var(--ui-focus-ring);
+  outline-offset: 2px;
+}
+.workspace-button-primary {
+  color: var(--accent-contrast);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.workspace-button-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+.workspace-button-quiet {
+  border-color: transparent;
+  color: var(--text-secondary);
+}
+.workspace-button-icon,
+.reference-row .reference-card-actions > .workspace-button-icon {
+  flex: 0 0 var(--workspace-icon-button-size);
+  width: var(--workspace-icon-button-size);
+  height: var(--workspace-icon-button-size);
+  padding: 0;
+  border-color: transparent;
+}
+
+/* Borders are included in the common header height. */
+.panel-tabs,
+.tab-bar,
+.pdf-toolbar,
+.log-panel-header {
+  box-sizing: border-box;
+  height: var(--app-toolbar-height);
+  min-height: var(--app-toolbar-height);
+  flex-shrink: 0;
+}
+.panel-tabs > button {
+  height: 100%;
+  min-height: 0;
+}
+.panel-tabs > [role='tab'] {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-inline: var(--space-4);
+}
+.sidebar-tab-label,
+.research-panel-tab-label {
+  position: static;
+  width: auto;
+  height: auto;
+  margin: 0;
+  clip: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.toolbar-research-toggle {
+  gap: var(--space-4);
+  width: auto;
+  padding-inline: var(--space-8);
+}
+
+/* The search popover never participates in page or toolbar layout. */
+.pdf-toolbar {
+  display: flex;
+  position: relative;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--space-6);
+  min-width: 0;
+  padding: 0 var(--space-8);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  z-index: 20;
+}
+.pdf-toolbar-title {
+  font-size: var(--font-md);
+  color: var(--text-secondary);
+}
+.pdf-toolbar .toolbar-sync-controls,
+.pdf-toolbar .toolbar-pdf-controls {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--space-2);
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+.pdf-toolbar .toolbar-compact-btn,
+.pdf-toolbar .local-search-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--workspace-icon-button-size);
+  min-height: 0;
+  padding-block: 0;
+}
+.pdf-toolbar .toolbar-page-input {
+  height: var(--workspace-icon-button-size);
+}
+.pdf-toolbar-search {
+  flex: 0 0 var(--workspace-icon-button-size);
+  width: var(--workspace-icon-button-size);
+  height: var(--workspace-icon-button-size);
+  margin-left: auto;
+}
+.pdf-toolbar-search .local-search-toggle {
+  position: static;
+  width: 100%;
+  margin: 0;
+  border-color: transparent;
+  background: transparent;
+}
+.pdf-toolbar-search .local-search-toggle[aria-expanded='true'] {
+  background: var(--ui-selected-bg);
+  color: var(--text-primary);
+}
+.pdf-toolbar-search .local-search-bar {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: var(--space-8);
+  width: min(360px, calc(100% - 16px));
+  max-width: calc(100% - 16px);
+  margin: 0;
+  box-shadow: var(--ui-shadow-popover);
+}
+.local-search-bar {
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+}
+.local-search-bar input {
+  height: var(--workspace-icon-button-size);
+  min-width: 0;
+  border-color: transparent;
+  background: transparent;
+}
+.local-search-bar button {
+  flex: 0 0 var(--workspace-icon-button-size);
+  width: var(--workspace-icon-button-size);
+  height: var(--workspace-icon-button-size);
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+}
+.local-search-bar button:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+.local-search-bar [role='status'] {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.preview-container > .pdf-toolbar {
+  position: sticky;
+  top: -16px;
+  margin: -16px -16px 12px;
+}
+
+/* Keep header labels on one baseline; narrow panel rules hide the duplicate title. */
+.log-panel-header > #log-panel-title {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.log-panel-header .log-actions {
+  flex-shrink: 0;
+}
+.log-view-tabs button {
+  white-space: nowrap;
+}
+
+/* Message text gets the available width; actions align with its first line. */
+.log-entry-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px;
+  align-items: start;
+  gap: var(--space-6);
+  padding: var(--space-6) var(--space-12);
+}
+.log-entry-row > .log-entry {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: start;
+  min-width: 0;
+  padding: var(--space-4) 0;
+  gap: var(--space-4) var(--space-8);
+  font-family: inherit;
+  font-size: var(--font-md);
+  line-height: 1.5;
+}
+.log-entry-icon {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+}
+.log-entry-message {
+  grid-column: 2;
+}
+.log-entry-location {
+  grid-column: 2;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  font-variant-numeric: tabular-nums;
+}
+.log-entry-row .log-inline-fix {
+  height: var(--workspace-icon-button-size);
+  width: 64px;
+  padding: 0 var(--space-6);
+  color: var(--accent);
+}
+
+.ai-edit-review {
+  min-width: 0;
+  margin: var(--space-8);
+  padding: var(--space-10);
+  border: 1px solid var(--border);
+  border-radius: var(--ui-radius-panel);
+  font-size: var(--font-md);
+}
+.ai-edit-review-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+.ai-edit-review-header > strong {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ai-edit-review-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+.ai-edit-review p {
+  margin: var(--space-6) 0;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.ai-edit-review pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 180px;
+  overflow: auto;
+  padding: var(--space-6);
+  background: var(--bg-secondary);
+}
+.ai-edit-review summary,
+.workspace-disclosure summary,
+.citation-evidence-page-preview summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: var(--font-md);
+  line-height: 1.5;
+}
+
+/* Reference metadata follows the title's content column. */
+.reference-row-meta {
+  margin-left: 20px;
+  font-size: var(--font-sm);
+}
+.reference-row.expanded .reference-row-head {
+  align-items: start;
+}
+.reference-row.expanded .reference-row-head strong {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+.reference-row-detail {
+  margin-left: 20px;
+  padding-top: 0;
+  border-top: 0;
+  gap: var(--space-12);
+}
+.reference-row.expanded .reference-card-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--space-4);
+  max-height: none;
+  opacity: 1;
+  overflow: visible;
+  pointer-events: auto;
+  transform: none;
+}
+.reference-row .reference-card-actions > button:first-child {
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+.reference-row .reference-card-actions > button > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.reference-evidence {
+  min-width: 0;
+}
+.reference-evidence .research-muted {
+  margin: 0 0 var(--space-8);
+  line-height: 1.5;
+}
+.reference-evidence-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+.reference-evidence-actions > .workspace-button:not(.workspace-button-icon) {
+  flex: 1 1 auto;
+  white-space: normal;
+  line-height: 1.25;
+}
+.reference-evidence blockquote {
+  margin: var(--space-8) 0;
+  padding-left: var(--space-10);
+  border-left: 2px solid var(--border);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.reference-citation-locations {
+  display: grid;
+  gap: var(--space-8);
+}
+.reference-citation-location {
+  min-width: 0;
+}
+.reference-citation-location > button {
+  max-width: 100%;
+  height: var(--workspace-icon-button-size);
+  padding-inline: 0;
+  font-size: var(--font-sm);
+}
+.reference-citation-passage {
+  display: block;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: var(--font-md);
+  line-height: 1.5;
+  margin-top: var(--space-2);
+}
+.research-chat-source-card {
+  flex-wrap: wrap;
+}
+.research-chat-source-evidence {
+  flex-basis: 100%;
+  order: 1;
+}
+
+.citation-evidence-panel {
+  display: grid;
+  gap: var(--space-12);
+  width: 100%;
+  min-width: 0;
+  padding-top: var(--space-12);
+  font-size: var(--font-md);
+}
+.citation-evidence-panel p {
+  margin: 0;
+  line-height: 1.5;
+}
+.citation-evidence-panel label {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.citation-evidence-panel select,
+.citation-evidence-panel input,
+.citation-evidence-panel textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  padding: var(--space-6);
+  border-radius: var(--ui-radius-control);
+  font: inherit;
+}
+.citation-evidence-panel select,
+.citation-evidence-panel input {
+  height: var(--workspace-control-height);
+}
+.citation-evidence-file-field {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--space-8);
+}
+.citation-evidence-page-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-8);
+}
+.citation-evidence-page-controls > label {
+  grid-template-columns: minmax(0, auto) minmax(36px, 64px);
+  align-items: center;
+  gap: var(--space-8);
+}
+.citation-evidence-page-controls > button {
+  margin-left: auto;
+}
+.citation-evidence-panel textarea {
+  min-height: 84px;
+  resize: vertical;
+  line-height: 1.5;
+}
+.citation-evidence-panel textarea[readonly] {
+  min-height: 160px;
+}
+.citation-evidence-page-preview > label {
+  margin-top: var(--space-8);
+}
+.citation-evidence-save {
+  justify-self: end;
+}
+.citation-evidence-record {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.citation-evidence-record + .citation-evidence-record {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-12);
+}
+.citation-evidence-record > strong {
+  display: block;
+  font-size: var(--font-md);
+  font-weight: 500;
+}
+.citation-evidence-record-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-8);
+}
+.citation-evidence-record-actions > .workspace-button-icon {
+  margin-left: auto;
+}
+.citation-evidence-record-actions > button {
+  padding-inline: var(--space-6);
+}
+
+/* Keep the collection name useful before allocating space to secondary controls. */
+.research-config-row {
+  position: relative;
+  flex-wrap: wrap;
+}
+.research-config-row > .zotero-collection-picker {
+  position: static;
+  flex-basis: 160px;
+}
+.research-config-row .reference-sort-select,
+.zotero-collection-trigger {
+  height: var(--workspace-control-height);
+}
+.research-config-row > button {
+  flex: 0 0 var(--workspace-icon-button-size);
+  width: var(--workspace-icon-button-size);
+  height: var(--workspace-icon-button-size);
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+}
+.research-config-row > button:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+.zotero-collection-trigger > svg,
+.reference-manager-secondary-header svg {
+  flex-shrink: 0;
+}
+.research-config-row .zotero-collection-popover {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+}
+.reference-health {
+  padding: var(--space-8) 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+.reference-health-heading small {
+  flex: 0 1 auto;
+  overflow-wrap: anywhere;
+}
+.reference-health-filters > button {
+  flex: 0 0 auto;
+  min-height: var(--workspace-icon-button-size);
+  padding: var(--space-4) var(--space-6);
+  border-color: transparent;
+  border-radius: var(--ui-radius-control);
+  white-space: nowrap;
+}
+.reference-health-filters > button:hover {
+  background: var(--bg-hover);
+}
+.reference-health-issues-toggle {
+  align-self: flex-start;
+  min-height: var(--workspace-icon-button-size);
+  padding: 0 var(--space-6);
+  color: var(--warning);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--ui-radius-control);
+  font: inherit;
+  font-size: var(--font-sm);
+  cursor: pointer;
+}
+html .research-reference-view .research-search {
+  height: var(--workspace-control-height);
+  padding: 0 var(--space-2) 0 var(--space-8);
+  gap: var(--space-4);
+}
+.research-reference-view .research-search input {
+  width: 0;
+  height: 100%;
+  padding: 0;
+  font: inherit;
+  font-size: var(--font-md);
+}
+.research-reference-view .research-search > button {
+  display: inline-flex;
+  flex: 0 0 var(--workspace-icon-button-size);
+  align-items: center;
+  justify-content: center;
+  width: var(--workspace-icon-button-size);
+  height: var(--workspace-icon-button-size);
+  padding: 0;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 0;
+  border-radius: var(--ui-radius-control);
+  cursor: pointer;
+}
+.research-reference-view .research-search > button:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+.research-reference-view .research-search > button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.reference-manager-secondary-header {
+  min-height: var(--app-toolbar-height);
+  flex-wrap: wrap;
+  padding-block: var(--space-4);
+}
+.reference-manager-secondary-header > button {
+  min-height: var(--workspace-icon-button-size);
+  font: inherit;
+  text-align: left;
+}
+
+/* One input surface; spacing separates model selection from auxiliary tools. */
+.research-chat-composer {
+  border-top: 0;
+}
+.research-chat-execution-bar,
+.research-chat-composer-footer {
+  gap: var(--space-6);
+  padding: var(--space-4) var(--space-6);
+  border-top: 0;
+}
+.research-chat-model-selector {
+  flex: 1 1 0;
+  max-width: none;
+}
+.research-chat-model-selector select {
+  height: var(--workspace-control-height);
+  font-size: var(--font-sm);
+}
+.research-chat-mode {
+  padding-inline: var(--space-4);
+  border: 0;
+}
+.research-chat-execution-bar .research-chat-send,
+.research-chat-execution-bar .research-chat-stop {
+  width: var(--workspace-control-height);
+  height: var(--workspace-control-height);
+  margin-left: 0;
+}
+.research-chat-composer-footer {
+  position: relative;
+}
+.research-chat-footer-button,
+.research-chat-tools > summary {
+  height: var(--workspace-icon-button-size);
+  min-height: var(--workspace-icon-button-size);
+  font-size: var(--font-sm);
+  white-space: nowrap;
+}
+.research-chat-tools {
+  position: static;
+}
+.research-chat-tools-popover {
+  left: 0;
+  width: min(320px, 100%);
+}
+.research-chat-tools-popover .research-action-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+.research-chat-tools-popover .research-action-grid button {
+  min-height: var(--workspace-control-height);
+  justify-content: flex-start;
+  font-size: var(--font-sm);
+}
+.research-chat-tools-popover .research-action-grid button svg {
+  flex-shrink: 0;
+}
+.research-config-row :is(button, select):focus-visible,
+.reference-health button:focus-visible,
+.research-search > button:focus-visible,
+.research-chat-composer :is(button, summary, select):focus-visible {
+  outline: 2px solid var(--ui-focus-ring);
+  outline-offset: 2px;
+}
+
+@container panel (max-width: 420px) {
+  .research-config-row > .zotero-collection-picker {
+    flex: 1 0 100%;
+  }
+  .research-config-row .reference-sort-select {
+    flex: 1;
+    min-width: 0;
+    max-width: none;
+    margin-right: auto;
+  }
+}
+
+.research-reference-view .zotero-inventory-summary {
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}

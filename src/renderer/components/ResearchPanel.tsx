@@ -415,6 +415,7 @@ export function ResearchPanel({
             hidden={tab !== 'problems'}
           >
             <LogPanel
+              onCompile={onCompile}
               onFixWithChat={(prompt) => useProjectStore.getState().queueChatPrompt(prompt)}
               onFixWithCli={openRepairCli}
               cliName={repairCliName}
