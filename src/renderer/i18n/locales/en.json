@@ -429,6 +429,7 @@
     "bands": "Bands"
   },
   "fileTree": {
+    "actionsFor": "Actions for {{name}}",
     "noFolder": "No folder open",
     "newFile": "New File",
     "newFolder": "New Folder",

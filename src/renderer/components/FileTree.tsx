@@ -1,3 +1,4 @@
+import { useFileTreeMenu } from './ui/useFileTreeMenu'
 import { memo, useState, useCallback, useRef, useEffect, useLayoutEffect, useMemo } from 'react'
 import type { ReactNode } from 'react'
 import {
@@ -254,20 +255,6 @@ function FileTreeNode({ entry, depth, gitFiles, onChanged, showGenerated }: File
     }
   }, [])
 
-  const handleContextMenu = useCallback(
-    (e: React.MouseEvent) => {
-      if (entry.type !== 'directory') return
-      e.preventDefault()
-      e.stopPropagation()
-      // Expand if not already
-      if (!expanded) {
-        if (!children) loadChildren()
-        setExpanded(true)
-      }
-    },
-    [entry.type, expanded, children, loadChildren]
-  )
-
   const handleCreateFile = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation()
@@ -331,8 +318,8 @@ function FileTreeNode({ entry, depth, gitFiles, onChanged, showGenerated }: File
   )
 
   const handleDelete = useCallback(
-    async (event: React.MouseEvent) => {
-      event.stopPropagation()
+    async (event?: React.MouseEvent) => {
+      event?.stopPropagation()
       try {
         const result = await deleteFileTreeEntry(entry, () =>
           window.confirm(t('fileTree.confirmDelete', { name: entry.name }))
@@ -346,6 +333,19 @@ function FileTreeNode({ entry, depth, gitFiles, onChanged, showGenerated }: File
     },
     [entry, onChanged, t]
   )
+
+  const fileMenu = useFileTreeMenu(entry, {
+    create: (kind) => {
+      if (!expanded) {
+        if (!children) void loadChildren()
+        setExpanded(true)
+      }
+      setCreatingType(kind)
+    },
+    rename: () => setRenaming(true),
+    delete: () => handleDelete(),
+    activate: handleClick
+  })
 
   const isSelected = entry.path === activeFilePath
   const gitDeco = entry.type === 'file' ? getGitFileDecoration(entry.path, gitFiles) : null
@@ -369,7 +369,10 @@ function FileTreeNode({ entry, depth, gitFiles, onChanged, showGenerated }: File
         className={`file-tree-item${isSelected ? ' selected' : ''}${isImage ? ' draggable-image' : ''}${entry.type === 'directory' ? ' is-directory' : ''}`}
         style={{ paddingLeft: `${8 + depth * 16}px` }}
         onClick={handleClick}
-        onContextMenu={handleContextMenu}
+        onContextMenu={fileMenu.onContextMenu}
+        onKeyDown={fileMenu.onKeyDown}
+        tabIndex={0}
+        aria-haspopup="menu"
         draggable={isImage}
         onDragStart={handleDragStart}
         onMouseEnter={handleMouseEnter}
@@ -437,6 +440,7 @@ function FileTreeNode({ entry, depth, gitFiles, onChanged, showGenerated }: File
         </span>
         {gitDeco && <span className={`file-tree-git ${gitDeco.className}`}>{gitDeco.label}</span>}
       </div>
+      {fileMenu.menu}
       {hoverPreview && (
         <ImagePreviewTooltip
           filePath={entry.path}
@@ -546,8 +550,8 @@ const ProjectFileTreeRow = memo(function ProjectFileTreeRow({
   )
 
   const handleDelete = useCallback(
-    async (event: React.MouseEvent) => {
-      event.stopPropagation()
+    async (event?: React.MouseEvent) => {
+      event?.stopPropagation()
       try {
         const result = await deleteFileTreeEntry(entry, () =>
           window.confirm(t('fileTree.confirmDelete', { name: entry.name }))
@@ -582,6 +586,13 @@ const ProjectFileTreeRow = memo(function ProjectFileTreeRow({
     []
   )
 
+  const fileMenu = useFileTreeMenu(entry, {
+    create: (kind) => onCreate(row, kind),
+    rename: () => setRenaming(true),
+    delete: () => handleDelete(),
+    activate: handleClick
+  })
+
   if (renaming) {
     return (
       <div className="file-tree-virtual-row" style={{ height: FILE_TREE_ROW_HEIGHT }}>
@@ -605,11 +616,10 @@ const ProjectFileTreeRow = memo(function ProjectFileTreeRow({
         className={`file-tree-item${isActiveFile ? ' selected' : ''}${isImage ? ' draggable-image' : ''}${entry.type === 'directory' ? ' is-directory' : ''}`}
         style={{ paddingLeft: `${8 + depth * 16}px`, height: FILE_TREE_ROW_HEIGHT }}
         onClick={() => void handleClick()}
-        onContextMenu={(event) => {
-          if (entry.type !== 'directory') return
-          event.preventDefault()
-          if (!expanded) onToggle(entry.relativePath)
-        }}
+        onContextMenu={fileMenu.onContextMenu}
+        onKeyDown={fileMenu.onKeyDown}
+        tabIndex={0}
+        aria-haspopup="menu"
         draggable={isImage}
         onDragStart={(event) => {
           if (!isImage) return
@@ -687,6 +697,7 @@ const ProjectFileTreeRow = memo(function ProjectFileTreeRow({
         </span>
         {gitDeco && <span className={`file-tree-git ${gitDeco.className}`}>{gitDeco.label}</span>}
       </div>
+      {fileMenu.menu}
       {hoverPreview && (
         <ImagePreviewTooltip
           filePath={entry.path}

@@ -1,3 +1,4 @@
+import type { NativeContextMenuRequest } from '../../shared/contextMenu'
 import {
   AppCommandId,
   AiCliStatus,
@@ -97,6 +98,12 @@ export type WindowResizeDirection =
 
 /** Typed renderer boundary implemented by the Tauri adapter. */
 export interface DesktopApi {
+  /** Resolves when the OS menu closes; activation may arrive on a separate event channel. */
+  showContextMenu(
+    request: NativeContextMenuRequest,
+    onSelect: (id: string) => void,
+    signal?: AbortSignal
+  ): Promise<void>
   // File System
   openFile(): Promise<OpenFileResult | null>
   saveFile(content: string, filePath: string): Promise<SaveResult>

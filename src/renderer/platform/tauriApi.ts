@@ -1,3 +1,6 @@
+import { CONTEXT_MENU_EVENT, CONTEXT_MENU_ID_PREFIX } from '../../shared/contextMenu'
+import { Menu } from '@tauri-apps/api/menu'
+import { LogicalPosition } from '@tauri-apps/api/dpi'
 import {
   Channel,
   invoke as invokeNative,
@@ -47,6 +50,61 @@ function invoke<T>(
   return invokeNative<T>(cmd, ...rest).catch((error: unknown) => {
     throw normalizeNativeError(error)
   })
+}
+
+// Menu activation and popup dismissal arrive independently. Keep one bounded
+// dispatcher, with unique IDs so delayed events cannot target a newer menu.
+let contextMenuSequence = 0
+let contextMenuQueue: Promise<void> = Promise.resolve()
+let contextMenuListener: Promise<UnlistenFn> | null = null
+let contextMenuSelection: ((id: string) => void) | null = null
+const showContextMenu: DesktopApi['showContextMenu'] = (request, onSelect, signal) => {
+  if (!Number.isFinite(request.x) || !Number.isFinite(request.y) || request.items.length > 64) {
+    return Promise.reject(new Error('Invalid context menu'))
+  }
+  const sequence = ++contextMenuSequence
+  const items = request.items.map((item, index) => ({
+    nativeId: `${CONTEXT_MENU_ID_PREFIX}${sequence}.${index}`,
+    ...item
+  }))
+  const show = async () => {
+    if (sequence !== contextMenuSequence || signal?.aborted) return
+    if (!contextMenuListener) {
+      contextMenuListener = listen<string>(CONTEXT_MENU_EVENT, ({ payload }) => {
+        contextMenuSelection?.(payload)
+      }).catch((error: unknown) => {
+        contextMenuListener = null
+        throw error
+      })
+    }
+    await contextMenuListener
+    if (sequence !== contextMenuSequence || signal?.aborted) return
+    let selected = false
+    contextMenuSelection = (id) => {
+      const item = items.find((item) => item.nativeId === id)
+      if (sequence !== contextMenuSequence || signal?.aborted || selected || !item || item.disabled)
+        return
+      selected = true
+      onSelect(item.id)
+    }
+    const menu = await Menu.new({
+      items: items.map((item) => ({
+        id: item.nativeId,
+        text: item.label.replaceAll('&', '&&'),
+        enabled: !item.disabled
+      }))
+    })
+    try {
+      if (sequence === contextMenuSequence && !signal?.aborted) {
+        await menu.popup(new LogicalPosition(request.x, request.y), getCurrentWindow())
+      }
+    } finally {
+      await menu.close()
+    }
+  }
+  const pending = contextMenuQueue.then(show)
+  contextMenuQueue = pending.catch(() => {})
+  return pending
 }
 
 const aiGenerate: DesktopApi['aiGenerate'] = (input, provider, model) =>
@@ -754,7 +812,8 @@ const tauriDesktopApi = {
   hideWindow,
   requestWindowClose,
   onWindowCloseRequested,
-  removeWindowCloseRequestedListener
+  removeWindowCloseRequestedListener,
+  showContextMenu
 } satisfies DesktopApi
 
 /**

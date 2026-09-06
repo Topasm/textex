@@ -567,3 +567,21 @@ Components subscribe with fine-grained selectors; there is no monolithic `useApp
 - Chat model selection, Stop and Send share a 32 px baseline. The composer uses one outer surface
   without internal separator lines. Auxiliary tools open within the composer width, with actions
   in a vertical list; Escape returns focus to Tools, and outside pointer/focus closes the popover.
+
+### Native context menus
+
+- File/folder rows, reference rows (including More), and bibliography cards use the same
+  `ContextMenu` boundary. Desktop builds show the operating system's native popup through
+  `DesktopApi.showContextMenu`; HTML portals remain available in browser tests and when native
+  presentation fails. Native menu appearance follows OS settings, not the workspace CSS theme.
+- Both indexed and directory-backed file trees expose New File/New Folder for folders and
+  Rename/Delete for all entries. Shift+F10 or the context-menu key opens the same actions.
+  Existing inline creation/rename, delete confirmation, dirty-document checks, and native
+  project/symlink containment remain in the operation handlers.
+- Native choices use unique session IDs and one scoped event dispatcher. Delayed, duplicate,
+  disabled and superseded choices cannot act on a different target. Project changes and
+  unmounting cancel pending presentation/activation. Popup resources are released on dismissal;
+  the invisible React listener survives normal dismissal until replaced or unmounted because
+  native activation may arrive after the popup call resolves.
+- Only menu creation, popup, and resource close capabilities are added. Selection events carry
+  item IDs; they never perform filesystem operations in the native menu listener.

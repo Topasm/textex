@@ -392,7 +392,6 @@ export function ReferenceRow({
               aria-label={t('researchPanel.referenceRow.menuLabel', { name: row.title })}
               title={t('researchPanel.referenceRow.menuLabel', { name: row.title })}
               aria-haspopup="menu"
-              aria-expanded={menuAnchor !== null}
               onClick={(event) => {
                 const rect = event.currentTarget.getBoundingClientRect()
                 openMenu(rect.right, rect.bottom)

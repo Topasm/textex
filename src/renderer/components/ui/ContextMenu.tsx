@@ -2,9 +2,12 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNo
 import ReactDOM from 'react-dom'
 import { focusCollectionItem } from '../../utils/collectionFocus'
 import './ContextMenu.css'
+import { useProjectStore } from '../../store/useProjectStore'
+import { logError } from '../../utils/errorMessage'
 
 const VIEWPORT_MARGIN = 8
 const MENU_ITEM_SELECTOR = '[role="menuitem"]:not(:disabled)'
+let dismissNativeMenu: (() => void) | null = null
 
 export interface ContextMenuItem {
   id: string
@@ -23,16 +26,96 @@ interface ContextMenuProps {
   anchor: ContextMenuAnchor
   items: ContextMenuItem[]
   label: string
-  /** Called after a dismissal or a run item; receives whether focus should return to the opener. */
+  /** Clears the owning menu state, optionally returning keyboard focus to its opener. */
   onClose: (restoreFocus: boolean) => void
 }
 
-/**
- * A cursor-anchored menu rendered into `document.body`. The panel it opens over
- * scrolls and clips its own content, so the menu has to escape that stacking
- * context the same way `ImagePreviewTooltip` does.
- */
-export function ContextMenu({ anchor, items, label, onClose }: ContextMenuProps) {
+function runItem(item: ContextMenuItem): void {
+  try {
+    void Promise.resolve(item.run()).catch((error: unknown) =>
+      logError('ContextMenu:action', error)
+    )
+  } catch (error) {
+    logError('ContextMenu:action', error)
+  }
+}
+
+/** OS-native menus in desktop builds, with an accessible portal fallback. */
+export function ContextMenu(props: ContextMenuProps) {
+  return typeof window.api?.showContextMenu === 'function' ? (
+    <NativeContextMenu {...props} />
+  ) : (
+    <WebContextMenu {...props} />
+  )
+}
+
+function NativeContextMenu(props: ContextMenuProps) {
+  const latest = useRef(props)
+  const [fallback, setFallback] = useState(false)
+  useLayoutEffect(() => {
+    latest.current = props
+  })
+  useEffect(() => {
+    if (fallback) return
+    let active = true
+    let selected = false
+    const controller = new AbortController()
+    const dismiss = () => {
+      active = false
+      controller.abort()
+      latest.current.onClose(false)
+    }
+    const root = useProjectStore.getState().projectRoot
+    const unsubscribe = useProjectStore.subscribe((state) => {
+      if (state.projectRoot !== root) {
+        active = false
+        controller.abort()
+        latest.current.onClose(false)
+      }
+    })
+    // Defer opening until after effect setup, so StrictMode's discarded mount
+    // cannot flash an extra native menu.
+    void Promise.resolve().then(async () => {
+      if (!active) return
+      dismissNativeMenu?.()
+      dismissNativeMenu = dismiss
+      try {
+        await window.api.showContextMenu(
+          {
+            ...props.anchor,
+            items: latest.current.items.map(({ id, label, disabled }) => ({ id, label, disabled }))
+          },
+          (id) => {
+            if (!active || selected) return
+            const item = latest.current.items.find((item) => item.id === id)
+            if (!item || item.disabled) return
+            selected = true
+            latest.current.onClose(true)
+            runItem(item)
+          },
+          controller.signal
+        )
+        // Dismissal can precede the activation event. Retain this invisible
+        // listener until the owner unmounts or opens another menu; the OS
+        // already restored focus. Do not discard a queued selection here.
+      } catch (error) {
+        if (active) {
+          logError('ContextMenu:native', error)
+          setFallback(true)
+        }
+      }
+    })
+    return () => {
+      active = false
+      controller.abort()
+      if (dismissNativeMenu === dismiss) dismissNativeMenu = null
+      unsubscribe()
+    }
+  }, [props.anchor, fallback])
+  return fallback ? <WebContextMenu {...props} /> : null
+}
+
+function WebContextMenu({ anchor, items, label, onClose }: ContextMenuProps) {
   const menuRef = useRef<HTMLDivElement | null>(null)
   const [position, setPosition] = useState<ContextMenuAnchor>(anchor)
 
@@ -63,6 +146,9 @@ export function ContextMenu({ anchor, items, label, onClose }: ContextMenuProps)
     const handleOutsideMouseDown = (event: MouseEvent): void => {
       if (event.target instanceof Node && !menuRef.current?.contains(event.target)) onClose(false)
     }
+    const unsubscribe = useProjectStore.subscribe((state, previous) => {
+      if (state.projectRoot !== previous.projectRoot) onClose(false)
+    })
     // A scroll or resize moves the row the menu points at, so the anchor stops
     // meaning anything; closing is the only honest response.
     const handleReflow = (): void => onClose(false)
@@ -70,6 +156,7 @@ export function ContextMenu({ anchor, items, label, onClose }: ContextMenuProps)
     window.addEventListener('resize', handleReflow)
     window.addEventListener('scroll', handleReflow, true)
     return () => {
+      unsubscribe()
       document.removeEventListener('mousedown', handleOutsideMouseDown)
       window.removeEventListener('resize', handleReflow)
       window.removeEventListener('scroll', handleReflow, true)
@@ -131,15 +218,13 @@ export function ContextMenu({ anchor, items, label, onClose }: ContextMenuProps)
           className="context-menu-item"
           disabled={item.disabled}
           onClick={() => {
-            void item.run()
             onClose(true)
+            runItem(item)
           }}
         >
-          {item.icon && (
-            <span className="context-menu-item-icon" aria-hidden="true">
-              {item.icon}
-            </span>
-          )}
+          <span className="context-menu-item-icon" aria-hidden="true">
+            {item.icon}
+          </span>
           <span>{item.label}</span>
         </button>
       ))}

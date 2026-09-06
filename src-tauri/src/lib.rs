@@ -165,7 +165,8 @@ pub fn run() {
         .build();
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .plugin(updater_plugin);
+        .plugin(updater_plugin)
+        .on_menu_event(services::context_menu::handle_event);
 
     // macOS keeps its native application menu and traffic-light controls. On
     // Windows and Linux the renderer supplies one-row custom chrome instead.

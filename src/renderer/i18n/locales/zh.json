@@ -429,6 +429,7 @@
     "bands": "色带"
   },
   "fileTree": {
+    "actionsFor": "{{name}} 的操作",
     "noFolder": "未打开文件夹",
     "newFile": "新建文件",
     "newFolder": "新建文件夹",

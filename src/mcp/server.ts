@@ -24,7 +24,7 @@ function resolveTectonicPath(): string {
 const server = new McpServer(
   {
     name: 'textex',
-    version: '1.2.16'
+    version: '1.2.17'
   },
   {
     capabilities: {

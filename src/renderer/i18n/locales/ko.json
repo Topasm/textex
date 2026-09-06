@@ -429,6 +429,7 @@
     "bands": "띠"
   },
   "fileTree": {
+    "actionsFor": "{{name}} 작업",
     "noFolder": "열린 폴더 없음",
     "newFile": "새 파일",
     "newFolder": "새 폴더",
