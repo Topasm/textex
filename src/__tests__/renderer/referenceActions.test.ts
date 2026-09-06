@@ -5,7 +5,6 @@ import {
   buildProjectReferenceDragPayload,
   MAX_REFERENCE_DRAG_BYTES,
   parseReferenceDragData,
-  parseZoteroCollectionDragData,
   setReferenceDragData
 } from '../../renderer/components/research/referenceActions'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
@@ -86,39 +85,6 @@ describe('research reference actions', () => {
     await expect(adding).rejects.toThrow('active project changed')
     expect(window.api.zoteroAddToProject).not.toHaveBeenCalled()
     expect(window.api.researchAddOnline).not.toHaveBeenCalled()
-  })
-
-  it('validates collection drag payloads', () => {
-    expect(
-      parseZoteroCollectionDragData(
-        JSON.stringify({
-          collection: { key: '/0/ABC', name: 'Research', parentKey: null, itemCount: 4 },
-          port: 23_119
-        })
-      )
-    ).toEqual({
-      collection: { key: '/0/ABC', name: 'Research', parentKey: null, itemCount: 4 },
-      port: 23_119
-    })
-    expect(
-      parseZoteroCollectionDragData(
-        JSON.stringify({
-          collection: { key: '/0/ABC', name: 'Research', parentKey: null, itemCount: null }
-        })
-      )
-    ).toEqual({
-      collection: { key: '/0/ABC', name: 'Research', parentKey: null, itemCount: null }
-    })
-    expect(
-      parseZoteroCollectionDragData(
-        JSON.stringify({ collection: { key: '../../outside', name: 'Bad', itemCount: 1 } })
-      )
-    ).toBeNull()
-    expect(
-      parseZoteroCollectionDragData(
-        JSON.stringify({ collection: { key: '/0/ABC?format=json', name: 'Bad', itemCount: 1 } })
-      )
-    ).toBeNull()
   })
 
   it('validates complete reference drag payloads', () => {

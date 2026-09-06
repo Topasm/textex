@@ -267,7 +267,6 @@
 
 /* Keep blur for floating glass only; workspace surfaces stay stable and legible. */
 [data-theme='glass'] .toolbar,
-[data-theme='glass'] .zoom-toolbar,
 [data-theme='glass'] .modal-bg,
 [data-theme='glass'] .menu-dropdown-content {
   backdrop-filter: blur(12px) saturate(110%);
@@ -753,60 +752,6 @@ body,
   background-color: var(--warning);
   display: inline-block;
   flex-shrink: 0;
-}
-
-/* Zoom Toolbar */
-.zoom-toolbar {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-4);
-  padding: var(--space-4) var(--space-8);
-  background-color: var(--zoom-bg);
-  border-bottom: 1px solid var(--border);
-}
-
-.zoom-toolbar button {
-  padding: var(--space-2) var(--space-8);
-  font-size: var(--font-md);
-  background-color: var(--bg-toolbar);
-  color: var(--text-primary);
-  border: none;
-  border-radius: var(--ui-radius-subtle);
-  cursor: pointer;
-}
-
-.zoom-toolbar button:hover {
-  background-color: var(--bg-hover);
-}
-
-.zoom-toolbar button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.zoom-toolbar span {
-  font-size: var(--font-md);
-  color: var(--text-primary);
-  min-width: 40px;
-  text-align: center;
-}
-
-.zoom-toolbar .synctex-btn {
-  font-size: var(--font-lg);
-  font-weight: bold;
-  padding: var(--space-2) var(--space-6);
-}
-
-.zoom-toolbar-separator {
-  width: 1px;
-  height: 16px;
-  min-width: 1px;
-  background-color: var(--border);
-  margin: 0 var(--space-4);
 }
 
 /* Preview */
@@ -2448,25 +2393,6 @@ body,
   padding: var(--space-4) 0;
 }
 
-.bib-search {
-  padding: var(--space-4) var(--space-12) var(--space-8);
-}
-
-.bib-search input {
-  width: 100%;
-  padding: var(--space-4) var(--space-8);
-  font-size: var(--font-base);
-  background-color: var(--bg-input);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-  border-radius: var(--ui-radius-control);
-}
-
-.bib-search input:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-
 .bib-entry {
   display: flex;
   align-items: flex-start;
@@ -2953,16 +2879,14 @@ body,
 
 /* One tab strip for both panels: `.panel-tabs` is worn by the project sidebar
    and by the research panel, so left and right match icon for icon. */
-.panel-tabs,
-.reference-source-tabs {
+.panel-tabs {
   display: flex;
   flex-shrink: 0;
   align-items: stretch;
   border-bottom: 1px solid var(--border);
 }
 
-.panel-tabs > button,
-.reference-source-tabs > button {
+.panel-tabs > button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2993,8 +2917,7 @@ body,
   white-space: nowrap;
 }
 
-.panel-tabs > button:hover,
-.reference-source-tabs > button:hover {
+.panel-tabs > button:hover {
   color: var(--text-primary);
 }
 
@@ -3025,8 +2948,7 @@ body,
 }
 
 .panel-tabs > button.active,
-.panel-tabs > [role='tab'][aria-selected='true'],
-.reference-source-tabs > button.active {
+.panel-tabs > [role='tab'][aria-selected='true'] {
   color: var(--text-primary);
   border-bottom-color: var(--accent);
 }
@@ -3097,15 +3019,13 @@ body,
 }
 
 .research-panel-content,
-.references-panel,
-.reference-source-content {
+.references-panel {
   flex: 1;
   min-height: 0;
   overflow: hidden;
 }
 
-.research-panel-content,
-.reference-source-content {
+.research-panel-content {
   display: flex;
   flex-direction: column;
 }
@@ -3397,19 +3317,6 @@ body,
   border: 1px solid var(--border);
   border-radius: var(--ui-radius-control);
   cursor: pointer;
-}
-
-.reference-source-tabs > button {
-  flex: 1;
-  min-width: 0;
-  font-size: var(--font-sm);
-}
-
-.reference-source-content > .bib-panel,
-.reference-source-content > .research-reference-view {
-  flex: 1 1 auto;
-  width: 100%;
-  min-height: 0;
 }
 
 .research-reference-view,
@@ -4994,50 +4901,6 @@ button.submission-check-finding:hover {
 .research-chat-edit-flash-gutter {
   animation: fadeOutBackground 4s ease-out forwards;
   --synctex-flash-bg: color-mix(in srgb, var(--git-added, #6a9955) 22%, transparent);
-}
-
-.research-chat-applied-notice {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  gap: var(--space-6);
-  margin: var(--space-8) 0;
-  padding: var(--space-6) var(--space-10);
-  color: var(--text-primary);
-  background: color-mix(in srgb, var(--git-added, #6a9955) 8%, transparent);
-  border-left: 2px solid var(--git-added, #6a9955);
-  font-size: var(--font-xs);
-}
-
-.research-chat-applied-notice svg {
-  flex-shrink: 0;
-  color: var(--git-added, #6a9955);
-}
-
-.research-chat-applied-notice span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.research-chat-applied-notice button {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  gap: var(--space-4);
-  margin-left: auto;
-  padding: var(--space-2) var(--space-6);
-  color: var(--text-primary);
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-radius: var(--ui-radius-control);
-  cursor: pointer;
-  font-size: var(--font-xs);
-}
-
-.research-chat-applied-notice button:hover {
-  background: var(--bg-hover);
-  border-color: var(--accent);
 }
 
 .research-chat-composer {
@@ -6923,145 +6786,6 @@ button.submission-check-finding:hover {
   color: var(--text-secondary);
 }
 
-/* Search bar */
-.home-search-wrapper {
-  position: relative;
-  width: 100%;
-  max-width: 560px;
-  margin-bottom: var(--space-32);
-}
-
-.home-search-bar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-8);
-  padding: var(--space-8) var(--space-12);
-  background-color: var(--bg-input, var(--bg-secondary));
-  border: 1px solid var(--border);
-  border-radius: var(--ui-radius-large);
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
-}
-
-.home-search-bar:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent);
-}
-
-.home-search-bar .search-icon {
-  color: var(--text-secondary);
-  flex-shrink: 0;
-}
-
-.home-search-input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  font-size: var(--font-lg);
-  color: var(--text-primary);
-  font-family: inherit;
-}
-
-.home-search-input::placeholder {
-  color: var(--text-secondary);
-  opacity: 0.7;
-}
-
-.home-search-clear {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  background: none;
-  border: none;
-  border-radius: var(--ui-radius-control);
-  color: var(--text-secondary);
-  cursor: pointer;
-  flex-shrink: 0;
-  transition:
-    background-color 0.15s,
-    color 0.15s;
-}
-
-.home-search-clear:hover {
-  background-color: var(--bg-hover);
-  color: var(--text-primary);
-}
-
-/* Search dropdown */
-.home-search-dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
-  background-color: var(--modal-bg, var(--bg-secondary));
-  border: 1px solid var(--border);
-  border-radius: var(--ui-radius-large);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-  max-height: 320px;
-  overflow-y: auto;
-  z-index: 50;
-  padding: var(--space-4);
-}
-
-.home-search-result {
-  display: flex;
-  align-items: center;
-  gap: var(--space-10);
-  padding: var(--space-8) 10px;
-  border-radius: var(--ui-radius-panel);
-  cursor: pointer;
-  transition: background-color 0.1s;
-}
-
-.home-search-result:hover,
-.home-search-result.selected {
-  background-color: var(--bg-hover);
-}
-
-.home-search-result-icon {
-  color: var(--accent);
-  flex-shrink: 0;
-}
-
-.home-search-result-text {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.home-search-result-label {
-  font-size: var(--font-base);
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.home-search-result-detail {
-  font-size: var(--font-sm);
-  color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.home-search-result-badge {
-  font-size: var(--font-xs);
-  font-weight: 600;
-  padding: var(--space-2) var(--space-6);
-  border-radius: var(--ui-radius-pill);
-  background-color: var(--bg-hover);
-  color: var(--text-secondary);
-  white-space: nowrap;
-  flex-shrink: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
 .home-actions {
   display: flex;
   flex-wrap: wrap;
@@ -7814,7 +7538,7 @@ button.submission-check-finding:hover {
 /* ── Section Highlight Bands ─────────────────────────────────────── */
 /* Base structural styles only. Color classes (sh-heading-cN, sh-bar-cN,
    sh-band-cN) are injected dynamically from the user's palette via
-   useSectionHighlight hook → <style id="sh-palette-styles">. */
+   useSectionHighlight hook → \3c style id="sh-palette-styles">. */
 
 .sh-heading {
   border-top: 2px solid transparent !important;

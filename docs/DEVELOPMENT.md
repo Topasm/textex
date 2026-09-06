@@ -36,7 +36,7 @@ Clippy with Linux dependencies installed.
 
 ```bash
 npm run check              # TypeScript, ESLint, Prettier, Rust format
-npm run test               # Vitest
+npm run test               # Vitest (Node + renderer projects) and script tests
 npm run test:workflow      # Focused cross-component paper/Git workflows
 npx playwright install chromium webkit
 npm run test:browser       # Production-bundled PDF/Monaco/Markdown regression tests
@@ -45,6 +45,19 @@ cargo test --locked --manifest-path src-tauri/Cargo.toml
 cargo clippy --locked --manifest-path src-tauri/Cargo.toml -- -D warnings
 npm audit
 ```
+
+Vitest separates pure shared logic and static contracts into the `node` project,
+without DOM, desktop API mocks, or translation initialization. Component and
+store tests use the `renderer` project with jsdom and `src/__tests__/setup.ts`.
+Use `npx vitest run --project=node` or `--project=renderer` to select a project;
+`npm run test` runs both and the packaging script tests. The learning catalog
+suite stays in the renderer project because it imports the persisted learning
+store. Update `nodeTests` in `vitest.config.ts` when moving suites between them.
+
+`npm run typecheck` checks the Tauri adapter as part of the web project.
+`npm run typecheck:tauri` remains available as a focused adapter check and is
+not repeated in the aggregate gate. TypeScript build caches (`*.tsbuildinfo`)
+are generated locally and must not be committed.
 
 Run the focused test for a changed behavior first. Native changes should include
 Rust tests near the service; renderer contracts and orchestration should include

@@ -87,7 +87,6 @@ html .toolbar button > .ui-icon {
 }
 
 html .panel-tabs > button > .ui-icon,
-html .reference-source-tabs > button > .ui-icon,
 html .file-tree-icon > .ui-icon,
 html .file-tree-header-btn > .ui-icon {
   width: var(--ui-icon-size-compact);
@@ -245,8 +244,7 @@ html .research-panel {
   background: var(--ui-surface-sidebar);
 }
 
-html .panel-tabs > button,
-html .reference-source-tabs > button {
+html .panel-tabs > button {
   border-bottom-width: 1px;
 }
 
@@ -284,7 +282,6 @@ html .status-compile-indicator:hover {
 
 /* Search and floating command surfaces */
 html .local-search-bar,
-html .home-search-bar,
 html .command-palette-search,
 html .research-search {
   background: var(--ui-surface-input);
@@ -293,21 +290,11 @@ html .research-search {
   box-shadow: none;
 }
 
-html .home-search-bar:focus-within,
 html .command-palette-search:focus-within,
 html .research-search:focus-within {
   box-shadow: none;
   outline: 1px solid var(--accent);
   outline-offset: -1px;
-}
-
-html .home-search-result,
-html .home-search-dropdown {
-  color: var(--text-primary);
-  background: var(--ui-surface-raised);
-  border: 1px solid var(--ui-border-strong);
-  border-radius: var(--ui-radius-panel);
-  box-shadow: var(--ui-shadow-popover);
 }
 
 html .command-palette {
@@ -316,7 +303,6 @@ html .command-palette {
   box-shadow: var(--ui-shadow-modal);
 }
 
-html .home-search-result.selected,
 html .command-palette-option.active {
   background: var(--ui-selected-bg);
 }
@@ -492,7 +478,6 @@ html .research-profile-field select:focus-visible,
 html .research-profile-field textarea:focus-visible,
 html .draft-input:focus-visible,
 html .git-commit-input:focus-visible,
-html .bib-search input:focus-visible,
 html .template-add-form input:focus-visible,
 html .template-add-form textarea:focus-visible {
   border-color: var(--accent);

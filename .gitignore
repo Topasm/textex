@@ -8,3 +8,4 @@ dist/
 resources/bin/*/tectonic
 resources/bin/*/tectonic.exe
 test/
+*.tsbuildinfo

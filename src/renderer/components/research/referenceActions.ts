@@ -1,4 +1,4 @@
-import type { BibEntry, OnlineReference, ZoteroCollection } from '../../../shared/types'
+import type { BibEntry, OnlineReference } from '../../../shared/types'
 import { isSafeCitationKey } from '../../../shared/referenceValidation'
 import { useEditorStore } from '../../store/useEditorStore'
 import { useProjectStore } from '../../store/useProjectStore'
@@ -10,13 +10,7 @@ import type { ReferenceDragMetadata, ReferenceDragPayload } from '../../services
 export type { ReferenceDragMetadata, ReferenceDragPayload } from '../../services/referencePayload'
 
 export const TEXTEX_REFERENCE_MIME = 'application/x-textex-reference'
-export const TEXTEX_ZOTERO_COLLECTION_MIME = 'application/x-textex-zotero-collection'
 export const MAX_REFERENCE_DRAG_BYTES = 384 * 1024
-
-export interface ZoteroCollectionDragPayload {
-  collection: ZoteroCollection
-  port?: number
-}
 
 export function buildProjectReferenceDragPayload(entry: BibEntry): ReferenceDragPayload {
   return {
@@ -157,60 +151,6 @@ export function parseReferenceDragData(data: string): ReferenceDragPayload | nul
     if (isRecord(value) && value.source === 'online') {
       const reference = parseOnlineReference(value.reference)
       if (reference) return { source: 'online', reference }
-    }
-  } catch {
-    // Ignore untrusted drag payloads.
-  }
-  return null
-}
-
-export function setZoteroCollectionDragData(
-  event: React.DragEvent,
-  payload: ZoteroCollectionDragPayload
-): void {
-  event.dataTransfer.setData(TEXTEX_ZOTERO_COLLECTION_MIME, JSON.stringify(payload))
-  event.dataTransfer.effectAllowed = 'copy'
-}
-
-export function parseZoteroCollectionDragData(data: string): ZoteroCollectionDragPayload | null {
-  if (data.length > 32_768) return null
-  try {
-    const value = JSON.parse(data) as unknown
-    if (
-      isRecord(value) &&
-      isRecord(value.collection) &&
-      typeof value.collection.key === 'string' &&
-      value.collection.key.length <= 2_048 &&
-      value.collection.key.startsWith('/') &&
-      !hasControlCharacters(value.collection.key) &&
-      !Array.from(value.collection.key).some((character) => '?#&'.includes(character)) &&
-      typeof value.collection.name === 'string' &&
-      value.collection.name.length <= 16_384 &&
-      (value.collection.parentKey === undefined ||
-        value.collection.parentKey === null ||
-        (typeof value.collection.parentKey === 'string' &&
-          value.collection.parentKey.length <= 2_048)) &&
-      (value.collection.itemCount === null ||
-        (typeof value.collection.itemCount === 'number' &&
-          Number.isInteger(value.collection.itemCount) &&
-          value.collection.itemCount >= 0)) &&
-      (value.port === undefined ||
-        (typeof value.port === 'number' &&
-          Number.isInteger(value.port) &&
-          value.port >= 1 &&
-          value.port <= 65_535))
-    ) {
-      return {
-        collection: {
-          key: value.collection.key,
-          name: value.collection.name,
-          parentKey:
-            typeof value.collection.parentKey === 'string' ? value.collection.parentKey : null,
-          itemCount:
-            typeof value.collection.itemCount === 'number' ? value.collection.itemCount : null
-        },
-        ...(typeof value.port === 'number' ? { port: value.port } : {})
-      }
     }
   } catch {
     // Ignore untrusted drag payloads.

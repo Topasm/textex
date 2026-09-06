@@ -3,7 +3,6 @@ import type { AiProvider } from '../shared/types'
 
 export const DEBOUNCE_ZOOM_MS = 150
 export const SYNCTEX_HIGHLIGHT_MS = 1500
-export const SETTINGS_SYNC_DELAY_MS = 500
 export const AUTO_COMPILE_DELAY_MS = 1000
 /** Quiet gap after typing before the prose view writes back into the document. */
 export const PROSE_COMMIT_DELAY_MS = 400
@@ -40,14 +39,6 @@ export const SIDEBAR_WIDTH_MAX = 500
 export const RESEARCH_PANEL_DEFAULT_WIDTH = 380
 export const RESEARCH_PANEL_WIDTH_MIN = 320
 export const RESEARCH_PANEL_WIDTH_MAX = 520
-
-// ── Export formats ──────────────────────────────────────────
-export const EXPORT_FORMATS = [
-  { name: 'HTML', ext: 'html' },
-  { name: 'Word (DOCX)', ext: 'docx' },
-  { name: 'OpenDocument (ODT)', ext: 'odt' },
-  { name: 'EPUB', ext: 'epub' }
-] as const
 
 // ── AI Provider metadata ────────────────────────────────────
 export const AI_PROVIDER_ORDER: AiProvider[] = [

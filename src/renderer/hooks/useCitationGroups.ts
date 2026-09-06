@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import { useProjectStore } from '../store/useProjectStore'
-import type { BibEntry, CitationGroup } from '../../shared/types'
+import type { CitationGroup } from '../../shared/types'
 import { logError } from '../utils/errorMessage'
 
 export function useCitationGroupOps() {
