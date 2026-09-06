@@ -77,6 +77,8 @@ interface PersistedResearchPanelState {
 
 interface ProjectState {
   projectRoot: string | null
+  lastActiveFiles: Record<string, string>
+  rememberActiveFile: (filePath: string) => void
   directoryTree: DirectoryEntry[] | null
   directoryRefreshVersions: Record<string, number>
   projectIndex: ProjectIndexSnapshot | null
@@ -156,6 +158,14 @@ export const useProjectStore = create<ProjectState>()(
   persist(
     subscribeWithSelector((set) => ({
       projectRoot: null,
+      lastActiveFiles: {},
+      rememberActiveFile: (filePath) =>
+        set((state) => {
+          if (!state.projectRoot) return state
+          const key = projectPathKey(state.projectRoot)
+          if (state.lastActiveFiles[key] === filePath) return state
+          return { lastActiveFiles: { ...state.lastActiveFiles, [key]: filePath } }
+        }),
       directoryTree: null,
       directoryRefreshVersions: {},
       projectIndex: null,
@@ -324,6 +334,7 @@ export const useProjectStore = create<ProjectState>()(
       name: 'textex-project-storage',
       partialize: (state) => ({
         projectRoot: state.projectRoot,
+        lastActiveFiles: state.lastActiveFiles,
         isSidebarOpen: state.isSidebarOpen,
         sidebarView: state.sidebarView,
         sidebarWidth: state.sidebarWidth,

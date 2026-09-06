@@ -48,6 +48,7 @@ describe('openProject', () => {
     useEditorStore.getState().resetEditor()
     useProjectStore.setState({
       projectRoot: null,
+      lastActiveFiles: {},
       directoryTree: null,
       isSidebarOpen: false,
       sidebarView: 'files',
@@ -91,6 +92,70 @@ describe('openProject', () => {
   afterEach(() => {
     clearResearchProfileDraft()
     vi.restoreAllMocks()
+  })
+
+  it('persists the selected tab and restores it after closing and reopening a project', async () => {
+    const chapter = `${projectRoot}/chapters/results.tex`
+    vi.mocked(window.api.readFile).mockImplementation(async (filePath) => ({
+      filePath,
+      content: 'saved content'
+    }))
+    await openProject(projectRoot)
+    useEditorStore.getState().openFileInTab(chapter, 'saved content')
+    useEditorStore.getState().setActiveTab(`${projectRoot}/main.tex`)
+    useEditorStore.getState().setActiveTab(chapter)
+    await deactivateProject()
+
+    // Rehydrate to verify the preference survives a new app session as well.
+    const persisted = localStorage.getItem('textex-project-storage')!
+    useProjectStore.setState({ lastActiveFiles: {} })
+    localStorage.setItem('textex-project-storage', persisted)
+    await useProjectStore.persist.rehydrate()
+    expect(useProjectStore.getState().lastActiveFiles[projectRoot]).toBe(chapter)
+    await openProject(projectRoot)
+
+    expect(useEditorStore.getState().activeFilePath).toBe(chapter)
+  })
+
+  it('keeps each project last selected file when switching between projects', async () => {
+    const otherRoot = '/workspace/other'
+    const chapter = `${projectRoot}/chapter.tex`
+    vi.mocked(window.api.readFile).mockImplementation(async (filePath) => ({
+      filePath,
+      content: 'saved content'
+    }))
+    await openProject(projectRoot)
+    useEditorStore.getState().openFileInTab(chapter, 'saved content')
+    await openProject(otherRoot, { autoOpenFirstTex: false })
+    useEditorStore.getState().openFileInTab(`${otherRoot}/other.tex`, 'saved content')
+    await openProject(projectRoot)
+
+    expect(useEditorStore.getState().activeFilePath).toBe(chapter)
+    expect(useProjectStore.getState().lastActiveFiles[otherRoot]).toBe(`${otherRoot}/other.tex`)
+  })
+
+  it('falls back to the default document when the remembered file cannot be read', async () => {
+    useProjectStore.setState({ lastActiveFiles: { [projectRoot]: `${projectRoot}/missing.tex` } })
+    vi.mocked(window.api.readFile).mockRejectedValueOnce(new Error('File missing'))
+
+    await openProject(projectRoot)
+
+    expect(window.api.readFile).toHaveBeenNthCalledWith(1, `${projectRoot}/missing.tex`)
+    expect(useEditorStore.getState().activeFilePath).toBe(`${projectRoot}/main.tex`)
+  })
+
+  it('does not replace a user-selected tab while the remembered file is loading', async () => {
+    const chapter = `${projectRoot}/chapter.tex`
+    const pending = deferred<{ filePath: string; content: string }>()
+    useProjectStore.setState({ lastActiveFiles: { [projectRoot]: chapter } })
+    vi.mocked(window.api.readFile).mockReturnValueOnce(pending.promise)
+    const opening = openProject(projectRoot)
+    await vi.waitFor(() => expect(window.api.readFile).toHaveBeenCalledWith(chapter))
+    useEditorStore.getState().openFileInTab(`${projectRoot}/chosen.tex`, 'user selection')
+    pending.resolve({ filePath: chapter, content: 'saved content' })
+    await opening
+
+    expect(useEditorStore.getState().activeFilePath).toBe(`${projectRoot}/chosen.tex`)
   })
 
   it('cancels a project switch with dirty tabs before native activation', async () => {

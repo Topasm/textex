@@ -28,6 +28,15 @@ export interface ProjectTransitionSnapshot {
   projectPath: string
 }
 
+// Keep the per-project selection durable even when the app exits without a
+// project-close transition. Resetting the editor must not erase this selection.
+useEditorStore.subscribe(
+  (state) => state.activeFilePath,
+  (filePath) => {
+    if (filePath) useProjectStore.getState().rememberActiveFile(filePath)
+  }
+)
+
 let projectTransitionRequestGeneration = 0
 let activeProjectGeneration = 0
 let nativeProjectTransition: Promise<void> = Promise.resolve()
@@ -287,6 +296,7 @@ export async function openProject(
     // Zotero sync is unavailable. Manual sync can report the actionable error.
   })
 
+  const expectedTabMutationEpoch = useEditorStore.getState().tabMutationEpoch
   let tree: DirectoryEntry[] = []
   try {
     tree = await window.api.readDirectory(projectPath)
@@ -303,16 +313,26 @@ export async function openProject(
   }
   useProjectStore.getState().setSidebarView('files')
 
-  // Prefer the conventional root document and support projects whose TeX
-  // sources live below the project root.
-  const texFile = findDefaultTexFile(tree)
-  if (autoOpenFirstTex && texFile) {
-    try {
-      const result = await window.api.readFile(texFile.path)
+  const savedFile = useProjectStore.getState().lastActiveFiles[projectPathKey(projectPath)]
+  const defaultFile = findDefaultTexFile(tree)?.path
+  const candidates = [
+    ...new Set([savedFile, defaultFile].filter((path): path is string => Boolean(path)))
+  ]
+  if (autoOpenFirstTex) {
+    for (const filePath of candidates) {
       if (!isCurrentProjectTransition(generation, projectPath)) return null
-      useEditorStore.getState().openFileInTab(result.filePath, result.content)
-    } catch {
-      // ignore
+      if (useEditorStore.getState().tabMutationEpoch !== expectedTabMutationEpoch) break
+      try {
+        // Native reads enforce the active project's filesystem boundary,
+        // including saved paths that have since become symlinks.
+        const result = await window.api.readFile(filePath)
+        if (!isCurrentProjectTransition(generation, projectPath)) return null
+        if (useEditorStore.getState().tabMutationEpoch !== expectedTabMutationEpoch) break
+        useEditorStore.getState().openFileInTab(result.filePath, result.content)
+        break
+      } catch {
+        // A removed or inaccessible saved file falls back to the root document.
+      }
     }
   }
 
