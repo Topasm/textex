@@ -1,3 +1,4 @@
+import { sharePdf } from './pdfShare'
 import { CONTEXT_MENU_EVENT, CONTEXT_MENU_ID_PREFIX } from '../../shared/contextMenu'
 import { Menu } from '@tauri-apps/api/menu'
 import { LogicalPosition } from '@tauri-apps/api/dpi'
@@ -559,6 +560,9 @@ const synctexInverse: DesktopApi['synctexInverse'] = (texFile, page, x, y) =>
 const synctexBuildLineMap: DesktopApi['synctexBuildLineMap'] = (texFile) =>
   invoke<SyncTeXLineMapEntry[]>(TAURI_COMMANDS.synctexBuildLineMap, { texFile })
 
+const exportPdf: DesktopApi['exportPdf'] = (pdfPath, openFolder) =>
+  invoke(TAURI_COMMANDS.exportPdf, { pdfPath, openFolder })
+
 const exportDocument: DesktopApi['exportDocument'] = (inputPath, format) =>
   invoke(TAURI_COMMANDS.exportDocument, { inputPath, format })
 
@@ -787,6 +791,8 @@ const tauriDesktopApi = {
   synctexForward,
   synctexInverse,
   synctexBuildLineMap,
+  exportPdf,
+  sharePdf,
   exportDocument,
   exportOverleafZip,
   runSubmissionCheck,

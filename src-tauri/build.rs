@@ -102,6 +102,7 @@ fn main() {
         "synctex_forward",
         "synctex_inverse",
         "synctex_build_line_map",
+        "export_pdf",
         "export_document",
         "export_overleaf_zip",
         "run_submission_check",

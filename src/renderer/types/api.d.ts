@@ -1,3 +1,4 @@
+import type { PdfExportResult, PdfShareResult } from '../../shared/pdfExport'
 import type { NativeContextMenuRequest } from '../../shared/contextMenu'
 import {
   AppCommandId,
@@ -217,6 +218,8 @@ export interface DesktopApi {
   removeWindowCloseRequestedListener(): void
 
   // Export
+  exportPdf(pdfPath: string, openFolder: boolean): Promise<PdfExportResult | null>
+  sharePdf(data: Uint8Array, fileName: string): Promise<PdfShareResult>
   exportDocument(
     inputPath: string,
     format: string

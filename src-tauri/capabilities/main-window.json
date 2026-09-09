@@ -119,6 +119,7 @@
     "allow-synctex-forward",
     "allow-synctex-inverse",
     "allow-synctex-build-line-map",
+    "allow-export-pdf",
     "allow-export-document",
     "allow-export-overleaf-zip",
     "allow-run-submission-check",

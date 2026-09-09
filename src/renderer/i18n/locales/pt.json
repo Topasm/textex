@@ -1,4 +1,14 @@
 {
+  "pdfExport": {
+    "save": "Salvar PDF como…",
+    "share": "Compartilhar PDF",
+    "compileFirst": "Compile o documento atual para salvar ou compartilhar seu PDF.",
+    "shareFallback": "O compartilhamento de arquivos não está disponível aqui. Salve o PDF para anexá-lo no seu e-mail ou aplicativo de mensagens.",
+    "saved": "PDF salvo em {{path}}",
+    "readyToAttach": "PDF salvo em {{path}}. A pasta está aberta; anexe este arquivo no seu e-mail ou aplicativo de mensagens.",
+    "folderFailed": "PDF salvo em {{path}}, mas não foi possível abrir a pasta. Anexe o arquivo a partir desse local.",
+    "failed": "Não foi possível salvar ou compartilhar o PDF: {{reason}}"
+  },
   "toolbar": {
     "returnHome": "Voltar para a tela inicial",
     "file": "Arquivo",
@@ -10,7 +20,7 @@
     "saveAs": "Salvar como",
     "newFromTemplate": "Novo a partir de modelo",
     "export": "Exportar",
-    "quickSave": "Salvamento rápido",
+    "quickSave": "Salvamento rápido (fonte .tex)",
     "compile": "Compilar",
     "compiling": "Compilando...",
     "compileLaTeX": "Compilar LaTeX",

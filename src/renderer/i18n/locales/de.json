@@ -1,4 +1,14 @@
 {
+  "pdfExport": {
+    "save": "PDF speichern unter…",
+    "share": "PDF teilen",
+    "compileFirst": "Kompilieren Sie das aktuelle Dokument, um das PDF zu speichern oder zu teilen.",
+    "shareFallback": "Dateifreigabe ist hier nicht verfügbar. Speichern Sie das PDF, um es per E-Mail oder Messenger anzuhängen.",
+    "saved": "PDF gespeichert unter {{path}}",
+    "readyToAttach": "PDF gespeichert unter {{path}}. Der Ordner ist geöffnet; hängen Sie diese Datei in Ihrer E-Mail oder Ihrem Messenger an.",
+    "folderFailed": "PDF gespeichert unter {{path}}, aber der Ordner konnte nicht geöffnet werden. Hängen Sie die Datei von diesem Speicherort an.",
+    "failed": "PDF konnte nicht gespeichert oder geteilt werden: {{reason}}"
+  },
   "toolbar": {
     "returnHome": "Zurück zum Startbildschirm",
     "file": "Datei",
@@ -10,7 +20,7 @@
     "saveAs": "Speichern unter",
     "newFromTemplate": "Neu aus Vorlage",
     "export": "Exportieren",
-    "quickSave": "Schnellspeichern",
+    "quickSave": "Schnellspeichern (.tex-Quelltext)",
     "compile": "Kompilieren",
     "compiling": "Kompilierung...",
     "compileLaTeX": "LaTeX kompilieren",

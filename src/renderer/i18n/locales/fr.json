@@ -1,4 +1,14 @@
 {
+  "pdfExport": {
+    "save": "Enregistrer le PDF sous…",
+    "share": "Partager le PDF",
+    "compileFirst": "Compilez le document actuel pour enregistrer ou partager son PDF.",
+    "shareFallback": "Le partage de fichiers est indisponible ici. Enregistrez le PDF pour le joindre dans votre messagerie.",
+    "saved": "PDF enregistré dans {{path}}",
+    "readyToAttach": "PDF enregistré dans {{path}}. Le dossier est ouvert ; joignez ce fichier dans votre messagerie.",
+    "folderFailed": "PDF enregistré dans {{path}}, mais le dossier ne peut pas être ouvert. Joignez le fichier depuis cet emplacement.",
+    "failed": "Impossible d’enregistrer ou de partager le PDF : {{reason}}"
+  },
   "toolbar": {
     "returnHome": "Retour à l'écran d'accueil",
     "file": "Fichier",
@@ -10,7 +20,7 @@
     "saveAs": "Enregistrer sous",
     "newFromTemplate": "Nouveau à partir d'un modèle",
     "export": "Exporter",
-    "quickSave": "Enregistrement rapide",
+    "quickSave": "Enregistrement rapide (source .tex)",
     "compile": "Compiler",
     "compiling": "Compilation...",
     "compileLaTeX": "Compiler LaTeX",

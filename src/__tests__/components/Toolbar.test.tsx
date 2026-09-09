@@ -465,8 +465,8 @@ describe('Workspace toolbars', () => {
 
     // The label stays free of key names so it reads correctly on every
     // platform; the tooltip adds the binding the manifest actually holds.
-    const save = screen.getByRole('button', { name: 'Quick Save' })
-    expect(save).toHaveAttribute('title', 'Quick Save (Ctrl+S)')
+    const save = screen.getByRole('button', { name: 'Quick Save (.tex source)' })
+    expect(save).toHaveAttribute('title', 'Quick Save (.tex source) (Ctrl+S)')
     expect(screen.getByRole('button', { name: 'Compile LaTeX' })).toHaveAttribute(
       'title',
       'Compile LaTeX (Ctrl+Enter)'

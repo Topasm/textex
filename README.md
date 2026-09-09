@@ -115,6 +115,7 @@ TextEx features a modern Monaco-based editor with:
 - **Visual Table Editor**: Click the CodeLens above any `tabular` to open a visual editor.
 
 ### Compiling & Previewing
+- **Save and share PDF**: The document Save button saves the `.tex` source. Compiled PDFs live in the TextEx application cache under `build/<project>/<engine>/<document>/`, rather than beside the source. Compile the current revision, then use **Save PDF As…** in the PDF toolbar to choose a destination; the notification shows the saved path. **Share PDF** opens file sharing when supported. Otherwise, it saves a PDF and opens its folder so you can attach the file in your mail or messaging app. Cancelling either dialog does not send anything. Hover over the PDF title to see the compiled cache path.
 - **Auto-Compile**: The PDF preview updates automatically when you save (`Ctrl+S`).
 - **Manual Compile**: Press `Ctrl+Enter` to force a compilation at any time.
 - **PDF View Modes**: Switch between continuous scroll and single-page view in Settings > Appearance.

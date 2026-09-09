@@ -298,6 +298,7 @@ pub fn run() {
             commands::synctex::synctex_forward,
             commands::synctex::synctex_inverse,
             commands::synctex::synctex_build_line_map,
+            commands::export::export_pdf,
             commands::export::export_document,
             commands::export::export_overleaf_zip,
             commands::submission_check::run_submission_check,

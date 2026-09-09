@@ -14,7 +14,7 @@ use zip::{write::SimpleFileOptions, CompressionMethod, ZipWriter};
 use crate::{
     error::{AppError, AppResult},
     models::ExportResult,
-    services::filesystem,
+    services::{filesystem, runtime},
     state::AppState,
 };
 
@@ -23,6 +23,103 @@ const MAX_STDERR_BYTES: u64 = 1024 * 1024;
 const MAX_OUTPUT_BYTES: u64 = 512 * 1024 * 1024;
 const MAX_OVERLEAF_FILES: usize = 20_000;
 const MAX_OVERLEAF_SOURCE_BYTES: u64 = 512 * 1024 * 1024;
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PdfExportResult {
+    pub output_path: String,
+    pub folder_opened: bool,
+}
+
+pub async fn export_pdf(
+    app: &AppHandle,
+    state: &AppState,
+    pdf_path: &str,
+    open_folder: bool,
+) -> AppResult<Option<PdfExportResult>> {
+    // Freeze the PDF before opening the dialog: auto-compilation may replace
+    // the cached file while the user chooses a destination.
+    let (bytes, selected_epoch) = {
+        let _operation = state.lock_project_operation().await;
+        let (_, epoch, _) = state.project_root_epoch()?;
+        let bytes = filesystem::read_compiled_pdf(app, state, pdf_path).await?;
+        validate_pdf_bytes(&bytes)?;
+        (bytes, epoch)
+    };
+    let file_name = Path::new(pdf_path)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| export_error("PDF filename is not valid UTF-8"))?;
+    let selected = app
+        .dialog()
+        .file()
+        .set_file_name(file_name)
+        .add_filter("PDF", &["pdf"])
+        .blocking_save_file();
+    let Some(selected) = selected else {
+        return Ok(None);
+    };
+    let _operation = state.lock_project_operation().await;
+    if state.project_root_epoch()?.1 != selected_epoch {
+        return Err(export_error(
+            "the active project changed while saving the PDF",
+        ));
+    }
+    let output = selected
+        .into_path()
+        .map_err(|error| AppError::InvalidPath(error.to_string()))?;
+    // Keep the exact dialog-selected path so overwrite confirmation applies
+    // to the actual destination. The dialog supplies the PDF extension.
+    write_pdf_snapshot(&output, &bytes).await?;
+    let folder_opened = if open_folder {
+        open_export_folder(&output).await.is_ok()
+    } else {
+        false
+    };
+    Ok(Some(PdfExportResult {
+        output_path: filesystem::path_to_string(&output)?,
+        folder_opened,
+    }))
+}
+
+fn validate_pdf_bytes(bytes: &[u8]) -> AppResult<()> {
+    if !bytes.starts_with(b"%PDF-") {
+        return Err(export_error(
+            "the compiled PDF is incomplete; compile again",
+        ));
+    }
+    Ok(())
+}
+
+async fn write_pdf_snapshot(output: &Path, bytes: &[u8]) -> AppResult<()> {
+    validate_pdf_bytes(bytes)?;
+    if !output
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("pdf"))
+    {
+        return Err(export_error("choose a filename ending in .pdf"));
+    }
+    validate_output_target(output).await?;
+    let staged = filesystem::reserve_external_output(output, "pdf").await?;
+    if let Err(source) = tokio::fs::write(&staged, bytes).await {
+        let _ = tokio::fs::remove_file(&staged).await;
+        return Err(AppError::io("write PDF export", display(output), source));
+    }
+    filesystem::commit_external_output(staged, output.to_owned()).await
+}
+
+async fn open_export_folder(output: &Path) -> AppResult<()> {
+    let parent = output
+        .parent()
+        .ok_or_else(|| AppError::InvalidPath(display(output)))?;
+    let parent = dunce::canonicalize(parent)
+        .map_err(|source| AppError::io("resolve PDF export directory", display(parent), source))?;
+    let uri = reqwest::Url::from_directory_path(&parent)
+        .map_err(|()| AppError::InvalidPath(display(&parent)))?;
+    runtime::launch_uri(uri.as_str()).await?;
+    Ok(())
+}
 
 pub async fn export_document(
     app: &AppHandle,
@@ -446,8 +543,46 @@ fn export_error(message: impl Into<String>) -> AppError {
 mod tests {
     use std::{fs::File, io::Read};
 
-    use super::{create_overleaf_zip_at, platform_directory, validate_format};
+    use super::{create_overleaf_zip_at, platform_directory, validate_format, write_pdf_snapshot};
     use zip::ZipArchive;
+
+    #[tokio::test]
+    async fn exports_exact_pdf_snapshot_and_replaces_existing_pdf() {
+        let directory = tempfile::tempdir().expect("tempdir");
+        let output = directory.path().join("paper.PDF");
+        std::fs::write(&output, "previous export").expect("write old export");
+        let snapshot = b"%PDF-1.7\nexported snapshot\n%%EOF";
+        write_pdf_snapshot(&output, snapshot)
+            .await
+            .expect("export PDF");
+        assert_eq!(std::fs::read(&output).expect("read PDF"), snapshot);
+        assert_eq!(std::fs::read_dir(directory.path()).unwrap().count(), 1);
+    }
+
+    #[tokio::test]
+    async fn rejects_incomplete_pdf_and_non_pdf_destinations_without_overwriting() {
+        let directory = tempfile::tempdir().expect("tempdir");
+        let output = directory.path().join("paper.pdf");
+        std::fs::write(&output, "previous export").expect("write old export");
+        assert!(write_pdf_snapshot(&output, b"incomplete").await.is_err());
+        assert_eq!(std::fs::read(&output).unwrap(), b"previous export");
+        let source = directory.path().join("paper.tex");
+        std::fs::write(&source, "source").expect("write source");
+        assert!(write_pdf_snapshot(&source, b"%PDF-1.7").await.is_err());
+        assert_eq!(std::fs::read(&source).unwrap(), b"source");
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn pdf_export_rejects_symlink_destination() {
+        let directory = tempfile::tempdir().expect("tempdir");
+        let target = directory.path().join("original.pdf");
+        let output = directory.path().join("link.pdf");
+        std::fs::write(&target, "original").expect("write target");
+        std::os::unix::fs::symlink(&target, &output).expect("symlink");
+        assert!(write_pdf_snapshot(&output, b"%PDF-1.7").await.is_err());
+        assert_eq!(std::fs::read(target).unwrap(), b"original");
+    }
 
     #[test]
     fn exposes_only_supported_pandoc_formats() {

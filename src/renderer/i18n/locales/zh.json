@@ -1,4 +1,14 @@
 {
+  "pdfExport": {
+    "save": "PDF 另存为…",
+    "share": "分享 PDF",
+    "compileFirst": "请编译当前文档以保存或分享 PDF。",
+    "shareFallback": "此环境不支持文件分享。请保存 PDF 后在邮件或聊天应用中添加附件。",
+    "saved": "PDF 已保存至 {{path}}",
+    "readyToAttach": "PDF 已保存至 {{path}}。文件夹已打开，请在邮件或聊天应用中添加此文件作为附件。",
+    "folderFailed": "PDF 已保存至 {{path}}，但无法打开文件夹。请从此位置添加附件。",
+    "failed": "无法保存或分享 PDF：{{reason}}"
+  },
   "toolbar": {
     "returnHome": "返回主屏幕",
     "file": "文件",
@@ -10,7 +20,7 @@
     "saveAs": "另存为",
     "newFromTemplate": "从模板新建",
     "export": "导出",
-    "quickSave": "快速保存",
+    "quickSave": "快速保存（.tex 源文件）",
     "compile": "编译",
     "compiling": "编译中...",
     "compileLaTeX": "编译 LaTeX",

@@ -9,6 +9,7 @@ import PdfZoomDropdown from './PdfZoomDropdown'
 import { ICON_SIZE } from './ui/IconSystem'
 import { proseModeFor, useUiStore } from '../store/useUiStore'
 import { logError } from '../utils/errorMessage'
+import { PdfExportControls } from './PdfExportControls'
 
 export function PdfToolbar({ children }: { children?: React.ReactNode }) {
   const { t } = useTranslation()
@@ -74,7 +75,10 @@ export function PdfToolbar({ children }: { children?: React.ReactNode }) {
 
   return (
     <div className="pdf-toolbar" role="toolbar" aria-label="PDF">
-      <span className="pdf-toolbar-title">PDF</span>
+      <span className="pdf-toolbar-title" title={pdfPath ?? undefined}>
+        PDF
+      </span>
+      <PdfExportControls />
       {showPdfControls && (
         <div className="toolbar-sync-controls">
           <button

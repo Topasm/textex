@@ -1,4 +1,14 @@
 {
+  "pdfExport": {
+    "save": "Guardar PDF como…",
+    "share": "Compartir PDF",
+    "compileFirst": "Compila el documento actual para guardar o compartir su PDF.",
+    "shareFallback": "No se pueden compartir archivos aquí. Guarda el PDF para adjuntarlo en tu correo o aplicación de mensajería.",
+    "saved": "PDF guardado en {{path}}",
+    "readyToAttach": "PDF guardado en {{path}}. La carpeta está abierta; adjunta este archivo en tu correo o aplicación de mensajería.",
+    "folderFailed": "PDF guardado en {{path}}, pero no se pudo abrir la carpeta. Adjunta el archivo desde esta ubicación.",
+    "failed": "No se pudo guardar o compartir el PDF: {{reason}}"
+  },
   "toolbar": {
     "returnHome": "Volver a la pantalla de inicio",
     "file": "Archivo",
@@ -10,7 +20,7 @@
     "saveAs": "Guardar como",
     "newFromTemplate": "Nuevo desde plantilla",
     "export": "Exportar",
-    "quickSave": "Guardado rápido",
+    "quickSave": "Guardado rápido (fuente .tex)",
     "compile": "Compilar",
     "compiling": "Compilando...",
     "compileLaTeX": "Compilar LaTeX",

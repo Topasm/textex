@@ -134,6 +134,8 @@ Object.defineProperty(window, 'api', {
     removeWindowCloseRequestedListener: vi.fn(),
 
     // Export
+    exportPdf: vi.fn(),
+    sharePdf: vi.fn(),
     exportDocument: vi.fn(),
 
     // AI

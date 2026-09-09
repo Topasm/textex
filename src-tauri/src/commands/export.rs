@@ -19,3 +19,13 @@ pub async fn export_overleaf_zip(
 ) -> AppResult<Option<ExportResult>> {
     export::export_overleaf_zip(&app, state.inner()).await
 }
+
+#[tauri::command]
+pub async fn export_pdf(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    pdf_path: String,
+    open_folder: bool,
+) -> AppResult<Option<export::PdfExportResult>> {
+    export::export_pdf(&app, state.inner(), &pdf_path, open_folder).await
+}

@@ -1,4 +1,14 @@
 {
+  "pdfExport": {
+    "save": "Save PDF As…",
+    "share": "Share PDF",
+    "compileFirst": "Compile the current document to save or share its PDF.",
+    "shareFallback": "File sharing is unavailable here. Save the PDF to attach it in your mail or messaging app.",
+    "saved": "PDF saved to {{path}}",
+    "readyToAttach": "PDF saved to {{path}}. The folder is open; attach this file in your mail or messaging app.",
+    "folderFailed": "PDF saved to {{path}}, but the folder could not be opened. Attach the file from this location.",
+    "failed": "Could not save or share PDF: {{reason}}"
+  },
   "toolbar": {
     "returnHome": "Return to home screen",
     "file": "File",
@@ -10,7 +20,7 @@
     "saveAs": "Save As",
     "newFromTemplate": "New from Template",
     "export": "Export",
-    "quickSave": "Quick Save",
+    "quickSave": "Quick Save (.tex source)",
     "compile": "Compile",
     "compiling": "Compiling...",
     "compileLaTeX": "Compile LaTeX",

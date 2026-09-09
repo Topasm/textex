@@ -106,6 +106,7 @@ export const TAURI_COMMANDS = {
   synctexForward: 'synctex_forward',
   synctexInverse: 'synctex_inverse',
   synctexBuildLineMap: 'synctex_build_line_map',
+  exportPdf: 'export_pdf',
   exportDocument: 'export_document',
   exportOverleafZip: 'export_overleaf_zip',
   runSubmissionCheck: 'run_submission_check',
