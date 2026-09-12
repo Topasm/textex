@@ -18,7 +18,7 @@ import { useSettingsStore } from '../../store/useSettingsStore'
 import { useEditorStore } from '../../store/useEditorStore'
 import { useCompileStore } from '../../store/useCompileStore'
 import {
-  cacheZoteroInventory,
+  loadZoteroInventory,
   getCachedZoteroInventory,
   invalidateZoteroInventory
 } from '../../services/zoteroInventoryCache'
@@ -527,11 +527,10 @@ export function ZoteroReferences({
     setLibraryInventory([])
     setLibraryInventoryLoaded(false)
     setLibraryInventoryError('')
-    void loadAllZoteroCollectionItems(libraryKey, port)
+    void loadZoteroInventory(port, libraryKey)
       .then((items) => {
         if (cancelled || !isCurrentScope(generation, root, apiPort)) return
         setLibraryInventory(items)
-        cacheZoteroInventory(port, libraryKey, items)
         setLibraryInventoryLoaded(true)
         setLibraryInventoryError('')
       })

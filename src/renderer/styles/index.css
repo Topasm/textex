@@ -7923,6 +7923,22 @@ button.submission-check-finding:hover {
   margin-top: var(--space-8);
 }
 
+.citation-tooltip-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+.citation-tooltip-abstract {
+  margin-top: var(--space-8);
+  white-space: pre-wrap;
+}
+
+.citation-tooltip-abstract summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
 .citation-tooltip-entry + .citation-tooltip-entry {
   margin-top: var(--space-8);
   padding-top: var(--space-8);

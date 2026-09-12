@@ -70,6 +70,14 @@ if (new URLSearchParams(location.search).has('citations')) {
     ],
     auxCitationMap: parseAuxContent('\\bibcite{method2026}{1}\n\\bibcite{author2025}{2}')
   })
+  if (new URLSearchParams(location.search).has('zotero')) {
+    useSettingsStore.setState((state) => ({ settings: { ...state.settings, zoteroEnabled: true } }))
+    Object.assign(window.api, {
+      zoteroCollectionItems: async () => ({ items: [{ itemKey: 'ABCD2345', citekey: 'method2026', title: 'An efficient method in Zotero', author: 'Kim and Park', year: '2026', type: 'journalArticle', doi: '10.1000/method', arxivId: null }], totalResults: 1 }),
+      zoteroItemDetail: async () => ({ itemKey: 'ABCD2345', abstract: 'An abstract from the Zotero library.', publication: 'Methods Journal', url: 'https://example.org/method' }),
+      zoteroOpenItem: async (key: string) => { sessionStorage.setItem('opened-zotero', key); return { success: true } }
+    })
+  }
 }
 useSettingsStore.setState((state) => ({
   settings: { ...state.settings, scrollSyncEnabled: false }

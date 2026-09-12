@@ -2,7 +2,11 @@
   "citationPreview": {
     "title": "Citation details",
     "close": "Close citation details",
-    "missingDetails": "No bibliography details found in this project."
+    "missingDetails": "No bibliography details found in this project.",
+    "zoteroSource": "From Zotero",
+    "abstract": "Abstract",
+    "zoteroDisabled": "Enable Zotero in Settings → Integrations to show library details here.",
+    "zoteroUnavailable": "Zotero is unavailable. Showing project bibliography details."
   },
   "pdfExport": {
     "save": "Save PDF As…",

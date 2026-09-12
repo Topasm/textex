@@ -47,11 +47,11 @@ export function loadZoteroItemDetail(port: number, itemKey: string): Promise<Zot
   const request = window.api
     .zoteroItemDetail(itemKey, port)
     .then((detail) => {
-      remember(key, detail)
+      if (inFlight.get(key) === request) remember(key, detail)
       return detail
     })
     .finally(() => {
-      inFlight.delete(key)
+      if (inFlight.get(key) === request) inFlight.delete(key)
     })
   inFlight.set(key, request)
   return request

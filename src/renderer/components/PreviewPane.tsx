@@ -735,6 +735,7 @@ function PreviewPane() {
           {highlights.dotStyle && <div className="synctex-indicator" style={highlights.dotStyle} />}
           {tooltipData && (
             <CitationTooltip
+              key={`${projectRoot}:${displayedRevision}`}
               entries={tooltipData.entries}
               anchorRect={tooltipData.anchorRect}
               containerRect={tooltipData.containerRect}

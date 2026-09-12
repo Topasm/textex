@@ -2,7 +2,11 @@
   "citationPreview": {
     "title": "Détails de la citation",
     "close": "Fermer les détails de la citation",
-    "missingDetails": "Aucune information bibliographique trouvée dans ce projet."
+    "missingDetails": "Aucune information bibliographique trouvée dans ce projet.",
+    "zoteroSource": "Depuis Zotero",
+    "abstract": "Résumé",
+    "zoteroDisabled": "Activez Zotero dans Paramètres → Intégrations pour afficher les détails de la bibliothèque.",
+    "zoteroUnavailable": "Zotero est indisponible. Les données bibliographiques du projet sont affichées."
   },
   "pdfExport": {
     "save": "Enregistrer le PDF sous…",

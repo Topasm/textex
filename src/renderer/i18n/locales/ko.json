@@ -2,7 +2,11 @@
   "citationPreview": {
     "title": "인용 정보",
     "close": "인용 정보 닫기",
-    "missingDetails": "프로젝트에서 서지 정보를 찾을 수 없습니다."
+    "missingDetails": "프로젝트에서 서지 정보를 찾을 수 없습니다.",
+    "zoteroSource": "Zotero 정보",
+    "abstract": "초록",
+    "zoteroDisabled": "설정 → 연동에서 Zotero를 켜면 라이브러리 정보도 표시됩니다.",
+    "zoteroUnavailable": "Zotero에 연결할 수 없어 프로젝트의 서지 정보를 표시합니다."
   },
   "pdfExport": {
     "save": "PDF 다른 이름으로 저장…",

@@ -2,7 +2,11 @@
   "citationPreview": {
     "title": "引用详情",
     "close": "关闭引用详情",
-    "missingDetails": "在此项目中找不到参考文献信息。"
+    "missingDetails": "在此项目中找不到参考文献信息。",
+    "zoteroSource": "来自 Zotero",
+    "abstract": "摘要",
+    "zoteroDisabled": "在设置 → 集成中启用 Zotero，即可显示文库详情。",
+    "zoteroUnavailable": "无法连接 Zotero，正在显示项目的参考文献信息。"
   },
   "pdfExport": {
     "save": "PDF 另存为…",

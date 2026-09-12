@@ -32,4 +32,19 @@ describe('zoteroItemDetailCache', () => {
     await loadZoteroItemDetail(23_119, detail.itemKey)
     expect(window.api.zoteroItemDetail).toHaveBeenCalledTimes(2)
   })
+
+  it('does not restore stale details after an in-flight read is invalidated', async () => {
+    let resolve!: (value: typeof detail) => void
+    vi.mocked(window.api.zoteroItemDetail).mockImplementationOnce(
+      () =>
+        new Promise((done) => {
+          resolve = done
+        })
+    )
+    const first = loadZoteroItemDetail(23119, detail.itemKey)
+    invalidateZoteroItemDetails()
+    resolve(detail)
+    await first
+    expect(getCachedZoteroItemDetail(23119, detail.itemKey)).toBeNull()
+  })
 })

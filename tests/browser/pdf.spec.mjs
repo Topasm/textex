@@ -201,6 +201,25 @@ test('citation groups preview together and close on outside click, scroll and re
   await expect(popup).toHaveCount(0)
 })
 
+test('citation popup adds Zotero library details without moving the PDF', async ({ page }) => {
+  await page.goto('/?citations&zotero')
+  const link = page.locator('[data-page-number="1"] .annotationLayer a').first()
+  await expect(link).toBeVisible()
+  const viewer = page.locator('.preview-container')
+  const before = await viewer.evaluate((element) => element.scrollTop)
+  await link.click()
+  const popup = page.getByRole('dialog', { name: 'Citation details' })
+  await expect(popup).toContainText('An efficient method in Zotero')
+  await expect(popup).toContainText('An abstract from the Zotero library.')
+  await expect.poll(() => viewer.evaluate((element) => element.scrollTop)).toBe(before)
+  await popup.getByRole('button', { name: 'Open in Zotero' }).click()
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem('opened-zotero'))).toBe('ABCD2345')
+  await expect(popup).toBeVisible()
+  await page.getByRole('button', { name: 'Recompile', exact: true }).click()
+  await expect(page.locator('[data-pdf-generation="2"] .textLayer').first()).toBeVisible()
+  await expect(popup).toHaveCount(0)
+})
+
 test('PDF search stays in the viewer and follows the displayed generation', async ({ page }) => {
   await page.goto('/')
   await expect(page.locator('.textLayer span').first()).toBeVisible()
