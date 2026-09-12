@@ -31,7 +31,7 @@ describe('useHorizontalResize', () => {
     expect(document.body.style.cursor).toBe('col-resize')
     expect(document.body.style.userSelect).toBe('none')
 
-    fireEvent.mouseMove(window, { clientX: 412 })
+    fireEvent.mouseMove(window, { clientX: 412, buttons: 1 })
     expect(onMove).toHaveBeenCalledWith(412)
 
     fireEvent.mouseUp(window)
@@ -57,6 +57,37 @@ describe('useHorizontalResize', () => {
     unmount()
     expect(onStop).toHaveBeenCalledTimes(2)
     expect(document.body.style.cursor).toBe('')
+  })
+
+  it('restores selection when the window loses focus during a resize', () => {
+    const onMove = vi.fn()
+    const onStop = vi.fn()
+    const { result } = renderHook(() => useHorizontalResize({ onMove, onStop }))
+
+    act(() => result.current(leftMouseDown()))
+    fireEvent.blur(window)
+
+    expect(document.body.style.userSelect).toBe('')
+    expect(document.body.style.cursor).toBe('')
+    expect(onStop).toHaveBeenCalledOnce()
+    fireEvent.mouseMove(window, { clientX: 412, buttons: 1 })
+    fireEvent.mouseUp(window)
+    expect(onMove).not.toHaveBeenCalled()
+    expect(onStop).toHaveBeenCalledOnce()
+  })
+
+  it('stops resizing on return when the mouse was released outside the window', () => {
+    const onMove = vi.fn()
+    const onStop = vi.fn()
+    const { result } = renderHook(() => useHorizontalResize({ onMove, onStop }))
+
+    act(() => result.current(leftMouseDown()))
+    fireEvent.mouseMove(window, { clientX: 412, buttons: 0 })
+
+    expect(document.body.style.userSelect).toBe('')
+    expect(document.body.style.cursor).toBe('')
+    expect(onMove).not.toHaveBeenCalled()
+    expect(onStop).toHaveBeenCalledOnce()
   })
 
   it('ignores non-primary mouse buttons', () => {

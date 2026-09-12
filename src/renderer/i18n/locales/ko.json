@@ -1,4 +1,9 @@
 {
+  "citationPreview": {
+    "title": "인용 정보",
+    "close": "인용 정보 닫기",
+    "missingDetails": "프로젝트에서 서지 정보를 찾을 수 없습니다."
+  },
   "pdfExport": {
     "save": "PDF 다른 이름으로 저장…",
     "share": "PDF 공유",

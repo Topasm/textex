@@ -4,6 +4,7 @@ import 'monaco-editor/editor/contrib/find/browser/findController'
 import { requestLocalSearch } from '../../src/renderer/services/localSearch'
 import { useLocalSearchRequest } from '../../src/renderer/hooks/useLocalSearchRequest'
 import { usePendingActions } from '../../src/renderer/hooks/editor/usePendingActions'
+import { useHorizontalResize } from '../../src/renderer/hooks/useHorizontalResize'
 import { useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import * as monaco from 'monaco-editor/editor/editor.api'
@@ -18,7 +19,8 @@ import { useEditorStore } from '../../src/renderer/store/useEditorStore'
 import { usePdfStore } from '../../src/renderer/store/usePdfStore'
 import { useProjectStore } from '../../src/renderer/store/useProjectStore'
 import { useSettingsStore } from '../../src/renderer/store/useSettingsStore'
-import { pdfFixture, multipagePdfFixture } from './pdf-fixture'
+import { pdfFixture, multipagePdfFixture, citationPdfFixture } from './pdf-fixture'
+import { parseAuxContent } from '../../src/shared/auxparser'
 import i18n from '../../src/renderer/i18n'
 import '../../src/renderer/styles/index.css'
 import '../../src/renderer/styles/flat.css'
@@ -31,7 +33,8 @@ const sourcePath = '/project/main.tex'
 const source = '\\begin{document}\nThe efficient method works.\n\\end{document}'
 let pdfRevision = 1
 window.api = {
-  readCompiledPdf: async () => ({ data: new URLSearchParams(location.search).has('multipage') ? multipagePdfFixture() : pdfFixture(pdfRevision), mimeType: 'application/pdf' }),
+  readCompiledPdf: async () => ({ data: new URLSearchParams(location.search).has('citations') ? citationPdfFixture() : new URLSearchParams(location.search).has('multipage') ? multipagePdfFixture() : pdfFixture(pdfRevision), mimeType: 'application/pdf' }),
+  openExternal: async (url: string) => { sessionStorage.setItem('opened-url', url) },
   getProjectIndex: async () => ({ root: '/project', generation: 1, entries: [{ type: 'file', path: '/project/reference.pdf', relativePath: 'reference.pdf', parentRelativePath: '', name: 'reference.pdf' }] }),
   readFileBase64: async () => ({ data: 'data:application/pdf;base64,' + btoa(String.fromCharCode(...pdfFixture(pdfRevision))), mimeType: 'application/pdf' }),
   readDirectory: async () => sessionStorage.getItem('evidence') ? [{ name: 'citation-evidence.json', path: '/project/citation-evidence.json', type: 'file' }] : [],
@@ -59,6 +62,15 @@ if (new URLSearchParams(location.search).has('research-ui')) {
 }
 useEditorStore.getState().openFileInTab(sourcePath, source)
 useProjectStore.setState({ projectRoot: '/project' })
+if (new URLSearchParams(location.search).has('citations')) {
+  useProjectStore.setState({
+    bibEntries: [
+      { key: 'method2026', type: 'article', title: 'An efficient method', author: 'Kim and Park', year: '2026', journal: 'Methods Journal', doi: '10.1000/method' },
+      { key: 'author2025', type: 'book', title: 'A useful reference', author: 'Lee', year: '2025' }
+    ],
+    auxCitationMap: parseAuxContent('\\bibcite{method2026}{1}\n\\bibcite{author2025}{2}')
+  })
+}
 useSettingsStore.setState((state) => ({
   settings: { ...state.settings, scrollSyncEnabled: false }
 }))
@@ -106,6 +118,7 @@ function SourceEditor() {
 
 function Harness() {
   const [markdown, setMarkdown] = useState(false)
+  const startResize = useHorizontalResize({ onMove: () => {} })
   const highlight = useEditorStore((state) => state.previewSourceHighlight)
   if (new URLSearchParams(location.search).has('research-ui')) return <ResearchUiHarness />
   if (new URLSearchParams(location.search).has('ui')) return <UiHarness />
@@ -116,6 +129,7 @@ function Harness() {
   return (
     <>
       <nav>
+        <button onMouseDown={startResize}>Resize panel</button>
         <button onClick={() => useSettingsStore.setState((state) => ({ settings: { ...state.settings, pdfViewMode: 'single' } }))}>Single page</button>
         <button onClick={() => requestLocalSearch('document')}>Find document</button>
         <button onClick={() => usePdfStore.getState().setZoomLevel(180)}>Zoom in</button>

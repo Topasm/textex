@@ -1,5 +1,18 @@
 import { test, expect } from '@playwright/test'
 
+async function selectFixtureText(page, backwards = false) {
+  // Use the drawn glyph coordinates so a misaligned text layer cannot pass.
+  const canvas = await page.locator('.react-pdf__Page__canvas').boundingBox()
+  const scale = canvas.width / 600
+  const y = canvas.y + 54 * scale
+  const left = canvas.x + 61 * scale
+  const right = canvas.x + 270 * scale
+  await page.mouse.move(backwards ? right : left, y)
+  await page.mouse.down()
+  await page.mouse.move(backwards ? left : right, y, { steps: 20 })
+  await page.mouse.up()
+}
+
 test('real PDF worker renders canvas, text and annotations across zoom and generations', async ({
   page
 }) => {
@@ -95,6 +108,97 @@ test('Ctrl+click on PDF moves the real Monaco editor to the source line', async 
   await expect(page.locator('.monaco-editor .editor-flash-line')).toBeVisible()
   await expect(page.getByTestId('source-editor')).toHaveAttribute('data-cursor-line', '2')
   await expect.poll(() => page.locator('.monaco-editor').evaluate((editor) => editor.contains(document.activeElement))).toBe(true)
+})
+
+test('PDF text remains selectable after a panel resize loses window focus', async ({ page }) => {
+  await page.goto('/')
+  const text = page.locator('.textLayer span').filter({ hasText: 'The efficient method works.' })
+  await expect(text).toBeVisible()
+  const resize = await page.getByRole('button', { name: 'Resize panel', exact: true }).boundingBox()
+  await page.mouse.move(resize.x + resize.width / 2, resize.y + resize.height / 2)
+  await page.mouse.down()
+  // A release in another window is not delivered to the app.
+  await page.evaluate(() => window.dispatchEvent(new Event('blur')))
+  await expect(page.locator('body')).not.toHaveCSS('user-select', 'none')
+  await page.mouse.up()
+
+  await selectFixtureText(page)
+  await expect.poll(() => page.evaluate(() => window.getSelection()?.toString())).toContain('efficient method')
+  await expect(page.getByTestId('source-highlight')).toContainText('efficient method')
+})
+
+test.describe('PDF selection inside desktop chrome', () => {
+  test.use({ deviceScaleFactor: 2 })
+
+  test('selects drawn text in both directions even when the surrounding UI disables selection', async ({ page }) => {
+    await page.goto('/')
+    await expect(page.locator('.textLayer span').first()).toBeVisible()
+    await page.addStyleTag({ content: 'body { -webkit-user-select: none; user-select: none; }' })
+    for (const backwards of [false, true]) {
+      // Start from the editor, as when switching from writing to reading the PDF.
+      await page.locator('.monaco-editor textarea').focus()
+      await page.evaluate(() => window.getSelection()?.removeAllRanges())
+      await selectFixtureText(page, backwards)
+      await expect.poll(() => page.evaluate(() => window.getSelection()?.toString())).toContain('efficient method')
+      await expect(page.getByTestId('source-highlight')).toContainText('efficient method')
+    }
+  })
+})
+
+test('citation links open details in place using real PDF annotation destinations', async ({ page }) => {
+  await page.goto('/?citations')
+  const links = page.locator('[data-page-number="1"] .annotationLayer a')
+  await expect(links).toHaveCount(4)
+  // React-PDF hides every named destination behind the same href.
+  await expect(links.first()).toHaveAttribute('href', '#')
+  const viewer = page.locator('.preview-container')
+  const scrollTop = await viewer.evaluate(el => el.scrollTop)
+  await links.first().click()
+  const popup = page.getByRole('dialog', { name: 'Citation details' })
+  await expect(popup).toContainText('An efficient method')
+  await expect(popup).toContainText('Kim and Park')
+  await expect(popup).toContainText('2026 · Methods Journal')
+  await expect.poll(() => viewer.evaluate(el => el.scrollTop)).toBe(scrollTop)
+  await page.mouse.move(5, 5)
+  await expect(popup).toBeVisible()
+  await popup.getByRole('button', { name: 'Check original source' }).click()
+  expect(await page.evaluate(() => sessionStorage.getItem('opened-url'))).toBe('https://doi.org/10.1000%2Fmethod')
+  await page.keyboard.press('Escape')
+  await expect(popup).toHaveCount(0)
+  await expect(links.first()).toBeFocused()
+  await links.nth(1).focus()
+  await page.keyboard.press('Enter')
+  await expect(popup).toContainText('A useful reference')
+  await expect.poll(() => viewer.evaluate(el => el.scrollTop)).toBe(scrollTop)
+  await popup.getByRole('button', { name: 'Close citation details' }).click()
+  await expect(popup).toHaveCount(0)
+  await links.nth(3).click()
+  await expect(popup).toContainText('No bibliography details found')
+  await expect.poll(() => viewer.evaluate(el => el.scrollTop)).toBe(scrollTop)
+  await page.keyboard.press('Escape')
+  await links.nth(2).click()
+  await expect.poll(() => viewer.evaluate(el => el.scrollTop)).toBeGreaterThan(scrollTop + 300)
+  await expect(popup).toHaveCount(0)
+})
+
+test('citation groups preview together and close on outside click, scroll and recompile', async ({ page }) => {
+  await page.goto('/?citations')
+  const group = page.locator('.textLayer span').filter({ hasText: '[1,2]' })
+  const popup = page.getByRole('dialog', { name: 'Citation details' })
+  await group.click()
+  await expect(popup).toContainText('An efficient method')
+  await expect(popup).toContainText('A useful reference')
+  await page.mouse.click(10, 10)
+  await expect(popup).toHaveCount(0)
+  await group.click()
+  await expect(popup).toBeVisible()
+  await page.locator('.preview-container').evaluate(el => { el.scrollTop += 40 })
+  await expect(popup).toHaveCount(0)
+  await group.click()
+  await expect(popup).toBeVisible()
+  await page.getByRole('button', { name: 'Recompile', exact: true }).click()
+  await expect(page.locator('[data-pdf-generation="2"] .textLayer').first()).toBeVisible()
+  await expect(popup).toHaveCount(0)
 })
 
 test('PDF search stays in the viewer and follows the displayed generation', async ({ page }) => {

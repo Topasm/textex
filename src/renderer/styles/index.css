@@ -1326,6 +1326,9 @@ body,
 
 .preview-buffered-page .textLayer {
   z-index: 1;
+  /* Keep PDF text selectable inside desktop chrome, including WKWebView. */
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .react-pdf__Page {
@@ -7879,9 +7882,10 @@ button.submission-check-finding:hover {
 
 /* Citation Tooltip */
 .citation-tooltip {
-  position: absolute;
-  z-index: 10;
-  max-width: 350px;
+  position: fixed;
+  z-index: 80;
+  overflow: auto;
+  overflow-wrap: anywhere;
   padding: 10px var(--space-12);
   background: var(--bg-secondary);
   border: 1px solid var(--border);
@@ -7889,6 +7893,34 @@ button.submission-check-finding:hover {
   box-shadow: 0 4px 12px var(--shadow-color);
   pointer-events: none;
   animation: citation-tooltip-fade-in 100ms ease-out;
+}
+
+.citation-tooltip-pinned {
+  pointer-events: auto;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.citation-tooltip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  margin-bottom: var(--space-8);
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+}
+
+.citation-tooltip-pinned .citation-tooltip-title {
+  display: block;
+}
+
+.citation-tooltip-pinned .citation-tooltip-authors {
+  white-space: normal;
+}
+
+.citation-tooltip-source {
+  margin-top: var(--space-8);
 }
 
 .citation-tooltip-entry + .citation-tooltip-entry {

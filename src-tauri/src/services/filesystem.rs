@@ -327,6 +327,7 @@ pub async fn save_file_as(
     let selected = app
         .dialog()
         .file()
+        .set_directory(state.project_root()?)
         .set_file_name("untitled.tex")
         .add_filter("LaTeX Files", &["tex"])
         .add_filter("All Files", &["*"])

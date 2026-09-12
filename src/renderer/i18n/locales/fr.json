@@ -1,4 +1,9 @@
 {
+  "citationPreview": {
+    "title": "Détails de la citation",
+    "close": "Fermer les détails de la citation",
+    "missingDetails": "Aucune information bibliographique trouvée dans ce projet."
+  },
   "pdfExport": {
     "save": "Enregistrer le PDF sous…",
     "share": "Partager le PDF",

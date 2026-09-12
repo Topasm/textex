@@ -120,7 +120,11 @@ function PreviewPane() {
   }, [pdfDocumentId, projectRoot])
   const search = usePdfSearch(containerRef, displayedGeneration?.document, displayedRevision)
   usePdfSelection(containerRef, pageViewportsRef, displayedRevision)
-  const { tooltipData } = useCitationTooltip(containerRef, displayedRevision)
+  const {
+    tooltipData,
+    dismiss: dismissCitation,
+    registerPageAnnotations
+  } = useCitationTooltip(containerRef, displayedRevision)
 
   /** Calculate estimated height for a page. */
   const getPageHeight = useCallback(
@@ -568,6 +572,9 @@ function PreviewPane() {
         width={pageWidth}
         renderTextLayer={isDisplayed}
         renderAnnotationLayer={isDisplayed}
+        onGetAnnotationsSuccess={(annotations) =>
+          registerPageAnnotations(generation.revision, pageNumber, annotations)
+        }
         onRenderSuccess={
           isDisplayed
             ? handlePageRenderSuccess(generation.revision, pageNumber)
@@ -729,9 +736,10 @@ function PreviewPane() {
           {tooltipData && (
             <CitationTooltip
               entries={tooltipData.entries}
-              x={tooltipData.x}
-              y={tooltipData.y}
+              anchorRect={tooltipData.anchorRect}
               containerRect={tooltipData.containerRect}
+              pinned={tooltipData.pinned}
+              onClose={() => dismissCitation(true)}
             />
           )}
         </>

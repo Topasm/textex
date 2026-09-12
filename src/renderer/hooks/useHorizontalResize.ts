@@ -9,7 +9,7 @@ interface HorizontalResizeOptions {
 
 /**
  * Owns the document-level lifecycle for a horizontal resize gesture.
- * Body styles and global listeners are restored on mouse-up, disable, or unmount.
+ * Restore selection even when a window switch or an outside release interrupts the drag.
  */
 export function useHorizontalResize({
   enabled = true,
@@ -41,7 +41,13 @@ export function useHorizontalResize({
       const callbacks = callbacksRef.current
       const previousCursor = document.body.style.cursor
       const previousUserSelect = document.body.style.userSelect
-      const move = (moveEvent: MouseEvent): void => callbacks.onMove(moveEvent.clientX)
+      const move = (moveEvent: MouseEvent): void => {
+        if ((moveEvent.buttons & 1) === 0) {
+          stopResize()
+          return
+        }
+        callbacks.onMove(moveEvent.clientX)
+      }
       const up = (): void => stopResize()
 
       cleanupRef.current = () => {
@@ -49,6 +55,7 @@ export function useHorizontalResize({
         document.body.style.userSelect = previousUserSelect
         window.removeEventListener('mousemove', move)
         window.removeEventListener('mouseup', up)
+        window.removeEventListener('blur', up)
         callbacks.onStop?.()
       }
 
@@ -57,6 +64,7 @@ export function useHorizontalResize({
       document.body.style.userSelect = 'none'
       window.addEventListener('mousemove', move)
       window.addEventListener('mouseup', up)
+      window.addEventListener('blur', up)
     },
     [enabled, stopResize]
   )

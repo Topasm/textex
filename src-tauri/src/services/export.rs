@@ -39,12 +39,12 @@ pub async fn export_pdf(
 ) -> AppResult<Option<PdfExportResult>> {
     // Freeze the PDF before opening the dialog: auto-compilation may replace
     // the cached file while the user chooses a destination.
-    let (bytes, selected_epoch) = {
+    let (bytes, selected_project_root, selected_epoch) = {
         let _operation = state.lock_project_operation().await;
-        let (_, epoch, _) = state.project_root_epoch()?;
+        let (project_root, epoch, _) = state.project_root_epoch()?;
         let bytes = filesystem::read_compiled_pdf(app, state, pdf_path).await?;
         validate_pdf_bytes(&bytes)?;
-        (bytes, epoch)
+        (bytes, project_root, epoch)
     };
     let file_name = Path::new(pdf_path)
         .file_name()
@@ -53,6 +53,7 @@ pub async fn export_pdf(
     let selected = app
         .dialog()
         .file()
+        .set_directory(&selected_project_root)
         .set_file_name(file_name)
         .add_filter("PDF", &["pdf"])
         .blocking_save_file();
@@ -144,6 +145,7 @@ pub async fn export_document(
     let selected = app
         .dialog()
         .file()
+        .set_directory(state.project_root()?)
         .set_file_name(&default_name)
         .add_filter(format.to_ascii_uppercase(), &[extension])
         .blocking_save_file();
@@ -188,6 +190,7 @@ pub async fn export_overleaf_zip(
     let selected = app
         .dialog()
         .file()
+        .set_directory(&selected_project_root)
         .set_file_name(format!("{project_name}-overleaf.zip"))
         .add_filter("ZIP Archives", &["zip"])
         .blocking_save_file();

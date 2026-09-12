@@ -1,157 +1,188 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, type RefObject } from 'react'
 import { useProjectStore } from '../../store/useProjectStore'
 import type { BibEntry } from '../../../shared/types'
-import type { AuxCitationMap } from '../../../shared/auxparser'
+import { resolvePdfCitation, resolvePdfCitationLabel } from '../../services/pdfCitations'
 
 export interface CitationTooltipData {
   entries: BibEntry[]
-  x: number
-  y: number
+  anchorRect: DOMRect
   containerRect: DOMRect
+  pinned: boolean
 }
 
-/**
- * Detects hover over citation references in the PDF preview and resolves
- * them to BibEntry data for tooltip display.
- *
- * Primary: annotation layer links (hyperref) with href containing cite keys.
- * Fallback: text layer spans matching [N] patterns, resolved via auxCitationMap.
- */
+/** Resolve PDF.js annotation IDs before its link handler can scroll the document. */
 export function useCitationTooltip(
-  containerRef: React.RefObject<HTMLDivElement | null>,
+  containerRef: RefObject<HTMLDivElement | null>,
   pdfRevision: number
-): { tooltipData: CitationTooltipData | null } {
+) {
+  const projectRoot = useProjectStore((state) => state.projectRoot)
+  const bibEntries = useProjectStore((state) => state.bibEntries)
+  const auxCitationMap = useProjectStore((state) => state.auxCitationMap)
   const [tooltipData, setTooltipData] = useState<CitationTooltipData | null>(null)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const activeTargetRef = useRef<EventTarget | null>(null)
+  const annotationsRef = useRef(new Map<number, Map<string, unknown>>())
+  const scopeRef = useRef({ projectRoot, pdfRevision })
+  scopeRef.current = { projectRoot, pdfRevision }
+  const targetRef = useRef<HTMLElement | null>(null)
+  const pinnedRef = useRef(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const resolveFromAnnotationLink = useCallback((anchor: HTMLAnchorElement): BibEntry[] | null => {
-    const href = anchor.getAttribute('href') || ''
-    // hyperref internal links use fragment identifiers like #cite.KEY or destinations
-    // Also check data-dest attribute used by some PDF renderers
-    const dest = anchor.getAttribute('data-dest') || ''
-    const combined = href + ' ' + dest
-
-    // Match cite.KEY pattern (hyperref default)
-    const citeMatch = combined.match(/cite\.([^\s#&]+)/)
-    if (!citeMatch) return null
-
-    const citeKey = citeMatch[1]
-    const bibEntries = useProjectStore.getState().bibEntries
-    const entry = bibEntries.find((e) => e.key === citeKey)
-    return entry ? [entry] : null
-  }, [])
-
-  const resolveFromTextSpan = useCallback((span: HTMLSpanElement): BibEntry[] | null => {
-    const text = span.textContent?.trim()
-    if (!text) return null
-
-    // Match citation patterns: [1], [2,3], [1, 2, 3]
-    const match = text.match(/^\[(\d+(?:\s*,\s*\d+)*)\]$/)
-    if (!match) return null
-
-    const auxCitationMap = useProjectStore.getState().auxCitationMap as AuxCitationMap | null
-    if (!auxCitationMap) return null
-
-    const bibEntries = useProjectStore.getState().bibEntries
-    const numbers = match[1].split(',').map((s) => s.trim())
-    const results: BibEntry[] = []
-
-    for (const num of numbers) {
-      const keys = auxCitationMap.labelToKeys.get(num)
-      if (keys) {
-        for (const key of keys) {
-          const entry = bibEntries.find((e) => e.key === key)
-          if (entry) results.push(entry)
-        }
+  const dismiss = useCallback(
+    (restoreFocus = false) => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+      if (restoreFocus && pinnedRef.current) {
+        const target = targetRef.current
+        const focusTarget =
+          target?.isConnected && target.matches('a') ? target : containerRef.current
+        focusTarget?.focus({ preventScroll: true })
       }
-    }
+      pinnedRef.current = false
+      targetRef.current = null
+      setTooltipData(null)
+    },
+    [containerRef]
+  )
 
-    return results.length > 0 ? results : null
-  }, [])
+  useEffect(() => {
+    annotationsRef.current.clear()
+  }, [projectRoot, pdfRevision])
+
+  const registerPageAnnotations = useCallback(
+    (revision: number, pageNumber: number, annotations: unknown[]) => {
+      if (
+        revision !== pdfRevision ||
+        scopeRef.current.pdfRevision !== revision ||
+        scopeRef.current.projectRoot !== projectRoot
+      )
+        return
+      const destinations = new Map<string, unknown>()
+      for (const annotation of annotations) {
+        if (!annotation || typeof annotation !== 'object') continue
+        const item = annotation as { id?: unknown; dest?: unknown }
+        if (typeof item.id === 'string') destinations.set(item.id, item.dest)
+      }
+      annotationsRef.current.set(pageNumber, destinations)
+    },
+    [projectRoot, pdfRevision]
+  )
 
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
+    dismiss()
+    let pointerStart: { x: number; y: number } | null = null
 
-    const handleMouseOver = (e: MouseEvent) => {
-      const target = e.target as HTMLElement
-      if (!target) return
-
-      // Check annotation layer links first
-      const anchor = target.closest('.annotationLayer a') as HTMLAnchorElement | null
-      if (anchor) {
-        activeTargetRef.current = anchor
-        if (debounceRef.current) clearTimeout(debounceRef.current)
-        debounceRef.current = setTimeout(() => {
-          if (activeTargetRef.current !== anchor) return
-          const entries = resolveFromAnnotationLink(anchor)
-          if (entries && entries.length > 0) {
-            const rect = anchor.getBoundingClientRect()
-            const containerRect = container.getBoundingClientRect()
-            setTooltipData({
-              entries,
-              x: rect.left - containerRect.left + container.scrollLeft,
-              y: rect.top - containerRect.top + container.scrollTop,
-              containerRect
-            })
-          }
-        }, 150)
-        return
-      }
-
-      // Fallback: text layer spans
-      const span = target.closest('.react-pdf__Page__textContent span') as HTMLSpanElement | null
-      if (span) {
-        activeTargetRef.current = span
-        if (debounceRef.current) clearTimeout(debounceRef.current)
-        debounceRef.current = setTimeout(() => {
-          if (activeTargetRef.current !== span) return
-          const entries = resolveFromTextSpan(span)
-          if (entries && entries.length > 0) {
-            const rect = span.getBoundingClientRect()
-            const containerRect = container.getBoundingClientRect()
-            setTooltipData({
-              entries,
-              x: rect.left - containerRect.left + container.scrollLeft,
-              y: rect.top - containerRect.top + container.scrollTop,
-              containerRect
-            })
-          }
-        }, 150)
-        return
-      }
-    }
-
-    const handleMouseOut = (e: MouseEvent) => {
-      const related = e.relatedTarget as HTMLElement | null
-      // If moving to another citation element, let mouseover handle it
+    const resolve = (node: EventTarget | null) => {
+      if (!(node instanceof Element)) return null
+      const target = node.closest<HTMLElement>(
+        '.annotationLayer a, .textLayer span[role="presentation"]'
+      )
       if (
-        related?.closest?.('.annotationLayer a') ||
-        related?.closest?.('.react-pdf__Page__textContent span')
-      ) {
-        return
+        !target ||
+        target.closest('[data-pdf-generation]')?.getAttribute('data-pdf-generation') !==
+          String(pdfRevision)
+      )
+        return null
+      if (target.matches('a')) {
+        const page = Number(target.closest('[data-page-number]')?.getAttribute('data-page-number'))
+        const id = target.closest('[data-annotation-id]')?.getAttribute('data-annotation-id')
+        const destination = id ? annotationsRef.current.get(page)?.get(id) : undefined
+        // React-PDF uses href="#" for every internal link, so annotation metadata
+        // is authoritative. Fragment fallback supports older renderers.
+        const href = target.getAttribute('href') ?? ''
+        const entries =
+          resolvePdfCitation(destination, bibEntries) ??
+          resolvePdfCitation(target.getAttribute('data-dest'), bibEntries) ??
+          (href.startsWith('#') ? resolvePdfCitation(href, bibEntries) : null)
+        return entries ? { target, entries } : null
       }
-      activeTargetRef.current = null
-      if (debounceRef.current) clearTimeout(debounceRef.current)
-      setTooltipData(null)
+      const entries = resolvePdfCitationLabel(target.textContent ?? '', bibEntries, auxCitationMap)
+      return entries ? { target, entries } : null
     }
 
-    container.addEventListener('mouseover', handleMouseOver)
-    container.addEventListener('mouseout', handleMouseOut)
+    const show = (resolved: { target: HTMLElement; entries: BibEntry[] }, pinned: boolean) => {
+      if (!resolved.target.isConnected) return
+      if (timerRef.current) clearTimeout(timerRef.current)
+      targetRef.current = resolved.target
+      pinnedRef.current = pinned
+      setTooltipData({
+        entries: resolved.entries,
+        anchorRect: resolved.target.getBoundingClientRect(),
+        containerRect: container.getBoundingClientRect(),
+        pinned
+      })
+    }
 
+    const hover = (event: MouseEvent) => {
+      if (pinnedRef.current || event.buttons) return
+      const resolved = resolve(event.target)
+      if (!resolved) return
+      if (timerRef.current) clearTimeout(timerRef.current)
+      targetRef.current = resolved.target
+      timerRef.current = setTimeout(() => {
+        if (targetRef.current === resolved.target) show(resolved, false)
+      }, 150)
+    }
+    const leave = (event: MouseEvent) => {
+      if (pinnedRef.current) return
+      if (event.relatedTarget instanceof Node && targetRef.current?.contains(event.relatedTarget))
+        return
+      dismiss()
+    }
+    const pointerDown = (event: MouseEvent) => {
+      pointerStart = { x: event.clientX, y: event.clientY }
+    }
+    const click = (event: MouseEvent) => {
+      if (event.button !== 0 || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey)
+        return
+      if (
+        event.detail &&
+        pointerStart &&
+        Math.hypot(event.clientX - pointerStart.x, event.clientY - pointerStart.y) > 4
+      )
+        return
+      const selection = window.getSelection()
+      if (selection && !selection.isCollapsed && container.contains(selection.anchorNode)) return
+      const resolved = resolve(event.target)
+      if (!resolved) return
+      event.preventDefault()
+      event.stopPropagation()
+      show(resolved, true)
+    }
+    const outside = (event: PointerEvent) => {
+      if (!(event.target instanceof Element) || event.target.closest('.citation-tooltip')) return
+      if (!targetRef.current?.contains(event.target)) dismiss()
+    }
+    const keyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || !targetRef.current) return
+      event.preventDefault()
+      event.stopPropagation()
+      dismiss(true)
+    }
+    const close = () => dismiss()
+
+    container.addEventListener('mouseover', hover)
+    container.addEventListener('mouseout', leave)
+    container.addEventListener('mousedown', pointerDown)
+    container.addEventListener('click', click, true)
+    container.addEventListener('scroll', close, { passive: true })
+    document.addEventListener('pointerdown', outside, true)
+    document.addEventListener('keydown', keyDown, true)
+    window.addEventListener('resize', close)
+    const observer = new ResizeObserver(close)
+    observer.observe(container)
     return () => {
-      container.removeEventListener('mouseover', handleMouseOver)
-      container.removeEventListener('mouseout', handleMouseOut)
-      if (debounceRef.current) clearTimeout(debounceRef.current)
+      if (timerRef.current) clearTimeout(timerRef.current)
+      container.removeEventListener('mouseover', hover)
+      container.removeEventListener('mouseout', leave)
+      container.removeEventListener('mousedown', pointerDown)
+      container.removeEventListener('click', click, true)
+      container.removeEventListener('scroll', close)
+      document.removeEventListener('pointerdown', outside, true)
+      document.removeEventListener('keydown', keyDown, true)
+      window.removeEventListener('resize', close)
+      observer.disconnect()
     }
-  }, [containerRef, resolveFromAnnotationLink, resolveFromTextSpan])
+  }, [containerRef, pdfRevision, projectRoot, bibEntries, auxCitationMap, dismiss])
 
-  // Clear tooltip when PDF recompiles
-  useEffect(() => {
-    setTooltipData(null)
-    activeTargetRef.current = null
-  }, [pdfRevision])
-
-  return { tooltipData }
+  return { tooltipData, dismiss, registerPageAnnotations }
 }

@@ -30,6 +30,25 @@ function encodePdf(objects: string[]): Uint8Array {
   return new TextEncoder().encode(pdf)
 }
 
+/** Real hyperref and biblatex links point at the second-page bibliography. */
+export function citationPdfFixture(): Uint8Array {
+  const first = 'BT /F1 18 Tf 60 740 Td (Read [1].) Tj 0 -40 Td (Author 2025) Tj 0 -40 Td (Go to section) Tj 0 -40 Td (Missing entry) Tj 0 -40 Td ([1,2]) Tj ET'
+  const second = 'BT /F1 18 Tf 60 740 Td (References on page two) Tj ET'
+  return encodePdf([
+    '<< /Type /Catalog /Pages 2 0 R /Dests << /cite.method2026 [6 0 R /XYZ 60 740 null] /cite.0@author2025 [6 0 R /XYZ 60 700 null] /section.2 [6 0 R /Fit] /cite.missing [6 0 R /Fit] >> >>',
+    '<< /Type /Pages /Kids [3 0 R 6 0 R] /Count 2 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 600 800] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R /Annots [8 0 R 9 0 R 10 0 R 11 0 R] >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    `<< /Length ${first.length} >>\nstream\n${first}\nendstream`,
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 600 800] /Resources << /Font << /F1 4 0 R >> >> /Contents 7 0 R >>',
+    `<< /Length ${second.length} >>\nstream\n${second}\nendstream`,
+    '<< /Type /Annot /Subtype /Link /Rect [100 736 126 756] /Border [0 0 0] /Dest (cite.method2026) >>',
+    '<< /Type /Annot /Subtype /Link /Rect [60 696 180 716] /Border [0 0 0] /Dest (cite.0@author2025) >>',
+    '<< /Type /Annot /Subtype /Link /Rect [60 656 180 676] /Border [0 0 0] /Dest (section.2) >>',
+    '<< /Type /Annot /Subtype /Link /Rect [60 616 180 636] /Border [0 0 0] /Dest (cite.missing) >>'
+  ])
+}
+
 /** Matches on pages 12 and 24 are outside the initial virtual render window. */
 export function multipagePdfFixture(): Uint8Array {
   const count = 24

@@ -8,6 +8,7 @@ interface BufferedPdfPageProps {
   renderTextLayer: boolean
   renderAnnotationLayer: boolean
   onRenderSuccess: (page: PDFPageProxy) => void
+  onGetAnnotationsSuccess?: (annotations: unknown[]) => void
 }
 
 // At most 8 MB of RGBA pixels per mounted page, independent of zoom and DPR.
