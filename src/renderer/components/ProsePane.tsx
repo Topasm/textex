@@ -78,12 +78,18 @@ export function ProsePane() {
   const formattingDisabled = Boolean(activeSpan && !isEditableProseBlock(activeSpan.block))
   const syncState = refusal ? 'blocked' : draft === projected ? 'synced' : 'syncing'
 
-  // A reprojection after somebody else's edit must not clobber live typing.
+  // Disk reloads replace the draft even while focused; local projections preserve typing.
   useEffect(() => {
+    if (!documentRegistry.getModel(filePath ?? '')?.isDirty) {
+      committed.current = projected
+      setDraft(projected)
+      setRefusal(null)
+      return
+    }
     if (projected === committed.current) return
     committed.current = projected
     if (document.activeElement !== areaRef.current) setDraft(projected)
-  }, [projected])
+  }, [projected, filePath, revision])
 
   // Read through a ref so the debounce timer always commits the newest text
   // without being torn down on every keystroke.

@@ -8,6 +8,8 @@ import { isCurrentProjectTransitionSnapshot, openProject } from '../utils/openPr
 import { errorMessage } from '../utils/errorMessage'
 import { documentRegistry } from '../models/documentRegistry'
 import { flushPendingDocumentEdits } from '../services/pendingDocumentEdits'
+import { documentDiskWrite } from '../services/documentDiskWrite'
+import { pendingDiskReload } from '../services/pendingDiskReloads'
 import { clearRecoveryForFile, syncRecoveryForFile } from '../services/crashRecovery'
 
 interface FileOps {
@@ -40,6 +42,11 @@ export function useFileOps(): FileOps {
     const { settings } = useSettingsStore.getState()
 
     if (!filePath) return
+    const requestedModel = documentRegistry.getModel(filePath)
+    const pendingReload = pendingDiskReload(filePath)
+    if (pendingReload) await pendingReload
+    if (documentRegistry.getModel(filePath) !== requestedModel) return
+    if (pendingReload && !requestedModel?.isDirty) return
     flushPendingDocumentEdits(filePath)
     const initialModel = documentRegistry.getModel(filePath)
     const initialSnapshot = initialModel?.snapshot()
@@ -74,8 +81,19 @@ export function useFileOps(): FileOps {
     if (saveRequestId !== saveRequestIdRef.current) return
 
     try {
-      await window.api.saveFile(snapshotToSave.text, filePath)
-      useEditorStore.getState().markDocumentSaved(filePath, snapshotToSave.revision)
+      const pendingReload = pendingDiskReload(filePath)
+      if (pendingReload) await pendingReload
+      const currentModel = documentRegistry.getModel(filePath)
+      if (saveRequestId !== saveRequestIdRef.current || currentModel !== initialModel) return
+      if (!currentModel?.isCurrent(initialSnapshot) && !currentModel?.isDirty) return
+      snapshotToSave = currentModel.snapshot()
+      const result = await documentDiskWrite([{ filePath, snapshot: snapshotToSave }], () =>
+        window.api.saveFile(snapshotToSave.text, filePath)
+      )
+      if (!result.success) throw new Error('Could not save the document.')
+      if (documentRegistry.getModel(filePath)?.isCurrent(snapshotToSave)) {
+        useEditorStore.getState().markDocumentSaved(filePath, snapshotToSave.revision)
+      }
       await syncRecoveryForFile(filePath).catch(() => undefined)
     } catch (err: unknown) {
       const message = `Save failed: ${errorMessage(err)}`

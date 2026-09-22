@@ -2,6 +2,8 @@ import type { DocumentSnapshot } from '../models/documentModel'
 import { documentRegistry, normalizeDocumentId } from '../models/documentRegistry'
 import { useEditorStore } from '../store/useEditorStore'
 import { syncRecoveryForFiles } from './crashRecovery'
+import { documentDiskWrite } from './documentDiskWrite'
+import { pendingDiskReload } from './pendingDiskReloads'
 
 export type CompilePersistenceMode = 'manual' | 'automatic'
 
@@ -28,6 +30,13 @@ export async function prepareDocumentsForCompile({
   activeSnapshot,
   mode
 }: CompilePreparationOptions): Promise<CompilePreparationResult> {
+  const pending = Object.keys(useEditorStore.getState().openFiles)
+    .map(pendingDiskReload)
+    .filter((reload): reload is Promise<void> => reload !== null)
+  if (pending.length > 0) await Promise.all(pending)
+  if (!documentRegistry.getModel(activeFilePath)?.isCurrent(activeSnapshot)) {
+    return { status: 'stale', savedFilePaths: [] }
+  }
   const activeId = normalizeDocumentId(activeFilePath)
   const dirtyDocuments = documentRegistry.dirtySnapshots()
   const protectedDocuments = dirtyDocuments.filter(({ filePath }) => {
@@ -55,14 +64,19 @@ export async function prepareDocumentsForCompile({
   const savedFilePaths = documentsToSave.map(({ filePath }) => filePath)
 
   if (documentsToSave.length > 0) {
-    await window.api.saveFileBatch(
-      documentsToSave.map(({ filePath, snapshot }) => ({
-        filePath,
-        content: snapshot.text
-      }))
+    const result = await documentDiskWrite(documentsToSave, () =>
+      window.api.saveFileBatch(
+        documentsToSave.map(({ filePath, snapshot }) => ({
+          filePath,
+          content: snapshot.text
+        }))
+      )
     )
+    if (!result.success) throw new Error('Could not save documents before compiling.')
     for (const { filePath, snapshot } of documentsToSave) {
-      useEditorStore.getState().markDocumentSaved(filePath, snapshot.revision)
+      if (documentRegistry.getModel(filePath)?.isCurrent(snapshot)) {
+        useEditorStore.getState().markDocumentSaved(filePath, snapshot.revision)
+      }
     }
     await syncRecoveryForFiles(savedFilePaths)
   }

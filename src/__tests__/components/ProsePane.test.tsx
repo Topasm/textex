@@ -61,6 +61,30 @@ describe('ProsePane', () => {
     )
   })
 
+  it.each([true, false])(
+    'accepts disk reloads over a focused pending draft (body changed: %s)',
+    async (bodyChanged) => {
+      render(<ProsePane />)
+      const area = source()
+      act(() => area.focus())
+      fireEvent.change(area, {
+        target: { value: area.value.replace('We propose', 'Unsaved draft') }
+      })
+      const external = bodyChanged
+        ? SOURCE.replace('We propose', 'External update')
+        : SOURCE.replace('article', 'report')
+      act(() => useEditorStore.getState().reloadFileContent(filePath, external))
+      expect(area.value).not.toContain('Unsaved draft')
+      expect(area.value).toContain(bodyChanged ? 'External update' : 'We propose')
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(PROSE_COMMIT_DELAY_MS * 2)
+      })
+      fireEvent.blur(area)
+      expect(documentRegistry.snapshot(filePath)?.text).toBe(external)
+      expect(useEditorStore.getState().isDirty).toBe(false)
+    }
+  )
+
   it('carries a PDF passage selection into its projected Markdown text', () => {
     useCompileStore.setState({ pdfRevision: 7 })
     useEditorStore.getState().setPreviewSourceHighlight({

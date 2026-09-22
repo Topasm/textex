@@ -3,112 +3,110 @@ import { useEditorStore } from '../store/useEditorStore'
 import { useUiStore } from '../store/useUiStore'
 import { useSettingsStore } from '../store/useSettingsStore'
 import { documentRegistry } from '../models/documentRegistry'
+import { beginPendingDiskReload } from '../services/pendingDiskReloads'
+import { projectPathKey } from '../services/projectIndex'
+import { syncRecoveryForFile } from '../services/crashRecovery'
 import type { DirectoryChangeEvent } from '../../shared/types'
 
-const RELOAD_DEBOUNCE_MS = 300
+const RELOAD_DEBOUNCE_MS = 100
 
-/**
- * Returns a callback that handles `fs:directory-changed` events and
- * reloads open files whose content has changed on disk.
- *
- * - Clean files are reloaded automatically (auto-compile triggers naturally).
- * - Dirty files surface a conflict banner so the user can choose.
- */
+interface PendingReload {
+  timer: ReturnType<typeof setTimeout>
+  finish: () => void
+}
+
+/** Accepts changed disk content, including over unsaved edits, without writing it back. */
 export function useExternalFileReload(
   projectRoot: string | null
 ): (change: DirectoryChangeEvent) => void {
-  const debounceMapRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+  const pendingRef = useRef(new Map<string, PendingReload>())
 
-  // Clean up all pending timers on unmount
   useEffect(() => {
-    const map = debounceMapRef.current
-    return () => {
-      for (const timer of map.values()) clearTimeout(timer)
-      map.clear()
+    const pending = pendingRef.current
+    const cancel = (path: string): void => {
+      const request = pending.get(path)
+      if (!request) return
+      pending.delete(path)
+      clearTimeout(request.timer)
+      request.finish()
     }
-  }, [])
-
-  // Remove stale conflicts when tabs are closed
-  useEffect(() => {
-    const unsub = useEditorStore.subscribe(
-      (s) => s.openFiles,
+    const unsubscribe = useEditorStore.subscribe(
+      (state) => state.openFiles,
       (openFiles) => {
-        const conflicts = useUiStore.getState().externalChangeConflicts
-        for (const p of conflicts) {
-          if (!openFiles[p]) {
-            useUiStore.getState().removeExternalChangeConflict(p)
+        for (const path of pending.keys()) if (!openFiles[path]) cancel(path)
+      }
+    )
+    return () => {
+      unsubscribe()
+      for (const path of pending.keys()) cancel(path)
+    }
+  }, [projectRoot])
+
+  return useCallback(
+    (change: DirectoryChangeEvent) => {
+      if (!projectRoot || !useSettingsStore.getState().settings.watchOpenFiles) return
+      const rootKey = projectPathKey(projectRoot)
+      const prefix = rootKey.endsWith('/') ? rootKey : `${rootKey}/`
+      const changedKey = projectPathKey(`${prefix}${change.filename}`)
+      const paths = Object.keys(useEditorStore.getState().openFiles).filter((path) => {
+        const key = projectPathKey(path)
+        if (!key.startsWith(prefix)) return false
+        return change.indexInvalidated || key === changedKey || key.startsWith(`${changedKey}/`)
+      })
+
+      for (const path of paths) {
+        const model = documentRegistry.getModel(path)
+        if (!model) continue
+        const pending = pendingRef.current
+        const previous = pending.get(path)
+        if (previous) {
+          clearTimeout(previous.timer)
+          previous.finish()
+        }
+        const request: PendingReload = {
+          finish: beginPendingDiskReload(model),
+          timer: setTimeout(() => void reload(), RELOAD_DEBOUNCE_MS)
+        }
+        pending.set(path, request)
+
+        const isCurrent = (): boolean =>
+          pending.get(path) === request &&
+          documentRegistry.getModel(path) === model &&
+          !!useEditorStore.getState().openFiles[path] &&
+          useSettingsStore.getState().settings.watchOpenFiles
+
+        const reload = async (): Promise<void> => {
+          let retry = false
+          try {
+            if (!isCurrent()) return
+            const observed = model.revisionSnapshot()
+            const { content } = await window.api.readFile(path)
+            if (!isCurrent()) return
+            // A save echo must not erase typing that happened after that save.
+            if (documentRegistry.isKnownDiskContent(path, content)) return
+            const result = documentRegistry.reloadIfCurrent(path, content, observed)
+            if (result?.status === 'stale') {
+              // Re-read against the new revision instead of losing the event.
+              retry = true
+              request.timer = setTimeout(() => void reload(), RELOAD_DEBOUNCE_MS)
+              return
+            }
+            if (result) {
+              useEditorStore.getState().reloadFileContent(path, result.snapshot.text)
+              useUiStore.getState().removeExternalChangeConflict(path)
+              void syncRecoveryForFile(path).catch(() => undefined)
+            }
+          } catch {
+            // Deletion or a temporarily inaccessible file leaves the buffer intact.
+          } finally {
+            if (!retry) {
+              if (pending.get(path) === request) pending.delete(path)
+              request.finish()
+            }
           }
         }
       }
-    )
-    return unsub
-  }, [])
-
-  const handleFileChange = useCallback(
-    (change: DirectoryChangeEvent) => {
-      if (!projectRoot) return
-
-      const watchEnabled = useSettingsStore.getState().settings.watchOpenFiles
-      if (!watchEnabled) return
-
-      // Resolve relative filename to absolute path
-      const sep = projectRoot.includes('\\') ? '\\' : '/'
-      const absolutePath = projectRoot + sep + change.filename.replace(/[\\/]/g, sep)
-
-      // Only process files that are open in a tab
-      const { openFiles } = useEditorStore.getState()
-      if (!openFiles[absolutePath]) return
-
-      // Per-file debounce to handle rapid successive changes
-      const existing = debounceMapRef.current.get(absolutePath)
-      if (existing) clearTimeout(existing)
-
-      debounceMapRef.current.set(
-        absolutePath,
-        setTimeout(async () => {
-          debounceMapRef.current.delete(absolutePath)
-
-          // Re-check after debounce — file may have been closed
-          const currentState = useEditorStore.getState()
-          if (!currentState.openFiles[absolutePath]) return
-
-          // Capture before starting I/O. A user edit while readFile is in
-          // flight makes this snapshot stale and prevents disk data from
-          // replacing the newer local revision.
-          const observedSnapshot = documentRegistry.snapshot(absolutePath)
-          if (!observedSnapshot) return
-
-          try {
-            const { content: diskContent } = await window.api.readFile(absolutePath)
-
-            // Skip if content is identical (e.g. TextEx itself saved the file)
-            if (diskContent === observedSnapshot.text) return
-
-            const currentModel = documentRegistry.getModel(absolutePath)
-            if (!currentModel) return
-
-            if (currentModel.isDirty) {
-              // File has unsaved local changes — show conflict banner
-              useUiStore.getState().addExternalChangeConflict(absolutePath)
-            } else {
-              // File is clean — auto-reload
-              const result = documentRegistry.reloadIfCurrent(
-                absolutePath,
-                diskContent,
-                observedSnapshot
-              )
-              if (result?.status === 'applied') {
-                currentState.reloadFileContent(absolutePath, result.snapshot.text)
-              }
-            }
-          } catch {
-            // File may have been deleted or temporarily inaccessible; ignore
-          }
-        }, RELOAD_DEBOUNCE_MS)
-      )
     },
     [projectRoot]
   )
-
-  return handleFileChange
 }

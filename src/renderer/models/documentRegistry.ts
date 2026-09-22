@@ -16,7 +16,6 @@ export interface DocumentTextBuffer {
 export type DiskReloadResult =
   | { readonly status: 'applied'; readonly snapshot: DocumentSnapshot }
   | { readonly status: 'unchanged'; readonly snapshot: DocumentSnapshot }
-  | { readonly status: 'dirty'; readonly snapshot: DocumentSnapshot }
   | { readonly status: 'stale'; readonly snapshot: DocumentSnapshot }
 
 interface DocumentEntry {
@@ -24,6 +23,9 @@ interface DocumentEntry {
   model: DocumentModel
   buffer: DocumentTextBuffer
   replacingBuffer: boolean
+  diskText: string
+  diskGeneration: number
+  pendingWrites: Set<DocumentSnapshot>
 }
 
 function isWindowsPath(filePath: string): boolean {
@@ -96,7 +98,15 @@ export class DocumentRegistry {
 
     const buffer = createBootstrapBuffer(id, text)
     const model = new DocumentModel(id, () => buffer.getText())
-    this.#documents.set(id, { filePath, model, buffer, replacingBuffer: false })
+    this.#documents.set(id, {
+      filePath,
+      model,
+      buffer,
+      replacingBuffer: false,
+      diskText: text,
+      diskGeneration: 0,
+      pendingWrites: new Set()
+    })
     return model.snapshot()
   }
 
@@ -187,6 +197,26 @@ export class DocumentRegistry {
     return this.getModel(filePath)?.markSaved(revision) ?? false
   }
 
+  /** Distinguishes watcher echoes from an actual change to the disk version. */
+  isKnownDiskContent(filePath: string, text: string): boolean {
+    const entry = this.#documents.get(normalizeDocumentId(filePath))
+    return (
+      !!entry && (entry.diskText === text || [...entry.pendingWrites].some((s) => s.text === text))
+    )
+  }
+
+  /** Tracks a save even if typing continues before its watcher event arrives. */
+  beginDiskWrite(filePath: string, snapshot: DocumentSnapshot): (success: boolean) => void {
+    const entry = this.#documents.get(normalizeDocumentId(filePath))
+    if (!entry || !entry.model.isCurrent(snapshot)) return () => undefined
+    const generation = entry.diskGeneration
+    entry.pendingWrites.add(snapshot)
+    return (success) => {
+      entry.pendingWrites.delete(snapshot)
+      if (success && entry.diskGeneration === generation) entry.diskText = snapshot.text
+    }
+  }
+
   reloadIfCurrent(
     filePath: string,
     text: string,
@@ -196,8 +226,9 @@ export class DocumentRegistry {
     if (!entry) return null
     const current = entry.model.snapshot()
     if (!entry.model.isCurrent(observedSnapshot)) return { status: 'stale', snapshot: current }
-    if (entry.model.isDirty) return { status: 'dirty', snapshot: current }
 
+    entry.diskText = text
+    entry.diskGeneration += 1
     if (entry.buffer.getText() === text) {
       entry.model.markSaved(current.revision)
       return { status: 'unchanged', snapshot: entry.model.snapshot() }
@@ -211,6 +242,8 @@ export class DocumentRegistry {
   replaceFromDisk(filePath: string, text: string): DocumentSnapshot | null {
     const entry = this.#documents.get(normalizeDocumentId(filePath))
     if (!entry) return null
+    entry.diskText = text
+    entry.diskGeneration += 1
     if (entry.buffer.getText() === text) {
       entry.model.markSaved()
       return entry.model.snapshot()

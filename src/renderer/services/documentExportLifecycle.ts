@@ -9,6 +9,8 @@ import { errorMessage } from '../utils/errorMessage'
 import { documentRegistry, normalizeDocumentId } from '../models/documentRegistry'
 import type { DocumentSnapshot } from '../models/documentModel'
 import { projectPathKey } from './projectIndex'
+import { documentDiskWrite } from './documentDiskWrite'
+import { pendingDiskReload } from './pendingDiskReloads'
 
 const EXPORT_NOTIFICATION_ID = 'document-export'
 
@@ -202,14 +204,22 @@ export function exportDocumentWithFeedback(
     watchRequestOwner(exportRequest)
 
     try {
-      const saveResult = await window.api.saveFile(
-        exportRequest.snapshot.text,
-        exportRequest.inputPath
+      const pendingReload = pendingDiskReload(exportRequest.inputPath)
+      if (pendingReload) await pendingReload
+      if (!isRequestCurrent(exportRequest)) {
+        clearStaleFeedback(exportRequest)
+        return 'stale'
+      }
+      const saveResult = await documentDiskWrite(
+        [{ filePath: exportRequest.inputPath, snapshot: exportRequest.snapshot }],
+        () => window.api.saveFile(exportRequest.snapshot.text, exportRequest.inputPath)
       )
       if (!saveResult.success) throw new Error('Could not save the document before export.')
-      useEditorStore
-        .getState()
-        .markDocumentSaved(exportRequest.inputPath, exportRequest.snapshot.revision)
+      if (documentRegistry.getModel(exportRequest.inputPath)?.isCurrent(exportRequest.snapshot)) {
+        useEditorStore
+          .getState()
+          .markDocumentSaved(exportRequest.inputPath, exportRequest.snapshot.revision)
+      }
       await syncRecoveryForFile(exportRequest.inputPath).catch(() => undefined)
       if (!isRequestCurrent(exportRequest)) {
         clearStaleFeedback(exportRequest)

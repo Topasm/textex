@@ -186,6 +186,26 @@ describe('useFileOps', () => {
     expect(window.api.saveFile).toHaveBeenCalledWith('edited while formatting', filePath)
   })
 
+  it('abandons a format-on-save request superseded by an external reload', async () => {
+    let resolveFormat!: (text: string) => void
+    formatLatexMock.mockImplementation(
+      () =>
+        new Promise<string>((resolve) => {
+          resolveFormat = resolve
+        })
+    )
+    const filePath = '/workspace/project/paper.tex'
+    useEditorStore.getState().openFileInTab(filePath, 'initial')
+    useEditorStore.getState().updateActiveDocument('draft', 'editor')
+    const { result } = renderHook(() => useFileOps())
+    const saving = result.current.handleSave()
+    useEditorStore.getState().reloadFileContent(filePath, 'external')
+    resolveFormat('formatted old draft')
+    await saving
+    expect(documentRegistry.snapshot(filePath)?.text).toBe('external')
+    expect(window.api.saveFile).not.toHaveBeenCalled()
+  })
+
   it('does not apply a format result to a different active tab', async () => {
     let resolveFormat: ((formatted: string) => void) | undefined
     formatLatexMock.mockImplementation(

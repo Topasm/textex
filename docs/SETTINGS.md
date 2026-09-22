@@ -26,7 +26,7 @@ TextEx uses a "Zero-Friction" configuration system where settings are applied in
 | `theme` | `'system' \| 'light' \| 'dark' \| 'high-contrast' \| 'glass'` | `'system'` | UI and Editor theme. |
 | `fontSize` | `number` | `14` | Editor font size in pixels. |
 | `autoCompile` | `boolean` | `true` | Compile automatically on type (debounced). |
-| `watchOpenFiles` | `boolean` | `true` | Watch open project files for external changes. |
+| `watchOpenFiles` | `boolean` | `true` | Automatically accept external changes in open project files, replacing unsaved editor text. |
 | `formatOnSave` | `boolean` | `true` | Run formatter when saving files. |
 | `wordWrap` | `boolean` | `true` | Soft wrap lines in the editor. |
 | `spellCheckEnabled` | `boolean` | `false` | Enable inline spell checking. |
@@ -99,3 +99,13 @@ TextEx currently highlights LaTeX with its local Monaco Monarch tokenizer.
 - **Language features**: TextEx uses its built-in Monaco providers, package/reference
   indexes, Rust outline parser, and structured compiler diagnostics. No external language
   server is started.
+
+### External file changes
+
+With `watchOpenFiles` enabled (the default), edits from a CLI or another editor
+replace the open buffer automatically, including unsaved TextEx edits. Changes
+are coalesced for 100 ms after native watcher delivery. The reloaded buffer is
+marked saved; TextEx does not write it back. Automatic compilation can refresh
+the PDF without saving the same source again. Saves wait for pending external
+reads, and TextEx's own save events do not discard subsequent typing. Disabling
+this setting disables automatic external reloads.
