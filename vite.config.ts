@@ -2,6 +2,7 @@ import { resolve } from 'path'
 import { readFileSync } from 'node:fs'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
+import { sharedFormatterWorker } from './scripts/shared-formatter-worker'
 
 const tauriHost = process.env.TAURI_DEV_HOST
 const isTauriDebug = process.env.TAURI_ENV_DEBUG === 'true'
@@ -41,8 +42,7 @@ export default defineConfig({
       : undefined
   },
   worker: {
-    // The formatter worker lazy-loads Prettier and its LaTeX plugin. ES module
-    // workers allow Vite to preserve that split instead of forcing an IIFE.
+    // Keep separately bundled workers compatible with module imports.
     format: 'es'
   },
   build: {
@@ -70,12 +70,11 @@ export default defineConfig({
               name: 'vendor-react',
               test: /node_modules\/(react|react-dom|zustand|scheduler|use-sync-external-store)\//
             },
-            { name: 'vendor-i18n', test: /node_modules\/(i18next|react-i18next)\// },
-            { name: 'vendor-ui', test: /node_modules\/lucide-react\// }
+            { name: 'vendor-i18n', test: /node_modules\/(i18next|react-i18next)\// }
           ]
         }
       }
     }
   },
-  plugins: [react()]
+  plugins: [react(), sharedFormatterWorker()]
 })

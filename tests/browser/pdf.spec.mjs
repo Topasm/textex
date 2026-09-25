@@ -1,5 +1,48 @@
 import { test, expect } from '@playwright/test'
 
+test('the shared formatter bundle works in a real module worker', async ({ page }) => {
+  await page.goto('/')
+  const url = await page.locator('[data-formatter-worker-url]').getAttribute('data-formatter-worker-url')
+  const result = await page.evaluate((url) => new Promise((resolve, reject) => {
+    const worker = new Worker(url, { type: 'module' })
+    const timeout = setTimeout(() => { worker.terminate(); reject(new Error('Formatter timed out')) }, 10000)
+    worker.onmessage = ({ data }) => { clearTimeout(timeout); worker.terminate(); resolve(data) }
+    worker.onerror = () => { clearTimeout(timeout); worker.terminate(); reject(new Error('Formatter worker failed')) }
+    worker.postMessage({ type: 'format', requestId: 1, code: 'Hello world.', options: {} })
+  }), url)
+  expect(result).toEqual({ type: 'format-result', requestId: 1, formatted: 'Hello world.' })
+})
+
+test('PDF loading errors remain local and a subsequent compilation recovers', async ({ page }) => {
+  const errors = []
+  page.on('pageerror', (error) => errors.push(error.message))
+  await page.goto('/?invalid-pdf')
+  await expect(page.locator('.preview-error')).toBeVisible()
+  await expect(page.locator('.monaco-editor')).toBeVisible()
+  await page.getByRole('button', { name: 'Recompile', exact: true }).click()
+  await expect(page.locator('.textLayer span').filter({ hasText: 'The revised method works.' })).toBeVisible()
+  await expect(page.locator('.preview-error')).toHaveCount(0)
+  expect(errors).toEqual([])
+})
+
+test('a failed replacement PDF preserves the displayed generation', async ({ page }) => {
+  const errors = []
+  page.on('pageerror', (error) => errors.push(error.message))
+  await page.goto('/?invalid-next-pdf')
+  const text = page.locator('.textLayer span').filter({ hasText: 'The efficient method works.' })
+  await expect(text).toBeVisible()
+  const failure = page.waitForEvent('console', { predicate: (message) => message.text().includes('PDF load error:') })
+  await page.getByRole('button', { name: 'Recompile', exact: true }).click()
+  await failure
+  await expect(text).toBeVisible()
+  await expect(page.locator('[data-pdf-generation="1"]')).toHaveAttribute('aria-hidden', 'false')
+  await expect(page.locator('.preview-error')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Recompile', exact: true }).click()
+  await expect(page.locator('[data-pdf-generation="3"]')).toHaveAttribute('aria-hidden', 'false')
+  await expect(page.locator('.textLayer span').filter({ hasText: 'The revised method works.' })).toBeVisible()
+  expect(errors).toEqual([])
+})
+
 async function selectFixtureText(page, backwards = false) {
   // Use the drawn glyph coordinates so a misaligned text layer cannot pass.
   const canvas = await page.locator('.react-pdf__Page__canvas').boundingBox()

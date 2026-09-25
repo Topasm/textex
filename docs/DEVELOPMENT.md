@@ -79,13 +79,21 @@ host, or run one engine with `npm run test:browser -- --project=chromium` (or `w
 - Vite 8 uses Rolldown code splitting and the default Oxc minifier. React's
   CommonJS dependencies (`scheduler` and `use-sync-external-store`) stay in the
   React chunk to avoid circular initialization through the app entry.
-- `pdfjs-dist` is pinned to 6.3.289. The React-PDF override references that same
-  dependency with `$pdfjs-dist`, keeping the viewer and worker on one version.
-  React-PDF 10.5.0 declares PDF.js 5.4.296 upstream; the override is a deliberately
-  tested compatibility choice, not an upstream compatibility guarantee. Run
-  browser regression tests before changing either package, then verify native
-  platform builds before release.
-- TypeScript remains on 6.0: `typescript-eslint` 8.69 supports TypeScript below
+- `pdfjs-dist` is pinned to 6.3.289, matching React-PDF 11's upstream dependency.
+  No dependency override is needed. `Document` uses `suspense={false}` so loading
+  and errors remain local to each PDF generation and a failed replacement keeps
+  the previous preview visible. Run browser regression tests before changing
+  either package, then verify native platform builds before release.
+- Monaco 0.57 includes DOMPurify 3.4.15 without an override. Preserve the
+  selective feature imports and the legacy import aliases required by monaco-vim.
+- The formatter worker is emitted into the renderer's module graph by
+  `scripts/shared-formatter-worker.ts`. It shares Prettier and the LaTeX plugin
+  with the lazy renderer fallback instead of packaging them twice. Development
+  uses Vite's worker URL support; production uses an emitted module-worker URL.
+  Browser tests execute the production worker in Chromium and WebKit.
+- Lucide icons follow the chunks that use them instead of putting icons for
+  every lazy panel in the initial vendor bundle.
+- TypeScript remains on 6.0: `typescript-eslint` 8.70 supports TypeScript below
   6.1. ESLint remains on 9: `eslint-plugin-react` 7.37.5 does not declare ESLint 10
   support. Revisit these major upgrades when their peer ranges support them;
   do not bypass peer checks with forced installs.

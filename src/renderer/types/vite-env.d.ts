@@ -14,3 +14,7 @@ interface VimModeInstance {
 interface Window {
   vimMode?: VimModeInstance | null
 }
+declare module 'virtual:formatter-worker-url' {
+  const url: string
+  export default url
+}

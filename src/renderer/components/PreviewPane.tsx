@@ -724,7 +724,10 @@ function PreviewPane({ onCompile }: { onCompile?: () => Promise<void> }) {
                         }
                   }
                 >
+                  {/* Keep loading/errors within this generation; suspending would
+                      hide the previous preview during a replacement load. */}
                   <Document
+                    suspense={false}
                     file={generation.file}
                     onLoadSuccess={(document) =>
                       handleDocumentLoadSuccess(generation.revision, document)

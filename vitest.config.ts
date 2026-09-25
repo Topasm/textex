@@ -2,6 +2,7 @@ import { configDefaults, defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'path'
+import { sharedFormatterWorker } from './scripts/shared-formatter-worker'
 
 const packageVersion = (
   JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8')) as { version: string }
@@ -18,7 +19,7 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(packageVersion)
   },
-  plugins: [react()],
+  plugins: [react(), sharedFormatterWorker()],
   test: {
     root: resolve(__dirname),
     globals: true,

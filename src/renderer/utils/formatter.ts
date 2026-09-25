@@ -1,4 +1,5 @@
 import { formatLatexDirect } from './formatterRuntime'
+import formatterWorkerUrl from 'virtual:formatter-worker-url'
 import type { FormatterWorkerRequest, FormatterWorkerResponse } from './formatterWorkerProtocol'
 import type { FormatOptions } from './formatterWorkerProtocol'
 
@@ -54,7 +55,7 @@ function getFormatterWorker(): Worker | null {
   if (workerUnavailable || typeof Worker === 'undefined') return null
 
   try {
-    const worker = new Worker(new URL('./formatter.worker.ts', import.meta.url), {
+    const worker = new Worker(formatterWorkerUrl, {
       type: 'module',
       name: 'textex-latex-formatter'
     })

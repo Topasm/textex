@@ -1,4 +1,5 @@
 import { flushAllPendingDocumentEdits } from '../../src/renderer/services/pendingDocumentEdits'
+import formatterWorkerUrl from 'virtual:formatter-worker-url'
 import Toolbar from '../../src/renderer/components/Toolbar'
 import { WorkspaceSourcePane } from '../../src/renderer/components/WorkspaceSourcePane'
 import { ResearchUiHarness, UiHarness } from './ui-harness'
@@ -46,7 +47,7 @@ let pdfRevision = 1
 let editedSentence: string | undefined
 let diskSource = source
 window.api = {
-  readCompiledPdf: async () => ({ data: new URLSearchParams(location.search).has('sentences') ? sentencePdfFixture(editedSentence) : new URLSearchParams(location.search).has('citations') ? citationPdfFixture() : new URLSearchParams(location.search).has('multipage') ? multipagePdfFixture() : pdfFixture(pdfRevision), mimeType: 'application/pdf' }),
+  readCompiledPdf: async () => ({ data: (new URLSearchParams(location.search).has('invalid-pdf') && pdfRevision === 1) || (new URLSearchParams(location.search).has('invalid-next-pdf') && pdfRevision === 2) ? new TextEncoder().encode('invalid PDF') : new URLSearchParams(location.search).has('sentences') ? sentencePdfFixture(editedSentence) : new URLSearchParams(location.search).has('citations') ? citationPdfFixture() : new URLSearchParams(location.search).has('multipage') ? multipagePdfFixture() : pdfFixture(pdfRevision), mimeType: 'application/pdf' }),
   openExternal: async (url: string) => { sessionStorage.setItem('opened-url', url) },
   getProjectIndex: async () => ({ root: '/project', generation: 1, entries: [{ type: 'file', path: '/project/reference.pdf', relativePath: 'reference.pdf', parentRelativePath: '', name: 'reference.pdf' }] }),
   readFileBase64: async () => ({ data: 'data:application/pdf;base64,' + btoa(String.fromCharCode(...pdfFixture(pdfRevision))), mimeType: 'application/pdf' }),
@@ -184,7 +185,7 @@ function Harness() {
       <nav hidden={workspace}>
         <button onMouseDown={startResize}>Resize panel</button>
         <button onClick={() => useSettingsStore.setState((state) => ({ settings: { ...state.settings, pdfViewMode: 'single' } }))}>Single page</button>
-        <button onClick={() => requestLocalSearch('document')}>Find document</button>
+        <button data-formatter-worker-url={formatterWorkerUrl} onClick={() => requestLocalSearch('document')}>Find document</button>
         <button onClick={() => usePdfStore.getState().setZoomLevel(180)}>Zoom in</button>
         <button onClick={() => usePdfStore.getState().setZoomLevel(80)}>Zoom out</button>
         <button onClick={() => setMarkdown(!markdown)}>Toggle Markdown</button>
