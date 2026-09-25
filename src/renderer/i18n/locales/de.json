@@ -654,7 +654,8 @@
       "app_checkUpdates": "Nach Updates suchen",
       "window_close": "Fenster schließen",
       "app_quit": "TextEx beenden",
-      "view_toggleProse": "Prosaansicht umschalten"
+      "view_toggleProse": "Prosaansicht umschalten",
+      "view_togglePdfOnly": "PDF-Arbeitsbereich umschalten"
     }
   },
   "learning": {
@@ -1428,5 +1429,14 @@
     "compileFailed": "Die Quelle wurde geändert, aber das PDF konnte nicht aktualisiert werden. Prüfen Sie die Kompilierungsfehler oder machen Sie die Änderung rückgängig.",
     "undone": "Änderung rückgängig gemacht und PDF aktualisiert.",
     "busy": "Wird verarbeitet…"
+  },
+  "pdfWorkspace": {
+    "enter": "PDF-Arbeitsbereich",
+    "split": "TeX und PDF anzeigen",
+    "source": "Quelltext bearbeiten",
+    "sourceHint": "Hier Gleichungen, Tabellen, Abbildungen, Zitate und Dokumentstruktur bearbeiten.",
+    "refresh": "Speichern und PDF aktualisieren",
+    "back": "Zurück zum PDF",
+    "hideTools": "Bereiche ausblenden"
   }
 }

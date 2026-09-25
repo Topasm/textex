@@ -39,7 +39,28 @@ function getExportFormat(command: Extract<AppCommandId, `file.export.${string}`>
   return command.replace('file.export.', '') as 'html' | 'docx' | 'odt' | 'epub'
 }
 
+function revealPdfTools(): boolean {
+  const pdf = usePdfStore.getState()
+  if (!pdf.pdfOnly || pdf.pdfToolsVisible) return false
+  pdf.setPdfToolsVisible(true)
+  return true
+}
+
+export function togglePdfOnly(): void {
+  const pdf = usePdfStore.getState()
+  const path = useEditorStore.getState().filePath
+  if (!pdf.pdfOnly && !path?.toLowerCase().endsWith('.tex')) return
+  if (path) useUiStore.getState().setProseMode(path, false)
+  pdf.setPdfOnly(!pdf.pdfOnly)
+}
+
 export function toggleProjectSidebar(): void {
+  if (revealPdfTools()) {
+    if (!useProjectStore.getState().isSidebarOpen) useProjectStore.getState().toggleSidebar()
+    if (useSettingsStore.getState().settings.autoHideSidebar)
+      useSettingsStore.getState().updateSetting('autoHideSidebar', false)
+    return
+  }
   const projectStore = useProjectStore.getState()
   const settingsStore = useSettingsStore.getState()
 
@@ -53,6 +74,13 @@ export function toggleProjectSidebar(): void {
 }
 
 export function toggleResearchPanel(tab?: ResearchPanelTab): void {
+  if (revealPdfTools()) {
+    const project = useProjectStore.getState()
+    project.openResearchPanel(project.isResearchPanelOpen ? undefined : tab)
+    if (useSettingsStore.getState().settings.autoHideResearchPanel)
+      useSettingsStore.getState().updateSetting('autoHideResearchPanel', false)
+    return
+  }
   const projectStore = useProjectStore.getState()
   const settingsStore = useSettingsStore.getState()
 
@@ -111,6 +139,9 @@ export async function executeAppCommand(
       return
     case 'view.toggleResearchPanel':
       toggleResearchPanel()
+      return
+    case 'view.togglePdfOnly':
+      togglePdfOnly()
       return
     case 'view.toggleProse':
       toggleProseMode()
@@ -177,6 +208,7 @@ export function toggleProseMode(): void {
   const { filePath, cursorLine } = useEditorStore.getState()
   if (!filePath || !filePath.toLowerCase().endsWith('.tex')) return
 
+  usePdfStore.getState().setPdfOnly(false)
   const ui = useUiStore.getState()
   const enabling = !proseModeFor(ui, filePath)
   ui.setProseMode(filePath, enabling)
@@ -192,6 +224,7 @@ export function toggleProseMode(): void {
 }
 
 export function openProblemsPanel(): boolean {
+  revealPdfTools()
   const projectStore = useProjectStore.getState()
   if (projectStore.isResearchPanelOpen && projectStore.researchPanelTab === 'problems') {
     return true

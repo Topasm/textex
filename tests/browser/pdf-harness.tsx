@@ -1,3 +1,6 @@
+import { flushAllPendingDocumentEdits } from '../../src/renderer/services/pendingDocumentEdits'
+import Toolbar from '../../src/renderer/components/Toolbar'
+import { WorkspaceSourcePane } from '../../src/renderer/components/WorkspaceSourcePane'
 import { ResearchUiHarness, UiHarness } from './ui-harness'
 import { ReferenceEvidence } from '../../src/renderer/components/research/ReferenceEvidence'
 import { NotesPanel } from '../../src/renderer/components/research/NotesPanel'
@@ -152,6 +155,8 @@ function SourceEditor() {
 }
 
 function Harness() {
+  const pdfOnly = usePdfStore((state) => state.pdfOnly)
+  const workspace = new URLSearchParams(location.search).has('workspace')
   const [markdown, setMarkdown] = useState(false)
   const startResize = useHorizontalResize({ onMove: () => {} })
   const highlight = useEditorStore((state) => state.previewSourceHighlight)
@@ -162,8 +167,19 @@ function Harness() {
     <button onClick={() => { pdfRevision++ }}>Replace reference PDF</button>
     <ReferenceEvidence citekey="method2026" />
   </>
+  const compile = async () => {
+          flushAllPendingDocumentEdits()
+          const snapshot = documentRegistry.snapshot(sourcePath)!
+          diskSource = snapshot.text
+          sessionStorage.setItem('compiled-source', snapshot.text)
+          editedSentence = sentenceSearchText(snapshot.text.split('\n')[1].slice('First sentence. '.length, -' Last sentence.'.length))
+          useCompileStore.getState().setPdfPath('/cache/main.pdf', { documentId: sourcePath, revision: snapshot.revision })
+          useCompileStore.getState().setCompileStatus('success')
+        }
   return (
     <>
+      {workspace && <Toolbar onSave={() => {}} onCompile={compile} onOpenFolder={() => {}}
+        onReturnHome={() => {}} onOpenCommandPalette={() => {}} onOpenSettings={() => {}} />}
       <nav>
         <button onMouseDown={startResize}>Resize panel</button>
         <button onClick={() => useSettingsStore.setState((state) => ({ settings: { ...state.settings, pdfViewMode: 'single' } }))}>Single page</button>
@@ -185,15 +201,9 @@ function Harness() {
         <output data-testid="source-highlight">{highlight?.text}</output>
         <output data-testid="source-range" hidden>{JSON.stringify(highlight?.range)}</output>
       </nav>
-      <main style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', height: 650 }}>
-        {markdown ? <ProsePane /> : <SourceEditor />}
-        <PreviewPane onCompile={async () => {
-          const snapshot = documentRegistry.snapshot(sourcePath)!
-          diskSource = snapshot.text
-          editedSentence = sentenceSearchText(snapshot.text.split('\n')[1].slice('First sentence. '.length, -' Last sentence.'.length))
-          useCompileStore.getState().setPdfPath('/cache/main.pdf', { documentId: sourcePath, revision: snapshot.revision })
-          useCompileStore.getState().setCompileStatus('success')
-        }} />
+      <main className={`editor-main-content${pdfOnly ? ' pdf-workspace' : ''}`} style={{ display: 'flex', height: 650, flex: 'none' }}>
+        <WorkspaceSourcePane onCompile={compile}>{markdown ? <ProsePane /> : <SourceEditor />}</WorkspaceSourcePane>
+        <div className="preview-pane" style={{ width: '50%' }}><PreviewPane onCompile={compile} /></div>
       </main>
     </>
   )

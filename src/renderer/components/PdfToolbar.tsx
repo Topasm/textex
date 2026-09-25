@@ -17,7 +17,9 @@ export function PdfToolbar({ children }: { children?: React.ReactNode }) {
   const pdfPath = useCompileStore((s) => s.pdfPath)
   const currentPage = usePdfStore((s) => s.currentPage)
   const numPages = usePdfStore((s) => s.numPages)
-  const isProseMode = useUiStore((state) => proseModeFor(state, filePath))
+  const pdfOnly = usePdfStore((state) => state.pdfOnly)
+  const documentProseMode = useUiStore((state) => proseModeFor(state, filePath))
+  const isProseMode = !pdfOnly && documentProseMode
   const pdfControlsEnabled = useSettingsStore((s) => s.settings.showPdfToolbarControls !== false)
   const showPdfControls = pdfControlsEnabled && !isProseMode
   const [pageInputValue, setPageInputValue] = useState('')

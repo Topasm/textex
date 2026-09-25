@@ -1,6 +1,8 @@
 import React, { useCallback, useRef } from 'react'
 import {
   House,
+  FileText,
+  Code,
   FolderOpen,
   Loader,
   Menu,
@@ -17,6 +19,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import type { WindowResizeDirection } from '../types/api'
 import { useEditorStore } from '../store/useEditorStore'
+import { usePdfStore } from '../store/usePdfStore'
 import { useCompileStore } from '../store/useCompileStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { useSettingsStore } from '../store/useSettingsStore'
@@ -24,7 +27,12 @@ import { proseModeFor, useUiStore } from '../store/useUiStore'
 import { RecentProjectSwitcher } from './RecentProjectSwitcher'
 import { ICON_SIZE } from './ui/IconSystem'
 import { withShortcutHint } from '../services/commandSearch'
-import { toggleProjectSidebar, toggleProseMode, toggleResearchPanel } from '../services/appCommands'
+import {
+  toggleProjectSidebar,
+  toggleProseMode,
+  toggleResearchPanel,
+  togglePdfOnly
+} from '../services/appCommands'
 
 interface ToolbarProps {
   onSave: () => void
@@ -105,6 +113,10 @@ const Toolbar = React.memo(function Toolbar({
   const projectRoot = useProjectStore((s) => s.projectRoot)
   const isSidebarOpen = useProjectStore((s) => s.isSidebarOpen)
   const isResearchPanelOpen = useProjectStore((s) => s.isResearchPanelOpen)
+  const pdfOnly = usePdfStore((s) => s.pdfOnly)
+  const pdfToolsVisible = usePdfStore((s) => s.pdfToolsVisible)
+  const sourceEditorOpen = usePdfStore((s) => s.sourceEditorOpen)
+  const panelsVisible = !pdfOnly || pdfToolsVisible
   const isProseMode = useUiStore((state) => proseModeFor(state, filePath))
   const canUseProseMode = Boolean(filePath?.toLowerCase().endsWith('.tex'))
 
@@ -184,7 +196,7 @@ const Toolbar = React.memo(function Toolbar({
               <RecentProjectSwitcher />
               <button
                 type="button"
-                className={`toolbar-btn toolbar-sidebar-toggle${isSidebarOpen && !settings.autoHideSidebar ? ' active' : ''}`}
+                className={`toolbar-btn toolbar-sidebar-toggle${panelsVisible && isSidebarOpen && !settings.autoHideSidebar ? ' active' : ''}`}
                 onClick={toggleProjectSidebar}
                 title={withShortcutHint(
                   t('commandPalette.commands.view_toggleSidebar'),
@@ -192,9 +204,9 @@ const Toolbar = React.memo(function Toolbar({
                 )}
                 aria-label={t('commandPalette.commands.view_toggleSidebar')}
                 aria-controls="project-sidebar"
-                aria-expanded={isSidebarOpen && !settings.autoHideSidebar}
+                aria-expanded={panelsVisible && isSidebarOpen && !settings.autoHideSidebar}
               >
-                {isSidebarOpen && !settings.autoHideSidebar ? (
+                {panelsVisible && isSidebarOpen && !settings.autoHideSidebar ? (
                   <PanelLeftClose size={ICON_SIZE.control} />
                 ) : (
                   <PanelLeftOpen size={ICON_SIZE.control} />
@@ -226,6 +238,42 @@ const Toolbar = React.memo(function Toolbar({
               <Play size={ICON_SIZE.control} />
             )}
           </button>
+
+          <button
+            type="button"
+            className={`toolbar-btn toolbar-pdf-action${pdfOnly ? ' active' : ''}`}
+            onClick={togglePdfOnly}
+            disabled={!pdfOnly && !canUseProseMode}
+            title={t(pdfOnly ? 'pdfWorkspace.split' : 'pdfWorkspace.enter')}
+            aria-label={t(pdfOnly ? 'pdfWorkspace.split' : 'pdfWorkspace.enter')}
+            aria-pressed={pdfOnly}
+          >
+            <FileText size={ICON_SIZE.control} />
+            <span>PDF</span>
+          </button>
+          {pdfOnly && (
+            <button
+              type="button"
+              className={`toolbar-btn toolbar-pdf-action${sourceEditorOpen ? ' active' : ''}`}
+              onClick={() => usePdfStore.getState().setSourceEditorOpen(!sourceEditorOpen)}
+              title={t('pdfWorkspace.source')}
+              aria-label={t('pdfWorkspace.source')}
+              aria-expanded={sourceEditorOpen}
+              aria-controls="workspace-source-editor"
+            >
+              <Code size={ICON_SIZE.control} />
+              <span>{t('pdfWorkspace.source')}</span>
+            </button>
+          )}
+          {pdfOnly && pdfToolsVisible && (
+            <button
+              type="button"
+              className="toolbar-btn"
+              onClick={() => usePdfStore.getState().setPdfToolsVisible(false)}
+            >
+              {t('pdfWorkspace.hideTools')}
+            </button>
+          )}
 
           <button
             type="button"
@@ -262,7 +310,7 @@ const Toolbar = React.memo(function Toolbar({
             {isDirty && <span className="dirty-dot" />}
             {fileName}
           </span>
-          {projectRoot && !isResearchPanelOpen && (
+          {projectRoot && (!panelsVisible || !isResearchPanelOpen) && (
             <button
               type="button"
               className="toolbar-btn toolbar-research-toggle"

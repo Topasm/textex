@@ -34,6 +34,9 @@ beforeEach(() => {
     projectRoot: null
   })
   usePdfStore.setState({
+    pdfOnly: false,
+    sourceEditorOpen: false,
+    pdfToolsVisible: false,
     zoomLevel: 100,
     currentPage: 1,
     numPages: 0,
@@ -480,4 +483,20 @@ describe('Workspace toolbars', () => {
       'Show prose view (Ctrl+Shift+M)\nSwipe horizontally on the source pane to switch views.'
     )
   })
+})
+
+it('opens PDF-only editing and reveals hidden research tools without closing their state', () => {
+  useEditorStore.setState({ filePath: '/project/main.tex' })
+  useProjectStore.setState({ projectRoot: '/project', isResearchPanelOpen: true })
+  render(<Toolbar {...defaultProps} />)
+  fireEvent.click(screen.getByRole('button', { name: 'PDF workspace' }))
+  expect(usePdfStore.getState().pdfOnly).toBe(true)
+  expect(useProjectStore.getState().isResearchPanelOpen).toBe(true)
+  fireEvent.click(screen.getByRole('button', { name: 'Edit source' }))
+  expect(usePdfStore.getState().sourceEditorOpen).toBe(true)
+  fireEvent.click(screen.getByRole('button', { name: /Open research panel/i }))
+  expect(usePdfStore.getState().pdfToolsVisible).toBe(true)
+  expect(useProjectStore.getState().isResearchPanelOpen).toBe(true)
+  fireEvent.click(screen.getByRole('button', { name: 'Show TeX and PDF' }))
+  expect(usePdfStore.getState().pdfOnly).toBe(false)
 })

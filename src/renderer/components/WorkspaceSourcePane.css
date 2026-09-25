@@ -1,0 +1,54 @@
+.editor-main-content.pdf-workspace {
+  position: relative;
+  display: flex;
+}
+.pdf-workspace > .preview-pane {
+  width: 100% !important;
+  height: 100%;
+  flex: 1;
+}
+.pdf-workspace > .split-divider,
+.workspace-source-pane[hidden],
+.app-container.pdf-only:not(.pdf-tools-visible) > .research-panel,
+.app-container.pdf-only:not(.pdf-tools-visible) .workspace > .sidebar-wrapper,
+.app-container.pdf-only:not(.pdf-tools-visible) .sidebar-drawer-backdrop {
+  display: none;
+}
+.editor-main-content > .workspace-source-pane--floating {
+  position: absolute;
+  inset: 12px auto 12px 12px;
+  z-index: 100;
+  width: min(760px, calc(100% - 24px)) !important;
+  height: calc(100% - 24px);
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--ui-radius-panel);
+  box-shadow: 0 8px 32px #0004;
+  overflow: hidden;
+}
+.workspace-source-pane__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-12);
+  border-bottom: 1px solid var(--border);
+}
+.workspace-source-pane__header > div {
+  flex: 1 1 220px;
+}
+.workspace-source-pane__header p {
+  margin: 4px 0 0;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.toolbar .toolbar-pdf-action {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+@container app-toolbar (max-width: 560px) {
+  .toolbar-pdf-action > span {
+    display: none;
+  }
+}

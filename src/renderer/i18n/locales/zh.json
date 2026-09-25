@@ -654,7 +654,8 @@
       "app_checkUpdates": "检查更新",
       "window_close": "关闭窗口",
       "app_quit": "退出 TextEx",
-      "view_toggleProse": "切换正文视图"
+      "view_toggleProse": "切换正文视图",
+      "view_togglePdfOnly": "切换 PDF 工作区"
     }
   },
   "learning": {
@@ -1428,5 +1429,14 @@
     "compileFailed": "源码已修改，但 PDF 无法刷新。请检查编译错误或撤销此次修改。",
     "undone": "已撤销修改并刷新 PDF。",
     "busy": "处理中…"
+  },
+  "pdfWorkspace": {
+    "enter": "PDF 工作区",
+    "split": "同时显示 TeX 和 PDF",
+    "source": "编辑源文档",
+    "sourceHint": "在此编辑公式、表格、图片、引用和文档结构。",
+    "refresh": "保存并刷新 PDF",
+    "back": "返回 PDF",
+    "hideTools": "隐藏面板"
   }
 }

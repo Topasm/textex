@@ -47,7 +47,13 @@ describe('executeAppCommand', () => {
       researchPanelTab: 'chat',
       researchReferenceSource: 'project'
     })
-    usePdfStore.setState({ zoomLevel: 100, fitRequest: null })
+    usePdfStore.setState({
+      zoomLevel: 100,
+      fitRequest: null,
+      pdfOnly: false,
+      sourceEditorOpen: false,
+      pdfToolsVisible: false
+    })
     useSettingsStore.setState({
       settings: {
         ...useSettingsStore.getState().settings,
@@ -58,6 +64,19 @@ describe('executeAppCommand', () => {
     window.api.saveSettings = vi
       .fn()
       .mockImplementation(async () => useSettingsStore.getState().settings)
+  })
+
+  it('keeps PDF mode independent from prose and opens source search on demand', async () => {
+    useEditorStore.getState().openFileInTab('/project/main.tex', 'Text.')
+    useUiStore.getState().setProseMode('/project/main.tex', true)
+    await executeAppCommand('view.togglePdfOnly', context)
+    expect(usePdfStore.getState().pdfOnly).toBe(true)
+    expect(proseModeFor(useUiStore.getState(), '/project/main.tex')).toBe(false)
+    await executeAppCommand('edit.find', context)
+    expect(usePdfStore.getState().sourceEditorOpen).toBe(true)
+    await executeAppCommand('view.toggleProse', context)
+    expect(usePdfStore.getState().pdfOnly).toBe(false)
+    expect(proseModeFor(useUiStore.getState(), '/project/main.tex')).toBe(true)
   })
 
   it('routes file commands through the injected handlers', async () => {

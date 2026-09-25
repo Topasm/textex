@@ -11,6 +11,12 @@ export interface PdfSyncTarget {
 }
 
 interface PdfState {
+  pdfOnly: boolean
+  sourceEditorOpen: boolean
+  pdfToolsVisible: boolean
+  setPdfOnly: (enabled: boolean) => void
+  setSourceEditorOpen: (open: boolean) => void
+  setPdfToolsVisible: (visible: boolean) => void
   zoomLevel: number
   splitRatio: number
   synctexHighlight: (PdfSyncTarget & { timestamp: number }) | null
@@ -86,6 +92,12 @@ function normalizeZoomLevel(level: number): number {
 export const usePdfStore = create<PdfState>()(
   persist(
     subscribeWithSelector((set, get) => ({
+      pdfOnly: false,
+      sourceEditorOpen: false,
+      pdfToolsVisible: false,
+      setPdfOnly: (pdfOnly) => set({ pdfOnly, sourceEditorOpen: false, pdfToolsVisible: false }),
+      setSourceEditorOpen: (sourceEditorOpen) => set({ sourceEditorOpen }),
+      setPdfToolsVisible: (pdfToolsVisible) => set({ pdfToolsVisible }),
       zoomLevel: 100,
       splitRatio: 0.5,
       synctexHighlight: null,

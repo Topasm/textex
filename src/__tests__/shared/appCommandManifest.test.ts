@@ -22,6 +22,7 @@ const EXPECTED_APP_COMMAND_IDS = [
   'edit.find',
   'view.toggleSidebar',
   'view.toggleResearchPanel',
+  'view.togglePdfOnly',
   'view.toggleProse',
   'view.toggleLog',
   'view.search.citations',

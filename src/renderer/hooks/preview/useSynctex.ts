@@ -52,6 +52,7 @@ export function useSynctex(
         if (!range) return
         const snapshot = prepared.activate()
         if (!snapshot) return
+        if (usePdfStore.getState().pdfOnly) usePdfStore.getState().setSourceEditorOpen(true)
         const state = useEditorStore.getState()
         const column = Math.min(Math.max(1, result.column || 1), range.end.column)
         state.requestJumpToLine(result.line, column, false, {

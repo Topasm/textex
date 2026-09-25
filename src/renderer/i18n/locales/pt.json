@@ -654,7 +654,8 @@
       "app_checkUpdates": "Verificar atualizações",
       "window_close": "Fechar janela",
       "app_quit": "Sair do TextEx",
-      "view_toggleProse": "Alternar a visão de prosa"
+      "view_toggleProse": "Alternar a visão de prosa",
+      "view_togglePdfOnly": "Alternar área PDF"
     }
   },
   "learning": {
@@ -1428,5 +1429,14 @@
     "compileFailed": "O código foi alterado, mas o PDF não pôde ser atualizado. Verifique os erros de compilação ou desfaça a edição.",
     "undone": "Edição desfeita e PDF atualizado.",
     "busy": "Processando…"
+  },
+  "pdfWorkspace": {
+    "enter": "Área PDF",
+    "split": "Mostrar TeX e PDF",
+    "source": "Editar código-fonte",
+    "sourceHint": "Edite equações, tabelas, figuras, citações e a estrutura do documento.",
+    "refresh": "Salvar e atualizar PDF",
+    "back": "Voltar ao PDF",
+    "hideTools": "Ocultar painéis"
   }
 }

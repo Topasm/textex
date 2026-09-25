@@ -654,7 +654,8 @@
       "app_checkUpdates": "Rechercher les mises à jour",
       "window_close": "Fermer la fenêtre",
       "app_quit": "Quitter TextEx",
-      "view_toggleProse": "Basculer la vue prose"
+      "view_toggleProse": "Basculer la vue prose",
+      "view_togglePdfOnly": "Basculer l’espace PDF"
     }
   },
   "learning": {
@@ -1428,5 +1429,14 @@
     "compileFailed": "La source a été modifiée, mais le PDF n’a pas été actualisé. Vérifiez les erreurs de compilation ou annulez la modification.",
     "undone": "Modification annulée et PDF actualisé.",
     "busy": "Traitement…"
+  },
+  "pdfWorkspace": {
+    "enter": "Espace PDF",
+    "split": "Afficher TeX et PDF",
+    "source": "Modifier la source",
+    "sourceHint": "Modifiez ici les équations, tableaux, figures, citations et la structure du document.",
+    "refresh": "Enregistrer et actualiser le PDF",
+    "back": "Retour au PDF",
+    "hideTools": "Masquer les panneaux"
   }
 }

@@ -654,7 +654,8 @@
       "app_checkUpdates": "Check for Updates",
       "window_close": "Close Window",
       "app_quit": "Quit TextEx",
-      "view_toggleProse": "Toggle Prose View"
+      "view_toggleProse": "Toggle Prose View",
+      "view_togglePdfOnly": "Toggle PDF Workspace"
     }
   },
   "learning": {
@@ -1428,5 +1429,14 @@
     "compileFailed": "The source was updated, but the PDF could not be refreshed. Check the compilation errors or undo this edit.",
     "undone": "The sentence edit was undone and the PDF refreshed.",
     "busy": "Working…"
+  },
+  "pdfWorkspace": {
+    "enter": "PDF workspace",
+    "split": "Show TeX and PDF",
+    "source": "Edit source",
+    "sourceHint": "Edit equations, tables, figures, citations, and document structure here.",
+    "refresh": "Save and refresh PDF",
+    "back": "Back to PDF",
+    "hideTools": "Hide panels"
   }
 }

@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { Pencil, Sparkles, X } from 'lucide-react'
 import { ICON_SIZE } from './ui/IconSystem'
+import { usePdfStore } from '../store/usePdfStore'
 import { useEditorStore } from '../store/useEditorStore'
 import { useCompileStore } from '../store/useCompileStore'
 import { useProjectStore } from '../store/useProjectStore'
@@ -244,6 +245,22 @@ export default function PdfSentenceEditor({
           )}
         </>
       )}
+      <button
+        type="button"
+        className="workspace-button"
+        disabled={busy}
+        onClick={() => {
+          usePdfStore.getState().setSourceEditorOpen(true)
+          if (target?.isCurrent()) {
+            useEditorStore
+              .getState()
+              .requestJumpToLine(target.range.start.line, target.range.start.column)
+          }
+          onClose()
+        }}
+      >
+        {t('pdfWorkspace.source')}
+      </button>
       {busy && <p role="status">{t('pdfSentenceEditor.busy')}</p>}
       {status && <p role="status">{status}</p>}
       {error && <p role="alert">{error}</p>}

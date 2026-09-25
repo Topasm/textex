@@ -1,3 +1,4 @@
+import { WorkspaceSourcePane } from './components/WorkspaceSourcePane'
 import {
   useCallback,
   useEffect,
@@ -72,7 +73,7 @@ import {
 import { ICON_SIZE } from './components/ui/IconSystem'
 import { installCrashRecoveryAutosnapshot } from './services/crashRecovery'
 import { prepareDocumentsForManualCompile } from './services/compilePersistenceCoordinator'
-import { flushPendingDocumentEdits } from './services/pendingDocumentEdits'
+import { flushAllPendingDocumentEdits } from './services/pendingDocumentEdits'
 import { SIDEBAR_WIDTH_MAX, SIDEBAR_WIDTH_MIN, SPLIT_RATIO_MAX, SPLIT_RATIO_MIN } from './constants'
 
 // Lazy-load heavy modals and panels that are rarely shown
@@ -162,6 +163,9 @@ function App() {
   useEffect(() => installCrashRecoveryAutosnapshot(), [])
 
   // Only subscribe to state needed for rendering
+  const pdfOnly = usePdfStore((s) => s.pdfOnly)
+  const pdfToolsVisible = usePdfStore((s) => s.pdfToolsVisible)
+  const panelsVisible = !pdfOnly || pdfToolsVisible
   const splitRatio = usePdfStore((s) => s.splitRatio)
   const pdfPath = useCompileStore((s) => s.pdfPath)
   const isSidebarOpen = useProjectStore((s) => s.isSidebarOpen)
@@ -182,7 +186,8 @@ function App() {
   const updateStatus = useUiStore((s) => s.updateStatus)
   const settingsRequested = useUiStore((s) => s.settingsRequested)
   const helpRequestedSection = useUiStore((s) => s.helpRequestedSection)
-  const isProseMode = useUiStore((state) => proseModeFor(state, filePath))
+  const documentProseMode = useUiStore((state) => proseModeFor(state, filePath))
+  const isProseMode = !pdfOnly && documentProseMode
   const pdfViewMode = useSettingsStore((s) => s.settings.pdfViewMode ?? 'continuous')
   const helpHasDocument = Boolean(filePath)
   const helpHasPdf = Boolean(pdfPath)
@@ -286,15 +291,20 @@ function App() {
   // ---- Compile handler ----
   const handleCompile = useCallback(async (): Promise<void> => {
     const editorState = useEditorStore.getState()
-    if (!editorState.filePath) return
-    if (!editorState.filePath.toLowerCase().endsWith('.tex')) return
-    flushPendingDocumentEdits(editorState.filePath)
-    const snapshot = documentRegistry.snapshot(editorState.filePath)
+    const pdfRoot = useCompileStore.getState().pdfDocumentId
+    const compilePath =
+      usePdfStore.getState().pdfOnly && pdfRoot && documentRegistry.getModel(pdfRoot)
+        ? pdfRoot
+        : editorState.filePath
+    if (!compilePath?.toLowerCase().endsWith('.tex')) return
+    flushAllPendingDocumentEdits()
+    if (compilePath !== editorState.filePath) useEditorStore.getState().setActiveTab(compilePath)
+    const snapshot = documentRegistry.snapshot(compilePath)
     if (!snapshot) return
     cancelPendingAutoCompile()
     useCompileStore.getState().clearLogs()
     try {
-      await prepareDocumentsForManualCompile(editorState.filePath, snapshot)
+      await prepareDocumentsForManualCompile(compilePath, snapshot)
     } catch (err) {
       logError('App:preSave', err)
       useCompileStore
@@ -304,7 +314,7 @@ function App() {
       reportCompileFailure(err, 'manual')
       return
     }
-    const ticket = beginCompileTicket(editorState.filePath, snapshot)
+    const ticket = beginCompileTicket(compilePath, snapshot)
     useCompileStore.getState().setCompileStatus('compiling')
     try {
       const result = await window.api.compile(toCompileRequest(ticket, 'high'))
@@ -736,7 +746,7 @@ function App() {
 
   return (
     <div
-      className={`app-container${isResearchPanelOpen && !autoHideResearchPanel ? ' has-research-panel' : ''}${isSettingsOpen || isHelpOpen ? ' has-app-page' : ''}`}
+      className={`app-container${pdfOnly ? ' pdf-only' : ''}${pdfToolsVisible ? ' pdf-tools-visible' : ''}${panelsVisible && isResearchPanelOpen && !autoHideResearchPanel ? ' has-research-panel' : ''}${isSettingsOpen || isHelpOpen ? ' has-app-page' : ''}`}
       style={appLayoutStyle}
     >
       <Toolbar
@@ -853,13 +863,11 @@ function App() {
             />
           )}
           <div className="editor-area">
-            <div className="editor-main-content" ref={mainContentRef}>
-              <div
-                className="editor-pane"
-                style={{
-                  width: `${splitRatio * 100}%`
-                }}
-              >
+            <div
+              className={`editor-main-content${pdfOnly ? ' pdf-workspace' : ''}`}
+              ref={mainContentRef}
+            >
+              <WorkspaceSourcePane onCompile={handleCompile}>
                 <TabBar />
                 {/* Monaco stays mounted behind the prose view: it owns the
                     document adapter the prose edits are applied through, and
@@ -867,7 +875,7 @@ function App() {
                 <div
                   className="editor-surface"
                   data-prose-mode={isProseMode ? 'true' : 'false'}
-                  onWheelCapture={handleWorkspaceSwipe}
+                  onWheelCapture={pdfOnly ? undefined : handleWorkspaceSwipe}
                 >
                   <div className="editor-surface__tex" hidden={isProseMode}>
                     <Suspense
@@ -884,7 +892,7 @@ function App() {
                     </Suspense>
                   )}
                 </div>
-              </div>
+              </WorkspaceSourcePane>
               <div
                 className="split-divider"
                 onMouseDown={handleDividerMouseDown}

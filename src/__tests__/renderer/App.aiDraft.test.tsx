@@ -1,3 +1,6 @@
+import { usePdfStore } from '../../renderer/store/usePdfStore'
+import { useCompileStore } from '../../renderer/store/useCompileStore'
+import { documentRegistry } from '../../renderer/models/documentRegistry'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../renderer/App'
@@ -30,7 +33,11 @@ vi.mock('../../renderer/components/EditorPane', () => ({
 }))
 
 vi.mock('../../renderer/components/PreviewPane', () => ({
-  default: () => <div data-testid="pdf-preview" />
+  default: ({ onCompile }: { onCompile: () => Promise<void> }) => (
+    <div data-testid="pdf-preview">
+      <button onClick={() => void onCompile()}>Refresh preview</button>
+    </div>
+  )
 }))
 
 vi.mock('../../renderer/components/ProsePane', () => ({
@@ -199,6 +206,7 @@ vi.mock('../../renderer/utils/openProject', () => ({
 describe('App AI Draft flow', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    usePdfStore.getState().setPdfOnly(false)
     shortcutHarness.openCommandPalette = null
     useUiStore.getState().setTemplateGalleryOpen(false)
     useUiStore.setState({
@@ -329,6 +337,7 @@ describe('App AI Draft flow', () => {
 describe('App paired workspace gestures', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    usePdfStore.getState().setPdfOnly(false)
     useProjectStore.setState({ projectRoot: '/project', isSidebarOpen: false })
     useEditorStore.getState().resetEditor()
     useEditorStore.getState().openFileInTab('/project/main.tex', 'paper')
@@ -336,6 +345,46 @@ describe('App paired workspace gestures', () => {
     useSettingsStore.setState((state) => ({
       settings: { ...state.settings, autoHideSidebar: false, showStatusBar: false }
     }))
+  })
+
+  it('preserves the editor node while opening PDF-only mode and its source drawer', async () => {
+    const view = render(<App />)
+    const editor = await screen.findByTestId('editor-pane')
+    act(() => usePdfStore.getState().setPdfOnly(true))
+    expect(editor).not.toBeVisible()
+    expect(view.container.querySelector('.editor-main-content')).toHaveClass('pdf-workspace')
+    act(() => usePdfStore.getState().setSourceEditorOpen(true))
+    expect(screen.getByTestId('editor-pane')).toBe(editor)
+    expect(editor).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'Back to PDF' }))
+    expect(editor).not.toBeVisible()
+    act(() => usePdfStore.getState().setPdfOnly(false))
+    expect(editor).toBeVisible()
+  })
+
+  it('refreshes the displayed PDF root after editing an included source file', async () => {
+    const snapshot = documentRegistry.snapshot('/project/main.tex')!
+    useCompileStore.getState().setPdfPath('/cache/main.pdf', {
+      documentId: snapshot.documentId,
+      revision: snapshot.revision
+    })
+    useEditorStore.getState().openFileInTab('/project/chapter.tex', 'Chapter text.')
+    usePdfStore.getState().setPdfOnly(true)
+    window.api.scanLabels = vi.fn().mockResolvedValue([])
+    window.api.compile = vi.fn().mockImplementation(async (request) => ({
+      ...request,
+      pdfPath: '/cache/main.pdf',
+      auxContent: ''
+    }))
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Refresh preview' }))
+    await waitFor(() =>
+      expect(window.api.compile).toHaveBeenCalledWith(
+        expect.objectContaining({ filePath: '/project/main.tex' })
+      )
+    )
+    await waitFor(() => expect(useCompileStore.getState().compileStatus).toBe('success'))
+    expect(useCompileStore.getState().pdfDocumentId).toBe(snapshot.documentId)
   })
 
   it('keeps PDF page swipes separate while the editor can open the Markdown pair', async () => {

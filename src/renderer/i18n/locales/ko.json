@@ -654,7 +654,8 @@
       "app_checkUpdates": "업데이트 확인",
       "window_close": "창 닫기",
       "app_quit": "TextEx 종료",
-      "view_toggleProse": "산문 보기 전환"
+      "view_toggleProse": "산문 보기 전환",
+      "view_togglePdfOnly": "PDF 작업 모드 전환"
     }
   },
   "learning": {
@@ -1428,5 +1429,14 @@
     "compileFailed": "원문은 변경되었지만 PDF를 갱신하지 못했습니다. 컴파일 오류를 확인하거나 이번 수정을 되돌려 주세요.",
     "undone": "문장 수정을 되돌리고 PDF를 갱신했습니다.",
     "busy": "처리 중…"
+  },
+  "pdfWorkspace": {
+    "enter": "PDF만 보기",
+    "split": "TeX와 PDF 함께 보기",
+    "source": "원문 편집",
+    "sourceHint": "수식·표·그림·인용·문서 구조를 이곳에서 수정하세요.",
+    "refresh": "저장하고 PDF 갱신",
+    "back": "PDF로 돌아가기",
+    "hideTools": "패널 숨기기"
   }
 }

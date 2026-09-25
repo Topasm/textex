@@ -153,6 +153,13 @@ export const APP_COMMAND_MANIFEST = [
     shortcut: { key: ['b', 'B'], mod: true, shift: true }
   },
   {
+    id: 'view.togglePdfOnly',
+    label: 'Toggle PDF Workspace',
+    group: 'view',
+    keywords: ['pdf', 'focus', 'edit', 'preview', 'workspace'],
+    requiredContext: 'document'
+  },
+  {
     id: 'view.toggleProse',
     label: 'Toggle Prose View',
     group: 'view',
