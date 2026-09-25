@@ -28,13 +28,15 @@ import { useProjectStore } from '../../src/renderer/store/useProjectStore'
 import { useSettingsStore } from '../../src/renderer/store/useSettingsStore'
 import { pdfFixture, multipagePdfFixture, citationPdfFixture, sentencePdfFixture } from './pdf-fixture'
 import { parseAuxContent } from '../../src/shared/auxparser'
-import i18n from '../../src/renderer/i18n'
+import i18n, { loadLanguage } from '../../src/renderer/i18n'
 import '../../src/renderer/styles/index.css'
 import '../../src/renderer/styles/flat.css'
 import '../../src/renderer/styles/responsive.css'
 import '../../src/renderer/styles/research-panel-responsive.css'
 import '../../src/renderer/styles/workspace-controls.css'
 
+const locale = new URLSearchParams(location.search).get('locale') ?? 'en'
+void loadLanguage(locale).then(() => i18n.changeLanguage(locale))
 self.MonacoEnvironment = { getWorker: () => new EditorWorker() }
 const sourcePath = '/project/main.tex'
 const source = new URLSearchParams(location.search).has('sentences')
@@ -66,7 +68,6 @@ if (new URLSearchParams(location.search).has('notes')) {
   })
 }
 if (new URLSearchParams(location.search).has('research-ui')) {
-  void i18n.changeLanguage(new URLSearchParams(location.search).get('locale') ?? 'en')
   Object.assign(window.api, {
     researchProfileLoad: async () => ({ version: 1, paper: { title: 'Scientific Document Understanding', authors: [{ id: 'ada', name: 'Ada' }] }, resources: [], instructions: [] }),
     researchChatSessionLoad: async () => ({ projectRoot: '/project', projectEpoch: '1', revision: '0', session: { version: 1, messages: [], selectedContexts: [] } }),
@@ -151,7 +152,7 @@ function SourceEditor() {
       editor.dispose()
     }
   }, [refresh, refreshJump, refreshSearch, registerClickNavigation])
-  return <div ref={host} data-testid="source-editor" style={{ height: 600 }} />
+  return <div ref={host} data-testid="source-editor" style={{ height: '100%', minHeight: 0, flex: 1 }} />
 }
 
 function Harness() {
@@ -180,7 +181,7 @@ function Harness() {
     <>
       {workspace && <Toolbar onSave={() => {}} onCompile={compile} onOpenFolder={() => {}}
         onReturnHome={() => {}} onOpenCommandPalette={() => {}} onOpenSettings={() => {}} />}
-      <nav>
+      <nav hidden={workspace}>
         <button onMouseDown={startResize}>Resize panel</button>
         <button onClick={() => useSettingsStore.setState((state) => ({ settings: { ...state.settings, pdfViewMode: 'single' } }))}>Single page</button>
         <button onClick={() => requestLocalSearch('document')}>Find document</button>
@@ -201,7 +202,7 @@ function Harness() {
         <output data-testid="source-highlight">{highlight?.text}</output>
         <output data-testid="source-range" hidden>{JSON.stringify(highlight?.range)}</output>
       </nav>
-      <main className={`editor-main-content${pdfOnly ? ' pdf-workspace' : ''}`} style={{ display: 'flex', height: 650, flex: 'none' }}>
+      <main className={`editor-main-content${pdfOnly ? ' pdf-workspace' : ''}`} style={{ display: 'flex', height: workspace ? 'calc(100vh - 40px)' : 650, flex: 'none' }}>
         <WorkspaceSourcePane onCompile={compile}>{markdown ? <ProsePane /> : <SourceEditor />}</WorkspaceSourcePane>
         <div className="preview-pane" style={{ width: '50%' }}><PreviewPane onCompile={compile} /></div>
       </main>

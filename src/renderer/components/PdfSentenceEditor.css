@@ -1,52 +1,131 @@
 .pdf-sentence-editor {
   position: fixed;
-  right: var(--space-24);
-  bottom: var(--space-24);
+  right: var(--space-16);
+  bottom: var(--space-16);
   z-index: 200;
-  width: min(440px, calc(100vw - 48px));
-  max-height: calc(100vh - 48px);
-  overflow: auto;
-  padding: var(--space-16);
+  display: flex;
+  flex-direction: column;
+  width: min(480px, calc(100vw - 32px));
+  max-height: calc(100dvh - 80px);
+  overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--ui-radius-panel);
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   color: var(--text-primary);
   box-shadow: 0 8px 32px #0004;
 }
 .pdf-sentence-editor header,
+.pdf-sentence-editor footer,
 .pdf-sentence-editor__actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-8);
   flex-wrap: wrap;
 }
+.pdf-sentence-editor header,
+.pdf-sentence-editor footer {
+  flex-shrink: 0;
+  justify-content: space-between;
+  padding: var(--space-12) var(--space-16);
+  background: var(--bg-secondary);
+}
+.pdf-sentence-editor header {
+  border-bottom: 1px solid var(--border);
+}
+.pdf-sentence-editor footer {
+  border-top: 1px solid var(--border);
+}
 .pdf-sentence-editor h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
   margin: 0;
   font-size: var(--font-lg);
 }
+.pdf-sentence-editor__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+  min-height: 0;
+  padding: var(--space-16);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.pdf-sentence-editor__caption {
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  font-weight: 600;
+}
 .pdf-sentence-editor blockquote {
-  margin: var(--space-12) 0;
-  padding-left: var(--space-12);
+  margin: var(--space-6) 0 0;
+  padding: var(--space-8) var(--space-12);
   border-left: 3px solid var(--accent);
+  background: var(--bg-secondary);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  max-height: 140px;
+  line-height: 1.6;
+  max-height: 100px;
   overflow: auto;
 }
-.pdf-sentence-editor label {
+.pdf-sentence-editor__field {
   display: grid;
   gap: var(--space-6);
+  font-weight: 600;
 }
 .pdf-sentence-editor textarea {
   width: 100%;
-  min-height: 120px;
+  min-height: 100px;
+  height: clamp(100px, 18vh, 160px);
   box-sizing: border-box;
-  padding: var(--space-8);
+  padding: var(--space-12);
   resize: vertical;
   background: var(--bg-primary);
   color: var(--text-primary);
   border: 1px solid var(--border);
   border-radius: var(--ui-radius-control);
   font: inherit;
+  font-weight: 400;
+  line-height: 1.6;
+}
+.pdf-sentence-editor textarea:focus-visible {
+  outline: 2px solid var(--ui-focus-ring);
+  outline-offset: 2px;
+}
+.pdf-sentence-editor__hint,
+.pdf-sentence-editor__ai-setup p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  line-height: 1.5;
+}
+.pdf-sentence-editor__apply {
+  align-self: stretch;
+}
+.pdf-sentence-editor__apply kbd {
+  margin-left: auto;
+  font: inherit;
+  font-size: var(--font-xs);
+  opacity: 0.8;
+}
+.pdf-sentence-editor__result p {
+  margin: var(--space-6) 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+.pdf-sentence-editor__feedback {
+  margin: 0;
+  padding: var(--space-10) var(--space-12);
+  border-radius: var(--ui-radius-control);
+  background: var(--bg-secondary);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.pdf-sentence-editor__feedback.is-success {
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 8%, var(--bg-primary));
+}
+.pdf-sentence-editor__feedback.is-error {
+  color: var(--error);
+  background: color-mix(in srgb, var(--error) 8%, var(--bg-primary));
 }

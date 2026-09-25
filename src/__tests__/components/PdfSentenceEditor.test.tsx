@@ -1,3 +1,4 @@
+import { useUiStore } from '../../renderer/store/useUiStore'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, expect, it, vi, type Mock } from 'vitest'
 import PdfSentenceEditor from '../../renderer/components/PdfSentenceEditor'
@@ -140,4 +141,36 @@ it('edits an included file but recompiles the document that produced the PDF', a
   expect(compiledPath).toBe(path)
   expect(documentRegistry.snapshot(included)?.text).toContain('Improved chapter sentence.')
   expect(documentRegistry.snapshot(path)?.text).toBe(source)
+})
+
+it('resets a draft without changing the document and applies with the keyboard', async () => {
+  const close = vi.fn()
+  render(<PdfSentenceEditor selection={selection} onClose={close} onCompile={compile} />)
+  fireEvent.click(screen.getByRole('button', { name: 'Edit manually' }))
+  const field = screen.getByRole('textbox')
+  fireEvent.change(field, { target: { value: 'Discard this draft.' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Reset draft' }))
+  expect(field).toHaveValue('Original sentence.')
+  expect(documentRegistry.snapshot(path)?.text).toBe(source)
+  fireEvent.keyDown(field, { key: 'Enter', ctrlKey: true })
+  expect(compile).not.toHaveBeenCalled()
+  fireEvent.change(field, { target: { value: 'Reviewed sentence.' } })
+  fireEvent.keyDown(field, { key: 'Enter', ctrlKey: true })
+  expect(await screen.findByText('PDF refreshed.')).toBeVisible()
+  expect(screen.getByText('Applied sentence')).toBeVisible()
+  expect(screen.getByText('Reviewed sentence.')).toBeVisible()
+  expect(screen.getByRole('button', { name: 'Done' })).toHaveFocus()
+  fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+  expect(close).toHaveBeenCalledOnce()
+})
+
+it('opens AI settings without discarding a manual draft', () => {
+  useSettingsStore.setState((state) => ({ settings: { ...state.settings, aiEnabled: false } }))
+  useUiStore.setState({ settingsRequested: false })
+  render(<PdfSentenceEditor selection={selection} onClose={vi.fn()} onCompile={compile} />)
+  fireEvent.click(screen.getByRole('button', { name: 'Edit manually' }))
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Keep my draft.' } })
+  fireEvent.click(screen.getByRole('button', { name: 'AI settings' }))
+  expect(useUiStore.getState().settingsRequested).toBe(true)
+  expect(screen.getByRole('textbox')).toHaveValue('Keep my draft.')
 })

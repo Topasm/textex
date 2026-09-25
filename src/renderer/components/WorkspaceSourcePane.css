@@ -16,30 +16,87 @@
 }
 .editor-main-content > .workspace-source-pane--floating {
   position: absolute;
-  inset: 12px auto 12px 12px;
+  inset: 52px 12px 12px auto;
   z-index: 100;
-  width: min(760px, calc(100% - 24px)) !important;
-  height: calc(100% - 24px);
+  width: min(560px, calc(100% - 24px)) !important;
+  height: calc(100% - 64px);
   background: var(--bg-primary);
   border: 1px solid var(--border);
   border-radius: var(--ui-radius-panel);
   box-shadow: 0 8px 32px #0004;
   overflow: hidden;
 }
-.workspace-source-pane__header {
+.workspace-source-pane__header,
+.workspace-source-pane__footer {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-8);
   padding: var(--space-12);
+  flex-shrink: 0;
+  background: var(--bg-secondary);
+}
+.workspace-source-pane__header {
   border-bottom: 1px solid var(--border);
 }
-.workspace-source-pane__header > div {
-  flex: 1 1 220px;
+.workspace-source-pane__heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  flex: 1;
+  min-width: 0;
+}
+.workspace-source-pane__heading strong {
+  flex-shrink: 0;
+}
+.workspace-source-pane__file {
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
 }
 .workspace-source-pane__header p {
-  margin: 4px 0 0;
+  flex-basis: 100%;
+  margin: 0;
   font-size: var(--font-sm);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.workspace-source-pane__footer {
+  border-top: 1px solid var(--border);
+  justify-content: space-between;
+}
+.workspace-source-pane__state {
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+}
+.workspace-source-pane__state.is-dirty {
+  color: var(--warning);
+}
+.workspace-source-pane__error {
+  flex-basis: 100%;
+  display: flex;
+  gap: var(--space-8);
+  align-items: center;
+  color: var(--error);
+}
+.workspace-source-pane__error p {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  margin: 0;
+}
+.pdf-toolbar .pdf-source-toggle {
+  white-space: nowrap;
+  flex-shrink: 0;
+  gap: var(--space-6);
+}
+.pdf-workspace-hint {
+  margin: 0;
+  padding: var(--space-6) var(--space-16);
+  font-size: var(--font-sm);
+  line-height: 1.5;
   color: var(--text-secondary);
 }
 

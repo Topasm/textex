@@ -2,7 +2,8 @@ import React, { useCallback, useRef } from 'react'
 import {
   House,
   FileText,
-  Code,
+  Columns2,
+  PanelRightClose,
   FolderOpen,
   Loader,
   Menu,
@@ -115,7 +116,6 @@ const Toolbar = React.memo(function Toolbar({
   const isResearchPanelOpen = useProjectStore((s) => s.isResearchPanelOpen)
   const pdfOnly = usePdfStore((s) => s.pdfOnly)
   const pdfToolsVisible = usePdfStore((s) => s.pdfToolsVisible)
-  const sourceEditorOpen = usePdfStore((s) => s.sourceEditorOpen)
   const panelsVisible = !pdfOnly || pdfToolsVisible
   const isProseMode = useUiStore((state) => proseModeFor(state, filePath))
   const canUseProseMode = Boolean(filePath?.toLowerCase().endsWith('.tex'))
@@ -248,30 +248,22 @@ const Toolbar = React.memo(function Toolbar({
             aria-label={t(pdfOnly ? 'pdfWorkspace.split' : 'pdfWorkspace.enter')}
             aria-pressed={pdfOnly}
           >
-            <FileText size={ICON_SIZE.control} />
-            <span>PDF</span>
+            {pdfOnly ? (
+              <Columns2 size={ICON_SIZE.control} />
+            ) : (
+              <FileText size={ICON_SIZE.control} />
+            )}
+            <span>{pdfOnly ? t('pdfWorkspace.splitShort') : 'PDF'}</span>
           </button>
-          {pdfOnly && (
-            <button
-              type="button"
-              className={`toolbar-btn toolbar-pdf-action${sourceEditorOpen ? ' active' : ''}`}
-              onClick={() => usePdfStore.getState().setSourceEditorOpen(!sourceEditorOpen)}
-              title={t('pdfWorkspace.source')}
-              aria-label={t('pdfWorkspace.source')}
-              aria-expanded={sourceEditorOpen}
-              aria-controls="workspace-source-editor"
-            >
-              <Code size={ICON_SIZE.control} />
-              <span>{t('pdfWorkspace.source')}</span>
-            </button>
-          )}
           {pdfOnly && pdfToolsVisible && (
             <button
               type="button"
               className="toolbar-btn"
+              title={t('pdfWorkspace.hideTools')}
+              aria-label={t('pdfWorkspace.hideTools')}
               onClick={() => usePdfStore.getState().setPdfToolsVisible(false)}
             >
-              {t('pdfWorkspace.hideTools')}
+              <PanelRightClose size={ICON_SIZE.control} />
             </button>
           )}
 

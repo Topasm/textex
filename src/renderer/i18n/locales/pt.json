@@ -1428,7 +1428,12 @@
     "updated": "PDF atualizado.",
     "compileFailed": "O código foi alterado, mas o PDF não pôde ser atualizado. Verifique os erros de compilação ou desfaça a edição.",
     "undone": "Edição desfeita e PDF atualizado.",
-    "busy": "Processando…"
+    "busy": "Processando…",
+    "original": "Texto original do PDF",
+    "resetDraft": "Redefinir rascunho",
+    "aiSettings": "Configurações de IA",
+    "appliedText": "Frase aplicada",
+    "done": "Concluído"
   },
   "pdfWorkspace": {
     "enter": "Área PDF",
@@ -1437,6 +1442,13 @@
     "sourceHint": "Edite equações, tabelas, figuras, citações e a estrutura do documento.",
     "refresh": "Salvar e atualizar PDF",
     "back": "Voltar ao PDF",
-    "hideTools": "Ocultar painéis"
+    "hideTools": "Ocultar painéis",
+    "splitShort": "Vista dividida",
+    "editHint": "Duplo clique para editar uma frase · Ctrl/⌘-clique para abrir o código",
+    "unsaved": "Alterações não salvas",
+    "saved": "Código salvo",
+    "updating": "Atualizando PDF…",
+    "refreshFailed": "Não foi possível atualizar o PDF. Suas alterações foram mantidas.",
+    "showProblems": "Ver problemas"
   }
 }

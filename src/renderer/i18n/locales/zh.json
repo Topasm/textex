@@ -1428,7 +1428,12 @@
     "updated": "PDF 已刷新。",
     "compileFailed": "源码已修改，但 PDF 无法刷新。请检查编译错误或撤销此次修改。",
     "undone": "已撤销修改并刷新 PDF。",
-    "busy": "处理中…"
+    "busy": "处理中…",
+    "original": "PDF 原文",
+    "resetDraft": "重置草稿",
+    "aiSettings": "AI 设置",
+    "appliedText": "已应用的句子",
+    "done": "完成"
   },
   "pdfWorkspace": {
     "enter": "PDF 工作区",
@@ -1437,6 +1442,13 @@
     "sourceHint": "在此编辑公式、表格、图片、引用和文档结构。",
     "refresh": "保存并刷新 PDF",
     "back": "返回 PDF",
-    "hideTools": "隐藏面板"
+    "hideTools": "隐藏面板",
+    "splitShort": "分栏视图",
+    "editHint": "双击句子进行编辑 · Ctrl/⌘+单击打开对应源文档",
+    "unsaved": "未保存的更改",
+    "saved": "源文档已保存",
+    "updating": "正在更新 PDF…",
+    "refreshFailed": "无法刷新 PDF。源文档的修改已保留。",
+    "showProblems": "查看问题"
   }
 }

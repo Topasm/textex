@@ -1428,7 +1428,12 @@
     "updated": "PDF refreshed.",
     "compileFailed": "The source was updated, but the PDF could not be refreshed. Check the compilation errors or undo this edit.",
     "undone": "The sentence edit was undone and the PDF refreshed.",
-    "busy": "Working…"
+    "busy": "Working…",
+    "original": "Original PDF text",
+    "resetDraft": "Reset draft",
+    "aiSettings": "AI settings",
+    "appliedText": "Applied sentence",
+    "done": "Done"
   },
   "pdfWorkspace": {
     "enter": "PDF workspace",
@@ -1437,6 +1442,13 @@
     "sourceHint": "Edit equations, tables, figures, citations, and document structure here.",
     "refresh": "Save and refresh PDF",
     "back": "Back to PDF",
-    "hideTools": "Hide panels"
+    "hideTools": "Hide panels",
+    "splitShort": "Split view",
+    "editHint": "Double-click a sentence to edit · Ctrl/⌘-click to open its source",
+    "unsaved": "Unsaved changes",
+    "saved": "Source saved",
+    "updating": "Updating PDF…",
+    "refreshFailed": "The PDF could not be refreshed. Your source edits are kept.",
+    "showProblems": "View problems"
   }
 }

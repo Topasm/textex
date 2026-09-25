@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react'
-import { ArrowLeft, ArrowRight } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Code } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useEditorStore } from '../store/useEditorStore'
 import { useCompileStore } from '../store/useCompileStore'
@@ -17,6 +17,7 @@ export function PdfToolbar({ children }: { children?: React.ReactNode }) {
   const pdfPath = useCompileStore((s) => s.pdfPath)
   const currentPage = usePdfStore((s) => s.currentPage)
   const numPages = usePdfStore((s) => s.numPages)
+  const sourceEditorOpen = usePdfStore((state) => state.sourceEditorOpen)
   const pdfOnly = usePdfStore((state) => state.pdfOnly)
   const documentProseMode = useUiStore((state) => proseModeFor(state, filePath))
   const isProseMode = !pdfOnly && documentProseMode
@@ -80,6 +81,21 @@ export function PdfToolbar({ children }: { children?: React.ReactNode }) {
       <span className="pdf-toolbar-title" title={pdfPath ?? undefined}>
         PDF
       </span>
+      {pdfOnly && (
+        <button
+          type="button"
+          className={`toolbar-btn pdf-source-toggle${sourceEditorOpen ? ' active' : ''}`}
+          onClick={() => usePdfStore.getState().setSourceEditorOpen(!sourceEditorOpen)}
+          title={t('pdfWorkspace.sourceHint')}
+          aria-label={t('pdfWorkspace.source')}
+          aria-expanded={sourceEditorOpen}
+          aria-controls="workspace-source-editor"
+          disabled={!filePath}
+        >
+          <Code size={ICON_SIZE.compact} />
+          <span>{t('pdfWorkspace.source')}</span>
+        </button>
+      )}
       <PdfExportControls />
       {showPdfControls && (
         <div className="toolbar-sync-controls">

@@ -62,6 +62,7 @@ function PreviewPane({ onCompile }: { onCompile?: () => Promise<void> }) {
   const pdfPath = useCompileStore((s) => s.pdfPath)
   const pdfRevision = useCompileStore((s) => s.pdfRevision)
   const pdfDocumentId = useCompileStore((s) => s.pdfDocumentId)
+  const pdfOnly = usePdfStore((s) => s.pdfOnly)
   const compileStatus = useCompileStore((s) => s.compileStatus)
   const zoomLevel = usePdfStore((s) => s.zoomLevel)
   const fitRequest = usePdfStore((s) => s.fitRequest)
@@ -665,6 +666,9 @@ function PreviewPane({ onCompile }: { onCompile?: () => Promise<void> }) {
       style={{ position: 'relative' }}
     >
       <PdfToolbar>{displayedGeneration && <PdfSearchBar search={search} />}</PdfToolbar>
+      {pdfOnly && displayedGeneration && (
+        <p className="pdf-workspace-hint">{t('pdfWorkspace.editHint')}</p>
+      )}
       {sentenceSelection && (
         <PdfSentenceEditor
           key={`${sentenceSelection.id}:${sentenceSelection.loading}`}

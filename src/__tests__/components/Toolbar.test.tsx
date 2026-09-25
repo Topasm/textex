@@ -488,7 +488,12 @@ describe('Workspace toolbars', () => {
 it('opens PDF-only editing and reveals hidden research tools without closing their state', () => {
   useEditorStore.setState({ filePath: '/project/main.tex' })
   useProjectStore.setState({ projectRoot: '/project', isResearchPanelOpen: true })
-  render(<Toolbar {...defaultProps} />)
+  render(
+    <>
+      <Toolbar {...defaultProps} />
+      <PdfToolbar />
+    </>
+  )
   fireEvent.click(screen.getByRole('button', { name: 'PDF workspace' }))
   expect(usePdfStore.getState().pdfOnly).toBe(true)
   expect(useProjectStore.getState().isResearchPanelOpen).toBe(true)

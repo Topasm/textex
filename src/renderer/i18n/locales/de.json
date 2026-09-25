@@ -1428,7 +1428,12 @@
     "updated": "PDF aktualisiert.",
     "compileFailed": "Die Quelle wurde geändert, aber das PDF konnte nicht aktualisiert werden. Prüfen Sie die Kompilierungsfehler oder machen Sie die Änderung rückgängig.",
     "undone": "Änderung rückgängig gemacht und PDF aktualisiert.",
-    "busy": "Wird verarbeitet…"
+    "busy": "Wird verarbeitet…",
+    "original": "Originaltext im PDF",
+    "resetDraft": "Entwurf zurücksetzen",
+    "aiSettings": "KI-Einstellungen",
+    "appliedText": "Übernommener Satz",
+    "done": "Fertig"
   },
   "pdfWorkspace": {
     "enter": "PDF-Arbeitsbereich",
@@ -1437,6 +1442,13 @@
     "sourceHint": "Hier Gleichungen, Tabellen, Abbildungen, Zitate und Dokumentstruktur bearbeiten.",
     "refresh": "Speichern und PDF aktualisieren",
     "back": "Zurück zum PDF",
-    "hideTools": "Bereiche ausblenden"
+    "hideTools": "Bereiche ausblenden",
+    "splitShort": "Geteilte Ansicht",
+    "editHint": "Satz zum Bearbeiten doppelklicken · Strg/⌘-Klick öffnet den Quelltext",
+    "unsaved": "Ungespeicherte Änderungen",
+    "saved": "Quelltext gespeichert",
+    "updating": "PDF wird aktualisiert…",
+    "refreshFailed": "PDF konnte nicht aktualisiert werden. Ihre Änderungen bleiben erhalten.",
+    "showProblems": "Probleme anzeigen"
   }
 }
