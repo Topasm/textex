@@ -7,6 +7,7 @@ import { logError } from '../../utils/errorMessage'
 import { ICON_SIZE } from '../ui/IconSystem'
 import { renderInline } from '../ui/MarkdownText'
 import { describeNativeError } from '../../services/nativeErrors'
+import { PdfAnnotationImport } from './PdfAnnotationImport'
 
 /**
  * A freeform Markdown notepad, saved to `TODO.md` at the project root.
@@ -62,6 +63,7 @@ export function NotesPanel() {
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
   const [loadedProjectRoot, setLoadedProjectRoot] = useState<string | null>(null)
   const [loadError, setLoadError] = useState('')
+  const [saveError, setSaveError] = useState('')
   const [reloadToken, setReloadToken] = useState(0)
 
   const linesRef = useRef<string[]>([])
@@ -88,8 +90,10 @@ export function NotesPanel() {
         pendingSaves.current.delete(path)
         try {
           await window.api.saveFile(content, path)
+          if (activeFilePath.current === path) setSaveError('')
         } catch (err) {
           logError('NotesPanel:save', err)
+          if (activeFilePath.current === path) setSaveError(describeNativeError(err))
         }
       }
     } finally {
@@ -123,6 +127,7 @@ export function NotesPanel() {
     setLoading(true)
     setLoadedProjectRoot(null)
     setLoadError('')
+    setSaveError('')
     setActiveIndex(null)
     activeFilePath.current = null
     if (!projectRoot) return
@@ -203,12 +208,30 @@ export function NotesPanel() {
     setActiveIndex(index)
   }, [])
 
+  const importAnnotations = useCallback(
+    (imported: string[]) => {
+      if (!activeFilePath.current || loadedProjectRoot !== useProjectStore.getState().projectRoot)
+        return
+      const current = linesRef.current
+      const next = current.length ? [...current, '', ...imported] : ['# Notes', '', ...imported]
+      linesRef.current = next
+      setLines(next)
+      setExists(true)
+      setActiveIndex(null)
+      scheduleSave(next)
+    },
+    [loadedProjectRoot, scheduleSave]
+  )
+
   const handleCreate = useCallback(async () => {
     const filePath = activeFilePath.current
     if (!filePath) return
+    const generation = loadGeneration.current
+    const previousLines = linesRef.current
     const initial = ['# Notes', '', '']
     try {
       await window.api.saveFile(initial.join('\n'), filePath)
+      if (generation !== loadGeneration.current || linesRef.current !== previousLines) return
       setLines(initial)
       linesRef.current = initial
       setExists(true)
@@ -375,6 +398,7 @@ export function NotesPanel() {
   if (!exists) {
     return (
       <div className="notes-panel notes-panel--empty">
+        <PdfAnnotationImport key={projectRoot} onImport={importAnnotations} />
         <button
           type="button"
           className="panel-create-icon-btn"
@@ -391,6 +415,8 @@ export function NotesPanel() {
 
   return (
     <div className="notes-panel">
+      <PdfAnnotationImport key={projectRoot} onImport={importAnnotations} />
+      {saveError && <p role="alert">{saveError}</p>}
       {lines.map((raw, index) => {
         if (activeIndex === index) {
           return (

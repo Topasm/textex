@@ -13,6 +13,18 @@ export function pdfFixture(revision: number): Uint8Array {
   return encodePdf(objects)
 }
 
+export function sentencePdfFixture(replacement?: string): Uint8Array {
+  const escaped = replacement?.replace(/[\\()]/gu, '\\$&')
+  const stream = replacement === undefined ? 'BT /F1 18 Tf 60 740 Td (First sentence. The efficient) Tj 0 -24 Td (method works. Last sentence.) Tj ET' : `BT /F1 18 Tf 60 740 Td (First sentence. ${escaped} Last sentence.) Tj ET`
+  return encodePdf([
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 600 800] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`
+  ])
+}
+
 function encodePdf(objects: string[]): Uint8Array {
   let pdf = '%PDF-1.7\n'
   const offsets = [0]
@@ -28,6 +40,22 @@ function encodePdf(objects: string[]): Uint8Array {
     .join('')
   pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`
   return new TextEncoder().encode(pdf)
+}
+
+/** Reviewer comment, highlight, popup and link exercise the real annotation parser. */
+export function annotatedPdfFixture(): Uint8Array {
+  const stream = 'BT /F1 18 Tf 60 740 Td (The efficient method works.) Tj ET'
+  return encodePdf([
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 600 800] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R /Annots [6 0 R 7 0 R 8 0 R 9 0 R] >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,
+    '<< /Type /Annot /Subtype /Text /Rect [50 700 70 720] /T (Reviewer) /Contents (Please explain the method.) /Popup 8 0 R >>',
+    '<< /Type /Annot /Subtype /Highlight /Rect [60 738 300 760] /QuadPoints [60 760 300 760 60 738 300 738] /T (Reviewer) /Contents (Check this claim.) /C [1 1 0] >>',
+    '<< /Type /Annot /Subtype /Popup /Rect [300 600 500 700] /Parent 6 0 R >>',
+    '<< /Type /Annot /Subtype /Link /Rect [60 680 300 705] /A << /S /URI /URI (https://example.org/) >> >>'
+  ])
 }
 
 /** Real hyperref and biblatex links point at the second-page bibliography. */

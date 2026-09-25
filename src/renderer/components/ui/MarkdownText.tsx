@@ -118,7 +118,8 @@ type InlineToken =
   | { kind: 'code'; value: string }
   | { kind: 'link'; value: string; href: string }
 
-const INLINE_RE = /\*\*([^*]+)\*\*|`([^`]+)`|\[([^\]]+)\]\(([^)\s]+)\)|\*([^*]+)\*|_([^_]+)_/gu
+const INLINE_RE =
+  /\\([\\`*_{}[\]<>#!|])|\*\*([^*]+)\*\*|`([^`]+)`|\[([^\]]+)\]\(([^)\s]+)\)|\*([^*]+)\*|_([^_]+)_/gu
 const SAFE_LINK_RE = /^(https?:|mailto:)/iu
 
 function parseInline(text: string): InlineToken[] {
@@ -129,11 +130,12 @@ function parseInline(text: string): InlineToken[] {
   while ((match = INLINE_RE.exec(text))) {
     if (match.index > lastIndex)
       tokens.push({ kind: 'text', value: text.slice(lastIndex, match.index) })
-    if (match[1] !== undefined) tokens.push({ kind: 'bold', value: match[1] })
-    else if (match[2] !== undefined) tokens.push({ kind: 'code', value: match[2] })
-    else if (match[3] !== undefined) tokens.push({ kind: 'link', value: match[3], href: match[4] })
-    else if (match[5] !== undefined) tokens.push({ kind: 'italic', value: match[5] })
+    if (match[1] !== undefined) tokens.push({ kind: 'text', value: match[1] })
+    else if (match[2] !== undefined) tokens.push({ kind: 'bold', value: match[2] })
+    else if (match[3] !== undefined) tokens.push({ kind: 'code', value: match[3] })
+    else if (match[4] !== undefined) tokens.push({ kind: 'link', value: match[4], href: match[5] })
     else if (match[6] !== undefined) tokens.push({ kind: 'italic', value: match[6] })
+    else if (match[7] !== undefined) tokens.push({ kind: 'italic', value: match[7] })
     lastIndex = INLINE_RE.lastIndex
   }
   if (lastIndex < text.length) tokens.push({ kind: 'text', value: text.slice(lastIndex) })

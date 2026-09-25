@@ -19,7 +19,7 @@ A **free**, **local-first** Tauri desktop LaTeX editor. TextEx runs on your mach
 | **Zero Setup** | Bundled Tectonic engine — no TeX installation required |
 | **Live PDF Preview** | Auto-compile on save with instant split-pane preview |
 | **Scroll Sync** | Bidirectional scroll synchronization between editor and PDF |
-| **SyncTeX** | Ctrl+Click to jump between source code and PDF positions |
+| **SyncTeX** | Double-click sentences to sync TeX and PDF; Ctrl+Click for line navigation |
 | **Search** | Document/PDF find, reference search, and quick file opening |
 | **Monaco Editor** | Syntax highlighting, auto-completion, snippets, Vim mode |
 | **Multi-File Projects** | Sidebar file tree with generated outputs hidden, tab bar, `\input`/`\include` navigation |
@@ -133,6 +133,8 @@ Enable **Scroll Sync** in Settings > Appearance to keep the editor and PDF align
 - Built-in feedback loop prevention — no bouncing or jittering.
 
 ### SyncTeX (Click-to-Jump)
+- **Sentence sync**: Double-click text in either the PDF or TeX editor to highlight and reveal the corresponding sentence on the other side. Wrapped text and common TeX formatting are supported. When text cannot be matched (for example, generated macros or equations), SyncTeX falls back to the source line. Recompile after editing the source to refresh the mapping.
+- **Edit from the PDF**: Double-click a PDF sentence to open a prefilled editor. Choose **Edit manually** or **Polish with AI**, review the sentence, then **Apply and refresh PDF**. Only the matched TeX sentence changes; the original PDF's source document is compiled again. Keep LaTeX formatting commands intact in the field. AI must be enabled in Settings, and suggestions are never applied automatically. You can undo the edit from the same panel. Uncertain mappings and source changes disable editing rather than replacing a guessed source range.
 - **PDF selection → source highlight**: Drag to select PDF text and highlight the corresponding TeX passage. Switching to Markdown selects the same sentence or paragraph. Text that differs from the source, such as macros or equations, falls back to source-line highlighting. This temporary selection is not saved to the file.
 - **Code to PDF**: Click the "Sync Code to PDF" toolbar button to highlight the current line in the PDF.
 - **PDF to Code**: `Ctrl+Click` anywhere on the PDF to jump to the corresponding source line.
@@ -162,7 +164,7 @@ Enable **Scroll Sync** in Settings > Appearance to keep the editor and PDF align
 
 - **Search**: Find text inside the active TeX/Markdown editor or PDF viewer; search papers in References. Open project files with `Ctrl/Cmd+P`, and commands with `Ctrl/Cmd+Shift+P`.
 - **Todo Panel**: Track writing tasks in the sidebar.
-- **Notes Panel**: Track TODO items and keep project memos.
+- **Notes Panel**: Track TODO items and keep project memos. Use **Import PDF annotations** to select a reviewed PDF and append comments and highlights to `TODO.md` as review checkboxes, with page numbers and authors. Existing notes are preserved; each import appends a new section. Marked text is approximate context and may include surrounding text. Flattened annotations cannot be recovered, and password-protected PDFs must be unlocked first. Import supports PDFs up to 20 MB, 2,000 pages and 5,000 annotations.
 - **Timeline**: View local file history and revert to any previous save.
 - **Git Panel**: Stage and commit locally, inspect upstream divergence, Fetch, or confirm safe Pull/Push operations. Pull requires a clean worktree and uses fast-forward only; TextEx never force-pushes.
 - **AI Settings**: Choose a global default provider/model independently from API-key and CLI connection setup. Research Chat can override that target for one conversation without changing the global default.

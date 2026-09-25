@@ -1,0 +1,52 @@
+.pdf-sentence-editor {
+  position: fixed;
+  right: var(--space-24);
+  bottom: var(--space-24);
+  z-index: 200;
+  width: min(440px, calc(100vw - 48px));
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  padding: var(--space-16);
+  border: 1px solid var(--border);
+  border-radius: var(--ui-radius-panel);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  box-shadow: 0 8px 32px #0004;
+}
+.pdf-sentence-editor header,
+.pdf-sentence-editor__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  flex-wrap: wrap;
+}
+.pdf-sentence-editor h3 {
+  margin: 0;
+  font-size: var(--font-lg);
+}
+.pdf-sentence-editor blockquote {
+  margin: var(--space-12) 0;
+  padding-left: var(--space-12);
+  border-left: 3px solid var(--accent);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 140px;
+  overflow: auto;
+}
+.pdf-sentence-editor label {
+  display: grid;
+  gap: var(--space-6);
+}
+.pdf-sentence-editor textarea {
+  width: 100%;
+  min-height: 120px;
+  box-sizing: border-box;
+  padding: var(--space-8);
+  resize: vertical;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--ui-radius-control);
+  font: inherit;
+}

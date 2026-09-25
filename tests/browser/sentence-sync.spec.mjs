@@ -1,0 +1,65 @@
+import { test, expect } from '@playwright/test'
+
+test('double-clicking a wrapped PDF sentence highlights its precise formatted TeX sentence', async ({ page }) => {
+  await page.goto('/?sentences')
+  const span = page.locator('.textLayer span').filter({ hasText: 'method works. Last sentence.' })
+  await expect(span).toBeVisible()
+  await span.dblclick({ position: { x: 20, y: 8 } })
+  await expect(page.getByTestId('source-highlight')).toHaveText(/The efficient\s+method works\./)
+  await expect(page.locator('.editor-preview-selection')).toBeVisible()
+  await expect(page.getByTestId('source-range')).toHaveText(JSON.stringify({ start: { line: 2, column: 17 }, end: { line: 2, column: 53 } }))
+})
+
+test('double-clicking TeX highlights the matching PDF sentence across lines', async ({ page }) => {
+  await page.goto('/?sentences')
+  await expect(page.locator('.textLayer span').filter({ hasText: 'method works.' })).toBeVisible()
+  const source = page.getByTestId('source-editor').locator('.view-line').filter({ hasText: 'First sentence.' })
+  await expect(source).toBeVisible()
+  const point = await source.evaluate((line) => {
+    const walker = document.createTreeWalker(line, NodeFilter.SHOW_TEXT)
+    while (walker.nextNode()) {
+      const node = walker.currentNode
+      const index = node.textContent.indexOf('efficient')
+      if (index < 0) continue
+      const range = document.createRange()
+      range.setStart(node, index)
+      range.setEnd(node, index + 9)
+      const rect = range.getBoundingClientRect()
+      return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 }
+    }
+    throw new Error('Source word not rendered')
+  })
+  await page.mouse.dblclick(point.x, point.y)
+  await expect(page.locator('.pdf-sentence-highlight')).toHaveCount(2)
+  await expect(page.getByTestId('source-highlight')).toHaveText('The \\textbf{efficient} method works.')
+})
+
+test('edits a PDF sentence manually, recompiles its preview, and undoes the change', async ({ page }) => {
+  await page.goto('/?sentences')
+  const span = page.locator('.textLayer span').filter({ hasText: 'method works. Last sentence.' })
+  await span.dblclick({ position: { x: 20, y: 8 } })
+  const dialog = page.getByRole('dialog', { name: 'Edit PDF sentence' })
+  await expect(dialog).toBeVisible()
+  await dialog.getByRole('button', { name: 'Edit manually' }).click()
+  const field = dialog.getByRole('textbox', { name: 'Sentence', exact: true })
+  await expect(field).toHaveValue('The \\textbf{efficient} method works.')
+  await field.fill('The method is effective.')
+  await dialog.getByRole('button', { name: 'Apply and refresh PDF' }).click()
+  await expect(dialog.getByText('PDF refreshed.', { exact: true })).toBeVisible()
+  await expect(page.locator('.textLayer span').filter({ hasText: 'The method is effective.' })).toBeVisible()
+  await expect(page.getByTestId('source-editor')).toContainText('First sentence. The method is effective. Last sentence.')
+  await dialog.getByRole('button', { name: 'Undo this edit' }).click()
+  await expect(dialog.getByText('The sentence edit was undone and the PDF refreshed.')).toBeVisible()
+  await expect(page.locator('.textLayer span').filter({ hasText: 'The efficient method works.' })).toBeVisible()
+})
+
+test('reviews an AI-polished sentence before applying it from the PDF', async ({ page }) => {
+  await page.goto('/?sentences')
+  await page.locator('.textLayer span').filter({ hasText: 'method works. Last sentence.' }).dblclick({ position: { x: 20, y: 8 } })
+  const dialog = page.getByRole('dialog', { name: 'Edit PDF sentence' })
+  await dialog.getByRole('button', { name: 'Polish with AI' }).click()
+  await expect(dialog.getByRole('textbox')).toHaveValue('The method is effective.')
+  await expect(page.getByTestId('source-editor')).toContainText('The \\textbf{efficient} method works.')
+  await dialog.getByRole('button', { name: 'Apply and refresh PDF' }).click()
+  await expect(page.locator('.textLayer span').filter({ hasText: 'The method is effective.' })).toBeVisible()
+})

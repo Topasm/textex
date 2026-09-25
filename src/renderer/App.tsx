@@ -912,7 +912,11 @@ function App() {
                   >
                     {/* Prose mode swaps both halves at once: Markdown source on
                         the left, its rendering here in the PDF's slot. */}
-                    {isProseMode ? <ProsePreview key={filePath} /> : <PreviewPane />}
+                    {isProseMode ? (
+                      <ProsePreview key={filePath} />
+                    ) : (
+                      <PreviewPane onCompile={handleCompile} />
+                    )}
                   </Suspense>
                 </PreviewErrorBoundary>
               </div>

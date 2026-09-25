@@ -40,6 +40,9 @@ import {
   clampPage
 } from './previewUtils'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
+import { usePdfSentenceHighlight } from '../hooks/preview/usePdfSentenceHighlight'
+import PdfSentenceEditor from './PdfSentenceEditor'
+import type { PdfSentenceSelection } from '../services/pdfSentenceEditing'
 import 'react-pdf/dist/Page/TextLayer.css'
 
 // Use ?url so Vite emits a stable worker asset URL for the Tauri webview.
@@ -54,7 +57,7 @@ interface PageViewportInfo {
   pageHeight: number // actual PDF page height in points
 }
 
-function PreviewPane() {
+function PreviewPane({ onCompile }: { onCompile?: () => Promise<void> }) {
   const { t } = useTranslation()
   const pdfPath = useCompileStore((s) => s.pdfPath)
   const pdfRevision = useCompileStore((s) => s.pdfRevision)
@@ -72,6 +75,19 @@ function PreviewPane() {
     return pdfPath ? `pdf:${normalizeDocumentId(pdfPath)}` : null
   }, [pdfDocumentId, pdfPath, projectRoot])
   const containerRef = useRef<HTMLDivElement>(null)
+  const [sentenceSelection, setSentenceSelection] = useState<PdfSentenceSelection | null>(null)
+  const openSentence = useCallback((selection: PdfSentenceSelection) => {
+    setSentenceSelection((current) =>
+      selection.loading || current?.id === selection.id ? selection : current
+    )
+  }, [])
+  const closeSentence = useCallback(() => {
+    setSentenceSelection(null)
+    containerRef.current?.focus({ preventScroll: true })
+  }, [])
+  useEffect(() => {
+    setSentenceSelection(null)
+  }, [projectRoot])
   const scrollPositionRef = useRef(0)
   const currentPageRef = useRef(1)
   const activeViewPositionKeyRef = useRef<string | null>(null)
@@ -119,7 +135,8 @@ function PreviewPane() {
     }
   }, [pdfDocumentId, projectRoot])
   const search = usePdfSearch(containerRef, displayedGeneration?.document, displayedRevision)
-  usePdfSelection(containerRef, pageViewportsRef, displayedRevision)
+  usePdfSelection(containerRef, pageViewportsRef, displayedRevision, openSentence)
+  usePdfSentenceHighlight(containerRef, pageViewportsRef, displayedRevision)
   const {
     tooltipData,
     dismiss: dismissCitation,
@@ -648,6 +665,14 @@ function PreviewPane() {
       style={{ position: 'relative' }}
     >
       <PdfToolbar>{displayedGeneration && <PdfSearchBar search={search} />}</PdfToolbar>
+      {sentenceSelection && (
+        <PdfSentenceEditor
+          key={`${sentenceSelection.id}:${sentenceSelection.loading}`}
+          selection={sentenceSelection}
+          onClose={closeSentence}
+          onCompile={onCompile}
+        />
+      )}
       {compileStatus === 'error' && !displayedGeneration ? (
         <div className="preview-center preview-error">
           <p>{t('previewPane.compileFailed')}</p>

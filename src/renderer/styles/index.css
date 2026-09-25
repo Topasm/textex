@@ -1324,6 +1324,12 @@ body,
   outline: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
+.pdf-sentence-highlight {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  border-radius: var(--ui-radius-subtle);
+}
+
 .preview-buffered-page .textLayer {
   z-index: 1;
   /* Keep PDF text selectable inside desktop chrome, including WKWebView. */
@@ -7301,6 +7307,14 @@ button.submission-check-finding:hover {
 }
 
 /* ===== Notes Panel ===== */
+.notes-panel__import {
+  margin-bottom: var(--space-12);
+}
+
+.notes-panel__import p {
+  overflow-wrap: anywhere;
+}
+
 .notes-panel {
   height: 100%;
   padding: var(--space-12);

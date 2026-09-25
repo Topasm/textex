@@ -1,7 +1,10 @@
 import type { PdfSearchMatch } from './pdfTextSearch'
 
-export function clearPdfSearchHighlights(container: HTMLElement): void {
-  container.querySelectorAll('[data-pdf-search-overlay]').forEach((overlay) => overlay.remove())
+export function clearPdfSearchHighlights(
+  container: HTMLElement,
+  owner: 'search' | 'synctex' = 'search'
+): void {
+  container.querySelectorAll(`[data-pdf-${owner}-overlay]`).forEach((overlay) => overlay.remove())
 }
 
 /** Draw ranges above the text layer, preserving its text nodes and drag selection. */
@@ -9,9 +12,10 @@ export function paintPdfSearchHighlights(
   container: HTMLElement,
   revision: number,
   matches: readonly PdfSearchMatch[],
-  activeIndex: number
+  activeIndex: number,
+  owner: 'search' | 'synctex' = 'search'
 ): HTMLElement | null {
-  clearPdfSearchHighlights(container)
+  clearPdfSearchHighlights(container, owner)
   const generation = container.querySelector(`[data-pdf-generation="${revision}"]`)
   if (!generation) return null
 
@@ -38,7 +42,7 @@ export function paintPdfSearchHighlights(
     const scale = bounds.width / page.element.clientWidth
     if (!Number.isFinite(scale) || scale <= 0) continue
     const overlay = document.createElement('div')
-    overlay.dataset.pdfSearchOverlay = ''
+    overlay.setAttribute(`data-pdf-${owner}-overlay`, '')
     overlay.setAttribute('aria-hidden', 'true')
     Object.assign(overlay.style, {
       position: 'absolute',
@@ -56,8 +60,11 @@ export function paintPdfSearchHighlights(
         for (const rect of range.getClientRects()) {
           if (rect.width <= 0 || rect.height <= 0) continue
           const highlight = document.createElement('div')
-          highlight.className = `pdf-search-highlight${index === activeIndex ? ' pdf-search-current' : ''}`
-          highlight.dataset.pdfSearchMatch = String(index)
+          highlight.className =
+            owner === 'synctex'
+              ? 'pdf-sentence-highlight'
+              : `pdf-search-highlight${index === activeIndex ? ' pdf-search-current' : ''}`
+          highlight.setAttribute(`data-pdf-${owner}-match`, String(index))
           Object.assign(highlight.style, {
             position: 'absolute',
             left: `${(rect.left - bounds.left) / scale}px`,

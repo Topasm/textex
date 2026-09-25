@@ -2,10 +2,18 @@ import { create } from 'zustand'
 import { subscribeWithSelector, persist } from 'zustand/middleware'
 import { ZOOM_MIN, ZOOM_MAX, ZOOM_STEP, SPLIT_RATIO_MIN, SPLIT_RATIO_MAX } from '../constants'
 
+export interface PdfSyncTarget {
+  page: number
+  x: number
+  y: number
+  sentence?: string
+  pdfRevision?: number
+}
+
 interface PdfState {
   zoomLevel: number
   splitRatio: number
-  synctexHighlight: { page: number; x: number; y: number; timestamp: number } | null
+  synctexHighlight: (PdfSyncTarget & { timestamp: number }) | null
 
   // PDF Search
   pdfSearchVisible: boolean
@@ -34,7 +42,7 @@ interface PdfState {
   zoomIn: () => void
   zoomOut: () => void
   resetZoom: () => void
-  setSynctexHighlight: (highlight: { page: number; x: number; y: number } | null) => void
+  setSynctexHighlight: (highlight: PdfSyncTarget | null) => void
   setPdfSearchVisible: (visible: boolean) => void
   setPdfSearchQuery: (query: string) => void
   triggerSyncToCode: () => void

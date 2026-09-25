@@ -3,6 +3,13 @@ import type { editor as monacoEditor } from 'monaco-editor'
 import { useEditorStore } from '../../store/useEditorStore'
 import { useProjectStore } from '../../store/useProjectStore'
 import { usePdfStore } from '../../store/usePdfStore'
+import { useCompileStore } from '../../store/useCompileStore'
+import { capturePdfSourceContext } from '../../services/pdfSourceNavigation'
+import { documentRegistry } from '../../models/documentRegistry'
+import { sourceSentenceAt } from '../../utils/sentenceSelection'
+import { flushAllPendingDocumentEdits } from '../../services/pendingDocumentEdits'
+
+const CONTENT_TEXT_TARGET = 6 // Monaco MouseTargetType.CONTENT_TEXT
 
 function findCommandArgAtPosition(
   lineContent: string,
@@ -39,7 +46,46 @@ export function useClickNavigation(): (editor: monacoEditor.IStandaloneCodeEdito
   dispose(): void
 } {
   return useCallback((editor: monacoEditor.IStandaloneCodeEditor) => {
-    return editor.onMouseDown((e) => {
+    let disposed = false
+    let request = 0
+    const forward = async (line: number, column: number, sentenceMode: boolean) => {
+      const id = ++request
+      flushAllPendingDocumentEdits()
+      const state = useEditorStore.getState()
+      const path = state.filePath
+      const model = path ? documentRegistry.getModel(path) : null
+      const context = capturePdfSourceContext(useCompileStore.getState().pdfRevision)
+      if (!path || !model || model.isDirty || !context) return
+      const sentence = sentenceMode
+        ? sourceSentenceAt(model.snapshot().text, { line, column })
+        : null
+      try {
+        const result = await window.api.synctexForward(path, line)
+        if (!result || disposed || id !== request || !context.isCurrent()) return
+        usePdfStore.getState().setSynctexHighlight({
+          ...result,
+          sentence: sentence?.text,
+          pdfRevision: context.pdfRevision
+        })
+        if (sentence)
+          state.setPreviewSourceHighlight({
+            filePath: path,
+            revision: model.revision,
+            pdfRevision: context.pdfRevision,
+            range: sentence.range,
+            text: sentence.text
+          })
+      } catch {
+        /* A missing SyncTeX map leaves the current selection intact. */
+      }
+    }
+    const mouseUp = editor.onMouseUp((e) => {
+      if (e.event.detail !== 2 || e.event.ctrlKey || e.event.metaKey || !e.target.position) return
+      // Monaco content text is target type 6; exclude gutter, widgets and whitespace.
+      if (e.target.type !== CONTENT_TEXT_TARGET) return
+      void forward(e.target.position.lineNumber, e.target.position.column, true)
+    })
+    const mouseDown = editor.onMouseDown((e) => {
       if (!(e.event.ctrlKey || e.event.metaKey)) return
       if (!e.target.position) return
       e.event.preventDefault()
@@ -116,15 +162,14 @@ export function useClickNavigation(): (editor: monacoEditor.IStandaloneCodeEdito
         return
       }
 
-      const line = e.target.position.lineNumber
-      window.api
-        .synctexForward(currentFilePath, line)
-        .then((result) => {
-          if (result) {
-            usePdfStore.getState().setSynctexHighlight(result)
-          }
-        })
-        .catch(() => {})
+      void forward(e.target.position.lineNumber, col, false)
     })
+    return {
+      dispose: () => {
+        disposed = true
+        mouseDown.dispose()
+        mouseUp.dispose()
+      }
+    }
   }, [])
 }

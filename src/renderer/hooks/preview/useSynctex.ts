@@ -74,7 +74,11 @@ export function useSynctex(
 
   // React to synctexHighlight changes — show line bar + dot indicator + scroll
   useEffect(() => {
-    if (!synctexHighlight) {
+    if (
+      !synctexHighlight ||
+      (synctexHighlight.pdfRevision !== undefined &&
+        synctexHighlight.pdfRevision !== displayedRevision)
+    ) {
       setHighlights({ lineStyle: null, dotStyle: null })
       return
     }
@@ -172,7 +176,7 @@ export function useSynctex(
       if (retryTimer) clearTimeout(retryTimer)
       if (fadeTimer) clearTimeout(fadeTimer)
     }
-  }, [synctexHighlight, containerRef, pageViewportsRef])
+  }, [synctexHighlight, containerRef, pageViewportsRef, displayedRevision])
 
   // Sync PDF → Code: find most visible page and inverse synctex from its center
   const handleSyncToCode = useCallback(() => {

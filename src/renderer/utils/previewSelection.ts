@@ -40,7 +40,27 @@ export function previewSourceRange(
   )
     return null
   const passage = lines.slice(startLine - 1, endLine).join('\n')
-  const match = findPreviewText(passage, selected)
+  let match = findPreviewText(passage, selected)
+  if (!match && selected) {
+    // Common text-formatting commands are transparent in PDF text. Retain a
+    // source-offset map so a sentence inside a longer TeX line stays precise.
+    const offsets: number[] = []
+    let plain = ''
+    for (let index = 0; index < passage.length; index++) {
+      const command = /^\\(?:textbf|textit|emph|texttt|textrm|textsf|textnormal)\s*\{/u.exec(
+        passage.slice(index)
+      )
+      if (command) {
+        index += command[0].length - 1
+        continue
+      }
+      if (passage[index] === '{' || passage[index] === '}') continue
+      plain += passage[index] === '~' ? ' ' : passage[index]
+      offsets.push(index)
+    }
+    const found = findPreviewText(plain, selected)
+    if (found) match = { start: offsets[found.start], end: offsets[found.end - 1] + 1 }
+  }
   const position = (offset: number) => {
     const preceding = passage.slice(0, offset).split('\n')
     return { line: startLine + preceding.length - 1, column: preceding.at(-1)!.length + 1 }
