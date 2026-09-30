@@ -10,7 +10,6 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use tauri::ipc::Channel;
 use tokio::{
     fs,
@@ -25,6 +24,7 @@ use crate::{
         DirectoryChangeEvent, DirectoryChangeType, DirectoryEntryType, ProjectIndexDelta,
         ProjectIndexEntry, ProjectIndexSnapshot,
     },
+    services::digest::sha256_hex,
     state::AppState,
 };
 
@@ -950,10 +950,7 @@ async fn prepare_cache_path(app_cache_root: &Path, root: &Path) -> Option<PathBu
     }
 
     let identity = root_identity(root).ok()?;
-    let hash = format!(
-        "{:x}",
-        Sha256::digest(format!("{INDEX_CACHE_SCHEMA_VERSION}\0{identity}").as_bytes())
-    );
+    let hash = sha256_hex(format!("{INDEX_CACHE_SCHEMA_VERSION}\0{identity}").as_bytes());
     Some(canonical_directory.join(format!("{hash}.json")))
 }
 

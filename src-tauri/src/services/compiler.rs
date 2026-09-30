@@ -7,7 +7,6 @@ use std::{
     time::Duration,
 };
 
-use sha2::{Digest, Sha256};
 use tauri::{ipc::Channel, AppHandle, Manager};
 use tokio::{
     fs,
@@ -23,7 +22,7 @@ use crate::{
         CompileDiagnostic, CompileDiagnosticSeverity, CompileEvent, CompileIdentity,
         CompileRequest, CompileResponse, CompileStage, LatexEngine,
     },
-    services::tectonic_cache,
+    services::{digest::sha256_hex, tectonic_cache},
     state::AppState,
 };
 
@@ -452,7 +451,7 @@ fn project_cache_id(project_root: &Path) -> String {
     } else {
         project_root.to_string_lossy().into_owned()
     };
-    format!("{:x}", Sha256::digest(identity.as_bytes()))
+    sha256_hex(identity.as_bytes())
 }
 
 fn root_document_cache_id(project_root: &Path, root_file: &Path) -> AppResult<String> {
@@ -464,7 +463,7 @@ fn root_document_cache_id(project_root: &Path, root_file: &Path) -> AppResult<St
     } else {
         relative.to_string_lossy().into_owned()
     };
-    Ok(format!("{:x}", Sha256::digest(identity.as_bytes())))
+    Ok(sha256_hex(identity.as_bytes()))
 }
 
 async fn run_configured_compiler(

@@ -14,7 +14,10 @@ use tokio::{
     sync::{Mutex, RwLock, RwLockReadGuard},
 };
 
-use crate::error::{AppError, AppResult};
+use crate::{
+    error::{AppError, AppResult},
+    services::digest::{hex, sha256_hex},
+};
 
 const MANIFEST_NAME: &str = "manifest.json";
 const SEED_FILES_DIRECTORY: &str = "files";
@@ -1051,7 +1054,7 @@ async fn hash_regular_file(path: &Path, expected_size: u64) -> AppResult<String>
             path.to_string_lossy()
         )));
     }
-    Ok(format!("{:x}", digest.finalize()))
+    Ok(hex(&digest.finalize()))
 }
 
 async fn ensure_directory(path: &Path) -> AppResult<()> {
@@ -1167,7 +1170,7 @@ async fn copy_and_hash(source: &Path, target: &Path, expected_size: u64) -> AppR
             source.to_string_lossy()
         )));
     }
-    Ok(format!("{:x}", digest.finalize()))
+    Ok(hex(&digest.finalize()))
 }
 
 fn validate_relative_path(path: &str) -> AppResult<()> {
@@ -1194,7 +1197,7 @@ fn valid_sha256(value: &str) -> bool {
 }
 
 fn hex_digest(bytes: &[u8]) -> String {
-    format!("{:x}", Sha256::digest(bytes))
+    sha256_hex(bytes)
 }
 
 #[cfg(test)]

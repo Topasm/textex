@@ -7,14 +7,13 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use tauri::{AppHandle, Manager};
 use tokio::{fs, io::AsyncWriteExt, sync::Mutex};
 
 use crate::{
     error::{AppError, AppResult},
     models::{RecoveryDiskState, RecoveryItem, RecoverySnapshot},
-    services::filesystem,
+    services::{digest::sha256_hex, filesystem},
     state::AppState,
 };
 
@@ -251,7 +250,7 @@ fn record_id(file_path: &str) -> String {
     } else {
         file_path.to_owned()
     };
-    format!("{:x}", Sha256::digest(normalized.as_bytes()))
+    sha256_hex(normalized.as_bytes())
 }
 
 fn validate_record_id(id: &str) -> AppResult<()> {
