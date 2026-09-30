@@ -1,6 +1,7 @@
 pub mod ai;
 pub mod compiler;
 pub mod context_menu;
+pub mod digest;
 pub mod export;
 pub mod filesystem;
 pub mod git;

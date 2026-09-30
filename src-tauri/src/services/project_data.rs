@@ -5,14 +5,13 @@ use std::{
 };
 
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use tauri::{AppHandle, Manager};
 use tokio::sync::Mutex;
 
 use crate::{
     error::{AppError, AppResult},
     models::CitationGroup,
-    services::filesystem,
+    services::{digest::sha256_hex, filesystem},
     state::AppState,
 };
 
@@ -183,7 +182,7 @@ fn legacy_citation_paths(
     let canonical = display(canonical_root);
     let hashes = [requested_root, canonical.as_str()]
         .into_iter()
-        .map(|root| format!("{:x}", Sha256::digest(root.as_bytes())))
+        .map(|root| sha256_hex(root.as_bytes()))
         .collect::<HashSet<_>>();
     let mut paths = Vec::new();
     for directory in user_data_dirs {
