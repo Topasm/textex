@@ -28,6 +28,7 @@ import { useDragResize } from './hooks/useDragResize'
 import { useAnimatedPresence } from './hooks/useAnimatedPresence'
 import { useHorizontalSwipe } from './hooks/useHorizontalSwipe'
 import { useFeatureHints } from './hooks/useFeatureHints'
+import { usePanelsVisible, useProseModeVisible } from './hooks/useWorkspaceView'
 import {
   executeAppCommand,
   revealPdfToolsWhenPanelsOpen,
@@ -40,7 +41,7 @@ import { useCompileStore } from './store/useCompileStore'
 import { useProjectStore } from './store/useProjectStore'
 import type { SidebarView } from './store/useProjectStore'
 import { usePdfStore } from './store/usePdfStore'
-import { proseModeFor, useUiStore } from './store/useUiStore'
+import { useUiStore } from './store/useUiStore'
 import { useSettingsStore } from './store/useSettingsStore'
 import { useNotificationStore } from './store/useNotificationStore'
 import { deactivateProject, openProject } from './utils/openProject'
@@ -69,7 +70,9 @@ import {
   canPublishCompileResponse,
   canPublishCompileTicket,
   isLatestCompileTicket,
-  toCompileRequest
+  resolveCompileTarget,
+  toCompileRequest,
+  type CompileOptions
 } from './services/compileCoordinator'
 import { ICON_SIZE } from './components/ui/IconSystem'
 import { installCrashRecoveryAutosnapshot } from './services/crashRecovery'
@@ -167,7 +170,7 @@ function App() {
   // Only subscribe to state needed for rendering
   const pdfOnly = usePdfStore((s) => s.pdfOnly)
   const pdfToolsVisible = usePdfStore((s) => s.pdfToolsVisible)
-  const panelsVisible = !pdfOnly || pdfToolsVisible
+  const panelsVisible = usePanelsVisible()
   const splitRatio = usePdfStore((s) => s.splitRatio)
   const pdfPath = useCompileStore((s) => s.pdfPath)
   const isSidebarOpen = useProjectStore((s) => s.isSidebarOpen)
@@ -188,8 +191,7 @@ function App() {
   const updateStatus = useUiStore((s) => s.updateStatus)
   const settingsRequested = useUiStore((s) => s.settingsRequested)
   const helpRequestedSection = useUiStore((s) => s.helpRequestedSection)
-  const documentProseMode = useUiStore((state) => proseModeFor(state, filePath))
-  const isProseMode = !pdfOnly && documentProseMode
+  const isProseMode = useProseModeVisible(filePath)
   const pdfViewMode = useSettingsStore((s) => s.settings.pdfViewMode ?? 'continuous')
   const helpHasDocument = Boolean(filePath)
   const helpHasPdf = Boolean(pdfPath)
@@ -291,77 +293,75 @@ function App() {
   }, [])
 
   // ---- Compile handler ----
-  const handleCompile = useCallback(async (): Promise<void> => {
-    const editorState = useEditorStore.getState()
-    const pdfRoot = useCompileStore.getState().pdfDocumentId
-    // The PDF workspace always rebuilds its root without moving the drawer off the edited file.
-    const pdfRootPath =
-      usePdfStore.getState().pdfOnly && pdfRoot ? documentRegistry.getFilePath(pdfRoot) : null
-    const compilePath = pdfRootPath ?? editorState.filePath
-    if (!compilePath?.toLowerCase().endsWith('.tex')) return
-    flushAllPendingDocumentEdits()
-    const snapshot = documentRegistry.snapshot(compilePath)
-    if (!snapshot) return
-    cancelPendingAutoCompile()
-    useCompileStore.getState().clearLogs()
-    try {
-      await prepareDocumentsForManualCompile(compilePath, snapshot)
-    } catch (err) {
-      logError('App:preSave', err)
-      useCompileStore
-        .getState()
-        .appendLog(`${t('logPanel.compileNotStarted', { reason: describeNativeError(err) })}\n`)
-      useCompileStore.getState().setCompileStatus('error')
-      reportCompileFailure(err, 'manual')
-      return
-    }
-    const ticket = beginCompileTicket(compilePath, snapshot, {
-      detachedFromActiveTab: compilePath !== editorState.filePath
-    })
-    useCompileStore.getState().setCompileStatus('compiling')
-    try {
-      const result = await window.api.compile(toCompileRequest(ticket, 'high'))
-      if (!canPublishCompileResponse(ticket, result)) {
-        if (isLatestCompileTicket(ticket)) useCompileStore.getState().setCompileStatus('idle')
+  const handleCompile = useCallback(
+    async (options?: CompileOptions): Promise<void> => {
+      const editorState = useEditorStore.getState()
+      const target = resolveCompileTarget(options?.rootPath)
+      if (!target) return
+      const compilePath = target.filePath
+      flushAllPendingDocumentEdits()
+      const snapshot = documentRegistry.snapshot(compilePath)
+      if (!snapshot) return
+      cancelPendingAutoCompile()
+      useCompileStore.getState().clearLogs()
+      try {
+        await prepareDocumentsForManualCompile(compilePath, snapshot, editorState.filePath)
+      } catch (err) {
+        logError('App:preSave', err)
+        useCompileStore
+          .getState()
+          .appendLog(`${t('logPanel.compileNotStarted', { reason: describeNativeError(err) })}\n`)
+        useCompileStore.getState().setCompileStatus('error')
+        reportCompileFailure(err, 'manual')
         return
       }
-      useCompileStore.getState().setPdfPath(result.pdfPath, {
-        documentId: snapshot.documentId,
-        revision: snapshot.revision
-      })
-      useCompileStore.getState().setCompileStatus('success')
-      clearCompileFailure()
-      useProjectStore
-        .getState()
-        .setAuxCitationMap(result.auxContent ? parseAuxContent(result.auxContent) : null)
-      const root = useProjectStore.getState().projectRoot
-      if (root) {
-        window.api
-          .scanLabels(root)
-          .then((labels) => {
-            if (canPublishCompileTicket(ticket)) {
-              useProjectStore.getState().setLabels(labels)
-            }
-          })
-          .catch((err) => {
-            logError('App:scanLabels', err)
-          })
+      const ticket = beginCompileTicket(compilePath, snapshot, target)
+      useCompileStore.getState().setCompileStatus('compiling')
+      try {
+        const result = await window.api.compile(toCompileRequest(ticket, 'high'))
+        if (!canPublishCompileResponse(ticket, result)) {
+          if (isLatestCompileTicket(ticket)) useCompileStore.getState().setCompileStatus('idle')
+          return
+        }
+        useCompileStore.getState().setPdfPath(result.pdfPath, {
+          documentId: snapshot.documentId,
+          revision: snapshot.revision
+        })
+        useCompileStore.getState().setCompileStatus('success')
+        clearCompileFailure()
+        useProjectStore
+          .getState()
+          .setAuxCitationMap(result.auxContent ? parseAuxContent(result.auxContent) : null)
+        const root = useProjectStore.getState().projectRoot
+        if (root) {
+          window.api
+            .scanLabels(root)
+            .then((labels) => {
+              if (canPublishCompileTicket(ticket)) {
+                useProjectStore.getState().setLabels(labels)
+              }
+            })
+            .catch((err) => {
+              logError('App:scanLabels', err)
+            })
+        }
+      } catch (err: unknown) {
+        if (!isLatestCompileTicket(ticket)) return
+        if (!documentRegistry.getModel(ticket.filePath)?.isCurrent(ticket.snapshot)) {
+          useCompileStore.getState().setCompileStatus('idle')
+          return
+        }
+        if (hasNativeErrorCode(err, 'compilationCancelled', 'compilationSuperseded')) {
+          useCompileStore.getState().setCompileStatus('idle')
+          return
+        }
+        useCompileStore.getState().appendLog(describeNativeError(err))
+        useCompileStore.getState().setCompileStatus('error')
+        reportCompileFailure(err, 'manual')
       }
-    } catch (err: unknown) {
-      if (!isLatestCompileTicket(ticket)) return
-      if (!documentRegistry.getModel(ticket.filePath)?.isCurrent(ticket.snapshot)) {
-        useCompileStore.getState().setCompileStatus('idle')
-        return
-      }
-      if (hasNativeErrorCode(err, 'compilationCancelled', 'compilationSuperseded')) {
-        useCompileStore.getState().setCompileStatus('idle')
-        return
-      }
-      useCompileStore.getState().appendLog(describeNativeError(err))
-      useCompileStore.getState().setCompileStatus('error')
-      reportCompileFailure(err, 'manual')
-    }
-  }, [t])
+    },
+    [t]
+  )
 
   // ---- Open folder handler ----
   const handleOpenFolder = useCallback(async (): Promise<void> => {

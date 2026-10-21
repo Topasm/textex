@@ -5,6 +5,7 @@ import {
   openProject
 } from '../../renderer/utils/openProject'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
+import { usePdfStore } from '../../renderer/store/usePdfStore'
 import { useNotificationStore } from '../../renderer/store/useNotificationStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
@@ -115,6 +116,20 @@ describe('openProject', () => {
     await openProject(projectRoot)
 
     expect(useEditorStore.getState().activeFilePath).toBe(chapter)
+  })
+
+  it('leaves the PDF workspace when switching projects', async () => {
+    await openProject(projectRoot)
+    usePdfStore.getState().setPdfOnly(true)
+    usePdfStore.getState().setSourceEditorOpen(true)
+    usePdfStore.getState().setPdfToolsVisible(true)
+    await openProject('/workspace/other', { autoOpenFirstTex: false })
+
+    expect(usePdfStore.getState()).toMatchObject({
+      pdfOnly: false,
+      sourceEditorOpen: false,
+      pdfToolsVisible: false
+    })
   })
 
   it('keeps each project last selected file when switching between projects', async () => {

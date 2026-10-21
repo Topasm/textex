@@ -1422,7 +1422,7 @@
     "apply": "Apply and refresh PDF",
     "undo": "Undo this edit",
     "stale": "The source or PDF changed. Close this panel and double-click the sentence again after compiling.",
-    "invalid": "Enter a nonempty sentence with balanced LaTeX braces, without Markdown fences (up to 16,000 characters).",
+    "invalid": "Enter one nonempty sentence with balanced LaTeX braces, without blank lines or Markdown fences (up to 16,000 characters).",
     "review": "AI suggestion ready. Review or edit it before applying.",
     "refreshing": "Sentence applied. Refreshing the PDF…",
     "updated": "PDF refreshed.",

@@ -97,6 +97,10 @@ export function clearProjectScopedRendererState(): void {
     gitStatus: null
   })
   usePdfStore.setState({
+    // The PDF workspace belongs to the previous project's PDF; start in split view.
+    pdfOnly: false,
+    sourceEditorOpen: false,
+    pdfToolsVisible: false,
     synctexHighlight: null,
     pdfSearchVisible: false,
     pdfSearchQuery: '',

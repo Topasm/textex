@@ -16,6 +16,7 @@ import {
   canPublishCompileTicket,
   isLatestCompileTicket,
   onPendingAutoCompileCancellation,
+  resolveCompileTarget,
   toCompileRequest
 } from '../services/compileCoordinator'
 import { prepareDocumentsForCompile } from '../services/compilePersistenceCoordinator'
@@ -40,6 +41,9 @@ export function useAutoCompile(): void {
       const scheduledFile = useEditorStore.getState().filePath
       if (!scheduledFile?.toLowerCase().endsWith('.tex')) return
       if (documentRegistry.getModel(scheduledFile)?.requiresExplicitSave) return
+      // In the PDF workspace this is the PDF's root, not the file in the source drawer.
+      const scheduledTarget = resolveCompileTarget()
+      if (!scheduledTarget) return
       const scheduledGeneration = generation
 
       timerRef.current = setTimeout(async () => {
@@ -51,14 +55,17 @@ export function useAutoCompile(): void {
         const currentFilePath = useEditorStore.getState().filePath
         if (!currentFilePath || currentFilePath !== scheduledFile) return
         if (documentRegistry.getModel(currentFilePath)?.requiresExplicitSave) return
-        const sourceSnapshot = documentRegistry.snapshot(currentFilePath)
+        const target = resolveCompileTarget()
+        if (!target || target.filePath !== scheduledTarget.filePath) return
+        const sourceSnapshot = documentRegistry.snapshot(target.filePath)
         if (!sourceSnapshot) return
 
         try {
           const preparation = await prepareDocumentsForCompile({
-            activeFilePath: currentFilePath,
+            activeFilePath: target.filePath,
             activeSnapshot: sourceSnapshot,
-            mode: 'automatic'
+            mode: 'automatic',
+            editedFilePath: currentFilePath
           })
           if (preparation.status !== 'ready') return
         } catch (err: unknown) {
@@ -73,7 +80,7 @@ export function useAutoCompile(): void {
 
         if (!isCurrentRun()) return
 
-        const ticket = beginCompileTicket(currentFilePath, sourceSnapshot)
+        const ticket = beginCompileTicket(target.filePath, sourceSnapshot, target)
         setCompileStatus('compiling')
         clearLogs()
         try {

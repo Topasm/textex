@@ -11,6 +11,7 @@ import {
 } from '../../renderer/services/compileCoordinator'
 import { useCompileStore } from '../../renderer/store/useCompileStore'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
+import { usePdfStore } from '../../renderer/store/usePdfStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 import { normalizeNativeError } from '../../shared/appError'
 
@@ -267,5 +268,30 @@ describe('useAutoCompile', () => {
 
     expect(useCompileStore.getState().compileStatus).toBe('error')
     expect(useCompileStore.getState().logs).toContain('No LaTeX engine was found')
+  })
+
+  it('rebuilds the PDF workspace root while an included file is edited', async () => {
+    const chapter = '/project/chapter.tex'
+    useEditorStore.getState().openFileInTab(chapter, 'chapter')
+    useCompileStore.setState({ pdfDocumentId: filePath, pdfDocumentRevision: 0 })
+    usePdfStore.getState().setPdfOnly(true)
+    try {
+      setAutoCompile(true)
+      renderHook(() => useAutoCompile())
+
+      await act(async () => {
+        useEditorStore.getState().updateActiveDocument('chapter edited', 'editor')
+        await vi.advanceTimersByTimeAsync(AUTO_COMPILE_DELAY_MS)
+      })
+
+      expect(window.api.compile).toHaveBeenCalledWith(expect.objectContaining({ filePath }))
+      expect(saveFileBatchMock).toHaveBeenCalledWith([
+        { filePath: chapter, content: 'chapter edited' }
+      ])
+      expect(useEditorStore.getState().filePath).toBe(chapter)
+      expect(useCompileStore.getState().pdfDocumentId).toBe(filePath)
+    } finally {
+      usePdfStore.getState().setPdfOnly(false)
+    }
   })
 })

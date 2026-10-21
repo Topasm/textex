@@ -5,7 +5,11 @@ import { ICON_SIZE } from '../ui/IconSystem'
 import { useProjectStore } from '../../store/useProjectStore'
 import { describeNativeError } from '../../services/nativeErrors'
 
-export function PdfAnnotationImport({ onImport }: { onImport: (lines: string[]) => void }) {
+export function PdfAnnotationImport({
+  onImport
+}: {
+  onImport: (lines: string[]) => void | Promise<void>
+}) {
   const { t } = useTranslation()
   const root = useProjectStore((state) => state.projectRoot)
   const input = useRef<HTMLInputElement>(null)
@@ -35,7 +39,8 @@ export function PdfAnnotationImport({ onImport }: { onImport: (lines: string[]) 
       if (!current()) return
       const annotations = await readPdfAnnotations(file, controller.signal)
       if (!current()) return
-      if (annotations.length) onImport(annotationNotes(file.name, annotations))
+      if (annotations.length) await onImport(annotationNotes(file.name, annotations))
+      if (!current()) return
       setMessage(
         t(annotations.length ? 'pdfAnnotations.imported' : 'pdfAnnotations.empty', {
           count: annotations.length

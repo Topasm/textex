@@ -24,7 +24,7 @@ import { usePdfStore } from '../store/usePdfStore'
 import { useCompileStore } from '../store/useCompileStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { useSettingsStore } from '../store/useSettingsStore'
-import { proseModeFor, useUiStore } from '../store/useUiStore'
+import { useProseModeVisible, usePanelsVisible } from '../hooks/useWorkspaceView'
 import { RecentProjectSwitcher } from './RecentProjectSwitcher'
 import { ICON_SIZE } from './ui/IconSystem'
 import { withShortcutHint } from '../services/commandSearch'
@@ -116,9 +116,8 @@ const Toolbar = React.memo(function Toolbar({
   const isResearchPanelOpen = useProjectStore((s) => s.isResearchPanelOpen)
   const pdfOnly = usePdfStore((s) => s.pdfOnly)
   const pdfToolsVisible = usePdfStore((s) => s.pdfToolsVisible)
-  const panelsVisible = !pdfOnly || pdfToolsVisible
-  const documentProseMode = useUiStore((state) => proseModeFor(state, filePath))
-  const isProseMode = !pdfOnly && documentProseMode
+  const panelsVisible = usePanelsVisible()
+  const isProseMode = useProseModeVisible(filePath)
   const canUseProseMode = Boolean(filePath?.toLowerCase().endsWith('.tex'))
 
   const customWindowChrome = usesCustomWindowChrome()

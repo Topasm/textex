@@ -108,13 +108,15 @@ it.each(['edit', 'project', 'pdf', 'tab'] as const)(
     await expect(promise).rejects.toThrow(/source or PDF changed/)
   }
 )
-it.each(['', '```latex\nNew sentence.\n```', '\\textbf{Broken sentence.'])(
-  'rejects invalid replacements %j',
-  async (draft) => {
-    await expect(applyPdfSentence(target(), draft, signal())).rejects.toThrow()
-    expect(documentRegistry.snapshot(path)?.text).toBe(source)
-  }
-)
+it.each([
+  '',
+  '```latex\nNew sentence.\n```',
+  '\\textbf{Broken sentence.',
+  'First part.\n\nSecond paragraph.'
+])('rejects invalid replacements %j', async (draft) => {
+  await expect(applyPdfSentence(target(), draft, signal())).rejects.toThrow()
+  expect(documentRegistry.snapshot(path)?.text).toBe(source)
+})
 it('refuses changed disk contents and native boundary failures', async () => {
   window.api.readFile = vi.fn().mockResolvedValue({ filePath: path, content: 'Changed externally' })
   await expect(applyPdfSentence(target(), 'New sentence.', signal())).rejects.toThrow(
@@ -140,4 +142,19 @@ it('does not undo over a subsequent source edit', async () => {
   useEditorStore.getState().updateActiveDocument('Later edit')
   expect(applied.undo()).toBe(false)
   expect(documentRegistry.snapshot(path)?.text).toBe('Later edit')
+})
+
+it('escapes bare percent signs and trims a replacement before applying it', async () => {
+  const selected = target()
+  const applied = await applyPdfSentence(selected, '  Improved by 50% (not 5\\%).\n\n', signal())
+  expect(documentRegistry.snapshot(path)?.text).toBe(
+    source.replace(selected.original, 'Improved by 50\\% (not 5\\%).')
+  )
+  expect(applied.undo()).toBe(true)
+  expect(documentRegistry.snapshot(path)?.text).toBe(source)
+})
+
+it('normalizes an AI suggestion with a trailing paragraph break', async () => {
+  window.api.aiProcessCustom = vi.fn().mockResolvedValue('Gains of 50% overall.\n\n')
+  expect(await refinePdfSentence(target(), target().original)).toBe('Gains of 50\\% overall.')
 })

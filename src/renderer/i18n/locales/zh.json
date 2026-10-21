@@ -1422,7 +1422,7 @@
     "apply": "应用并刷新 PDF",
     "undo": "撤销此次修改",
     "stale": "源码或 PDF 已更改。请关闭面板，编译后重新双击句子。",
-    "invalid": "请输入非空句子，保持 LaTeX 花括号配对，不使用 Markdown 代码块（最多 16,000 字符）。",
+    "invalid": "请输入一个非空句子，保持 LaTeX 花括号配对，不含空行或 Markdown 代码块（最多 16,000 字符）。",
     "review": "AI 建议已准备好。请检查或编辑后再应用。",
     "refreshing": "已应用句子修改。正在刷新 PDF…",
     "updated": "PDF 已刷新。",

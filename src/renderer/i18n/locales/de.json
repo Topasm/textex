@@ -1422,7 +1422,7 @@
     "apply": "Anwenden und PDF aktualisieren",
     "undo": "Änderung rückgängig machen",
     "stale": "Quelle oder PDF wurde geändert. Schließen Sie das Fenster, kompilieren Sie und doppelklicken Sie erneut.",
-    "invalid": "Geben Sie einen Satz mit passenden LaTeX-Klammern ohne Markdown-Codeblock ein (höchstens 16.000 Zeichen).",
+    "invalid": "Geben Sie einen Satz mit passenden LaTeX-Klammern ohne Leerzeilen oder Markdown-Codeblock ein (höchstens 16.000 Zeichen).",
     "review": "KI-Vorschlag bereit. Vor dem Anwenden prüfen oder bearbeiten.",
     "refreshing": "Satz angewendet. PDF wird aktualisiert…",
     "updated": "PDF aktualisiert.",

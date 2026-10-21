@@ -7,7 +7,7 @@ import { usePdfStore } from '../store/usePdfStore'
 import { useSettingsStore } from '../store/useSettingsStore'
 import PdfZoomDropdown from './PdfZoomDropdown'
 import { ICON_SIZE } from './ui/IconSystem'
-import { proseModeFor, useUiStore } from '../store/useUiStore'
+import { useProseModeVisible } from '../hooks/useWorkspaceView'
 import { logError } from '../utils/errorMessage'
 import { PdfExportControls } from './PdfExportControls'
 
@@ -19,8 +19,7 @@ export function PdfToolbar({ children }: { children?: React.ReactNode }) {
   const numPages = usePdfStore((s) => s.numPages)
   const sourceEditorOpen = usePdfStore((state) => state.sourceEditorOpen)
   const pdfOnly = usePdfStore((state) => state.pdfOnly)
-  const documentProseMode = useUiStore((state) => proseModeFor(state, filePath))
-  const isProseMode = !pdfOnly && documentProseMode
+  const isProseMode = useProseModeVisible(filePath)
   const pdfControlsEnabled = useSettingsStore((s) => s.settings.showPdfToolbarControls !== false)
   const showPdfControls = pdfControlsEnabled && !isProseMode
   const [pageInputValue, setPageInputValue] = useState('')

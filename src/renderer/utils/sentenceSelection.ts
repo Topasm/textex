@@ -16,8 +16,11 @@ export function sentenceAt(text: string, offset: number): { start: number; end: 
   return null
 }
 
-const isBoundary = (line: string) =>
-  !line.trim() || /^\s*(?:%|\\(?:begin|end|(?:sub)*section|chapter|part|item)\b)/u.test(line)
+/** Lines that start with these never continue the prose around them. */
+const STRUCTURAL_LINE =
+  /^\s*(?:%|\\(?:begin|end|(?:sub)*section|chapter|part|item|(?:sub)?paragraph|label|caption|maketitle|title|author|date|tableofcontents|listof(?:figures|tables)|appendix|(?:front|main|back)matter|bibliography(?:style)?|printbibliography|addbibresource|input|include|includegraphics|centering|(?:clear|cleardouble|new)page|vspace|(?:big|med|small)skip|documentclass|usepackage)\b)/u
+
+const isBoundary = (line: string) => !line.trim() || STRUCTURAL_LINE.test(line)
 
 /** Index of the first unescaped `%`, or -1 when the line has no comment. */
 function commentStart(line: string): number {

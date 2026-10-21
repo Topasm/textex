@@ -11,6 +11,7 @@ import { useEditorStore } from '../../renderer/store/useEditorStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { useCompileStore } from '../../renderer/store/useCompileStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
+import type { CompileOptions } from '../../renderer/services/compileCoordinator'
 
 const path = '/project/main.tex'
 const source = 'First sentence. Original sentence. Last sentence.'
@@ -128,9 +129,9 @@ it('edits an included file but recompiles the document that produced the PDF', a
     1
   )
   window.api.readFile = vi.fn().mockResolvedValue({ filePath: included, content: source })
-  let compiledPath: string | null = null
-  const onCompile = async () => {
-    compiledPath = useEditorStore.getState().filePath
+  let compiledPath: string | null | undefined = null
+  const onCompile = async (options?: CompileOptions) => {
+    compiledPath = options?.rootPath
     await compile()
   }
   render(<PdfSentenceEditor selection={selection} onClose={vi.fn()} onCompile={onCompile} />)
@@ -139,6 +140,8 @@ it('edits an included file but recompiles the document that produced the PDF', a
   fireEvent.click(screen.getByRole('button', { name: 'Apply and refresh PDF' }))
   expect(await screen.findByText('PDF refreshed.')).toBeVisible()
   expect(compiledPath).toBe(path)
+  // The editor stays on the edited file instead of jumping to the root.
+  expect(useEditorStore.getState().filePath).toBe(included)
   expect(documentRegistry.snapshot(included)?.text).toContain('Improved chapter sentence.')
   expect(documentRegistry.snapshot(path)?.text).toBe(source)
 })
@@ -161,9 +164,9 @@ it('maps a normalized Windows root ID back to its tab before recompiling', async
     1
   )
   window.api.readFile = vi.fn().mockResolvedValue({ filePath: included, content: source })
-  let compiledPath: string | null = null
-  const onCompile = async () => {
-    compiledPath = useEditorStore.getState().filePath
+  let compiledPath: string | null | undefined = null
+  const onCompile = async (options?: CompileOptions) => {
+    compiledPath = options?.rootPath
     useCompileStore.getState().setPdfPath('C:\\cache\\main.pdf', {
       documentId: rootId,
       revision: documentRegistry.snapshot(root)!.revision
@@ -208,4 +211,27 @@ it('opens AI settings without discarding a manual draft', () => {
   fireEvent.click(screen.getByRole('button', { name: 'AI settings' }))
   expect(useUiStore.getState().settingsRequested).toBe(true)
   expect(screen.getByRole('textbox')).toHaveValue('Keep my draft.')
+})
+
+it('reports an unrefreshed PDF when undo cannot find the root document', async () => {
+  const included = '/project/chapter.tex'
+  useEditorStore.getState().openFileInTab(included, source)
+  selection.target = createPdfSentenceTarget(
+    included,
+    path,
+    documentRegistry.snapshot(included)!,
+    { start: { line: 1, column: 17 }, end: { line: 1, column: 35 } },
+    selection.text,
+    1
+  )
+  window.api.readFile = vi.fn().mockResolvedValue({ filePath: included, content: source })
+  render(<PdfSentenceEditor selection={selection} onClose={vi.fn()} onCompile={compile} />)
+  fireEvent.click(screen.getByRole('button', { name: 'Edit manually' }))
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Improved chapter sentence.' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Apply and refresh PDF' }))
+  expect(await screen.findByText('PDF refreshed.')).toBeVisible()
+  act(() => useEditorStore.getState().closeTab(path))
+  fireEvent.click(screen.getByRole('button', { name: 'Undo this edit' }))
+  expect(await screen.findByText(/source was updated, but the PDF/)).toBeVisible()
+  expect(screen.queryByText('PDF refreshed.')).not.toBeInTheDocument()
 })

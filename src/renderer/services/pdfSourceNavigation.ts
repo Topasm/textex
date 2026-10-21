@@ -7,6 +7,35 @@ import { useProjectStore } from '../store/useProjectStore'
 
 let interactionEpoch = 0
 
+/**
+ * Captures the compile, project, tab and open-document revisions a PDF/source
+ * interaction depends on. The returned check fails once any of them changes.
+ */
+export function captureSourceRevisions(): () => boolean {
+  const compiled = useCompileStore.getState()
+  const projectRoot = useProjectStore.getState().projectRoot
+  const editor = useEditorStore.getState()
+  const models = Object.keys(editor.openFiles).map((path) => {
+    const model = documentRegistry.getModel(path)
+    return { path, model, revision: model?.revision }
+  })
+  return () => {
+    const next = useCompileStore.getState()
+    return (
+      next.compileStatus !== 'compiling' &&
+      next.pdfRevision === compiled.pdfRevision &&
+      next.pdfDocumentId === compiled.pdfDocumentId &&
+      next.pdfDocumentRevision === compiled.pdfDocumentRevision &&
+      useProjectStore.getState().projectRoot === projectRoot &&
+      useEditorStore.getState().tabMutationEpoch === editor.tabMutationEpoch &&
+      models.every(
+        ({ path, model, revision }) =>
+          documentRegistry.getModel(path) === model && model?.revision === revision
+      )
+    )
+  }
+}
+
 /** Shared authority for selection, Ctrl+click, and toolbar inverse SyncTeX. */
 export function capturePdfSourceContext(displayedRevision: number) {
   const compiled = useCompileStore.getState()
@@ -20,33 +49,15 @@ export function capturePdfSourceContext(displayedRevision: number) {
   const source = documentRegistry.getModel(sourcePath)
   if (!source || source.revision !== compiled.pdfDocumentRevision) return null
   const epoch = ++interactionEpoch
-  const projectRoot = useProjectStore.getState().projectRoot
-  const editor = useEditorStore.getState()
-  const models = Object.keys(editor.openFiles).map((path) => {
-    const model = documentRegistry.getModel(path)
-    return { path, model, revision: model?.revision }
-  })
+  const unchanged = captureSourceRevisions()
   return {
     sourcePath,
     pdfRevision: compiled.pdfRevision,
-    isCurrent: () => {
-      const next = useCompileStore.getState()
-      return (
-        epoch === interactionEpoch &&
-        next.compileStatus !== 'compiling' &&
-        next.pdfRevision === compiled.pdfRevision &&
-        next.pdfDocumentId === sourcePath &&
-        next.pdfDocumentRevision === compiled.pdfDocumentRevision &&
-        useProjectStore.getState().projectRoot === projectRoot &&
-        useEditorStore.getState().tabMutationEpoch === editor.tabMutationEpoch &&
-        documentRegistry.getModel(sourcePath) === source &&
-        source.revision === compiled.pdfDocumentRevision &&
-        models.every(
-          ({ path, model, revision }) =>
-            documentRegistry.getModel(path) === model && model?.revision === revision
-        )
-      )
-    }
+    isCurrent: () =>
+      epoch === interactionEpoch &&
+      unchanged() &&
+      documentRegistry.getModel(sourcePath) === source &&
+      source.revision === compiled.pdfDocumentRevision
   }
 }
 
