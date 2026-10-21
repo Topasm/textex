@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   executeAppCommand,
+  revealPdfToolsWhenPanelsOpen,
   toggleLogPanel,
   toggleProseMode
 } from '../../renderer/services/appCommands'
@@ -276,5 +277,45 @@ describe('toggleProseMode', () => {
       'c:/paper/main.tex': { line: 17, origin: 'source' },
       'c:/paper/other.tex': { line: 4, origin: 'preview' }
     })
+  })
+})
+
+describe('revealPdfToolsWhenPanelsOpen', () => {
+  beforeEach(() => {
+    usePdfStore.getState().setPdfOnly(true)
+    useProjectStore.setState({
+      isSidebarOpen: false,
+      isResearchPanelOpen: false,
+      researchPanelTab: 'notes'
+    })
+  })
+
+  it('reveals hidden PDF tools when any caller opens a panel', () => {
+    const unsubscribe = revealPdfToolsWhenPanelsOpen()
+    try {
+      useProjectStore.getState().openResearchPanel('problems')
+      expect(usePdfStore.getState().pdfToolsVisible).toBe(true)
+
+      usePdfStore.getState().setPdfToolsVisible(false)
+      useProjectStore.getState().openResearchPanel('notes')
+      expect(usePdfStore.getState().pdfToolsVisible).toBe(true)
+
+      usePdfStore.getState().setPdfToolsVisible(false)
+      useProjectStore.getState().toggleSidebar()
+      expect(usePdfStore.getState().pdfToolsVisible).toBe(true)
+    } finally {
+      unsubscribe()
+    }
+  })
+
+  it('leaves the split view untouched', () => {
+    usePdfStore.getState().setPdfOnly(false)
+    const unsubscribe = revealPdfToolsWhenPanelsOpen()
+    try {
+      useProjectStore.getState().openResearchPanel('problems')
+      expect(usePdfStore.getState().pdfToolsVisible).toBe(false)
+    } finally {
+      unsubscribe()
+    }
   })
 })

@@ -19,6 +19,21 @@ export function sentenceAt(text: string, offset: number): { start: number; end: 
 const isBoundary = (line: string) =>
   !line.trim() || /^\s*(?:%|\\(?:begin|end|(?:sub)*section|chapter|part|item)\b)/u.test(line)
 
+/** Index of the first unescaped `%`, or -1 when the line has no comment. */
+function commentStart(line: string): number {
+  for (let index = 0; index < line.length; index++) {
+    if (line[index] === '\\') index++
+    else if (line[index] === '%') return index
+  }
+  return -1
+}
+
+/** Blank out trailing comments while keeping offsets aligned with the source. */
+function maskComment(line: string): string {
+  const start = commentStart(line)
+  return start < 0 ? line : line.slice(0, start) + ' '.repeat(line.length - start)
+}
+
 export function sourceSentenceAt(
   source: string,
   position: EditorPosition
@@ -35,6 +50,8 @@ export function sourceSentenceAt(
     position.column > lines[line].length + 1
   )
     return null
+  const comment = commentStart(lines[line])
+  if (comment >= 0 && position.column - 1 >= comment) return null
   let first = line
   let last = line
   while (first > 0 && !isBoundary(lines[first - 1])) first--
@@ -42,22 +59,40 @@ export function sourceSentenceAt(
   const paragraph = lines.slice(first, last + 1).join('\n')
   const offset =
     lines.slice(first, line).reduce((sum, value) => sum + value.length + 1, 0) + position.column - 1
-  const sentence = sentenceAt(paragraph, offset)
+  const searchable = lines
+    .slice(first, last + 1)
+    .map(maskComment)
+    .join('\n')
+  const sentence = sentenceAt(searchable, offset)
   if (!sentence) return null
+  const text = paragraph.slice(sentence.start, sentence.end)
+  // Replacing a sentence that spans a comment would silently drop the comment.
+  if (text !== searchable.slice(sentence.start, sentence.end)) return null
   const point = (at: number): EditorPosition => {
     const preceding = paragraph.slice(0, at).split('\n')
     return { line: first + preceding.length, column: preceding.at(-1)!.length + 1 }
   }
   return {
     range: { start: point(sentence.start), end: point(sentence.end) },
-    text: paragraph.slice(sentence.start, sentence.end)
+    text
   }
+}
+
+/** Formatting commands whose argument appears verbatim in PDF text. */
+const TRANSPARENT_FORMATTING = /\\(?:textbf|textit|emph|texttt|textrm|textsf|textnormal)\s*\{/u
+const TRANSPARENT_FORMATTING_ALL = new RegExp(TRANSPARENT_FORMATTING.source, 'gu')
+const TRANSPARENT_FORMATTING_AT = new RegExp(TRANSPARENT_FORMATTING.source, 'uy')
+
+/** Length of the transparent formatting command starting at `index`, or 0. */
+export function transparentFormattingAt(text: string, index: number): number {
+  TRANSPARENT_FORMATTING_AT.lastIndex = index
+  return TRANSPARENT_FORMATTING_AT.exec(text)?.[0].length ?? 0
 }
 
 /** Only transparent text formatting is removed; unknown macros keep the line fallback. */
 export function sentenceSearchText(source: string): string {
   return source
-    .replace(/\\(?:textbf|textit|emph|texttt|textrm|textsf|textnormal)\s*\{/gu, '{')
+    .replace(TRANSPARENT_FORMATTING_ALL, '{')
     .replace(/(?<!\\)[{}]/gu, '')
     .replace(/\\([%&#_{}])/gu, '$1')
     .replace(/~/gu, ' ')

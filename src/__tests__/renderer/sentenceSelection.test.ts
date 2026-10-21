@@ -29,6 +29,20 @@ it('handles Korean, decimals, end positions and paragraph boundaries', () => {
   expect(sentenceAt('One.', 4)).toEqual({ start: 0, end: 4 })
 })
 
+it('excludes trailing comments from source sentences', () => {
+  const source = 'Results improve. % TODO: cite Smith. Also check\nThe method works.'
+  expect(sourceSentenceAt(source, { line: 1, column: 3 })).toEqual({
+    text: 'Results improve.',
+    range: { start: { line: 1, column: 1 }, end: { line: 1, column: 17 } }
+  })
+  expect(sourceSentenceAt(source, { line: 2, column: 3 })?.text).toBe('The method works.')
+  expect(sourceSentenceAt(source, { line: 1, column: 25 })).toBeNull()
+  expect(sourceSentenceAt('Costs 5\\% less. Next.', { line: 1, column: 3 })?.text).toBe(
+    'Costs 5\\% less.'
+  )
+  expect(sourceSentenceAt('Spans a % note\ncomment.', { line: 1, column: 3 })).toBeNull()
+})
+
 it('matches transparent TeX formatting without selecting adjacent sentences', () => {
   const source = 'First sentence. The \\textbf{efficient} method works. Last sentence.'
   expect(previewSourceRange(source, 'The efficient\nmethod works.', 1, 1)).toEqual({

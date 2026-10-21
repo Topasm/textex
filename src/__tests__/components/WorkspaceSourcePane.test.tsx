@@ -90,3 +90,21 @@ it('does not show an old refresh failure after switching source documents', asyn
   )
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
 })
+
+it('refreshes on Ctrl+Enter before the embedded editor handles the key', () => {
+  usePdfStore.getState().setPdfOnly(true)
+  usePdfStore.getState().setSourceEditorOpen(true)
+  const compile = vi.fn().mockResolvedValue(undefined)
+  render(
+    <WorkspaceSourcePane onCompile={compile}>
+      <textarea aria-label="Source" />
+    </WorkspaceSourcePane>
+  )
+  const source = screen.getByRole('textbox')
+  // Monaco binds Ctrl+Enter to insertLineAfter and prevents the default action.
+  const editorBinding = vi.fn((event: KeyboardEvent) => event.preventDefault())
+  source.addEventListener('keydown', editorBinding)
+  fireEvent.keyDown(source, { key: 'Enter', ctrlKey: true })
+  expect(compile).toHaveBeenCalledOnce()
+  expect(editorBinding).not.toHaveBeenCalled()
+})

@@ -30,6 +30,7 @@ import { useHorizontalSwipe } from './hooks/useHorizontalSwipe'
 import { useFeatureHints } from './hooks/useFeatureHints'
 import {
   executeAppCommand,
+  revealPdfToolsWhenPanelsOpen,
   toggleLogPanel,
   toggleProjectSidebar,
   toggleProseMode
@@ -161,6 +162,7 @@ function App() {
   }, [])
 
   useEffect(() => installCrashRecoveryAutosnapshot(), [])
+  useEffect(() => revealPdfToolsWhenPanelsOpen(), [])
 
   // Only subscribe to state needed for rendering
   const pdfOnly = usePdfStore((s) => s.pdfOnly)
@@ -292,13 +294,12 @@ function App() {
   const handleCompile = useCallback(async (): Promise<void> => {
     const editorState = useEditorStore.getState()
     const pdfRoot = useCompileStore.getState().pdfDocumentId
-    const compilePath =
-      usePdfStore.getState().pdfOnly && pdfRoot && documentRegistry.getModel(pdfRoot)
-        ? pdfRoot
-        : editorState.filePath
+    // The PDF workspace always rebuilds its root without moving the drawer off the edited file.
+    const pdfRootPath =
+      usePdfStore.getState().pdfOnly && pdfRoot ? documentRegistry.getFilePath(pdfRoot) : null
+    const compilePath = pdfRootPath ?? editorState.filePath
     if (!compilePath?.toLowerCase().endsWith('.tex')) return
     flushAllPendingDocumentEdits()
-    if (compilePath !== editorState.filePath) useEditorStore.getState().setActiveTab(compilePath)
     const snapshot = documentRegistry.snapshot(compilePath)
     if (!snapshot) return
     cancelPendingAutoCompile()
@@ -314,7 +315,9 @@ function App() {
       reportCompileFailure(err, 'manual')
       return
     }
-    const ticket = beginCompileTicket(compilePath, snapshot)
+    const ticket = beginCompileTicket(compilePath, snapshot, {
+      detachedFromActiveTab: compilePath !== editorState.filePath
+    })
     useCompileStore.getState().setCompileStatus('compiling')
     try {
       const result = await window.api.compile(toCompileRequest(ticket, 'high'))

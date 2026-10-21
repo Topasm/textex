@@ -83,16 +83,21 @@ export function WorkspaceSourcePane({
       hidden={pdfOnly && !open}
       aria-label={t('pdfWorkspace.source')}
       style={{ width: `${ratio * 100}%` }}
+      onKeyDownCapture={(event) => {
+        // Capture before Monaco, whose Ctrl+Enter binding would insert a line instead.
+        if (!pdfOnly || event.nativeEvent.isComposing) return
+        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+          event.preventDefault()
+          event.stopPropagation()
+          void refresh()
+        }
+      }}
       onKeyDown={(event) => {
         if (!pdfOnly || event.defaultPrevented || event.nativeEvent.isComposing) return
         if (event.key === 'Escape') {
           event.preventDefault()
           event.stopPropagation()
           close()
-        } else if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-          event.preventDefault()
-          event.stopPropagation()
-          void refresh()
         }
       }}
       tabIndex={-1}

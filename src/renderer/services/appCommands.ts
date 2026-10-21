@@ -39,11 +39,16 @@ function getExportFormat(command: Extract<AppCommandId, `file.export.${string}`>
   return command.replace('file.export.', '') as 'html' | 'docx' | 'odt' | 'epub'
 }
 
-function revealPdfTools(): boolean {
-  const pdf = usePdfStore.getState()
-  if (!pdf.pdfOnly || pdf.pdfToolsVisible) return false
-  pdf.setPdfToolsVisible(true)
-  return true
+const revealPdfTools = () => usePdfStore.getState().revealPdfTools()
+
+/** Panels opened from anywhere while the PDF workspace hides its tools bring the tools back. */
+export function revealPdfToolsWhenPanelsOpen(): () => void {
+  return useProjectStore.subscribe((state, previous) => {
+    const researchOpened =
+      state.isResearchPanelOpen &&
+      (!previous.isResearchPanelOpen || state.researchPanelTab !== previous.researchPanelTab)
+    if (researchOpened || (state.isSidebarOpen && !previous.isSidebarOpen)) revealPdfTools()
+  })
 }
 
 export function togglePdfOnly(): void {
@@ -208,9 +213,11 @@ export function toggleProseMode(): void {
   const { filePath, cursorLine } = useEditorStore.getState()
   if (!filePath || !filePath.toLowerCase().endsWith('.tex')) return
 
-  usePdfStore.getState().setPdfOnly(false)
+  const pdf = usePdfStore.getState()
+  // The PDF workspace hides prose, so toggling from it always reveals the prose view.
   const ui = useUiStore.getState()
-  const enabling = !proseModeFor(ui, filePath)
+  const enabling = pdf.pdfOnly || !proseModeFor(ui, filePath)
+  pdf.setPdfOnly(false)
   ui.setProseMode(filePath, enabling)
 
   // Switching views keeps the author's place. Entering prose, the caret's line

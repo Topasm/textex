@@ -53,6 +53,8 @@ function parseLine(raw: string): ParsedLine {
 }
 
 const HEADER_TAGS = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] as const
+// Imported PDF annotations escape Markdown syntax so their text renders literally.
+const NOTE_INLINE = { escapes: true }
 
 export function NotesPanel() {
   const { t } = useTranslation()
@@ -449,7 +451,7 @@ export function NotesPanel() {
           const Tag = HEADER_TAGS[(parsed.level ?? 1) - 1]
           return (
             <Tag key={index} className="notes-panel__header" onClick={() => activateLine(index)}>
-              {renderInline(parsed.label ?? '', key)}
+              {renderInline(parsed.label ?? '', key, NOTE_INLINE)}
             </Tag>
           )
         }
@@ -461,7 +463,7 @@ export function NotesPanel() {
               className="notes-panel__blockquote"
               onClick={() => activateLine(index)}
             >
-              {renderInline(parsed.label ?? '', key)}
+              {renderInline(parsed.label ?? '', key, NOTE_INLINE)}
             </blockquote>
           )
         }
@@ -478,7 +480,7 @@ export function NotesPanel() {
                 onChange={() => toggleCheckbox(index)}
               />
               <span className="notes-panel__item-label" onClick={() => activateLine(index)}>
-                {renderInline(parsed.label ?? '', key)}
+                {renderInline(parsed.label ?? '', key, NOTE_INLINE)}
               </span>
             </div>
           )
@@ -486,7 +488,7 @@ export function NotesPanel() {
 
         return (
           <p key={index} className="notes-panel__text" onClick={() => activateLine(index)}>
-            {renderInline(parsed.label ?? '', key)}
+            {renderInline(parsed.label ?? '', key, NOTE_INLINE)}
           </p>
         )
       })}

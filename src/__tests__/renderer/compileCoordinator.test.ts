@@ -4,6 +4,7 @@ import { useEditorStore } from '../../renderer/store/useEditorStore'
 import {
   beginCompileTicket,
   canPublishCompileTicket,
+  isCurrentCompileIdentity,
   isLatestCompileTicket,
   resetCompileTicketsForTests
 } from '../../renderer/services/compileCoordinator'
@@ -37,5 +38,25 @@ describe('compileCoordinator', () => {
     documentRegistry.open('/project/main.tex', 'first')
 
     expect(canPublishCompileTicket(ticket)).toBe(false)
+  })
+
+  it('keeps a detached PDF workspace root compile current while another tab is active', () => {
+    useEditorStore.getState().openFileInTab('/project/main.tex', 'root')
+    const snapshot = documentRegistry.snapshot('/project/main.tex')!
+    useEditorStore.getState().openFileInTab('/project/chapter.tex', 'chapter')
+    const attached = beginCompileTicket('/project/main.tex', snapshot)
+    expect(canPublishCompileTicket(attached)).toBe(false)
+
+    const detached = beginCompileTicket('/project/main.tex', snapshot, {
+      detachedFromActiveTab: true
+    })
+    expect(canPublishCompileTicket(detached)).toBe(true)
+    expect(
+      isCurrentCompileIdentity({
+        requestId: detached.requestId,
+        documentId: snapshot.documentId,
+        documentRevision: snapshot.revision
+      })
+    ).toBe(true)
   })
 })

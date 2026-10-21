@@ -117,7 +117,8 @@ const Toolbar = React.memo(function Toolbar({
   const pdfOnly = usePdfStore((s) => s.pdfOnly)
   const pdfToolsVisible = usePdfStore((s) => s.pdfToolsVisible)
   const panelsVisible = !pdfOnly || pdfToolsVisible
-  const isProseMode = useUiStore((state) => proseModeFor(state, filePath))
+  const documentProseMode = useUiStore((state) => proseModeFor(state, filePath))
+  const isProseMode = !pdfOnly && documentProseMode
   const canUseProseMode = Boolean(filePath?.toLowerCase().endsWith('.tex'))
 
   const customWindowChrome = usesCustomWindowChrome()

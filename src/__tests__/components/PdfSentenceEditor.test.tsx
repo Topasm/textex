@@ -143,6 +143,41 @@ it('edits an included file but recompiles the document that produced the PDF', a
   expect(documentRegistry.snapshot(path)?.text).toBe(source)
 })
 
+it('maps a normalized Windows root ID back to its tab before recompiling', async () => {
+  const root = 'C:\\Project\\Main.tex'
+  const included = 'C:\\Project\\chapter.tex'
+  useEditorStore.getState().resetEditor()
+  useEditorStore.getState().openFileInTab(root, source)
+  useEditorStore.getState().openFileInTab(included, source)
+  const rootId = documentRegistry.snapshot(root)!.documentId
+  expect(rootId).toBe('c:/project/main.tex')
+  useCompileStore.setState({ pdfDocumentId: rootId, pdfDocumentRevision: 0 })
+  selection.target = createPdfSentenceTarget(
+    included,
+    rootId,
+    documentRegistry.snapshot(included)!,
+    { start: { line: 1, column: 17 }, end: { line: 1, column: 35 } },
+    selection.text,
+    1
+  )
+  window.api.readFile = vi.fn().mockResolvedValue({ filePath: included, content: source })
+  let compiledPath: string | null = null
+  const onCompile = async () => {
+    compiledPath = useEditorStore.getState().filePath
+    useCompileStore.getState().setPdfPath('C:\\cache\\main.pdf', {
+      documentId: rootId,
+      revision: documentRegistry.snapshot(root)!.revision
+    })
+    useCompileStore.getState().setCompileStatus('success')
+  }
+  render(<PdfSentenceEditor selection={selection} onClose={vi.fn()} onCompile={onCompile} />)
+  fireEvent.click(screen.getByRole('button', { name: 'Edit manually' }))
+  fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Improved chapter sentence.' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Apply and refresh PDF' }))
+  expect(await screen.findByText('PDF refreshed.')).toBeVisible()
+  expect(compiledPath).toBe(root)
+})
+
 it('resets a draft without changing the document and applies with the keyboard', async () => {
   const close = vi.fn()
   render(<PdfSentenceEditor selection={selection} onClose={close} onCompile={compile} />)
