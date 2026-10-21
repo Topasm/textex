@@ -1,6 +1,7 @@
 import { isRelativeEvidencePdf } from '../../shared/citationEvidence'
 import { resolveDiagnosticFilePath } from './diagnosticNavigation'
 import { checkEvidenceProject } from './citationEvidence'
+import { withPdfDocument } from './pdfDocument'
 import i18n from '../i18n'
 
 export interface EvidencePage {
@@ -44,18 +45,7 @@ export async function readEvidencePage(
   const sha256 = Array.from(new Uint8Array(digest), (byte) =>
     byte.toString(16).padStart(2, '0')
   ).join('')
-  const { pdfjs } = await import('react-pdf')
-  const { default: worker } = await import('pdfjs-dist/build/pdf.worker.min.mjs?url')
-  current()
-  pdfjs.GlobalWorkerOptions.workerSrc = worker
-  const task = pdfjs.getDocument({ data: bytes })
-  const cancel = () => {
-    void task.destroy().catch(() => {})
-  }
-  signal.addEventListener('abort', cancel, { once: true })
-  try {
-    const document = await task.promise
-    current()
+  return withPdfDocument(bytes, signal, current, async (document) => {
     if (page > document.numPages) throw new Error(i18n.t('citationEvidence.invalidPage'))
     const pdfPage = await document.getPage(page)
     const content = await pdfPage.getTextContent()
@@ -67,8 +57,5 @@ export async function readEvidencePage(
     if (!text) throw new Error(i18n.t('citationEvidence.noText'))
     if (text.length > 100_000) throw new Error(i18n.t('citationEvidence.unsupported'))
     return { pdf, page, pages: document.numPages, text, sha256 }
-  } finally {
-    signal.removeEventListener('abort', cancel)
-    await task.destroy()
-  }
+  })
 }

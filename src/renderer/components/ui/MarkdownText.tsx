@@ -118,25 +118,36 @@ type InlineToken =
   | { kind: 'code'; value: string }
   | { kind: 'link'; value: string; href: string }
 
-const INLINE_RE =
-  /\\([\\`*_{}[\]<>#!|])|\*\*([^*]+)\*\*|`([^`]+)`|\[([^\]]+)\]\(([^)\s]+)\)|\*([^*]+)\*|_([^_]+)_/gu
+const INLINE_SPAN_RE = /\*\*([^*]+)\*\*|`([^`]+)`|\[([^\]]+)\]\(([^)\s]+)\)|\*([^*]+)\*|_([^_]+)_/u
+const INLINE_RE = new RegExp(INLINE_SPAN_RE.source, 'gu')
+// Escapes stay opt-in: unfenced LaTeX in AI replies must keep its backslashes.
+const INLINE_ESCAPE_RE = /\\([\\`*_{}[\]<>#!|])/u
+const ESCAPED_INLINE_RE = new RegExp(`${INLINE_ESCAPE_RE.source}|${INLINE_SPAN_RE.source}`, 'gu')
 const SAFE_LINK_RE = /^(https?:|mailto:)/iu
 
-function parseInline(text: string): InlineToken[] {
+export interface InlineOptions {
+  /** Treat Markdown backslash escapes such as `\*` as literal characters. */
+  escapes?: boolean
+}
+
+function parseInline(text: string, { escapes = false }: InlineOptions): InlineToken[] {
   const tokens: InlineToken[] = []
+  const pattern = escapes ? ESCAPED_INLINE_RE : INLINE_RE
+  const offset = escapes ? 1 : 0
   let lastIndex = 0
   let match: RegExpExecArray | null
-  INLINE_RE.lastIndex = 0
-  while ((match = INLINE_RE.exec(text))) {
+  pattern.lastIndex = 0
+  while ((match = pattern.exec(text))) {
     if (match.index > lastIndex)
       tokens.push({ kind: 'text', value: text.slice(lastIndex, match.index) })
-    if (match[1] !== undefined) tokens.push({ kind: 'text', value: match[1] })
-    else if (match[2] !== undefined) tokens.push({ kind: 'bold', value: match[2] })
-    else if (match[3] !== undefined) tokens.push({ kind: 'code', value: match[3] })
-    else if (match[4] !== undefined) tokens.push({ kind: 'link', value: match[4], href: match[5] })
-    else if (match[6] !== undefined) tokens.push({ kind: 'italic', value: match[6] })
-    else if (match[7] !== undefined) tokens.push({ kind: 'italic', value: match[7] })
-    lastIndex = INLINE_RE.lastIndex
+    const group = (index: number) => match![index + offset]
+    if (escapes && match[1] !== undefined) tokens.push({ kind: 'text', value: match[1] })
+    else if (group(1) !== undefined) tokens.push({ kind: 'bold', value: group(1) })
+    else if (group(2) !== undefined) tokens.push({ kind: 'code', value: group(2) })
+    else if (group(3) !== undefined) tokens.push({ kind: 'link', value: group(3), href: group(4) })
+    else if (group(5) !== undefined) tokens.push({ kind: 'italic', value: group(5) })
+    else if (group(6) !== undefined) tokens.push({ kind: 'italic', value: group(6) })
+    lastIndex = pattern.lastIndex
   }
   if (lastIndex < text.length) tokens.push({ kind: 'text', value: text.slice(lastIndex) })
   return tokens
@@ -145,14 +156,18 @@ function parseInline(text: string): InlineToken[] {
 /** Renders inline bold/italic/code/link spans. Exported for reuse by other
  * line-level markdown renderers (e.g. the Notes panel's live-preview lines)
  * that don't need MarkdownText's block parsing. */
-export function renderInline(text: string, keyPrefix: string): ReactNode[] {
-  return parseInline(text).map((token, index) => {
+export function renderInline(
+  text: string,
+  keyPrefix: string,
+  options: InlineOptions = {}
+): ReactNode[] {
+  return parseInline(text, options).map((token, index) => {
     const key = `${keyPrefix}-${index}`
     switch (token.kind) {
       case 'bold':
-        return <strong key={key}>{renderInline(token.value, key)}</strong>
+        return <strong key={key}>{renderInline(token.value, key, options)}</strong>
       case 'italic':
-        return <em key={key}>{renderInline(token.value, key)}</em>
+        return <em key={key}>{renderInline(token.value, key, options)}</em>
       case 'code':
         return (
           <code key={key} className="markdown-inline-code">

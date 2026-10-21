@@ -1,4 +1,5 @@
 import type { TextContent } from 'pdfjs-dist/types/src/display/api'
+import { withPdfDocument } from './pdfDocument'
 import i18n from '../i18n'
 
 export interface ImportedPdfAnnotation {
@@ -86,60 +87,53 @@ export async function readPdfAnnotations(
     throw new Error(i18n.t('pdfAnnotations.unsupported'))
   const bytes = new Uint8Array(await file.arrayBuffer())
   signal.throwIfAborted()
-  const { pdfjs } = await import('react-pdf')
-  const { default: worker } = await import('pdfjs-dist/build/pdf.worker.min.mjs?url')
-  signal.throwIfAborted()
-  pdfjs.GlobalWorkerOptions.workerSrc = worker
-  const task = pdfjs.getDocument({ data: bytes })
-  const cancel = () => {
-    void task.destroy().catch(() => {})
-  }
-  signal.addEventListener('abort', cancel, { once: true })
-  try {
-    const document = await task.promise
-    signal.throwIfAborted()
-    if (document.numPages > 2000) throw new Error(i18n.t('pdfAnnotations.unsupported'))
-    const result: ImportedPdfAnnotation[] = []
-    let totalText = 0
-    for (let page = 1; page <= document.numPages; page++) {
-      signal.throwIfAborted()
-      const pdfPage = await document.getPage(page)
-      try {
-        const annotations: unknown[] = await pdfPage.getAnnotations({ intent: 'display' })
+  return withPdfDocument(
+    bytes,
+    signal,
+    () => signal.throwIfAborted(),
+    async (document) => {
+      if (document.numPages > 2000) throw new Error(i18n.t('pdfAnnotations.unsupported'))
+      const result: ImportedPdfAnnotation[] = []
+      let totalText = 0
+      for (let page = 1; page <= document.numPages; page++) {
         signal.throwIfAborted()
-        const candidates = annotations.map(object).filter((annotation) => {
-          const kind = text(annotation.subtype)
-          return MARKUP_TYPES.has(kind) || COMMENT_TYPES.has(kind)
-        })
-        const content = candidates.some((annotation) => MARKUP_TYPES.has(text(annotation.subtype)))
-          ? await pdfPage.getTextContent()
-          : null
-        signal.throwIfAborted()
-        for (const annotation of candidates) {
-          const kind = text(annotation.subtype)
-          const comment = text(object(annotation.contentsObj).str) || text(annotation.contents)
-          if (!comment && !MARKUP_TYPES.has(kind)) continue
-          const entry = {
-            page,
-            kind,
-            comment,
-            author: text(object(annotation.titleObj).str) || text(annotation.title),
-            markedText: content && MARKUP_TYPES.has(kind) ? markedText(annotation, content) : ''
+        const pdfPage = await document.getPage(page)
+        try {
+          const annotations: unknown[] = await pdfPage.getAnnotations({ intent: 'display' })
+          signal.throwIfAborted()
+          const candidates = annotations.map(object).filter((annotation) => {
+            const kind = text(annotation.subtype)
+            return MARKUP_TYPES.has(kind) || COMMENT_TYPES.has(kind)
+          })
+          const content = candidates.some((annotation) =>
+            MARKUP_TYPES.has(text(annotation.subtype))
+          )
+            ? await pdfPage.getTextContent()
+            : null
+          signal.throwIfAborted()
+          for (const annotation of candidates) {
+            const kind = text(annotation.subtype)
+            const comment = text(object(annotation.contentsObj).str) || text(annotation.contents)
+            if (!comment && !MARKUP_TYPES.has(kind)) continue
+            const entry = {
+              page,
+              kind,
+              comment,
+              author: text(object(annotation.titleObj).str) || text(annotation.title),
+              markedText: content && MARKUP_TYPES.has(kind) ? markedText(annotation, content) : ''
+            }
+            totalText += entry.comment.length + entry.author.length + entry.markedText.length
+            if (result.length >= 5000 || totalText > 1_000_000)
+              throw new Error(i18n.t('pdfAnnotations.unsupported'))
+            result.push(entry)
           }
-          totalText += entry.comment.length + entry.author.length + entry.markedText.length
-          if (result.length >= 5000 || totalText > 1_000_000)
-            throw new Error(i18n.t('pdfAnnotations.unsupported'))
-          result.push(entry)
+        } finally {
+          pdfPage.cleanup()
         }
-      } finally {
-        pdfPage.cleanup()
       }
+      return result
     }
-    return result
-  } finally {
-    signal.removeEventListener('abort', cancel)
-    await task.destroy()
-  }
+  )
 }
 
 function escapeMarkdown(value: string): string {

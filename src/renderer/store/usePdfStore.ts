@@ -17,6 +17,8 @@ interface PdfState {
   setPdfOnly: (enabled: boolean) => void
   setSourceEditorOpen: (open: boolean) => void
   setPdfToolsVisible: (visible: boolean) => void
+  /** Shows the PDF workspace's hidden panels; returns whether anything changed. */
+  revealPdfTools: () => boolean
   zoomLevel: number
   splitRatio: number
   synctexHighlight: (PdfSyncTarget & { timestamp: number }) | null
@@ -98,6 +100,11 @@ export const usePdfStore = create<PdfState>()(
       setPdfOnly: (pdfOnly) => set({ pdfOnly, sourceEditorOpen: false, pdfToolsVisible: false }),
       setSourceEditorOpen: (sourceEditorOpen) => set({ sourceEditorOpen }),
       setPdfToolsVisible: (pdfToolsVisible) => set({ pdfToolsVisible }),
+      revealPdfTools: () => {
+        if (!get().pdfOnly || get().pdfToolsVisible) return false
+        set({ pdfToolsVisible: true })
+        return true
+      },
       zoomLevel: 100,
       splitRatio: 0.5,
       synctexHighlight: null,

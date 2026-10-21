@@ -428,6 +428,21 @@ describe('Workspace toolbars', () => {
     expect(screen.queryByTitle(/Zoom level/)).not.toBeInTheDocument()
   })
 
+  it('shows prose as inactive in the PDF workspace and reveals it when toggled', () => {
+    const filePath = '/project/main.tex'
+    useEditorStore.setState({ filePath })
+    useUiStore.getState().setProseMode(filePath, true)
+    usePdfStore.getState().setPdfOnly(true)
+
+    render(<Toolbar {...defaultProps} />)
+    const toggle = screen.getByRole('button', { name: 'Show prose view' })
+    expect(toggle).toHaveAttribute('aria-pressed', 'false')
+    fireEvent.click(toggle)
+
+    expect(usePdfStore.getState().pdfOnly).toBe(false)
+    expect(useUiStore.getState().proseModeDocumentIds).toContain(filePath)
+  })
+
   it('renders fractional zoom values as integer percentages', () => {
     usePdfStore.setState({ zoomLevel: 92.00965826511386 })
 

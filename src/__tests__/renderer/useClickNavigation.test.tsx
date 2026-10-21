@@ -10,6 +10,7 @@ import { usePdfStore } from '../../renderer/store/usePdfStore'
 const path = '/project/main.tex'
 const source = 'First sentence. Second sentence.'
 let mouseUp: (event: Monaco.IEditorMouseEvent) => void
+let mouseDown: (event: Monaco.IEditorMouseEvent) => void
 const event = (detail: number) =>
   ({
     event: { detail },
@@ -18,7 +19,11 @@ const event = (detail: number) =>
 function setup() {
   const { result } = renderHook(() => useClickNavigation())
   return result.current({
-    onMouseDown: () => ({ dispose: vi.fn() }),
+    onMouseDown: (handler: typeof mouseDown) => {
+      mouseDown = handler
+      return { dispose: vi.fn() }
+    },
+    getModel: () => ({ getLineContent: () => source }),
     onMouseUp: (handler: typeof mouseUp) => {
       mouseUp = handler
       return { dispose: vi.fn() }
@@ -82,5 +87,18 @@ it('does not sync dirty source text against the previous PDF', async () => {
   act(() => useEditorStore.getState().updateActiveDocument('Changed'))
   await act(async () => mouseUp(event(2)))
   expect(window.api.synctexForward).not.toHaveBeenCalled()
+  registration.dispose()
+})
+it('Ctrl+click line sync still runs with unsaved edits or a closed root', async () => {
+  const registration = setup()
+  const ctrlClick = {
+    event: { ctrlKey: true, preventDefault: vi.fn(), stopPropagation: vi.fn() },
+    target: { type: 6, position: { lineNumber: 1, column: 3 } }
+  } as unknown as Monaco.IEditorMouseEvent
+  act(() => useEditorStore.getState().updateActiveDocument('Changed'))
+  useCompileStore.setState({ pdfDocumentId: '/project/closed-root.tex' })
+  await act(async () => mouseDown(ctrlClick))
+  expect(window.api.synctexForward).toHaveBeenCalledWith(path, 1)
+  expect(usePdfStore.getState().synctexHighlight).toMatchObject({ page: 1, x: 50, y: 100 })
   registration.dispose()
 })

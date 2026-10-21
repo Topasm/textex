@@ -53,12 +53,22 @@ export function useClickNavigation(): (editor: monacoEditor.IStandaloneCodeEdito
       flushAllPendingDocumentEdits()
       const state = useEditorStore.getState()
       const path = state.filePath
-      const model = path ? documentRegistry.getModel(path) : null
+      if (!path) return
+      if (!sentenceMode) {
+        // Line navigation stays best-effort, so unsaved or uncompiled edits still move the PDF.
+        try {
+          const result = await window.api.synctexForward(path, line)
+          if (result && !disposed && id === request)
+            usePdfStore.getState().setSynctexHighlight(result)
+        } catch {
+          /* A missing SyncTeX map leaves the current selection intact. */
+        }
+        return
+      }
+      const model = documentRegistry.getModel(path)
       const context = capturePdfSourceContext(useCompileStore.getState().pdfRevision)
-      if (!path || !model || model.isDirty || !context) return
-      const sentence = sentenceMode
-        ? sourceSentenceAt(model.snapshot().text, { line, column })
-        : null
+      if (!model || model.isDirty || !context) return
+      const sentence = sourceSentenceAt(model.snapshot().text, { line, column })
       try {
         const result = await window.api.synctexForward(path, line)
         if (!result || disposed || id !== request || !context.isCurrent()) return

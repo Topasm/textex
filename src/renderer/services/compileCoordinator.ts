@@ -12,10 +12,13 @@ export interface CompileTicket {
   readonly requestId: number
   readonly filePath: string
   readonly snapshot: DocumentSnapshot
+  /** PDF workspace compiles of the root stay publishable while another file is active. */
+  readonly detachedFromActiveTab: boolean
 }
 
 let nextRequestId = 0
 let latestRequestId = 0
+let latestTicket: CompileTicket | null = null
 const pendingAutoCompileCancellationListeners = new Set<() => void>()
 
 /** Cancels debounced or pre-save automatic work before an explicit compile starts. */
@@ -29,10 +32,20 @@ export function onPendingAutoCompileCancellation(listener: () => void): () => vo
 }
 
 /** Creates a renderer-side identity for one compile input revision. */
-export function beginCompileTicket(filePath: string, snapshot: DocumentSnapshot): CompileTicket {
+export function beginCompileTicket(
+  filePath: string,
+  snapshot: DocumentSnapshot,
+  options: { detachedFromActiveTab?: boolean } = {}
+): CompileTicket {
   nextRequestId += 1
   latestRequestId = nextRequestId
-  return Object.freeze({ requestId: nextRequestId, filePath, snapshot })
+  latestTicket = Object.freeze({
+    requestId: nextRequestId,
+    filePath,
+    snapshot,
+    detachedFromActiveTab: options.detachedFromActiveTab ?? false
+  })
+  return latestTicket
 }
 
 export function isLatestCompileTicket(ticket: CompileTicket): boolean {
@@ -43,7 +56,7 @@ export function isLatestCompileTicket(ticket: CompileTicket): boolean {
 export function canPublishCompileTicket(ticket: CompileTicket): boolean {
   return (
     isLatestCompileTicket(ticket) &&
-    useEditorStore.getState().filePath === ticket.filePath &&
+    (ticket.detachedFromActiveTab || useEditorStore.getState().filePath === ticket.filePath) &&
     (documentRegistry.getModel(ticket.filePath)?.isCurrent(ticket.snapshot) ?? false)
   )
 }
@@ -60,9 +73,11 @@ export function toCompileRequest(ticket: CompileTicket, priority: CompilePriorit
 
 export function isCurrentCompileIdentity(identity: CompileIdentity): boolean {
   if (identity.requestId !== latestRequestId) return false
-  const activeFilePath = useEditorStore.getState().filePath
-  if (!activeFilePath) return false
-  const model = documentRegistry.getModel(activeFilePath)
+  const ownerPath = latestTicket?.detachedFromActiveTab
+    ? latestTicket.filePath
+    : useEditorStore.getState().filePath
+  if (!ownerPath) return false
+  const model = documentRegistry.getModel(ownerPath)
   return model?.documentId === identity.documentId && model.revision === identity.documentRevision
 }
 
@@ -81,4 +96,5 @@ export function canPublishCompileResponse(
 export function resetCompileTicketsForTests(): void {
   nextRequestId = 0
   latestRequestId = 0
+  latestTicket = null
 }

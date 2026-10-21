@@ -92,8 +92,11 @@ export default function PdfSentenceEditor({
   const refreshPdf = async () => {
     if (!target || !onCompile || useProjectStore.getState().projectRoot !== target.projectRoot)
       return
-    useEditorStore.getState().setActiveTab(target.compilePath)
-    const source = documentRegistry.snapshot(target.compilePath)
+    // compilePath is a normalized document ID; tabs are keyed by the original file path.
+    const compilePath = documentRegistry.getFilePath(target.compilePath)
+    if (!compilePath) return false
+    if (!usePdfStore.getState().pdfOnly) useEditorStore.getState().setActiveTab(compilePath)
+    const source = documentRegistry.snapshot(compilePath)
     const edited = documentRegistry.snapshot(target.filePath)
     const previousPdf = useCompileStore.getState().pdfRevision
     await onCompile()

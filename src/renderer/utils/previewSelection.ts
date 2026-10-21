@@ -1,4 +1,5 @@
 import type { EditorRange } from '../editor/EditorAdapter'
+import { transparentFormattingAt } from './sentenceSelection'
 
 /** Match PDF whitespace and ligatures while retaining offsets into the source. */
 export function findPreviewText(
@@ -47,11 +48,9 @@ export function previewSourceRange(
     const offsets: number[] = []
     let plain = ''
     for (let index = 0; index < passage.length; index++) {
-      const command = /^\\(?:textbf|textit|emph|texttt|textrm|textsf|textnormal)\s*\{/u.exec(
-        passage.slice(index)
-      )
+      const command = transparentFormattingAt(passage, index)
       if (command) {
-        index += command[0].length - 1
+        index += command - 1
         continue
       }
       if (passage[index] === '{' || passage[index] === '}') continue
