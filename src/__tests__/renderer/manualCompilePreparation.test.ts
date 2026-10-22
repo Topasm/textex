@@ -50,6 +50,16 @@ describe('manual compile preparation', () => {
     expect(documentRegistry.getModel(mainPath)?.isDirty).toBe(true)
   })
 
+  it('saves a restore in the file being edited while compiling the PDF workspace root', async () => {
+    useEditorStore.getState().setActiveTab(chapterPath)
+    useEditorStore.getState().updateActiveDocument('restored', 'history-restore')
+    const snapshot = documentRegistry.snapshot(mainPath)!
+
+    await prepareDocumentsForManualCompile(mainPath, snapshot, chapterPath)
+
+    expect(saveFileBatchMock).toHaveBeenCalledWith([{ filePath: chapterPath, content: 'restored' }])
+  })
+
   it('blocks an inactive history restore from being saved implicitly', async () => {
     useEditorStore.getState().setActiveTab(chapterPath)
     useEditorStore.getState().updateActiveDocument('restored', 'history-restore')

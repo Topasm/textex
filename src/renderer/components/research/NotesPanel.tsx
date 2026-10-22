@@ -211,10 +211,27 @@ export function NotesPanel() {
   }, [])
 
   const importAnnotations = useCallback(
-    (imported: string[]) => {
-      if (!activeFilePath.current || loadedProjectRoot !== useProjectStore.getState().projectRoot)
-        return
-      const current = linesRef.current
+    async (imported: string[]) => {
+      const path = activeFilePath.current
+      const generation = loadGeneration.current
+      if (!path || loadedProjectRoot !== useProjectStore.getState().projectRoot) return
+      const hasUnsavedEdits = () =>
+        saveTimer.current !== null || pendingSaves.current.size > 0 || saveInFlight.current
+      let current = linesRef.current
+      if (!hasUnsavedEdits()) {
+        // Notes load once; re-read so changes made outside the panel survive the import.
+        let disk: string[] | null
+        try {
+          disk = (await window.api.readFile(path)).content.split('\n')
+        } catch (err) {
+          if (exists) throw err
+          disk = null
+        }
+        if (generation !== loadGeneration.current || activeFilePath.current !== path) return
+        // Edits typed while the file was being read are newer than the disk copy.
+        if (!hasUnsavedEdits()) current = disk ?? []
+        else current = linesRef.current
+      }
       const next = current.length ? [...current, '', ...imported] : ['# Notes', '', ...imported]
       linesRef.current = next
       setLines(next)
@@ -222,7 +239,7 @@ export function NotesPanel() {
       setActiveIndex(null)
       scheduleSave(next)
     },
-    [loadedProjectRoot, scheduleSave]
+    [exists, loadedProjectRoot, scheduleSave]
   )
 
   const handleCreate = useCallback(async () => {

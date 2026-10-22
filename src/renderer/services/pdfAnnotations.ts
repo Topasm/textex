@@ -1,5 +1,6 @@
 import type { TextContent } from 'pdfjs-dist/types/src/display/api'
 import { withPdfDocument } from './pdfDocument'
+import { escapeMarkdownText } from '../utils/markdownEscape'
 import i18n from '../i18n'
 
 export interface ImportedPdfAnnotation {
@@ -136,28 +137,26 @@ export async function readPdfAnnotations(
   )
 }
 
-function escapeMarkdown(value: string): string {
-  return value.replace(/[\\`*_{}[\]<>#!|]/gu, '\\$&')
-}
-
 export function annotationNotes(fileName: string, annotations: ImportedPdfAnnotation[]): string[] {
   const lines = [
-    `## ${i18n.t('pdfAnnotations.heading')}: ${escapeMarkdown(fileName.replace(/\s+/gu, ' '))}`,
+    `## ${i18n.t('pdfAnnotations.heading')}: ${escapeMarkdownText(fileName.replace(/\s+/gu, ' '))}`,
     ''
   ]
   for (const annotation of annotations) {
     const author = annotation.author
-      ? ` · ${escapeMarkdown(annotation.author.replace(/\s+/gu, ' '))}`
+      ? ` · ${escapeMarkdownText(annotation.author.replace(/\s+/gu, ' '))}`
       : ''
     lines.push(
       `- [ ] ${i18n.t('pdfAnnotations.page', { page: annotation.page })} · ${annotation.kind}${author}`
     )
     if (annotation.markedText) {
       lines.push(`> ${i18n.t('pdfAnnotations.context')}`)
-      lines.push(...annotation.markedText.split('\n').map((line) => `> ${escapeMarkdown(line)}`))
+      lines.push(
+        ...annotation.markedText.split('\n').map((line) => `> ${escapeMarkdownText(line)}`)
+      )
     }
     if (annotation.comment)
-      lines.push(...annotation.comment.split('\n').map((line) => `> ${escapeMarkdown(line)}`))
+      lines.push(...annotation.comment.split('\n').map((line) => `> ${escapeMarkdownText(line)}`))
     lines.push('')
   }
   return lines

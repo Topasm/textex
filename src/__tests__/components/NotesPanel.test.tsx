@@ -135,8 +135,36 @@ describe('NotesPanel', () => {
     expect(screen.getByRole('checkbox')).not.toBeChecked()
   })
 
+  it('keeps changes made to TODO.md outside the panel when importing', async () => {
+    render(<NotesPanel />)
+    await screen.findByText('Initial')
+    window.api.readFile = vi.fn().mockResolvedValue({
+      filePath: '/project-a/TODO.md',
+      content: '# Notes\nInitial\nAdded in the editor'
+    })
+    choosePdf()
+    expect(await screen.findByText('Clarify the result')).toBeVisible()
+    expect(screen.getByText('Added in the editor')).toBeVisible()
+    await waitFor(() =>
+      expect(window.api.saveFile).toHaveBeenLastCalledWith(
+        expect.stringContaining('Initial\nAdded in the editor\n\n## PDF annotations: review.pdf'),
+        '/project-a/TODO.md'
+      )
+    )
+  })
+
+  it('reports a notes read failure without overwriting TODO.md', async () => {
+    render(<NotesPanel />)
+    await screen.findByText('Initial')
+    window.api.readFile = vi.fn().mockRejectedValue(new Error('Permission denied'))
+    choosePdf()
+    expect(await screen.findByRole('alert')).toHaveTextContent('Permission denied')
+    expect(window.api.saveFile).not.toHaveBeenCalled()
+  })
+
   it('creates notes when importing into a project with no TODO.md', async () => {
     window.api.readDirectory = vi.fn().mockResolvedValue([])
+    window.api.readFile = vi.fn().mockRejectedValue(new Error('No such file'))
     render(<NotesPanel />)
     await screen.findByRole('button', { name: 'Create TODO.md' })
     choosePdf()

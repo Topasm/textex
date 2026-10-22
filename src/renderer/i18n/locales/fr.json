@@ -1422,7 +1422,7 @@
     "apply": "Appliquer et actualiser le PDF",
     "undo": "Annuler cette modification",
     "stale": "La source ou le PDF a changé. Fermez ce panneau, compilez et double-cliquez à nouveau.",
-    "invalid": "Saisissez une phrase avec des accolades LaTeX équilibrées, sans bloc Markdown (16 000 caractères maximum).",
+    "invalid": "Saisissez une phrase avec des accolades LaTeX équilibrées, sans ligne vide ni bloc Markdown (16 000 caractères maximum).",
     "review": "Suggestion prête. Relisez-la ou modifiez-la avant de l’appliquer.",
     "refreshing": "Phrase appliquée. Actualisation du PDF…",
     "updated": "PDF actualisé.",

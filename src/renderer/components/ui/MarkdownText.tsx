@@ -1,4 +1,5 @@
 import { Fragment, useMemo, type ReactNode } from 'react'
+import { MARKDOWN_ESCAPE_RE } from '../../utils/markdownEscape'
 
 /**
  * Minimal, dependency-free Markdown renderer for trusted-but-unverified text
@@ -121,8 +122,7 @@ type InlineToken =
 const INLINE_SPAN_RE = /\*\*([^*]+)\*\*|`([^`]+)`|\[([^\]]+)\]\(([^)\s]+)\)|\*([^*]+)\*|_([^_]+)_/u
 const INLINE_RE = new RegExp(INLINE_SPAN_RE.source, 'gu')
 // Escapes stay opt-in: unfenced LaTeX in AI replies must keep its backslashes.
-const INLINE_ESCAPE_RE = /\\([\\`*_{}[\]<>#!|])/u
-const ESCAPED_INLINE_RE = new RegExp(`${INLINE_ESCAPE_RE.source}|${INLINE_SPAN_RE.source}`, 'gu')
+const ESCAPED_INLINE_RE = new RegExp(`${MARKDOWN_ESCAPE_RE.source}|${INLINE_SPAN_RE.source}`, 'gu')
 const SAFE_LINK_RE = /^(https?:|mailto:)/iu
 
 export interface InlineOptions {

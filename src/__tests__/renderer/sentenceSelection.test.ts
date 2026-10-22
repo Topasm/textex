@@ -29,6 +29,26 @@ it('handles Korean, decimals, end positions and paragraph boundaries', () => {
   expect(sentenceAt('One.', 4)).toEqual({ start: 0, end: 4 })
 })
 
+it('does not join labels or captions into the next sentence', () => {
+  const source = '\\section{Intro}\n\\label{sec:intro}\nThis is the first sentence. Next one.'
+  expect(sourceSentenceAt(source, { line: 3, column: 3 })).toEqual({
+    text: 'This is the first sentence.',
+    range: { start: { line: 3, column: 1 }, end: { line: 3, column: 28 } }
+  })
+  expect(sourceSentenceAt('\\caption{A plot.}\nBody text.', { line: 2, column: 2 })?.text).toBe(
+    'Body text.'
+  )
+  expect(sourceSentenceAt(source, { line: 2, column: 3 })).toBeNull()
+})
+
+it('locates PDF sentences that contain escaped special characters', () => {
+  const source = 'First one. We saw 50\\% gains \\& fewer \\{errors\\}. Last one.'
+  expect(previewSourceRange(source, 'We saw 50% gains & fewer {errors}.', 1, 1)).toEqual({
+    start: { line: 1, column: 12 },
+    end: { line: 1, column: 50 }
+  })
+})
+
 it('excludes trailing comments from source sentences', () => {
   const source = 'Results improve. % TODO: cite Smith. Also check\nThe method works.'
   expect(sourceSentenceAt(source, { line: 1, column: 3 })).toEqual({
@@ -76,6 +96,27 @@ describe('PDF sentence expansion', () => {
       expect(selected.endContainer).toBe(spans[1].firstChild)
       expect(selected.endOffset).toBe(13)
       expect(page.querySelectorAll('span')).toHaveLength(2)
+    } finally {
+      window.getSelection()?.removeAllRanges()
+      page.remove()
+    }
+  })
+
+  it('expands a word that PDF.js split across text spans', () => {
+    const page = document.createElement('div')
+    page.innerHTML =
+      '<div class="textLayer"><span role="presentation">First sentence. The ef</span><span role="presentation">ficient method works. Last.</span></div>'
+    document.body.append(page)
+    try {
+      const spans = page.querySelectorAll('span')
+      const range = document.createRange()
+      range.setStart(spans[0].firstChild!, 20)
+      range.setEnd(spans[1].firstChild!, 7)
+      const selection = window.getSelection()!
+      selection.removeAllRanges()
+      selection.addRange(range)
+      expect(selectPdfSentence(page, spans[1])).toBe(true)
+      expect(selection.toString()).toBe('The efficient method works.')
     } finally {
       window.getSelection()?.removeAllRanges()
       page.remove()

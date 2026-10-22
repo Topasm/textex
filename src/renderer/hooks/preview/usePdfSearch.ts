@@ -9,6 +9,7 @@ import {
 } from '../../services/pdfTextSearch'
 import {
   clearPdfSearchHighlights,
+  observeTextLayerRepaint,
   paintPdfSearchHighlights
 } from '../../services/pdfSearchHighlights'
 import { logError } from '../../utils/errorMessage'
@@ -128,44 +129,14 @@ export function usePdfSearch(
       if (pdf.scrollToPage) pdf.scrollToPage(match.page)
       else pdf.setCurrentPage(match.page)
     }
-    let needsScroll = Boolean(match)
-    let frame: number | null = null
-    const paint = () => {
-      frame = null
-      const current = paintPdfSearchHighlights(
-        container,
-        displayedRevision,
-        searchMatches,
-        currentMatchIndex
-      )
-      if (current && needsScroll) {
-        current.scrollIntoView({ block: 'center' })
-        needsScroll = false
-      }
-    }
-    paint()
-    const observer = new MutationObserver((records) => {
-      const touchesText = records.some(
-        (record) =>
-          (record.target instanceof Element && record.target.closest('.textLayer')) ||
-          [...record.addedNodes, ...record.removedNodes].some(
-            (node) =>
-              node instanceof Element &&
-              (node.matches('.textLayer, [data-pdf-generation]') ||
-                node.querySelector('.textLayer'))
-          )
-      )
-      if (touchesText && frame === null) frame = requestAnimationFrame(paint)
-    })
-    observer.observe(container, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['style']
-    })
+    const stop = observeTextLayerRepaint(
+      container,
+      () =>
+        paintPdfSearchHighlights(container, displayedRevision, searchMatches, currentMatchIndex),
+      { scroll: Boolean(match) }
+    )
     return () => {
-      observer.disconnect()
-      if (frame !== null) cancelAnimationFrame(frame)
+      stop()
       clearPdfSearchHighlights(container)
     }
   }, [containerRef, searchMatches, currentMatchIndex, displayedRevision])

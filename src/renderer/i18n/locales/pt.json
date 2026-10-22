@@ -1422,7 +1422,7 @@
     "apply": "Aplicar e atualizar PDF",
     "undo": "Desfazer esta edição",
     "stale": "O código ou PDF mudou. Feche o painel, compile e clique duas vezes novamente.",
-    "invalid": "Digite uma frase com chaves LaTeX equilibradas e sem blocos Markdown (até 16.000 caracteres).",
+    "invalid": "Digite uma frase com chaves LaTeX equilibradas, sem linhas em branco nem blocos Markdown (até 16.000 caracteres).",
     "review": "Sugestão pronta. Revise ou edite antes de aplicar.",
     "refreshing": "Frase aplicada. Atualizando o PDF…",
     "updated": "PDF atualizado.",

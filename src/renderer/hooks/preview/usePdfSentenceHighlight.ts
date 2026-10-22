@@ -4,6 +4,7 @@ import { renderedPdfText } from '../../services/pdfSentenceSelection'
 import { findPdfTextMatches } from '../../services/pdfTextSearch'
 import {
   clearPdfSearchHighlights,
+  observeTextLayerRepaint,
   paintPdfSearchHighlights
 } from '../../services/pdfSearchHighlights'
 import { sentenceSearchText } from '../../utils/sentenceSelection'
@@ -18,20 +19,17 @@ export function usePdfSentenceHighlight(
   useEffect(() => {
     const container = containerRef.current
     if (!container || !target?.sentence || target.pdfRevision !== revision) return
-    let frame: number | null = null
-    let needsScroll = true
     const paint = () => {
-      frame = null
       const page = container.querySelector<HTMLElement>(
         `[data-pdf-generation="${revision}"] [data-page-number="${target.page}"]`
       )
-      if (!page) return
+      if (!page) return null
       const content = renderedPdfText(page)
       const matches = findPdfTextMatches(content, sentenceSearchText(target.sentence!), target.page)
       // Repeated sentences are resolved by proximity to the native SyncTeX line.
       const bounds = page.getBoundingClientRect()
       const info = pagesRef.current.get(target.page)
-      if (!info) return
+      if (!info) return null
       const scale = bounds.width / info.pageWidth
       const nearest = matches
         .map((match, index) => {
@@ -42,41 +40,13 @@ export function usePdfSentenceHighlight(
           }
         })
         .sort((a, b) => a.distance - b.distance)[0]?.index
-      const active =
-        nearest === undefined
-          ? null
-          : paintPdfSearchHighlights(container, revision, [matches[nearest]], 0, 'synctex')
-      if (active && needsScroll) {
-        active.scrollIntoView({ block: 'center' })
-        needsScroll = false
-      }
+      return nearest === undefined
+        ? null
+        : paintPdfSearchHighlights(container, revision, [matches[nearest]], 0, 'synctex')
     }
-    paint()
-    const observer = new MutationObserver((records) => {
-      if (
-        records.some(
-          (record) =>
-            (record.target instanceof Element && record.target.closest('.textLayer')) ||
-            [...record.addedNodes, ...record.removedNodes].some(
-              (node) =>
-                node instanceof Element &&
-                (node.matches('.textLayer, [data-pdf-generation]') ||
-                  node.querySelector('.textLayer'))
-            )
-        ) &&
-        frame === null
-      )
-        frame = requestAnimationFrame(paint)
-    })
-    observer.observe(container, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['style']
-    })
+    const stop = observeTextLayerRepaint(container, paint)
     return () => {
-      observer.disconnect()
-      if (frame !== null) cancelAnimationFrame(frame)
+      stop()
       clearPdfSearchHighlights(container, 'synctex')
     }
   }, [containerRef, pagesRef, revision, target])

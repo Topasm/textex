@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { Check, Code, Loader, Pencil, RotateCcw, Sparkles, X } from 'lucide-react'
@@ -18,6 +18,7 @@ import {
   type PdfSentenceSelection
 } from '../services/pdfSentenceEditing'
 import { flushAllPendingDocumentEdits } from '../services/pendingDocumentEdits'
+import type { CompileOptions } from '../services/compileCoordinator'
 import './PdfSentenceEditor.css'
 
 export default function PdfSentenceEditor({
@@ -27,7 +28,7 @@ export default function PdfSentenceEditor({
 }: {
   selection: PdfSentenceSelection
   onClose: () => void
-  onCompile?: () => Promise<void>
+  onCompile?: (options?: CompileOptions) => Promise<void>
 }) {
   const { t } = useTranslation()
   const target = selection.target
@@ -39,19 +40,20 @@ export default function PdfSentenceEditor({
   const [feedbackTone, setFeedbackTone] = useState<'info' | 'success' | 'error'>('info')
   const [undone, setUndone] = useState(false)
   const [applied, setApplied] = useState<AppliedPdfSentence | null>(null)
-  const alive = useRef(new AbortController())
+  const [initialController] = useState(() => new AbortController())
+  const alive = useRef(initialController)
   const field = useRef<HTMLTextAreaElement>(null)
   const choice = useRef<HTMLButtonElement>(null)
   const panel = useRef<HTMLElement>(null)
   const done = useRef<HTMLButtonElement>(null)
   const aiEnabled = useSettingsStore((state) => state.settings.aiEnabled)
-  useEditorStore((state) => state.revision)
-  useEditorStore((state) => state.openFiles)
-  useEditorStore((state) => state.tabMutationEpoch)
-  useProjectStore((state) => state.projectRoot)
   const compileStatus = useCompileStore((state) => state.compileStatus)
-  useCompileStore((state) => state.pdfRevision)
-  const current = target?.isCurrent() ?? false
+  // Re-render when the target goes stale, not on every keystroke in any document.
+  const isCurrent = useCallback(() => target?.isCurrent() ?? false, [target])
+  useEditorStore(isCurrent)
+  useProjectStore(isCurrent)
+  useCompileStore(isCurrent)
+  const current = isCurrent()
 
   useEffect(() => {
     const controller = new AbortController()
@@ -94,12 +96,16 @@ export default function PdfSentenceEditor({
       return
     // compilePath is a normalized document ID; tabs are keyed by the original file path.
     const compilePath = documentRegistry.getFilePath(target.compilePath)
-    if (!compilePath) return false
-    if (!usePdfStore.getState().pdfOnly) useEditorStore.getState().setActiveTab(compilePath)
+    if (!compilePath) {
+      setFeedbackTone('error')
+      setStatus(t('pdfSentenceEditor.compileFailed'))
+      return false
+    }
     const source = documentRegistry.snapshot(compilePath)
     const edited = documentRegistry.snapshot(target.filePath)
     const previousPdf = useCompileStore.getState().pdfRevision
-    await onCompile()
+    // Rebuild the PDF's root without moving the editor off the edited file.
+    await onCompile({ rootPath: compilePath })
     if (alive.current.signal.aborted) return
     const result = useCompileStore.getState()
     const refreshed =

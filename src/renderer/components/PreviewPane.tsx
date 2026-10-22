@@ -42,6 +42,7 @@ import {
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import { usePdfSentenceHighlight } from '../hooks/preview/usePdfSentenceHighlight'
 import PdfSentenceEditor from './PdfSentenceEditor'
+import type { CompileOptions } from '../services/compileCoordinator'
 import type { PdfSentenceSelection } from '../services/pdfSentenceEditing'
 import 'react-pdf/dist/Page/TextLayer.css'
 
@@ -57,7 +58,7 @@ interface PageViewportInfo {
   pageHeight: number // actual PDF page height in points
 }
 
-function PreviewPane({ onCompile }: { onCompile?: () => Promise<void> }) {
+function PreviewPane({ onCompile }: { onCompile?: (options?: CompileOptions) => Promise<void> }) {
   const { t } = useTranslation()
   const pdfPath = useCompileStore((s) => s.pdfPath)
   const pdfRevision = useCompileStore((s) => s.pdfRevision)

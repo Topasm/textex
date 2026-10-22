@@ -16,6 +16,8 @@ interface CompilePreparationOptions {
   activeFilePath: string
   activeSnapshot: DocumentSnapshot
   mode: CompilePersistenceMode
+  /** The document open in the editor when the compiled root is a different file. */
+  editedFilePath?: string | null
 }
 
 /**
@@ -28,7 +30,8 @@ interface CompilePreparationOptions {
 export async function prepareDocumentsForCompile({
   activeFilePath,
   activeSnapshot,
-  mode
+  mode,
+  editedFilePath
 }: CompilePreparationOptions): Promise<CompilePreparationResult> {
   const pending = Object.keys(useEditorStore.getState().openFiles)
     .map(pendingDiskReload)
@@ -37,17 +40,20 @@ export async function prepareDocumentsForCompile({
   if (!documentRegistry.getModel(activeFilePath)?.isCurrent(activeSnapshot)) {
     return { status: 'stale', savedFilePaths: [] }
   }
-  const activeId = normalizeDocumentId(activeFilePath)
+  // Both the compiled root and the file being edited count as the author's own documents.
+  const activeIds = new Set(
+    [activeFilePath, editedFilePath].flatMap((path) => (path ? [normalizeDocumentId(path)] : []))
+  )
   const dirtyDocuments = documentRegistry.dirtySnapshots()
   const protectedDocuments = dirtyDocuments.filter(({ filePath }) => {
     if (!documentRegistry.getModel(filePath)?.requiresExplicitSave) return false
-    return mode === 'automatic' || normalizeDocumentId(filePath) !== activeId
+    return mode === 'automatic' || !activeIds.has(normalizeDocumentId(filePath))
   })
 
   if (
     mode === 'manual'
       ? protectedDocuments.length > 0
-      : protectedDocuments.some(({ filePath }) => normalizeDocumentId(filePath) === activeId)
+      : protectedDocuments.some(({ filePath }) => activeIds.has(normalizeDocumentId(filePath)))
   ) {
     return {
       status: 'protected',
@@ -95,12 +101,14 @@ export async function prepareDocumentsForCompile({
 
 export async function prepareDocumentsForManualCompile(
   activeFilePath: string,
-  activeSnapshot: DocumentSnapshot
+  activeSnapshot: DocumentSnapshot,
+  editedFilePath?: string | null
 ): Promise<void> {
   const result = await prepareDocumentsForCompile({
     activeFilePath,
     activeSnapshot,
-    mode: 'manual'
+    mode: 'manual',
+    editedFilePath
   })
   if (result.status === 'ready') return
 

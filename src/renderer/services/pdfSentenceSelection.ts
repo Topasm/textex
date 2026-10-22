@@ -19,13 +19,20 @@ export function selectPdfSentence(page: HTMLElement, target: Element): boolean {
   const selection = window.getSelection()
   if (!selection || selection.rangeCount !== 1) return false
   const original = selection.getRangeAt(0)
-  if (!target.contains(original.startContainer) || !page.contains(original.endContainer))
+  if (
+    !page.contains(original.startContainer) ||
+    !page.contains(original.endContainer) ||
+    !original.intersectsNode(target)
+  )
     return false
   const content = renderedPdfText(page)
-  const index = content.elements.findIndex((span) => span.contains(original.startContainer))
-  if (index < 0 || original.startContainer.nodeType !== Node.TEXT_NODE) return false
+  // PDF.js may split one word across spans, so the word can start before the clicked span.
+  const fromSelection = target.contains(original.startContainer)
+  const anchor = fromSelection ? original.startContainer : target
+  const index = content.elements.findIndex((span) => span.contains(anchor))
+  if (index < 0 || (fromSelection && anchor.nodeType !== Node.TEXT_NODE)) return false
   const offset =
-    content.elements[index].firstChild === original.startContainer ? original.startOffset : 0
+    fromSelection && content.elements[index].firstChild === anchor ? original.startOffset : 0
   const sentence = sentenceAt(content.text, content.spans[index].start + offset)
   if (!sentence) return false
   const first = content.spans.findIndex((span) => span.end > sentence.start)

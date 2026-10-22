@@ -83,3 +83,49 @@ export function paintPdfSearchHighlights(
   for (const { element, overlay } of overlays) element.append(overlay)
   return current
 }
+
+const touchesTextLayer = (records: MutationRecord[]) =>
+  records.some(
+    (record) =>
+      (record.target instanceof Element && record.target.closest('.textLayer')) ||
+      [...record.addedNodes, ...record.removedNodes].some(
+        (node) =>
+          node instanceof Element &&
+          (node.matches('.textLayer, [data-pdf-generation]') || node.querySelector('.textLayer'))
+      )
+  )
+
+/**
+ * Paints now and again, at most once per frame, whenever PDF.js re-renders a
+ * text layer. The element `paint` returns is scrolled into view once.
+ */
+export function observeTextLayerRepaint(
+  container: HTMLElement,
+  paint: () => HTMLElement | null,
+  { scroll = true }: { scroll?: boolean } = {}
+): () => void {
+  let frame: number | null = null
+  let needsScroll = scroll
+  const run = () => {
+    frame = null
+    const active = paint()
+    if (active && needsScroll) {
+      active.scrollIntoView({ block: 'center' })
+      needsScroll = false
+    }
+  }
+  run()
+  const observer = new MutationObserver((records) => {
+    if (frame === null && touchesTextLayer(records)) frame = requestAnimationFrame(run)
+  })
+  observer.observe(container, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['style']
+  })
+  return () => {
+    observer.disconnect()
+    if (frame !== null) cancelAnimationFrame(frame)
+  }
+}

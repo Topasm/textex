@@ -1,6 +1,8 @@
 import type { DocumentSnapshot } from '../models/documentModel'
 import { documentRegistry } from '../models/documentRegistry'
 import { useEditorStore } from '../store/useEditorStore'
+import { useCompileStore } from '../store/useCompileStore'
+import { usePdfStore } from '../store/usePdfStore'
 import type {
   CompileIdentity,
   CompilePriority,
@@ -29,6 +31,32 @@ export function cancelPendingAutoCompile(): void {
 export function onPendingAutoCompileCancellation(listener: () => void): () => void {
   pendingAutoCompileCancellationListeners.add(listener)
   return () => pendingAutoCompileCancellationListeners.delete(listener)
+}
+
+export interface CompileOptions {
+  /** Build this open document instead of the active tab or the PDF workspace root. */
+  rootPath?: string | null
+}
+
+export interface CompileTarget {
+  filePath: string
+  detachedFromActiveTab: boolean
+}
+
+/**
+ * Chooses the document a compile builds. The PDF workspace always rebuilds the
+ * document its PDF came from, whichever source file the drawer shows; callers
+ * may also name an open root explicitly (a sentence edit in an included file).
+ */
+export function resolveCompileTarget(requestedRoot?: string | null): CompileTarget | null {
+  const active = useEditorStore.getState().filePath
+  const pdfRoot = useCompileStore.getState().pdfDocumentId
+  const root =
+    (requestedRoot ? documentRegistry.getFilePath(requestedRoot) : null) ??
+    (usePdfStore.getState().pdfOnly && pdfRoot ? documentRegistry.getFilePath(pdfRoot) : null)
+  const filePath = root ?? active
+  if (!filePath?.toLowerCase().endsWith('.tex')) return null
+  return { filePath, detachedFromActiveTab: filePath !== active }
 }
 
 /** Creates a renderer-side identity for one compile input revision. */

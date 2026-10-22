@@ -45,7 +45,9 @@ export function previewSourceRange(
   if (!match && selected) {
     // Common text-formatting commands are transparent in PDF text. Retain a
     // source-offset map so a sentence inside a longer TeX line stays precise.
-    const offsets: number[] = []
+    // Each plain character maps back to the source span that printed it.
+    const starts: number[] = []
+    const ends: number[] = []
     let plain = ''
     for (let index = 0; index < passage.length; index++) {
       const command = transparentFormattingAt(passage, index)
@@ -53,12 +55,21 @@ export function previewSourceRange(
         index += command - 1
         continue
       }
+      // Escaped specials print as the character itself, like sentenceSearchText.
+      if (passage[index] === '\\' && /[%&#_{}]/u.test(passage[index + 1] ?? '')) {
+        plain += passage[index + 1]
+        starts.push(index)
+        ends.push(index + 2)
+        index++
+        continue
+      }
       if (passage[index] === '{' || passage[index] === '}') continue
       plain += passage[index] === '~' ? ' ' : passage[index]
-      offsets.push(index)
+      starts.push(index)
+      ends.push(index + 1)
     }
     const found = findPreviewText(plain, selected)
-    if (found) match = { start: offsets[found.start], end: offsets[found.end - 1] + 1 }
+    if (found) match = { start: starts[found.start], end: ends[found.end - 1] }
   }
   const position = (offset: number) => {
     const preceding = passage.slice(0, offset).split('\n')
