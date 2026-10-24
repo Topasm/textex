@@ -5,6 +5,12 @@ import { useCompileStore } from '../../renderer/store/useCompileStore'
 import { usePdfStore } from '../../renderer/store/usePdfStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
+import { useEditorStore } from '../../renderer/store/useEditorStore'
+import { documentRegistry } from '../../renderer/models/documentRegistry'
+import {
+  beginCompileTicket,
+  resetCompileTicketsForTests
+} from '../../renderer/services/compileCoordinator'
 
 vi.mock('../../renderer/hooks/preview/useContainerSize', () => ({
   useContainerSize: () => ({ containerWidth: 800, ctrlHeld: false })
@@ -110,8 +116,10 @@ describe('PreviewPane PDF generation swap', () => {
       pdfPath: null,
       pdfRevision: 0,
       pdfDocumentId: null,
-      pdfDocumentRevision: null
+      pdfDocumentRevision: null,
+      supportFileDownloads: { currentFile: null, count: 0 }
     })
+    vi.mocked(window.api.cancelCompile).mockClear()
     usePdfStore.setState({
       currentPage: 1,
       numPages: 0,
@@ -123,6 +131,31 @@ describe('PreviewPane PDF generation swap', () => {
     useSettingsStore.setState((state) => ({
       settings: { ...state.settings, pdfViewMode: 'continuous', pdfInvertMode: false }
     }))
+  })
+
+  it('explains a first compile that is still downloading support files', () => {
+    documentRegistry.clear()
+    resetCompileTicketsForTests()
+    useEditorStore.getState().openFileInTab('/project/main.tex', 'body')
+    const ticket = beginCompileTicket(
+      '/project/main.tex',
+      documentRegistry.snapshot('/project/main.tex')!
+    )
+    useCompileStore.setState({
+      compileStatus: 'compiling',
+      supportFileDownloads: { currentFile: 'natbib.sty', count: 12 }
+    })
+
+    const { container } = render(<PreviewPane />)
+
+    expect(container.querySelector('.preview-compiling')).not.toBeNull()
+    expect(screen.getByText('Downloading support files (12 so far)')).toBeInTheDocument()
+    expect(screen.getByText('natbib.sty')).toBeInTheDocument()
+    expect(screen.queryByText('No PDF to display')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(window.api.cancelCompile).toHaveBeenCalledWith(ticket.requestId)
+    expect(useCompileStore.getState().compileStatus).toBe('idle')
   })
 
   it('keeps the previous layer visible until the pending current page renders', async () => {

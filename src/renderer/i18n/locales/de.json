@@ -33,6 +33,7 @@
     "compile": "Kompilieren",
     "compiling": "Kompilierung...",
     "compileLaTeX": "LaTeX kompilieren",
+    "cancelCompile": "Kompilierung abbrechen",
     "log": "Protokoll",
     "aiDraft": "KI-Entwurf",
     "aiAssistant": "KI-Assistent",
@@ -61,6 +62,7 @@
   "statusBar": {
     "ready": "Bereit",
     "compiling": "Kompilierung...",
+    "downloadingSupportFiles": "Hilfsdateien werden heruntergeladen ({{downloaded}}): {{file}}",
     "success": "Erfolg",
     "error": "Fehler",
     "toggleLog": "Problembereich ein-/ausblenden",
@@ -1279,6 +1281,10 @@
   },
   "previewPane": {
     "compileFailed": "Kompilierung fehlgeschlagen. Prüfen Sie den Tab „Probleme“.",
+    "compiling": "Kompilieren…",
+    "downloadingSupportFiles": "Hilfsdateien werden heruntergeladen (bisher {{downloaded}})",
+    "downloadingHint": "Beim ersten Kompilieren werden LaTeX-Pakete bei Bedarf geladen; das kann einige Minuten dauern.",
+    "cancelCompile": "Abbrechen",
     "noPdf": "Kein PDF zum Anzeigen",
     "noPdfHint": "Öffnen Sie eine .tex-Datei und kompilieren Sie, um die Vorschau zu sehen",
     "loadingPdf": "PDF wird geladen…",

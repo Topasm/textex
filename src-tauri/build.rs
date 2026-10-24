@@ -97,6 +97,7 @@ fn main() {
         "remove_recent_project",
         "update_recent_project",
         "compile_latex",
+        "cancel_compile_latex",
         "tectonic_cache_status",
         "tectonic_cache_reset",
         "synctex_forward",

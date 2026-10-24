@@ -293,6 +293,7 @@ pub fn run() {
             commands::settings::remove_recent_project,
             commands::settings::update_recent_project,
             commands::compiler::compile_latex,
+            commands::compiler::cancel_compile_latex,
             commands::compiler::tectonic_cache_status,
             commands::compiler::tectonic_cache_reset,
             commands::synctex::synctex_forward,

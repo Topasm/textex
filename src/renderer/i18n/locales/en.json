@@ -33,6 +33,7 @@
     "compile": "Compile",
     "compiling": "Compiling...",
     "compileLaTeX": "Compile LaTeX",
+    "cancelCompile": "Cancel compile",
     "log": "Log",
     "aiDraft": "AI Draft",
     "aiAssistant": "AI Assistant",
@@ -61,6 +62,7 @@
   "statusBar": {
     "ready": "Ready",
     "compiling": "Compiling...",
+    "downloadingSupportFiles": "Downloading support files ({{downloaded}}): {{file}}",
     "success": "Success",
     "error": "Error",
     "toggleLog": "Toggle Problems panel",
@@ -1279,6 +1281,10 @@
   },
   "previewPane": {
     "compileFailed": "Compilation failed. Check the Problems tab.",
+    "compiling": "Compiling…",
+    "downloadingSupportFiles": "Downloading support files ({{downloaded}} so far)",
+    "downloadingHint": "The first compile fetches LaTeX packages on demand and can take a few minutes.",
+    "cancelCompile": "Cancel",
     "noPdf": "No PDF to display",
     "noPdfHint": "Open a .tex file and compile to see the preview",
     "loadingPdf": "Loading PDF…",

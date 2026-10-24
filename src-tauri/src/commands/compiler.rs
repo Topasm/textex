@@ -44,6 +44,13 @@ pub async fn compile_latex(
     Ok(response)
 }
 
+/// Cancels the compile identified by a renderer request id. The running child
+/// is killed and reaped by the compile task that owns it; this only signals.
+#[tauri::command]
+pub fn cancel_compile_latex(state: State<'_, AppState>, request_id: u64) -> AppResult<bool> {
+    compiler::cancel_compile(state.inner(), request_id)
+}
+
 /// Reports the packaged seed and writable Tectonic cache without accepting a
 /// renderer-provided filesystem path.
 #[tauri::command]

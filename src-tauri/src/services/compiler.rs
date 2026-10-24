@@ -207,12 +207,27 @@ fn finalize_compile_for_project<T>(
     }
 }
 
-fn validate_compile_request(request: &CompileRequest) -> AppResult<()> {
-    if request.request_id == 0 || request.request_id > MAX_JAVASCRIPT_SAFE_INTEGER {
+/// Stops the compile the renderer identifies by `request_id`. Whether the
+/// request is running, queued, or has not registered yet, it resolves as
+/// `CompilationCancelled` (or `CompilationSuperseded` when dropped from the
+/// queue), so the renderer never publishes its output. Returns whether a
+/// running compiler process was told to stop.
+pub fn cancel_compile(state: &AppState, request_id: u64) -> AppResult<bool> {
+    validate_request_id(request_id)?;
+    state.cancel_compilation(request_id)
+}
+
+fn validate_request_id(request_id: u64) -> AppResult<()> {
+    if request_id == 0 || request_id > MAX_JAVASCRIPT_SAFE_INTEGER {
         return Err(AppError::InvalidPath(
             "compile requestId must be a positive JavaScript-safe integer".to_owned(),
         ));
     }
+    Ok(())
+}
+
+fn validate_compile_request(request: &CompileRequest) -> AppResult<()> {
+    validate_request_id(request.request_id)?;
     if request.document_id.is_empty() || request.document_id.contains('\0') {
         return Err(AppError::InvalidPath(
             "compile documentId must be a non-empty string without NUL bytes".to_owned(),

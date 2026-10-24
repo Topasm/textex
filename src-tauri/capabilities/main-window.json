@@ -114,6 +114,7 @@
     "allow-remove-recent-project",
     "allow-update-recent-project",
     "allow-compile-latex",
+    "allow-cancel-compile-latex",
     "allow-tectonic-cache-status",
     "allow-tectonic-cache-reset",
     "allow-synctex-forward",

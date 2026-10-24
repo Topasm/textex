@@ -33,6 +33,7 @@
     "compile": "컴파일",
     "compiling": "컴파일 중...",
     "compileLaTeX": "LaTeX 컴파일",
+    "cancelCompile": "컴파일 취소",
     "log": "로그",
     "aiDraft": "AI 초안",
     "aiAssistant": "AI 어시스턴트",
@@ -61,6 +62,7 @@
   "statusBar": {
     "ready": "준비",
     "compiling": "컴파일 중...",
+    "downloadingSupportFiles": "지원 파일 다운로드 중 ({{downloaded}}): {{file}}",
     "success": "성공",
     "error": "오류",
     "toggleLog": "문제 패널 전환",
@@ -1279,6 +1281,10 @@
   },
   "previewPane": {
     "compileFailed": "컴파일에 실패했습니다. 문제 탭을 확인하세요.",
+    "compiling": "컴파일 중…",
+    "downloadingSupportFiles": "지원 파일 다운로드 중 (지금까지 {{downloaded}}개)",
+    "downloadingHint": "첫 컴파일은 필요한 LaTeX 패키지를 내려받으므로 몇 분이 걸릴 수 있습니다.",
+    "cancelCompile": "취소",
     "noPdf": "표시할 PDF가 없습니다",
     "noPdfHint": ".tex 파일을 열고 컴파일하면 미리 보기가 표시됩니다",
     "loadingPdf": "PDF 불러오는 중…",

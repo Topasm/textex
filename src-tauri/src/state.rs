@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     path::{Path, PathBuf},
     sync::{
         atomic::{AtomicU64, Ordering},
@@ -32,6 +32,10 @@ struct CompilerRuntime {
     active: Option<ActiveCompilation>,
     pending: Vec<PendingCompilation>,
     latest_request_by_document: HashMap<String, u64>,
+    /// Requests the renderer cancelled before they reached `begin_compilation`
+    /// (for example while the Tectonic cache was still being prepared). They
+    /// are consumed on arrival and pruned once a newer request starts.
+    cancelled_requests: HashSet<u64>,
 }
 
 struct ActiveCompilation {
@@ -169,6 +173,13 @@ impl AppState {
             if self.current_project_epoch() != expected_project_epoch {
                 return Err(AppError::CompilationCancelled);
             }
+            let was_cancelled = compiler.cancelled_requests.remove(&pending.request_id);
+            compiler
+                .cancelled_requests
+                .retain(|request_id| *request_id > pending.request_id);
+            if was_cancelled {
+                return Err(AppError::CompilationCancelled);
+            }
             if compiler
                 .latest_request_by_document
                 .get(&pending.document_id)
@@ -261,11 +272,40 @@ impl AppState {
         }
     }
 
+    /// Cancels one renderer request wherever it currently is: the active child
+    /// is signalled, a queued request is dropped before it starts, and a
+    /// request that has not registered yet is refused when it arrives. Returns
+    /// whether a running compile was told to stop.
+    pub(crate) fn cancel_compilation(&self, request_id: u64) -> AppResult<bool> {
+        let cancel = {
+            let mut compiler = self.lock_compiler()?;
+            let pending_before = compiler.pending.len();
+            compiler
+                .pending
+                .retain(|queued| queued.request_id != request_id);
+            let cancel = compiler
+                .active
+                .as_mut()
+                .filter(|compilation| compilation.request_id == request_id)
+                .and_then(|compilation| compilation.cancel.take());
+            if cancel.is_none() && compiler.pending.len() == pending_before {
+                compiler.cancelled_requests.insert(request_id);
+            }
+            cancel
+        };
+        self.compiler_changed.notify_waiters();
+
+        // The compile owner performs the actual child kill and reap once it
+        // observes the signal; the state lock is released before waking it.
+        Ok(cancel.is_some_and(|cancel| cancel.send(()).is_ok()))
+    }
+
     pub(crate) fn cancel_project_compilations(&self) -> AppResult<bool> {
         let cancel = {
             let mut compiler = self.lock_compiler()?;
             compiler.pending.clear();
             compiler.latest_request_by_document.clear();
+            compiler.cancelled_requests.clear();
             compiler
                 .active
                 .as_mut()
@@ -590,5 +630,70 @@ mod tests {
             .begin_compilation(&active_request, state.current_project_epoch())
             .await
             .expect("request ids reset with the project session");
+    }
+
+    #[tokio::test]
+    async fn cancel_compilation_signals_only_the_matching_active_request() {
+        let state = AppState::default();
+        let epoch = state.current_project_epoch();
+        let mut active = state
+            .begin_compilation(&request(1, "document-a", CompilePriority::Normal), epoch)
+            .await
+            .expect("active lease");
+
+        assert!(!state
+            .cancel_compilation(7)
+            .expect("cancel of an unknown request must not fail"));
+        assert!(active.cancel_receiver().try_recv().is_err());
+
+        assert!(state.cancel_compilation(1).expect("cancel active request"));
+        assert!(active.cancel_receiver().try_recv().is_ok());
+    }
+
+    #[tokio::test]
+    async fn cancel_compilation_drops_a_queued_request_before_it_starts() {
+        let state = AppState::default();
+        let epoch = state.current_project_epoch();
+        let active = state
+            .begin_compilation(&request(1, "document-a", CompilePriority::Normal), epoch)
+            .await
+            .expect("active lease");
+        let queued_request = request(2, "document-b", CompilePriority::Normal);
+        let queued = state.begin_compilation(&queued_request, epoch);
+        tokio::pin!(queued);
+        assert!(timeout(Duration::from_millis(20), &mut queued)
+            .await
+            .is_err());
+
+        assert!(!state.cancel_compilation(2).expect("cancel queued request"));
+        assert!(matches!(
+            timeout(Duration::from_millis(100), &mut queued)
+                .await
+                .expect("queued compile should wake"),
+            Err(AppError::CompilationSuperseded)
+        ));
+        drop(active);
+    }
+
+    #[tokio::test]
+    async fn cancel_compilation_refuses_a_request_that_registers_later() {
+        let state = AppState::default();
+        let epoch = state.current_project_epoch();
+
+        assert!(!state
+            .cancel_compilation(3)
+            .expect("cancel before registration"));
+        assert!(matches!(
+            state
+                .begin_compilation(&request(3, "document-a", CompilePriority::High), epoch)
+                .await,
+            Err(AppError::CompilationCancelled)
+        ));
+        // The cancellation is consumed once, and older entries are pruned by
+        // newer requests, so a retry with a fresh id proceeds normally.
+        state
+            .begin_compilation(&request(4, "document-a", CompilePriority::High), epoch)
+            .await
+            .expect("fresh request after a consumed cancellation");
     }
 }
