@@ -1,210 +1,154 @@
 [**English**](README.md)
 
-# TextEx
-
-[![Build Status](https://github.com/Topasm/textex/actions/workflows/build.yml/badge.svg)](https://github.com/Topasm/textex/actions/workflows/build.yml)
-[![Release](https://img.shields.io/github/v/release/Topasm/textex?include_prereleases&label=latest)](https://github.com/Topasm/textex/releases/latest)
-
-**무료**, **로컬 우선** Tauri 데스크톱 LaTeX 에디터입니다. TextEx는 계정이나 클라우드 서비스 없이 사용자의 컴퓨터에서 실행됩니다. 왼쪽에는 Monaco 코드 에디터, 오른쪽에는 실시간 PDF 미리보기를 제공하는 분할 화면 인터페이스를 갖추고 있으며, [Tectonic](https://tectonic-typesetting.github.io/) 엔진이 내장되어 있어 TeX Live나 MiKTeX 같은 별도의 TeX 배포판을 설치할 필요가 **없습니다**. 필요하면 설정에서 시스템 pdfLaTeX 설치를 선택해 `latexmk`를 통해 사용할 수도 있습니다. 지원 파일 seed가 비어 있는 빌드는 첫 컴파일에 네트워크를 사용할 수 있으며, 필요한 파일이 캐시된 뒤에는 오프라인 컴파일이 가능합니다.
-
 <p align="center">
-  <img src="docs/images/main-editor.png" alt="TextEx — 실시간 PDF 미리보기를 갖춘 분할 화면 LaTeX 에디터" width="900" />
+  <img src="docs/images/logo.png" alt="TextEx 로고" width="96" />
 </p>
 
-## 주요 기능
-
-| 기능 | 설명 |
-|------|------|
-| **무료 & 로컬 우선** | 계정과 클라우드 없이 문서는 로컬에 보관되며, 최초 TeX 지원 파일은 다운로드될 수 있습니다 |
-| **설치 불필요** | Tectonic 엔진 내장 — TeX 설치 불필요 |
-| **실시간 PDF 미리보기** | 저장 시 자동 컴파일 및 분할 화면 미리보기 |
-| **스크롤 동기화** | 에디터와 PDF 간 양방향 스크롤 동기화 |
-| **SyncTeX** | 문장 더블클릭으로 TeX ↔ PDF 동기화, Ctrl+클릭으로 줄 이동 |
-| **검색** | 문서·PDF 찾기, 참고문헌 검색, 파일 빠르게 열기 |
-| **Monaco 에디터** | 구문 강조, 자동 완성, 스니펫, Vim 모드 |
-| **멀티 파일 프로젝트** | 생성 파일을 기본으로 숨기는 사이드바 파일 트리, 탭 바, `\input`/`\include` 탐색 |
-| **인용 관리** | BibTeX 자동 완성 + Zotero 연동 |
-| **논문 제출 점검** | 인용 위치, 중복 경고, 결정론적인 제출 전 검사 |
-| **연구 & AI** | Crossref/arXiv 검색 및 네이티브 HTTP, Claude Code, Codex CLI 도우미 |
-| **언어 & 프로젝트 도구** | 내장 LaTeX 개요·완성·진단과 시스템 터미널에서 프로젝트 열기 |
-| **Git 통합** | 내장 스테이징, 커밋, 브랜치 상태 및 확인 기반 Fetch/Pull/Push |
-| **내보내기** | 깔끔한 Overleaf 소스 ZIP 생성 또는 Pandoc을 통한 DOCX, ODT, HTML, EPUB 변환 |
-| **7개 언어** | EN, KO, ES, FR, DE, PT, ZH |
-
-> **선택적 연동:** AI API 제공자와 온라인 논문 검색에는 네트워크가 필요합니다.
-> Claude Code 및 Codex CLI 기능은 해당 실행 파일이 `PATH`에 있어야 하며,
-> 핵심 편집기와 내장 Tectonic 컴파일러는 이들 없이도 로컬에서 동작합니다.
-
----
-
-## 시작하기
+<h1 align="center">TextEx</h1>
 
 <p align="center">
-  <img src="docs/images/home-screen.png" alt="TextEx 홈 화면 — 검색 바, 폴더 열기, 템플릿에서 새로 만들기" width="900" />
+  실시간 PDF 미리보기를 갖춘 무료 로컬 우선 LaTeX 에디터.<br />
+  TeX 설치도, 계정도, 클라우드도 필요 없습니다.
 </p>
 
-### 1. 다운로드 및 설치
+<p align="center">
+  <a href="https://github.com/Topasm/textex/actions/workflows/build.yml"><img src="https://github.com/Topasm/textex/actions/workflows/build.yml/badge.svg" alt="빌드 상태" /></a>
+  <a href="https://github.com/Topasm/textex/releases/latest"><img src="https://img.shields.io/github/v/release/Topasm/textex?include_prereleases&label=latest" alt="최신 릴리스" /></a>
+  <a href="https://github.com/Topasm/textex/releases"><img src="https://img.shields.io/github/downloads/Topasm/textex/total?label=downloads" alt="다운로드 수" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/Topasm/textex" alt="라이선스" /></a>
+  <img src="https://img.shields.io/badge/platforms-Windows%20%7C%20macOS%20%7C%20Linux-5c4a32" alt="Windows, macOS, Linux" />
+</p>
 
-[릴리스 페이지](https://github.com/Topasm/textex/releases/latest)에서 최신 버전을 다운로드하거나, [GitHub Actions](../../actions/workflows/build.yml)에서 개발 빌드를 받으세요.
+<p align="center">
+  <a href="https://github.com/Topasm/textex/releases/latest"><b>Windows 다운로드</b> (.exe)</a> ·
+  <a href="https://github.com/Topasm/textex/releases/latest"><b>macOS</b> (Apple Silicon .dmg)</a> ·
+  <a href="https://github.com/Topasm/textex/releases/latest"><b>Linux</b> (.AppImage / .deb)</a>
+</p>
 
-| 플랫폼 | 파일 |
-|----------|------|
-| Windows x64 | `.exe` 설치 파일 |
-| macOS Apple Silicon (arm64) | arm64 `.dmg` |
-| Linux x64 | `.AppImage` 또는 `.deb` |
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/hero-dark.png" />
+    <img src="docs/images/hero-light.png" alt="TextEx — 왼쪽에 소스, 오른쪽에 실시간 PDF 미리보기" width="900" />
+  </picture>
+</p>
 
-### 2. OS별 설정
+<p align="center">
+  <img src="docs/images/hero.gif" alt="문장을 고치고 저장하면 PDF가 다시 컴파일되고, PDF를 Ctrl+클릭하면 소스로 돌아갑니다" width="900" />
+  <br />
+  <sub>편집 → 저장 → PDF 재컴파일 → PDF를 Ctrl+클릭하면 해당 소스 줄로 이동합니다.</sub>
+</p>
 
-**macOS:**
-앱이 격리될 수 있습니다. 설치 후 다음 명령어를 실행하세요:
+## 왜 TextEx인가
+
+- **설치 없이 바로 시작.** [Tectonic](https://tectonic-typesetting.github.io/) 엔진이 내장되어 있어 TeX Live나 MiKTeX를 설치할 필요가 없습니다. 원하면 설정에서 시스템 pdfLaTeX를 선택할 수도 있습니다.
+- **로컬 우선.** 문서는 내 컴퓨터에만 남습니다. 계정도 클라우드 서비스도 없으며, 선택적인 AI 제공자와 온라인 논문 검색만 네트워크를 사용합니다.
+- **PDF에서 바로 작업.** 미리보기에서 Ctrl/⌘+클릭하면 소스로 이동하고, 문장을 더블클릭하면 그 자리에서 편집하며, 스크롤 동기화로 두 패널이 함께 움직입니다.
+- **논문 작성에 맞춘 도구.** Zotero와 Crossref/arXiv 검색이 되는 References 사이드바, BibTeX 자동 완성, 제출 점검, Git, 로컬 히스토리, Overleaf용 ZIP 내보내기.
+
+## 기능
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/synctex-highlight.png" alt="PDF에서 소스로 이동하는 SyncTeX" />
+      <p><b>실시간 미리보기 &amp; SyncTeX.</b> 저장하면 다시 컴파일됩니다. PDF를 Ctrl/⌘+클릭하면 소스 줄로 이동하고, 스크롤 동기화가 두 패널을 맞춰 줍니다.</p>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/pdf-workspace.png" alt="소스 편집 서랍이 있는 PDF 전용 워크스페이스" />
+      <p><b>PDF에서 편집.</b> PDF 전용 워크스페이스에서 문장을 더블클릭해 직접 고치거나 AI로 다듬은 뒤 적용하고 새로고침합니다.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/references-panel.png" alt="프로젝트 참고문헌과 Zotero 라이브러리가 있는 References 사이드바" />
+      <p><b>References &amp; Zotero.</b> 인용된 항목, 누락, 미사용을 한눈에 보고, Zotero 라이브러리나 Crossref/arXiv를 검색해 논문을 에디터로 끌어다 인용합니다.</p>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/prose-view.png" alt="페어 프로즈 워크스페이스: Markdown 투영과 실시간 렌더링" />
+      <p><b>프로즈 뷰.</b> <code>.tex</code>를 원본으로 유지한 채, 집중용 Markdown 투영과 실시간 렌더링을 나란히 두고 초안을 씁니다.</p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/git-panel.png" alt="스테이징된 변경이 있는 Git 패널" />
+      <p><b>Git &amp; 타임라인.</b> 사이드바에서 스테이징, 커밋, Fetch, Pull, Push를 하고, 타임라인에서 이전 로컬 저장 상태로 되돌립니다.</p>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/template-gallery.png" alt="템플릿 갤러리" />
+      <p><b>템플릿 &amp; 내보내기.</b> 논문, 보고서, CV 템플릿으로 시작하고, 깔끔한 Overleaf ZIP이나 Pandoc을 통한 DOCX/ODT/HTML/EPUB으로 내보냅니다.</p>
+    </td>
+  </tr>
+</table>
+
+<details>
+<summary><b>더 보기: 리서치 챗, 개요, 인앱 가이드</b></summary>
+
+<p align="center">
+  <img src="docs/images/research-panel.png" alt="리서치 챗 패널" width="900" />
+  <br /><sub><b>리서치 챗.</b> API 제공자, Claude Code, Codex CLI를 통해 논문, 현재 문서, 첨부한 참고문헌에 대해 질문합니다. 직접 켜기 전까지는 꺼져 있습니다.</sub>
+</p>
+
+<p align="center">
+  <img src="docs/images/sidebar-outline.png" alt="개요 사이드바" width="900" />
+  <br /><sub><b>개요.</b> 거터의 섹션 밴드와 클릭 가능한 문서 개요.</sub>
+</p>
+
+앱 안에서 <kbd>F1</kbd>을 누르면 트랙패드 제스처와 3분 체크리스트가 포함된 검색 가능한 가이드가 열립니다.
+
+</details>
+
+> **선택적 연동.** AI 제공자와 온라인 논문 검색에는 네트워크가 필요합니다. Claude Code 및 Codex CLI 기능은 해당 실행 파일이 `PATH`에 있어야 합니다. 편집기와 내장 컴파일러는 이들 없이도 동작합니다.
+
+## 빠른 시작
+
+1. **다운로드:** [Releases 페이지](https://github.com/Topasm/textex/releases/latest)에서 Windows `.exe` 설치 파일, macOS Apple Silicon `.dmg`, Linux `.AppImage` / `.deb` 중 하나를 받습니다.
+2. **폴더 열기** 또는 홈 화면의 **New from Template**를 선택합니다. 가이드 데모 논문은 인용, 리서치 챗, 제출 점검, Overleaf 내보내기를 차례로 안내합니다.
+3. <kbd>Ctrl/⌘ + S</kbd>로 **저장**하면 문서가 컴파일되고 미리보기가 갱신됩니다. 첫 컴파일에서는 TeX 지원 파일을 내려받을 수 있으며, 이후에는 오프라인에서도 컴파일됩니다.
+
+**macOS:** 앱이 격리(quarantine)될 수 있습니다. 앱을 우클릭해 **열기**를 선택하거나 다음을 실행하세요.
+
 ```bash
 xattr -cr /Applications/TextEx.app
 ```
-또는 앱을 우클릭 > **열기** > **열기**를 선택하세요.
 
-macOS에서 주 창을 닫으면 다른 문서 앱처럼 프로세스를 종료하지 않고 창을 숨겨
-현재 프로젝트를 유지합니다. Dock 아이콘을 누르면 다시 열리며, 앱을 완전히
-종료하려면 **TextEx > TextEx 종료** 또는 `Cmd+Q`를 사용하세요.
+**Linux:** AppImage에 실행 권한을 부여하세요.
 
-**Linux:**
-AppImage를 실행 가능하게 만드세요:
 ```bash
 chmod +x TextEx_*.AppImage
 ./TextEx_*.AppImage
 ```
 
----
-
-## 사용 가이드
-
-### 새 프로젝트 만들기
-- **폴더 열기**: 홈 화면의 **Open Folder**를 사용하여 프로젝트 디렉토리를 선택합니다.
-- **가이드 데모 논문**: 인용, Research Chat, 제출 점검, 컴파일러 전환, Overleaf 내보내기를 순서대로 체험할 수 있는 컴파일 가능한 프로젝트를 만듭니다.
-- **템플릿 사용**: **New from Template**을 사용하여 미리 구성된 LaTeX 템플릿(article, beamer, thesis, letter 등)으로 빠르게 시작하세요.
-
-<p align="center">
-  <img src="docs/images/template-gallery.png" alt="내장 LaTeX 템플릿이 있는 템플릿 갤러리" width="900" />
-</p>
-
-### 멀티 파일 프로젝트
-
-폴더를 열면 사이드바 파일 트리, 탭, `\input`/`\include` 탐색이 포함된 전체 프로젝트 뷰를 사용할 수 있습니다.
-복원할 세션이 없으면 TextEx는 루트의 `main.tex`, 루트의 `root.tex`, 그 밖의
-`.tex` 파일 순으로 안정적으로 기본 문서를 선택해 자동으로 엽니다.
-컴파일 산출물은 소스 옆이 아니라 TextEx의 엔진별 캐시에 저장됩니다. 눈 모양
-버튼으로 프로젝트에 남아 있는 기존 생성 파일을 표시하거나, 보관함 버튼으로
-Overleaf 업로드용 소스 ZIP을 만들 수 있습니다.
-
-<p align="center">
-  <img src="docs/images/sidebar-files.png" alt="멀티 파일 LaTeX 프로젝트의 사이드바 파일 트리" width="900" />
-</p>
-
-### 문서 작성하기
-TextEx는 다음과 같은 기능을 갖춘 최신 Monaco 기반 에디터를 제공합니다:
-- **구문 강조**: Monaco의 로컬 tokenizer를 사용한 LaTeX 구문 컬러링.
-- **자동 완성**: 명령어, 환경, 라벨, 인용 키에 대한 지능형 제안.
-- **스니펫**: 일반적인 패턴(예: `begin`, `figure`, `table`)을 빠르게 삽입.
-- **수학 미리보기**: `$...$` 또는 `\[...\]` 내에서 입력하는 즉시 수식 렌더링.
-- **섹션 하이라이트**: 거터에서 `\section` 제목에 대한 색상 코드 밴드.
-- **시각적 표 에디터**: `tabular` 위의 CodeLens를 클릭하여 시각적 에디터 열기.
-
-### 컴파일 및 미리보기
-- **자동 컴파일**: 저장(`Ctrl+S`) 시 PDF 미리보기가 자동으로 업데이트됩니다.
-- **수동 컴파일**: `Ctrl+Enter`를 눌러 언제든지 강제 컴파일할 수 있습니다.
-- **PDF 보기 모드**: 설정 > 외관에서 연속 스크롤과 단일 페이지 보기 간 전환.
-
-### 스크롤 동기화
-
-<p align="center">
-  <img src="docs/images/settings-appearance.png" alt="설정 — 스크롤 동기화, PDF 보기 모드, 테마 옵션이 있는 외관 탭" width="900" />
-</p>
-
-설정 > 외관에서 **스크롤 동기화**를 활성화하여 에디터와 PDF를 정렬하세요:
-- **에디터**에서 스크롤하면 PDF가 해당 콘텐츠로 자동 스크롤됩니다.
-- **PDF**에서 스크롤하면 에디터가 해당 소스 라인으로 자동 스크롤됩니다.
-- 사전 계산된 SyncTeX 라인 맵을 사용하여 즉시 조회 (지연 없음).
-- 내장 피드백 루프 방지 — 바운싱이나 떨림 없음.
-
-### SyncTeX (클릭하여 이동)
-- **문장 동기화**: PDF 또는 TeX 편집기의 텍스트를 더블클릭하면 반대쪽의 해당 문장으로 이동하고 강조합니다. 줄바꿈된 문장과 일반적인 TeX 서식 명령을 지원합니다. 매크로·수식 등으로 텍스트를 정확히 대응할 수 없으면 SyncTeX 줄 위치로 이동합니다. 소스를 편집한 뒤에는 다시 컴파일해야 위치가 갱신됩니다.
-- **PDF 작업 모드**: 상단 **PDF** 버튼을 누르면 원문과 보조 패널을 숨기고 PDF만 표시합니다. 문장 더블클릭으로 직접 수정하거나 AI로 다듬고, 수식·표·그림·인용·문서 구조는 PDF 도구막대의 **원문 편집** 패널에서 수정하세요. 작은 패널에서 파일명과 저장 상태를 확인하고 **저장하고 PDF 갱신**으로 반영하거나 Escape로 PDF에 돌아갈 수 있습니다. 편집 상태와 실행 취소 기록은 유지됩니다. 파일 탐색과 연구 패널은 상단에서 다시 열고 **패널 숨기기**로 닫을 수 있습니다. 프로젝트의 TeX 원문을 수정해 재컴파일하는 기능이며, 대응하는 원문이 없는 임의의 PDF는 이 방식으로 편집할 수 없습니다.
-- **PDF에서 문장 수정**: PDF 문장을 더블클릭하면 원문이 채워진 편집창이 열립니다. **직접 다듬기** 또는 **AI로 다듬기**를 선택하고 내용을 확인한 뒤 **적용하고 PDF 갱신**을 누르세요. 대응하는 TeX 문장만 변경하고, 해당 PDF의 원본 문서를 다시 컴파일합니다. 입력란의 LaTeX 서식 명령은 유지해 주세요. AI 기능은 설정에서 활성화해야 하며 제안은 자동 적용되지 않습니다. **초안 초기화**로 다시 작성하거나 **Ctrl/⌘+Enter**로 적용할 수 있습니다. 적용한 문장을 확인하고 같은 창에서 수정을 되돌리거나 **완료**를 눌러 PDF로 돌아갑니다. 문장 대응이 불확실하거나 원문이 바뀌면 추측한 범위를 덮어쓰지 않도록 편집을 제한합니다.
-- **PDF 텍스트 선택 → 원문 강조**: PDF에서 텍스트를 드래그해 선택하면 대응하는 TeX 구간을 강조합니다. Markdown 보기로 전환하면 같은 문장이나 문단이 선택됩니다. 수식·매크로 등 글자가 원문과 다르면 원문 줄 범위로 표시하며, 선택은 파일에 저장되지 않습니다.
-- **코드 → PDF**: "Sync Code to PDF" 툴바 버튼을 클릭하여 PDF에서 현재 줄을 하이라이트.
-- **PDF → 코드**: PDF 아무 곳에서나 `Ctrl+클릭`하여 해당 소스 라인으로 이동.
-
-<p align="center">
-  <img src="docs/images/synctex-highlight.png" alt="소스에서 PDF로의 이동을 보여주는 SyncTeX 하이라이트" width="900" />
-</p>
-
-### 이미지 삽입 (스마트 드롭 및 붙여넣기)
-- 컴퓨터에서 이미지 파일을 에디터로 직접 **드래그 앤 드롭**하거나, 스크린샷이나 복사한 이미지를
-  `Ctrl+V`(macOS는 `Cmd+V`)로 **붙여넣기**하세요.
-- TextEx가 자동으로:
-  1. 이미지를 프로젝트의 `images/` 폴더로 복사합니다. 파일 이름이 없는 클립보드 이미지는
-     클립보드의 이미지 형식에 맞춰 `pasted-YYYYMMDD-HHMMSS` 이름으로 저장됩니다.
-  2. 커서 위치에 `\begin{figure} ... \end{figure}` 스니펫을 삽입합니다.
-
-### 인용 관리
-- **BibTeX 지원**: `.bib` 파일을 감지하고 `\cite{...}` 키를 자동 완성합니다.
-- **인용 툴팁**: PDF 미리보기에서 인용 위에 마우스를 올리면 제목, 저자, 연도를 확인할 수 있습니다.
-- **Zotero 연동**:
-  1. Better BibTeX가 설치된 Zotero가 실행 중인지 확인하세요.
-  2. 왼쪽 사이드바의 **References**에서 프로젝트와 Zotero를 함께 검색합니다. 결과가 없으면 Crossref/arXiv 온라인 검색을 사용할 수 있습니다.
-  3. 논문을 에디터로 드래그하거나 References에서 인용 버튼을 사용합니다.
-  4. 온라인 검색 결과는 Zotero에 영구 저장하거나 프로젝트 참고문헌에 바로 추가할 수 있습니다.
-
-### 생산성 도구
-
-- **검색**: TeX/Markdown 편집기와 PDF 뷰어에서 내용을 찾고, References에서 논문을 검색합니다. `Ctrl/Cmd+P`로 프로젝트 파일을, `Ctrl/Cmd+Shift+P`로 명령 팔레트를 엽니다.
-- **할 일 패널**: 사이드바에서 집필 작업을 관리.
-- **노트 패널**: 프로젝트 할 일과 메모를 함께 관리. **PDF 주석 가져오기**에서 리뷰받은 PDF를 선택하면 코멘트와 하이라이트를 페이지 번호·작성자와 함께 `TODO.md`의 체크리스트로 추가합니다. 기존 노트는 유지되며, 가져올 때마다 새 섹션이 추가됩니다. 표시 영역의 텍스트에는 주변 문장이 포함될 수 있습니다. 이미지로 합쳐진 주석은 복원할 수 없으며, 암호로 보호된 PDF는 먼저 잠금을 해제해야 합니다. 20 MB, 2,000페이지, 주석 5,000개 이하의 PDF를 지원합니다.
-- **타임라인**: 로컬 파일 히스토리를 보고 이전 저장 상태로 복원.
-- **Git 패널**: 로컬 스테이징/커밋, upstream 차이 확인, Fetch 및 확인 기반 Pull/Push. Pull은 깨끗한 작업 트리에서 fast-forward만 허용하며 강제 Push는 사용하지 않습니다.
-- **AI 설정**: 전역 기본 provider/model과 API 키·CLI 연결 설정을 독립적으로 관리. Research Chat에서는 전역 기본값을 바꾸지 않고 대화별 실행 대상을 선택할 수 있습니다.
-
----
-
-## 단축키
+## 키보드 단축키
 
 | 단축키 | 동작 |
-|----------|--------|
-| `Ctrl/Cmd + S` | 저장 |
+|--------|------|
+| `Ctrl/Cmd + S` | 저장 (및 컴파일) |
 | `Ctrl/Cmd + Enter` | 컴파일 |
-| `Ctrl/Cmd + L` | 로그 패널 토글 |
+| `Ctrl/Cmd + P` | 프로젝트 파일 열기 |
+| `Ctrl/Cmd + Shift + P` | 커맨드 팔레트 |
 | `Ctrl/Cmd + B` | 사이드바 토글 |
+| `Ctrl/Cmd + L` | 로그 패널 토글 |
 | `Ctrl/Cmd + F` | 현재 문서에서 찾기 |
 | `Ctrl/Cmd + Shift + C` | 인용 검색 |
 | `Ctrl/Cmd + Shift + F` | PDF 텍스트 검색 |
-| `Shift + Alt + F` | 문서 포맷팅 |
-| `Ctrl/Cmd + 0` | PDF 너비에 맞추기 |
-| `Ctrl/Cmd + 9` | PDF 높이에 맞추기 |
+| `Shift + Alt + F` | 문서 포맷 |
+| `Ctrl/Cmd + 0` / `9` | PDF 너비 / 높이 맞춤 |
+| `F1` | 인앱 가이드 |
 
----
+## 더 알아보기
 
-## 문서 참조
+- [사용자 가이드](docs/USER_GUIDE.ko.md) — 프로젝트, 편집, 컴파일, SyncTeX, 인용, 생산성 도구
+- [설정 참조](docs/SETTINGS.md) · [Zotero 연동](docs/ZOTERO.md) · [연구 프로필 & 챗](docs/RESEARCH_PROFILE.md)
+- [CLI 참조](docs/CLI.md) · [MCP 서버](docs/MCP.md)
+- [개발 가이드](docs/DEVELOPMENT.md) · [아키텍처](docs/ARCHITECTURE.md) · [패키징](docs/PACKAGING.md)
 
-- [개발 가이드](docs/DEVELOPMENT.md)
-- [아키텍처](docs/ARCHITECTURE.md)
-- [파일 구조](docs/FILE_STRUCTURE.md)
-- [IPC 사양](docs/IPC_SPEC.md)
-- [기술 스택](docs/TECH_STACK.md)
-- [UI 명세](docs/UI_SPEC.md)
-- [설정 레퍼런스](docs/SETTINGS.md)
-- [패키징](docs/PACKAGING.md)
-- [Zotero 연동](docs/ZOTERO.md)
-- [Research Profile 및 Chat](docs/RESEARCH_PROFILE.md)
-- [CLI 레퍼런스](docs/CLI.md)
-- [MCP 서버](docs/MCP.md)
-- [라이선스](docs/LICENSES.md)
-- [TODO / 상태](docs/TODO.md)
+TextEx는 영어, 한국어, 스페인어, 프랑스어, 독일어, 포르투갈어, 중국어를 지원합니다.
 
 ## 오픈소스 고지
 
-번들된 고지 파일은 `resources/licenses/` 아래에 있으며 npm과 Rust 의존성
-고지 및 Tectonic 라이선스 파일이 포함됩니다.
-[docs/LICENSES.md](docs/LICENSES.md)는 사람이 읽기 쉬운 요약 문서이며, 전체
-번들 고지 파일 모음 자체는 아닙니다.
+번들된 고지 파일은 npm 및 Rust 의존성 고지와 Tectonic 라이선스 파일을 포함해
+`resources/licenses/`에 있습니다. [docs/LICENSES.md](docs/LICENSES.md)는 사람이
+읽기 쉬운 요약본이며, 전체 번들 고지 세트는 아닙니다.
 
 ## 라이선스
 
