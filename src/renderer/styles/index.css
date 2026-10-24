@@ -317,11 +317,6 @@ body,
   background-color: var(--bg-primary);
 }
 
-/* The desktop Research navigation owns the right end of the title-bar row. */
-.app-container.has-research-panel:not(.has-app-page) > .toolbar {
-  margin-right: clamp(320px, var(--research-panel-width), 520px);
-}
-
 .app-container > .toolbar {
   transition: margin-right 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
@@ -461,12 +456,9 @@ body,
   background-color: var(--chrome-bg);
   border-bottom: 1px solid var(--chrome-border);
   user-select: none;
-  /* The research panel reserves space with margin-right (see
-     .app-container.has-research-panel > .toolbar), which can shrink this
-     bar well below the viewport width. Size the collapse breakpoints in
-     responsive.css off the toolbar's own rendered width (container query)
-     instead of only the viewport, so opening/resizing that panel can't
-     leave buttons with nowhere to go. */
+  /* Size the collapse breakpoints in responsive.css off the toolbar's own
+     rendered width (container query) as well as the viewport, so chrome
+     that narrows this bar can't leave buttons with nowhere to go. */
   container-name: app-toolbar;
   container-type: inline-size;
 }
@@ -5415,7 +5407,7 @@ button.submission-check-finding:hover {
 
 .research-panel.overlay {
   position: absolute;
-  inset: 0 0 var(--research-panel-bottom, 0) auto;
+  inset: 0 0 0 auto;
   min-width: min(320px, 100%);
   max-width: min(520px, 100%);
   height: auto;
@@ -5526,12 +5518,7 @@ button.submission-check-finding:hover {
 }
 
 @media (max-width: 1199px) {
-  .app-container.has-research-panel > .toolbar {
-    margin-right: 0;
-  }
-
   .research-panel.overlay {
-    top: var(--app-toolbar-height);
     width: min(440px, 100%) !important;
   }
 
@@ -5541,9 +5528,82 @@ button.submission-check-finding:hover {
 }
 
 .editor-main-content {
+  position: relative;
   display: flex;
   flex: 1;
   min-height: 0;
+}
+
+/*
+ * Three-pane workspace. The research panel is the row's last child in every
+ * layout so its state survives a change of layout:
+ *   side     a third column; the editor and PDF split what `--research-reserved`
+ *            leaves them (their inline widths are calc()s over that variable)
+ *   stacked  the row is too narrow for three columns, so the panel covers the
+ *            PDF column below a PDF ↔ Research tab strip and the PDF stays
+ *            mounted and laid out behind it
+ *   overlay  the auto-hide rail (`.research-panel.overlay`, above)
+ */
+.editor-main-content > .research-panel--side {
+  flex: 0 0 auto;
+  height: 100%;
+  transition: opacity 140ms ease;
+}
+
+.research-panel--side.research-panel-entering,
+.research-panel--side.research-panel-exiting,
+.research-panel--stacked.research-panel-entering,
+.research-panel--stacked.research-panel-exiting {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.research-layout-stacked {
+  --preview-stack-tabs-height: calc(var(--app-toolbar-height) + 1px);
+}
+
+.research-layout-stacked > .preview-pane {
+  display: flex;
+  flex-direction: column;
+}
+
+.research-layout-stacked > .preview-pane > :not(.preview-stack-tabs) {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+}
+
+.preview-stack-tabs {
+  flex: 0 0 var(--preview-stack-tabs-height);
+  box-sizing: border-box;
+  height: var(--preview-stack-tabs-height);
+  background: var(--chrome-bg);
+  border-bottom-color: var(--chrome-border);
+}
+
+.preview-stack-tabs > [role='tab'] {
+  flex: 0 0 auto;
+  min-width: 0;
+  padding-inline: var(--space-12);
+  font-size: var(--font-sm);
+}
+
+.research-layout-stacked > .research-panel--stacked {
+  position: absolute;
+  inset: var(--preview-stack-tabs-height) 0 0 var(--preview-left, 0px);
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  height: auto;
+  border-left: 0;
+  transition: opacity 140ms ease;
+}
+
+/* The inactive surface keeps its box (and the PDF its scroll position and
+   measured width); it is only taken out of sight and out of the tab order. */
+.research-layout-stacked[data-stack-view='preview'] > .research-panel--stacked,
+.research-layout-stacked[data-stack-view='research'] > .preview-pane > :not(.preview-stack-tabs) {
+  visibility: hidden;
 }
 
 /* PDF Search Highlights */

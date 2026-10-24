@@ -819,6 +819,12 @@
     "pin": "연구 패널 고정",
     "unpin": "연구 패널 고정 해제 (자동 숨김)",
     "resize": "연구 패널 크기 조절",
+    "stacked": {
+      "label": "미리보기 영역",
+      "pdf": "PDF",
+      "preview": "미리보기",
+      "research": "연구"
+    },
     "tabs": {
       "chat": "Chat",
       "notes": "노트",

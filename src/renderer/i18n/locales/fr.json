@@ -819,6 +819,12 @@
     "pin": "Épingler le panneau de recherche",
     "unpin": "Désépingler le panneau de recherche (masquage auto)",
     "resize": "Redimensionner le panneau de recherche",
+    "stacked": {
+      "label": "Zone d'aperçu",
+      "pdf": "PDF",
+      "preview": "Aperçu",
+      "research": "Recherche"
+    },
     "tabs": {
       "chat": "Discussion",
       "notes": "Notes",

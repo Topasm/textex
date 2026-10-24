@@ -217,7 +217,46 @@ describe('ResearchPanel tabs', () => {
     expect(useProjectStore.getState().researchPanelWidth).toBe(320)
   })
 
-  it('always renders as a PDF overlay without adding a desktop backdrop', () => {
+  it('takes its own column beside the PDF and keeps its width within the row', () => {
+    useProjectStore.setState({ researchPanelWidth: 480 })
+    const { container } = render(<ResearchPanel onAiDraft={vi.fn()} layout="side" maxWidth={400} />)
+    const panel = container.querySelector<HTMLElement>('.research-panel')!
+    const separator = screen.getByRole('separator', { name: 'Resize research panel' })
+
+    expect(panel).toHaveClass('research-panel--side')
+    expect(panel).not.toHaveClass('overlay')
+    expect(panel.style.width).toBe('400px')
+    expect(separator).toHaveAttribute('aria-valuemax', '400')
+    expect(separator).toHaveAttribute('aria-valuenow', '400')
+
+    fireEvent.keyDown(separator, { key: 'ArrowLeft' })
+    expect(useProjectStore.getState().researchPanelWidth).toBe(400)
+    fireEvent.keyDown(separator, { key: 'ArrowRight' })
+    expect(useProjectStore.getState().researchPanelWidth).toBe(390)
+  })
+
+  it('fills the PDF column when stacked and steps aside while the PDF tab is shown', () => {
+    const view = render(<ResearchPanel onAiDraft={vi.fn()} layout="stacked" />)
+    const panel = view.container.querySelector<HTMLElement>('.research-panel')!
+
+    expect(panel).toHaveClass('research-panel--stacked')
+    expect(panel.style.width).toBe('')
+    expect(screen.queryByRole('separator')).not.toBeInTheDocument()
+    expect(panel).toHaveAttribute('aria-hidden', 'false')
+
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(useProjectStore.getState().isResearchPanelOpen).toBe(false)
+
+    useProjectStore.setState({ isResearchPanelOpen: true })
+    view.rerender(<ResearchPanel onAiDraft={vi.fn()} layout="stacked" inactive />)
+    const reopened = view.container.querySelector<HTMLElement>('.research-panel')!
+    expect(reopened).toHaveAttribute('aria-hidden', 'true')
+    expect(reopened).toHaveAttribute('inert')
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(useProjectStore.getState().isResearchPanelOpen).toBe(true)
+  })
+
+  it('renders the auto-hide rail as a PDF overlay without adding a desktop backdrop', () => {
     const originalInnerWidth = window.innerWidth
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1400 })
 

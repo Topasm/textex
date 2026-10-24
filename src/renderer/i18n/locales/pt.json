@@ -819,6 +819,12 @@
     "pin": "Fixar painel de pesquisa",
     "unpin": "Desfixar painel de pesquisa (ocultar automaticamente)",
     "resize": "Redimensionar o painel de pesquisa",
+    "stacked": {
+      "label": "Área de pré-visualização",
+      "pdf": "PDF",
+      "preview": "Pré-visualização",
+      "research": "Pesquisa"
+    },
     "tabs": {
       "chat": "Chat",
       "notes": "Notas",

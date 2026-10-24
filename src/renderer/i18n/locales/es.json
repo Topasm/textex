@@ -819,6 +819,12 @@
     "pin": "Fijar panel de investigación",
     "unpin": "Desfijar panel de investigación (ocultar automáticamente)",
     "resize": "Cambiar el tamaño del panel de investigación",
+    "stacked": {
+      "label": "Área de vista previa",
+      "pdf": "PDF",
+      "preview": "Vista previa",
+      "research": "Investigación"
+    },
     "tabs": {
       "chat": "Chat",
       "notes": "Notas",

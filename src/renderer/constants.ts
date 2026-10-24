@@ -39,6 +39,14 @@ export const SIDEBAR_WIDTH_MAX = 500
 export const RESEARCH_PANEL_DEFAULT_WIDTH = 380
 export const RESEARCH_PANEL_WIDTH_MIN = 320
 export const RESEARCH_PANEL_WIDTH_MAX = 520
+/** Narrowest useful editor column once the research panel shares the row. */
+export const EDITOR_PANE_MIN_WIDTH = 260
+/** Narrowest PDF column that still shows a readable page beside the panel. */
+export const PREVIEW_PANE_MIN_WIDTH = 280
+/** The editor ↔ preview divider (`.split-divider`). */
+export const SPLIT_DIVIDER_WIDTH = 4
+/** Quiet gap after a pane resize before the PDF re-lays out at the new width. */
+export const PREVIEW_RESIZE_SETTLE_MS = 100
 
 // ── AI Provider metadata ────────────────────────────────────
 export const AI_PROVIDER_ORDER: AiProvider[] = [

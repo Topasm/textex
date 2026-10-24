@@ -3,20 +3,20 @@
   display: flex;
 }
 .pdf-workspace > .preview-pane {
-  width: 100% !important;
+  width: calc(100% - var(--research-reserved, 0px)) !important;
   height: 100%;
   flex: 1;
 }
 .pdf-workspace > .split-divider,
 .workspace-source-pane[hidden],
-.app-container.pdf-only:not(.pdf-tools-visible) > .research-panel,
+.app-container.pdf-only:not(.pdf-tools-visible) .research-panel,
 .app-container.pdf-only:not(.pdf-tools-visible) .workspace > .sidebar-wrapper,
 .app-container.pdf-only:not(.pdf-tools-visible) .sidebar-drawer-backdrop {
   display: none;
 }
 .editor-main-content > .workspace-source-pane--floating {
   position: absolute;
-  inset: 52px 12px 12px auto;
+  inset: 52px calc(12px + var(--research-reserved, 0px)) 12px auto;
   z-index: 100;
   width: min(560px, calc(100% - 24px)) !important;
   height: calc(100% - 64px);
