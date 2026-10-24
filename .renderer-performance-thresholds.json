@@ -1,22 +1,22 @@
 {
   "schemaVersion": 1,
-  "measuredAt": "2026-09-04",
+  "measuredAt": "2026-10-24",
   "metrics": {
     "initialJavaScript.rawBytes": {
-      "baselineBytes": 513849,
-      "maxBytes": 534591
+      "baselineBytes": 514201,
+      "maxBytes": 534957
     },
     "initialJavaScript.gzipBytes": {
-      "baselineBytes": 164165,
-      "maxBytes": 170109
+      "baselineBytes": 168245,
+      "maxBytes": 174337
     },
     "allJavaScript.rawBytes": {
-      "baselineBytes": 8078716,
-      "maxBytes": 8241332
+      "baselineBytes": 8223700,
+      "maxBytes": 8389234
     },
     "allRendererFiles.rawBytes": {
-      "baselineBytes": 9710387,
-      "maxBytes": 9914128
+      "baselineBytes": 9909313,
+      "maxBytes": 10117228
     }
   }
 }
