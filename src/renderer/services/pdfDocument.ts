@@ -1,3 +1,4 @@
+import '../platform/readableStreamAsyncIterator'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 
 /**
