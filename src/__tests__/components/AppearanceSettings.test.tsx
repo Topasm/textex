@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { AppearanceTab } from '../../renderer/components/settings/AppearanceTab'
+import { AppearanceSettings } from '../../renderer/components/settings/AppearanceSettings'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 
 beforeEach(() => {
@@ -14,9 +14,9 @@ beforeEach(() => {
   vi.mocked(window.api.saveSettings).mockResolvedValue(useSettingsStore.getState().settings)
 })
 
-describe('AppearanceTab', () => {
+describe('AppearanceSettings', () => {
   it('selects high contrast without overriding the independent PDF appearance', () => {
-    render(<AppearanceTab />)
+    render(<AppearanceSettings />)
 
     const highContrast = screen.getByRole('button', { name: 'High contrast' })
     expect(highContrast).toHaveAttribute('aria-pressed', 'false')

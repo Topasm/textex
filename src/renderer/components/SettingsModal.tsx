@@ -1,49 +1,54 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  Palette,
-  Type,
-  Zap,
-  Link,
-  Settings as SettingsIcon,
+  ArrowLeft,
   Bot,
-  SlidersHorizontal,
   Search,
+  Settings as SettingsIcon,
+  SlidersHorizontal,
+  Type,
   X
 } from 'lucide-react'
 import { GeneralTab } from './settings/GeneralTab'
-import { AppearanceTab } from './settings/AppearanceTab'
 import { EditorTab } from './settings/EditorTab'
 import { AiTab } from './settings/AiTab'
-import { IntegrationsTab } from './settings/IntegrationsTab'
-import { AutomationTab } from './settings/AutomationTab'
+import {
+  SettingsSearchProvider,
+  collectSettingsCopy,
+  foldSettingsSearchText,
+  tokenizeSettingsSearch
+} from './settings/SettingsSearch'
 import UpdateNotification from './UpdateNotification'
 import { ICON_SIZE } from './ui/IconSystem'
 import { ModalCloseButton } from './ui/ModalChrome'
 import { AppPageFrame } from './ui/AppPageFrame'
-import { normalizeCommandSearchText } from '../services/commandSearch'
 
-type TabId = 'general' | 'appearance' | 'editor' | 'ai' | 'integrations' | 'automation'
+export type SettingsTabId = 'general' | 'editor' | 'ai'
 
-const TAB_ICONS = {
-  general: SlidersHorizontal,
-  appearance: Palette,
-  editor: Type,
-  ai: Bot,
-  integrations: Link,
-  automation: Zap
-} as const
+export const TAB_IDS: readonly SettingsTabId[] = ['general', 'editor', 'ai']
 
-const TAB_CONTENT: Record<TabId, React.FC> = {
-  general: GeneralTab,
-  appearance: AppearanceTab,
-  editor: EditorTab,
-  ai: AiTab,
-  integrations: IntegrationsTab,
-  automation: AutomationTab
+/**
+ * The `settings.*` translation namespaces each tab is built from. The tab
+ * filter is a secondary effect of the row-level search: a tab stays listed
+ * while any copy in its namespaces matches the query.
+ */
+export const SETTINGS_TAB_NAMESPACES: Record<SettingsTabId, readonly string[]> = {
+  general: ['general', 'appearance'],
+  editor: ['editor', 'compiler'],
+  ai: ['ai', 'integrations']
 }
 
-const TAB_IDS: TabId[] = ['general', 'appearance', 'editor', 'ai', 'integrations', 'automation']
+const TAB_ICONS: Record<SettingsTabId, typeof SlidersHorizontal> = {
+  general: SlidersHorizontal,
+  editor: Type,
+  ai: Bot
+}
+
+const TAB_CONTENT: Record<SettingsTabId, React.FC> = {
+  general: GeneralTab,
+  editor: EditorTab,
+  ai: AiTab
+}
 
 const FOCUSABLE_SELECTOR = [
   'a[href]',
@@ -54,15 +59,9 @@ const FOCUSABLE_SELECTOR = [
   '[tabindex]:not([tabindex="-1"])'
 ].join(',')
 
-function collectSearchCopy(value: unknown): string[] {
-  if (typeof value === 'string') return [value]
-  if (!value || typeof value !== 'object') return []
-  return Object.values(value).flatMap(collectSearchCopy)
-}
-
 export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
   const { t } = useTranslation()
-  const [activeTab, setActiveTab] = useState<TabId>('general')
+  const [activeTab, setActiveTab] = useState<SettingsTabId>('general')
   const [query, setQuery] = useState('')
   const titleId = useId()
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -70,33 +69,31 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
   const searchRef = useRef<HTMLInputElement>(null)
   const queryRef = useRef(query)
   const onCloseRef = useRef(onClose)
-  const tabIds = TAB_IDS
-  const normalizedQuery = useMemo(() => normalizeCommandSearchText(query), [query])
-  const queryTokens = useMemo(
-    () => normalizedQuery.split(/\s+/u).filter(Boolean),
-    [normalizedQuery]
-  )
+  const queryTokens = useMemo(() => tokenizeSettingsSearch(query), [query])
   const tabSearchIndex = useMemo(
     () =>
       Object.fromEntries(
-        tabIds.map((id) => [
+        TAB_IDS.map((id) => [
           id,
-          normalizeCommandSearchText(
+          foldSettingsSearchText(
             [
               t(`settings.tabs.${id}`),
-              ...collectSearchCopy(t(`settings.${id}`, { returnObjects: true }) as unknown)
+              t(`settings.tabSummaries.${id}`),
+              ...SETTINGS_TAB_NAMESPACES[id].flatMap((namespace) =>
+                collectSettingsCopy(t(`settings.${namespace}`, { returnObjects: true }) as unknown)
+              )
             ].join(' ')
           )
         ])
-      ) as Record<TabId, string>,
-    [t, tabIds]
+      ) as Record<SettingsTabId, string>,
+    [t]
   )
   const visibleTabIds = useMemo(
     () =>
       queryTokens.length === 0
-        ? tabIds
-        : tabIds.filter((id) => queryTokens.every((token) => tabSearchIndex[id].includes(token))),
-    [queryTokens, tabIds, tabSearchIndex]
+        ? TAB_IDS
+        : TAB_IDS.filter((id) => queryTokens.every((token) => tabSearchIndex[id].includes(token))),
+    [queryTokens, tabSearchIndex]
   )
   const resolvedActiveTab = visibleTabIds.includes(activeTab) ? activeTab : visibleTabIds[0]
   const ActiveContent = resolvedActiveTab ? TAB_CONTENT[resolvedActiveTab] : null
@@ -179,6 +176,15 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
     <AppPageFrame ref={dialogRef} owner="settings" titleId={titleId} className="settings-page">
       <header className="app-page-header settings-page-header">
         <div className="app-page-title settings-page-title">
+          <button
+            type="button"
+            className="app-page-back"
+            aria-label={t('settings.backToWorkspace')}
+            title={t('settings.backToWorkspace')}
+            onClick={onClose}
+          >
+            <ArrowLeft size={ICON_SIZE.control} aria-hidden="true" />
+          </button>
           <span className="settings-page-mark" aria-hidden="true">
             <SettingsIcon size={ICON_SIZE.feature} />
           </span>
@@ -210,11 +216,14 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
           )}
         </div>
 
-        <ModalCloseButton
-          className="app-page-close"
-          onClick={onClose}
-          label={t('logPanel.close')}
-        />
+        <div className="settings-page-actions">
+          <kbd aria-hidden="true">Esc</kbd>
+          <ModalCloseButton
+            className="app-page-close"
+            onClick={onClose}
+            label={t('logPanel.close')}
+          />
+        </div>
       </header>
 
       <UpdateNotification />
@@ -231,9 +240,13 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
                 onClick={() => setActiveTab(id)}
                 className={`settings-tab${resolvedActiveTab === id ? ' active' : ''}`}
                 aria-current={resolvedActiveTab === id ? 'page' : undefined}
+                aria-label={t(`settings.tabs.${id}`)}
               >
-                <Icon size={ICON_SIZE.control} />
-                <span className="settings-tab-label">{t(`settings.tabs.${id}`)}</span>
+                <Icon size={ICON_SIZE.control} aria-hidden="true" />
+                <span className="settings-tab-copy">
+                  <span className="settings-tab-label">{t(`settings.tabs.${id}`)}</span>
+                  <span className="settings-tab-summary">{t(`settings.tabSummaries.${id}`)}</span>
+                </span>
               </button>
             )
           })}
@@ -246,7 +259,14 @@ export const SettingsModal = ({ onClose }: { onClose: () => void }) => {
         <main className="settings-content">
           <div className="settings-content-inner">
             {ActiveContent ? (
-              <ActiveContent />
+              <SettingsSearchProvider query={query}>
+                {queryTokens.length > 0 && (
+                  <p className="settings-search-hint">
+                    {t('settings.searchResultsHint', { query })}
+                  </p>
+                )}
+                <ActiveContent />
+              </SettingsSearchProvider>
             ) : (
               <div className="settings-empty-state" role="status">
                 <Search size={ICON_SIZE.prominent} aria-hidden="true" />

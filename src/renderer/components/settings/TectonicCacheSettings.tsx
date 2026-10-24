@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TectonicCacheStatus } from '../../../shared/types'
+import { SettingsHighlight } from './SettingsSearch'
 
 function formatBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes <= 0) return '0 B'
@@ -44,7 +45,7 @@ export function TectonicCacheSettings() {
   }, [refresh])
 
   const resetCache = async (): Promise<void> => {
-    if (!window.confirm(t('settings.automation.cacheResetConfirm'))) return
+    if (!window.confirm(t('settings.compiler.cacheResetConfirm'))) return
     const request = ++generation.current
     setResetting(true)
     setError('')
@@ -63,22 +64,20 @@ export function TectonicCacheSettings() {
   return (
     <section aria-labelledby="tectonic-cache-heading" aria-busy={loading || resetting}>
       <h3 id="tectonic-cache-heading" className="settings-heading settings-heading-mb">
-        {t('settings.automation.offlineCache')}
+        <SettingsHighlight text={t('settings.compiler.offlineCache')} />
       </h3>
       <p className="settings-row-description" style={{ marginBottom: 12 }}>
-        {t('settings.automation.offlineCacheDesc')}
+        <SettingsHighlight text={t('settings.compiler.offlineCacheDesc')} />
       </p>
 
       {(loading || resetting) && (
         <div role="status" aria-live="polite" className="settings-row-description">
-          {resetting
-            ? t('settings.automation.cacheResetting')
-            : t('settings.automation.cacheLoading')}
+          {resetting ? t('settings.compiler.cacheResetting') : t('settings.compiler.cacheLoading')}
         </div>
       )}
       {error && (
         <div role="alert" className="settings-row-description" style={{ color: 'var(--error)' }}>
-          {t('settings.automation.cacheError', { error })}
+          {t('settings.compiler.cacheError', { error })}
         </div>
       )}
 
@@ -86,24 +85,24 @@ export function TectonicCacheSettings() {
         <div className="settings-column-group">
           {seedIsEmpty && (
             <div role="note" className="settings-row-description">
-              {t('settings.automation.emptySeedWarning')}
+              {t('settings.compiler.emptySeedWarning')}
             </div>
           )}
           <div className="settings-row" style={{ alignItems: 'flex-start' }}>
             <div style={{ minWidth: 0 }}>
               <div className="settings-row-label">
-                {t('settings.automation.packagedSeed')}
+                {t('settings.compiler.packagedSeed')}
                 {status.seed.seedVersion ? ` · ${status.seed.seedVersion}` : ''}
               </div>
               <div className="settings-row-description">
-                {t('settings.automation.cacheStats', {
+                {t('settings.compiler.cacheStats', {
                   files: status.seed.fileCount,
                   bytes: formatBytes(status.seed.totalBytes)
                 })}{' '}
                 ·{' '}
                 {status.seed.ready
-                  ? t('settings.automation.cacheReady')
-                  : t('settings.automation.cacheNotReady')}
+                  ? t('settings.compiler.cacheReady')
+                  : t('settings.compiler.cacheNotReady')}
               </div>
               <div className="settings-row-description">{status.seed.detail}</div>
               <code className="settings-row-description" style={{ wordBreak: 'break-all' }}>
@@ -114,18 +113,18 @@ export function TectonicCacheSettings() {
           <div className="settings-row" style={{ alignItems: 'flex-start' }}>
             <div style={{ minWidth: 0 }}>
               <div className="settings-row-label">
-                {t('settings.automation.writableCache')}
+                {t('settings.compiler.writableCache')}
                 {status.cache.installedSeedVersion ? ` · ${status.cache.installedSeedVersion}` : ''}
               </div>
               <div className="settings-row-description">
-                {t('settings.automation.cacheStats', {
+                {t('settings.compiler.cacheStats', {
                   files: status.cache.fileCount,
                   bytes: formatBytes(status.cache.totalBytes)
                 })}{' '}
                 ·{' '}
                 {status.cache.ready
-                  ? t('settings.automation.cacheFilesAvailable')
-                  : t('settings.automation.cacheFilesUnavailable')}
+                  ? t('settings.compiler.cacheFilesAvailable')
+                  : t('settings.compiler.cacheFilesUnavailable')}
               </div>
               <div className="settings-row-description">{status.cache.detail}</div>
               <code className="settings-row-description" style={{ wordBreak: 'break-all' }}>
@@ -134,13 +133,11 @@ export function TectonicCacheSettings() {
             </div>
           </div>
           {status.networkFallback && (
-            <div className="settings-row-description">
-              {t('settings.automation.networkFallback')}
-            </div>
+            <div className="settings-row-description">{t('settings.compiler.networkFallback')}</div>
           )}
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             <button type="button" onClick={() => void refresh()} disabled={loading || resetting}>
-              {t('settings.automation.cacheRecheck')}
+              {t('settings.compiler.cacheRecheck')}
             </button>
             <button
               type="button"
@@ -148,7 +145,7 @@ export function TectonicCacheSettings() {
               onClick={() => void resetCache()}
               disabled={loading || resetting}
             >
-              {t('settings.automation.cacheReset')}
+              {t('settings.compiler.cacheReset')}
             </button>
           </div>
         </div>

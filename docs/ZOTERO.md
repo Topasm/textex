@@ -110,7 +110,7 @@ collection pages stay lean.
 The project file `.textex/research.json` names the collection and the two managed `.bib` files, and
 nothing else — selecting a collection writes it immediately, with no save step and no save button.
 
-How that collection is mirrored is a user setting, **Settings → Integrations → Collection sync**,
+How that collection is mirrored is a user setting, **Settings → AI & Integrations → Collection sync**,
 applied to every project:
 
 | Mode | Behavior |

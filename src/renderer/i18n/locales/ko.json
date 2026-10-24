@@ -186,13 +186,17 @@
     "clearSearch": "설정 검색 지우기",
     "noResultsTitle": "일치하는 설정이 없습니다",
     "noResultsDescription": "“{{query}}”와 일치하는 설정이 없습니다. 다른 검색어를 입력해 보세요.",
+    "searchResultsHint": "“{{query}}”와 일치하는 설정만 표시합니다. Esc 키를 누르면 전체를 봅니다.",
+    "backToWorkspace": "작업 공간으로 돌아가기",
     "tabs": {
-      "general": "일반",
-      "appearance": "모양",
-      "editor": "편집기",
-      "ai": "AI",
-      "integrations": "연동",
-      "automation": "자동화"
+      "general": "일반 및 모양",
+      "editor": "편집기 및 컴파일러",
+      "ai": "AI 및 연동"
+    },
+    "tabSummaries": {
+      "general": "언어, 업데이트, 도움말, 테마, PDF 미리보기",
+      "editor": "글꼴, 편집 동작, 컴파일러, 맞춤법 검사",
+      "ai": "AI 제공업체, Zotero, Git"
     },
     "general": {
       "application": "애플리케이션",
@@ -370,7 +374,7 @@
       "syncModeOpen": "프로젝트를 열 때 한 번 동기화",
       "syncModeOff": "수동 동기화만"
     },
-    "automation": {
+    "compiler": {
       "compilerTools": "컴파일러 및 도구",
       "compilerEngine": "컴파일 엔진",
       "tectonicOption": "Tectonic (내장)",
@@ -491,7 +495,7 @@
   "draftModal": {
     "title": "AI 초안",
     "hint": "아래에 마크다운, 노트 또는 개요를 붙여넣으세요. AI가 완전한 LaTeX 문서를 생성합니다.",
-    "noProvider": "AI 제공업체가 설정되지 않았습니다. 설정 > AI에서 설정하세요.",
+    "noProvider": "AI 제공업체가 설정되지 않았습니다. 설정 > AI 및 연동에서 설정하세요.",
     "generating": "LaTeX 문서 생성 중...",
     "reviewHint": "생성된 LaTeX를 검토하고 편집한 다음 편집기에 삽입하세요.",
     "notConfigured": "설정되지 않음",
@@ -533,7 +537,7 @@
     "fixWithCli": "{{cli}}(으)로 문제 수정",
     "inlineFix": "수정",
     "inlineFixBusy": "수정 중…",
-    "inlineFixSetup": "설정 > AI 탭에서 AI를 활성화하고 연결을 설정해 주세요.",
+    "inlineFixSetup": "설정 > AI 및 연동에서 AI를 활성화하고 연결을 설정해 주세요.",
     "inlineFixUnsupported": "읽을 수 있는 TeX 소스 줄과 더 작은 수정 범위가 필요합니다.",
     "inlineFixInvalid": "AI 수정안의 형식이 올바르지 않아 적용하지 않았습니다.",
     "inlineFixApplied": "편집기에 수정안을 적용했습니다. 변경 내용을 확인하고 컴파일해 주세요. 실행 취소로 되돌릴 수 있습니다.",

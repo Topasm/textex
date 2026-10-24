@@ -119,15 +119,15 @@ TextEx features a modern Monaco-based editor with:
 - **Save and share PDF**: The document Save button saves the `.tex` source. Compiled PDFs live in the TextEx application cache under `build/<project>/<engine>/<document>/`, rather than beside the source. Compile the current revision, then use **Save PDF As…** in the PDF toolbar to choose a destination; the dialog starts in the currently opened project folder and the notification shows the saved path. **Save As** for source files, document exports, and Overleaf ZIP exports also start in the project folder. **Share PDF** opens file sharing when supported. Otherwise, it saves a PDF and opens its folder so you can attach the file in your mail or messaging app. Cancelling either dialog does not send anything. Hover over the PDF title to see the compiled cache path.
 - **Auto-Compile**: The PDF preview updates automatically when you save (`Ctrl+S`).
 - **Manual Compile**: Press `Ctrl+Enter` to force a compilation at any time.
-- **PDF View Modes**: Switch between continuous scroll and single-page view in Settings > Appearance.
+- **PDF View Modes**: Switch between continuous scroll and single-page view in Settings > General & Appearance.
 
 ## Scroll Sync
 
 <p align="center">
-  <img src="images/settings-appearance.png" alt="Settings — Appearance tab with theme, PDF view mode, and scroll options" width="900" />
+  <img src="images/settings-appearance.png" alt="Settings — General & Appearance tab with theme, PDF view mode, and scroll options" width="900" />
 </p>
 
-Enable **Scroll Sync** in Settings > Appearance to keep the editor and PDF aligned:
+Enable **Scroll Sync** in Settings > General & Appearance to keep the editor and PDF aligned:
 - Scrolling in the **editor** automatically scrolls the PDF to the matching content.
 - Scrolling in the **PDF** automatically scrolls the editor to the corresponding source line.
 - Uses a precomputed SyncTeX line map for instant lookups (no lag).
@@ -161,7 +161,7 @@ Enable **Scroll Sync** in Settings > Appearance to keep the editor and PDF align
 ## Managing Citations
 - **BibTeX Support**: TextEx detects `.bib` files and auto-completes `\cite{...}` keys.
 
-- **Citation Details**: Click a citation in the PDF preview to see its title, authors, year, and journal without scrolling to the bibliography. The popup stays open until you dismiss it with Escape, its close button, or a click outside; a DOI button opens the original source when available. With Zotero enabled in Settings → Integrations, exact DOI, arXiv ID, or citation-key matches in My Library add Zotero metadata, an expandable abstract, and an **Open in Zotero** button. Library reads share the reference sidebar's cache, and project metadata remains available when Zotero is offline. Hover still provides a quick preview. Hyperref and biblatex citation links use the project bibliography, and numeric citation groups can also resolve through the `.aux` labels. Missing bibliography details are shown explicitly. Ordinary section links keep their navigation behavior.
+- **Citation Details**: Click a citation in the PDF preview to see its title, authors, year, and journal without scrolling to the bibliography. The popup stays open until you dismiss it with Escape, its close button, or a click outside; a DOI button opens the original source when available. With Zotero enabled in Settings → AI & Integrations, exact DOI, arXiv ID, or citation-key matches in My Library add Zotero metadata, an expandable abstract, and an **Open in Zotero** button. Library reads share the reference sidebar's cache, and project metadata remains available when Zotero is offline. Hover still provides a quick preview. Hyperref and biblatex citation links use the project bibliography, and numeric citation groups can also resolve through the `.aux` labels. Missing bibliography details are shown explicitly. Ordinary section links keep their navigation behavior.
 - **Zotero Integration**:
   1. Ensure Zotero with Better BibTeX is running.
   2. Open **References** in the left sidebar to search the project and Zotero together; Crossref/arXiv appears as an online fallback.

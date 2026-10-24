@@ -321,6 +321,20 @@ body,
   transition: margin-right 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+/* Settings and Help are modes: the workspace controls behind them stay visible
+ * for orientation but are inert (see Toolbar) and read as dimmed. Window
+ * controls and the drag region keep working. */
+.toolbar-workspace-status {
+  display: contents;
+}
+
+.app-container.has-app-page > .toolbar .toolbar-left,
+.app-container.has-app-page > .toolbar .toolbar-center,
+.app-container.has-app-page > .toolbar .toolbar-workspace-status > * {
+  opacity: 0.38;
+  transition: opacity 150ms;
+}
+
 .main-content {
   display: flex;
   flex: 1;

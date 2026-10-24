@@ -806,6 +806,7 @@ function App() {
         onReturnHome={handleCloseProject}
         onOpenCommandPalette={openCommandPalette}
         onOpenSettings={handleOpenSettings}
+        workspaceInert={isSettingsOpen || isHelpOpen}
       />
       {isSettingsOpen && (
         <Suspense

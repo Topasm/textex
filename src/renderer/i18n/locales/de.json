@@ -186,13 +186,17 @@
     "clearSearch": "Einstellungssuche löschen",
     "noResultsTitle": "Keine Einstellungen gefunden",
     "noResultsDescription": "Keine Einstellungen stimmen mit „{{query}}“ überein. Versuchen Sie einen anderen Begriff.",
+    "searchResultsHint": "Es werden nur Einstellungen angezeigt, die zu „{{query}}“ passen. Mit Escape alles anzeigen.",
+    "backToWorkspace": "Zurück zum Arbeitsbereich",
     "tabs": {
-      "general": "Allgemein",
-      "appearance": "Erscheinungsbild",
-      "editor": "Editor",
-      "ai": "KI",
-      "integrations": "Integrationen",
-      "automation": "Automatisierung"
+      "general": "Allgemein & Erscheinungsbild",
+      "editor": "Editor & Compiler",
+      "ai": "KI & Integrationen"
+    },
+    "tabSummaries": {
+      "general": "Sprache, Updates, Hilfe, Design und PDF-Vorschau",
+      "editor": "Typografie, Bearbeitungsverhalten, Compiler und Rechtschreibprüfung",
+      "ai": "KI-Anbieter, Zotero und Git"
     },
     "general": {
       "application": "Anwendung",
@@ -370,7 +374,7 @@
       "syncModeOpen": "Einmal beim Öffnen eines Projekts synchronisieren",
       "syncModeOff": "Nur manuelle Synchronisierung"
     },
-    "automation": {
+    "compiler": {
       "compilerTools": "Compiler & Werkzeuge",
       "compilerEngine": "Compiler-Engine",
       "tectonicOption": "Tectonic (integriert)",
@@ -491,7 +495,7 @@
   "draftModal": {
     "title": "KI-Entwurf",
     "hint": "Fügen Sie unten Ihr Markdown, Ihre Notizen oder Ihre Gliederung ein. Die KI wird ein vollständiges LaTeX-Dokument generieren.",
-    "noProvider": "Kein KI-Anbieter konfiguriert. Gehen Sie zu Einstellungen > KI zur Einrichtung.",
+    "noProvider": "Kein KI-Anbieter konfiguriert. Gehen Sie zu Einstellungen > KI & Integrationen zur Einrichtung.",
     "generating": "LaTeX-Dokument wird generiert...",
     "reviewHint": "Überprüfen und bearbeiten Sie das generierte LaTeX unten und fügen Sie es dann in Ihren Editor ein.",
     "notConfigured": "Nicht konfiguriert",
@@ -533,7 +537,7 @@
     "fixWithCli": "Probleme mit {{cli}} beheben",
     "inlineFix": "Korrigieren",
     "inlineFixBusy": "Korrektur läuft…",
-    "inlineFixSetup": "Aktivieren und konfigurieren Sie KI unter Einstellungen > KI.",
+    "inlineFixSetup": "Aktivieren und konfigurieren Sie KI unter Einstellungen > KI & Integrationen.",
     "inlineFixUnsupported": "Eine lesbare TeX-Quellzeile und ein kleinerer Textabschnitt sind erforderlich.",
     "inlineFixInvalid": "Die KI-Korrektur ist ungültig. Es wurden keine Änderungen angewendet.",
     "inlineFixApplied": "Korrektur im Editor angewendet. Prüfen und kompilieren Sie den Text. Rückgängig ist verfügbar.",
