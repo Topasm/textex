@@ -9,51 +9,55 @@ import {
   SettingsSegmentedControl,
   SettingsToggleRow
 } from './SettingsControls'
+import { SettingsHighlight, SettingsSearchBlock } from './SettingsSearch'
 
-export const AppearanceTab = () => {
+export const AppearanceSettings = () => {
   const { t } = useTranslation()
   const settings = useSettingsStore((state) => state.settings)
   const updateSetting = useSettingsStore((state) => state.updateSetting)
+  const themeModes = [
+    { id: 'light', label: t('settings.appearance.light'), icon: Sun },
+    { id: 'dark', label: t('settings.appearance.dark'), icon: Moon },
+    { id: 'high-contrast', label: t('settings.appearance.highContrast'), icon: Contrast },
+    { id: 'glass', label: t('settings.appearance.glass'), icon: Sparkles },
+    { id: 'system', label: t('settings.appearance.system'), icon: Monitor }
+  ]
+  const viewModeOptions = [
+    t('settings.appearance.pdfViewModeContinuous'),
+    t('settings.appearance.pdfViewModeSingle')
+  ]
 
   return (
-    <div className="settings-tab-content settings-animate-in">
+    <>
       <SettingsSection
         title={t('settings.appearance.theme')}
         description={t('settings.appearance.themeDesc')}
       >
-        <div className="settings-theme-grid">
-          {[
-            { id: 'light', label: t('settings.appearance.light'), icon: Sun },
-            { id: 'dark', label: t('settings.appearance.dark'), icon: Moon },
-            {
-              id: 'high-contrast',
-              label: t('settings.appearance.highContrast'),
-              icon: Contrast
-            },
-            { id: 'glass', label: t('settings.appearance.glass'), icon: Sparkles },
-            { id: 'system', label: t('settings.appearance.system'), icon: Monitor }
-          ].map((mode) => (
-            <button
-              key={mode.id}
-              onClick={() => {
-                const newTheme = mode.id as UserSettings['theme']
-                updateSetting('theme', newTheme)
-              }}
-              className={`settings-theme-card${settings.theme === mode.id ? ' selected' : ''}`}
-              aria-pressed={settings.theme === mode.id}
-            >
-              <div className="settings-theme-card-icon">
-                <mode.icon size={ICON_SIZE.prominent} />
-              </div>
-              <span className="settings-theme-card-label">{mode.label}</span>
-              {settings.theme === mode.id && (
-                <div className="settings-theme-card-check">
-                  <Check size={ICON_SIZE.control} />
+        <SettingsSearchBlock keywords={themeModes.map((mode) => mode.label)}>
+          <div className="settings-theme-grid">
+            {themeModes.map((mode) => (
+              <button
+                key={mode.id}
+                type="button"
+                onClick={() => updateSetting('theme', mode.id as UserSettings['theme'])}
+                className={`settings-theme-card${settings.theme === mode.id ? ' selected' : ''}`}
+                aria-pressed={settings.theme === mode.id}
+              >
+                <div className="settings-theme-card-icon">
+                  <mode.icon size={ICON_SIZE.prominent} />
                 </div>
-              )}
-            </button>
-          ))}
-        </div>
+                <span className="settings-theme-card-label">
+                  <SettingsHighlight text={mode.label} />
+                </span>
+                {settings.theme === mode.id && (
+                  <div className="settings-theme-card-check">
+                    <Check size={ICON_SIZE.control} />
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
+        </SettingsSearchBlock>
       </SettingsSection>
 
       <SettingsSection
@@ -70,6 +74,7 @@ export const AppearanceTab = () => {
         <SettingsRow
           label={t('settings.appearance.pdfViewMode')}
           description={t('settings.appearance.pdfViewModeDesc')}
+          keywords={viewModeOptions}
         >
           <SettingsSegmentedControl
             label={t('settings.appearance.pdfViewMode')}
@@ -99,6 +104,6 @@ export const AppearanceTab = () => {
           onChange={(checked) => updateSetting('scrollSyncEnabled', checked)}
         />
       </SettingsSection>
-    </div>
+    </>
   )
 }

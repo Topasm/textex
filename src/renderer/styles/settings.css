@@ -317,8 +317,28 @@
   padding-top: var(--space-24);
 }
 
-.settings-pane-section-header > :last-child {
+.settings-pane-section-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-16);
+}
+
+.settings-pane-section-heading {
+  min-width: 0;
+}
+
+.settings-pane-section-heading > :last-child {
   margin-bottom: 0;
+}
+
+.settings-pane-section-action {
+  flex: 0 0 auto;
+  padding-top: var(--space-2);
+}
+
+.settings-pane-section[hidden] {
+  display: none;
 }
 
 .settings-stack,
@@ -399,4 +419,95 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-6);
+}
+
+/* Page chrome: a visible way back on the left, the keyboard way out on the right. */
+.settings-page-title .app-page-back {
+  margin-right: calc(-1 * var(--space-4));
+}
+
+.settings-page-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  justify-self: end;
+}
+
+.settings-page-actions > kbd {
+  min-width: 27px;
+  padding: 3px var(--space-6);
+  color: var(--text-secondary);
+  background: var(--ui-surface-input);
+  border: 1px solid var(--ui-border-strong);
+  border-bottom-width: 2px;
+  border-radius: var(--ui-radius-control);
+  font: inherit;
+  font-size: var(--font-xs);
+  text-align: center;
+}
+
+/* Three broad tabs carry a one-line summary of what lives inside. */
+.settings-page .settings-tab {
+  align-items: flex-start;
+}
+
+.settings-page .settings-tab > svg {
+  margin-top: 3px;
+}
+
+.settings-tab-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+
+.settings-tab-summary {
+  color: var(--text-secondary);
+  font-size: var(--font-xs);
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+/* Row-level search */
+.settings-search-hint {
+  margin: 0 0 var(--space-16);
+  padding: var(--space-8) var(--space-12);
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  line-height: 1.45;
+  background: var(--settings-accent-soft);
+  border: 1px solid var(--settings-accent-border);
+  border-radius: var(--ui-radius-panel);
+}
+
+.settings-search-match {
+  padding: 0 1px;
+  color: inherit;
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  border-radius: var(--ui-radius-subtle);
+  box-decoration-break: clone;
+}
+
+@media (max-width: 760px) {
+  .settings-tab-summary,
+  .settings-page-actions > kbd {
+    display: none;
+  }
+
+  .settings-page .settings-tab {
+    align-items: center;
+  }
+
+  .settings-page .settings-tab > svg {
+    margin-top: 0;
+  }
+}
+
+@media (forced-colors: active) {
+  .settings-search-match {
+    color: HighlightText;
+    background: Highlight;
+  }
 }

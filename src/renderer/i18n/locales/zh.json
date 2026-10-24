@@ -186,13 +186,17 @@
     "clearSearch": "清除设置搜索",
     "noResultsTitle": "未找到设置",
     "noResultsDescription": "没有与“{{query}}”匹配的设置。请尝试其他关键词。",
+    "searchResultsHint": "仅显示与“{{query}}”匹配的设置。按 Esc 显示全部。",
+    "backToWorkspace": "返回工作区",
     "tabs": {
-      "general": "常规",
-      "appearance": "外观",
-      "editor": "编辑器",
-      "ai": "AI",
-      "integrations": "集成",
-      "automation": "自动化"
+      "general": "常规与外观",
+      "editor": "编辑器与编译器",
+      "ai": "AI 与集成"
+    },
+    "tabSummaries": {
+      "general": "语言、更新、帮助、主题和 PDF 预览",
+      "editor": "字体、编辑行为、编译器和拼写检查",
+      "ai": "AI 服务商、Zotero 和 Git"
     },
     "general": {
       "application": "应用程序",
@@ -370,7 +374,7 @@
       "syncModeOpen": "打开项目时同步一次",
       "syncModeOff": "仅手动同步"
     },
-    "automation": {
+    "compiler": {
       "compilerTools": "编译器和工具",
       "compilerEngine": "编译引擎",
       "tectonicOption": "Tectonic（内置）",
@@ -491,7 +495,7 @@
   "draftModal": {
     "title": "AI 草稿",
     "hint": "在下方粘贴你的 markdown、笔记或大纲。AI 将生成一份完整的 LaTeX 文档。",
-    "noProvider": "未配置 AI 服务商。前往 设置 > AI 进行配置。",
+    "noProvider": "未配置 AI 服务商。前往 设置 > AI 与集成 进行配置。",
     "generating": "正在生成 LaTeX 文档...",
     "reviewHint": "查看并编辑下方生成的 LaTeX，然后插入到编辑器中。",
     "notConfigured": "未配置",
@@ -533,7 +537,7 @@
     "fixWithCli": "使用 {{cli}} 修复问题",
     "inlineFix": "修复",
     "inlineFixBusy": "修复中…",
-    "inlineFixSetup": "请在设置 > AI中启用并配置 AI。",
+    "inlineFixSetup": "请在设置 > AI 与集成中启用并配置 AI。",
     "inlineFixUnsupported": "需要可读取的 TeX 源代码行和更小的修改范围。",
     "inlineFixInvalid": "AI 修改内容格式无效，未应用任何更改。",
     "inlineFixApplied": "已在编辑器中应用修改。请检查并编译验证，也可以撤销。",

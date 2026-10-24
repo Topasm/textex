@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
-import { IntegrationsTab } from '../../renderer/components/settings/IntegrationsTab'
+import { IntegrationsSettings } from '../../renderer/components/settings/IntegrationsSettings'
 import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 
-describe('IntegrationsTab Zotero section', () => {
+describe('IntegrationsSettings Zotero section', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useProjectStore.setState({ projectRoot: '/project', bibEntries: [] })
@@ -20,7 +20,7 @@ describe('IntegrationsTab Zotero section', () => {
   })
 
   it('owns the sync behavior for every project', () => {
-    render(<IntegrationsTab />)
+    render(<IntegrationsSettings />)
 
     fireEvent.change(screen.getByLabelText('Collection sync'), { target: { value: 'off' } })
 
@@ -28,7 +28,7 @@ describe('IntegrationsTab Zotero section', () => {
   })
 
   it('no longer carries a second collection field and sync button', () => {
-    render(<IntegrationsTab />)
+    render(<IntegrationsSettings />)
 
     // The collection is chosen with the picker in the Research panel, which
     // stores it per project. This tab used to keep a hand-typed path of its

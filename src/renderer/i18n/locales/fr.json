@@ -186,13 +186,17 @@
     "clearSearch": "Effacer la recherche des paramètres",
     "noResultsTitle": "Aucun paramètre trouvé",
     "noResultsDescription": "Aucun paramètre ne correspond à « {{query}} ». Essayez un autre terme.",
+    "searchResultsHint": "Affichage des paramètres correspondant à « {{query}} ». Appuyez sur Échap pour tout afficher.",
+    "backToWorkspace": "Retour à l’espace de travail",
     "tabs": {
-      "general": "Général",
-      "appearance": "Apparence",
-      "editor": "Éditeur",
-      "ai": "IA",
-      "integrations": "Intégrations",
-      "automation": "Automatisation"
+      "general": "Général et apparence",
+      "editor": "Éditeur et compilateur",
+      "ai": "IA et intégrations"
+    },
+    "tabSummaries": {
+      "general": "Langue, mises à jour, aide, thème et aperçu PDF",
+      "editor": "Typographie, comportement d’édition, compilateur et correcteur orthographique",
+      "ai": "Fournisseurs IA, Zotero et Git"
     },
     "general": {
       "application": "Application",
@@ -370,7 +374,7 @@
       "syncModeOpen": "Synchroniser une fois à l’ouverture d’un projet",
       "syncModeOff": "Synchronisation manuelle uniquement"
     },
-    "automation": {
+    "compiler": {
       "compilerTools": "Compilateur et outils",
       "compilerEngine": "Moteur de compilation",
       "tectonicOption": "Tectonic (intégré)",
@@ -491,7 +495,7 @@
   "draftModal": {
     "title": "Brouillon IA",
     "hint": "Collez votre markdown, vos notes ou votre plan ci-dessous. L'IA générera un document LaTeX complet.",
-    "noProvider": "Aucun fournisseur IA configuré. Allez dans Paramètres > IA pour configurer.",
+    "noProvider": "Aucun fournisseur IA configuré. Allez dans Paramètres > IA et intégrations pour configurer.",
     "generating": "Génération du document LaTeX...",
     "reviewHint": "Vérifiez et modifiez le LaTeX généré ci-dessous, puis insérez-le dans votre éditeur.",
     "notConfigured": "Non configuré",
@@ -533,7 +537,7 @@
     "fixWithCli": "Corriger les problèmes avec {{cli}}",
     "inlineFix": "Corriger",
     "inlineFixBusy": "Correction…",
-    "inlineFixSetup": "Activez et configurez l’IA dans Paramètres > IA.",
+    "inlineFixSetup": "Activez et configurez l’IA dans Paramètres > IA et intégrations.",
     "inlineFixUnsupported": "Une ligne source TeX lisible et un passage plus court sont nécessaires.",
     "inlineFixInvalid": "La correction IA est invalide. Aucune modification appliquée.",
     "inlineFixApplied": "Correction appliquée dans l’éditeur. Vérifiez puis compilez. Vous pouvez annuler.",

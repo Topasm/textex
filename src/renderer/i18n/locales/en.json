@@ -186,13 +186,17 @@
     "clearSearch": "Clear settings search",
     "noResultsTitle": "No settings found",
     "noResultsDescription": "No settings match “{{query}}”. Try another term.",
+    "searchResultsHint": "Showing settings that match “{{query}}”. Press Escape to show everything.",
+    "backToWorkspace": "Back to workspace",
     "tabs": {
-      "general": "General",
-      "appearance": "Appearance",
-      "editor": "Editor",
-      "ai": "AI",
-      "integrations": "Integrations",
-      "automation": "Automation"
+      "general": "General & Appearance",
+      "editor": "Editor & Compiler",
+      "ai": "AI & Integrations"
+    },
+    "tabSummaries": {
+      "general": "Language, updates, help, theme, and PDF preview",
+      "editor": "Typography, editing behavior, compiler, and spell check",
+      "ai": "AI providers, Zotero, and Git"
     },
     "general": {
       "application": "Application",
@@ -370,7 +374,7 @@
       "syncModeOpen": "Sync once when a project opens",
       "syncModeOff": "Manual sync only"
     },
-    "automation": {
+    "compiler": {
       "compilerTools": "Compiler & Tools",
       "compilerEngine": "Compiler engine",
       "tectonicOption": "Tectonic (bundled)",
@@ -491,7 +495,7 @@
   "draftModal": {
     "title": "AI Draft",
     "hint": "Paste your markdown, notes, or outline below. The AI will generate a complete LaTeX document.",
-    "noProvider": "No AI provider configured. Go to Settings > AI to set up.",
+    "noProvider": "No AI provider configured. Go to Settings > AI & Integrations to set up.",
     "generating": "Generating LaTeX document...",
     "reviewHint": "Review and edit the generated LaTeX below, then insert into your editor.",
     "notConfigured": "Not configured",
@@ -533,7 +537,7 @@
     "fixWithCli": "Fix problems with {{cli}}",
     "inlineFix": "Fix",
     "inlineFixBusy": "Fixing…",
-    "inlineFixSetup": "Enable and configure AI in Settings > AI to fix this problem.",
+    "inlineFixSetup": "Enable and configure AI in Settings > AI & Integrations to fix this problem.",
     "inlineFixUnsupported": "This problem needs a readable TeX source line and a smaller source passage.",
     "inlineFixInvalid": "AI returned an invalid replacement. No changes were applied.",
     "inlineFixApplied": "Fix applied to the editor. Review the change and compile to check it; use Undo to revert.",

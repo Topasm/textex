@@ -548,3 +548,22 @@ it('opens PDF-only editing and reveals hidden research tools without closing the
   fireEvent.click(screen.getByRole('button', { name: 'Show TeX and PDF' }))
   expect(usePdfStore.getState().pdfOnly).toBe(false)
 })
+
+describe('Toolbar behind an app page', () => {
+  it('makes the workspace controls inert while keeping window chrome live', () => {
+    const { container } = render(<Toolbar {...defaultProps} workspaceInert />)
+
+    expect(container.querySelector('.toolbar-left')).toHaveAttribute('inert')
+    expect(container.querySelector('.toolbar-center')).toHaveAttribute('inert')
+    expect(container.querySelector('.toolbar-workspace-status')).toHaveAttribute('inert')
+    const windowControls = container.querySelector('.toolbar-window-controls')
+    if (windowControls) expect(windowControls).not.toHaveAttribute('inert')
+  })
+
+  it('leaves the workspace controls live by default', () => {
+    const { container } = render(<Toolbar {...defaultProps} />)
+
+    expect(container.querySelector('.toolbar-left')).not.toHaveAttribute('inert')
+    expect(container.querySelector('.toolbar-workspace-status')).not.toHaveAttribute('inert')
+  })
+})

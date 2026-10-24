@@ -2,22 +2,38 @@ import { useTranslation } from 'react-i18next'
 import { useSettingsStore } from '../../store/useSettingsStore'
 import { TectonicCacheSettings } from './TectonicCacheSettings'
 import { SettingsRow, SettingsSection, SettingsSelect, SettingsToggleRow } from './SettingsControls'
+import { SettingsSearchBlock } from './SettingsSearch'
 
-export const AutomationTab = () => {
+const CACHE_COPY_KEYS = [
+  'offlineCache',
+  'offlineCacheDesc',
+  'packagedSeed',
+  'writableCache',
+  'networkFallback',
+  'cacheRecheck',
+  'cacheReset'
+] as const
+
+export const CompilerSettings = () => {
   const { t } = useTranslation()
   const settings = useSettingsStore((state) => state.settings)
   const updateSetting = useSettingsStore((state) => state.updateSetting)
+  const engineOptions = [
+    t('settings.compiler.tectonicOption'),
+    t('settings.compiler.pdfLatexOption')
+  ]
 
   return (
-    <div className="settings-tab-content settings-animate-in">
-      <SettingsSection title={t('settings.automation.compilerTools')}>
+    <>
+      <SettingsSection title={t('settings.compiler.compilerTools')}>
         <SettingsRow
-          label={t('settings.automation.compilerEngine')}
+          label={t('settings.compiler.compilerEngine')}
           description={
             settings.latexEngine === 'pdf-latex'
-              ? t('settings.automation.pdfLatexDesc')
-              : t('settings.automation.tectonicDesc')
+              ? t('settings.compiler.pdfLatexDesc')
+              : t('settings.compiler.tectonicDesc')
           }
+          keywords={engineOptions}
           htmlFor="latex-engine-select"
         >
           <SettingsSelect
@@ -27,39 +43,42 @@ export const AutomationTab = () => {
               updateSetting('latexEngine', event.target.value as typeof settings.latexEngine)
             }
           >
-            <option value="tectonic">{t('settings.automation.tectonicOption')}</option>
-            <option value="pdf-latex">{t('settings.automation.pdfLatexOption')}</option>
+            <option value="tectonic">{t('settings.compiler.tectonicOption')}</option>
+            <option value="pdf-latex">{t('settings.compiler.pdfLatexOption')}</option>
           </SettingsSelect>
         </SettingsRow>
 
         <SettingsToggleRow
-          label={t('settings.automation.autoCompile')}
-          description={t('settings.automation.autoCompileDesc')}
+          label={t('settings.compiler.autoCompile')}
+          description={t('settings.compiler.autoCompileDesc')}
           checked={settings.autoCompile}
           onChange={(checked) => updateSetting('autoCompile', checked)}
         />
 
         <SettingsToggleRow
-          label={t('settings.automation.watchOpenFiles')}
-          description={t('settings.automation.watchOpenFilesDesc')}
+          label={t('settings.compiler.watchOpenFiles')}
+          description={t('settings.compiler.watchOpenFilesDesc')}
           checked={settings.watchOpenFiles}
           onChange={(checked) => updateSetting('watchOpenFiles', checked)}
         />
 
         <SettingsToggleRow
-          label={t('settings.automation.spellCheck')}
-          description={t('settings.automation.spellCheckDesc')}
+          label={t('settings.compiler.spellCheck')}
+          description={t('settings.compiler.spellCheckDesc')}
+          keywords={[t('settings.compiler.spellLanguage')]}
           checked={settings.spellCheckEnabled}
           onChange={(checked) => updateSetting('spellCheckEnabled', checked)}
         />
 
         {settings.spellCheckEnabled && (
-          <div className="settings-spellcheck-sub">
-            <label className="settings-label" htmlFor="spell-language-select">
-              {t('settings.automation.spellLanguage')}
-            </label>
+          <SettingsRow
+            label={t('settings.compiler.spellLanguage')}
+            keywords={[t('settings.compiler.spellCheck')]}
+            htmlFor="spell-language-select"
+          >
             <SettingsSelect
               id="spell-language-select"
+              width="narrow"
               value={settings.spellCheckLanguage ?? 'en-US'}
               onChange={(event) => {
                 updateSetting('spellCheckLanguage', event.target.value)
@@ -68,15 +87,17 @@ export const AutomationTab = () => {
             >
               <option value="en-US">English (US)</option>
             </SettingsSelect>
-          </div>
+          </SettingsRow>
         )}
       </SettingsSection>
+
       {settings.latexEngine === 'tectonic' && (
-        <>
-          <hr className="settings-divider" />
-          <TectonicCacheSettings />
-        </>
+        <SettingsSearchBlock keywords={CACHE_COPY_KEYS.map((key) => t(`settings.compiler.${key}`))}>
+          <div className="settings-pane-section">
+            <TectonicCacheSettings />
+          </div>
+        </SettingsSearchBlock>
       )}
-    </div>
+    </>
   )
 }

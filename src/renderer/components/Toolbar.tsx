@@ -43,6 +43,8 @@ interface ToolbarProps {
   onReturnHome: () => void
   onOpenCommandPalette: (mode?: 'commands' | 'files') => void
   onOpenSettings: () => void
+  /** True while an app page (Settings, Help) covers the workspace: its controls go inert. */
+  workspaceInert?: boolean
 }
 
 const TOOLBAR_NO_DRAG_SELECTOR = [
@@ -105,7 +107,8 @@ const Toolbar = React.memo(function Toolbar({
   onSave,
   onCompile,
   onReturnHome,
-  onOpenCommandPalette
+  onOpenCommandPalette,
+  workspaceInert = false
 }: ToolbarProps) {
   const { t } = useTranslation()
   const filePath = useEditorStore((s) => s.filePath)
@@ -173,7 +176,7 @@ const Toolbar = React.memo(function Toolbar({
         onMouseDown={handleToolbarMouseDown}
         onDoubleClick={handleToolbarDoubleClick}
       >
-        <div className="toolbar-left">
+        <div className="toolbar-left" inert={workspaceInert || undefined}>
           <button
             type="button"
             className="toolbar-btn toolbar-app-menu"
@@ -306,28 +309,34 @@ const Toolbar = React.memo(function Toolbar({
           )}
         </div>
 
-        <div className="toolbar-center" data-responsive-priority="secondary"></div>
+        <div
+          className="toolbar-center"
+          data-responsive-priority="secondary"
+          inert={workspaceInert || undefined}
+        ></div>
 
         <div className="toolbar-right">
-          <span className="file-name" data-responsive-priority="tertiary" title={fileName}>
-            {isDirty && <span className="dirty-dot" />}
-            {fileName}
-          </span>
-          {projectRoot && (!panelsVisible || !isResearchPanelOpen) && (
-            <button
-              type="button"
-              className="toolbar-btn toolbar-research-toggle"
-              onClick={() => toggleResearchPanel('chat')}
-              title={withShortcutHint(t('researchPanel.open'), 'view.toggleResearchPanel')}
-              aria-label={t('researchPanel.open')}
-              aria-controls="research-panel"
-              aria-expanded="false"
-              id="research-panel-toggle"
-            >
-              <PanelRightOpen size={ICON_SIZE.control} />
-              <span>{t('researchPanel.label')}</span>
-            </button>
-          )}
+          <div className="toolbar-workspace-status" inert={workspaceInert || undefined}>
+            <span className="file-name" data-responsive-priority="tertiary" title={fileName}>
+              {isDirty && <span className="dirty-dot" />}
+              {fileName}
+            </span>
+            {projectRoot && (!panelsVisible || !isResearchPanelOpen) && (
+              <button
+                type="button"
+                className="toolbar-btn toolbar-research-toggle"
+                onClick={() => toggleResearchPanel('chat')}
+                title={withShortcutHint(t('researchPanel.open'), 'view.toggleResearchPanel')}
+                aria-label={t('researchPanel.open')}
+                aria-controls="research-panel"
+                aria-expanded="false"
+                id="research-panel-toggle"
+              >
+                <PanelRightOpen size={ICON_SIZE.control} />
+                <span>{t('researchPanel.label')}</span>
+              </button>
+            )}
+          </div>
           {customWindowChrome && (
             <div
               className="toolbar-window-controls"

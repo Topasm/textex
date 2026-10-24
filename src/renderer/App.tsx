@@ -759,6 +759,7 @@ function App() {
         onReturnHome={handleCloseProject}
         onOpenCommandPalette={openCommandPalette}
         onOpenSettings={handleOpenSettings}
+        workspaceInert={isSettingsOpen || isHelpOpen}
       />
       {projectRoot && researchPresence.mounted && (
         <Suspense fallback={<LoadingFallback variant="panel" label={t('loading.workspace')} />}>
