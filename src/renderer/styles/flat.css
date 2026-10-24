@@ -73,6 +73,25 @@
   --ui-shadow-popover: 0 4px 14px color-mix(in srgb, var(--shadow-color) 55%, transparent);
   --ui-shadow-modal: 0 8px 28px color-mix(in srgb, var(--shadow-color) 65%, transparent);
   --accent-contrast: #07140a;
+
+  /*
+   * Semantic aliases. Feature CSS reaches for these generic names; they resolve
+   * against whichever theme block is active, so no theme has to repeat them.
+   */
+  --ui-font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  --editor-font-family: var(--ui-font-mono);
+  --hover: var(--bg-hover);
+  --hover-bg: var(--bg-hover);
+  --surface-hover: var(--bg-hover);
+  --bg-tertiary: var(--bg-hover);
+  --bg-surface: var(--ui-surface-panel);
+  --bg-elevated: var(--ui-surface-raised);
+  --border-color: var(--border);
+  --accent-color: var(--accent);
+  --error-color: var(--error);
+  --text-muted: var(--text-secondary);
+  --text-tertiary: var(--text-kbd);
+  --text-on-accent: var(--accent-contrast);
 }
 
 .ui-icon {

@@ -531,7 +531,7 @@
     "fixWithCli": "使用 {{cli}} 修复问题",
     "inlineFix": "修复",
     "inlineFixBusy": "修复中…",
-    "inlineFixSetup": "请在设置 > 集成中启用并配置 AI。",
+    "inlineFixSetup": "请在设置 > AI中启用并配置 AI。",
     "inlineFixUnsupported": "需要可读取的 TeX 源代码行和更小的修改范围。",
     "inlineFixInvalid": "AI 修改内容格式无效，未应用任何更改。",
     "inlineFixApplied": "已在编辑器中应用修改。请检查并编译验证，也可以撤销。",

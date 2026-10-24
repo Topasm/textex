@@ -3574,7 +3574,7 @@ button.submission-check-finding:hover {
 
 .submission-check-finding-copy code {
   color: inherit;
-  font-family: var(--font-mono);
+  font-family: var(--ui-font-mono);
   font-size: inherit;
 }
 

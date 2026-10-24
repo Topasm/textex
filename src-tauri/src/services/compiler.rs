@@ -246,6 +246,10 @@ async fn run_tectonic(
         .arg("-X")
         .arg("compile")
         .arg("--synctex")
+        // Without `--print` Tectonic only reports its own notes; LaTeX warnings
+        // (undefined citations, overfull boxes, ...) never leave the engine
+        // log, so the Problems panel would stay empty for warning-only runs.
+        .arg("--print")
         .arg("--outdir")
         .arg(build_dir)
         .arg(tex_path)
@@ -702,15 +706,114 @@ fn finish_output_task(
         .map_err(|source| AppError::compiler_io(operation, display_tectonic_path, source))
 }
 
+/// TeX wraps terminal and log output at `max_print_line` (79 columns by
+/// default) and splits messages mid-word when it does. A physical line that is
+/// exactly that wide continues on the next one.
+const TEX_MAX_PRINT_LINE: usize = 79;
+
+/// Lines written by the compiler driver itself (Tectonic notes and structured
+/// diagnostics) are never wrapped and never open or close TeX input files.
+fn is_driver_line(line: &str) -> bool {
+    line.starts_with("note:") || line.starts_with("warning:") || line.starts_with("error:")
+}
+
+fn unwrap_log_lines(output: &str) -> Vec<String> {
+    let mut unwrapped: Vec<String> = Vec::new();
+    let mut continues = false;
+    for raw_line in output.lines() {
+        if continues {
+            if let Some(previous) = unwrapped.last_mut() {
+                previous.push_str(raw_line);
+            }
+        } else {
+            unwrapped.push(raw_line.to_owned());
+        }
+        continues = raw_line.chars().count() == TEX_MAX_PRINT_LINE && !is_driver_line(raw_line);
+    }
+    unwrapped
+}
+
+/// Follow TeX's `(file ... )` groups so a warning or error can be attributed
+/// to the input file that was open when it was written. Parenthesised text
+/// that does not name a file is pushed as `None` so its closing parenthesis
+/// does not pop a real file.
+fn track_open_files(line: &str, open_files: &mut Vec<Option<String>>) {
+    let mut rest = line;
+    while let Some(position) = rest.find(['(', ')']) {
+        let tail = &rest[position..];
+        if let Some(after_close) = tail.strip_prefix(')') {
+            open_files.pop();
+            rest = after_close;
+            continue;
+        }
+        let token_end = tail[1..]
+            .find(|character: char| character.is_whitespace() || matches!(character, '(' | ')'))
+            .map_or(tail.len(), |offset| offset + 1);
+        let token = &tail[1..token_end];
+        open_files.push(looks_like_file(token).then(|| token.to_owned()));
+        rest = &tail[token_end..];
+    }
+}
+
+fn looks_like_file(token: &str) -> bool {
+    if token.contains('/') || token.contains('\\') {
+        return true;
+    }
+    token.rsplit_once('.').is_some_and(|(stem, extension)| {
+        !stem.is_empty()
+            && extension
+                .chars()
+                .next()
+                .is_some_and(|character| character.is_ascii_alphabetic())
+    })
+}
+
+fn file_name_part(file: &str) -> &str {
+    file.rsplit(['/', '\\']).next().unwrap_or(file)
+}
+
+fn is_tex_source(file: &str) -> bool {
+    match file_name_part(file).rsplit_once('.') {
+        Some((_, extension)) => matches!(
+            extension.to_ascii_lowercase().as_str(),
+            "tex" | "ltx" | "latex"
+        ),
+        // `\input{chapters/one}` is echoed without its extension.
+        None => true,
+    }
+}
+
+/// The innermost open TeX source file, with the `.tex` extension restored when
+/// TeX echoed the name as it was requested.
+fn current_tex_source(open_files: &[Option<String>]) -> Option<String> {
+    let file = open_files
+        .iter()
+        .rev()
+        .flatten()
+        .find(|file| is_tex_source(file))?;
+    Some(if file_name_part(file).contains('.') {
+        file.clone()
+    } else {
+        format!("{file}.tex")
+    })
+}
+
 fn parse_tectonic_diagnostics(output: &str, root_file: &Path) -> Vec<CompileDiagnostic> {
-    let lines: Vec<&str> = output.lines().collect();
+    let unwrapped = unwrap_log_lines(output);
+    let lines: Vec<&str> = unwrapped.iter().map(String::as_str).collect();
     let mut diagnostics = Vec::new();
+    let mut open_files: Vec<Option<String>> = Vec::new();
 
     for (index, raw_line) in lines.iter().enumerate() {
         let line = raw_line.trim();
         if line.is_empty() {
             continue;
         }
+        // Each TeX pass re-opens the root file from scratch.
+        if (is_driver_line(line) && line.contains("unning TeX")) || line.starts_with("This is ") {
+            open_files.clear();
+        }
+        let source_file = diagnostic_file(root_file, current_tex_source(&open_files).as_deref());
 
         let parsed = if let Some(message) = line.strip_prefix("error:") {
             Some(parse_prefixed_diagnostic(
@@ -745,7 +848,7 @@ fn parse_tectonic_diagnostics(output: &str, root_file: &Path) -> Vec<CompileDiag
                 .take(5)
                 .find_map(|candidate| parse_classic_error_line(candidate));
             Some(CompileDiagnostic {
-                file: diagnostic_file(root_file, None),
+                file: source_file.clone(),
                 line: line_number.unwrap_or(1),
                 column: None,
                 severity: CompileDiagnosticSeverity::Error,
@@ -753,7 +856,7 @@ fn parse_tectonic_diagnostics(output: &str, root_file: &Path) -> Vec<CompileDiag
             })
         } else if is_latex_warning(line) {
             Some(CompileDiagnostic {
-                file: diagnostic_file(root_file, None),
+                file: source_file.clone(),
                 line: parse_input_line(line).unwrap_or(1),
                 column: None,
                 severity: CompileDiagnosticSeverity::Warning,
@@ -761,7 +864,7 @@ fn parse_tectonic_diagnostics(output: &str, root_file: &Path) -> Vec<CompileDiag
             })
         } else if line.starts_with(r"Overfull \") || line.starts_with(r"Underfull \") {
             Some(CompileDiagnostic {
-                file: diagnostic_file(root_file, None),
+                file: source_file.clone(),
                 line: parse_bad_box_line(line).unwrap_or(1),
                 column: None,
                 severity: CompileDiagnosticSeverity::Info,
@@ -775,6 +878,9 @@ fn parse_tectonic_diagnostics(output: &str, root_file: &Path) -> Vec<CompileDiag
             if !diagnostic.message.is_empty() && !diagnostics.contains(&diagnostic) {
                 diagnostics.push(diagnostic);
             }
+        }
+        if !is_driver_line(line) {
+            track_open_files(line, &mut open_files);
         }
     }
 
@@ -1324,8 +1430,8 @@ mod tests {
         development_candidates, executable_parent_path, extract_magic_root,
         finalize_compile_for_project, latexmk_arguments, packaged_candidates,
         parse_tectonic_diagnostics, resolve_magic_root, root_document_cache_id,
-        sidecar_source_filename, system_latexmk_candidates, validate_compile_request,
-        validate_project_tex_file,
+        sidecar_source_filename, system_latexmk_candidates, unwrap_log_lines,
+        validate_compile_request, validate_project_tex_file,
     };
     #[cfg(unix)]
     use super::{isolate_process_group, monitor_child};
@@ -1362,6 +1468,122 @@ mod tests {
         assert_eq!(diagnostics[2].line, 27);
         assert_eq!(diagnostics[3].line, 31);
         assert_eq!(diagnostics[4].line, 40);
+    }
+
+    #[test]
+    fn joins_lines_tex_wrapped_at_max_print_line() {
+        // Exactly 79 columns, so the message continues on the next line.
+        let wrapped =
+            "Package natbib Warning: Citation `secondmissingkey' on page 1 undefined on inpu";
+        assert_eq!(wrapped.chars().count(), 79);
+        let output = format!(
+            "{wrapped}\nt line 3.\nshort line\nnote: {}\nnext\n",
+            "n".repeat(73)
+        );
+
+        let lines = unwrap_log_lines(&output);
+        assert_eq!(
+            lines,
+            vec![
+                "Package natbib Warning: Citation `secondmissingkey' on page 1 undefined on input line 3.",
+                "short line",
+                format!("note: {}", "n".repeat(73)).as_str(),
+                "next",
+            ]
+        );
+    }
+
+    #[test]
+    fn attributes_wrapped_latex_warnings_to_the_open_input_file() {
+        let root = Path::new("/project/main.tex");
+        // Verbatim Tectonic terminal output (`--print`) for a natbib document
+        // whose citations live in `main.tex` and an `\input` chapter.
+        let output = concat!(
+            "note: Running TeX ...\n",
+            "(main.tex\n",
+            "LaTeX2e <2021-11-15> patch level 1\n",
+            "L3 programming layer <2022-02-24> (article.cls\n",
+            "Document Class: article 2021/10/04 v1.4n Standard LaTeX document class\n",
+            "(size10.clo)) (natbib.sty) (l3backend-xetex.def)\n",
+            "No file main.aux.\n",
+            "(ts1cmr.fd)\n",
+            "\n",
+            "Package natbib Warning: Citation `averyveryverylongcitationkeythatwrapsthelog20\n",
+            "24' on page 1 undefined on input line 4.\n",
+            "\n",
+            "(chapters/one\n",
+            "\n",
+            "Package natbib Warning: Citation `secondmissingkey' on page 1 undefined on inpu\n",
+            "t line 3.\n",
+            "\n",
+            "\n",
+            "Package natbib Warning: Citation `thirdmissingkeyname2023' on page 1 undefined \n",
+            "on input line 3.\n",
+            "\n",
+            ")\n",
+            "\n",
+            "Package natbib Warning: There were undefined citations.\n",
+            "\n",
+            "[1] (main.aux) )\n",
+            "Output written on main.xdv (1 page, 1548 bytes).\n",
+            "note: Rerunning TeX because \"main.aux\" changed ...\n",
+            "(main.tex\n",
+            "Package natbib Warning: There were undefined citations.\n",
+            ")\n",
+        );
+
+        let diagnostics = parse_tectonic_diagnostics(output, root);
+        assert_eq!(diagnostics.len(), 4);
+        assert_eq!(diagnostics[0].file, "/project/main.tex");
+        assert_eq!(diagnostics[0].line, 4);
+        assert_eq!(
+            diagnostics[0].message,
+            "Package natbib Warning: Citation `averyveryverylongcitationkeythatwrapsthelog2024' on page 1 undefined on input line 4."
+        );
+        assert_eq!(diagnostics[1].file, "/project/chapters/one.tex");
+        assert_eq!(diagnostics[1].line, 3);
+        assert_eq!(
+            diagnostics[1].message,
+            "Package natbib Warning: Citation `secondmissingkey' on page 1 undefined on input line 3."
+        );
+        assert_eq!(diagnostics[2].file, "/project/chapters/one.tex");
+        assert_eq!(diagnostics[2].line, 3);
+        assert_eq!(
+            diagnostics[2].message,
+            "Package natbib Warning: Citation `thirdmissingkeyname2023' on page 1 undefined on input line 3."
+        );
+        assert_eq!(diagnostics[3].file, "/project/main.tex");
+        assert_eq!(diagnostics[3].line, 1);
+        assert_eq!(
+            diagnostics[3].message,
+            "Package natbib Warning: There were undefined citations."
+        );
+    }
+
+    #[test]
+    fn attributes_classic_errors_and_bad_boxes_to_the_open_input_file() {
+        let root = Path::new("/project/main.tex");
+        let output = concat!(
+            "This is pdfTeX, Version 3.141592653-2.6-1.40.24\n",
+            "(./main.tex (./chapters/two.tex\n",
+            "! Undefined control sequence.\n",
+            "l.7 \\foo\n",
+            "Overfull \\hbox (3.0pt too wide) in paragraph at lines 9--10\n",
+            ")\n",
+            "Underfull \\vbox (badness 10000) has occurred while \\output is active\n",
+            "LaTeX Warning: Reference `fig:missing' on page 2 undefined on input line 31.\n",
+            ")\n"
+        );
+
+        let diagnostics = parse_tectonic_diagnostics(output, root);
+        assert_eq!(diagnostics.len(), 4);
+        assert_eq!(diagnostics[0].file, "/project/chapters/two.tex");
+        assert_eq!(diagnostics[0].line, 7);
+        assert_eq!(diagnostics[1].file, "/project/chapters/two.tex");
+        assert_eq!(diagnostics[1].line, 9);
+        assert_eq!(diagnostics[2].file, "/project/main.tex");
+        assert_eq!(diagnostics[3].file, "/project/main.tex");
+        assert_eq!(diagnostics[3].line, 31);
     }
 
     #[test]
