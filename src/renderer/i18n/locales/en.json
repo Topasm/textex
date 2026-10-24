@@ -531,7 +531,7 @@
     "fixWithCli": "Fix problems with {{cli}}",
     "inlineFix": "Fix",
     "inlineFixBusy": "Fixing…",
-    "inlineFixSetup": "Enable and configure AI in Settings > Integrations to fix this problem.",
+    "inlineFixSetup": "Enable and configure AI in Settings > AI to fix this problem.",
     "inlineFixUnsupported": "This problem needs a readable TeX source line and a smaller source passage.",
     "inlineFixInvalid": "AI returned an invalid replacement. No changes were applied.",
     "inlineFixApplied": "Fix applied to the editor. Review the change and compile to check it; use Undo to revert.",

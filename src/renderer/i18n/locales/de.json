@@ -531,7 +531,7 @@
     "fixWithCli": "Probleme mit {{cli}} beheben",
     "inlineFix": "Korrigieren",
     "inlineFixBusy": "Korrektur läuft…",
-    "inlineFixSetup": "Aktivieren und konfigurieren Sie KI unter Einstellungen > Integrationen.",
+    "inlineFixSetup": "Aktivieren und konfigurieren Sie KI unter Einstellungen > KI.",
     "inlineFixUnsupported": "Eine lesbare TeX-Quellzeile und ein kleinerer Textabschnitt sind erforderlich.",
     "inlineFixInvalid": "Die KI-Korrektur ist ungültig. Es wurden keine Änderungen angewendet.",
     "inlineFixApplied": "Korrektur im Editor angewendet. Prüfen und kompilieren Sie den Text. Rückgängig ist verfügbar.",

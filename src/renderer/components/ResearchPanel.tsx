@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ICON_SIZE } from './ui/IconSystem'
 import {
   MessageSquare,
@@ -60,7 +60,11 @@ export function ResearchPanel({
   const aiProvider = useSettingsStore((state) => state.settings.aiProvider)
   const autoHide = useSettingsStore((state) => state.settings.autoHideResearchPanel)
   const visible = open || Boolean(autoHide)
-  const problemCount = diagnostics.length
+  // Match the status bar: errors and warnings count as problems, info does not.
+  const problemCount = useMemo(
+    () => diagnostics.filter((item) => item.severity !== 'info').length,
+    [diagnostics]
+  )
   const problemsLabel =
     problemCount === 0
       ? t('logPanel.problems')

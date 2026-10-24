@@ -531,7 +531,7 @@
     "fixWithCli": "Corriger les problèmes avec {{cli}}",
     "inlineFix": "Corriger",
     "inlineFixBusy": "Correction…",
-    "inlineFixSetup": "Activez et configurez l’IA dans Paramètres > Intégrations.",
+    "inlineFixSetup": "Activez et configurez l’IA dans Paramètres > IA.",
     "inlineFixUnsupported": "Une ligne source TeX lisible et un passage plus court sont nécessaires.",
     "inlineFixInvalid": "La correction IA est invalide. Aucune modification appliquée.",
     "inlineFixApplied": "Correction appliquée dans l’éditeur. Vérifiez puis compilez. Vous pouvez annuler.",

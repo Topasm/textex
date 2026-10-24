@@ -186,15 +186,6 @@ const Toolbar = React.memo(function Toolbar({
           {projectRoot && (
             <>
               <button
-                className="toolbar-btn"
-                onClick={onReturnHome}
-                title={t('toolbar.returnHome')}
-                aria-label={t('toolbar.returnHome')}
-              >
-                <House size={ICON_SIZE.control} />
-              </button>
-              <RecentProjectSwitcher />
-              <button
                 type="button"
                 className={`toolbar-btn toolbar-sidebar-toggle${panelsVisible && isSidebarOpen && !settings.autoHideSidebar ? ' active' : ''}`}
                 onClick={toggleProjectSidebar}
@@ -211,6 +202,16 @@ const Toolbar = React.memo(function Toolbar({
                 ) : (
                   <PanelLeftOpen size={ICON_SIZE.control} />
                 )}
+              </button>
+              <RecentProjectSwitcher />
+              <button
+                type="button"
+                className="toolbar-btn"
+                onClick={onReturnHome}
+                title={t('toolbar.returnHome')}
+                aria-label={t('toolbar.returnHome')}
+              >
+                <House size={ICON_SIZE.control} />
               </button>
             </>
           )}

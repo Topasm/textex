@@ -531,7 +531,7 @@
     "fixWithCli": "Corrigir os problemas com {{cli}}",
     "inlineFix": "Corrigir",
     "inlineFixBusy": "Corrigindo…",
-    "inlineFixSetup": "Ative e configure a IA em Configurações > Integrações.",
+    "inlineFixSetup": "Ative e configure a IA em Configurações > IA.",
     "inlineFixUnsupported": "É necessária uma linha TeX legível e um trecho menor.",
     "inlineFixInvalid": "A correção da IA é inválida. Nenhuma alteração foi aplicada.",
     "inlineFixApplied": "Correção aplicada no editor. Revise e compile para verificar. Você pode desfazer.",

@@ -83,6 +83,37 @@ describe('design tokens', () => {
     expect(offScale).toEqual([])
   })
 
+  it('only references tokens that some stylesheet or inline style defines', () => {
+    const sheets = styleSheets(styleRoot)
+    const defined = new Set<string>()
+    for (const file of sheets) {
+      for (const match of readFileSync(file, 'utf8').matchAll(/(--[a-z0-9-]+)\s*:/gu)) {
+        defined.add(match[1])
+      }
+    }
+    // Layout tokens written from React with `style={{ '--token': … }}`.
+    for (const token of [
+      '--sidebar-shell-width',
+      '--research-panel-width',
+      '--research-panel-bottom'
+    ]) {
+      defined.add(token)
+    }
+
+    const undefinedTokens: string[] = []
+    for (const file of sheets) {
+      const source = readFileSync(file, 'utf8')
+      for (const [index, line] of source.split('\n').entries()) {
+        for (const match of line.matchAll(/var\((--[a-z0-9-]+)\s*[,)]/gu)) {
+          if (!defined.has(match[1])) {
+            undefinedTokens.push(`${relative(process.cwd(), file)}:${index + 1} ${match[1]}`)
+          }
+        }
+      }
+    }
+    expect(undefinedTokens).toEqual([])
+  })
+
   it('mirrors the icon scale that IconSystem exposes to components', () => {
     for (const [token, size] of [
       ['--ui-icon-size-micro', '12px'],

@@ -148,7 +148,7 @@ function LogPanel({
   }
 
   // Problems tab label
-  const totalCount = diagnostics.length
+  const totalCount = errorCount + warningCount
   const problemsLabel =
     totalCount === 0 ? t('logPanel.problems') : t('logPanel.problemsCount', { count: totalCount })
   const hasRepairContext =
