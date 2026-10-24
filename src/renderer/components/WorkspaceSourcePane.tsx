@@ -82,7 +82,7 @@ export function WorkspaceSourcePane({
       className={`editor-pane workspace-source-pane${pdfOnly ? ' workspace-source-pane--floating' : ''}`}
       hidden={pdfOnly && !open}
       aria-label={t('pdfWorkspace.source')}
-      style={{ width: `${ratio * 100}%` }}
+      style={{ width: `calc((100% - var(--research-reserved, 0px)) * ${ratio})` }}
       onKeyDownCapture={(event) => {
         // Capture before Monaco, whose Ctrl+Enter binding would insert a line instead.
         if (!pdfOnly || event.nativeEvent.isComposing) return

@@ -819,6 +819,12 @@
     "pin": "固定研究面板",
     "unpin": "取消固定研究面板（自动隐藏）",
     "resize": "调整研究面板大小",
+    "stacked": {
+      "label": "预览区域",
+      "pdf": "PDF",
+      "preview": "预览",
+      "research": "研究"
+    },
     "tabs": {
       "chat": "聊天",
       "notes": "笔记",

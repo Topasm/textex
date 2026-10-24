@@ -9,15 +9,12 @@
 /*
  * Toolbar collapse, driven by the toolbar's own rendered width.
  *
- * The `@media` breakpoints below react to viewport width only, but the
- * research panel shrinks the toolbar by reserving up to 520px with
- * `margin-right` (see `.app-container.has-research-panel > .toolbar`)
- * regardless of how wide the window is. Without a container query, opening
- * or resizing that panel can leave the toolbar's own content (SyncTeX
- * buttons, page nav, filename) with nowhere to go, so it overlaps or gets
- * covered by the panel instead of collapsing. `.toolbar` establishes an
- * inline-size container (see index.css), so these mirror the same
- * thresholds against its actual box and apply on top of the viewport rules.
+ * The `@media` breakpoints below react to viewport width only. `.toolbar`
+ * establishes an inline-size container (see index.css), so these mirror the
+ * same thresholds against its actual box and apply on top of the viewport
+ * rules; chrome that narrows the bar without changing the window then still
+ * collapses it instead of leaving its content (SyncTeX buttons, page nav,
+ * filename) with nowhere to go.
  */
 @container app-toolbar (max-width: 1020px) {
   .toolbar {
@@ -196,6 +193,12 @@
 
   .editor-main-content > .split-divider {
     display: none;
+  }
+
+  /* Panes stack vertically here, so the stacked research panel covers the
+     lower (preview) half rather than a right-hand column. */
+  .editor-main-content.research-layout-stacked > .research-panel--stacked {
+    inset: calc(50% + var(--preview-stack-tabs-height)) 0 0 0;
   }
 
   .modal-overlay {

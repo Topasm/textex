@@ -819,6 +819,12 @@
     "pin": "Pin research panel",
     "unpin": "Unpin research panel (auto-hide)",
     "resize": "Resize research panel",
+    "stacked": {
+      "label": "Preview area",
+      "pdf": "PDF",
+      "preview": "Preview",
+      "research": "Research"
+    },
     "tabs": {
       "chat": "Chat",
       "notes": "Notes",

@@ -10,6 +10,10 @@ const loadingStyles = readFileSync(
 )
 const responsiveStyles = readFileSync(resolve(root, 'src/renderer/styles/responsive.css'), 'utf8')
 const settingsStyles = readFileSync(resolve(root, 'src/renderer/styles/settings.css'), 'utf8')
+const sourcePaneStyles = readFileSync(
+  resolve(root, 'src/renderer/components/WorkspaceSourcePane.css'),
+  'utf8'
+)
 const rendererEntry = readFileSync(resolve(root, 'src/renderer/main.tsx'), 'utf8')
 const tauriConfig = JSON.parse(
   readFileSync(resolve(root, 'src-tauri/tauri.conf.json'), 'utf8')
@@ -50,18 +54,39 @@ describe('responsive desktop layout contract', () => {
     expect(baseStyles).toContain('@container (max-width: 360px)')
   })
 
-  it('positions the research panel over the PDF instead of participating in workspace layout', () => {
+  it('gives a pinned research panel its own column and keeps the PDF laid out when stacked', () => {
+    // Side by side: the editor and PDF split what the panel leaves them.
     expect(baseStyles).toMatch(
-      /\.research-panel\.overlay\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0 0 var\(--research-panel-bottom, 0\) auto;/s
+      /\.editor-main-content > \.research-panel--side\s*\{[^}]*flex:\s*0 0 auto;/s
     )
-    expect(baseStyles).toMatch(
-      /\.app-container\.has-research-panel:not\(\.has-app-page\) > \.toolbar\s*\{[^}]*margin-right:\s*clamp\(320px, var\(--research-panel-width\), 520px\);/s
+    expect(baseStyles).toMatch(/\.editor-main-content\s*\{[^}]*position:\s*relative;/s)
+    expect(sourcePaneStyles).toMatch(
+      /\.pdf-workspace > \.preview-pane\s*\{[^}]*width:\s*calc\(100% - var\(--research-reserved, 0px\)\) !important;/s
     )
     expect(loadingStyles).toMatch(
-      /\.preview-pane > \.loading-fallback--panel\s*\{[^}]*position:\s*absolute;/s
+      /\.editor-main-content > \.loading-fallback--panel\s*\{[^}]*width:\s*var\(--research-reserved, 0px\);/s
+    )
+    // Stacked: the panel covers the PDF column below the tab strip, and the
+    // inactive surface is hidden without losing its box.
+    expect(baseStyles).toMatch(
+      /\.research-layout-stacked > \.research-panel--stacked\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*var\(--preview-stack-tabs-height\) 0 0 var\(--preview-left, 0px\);/s
     )
     expect(baseStyles).toMatch(
+      /\.research-layout-stacked\[data-stack-view='preview'\] > \.research-panel--stacked,\s*\.research-layout-stacked\[data-stack-view='research'\] > \.preview-pane > :not\(\.preview-stack-tabs\)\s*\{[^}]*visibility:\s*hidden;/s
+    )
+    expect(responsiveStyles).toMatch(
+      /\.editor-main-content\.research-layout-stacked > \.research-panel--stacked\s*\{[^}]*inset:\s*calc\(50% \+ var\(--preview-stack-tabs-height\)\) 0 0 0;/s
+    )
+    // The toolbar no longer reserves a right margin for the panel.
+    expect(baseStyles).not.toContain('--research-panel-width')
+    expect(baseStyles).toMatch(
       /\.preview-pane\s*\{[^}]*position:\s*relative;[^}]*overflow:\s*hidden;/s
+    )
+  })
+
+  it('keeps the auto-hide rail as an overlay inside the pane row', () => {
+    expect(baseStyles).toMatch(
+      /\.research-panel\.overlay\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0 0 0 auto;/s
     )
     expect(baseStyles).toMatch(
       /@media \(max-width: 1199px\)[\s\S]*\.research-panel\.overlay \.research-resize-handle\s*\{[^}]*display:\s*none;/

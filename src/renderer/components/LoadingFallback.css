@@ -26,12 +26,12 @@
   background: var(--ui-surface-panel, var(--bg-secondary));
 }
 
-/* The research panel is a workspace overlay; keep its lazy fallback out of
-   flex layout as well so opening the panel never reflows the PDF. */
-.preview-pane > .loading-fallback--panel {
-  position: absolute;
-  inset: 0 0 0 auto;
-  z-index: 16;
+/* The research panel's lazy fallback takes exactly the column the layout
+   already reserved for it, so the PDF is laid out once, not again when the
+   panel's chunk arrives. */
+.editor-main-content > .loading-fallback--panel {
+  flex: 0 0 auto;
+  width: var(--research-reserved, 0px);
 }
 
 .loading-fallback--modal {

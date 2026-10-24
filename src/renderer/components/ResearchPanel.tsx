@@ -34,16 +34,32 @@ import type { ReferenceDragPayload } from '../services/referencePayload'
 /** Swipe order, matching the tab strip left to right. */
 const RESEARCH_TAB_ORDER: ResearchPanelTab[] = ['chat', 'notes', 'profile', 'problems']
 
+/**
+ * Where the panel sits in the workspace row.
+ * - `side`: a third column next to the editor and the PDF.
+ * - `stacked`: in the PDF column, behind the PDF ↔ Research tab strip.
+ * - `overlay`: the auto-hide rail that slides over the PDF on hover.
+ */
+export type ResearchPanelLayout = 'side' | 'stacked' | 'overlay'
+
 interface ResearchPanelProps {
   onAiDraft: () => void
   onCompile?: () => Promise<void>
   presencePhase?: AnimatedPresencePhase
+  layout?: ResearchPanelLayout
+  /** Widest the panel may be in the current row; the layout owns this number. */
+  maxWidth?: number
+  /** Stacked and showing the PDF: keep the panel mounted but out of reach. */
+  inactive?: boolean
 }
 
 export function ResearchPanel({
   onAiDraft,
   onCompile,
-  presencePhase = 'entered'
+  presencePhase = 'entered',
+  layout = 'overlay',
+  maxWidth = RESEARCH_PANEL_WIDTH_MAX,
+  inactive = false
 }: ResearchPanelProps) {
   const { t } = useTranslation()
   const open = useProjectStore((state) => state.isResearchPanelOpen)
@@ -60,6 +76,8 @@ export function ResearchPanel({
   const aiProvider = useSettingsStore((state) => state.settings.aiProvider)
   const autoHide = useSettingsStore((state) => state.settings.autoHideResearchPanel)
   const visible = open || Boolean(autoHide)
+  const resizable = layout !== 'stacked'
+  const effectiveWidth = Math.min(width, maxWidth)
   // Match the status bar: errors and warnings count as problems, info does not.
   const problemCount = useMemo(
     () => diagnostics.filter((item) => item.severity !== 'info').length,
@@ -75,23 +93,26 @@ export function ResearchPanel({
   const [mountedTabs, setMountedTabs] = useState<Set<ResearchPanelTab>>(() =>
     visible ? new Set([tab]) : new Set()
   )
-  const startResize = useResearchPanelResize(panelRef, visible)
+  const startResize = useResearchPanelResize(panelRef, visible && resizable, maxWidth)
   const repairCli = aiProvider === 'claude-cli' ? 'claude' : 'codex'
   const repairCliName = repairCli === 'claude' ? 'Claude Code' : 'Codex CLI'
 
-  const resizePanelByKeyboard = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
-    const current = useProjectStore.getState().researchPanelWidth
-    const next = getKeyboardResizeValue(event, current, {
-      min: RESEARCH_PANEL_WIDTH_MIN,
-      max: RESEARCH_PANEL_WIDTH_MAX,
-      step: 10,
-      largeStep: 40,
-      invertArrows: true
-    })
-    if (next === null) return
-    event.preventDefault()
-    useProjectStore.getState().setResearchPanelWidth(next)
-  }, [])
+  const resizePanelByKeyboard = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const current = Math.min(useProjectStore.getState().researchPanelWidth, maxWidth)
+      const next = getKeyboardResizeValue(event, current, {
+        min: RESEARCH_PANEL_WIDTH_MIN,
+        max: maxWidth,
+        step: 10,
+        largeStep: 40,
+        invertArrows: true
+      })
+      if (next === null) return
+      event.preventDefault()
+      useProjectStore.getState().setResearchPanelWidth(next)
+    },
+    [maxWidth]
+  )
 
   useEffect(() => {
     setChatDropActive(false)
@@ -201,40 +222,47 @@ export function ResearchPanel({
     return () => window.removeEventListener('resize', onResize)
   }, [open])
 
+  // Escape dismisses the panel only where it covers the PDF: stacked in the
+  // PDF column, or the overlay on a window too narrow to keep both in view.
+  const coversPdf = layout === 'stacked' || (layout === 'overlay' && isCompact)
   useEffect(() => {
-    if (!open || !isCompact) return
+    if (!open || !coversPdf || inactive) return
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') closePanel()
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [closePanel, isCompact, open])
+  }, [closePanel, coversPdf, inactive, open])
 
   if (!visible && presencePhase !== 'exiting') return null
+
+  const hidden = !visible || inactive
 
   return (
     <aside
       ref={panelRef}
       id="research-panel"
-      className={`research-panel overlay research-panel-${presencePhase}${autoHide ? ' research-panel-auto-hide' : ''}`}
-      style={{ width }}
+      className={`research-panel research-panel--${layout}${layout === 'overlay' ? ' overlay' : ''} research-panel-${presencePhase}${autoHide ? ' research-panel-auto-hide' : ''}`}
+      style={resizable ? { width: effectiveWidth } : undefined}
       onWheel={handleWheel}
       aria-label={t('researchPanel.label')}
-      aria-hidden={!visible}
-      inert={!visible ? true : undefined}
+      aria-hidden={hidden}
+      inert={hidden ? true : undefined}
     >
-      <div
-        className="research-resize-handle panel-resize-handle"
-        onMouseDown={startResize}
-        onKeyDown={resizePanelByKeyboard}
-        role="separator"
-        tabIndex={0}
-        aria-label={t('researchPanel.resize')}
-        aria-orientation="vertical"
-        aria-valuemin={RESEARCH_PANEL_WIDTH_MIN}
-        aria-valuemax={RESEARCH_PANEL_WIDTH_MAX}
-        aria-valuenow={Math.round(width)}
-      />
+      {resizable && (
+        <div
+          className="research-resize-handle panel-resize-handle"
+          onMouseDown={startResize}
+          onKeyDown={resizePanelByKeyboard}
+          role="separator"
+          tabIndex={0}
+          aria-label={t('researchPanel.resize')}
+          aria-orientation="vertical"
+          aria-valuemin={RESEARCH_PANEL_WIDTH_MIN}
+          aria-valuemax={Math.round(maxWidth)}
+          aria-valuenow={Math.round(effectiveWidth)}
+        />
+      )}
       <div
         className="research-panel-tabs panel-tabs"
         role="tablist"

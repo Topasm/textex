@@ -819,6 +819,12 @@
     "pin": "Forschungsbereich anheften",
     "unpin": "Forschungsbereich lösen (automatisch ausblenden)",
     "resize": "Größe des Forschungsbereichs ändern",
+    "stacked": {
+      "label": "Vorschaubereich",
+      "pdf": "PDF",
+      "preview": "Vorschau",
+      "research": "Forschung"
+    },
     "tabs": {
       "chat": "Chat",
       "notes": "Notizen",

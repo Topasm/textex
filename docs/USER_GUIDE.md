@@ -190,6 +190,7 @@ Enable **Scroll Sync** in Settings > Appearance to keep the editor and PDF align
 </p>
 
 - **Research Chat**: Ask about the paper, the current document, or attached references. Choose a global default provider/model independently from API-key and CLI connection setup; Research Chat can override that target for one conversation without changing the global default.
+- **Three-pane layout**: A pinned research panel opens as a third column, so the editor, the PDF, and the panel stay visible together; drag the dividers to share the width. When the window is too narrow for three columns, the panel moves into the PDF column behind a **PDF / Research** tab strip instead of covering the PDF. Unpin the panel to get the auto-hide rail that slides over the PDF on hover.
 
 <p align="center">
   <img src="images/research-panel.png" alt="Research chat panel" width="900" />

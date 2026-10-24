@@ -9,7 +9,17 @@ import {
   type CSSProperties
 } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FolderTree, ListTree, BookOpen, Clock, GitBranch, Pin, PinOff } from 'lucide-react'
+import {
+  FolderTree,
+  ListTree,
+  BookOpen,
+  Clock,
+  FileText,
+  GitBranch,
+  MessageSquare,
+  Pin,
+  PinOff
+} from 'lucide-react'
 import Toolbar from './components/Toolbar'
 import StatusBar from './components/StatusBar'
 import TabBar from './components/TabBar'
@@ -25,6 +35,7 @@ import { useGitAutoRefresh } from './hooks/useGitAutoRefresh'
 import { useBibAutoLoad } from './hooks/useBibAutoLoad'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { useDragResize } from './hooks/useDragResize'
+import { useWorkspaceLayout } from './hooks/useWorkspaceLayout'
 import { useAnimatedPresence } from './hooks/useAnimatedPresence'
 import { useHorizontalSwipe } from './hooks/useHorizontalSwipe'
 import { useFeatureHints } from './hooks/useFeatureHints'
@@ -78,7 +89,13 @@ import { ICON_SIZE } from './components/ui/IconSystem'
 import { installCrashRecoveryAutosnapshot } from './services/crashRecovery'
 import { prepareDocumentsForManualCompile } from './services/compilePersistenceCoordinator'
 import { flushAllPendingDocumentEdits } from './services/pendingDocumentEdits'
-import { SIDEBAR_WIDTH_MAX, SIDEBAR_WIDTH_MIN, SPLIT_RATIO_MAX, SPLIT_RATIO_MIN } from './constants'
+import {
+  SIDEBAR_WIDTH_MAX,
+  SIDEBAR_WIDTH_MIN,
+  SPLIT_DIVIDER_WIDTH,
+  SPLIT_RATIO_MAX,
+  SPLIT_RATIO_MIN
+} from './constants'
 
 // Lazy-load heavy modals and panels that are rarely shown
 const SettingsModal = lazy(() =>
@@ -177,7 +194,6 @@ function App() {
   const sidebarView = useProjectStore((s) => s.sidebarView)
   const sidebarWidth = useProjectStore((s) => s.sidebarWidth)
   const isResearchPanelOpen = useProjectStore((s) => s.isResearchPanelOpen)
-  const researchPanelWidth = useProjectStore((s) => s.researchPanelWidth)
   const bibliographyRegistrationRequest = useProjectStore((s) => s.bibliographyRegistrationRequest)
   const filePath = useEditorStore((s) => s.filePath)
   const projectRoot = useProjectStore((s) => s.projectRoot)
@@ -633,6 +649,11 @@ function App() {
   } = useDragResize({
     sidebarTabs: sidebarTabs.map((tab) => tab.key)
   })
+  const workspaceLayout = useWorkspaceLayout({
+    rowRef: mainContentRef,
+    researchOpen: panelsVisible && !autoHideResearchPanel && researchPresence.mounted,
+    editorVisible: !pdfOnly
+  })
 
   const showHomeScreen = !projectRoot
   const sidebarHandleStyle = autoHideSidebar
@@ -743,9 +764,35 @@ function App() {
   )
 
   const appLayoutStyle = {
-    '--research-panel-width': `${researchPanelWidth}px`,
     '--research-panel-bottom': showStatusBar ? '25px' : '0px'
   } as CSSProperties
+  // The auto-hide rail is an overlay by nature; a pinned panel shares the row
+  // with the editor and the PDF, dropping into the PDF column when the row is
+  // too narrow for three columns.
+  const researchMounted = researchPresence.mounted && (autoHideResearchPanel || panelsVisible)
+  const researchLayout = autoHideResearchPanel
+    ? 'overlay'
+    : workspaceLayout.mode === 'stacked'
+      ? 'stacked'
+      : 'side'
+  const stackedResearch = researchMounted && researchLayout === 'stacked'
+  const stackedView = stackedResearch ? workspaceLayout.stackedView : undefined
+  const paneRowStyle = {
+    '--research-reserved': `${researchMounted && researchLayout === 'side' ? workspaceLayout.researchWidth : 0}px`,
+    '--preview-left': pdfOnly ? '0px' : `calc(${splitRatio * 100}% + ${SPLIT_DIVIDER_WIDTH}px)`
+  } as CSSProperties
+  const researchPanelElement = researchMounted && (
+    <Suspense fallback={<LoadingFallback variant="panel" label={t('loading.workspace')} />}>
+      <ResearchPanel
+        onAiDraft={() => handleAiDraft()}
+        onCompile={handleCompile}
+        presencePhase={researchPresence.phase}
+        layout={researchLayout}
+        maxWidth={workspaceLayout.maxResearchWidth}
+        inactive={stackedResearch && stackedView !== 'research'}
+      />
+    </Suspense>
+  )
 
   return (
     <div
@@ -760,15 +807,6 @@ function App() {
         onOpenCommandPalette={openCommandPalette}
         onOpenSettings={handleOpenSettings}
       />
-      {projectRoot && researchPresence.mounted && (
-        <Suspense fallback={<LoadingFallback variant="panel" label={t('loading.workspace')} />}>
-          <ResearchPanel
-            onAiDraft={() => handleAiDraft()}
-            onCompile={handleCompile}
-            presencePhase={researchPresence.phase}
-          />
-        </Suspense>
-      )}
       {isSettingsOpen && (
         <Suspense
           fallback={
@@ -867,8 +905,10 @@ function App() {
           )}
           <div className="editor-area">
             <div
-              className={`editor-main-content${pdfOnly ? ' pdf-workspace' : ''}`}
+              className={`editor-main-content${pdfOnly ? ' pdf-workspace' : ''}${researchMounted && researchLayout !== 'overlay' ? ` research-layout-${researchLayout}` : ''}`}
               ref={mainContentRef}
+              style={paneRowStyle}
+              data-stack-view={stackedView}
             >
               <WorkspaceSourcePane onCompile={handleCompile}>
                 <TabBar />
@@ -914,9 +954,44 @@ function App() {
                 data-workspace-view={isProseMode ? 'prose' : 'pdf'}
                 onWheelCapture={isProseMode ? handleWorkspaceSwipe : undefined}
                 style={{
-                  width: `${(1 - splitRatio) * 100}%`
+                  width: `calc((100% - var(--research-reserved, 0px)) * ${1 - splitRatio})`
                 }}
               >
+                {stackedResearch && (
+                  <div
+                    className="preview-stack-tabs panel-tabs"
+                    role="tablist"
+                    aria-label={t('researchPanel.stacked.label')}
+                  >
+                    <button
+                      type="button"
+                      role="tab"
+                      id="preview-stack-tab-preview"
+                      className={stackedView === 'preview' ? 'active' : ''}
+                      aria-selected={stackedView === 'preview'}
+                      onClick={() => workspaceLayout.showStackedView('preview')}
+                    >
+                      <FileText size={ICON_SIZE.compact} />
+                      <span>
+                        {isProseMode
+                          ? t('researchPanel.stacked.preview')
+                          : t('researchPanel.stacked.pdf')}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      id="preview-stack-tab-research"
+                      className={stackedView === 'research' ? 'active' : ''}
+                      aria-selected={stackedView === 'research'}
+                      aria-controls="research-panel"
+                      onClick={() => workspaceLayout.showStackedView('research')}
+                    >
+                      <MessageSquare size={ICON_SIZE.compact} />
+                      <span>{t('researchPanel.stacked.research')}</span>
+                    </button>
+                  </div>
+                )}
                 <PreviewErrorBoundary>
                   <Suspense
                     fallback={<LoadingFallback variant="pane" label={t('loading.preview')} />}
@@ -931,6 +1006,7 @@ function App() {
                   </Suspense>
                 </PreviewErrorBoundary>
               </div>
+              {researchPanelElement}
             </div>
           </div>
         </div>

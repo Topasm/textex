@@ -95,7 +95,9 @@ describe('design tokens', () => {
     for (const token of [
       '--sidebar-shell-width',
       '--research-panel-width',
-      '--research-panel-bottom'
+      '--research-panel-bottom',
+      '--research-reserved',
+      '--preview-left'
     ]) {
       defined.add(token)
     }
