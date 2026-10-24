@@ -46,6 +46,9 @@ import type { CompileOptions } from '../services/compileCoordinator'
 import type { PdfSentenceSelection } from '../services/pdfSentenceEditing'
 import 'react-pdf/dist/Page/TextLayer.css'
 
+// pdf.js reads text content with `for await`; the AppImage's WebKitGTK lacks
+// ReadableStream async iteration, so install it before any document opens.
+import '../platform/readableStreamAsyncIterator'
 // Use ?url so Vite emits a stable worker asset URL for the Tauri webview.
 // The new URL() pattern can fail for node_modules dependencies.
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
