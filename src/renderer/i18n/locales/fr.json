@@ -33,6 +33,7 @@
     "compile": "Compiler",
     "compiling": "Compilation...",
     "compileLaTeX": "Compiler LaTeX",
+    "cancelCompile": "Annuler la compilation",
     "log": "Journal",
     "aiDraft": "Brouillon IA",
     "aiAssistant": "Assistant IA",
@@ -61,6 +62,7 @@
   "statusBar": {
     "ready": "Prêt",
     "compiling": "Compilation...",
+    "downloadingSupportFiles": "Téléchargement des fichiers de support ({{downloaded}}) : {{file}}",
     "success": "Succès",
     "error": "Erreur",
     "toggleLog": "Afficher/masquer le panneau Problèmes",
@@ -1279,6 +1281,10 @@
   },
   "previewPane": {
     "compileFailed": "La compilation a échoué. Consultez l’onglet Problèmes.",
+    "compiling": "Compilation…",
+    "downloadingSupportFiles": "Téléchargement des fichiers de support ({{downloaded}} jusqu'ici)",
+    "downloadingHint": "La première compilation télécharge les paquets LaTeX à la demande et peut prendre quelques minutes.",
+    "cancelCompile": "Annuler",
     "noPdf": "Aucun PDF à afficher",
     "noPdfHint": "Ouvrez un fichier .tex et compilez pour voir l’aperçu",
     "loadingPdf": "Chargement du PDF…",

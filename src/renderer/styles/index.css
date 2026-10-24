@@ -807,6 +807,94 @@ body,
   background-color: var(--overlay-bg);
 }
 
+/* Compile phase feedback (spinner, downloading support files, cancel). */
+.preview-compile-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  min-width: 0;
+}
+
+.preview-compiling .preview-compile-progress {
+  flex-direction: column;
+  gap: var(--space-8);
+  color: var(--text-secondary);
+}
+
+.preview-compile-progress .preview-spinner {
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.preview-compiling-overlay .preview-spinner {
+  width: 16px;
+  height: 16px;
+}
+
+.preview-compile-progress-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.preview-compiling .preview-compile-progress-text {
+  align-items: center;
+}
+
+.preview-compile-phase {
+  font-size: var(--font-base);
+  color: var(--text-primary);
+}
+
+.preview-compile-file,
+.preview-compile-hint {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.preview-compile-file {
+  max-width: 40ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preview-compile-hint {
+  max-width: 44ch;
+}
+
+.preview-compile-cancel {
+  flex-shrink: 0;
+  padding: var(--space-4) var(--space-12);
+  border: 1px solid var(--border);
+  border-radius: var(--ui-radius-control);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: var(--font-sm);
+  cursor: pointer;
+}
+
+.preview-compile-cancel:hover {
+  border-color: var(--text-secondary);
+}
+
+/* The compile button becomes a stop button while a build runs: it keeps the
+   spinner at rest and reveals the stop glyph on hover or keyboard focus. */
+.toolbar .compile-cancel-btn .compile-cancel-stop {
+  display: none;
+}
+
+.toolbar .compile-cancel-btn:hover .compile-cancel-spinner,
+.toolbar .compile-cancel-btn:focus-visible .compile-cancel-spinner {
+  display: none;
+}
+
+.toolbar .compile-cancel-btn:hover .compile-cancel-stop,
+.toolbar .compile-cancel-btn:focus-visible .compile-cancel-stop {
+  display: inline-block;
+}
+
 .preview-error {
   color: var(--error);
 }

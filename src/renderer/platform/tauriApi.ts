@@ -540,6 +540,9 @@ const compile: DesktopApi['compile'] = (request: CompileRequest) => {
   return invoke<CompileResponse>(TAURI_COMMANDS.compile, { request, onEvent })
 }
 
+const cancelCompile: DesktopApi['cancelCompile'] = (requestId) =>
+  invoke<boolean>(TAURI_COMMANDS.cancelCompile, { requestId })
+
 const tectonicCacheStatus: DesktopApi['tectonicCacheStatus'] = () =>
   invoke(TAURI_COMMANDS.tectonicCacheStatus)
 
@@ -782,6 +785,7 @@ const tauriDesktopApi = {
   researchSourceClone,
   researchSourceFetch,
   compile,
+  cancelCompile,
   tectonicCacheStatus,
   tectonicCacheReset,
   onCompileLog,

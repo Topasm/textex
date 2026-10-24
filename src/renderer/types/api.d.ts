@@ -142,6 +142,12 @@ export interface DesktopApi {
 
   // Compilation
   compile(request: CompileRequest): Promise<CompileResponse>
+  /**
+   * Stops the compile with this request id. Resolves to whether a running
+   * compiler process was signalled; the original `compile` call then rejects
+   * with `compilationCancelled` (or `compilationSuperseded` if it was queued).
+   */
+  cancelCompile(requestId: number): Promise<boolean>
   tectonicCacheStatus(): Promise<TectonicCacheStatus>
   tectonicCacheReset(): Promise<TectonicCacheStatus>
   onCompileLog(cb: (event: CompileLogEvent) => void): void

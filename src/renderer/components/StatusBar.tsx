@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CircleX, GitBranch, TriangleAlert } from 'lucide-react'
-import { useCompileStore } from '../store/useCompileStore'
+import { selectActiveSupportFileDownload, useCompileStore } from '../store/useCompileStore'
 import { useEditorStore } from '../store/useEditorStore'
 import { useProjectStore } from '../store/useProjectStore'
 import { useSettingsStore } from '../store/useSettingsStore'
@@ -13,6 +13,7 @@ import { withShortcutHint } from '../services/commandSearch'
 const StatusBar = React.memo(function StatusBar() {
   const { t } = useTranslation()
   const compileStatus = useCompileStore((s) => s.compileStatus)
+  const activeDownload = useCompileStore(selectActiveSupportFileDownload)
   const cursorLine = useEditorStore((s) => s.cursorLine)
   const cursorColumn = useEditorStore((s) => s.cursorColumn)
   const diagnostics = useCompileStore((s) => s.diagnostics)
@@ -29,7 +30,15 @@ const StatusBar = React.memo(function StatusBar() {
     error: { dotClass: 'red', label: t('statusBar.error') }
   } as const
 
-  const { dotClass, label } = STATUS_CONFIG[compileStatus]
+  const { dotClass } = STATUS_CONFIG[compileStatus]
+  // A first compile on a fresh machine spends minutes fetching support files;
+  // name the phase so it does not read as a hung "Compiling...".
+  const label = activeDownload
+    ? t('statusBar.downloadingSupportFiles', {
+        downloaded: activeDownload.count,
+        file: activeDownload.currentFile
+      })
+    : STATUS_CONFIG[compileStatus].label
 
   const errorCount = useMemo(
     () => diagnostics.filter((d) => d.severity === 'error').length,

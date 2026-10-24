@@ -101,6 +101,7 @@ export const TAURI_COMMANDS = {
   removeRecentProject: 'remove_recent_project',
   updateRecentProject: 'update_recent_project',
   compile: 'compile_latex',
+  cancelCompile: 'cancel_compile_latex',
   tectonicCacheStatus: 'tectonic_cache_status',
   tectonicCacheReset: 'tectonic_cache_reset',
   synctexForward: 'synctex_forward',

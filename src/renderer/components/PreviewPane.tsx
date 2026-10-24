@@ -5,7 +5,7 @@ import { memo, useMemo, useRef, useCallback, useState, useEffect, useReducer } f
 import { useTranslation } from 'react-i18next'
 import { Document, pdfjs } from 'react-pdf'
 import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist'
-import { useCompileStore } from '../store/useCompileStore'
+import { selectActiveSupportFileDownload, useCompileStore } from '../store/useCompileStore'
 import { usePdfStore } from '../store/usePdfStore'
 import { useSettingsStore } from '../store/useSettingsStore'
 import { useProjectStore } from '../store/useProjectStore'
@@ -42,7 +42,7 @@ import {
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import { usePdfSentenceHighlight } from '../hooks/preview/usePdfSentenceHighlight'
 import PdfSentenceEditor from './PdfSentenceEditor'
-import type { CompileOptions } from '../services/compileCoordinator'
+import { cancelActiveCompile, type CompileOptions } from '../services/compileCoordinator'
 import type { PdfSentenceSelection } from '../services/pdfSentenceEditing'
 import 'react-pdf/dist/Page/TextLayer.css'
 
@@ -59,6 +59,41 @@ interface PageViewportInfo {
   element: HTMLDivElement
   pageWidth: number // actual PDF page width in points
   pageHeight: number // actual PDF page height in points
+}
+
+/**
+ * Live compile feedback for the preview. On a fresh machine the first compile
+ * spends most of its time fetching support files, so the phase names the file
+ * being downloaded and how many came before it instead of a bare spinner, and
+ * the author can stop the build from here.
+ */
+function CompileProgress({ className, compact = false }: { className: string; compact?: boolean }) {
+  const { t } = useTranslation()
+  const download = useCompileStore(selectActiveSupportFileDownload)
+  const phase = download
+    ? t('previewPane.downloadingSupportFiles', { downloaded: download.count })
+    : t('previewPane.compiling')
+  return (
+    <div className={className} role="status" aria-live="polite">
+      <div className="preview-compile-progress">
+        <div className="preview-spinner" aria-hidden="true" />
+        <div className="preview-compile-progress-text">
+          <p className="preview-compile-phase">{phase}</p>
+          {download && <p className="preview-compile-file">{download.currentFile}</p>}
+          {download && !compact && (
+            <p className="preview-compile-hint">{t('previewPane.downloadingHint')}</p>
+          )}
+        </div>
+        <button
+          type="button"
+          className="preview-compile-cancel"
+          onClick={() => void cancelActiveCompile()}
+        >
+          {t('previewPane.cancelCompile')}
+        </button>
+      </div>
+    </div>
+  )
 }
 
 function PreviewPane({ onCompile }: { onCompile?: (options?: CompileOptions) => Promise<void> }) {
@@ -685,6 +720,8 @@ function PreviewPane({ onCompile }: { onCompile?: (options?: CompileOptions) => 
         <div className="preview-center preview-error">
           <p>{t('previewPane.compileFailed')}</p>
         </div>
+      ) : !displayedGeneration && compileStatus === 'compiling' ? (
+        <CompileProgress className="preview-center preview-compiling" />
       ) : !displayedGeneration ? (
         <div className="preview-center preview-empty">
           <div>
@@ -695,9 +732,7 @@ function PreviewPane({ onCompile }: { onCompile?: (options?: CompileOptions) => 
       ) : (
         <>
           {compileStatus === 'compiling' && (
-            <div className="preview-compiling-overlay">
-              <div className="preview-spinner" />
-            </div>
+            <CompileProgress className="preview-compiling-overlay" compact />
           )}
           <div
             style={

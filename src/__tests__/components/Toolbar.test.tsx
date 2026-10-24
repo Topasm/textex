@@ -8,6 +8,11 @@ import { useProjectStore } from '../../renderer/store/useProjectStore'
 import { usePdfStore } from '../../renderer/store/usePdfStore'
 import { useSettingsStore } from '../../renderer/store/useSettingsStore'
 import { useUiStore } from '../../renderer/store/useUiStore'
+import { documentRegistry } from '../../renderer/models/documentRegistry'
+import {
+  beginCompileTicket,
+  resetCompileTicketsForTests
+} from '../../renderer/services/compileCoordinator'
 
 const defaultProps = {
   onSave: vi.fn(),
@@ -51,6 +56,8 @@ beforeEach(() => {
     }
   })
   useUiStore.setState({ proseModeDocumentIds: [], proseAnchors: {} })
+  documentRegistry.clear()
+  resetCompileTicketsForTests()
   vi.clearAllMocks()
 })
 
@@ -123,6 +130,27 @@ describe('Workspace toolbars', () => {
     )
     fireEvent.click(screen.getByTitle(/Quick Save/))
     expect(defaultProps.onSave).toHaveBeenCalledOnce()
+  })
+
+  it('turns the compile button into a cancel button while a build runs', async () => {
+    useEditorStore.getState().openFileInTab('/project/main.tex', '\\documentclass{article}')
+    const ticket = beginCompileTicket(
+      '/project/main.tex',
+      documentRegistry.snapshot('/project/main.tex')!
+    )
+    useCompileStore.setState({ compileStatus: 'compiling' })
+    render(<Toolbar {...defaultProps} />)
+
+    expect(screen.queryByRole('button', { name: 'Compile LaTeX' })).not.toBeInTheDocument()
+    const cancel = screen.getByRole('button', { name: 'Cancel compile' })
+    expect(cancel).toBeEnabled()
+
+    fireEvent.click(cancel)
+
+    expect(window.api.cancelCompile).toHaveBeenCalledWith(ticket.requestId)
+    expect(useCompileStore.getState().compileStatus).toBe('idle')
+    expect(defaultProps.onCompile).not.toHaveBeenCalled()
+    await screen.findByRole('button', { name: 'Compile LaTeX' })
   })
 
   it('calls onCompile when Compile button is clicked', () => {

@@ -33,6 +33,7 @@
     "compile": "编译",
     "compiling": "编译中...",
     "compileLaTeX": "编译 LaTeX",
+    "cancelCompile": "取消编译",
     "log": "日志",
     "aiDraft": "AI 草稿",
     "aiAssistant": "AI 助手",
@@ -61,6 +62,7 @@
   "statusBar": {
     "ready": "就绪",
     "compiling": "编译中...",
+    "downloadingSupportFiles": "正在下载支持文件（{{downloaded}}）：{{file}}",
     "success": "成功",
     "error": "错误",
     "toggleLog": "切换问题面板",
@@ -1279,6 +1281,10 @@
   },
   "previewPane": {
     "compileFailed": "编译失败。请查看“问题”标签页。",
+    "compiling": "正在编译…",
+    "downloadingSupportFiles": "正在下载支持文件（已下载 {{downloaded}} 个）",
+    "downloadingHint": "首次编译会按需下载 LaTeX 宏包，可能需要几分钟。",
+    "cancelCompile": "取消",
     "noPdf": "没有可显示的 PDF",
     "noPdfHint": "打开 .tex 文件并编译即可查看预览",
     "loadingPdf": "正在加载 PDF…",

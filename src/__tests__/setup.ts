@@ -49,6 +49,7 @@ Object.defineProperty(window, 'api', {
     writeFileBinary: vi.fn(),
     saveFileAs: vi.fn(),
     compile: vi.fn(),
+    cancelCompile: vi.fn().mockResolvedValue(true),
     tectonicCacheStatus: vi.fn(),
     tectonicCacheReset: vi.fn(),
     exportOverleafZip: vi.fn(),

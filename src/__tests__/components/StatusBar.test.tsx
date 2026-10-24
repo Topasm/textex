@@ -10,7 +10,8 @@ beforeEach(() => {
   clearResearchProfileDraft()
   useCompileStore.setState({
     compileStatus: 'idle',
-    diagnostics: []
+    diagnostics: [],
+    supportFileDownloads: { currentFile: null, count: 0 }
   })
   useEditorStore.setState({
     cursorLine: 1,
@@ -38,6 +39,25 @@ describe('StatusBar', () => {
     useCompileStore.setState({ compileStatus: 'compiling' })
     render(<StatusBar />)
     expect(screen.getByText('Compiling...')).toBeInTheDocument()
+  })
+
+  it('names the support file being downloaded during a first compile', () => {
+    useCompileStore.setState({
+      compileStatus: 'compiling',
+      supportFileDownloads: { currentFile: 'natbib.sty', count: 7 }
+    })
+    render(<StatusBar />)
+    expect(screen.getByText('Downloading support files (7): natbib.sty')).toBeInTheDocument()
+    expect(screen.queryByText('Compiling...')).not.toBeInTheDocument()
+  })
+
+  it('does not show a stale download once the compile has finished', () => {
+    useCompileStore.setState({
+      compileStatus: 'success',
+      supportFileDownloads: { currentFile: 'natbib.sty', count: 7 }
+    })
+    render(<StatusBar />)
+    expect(screen.getByText('Success')).toBeInTheDocument()
   })
 
   it('renders Success label on success', () => {

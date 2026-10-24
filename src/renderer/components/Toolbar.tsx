@@ -28,6 +28,7 @@ import { useProseModeVisible, usePanelsVisible } from '../hooks/useWorkspaceView
 import { RecentProjectSwitcher } from './RecentProjectSwitcher'
 import { ICON_SIZE } from './ui/IconSystem'
 import { withShortcutHint } from '../services/commandSearch'
+import { cancelActiveCompile } from '../services/compileCoordinator'
 import {
   toggleProjectSidebar,
   toggleProseMode,
@@ -226,19 +227,28 @@ const Toolbar = React.memo(function Toolbar({
             <SaveIcon size={ICON_SIZE.control} />
           </button>
 
-          <button
-            className="toolbar-btn compile-btn"
-            onClick={onCompile}
-            disabled={!filePath || compileStatus === 'compiling'}
-            title={withShortcutHint(t('toolbar.compileLaTeX'), 'compile.run')}
-            aria-label={t('toolbar.compileLaTeX')}
-          >
-            {compileStatus === 'compiling' ? (
-              <Loader size={ICON_SIZE.control} className="spin" />
-            ) : (
+          {compileStatus === 'compiling' ? (
+            <button
+              type="button"
+              className="toolbar-btn compile-btn compile-cancel-btn"
+              onClick={() => void cancelActiveCompile()}
+              title={t('toolbar.cancelCompile')}
+              aria-label={t('toolbar.cancelCompile')}
+            >
+              <Loader size={ICON_SIZE.control} className="spin compile-cancel-spinner" />
+              <Square size={ICON_SIZE.micro} className="compile-cancel-stop" />
+            </button>
+          ) : (
+            <button
+              className="toolbar-btn compile-btn"
+              onClick={onCompile}
+              disabled={!filePath}
+              title={withShortcutHint(t('toolbar.compileLaTeX'), 'compile.run')}
+              aria-label={t('toolbar.compileLaTeX')}
+            >
               <Play size={ICON_SIZE.control} />
-            )}
-          </button>
+            </button>
+          )}
 
           <button
             type="button"

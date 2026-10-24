@@ -1,9 +1,13 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { documentRegistry } from '../../renderer/models/documentRegistry'
 import { useEditorStore } from '../../renderer/store/useEditorStore'
+import { useCompileStore } from '../../renderer/store/useCompileStore'
 import {
   beginCompileTicket,
+  cancelActiveCompile,
+  canPublishCompileResponse,
   canPublishCompileTicket,
+  isCompileTicketCancelled,
   isCurrentCompileIdentity,
   isLatestCompileTicket,
   resetCompileTicketsForTests
@@ -13,7 +17,71 @@ describe('compileCoordinator', () => {
   beforeEach(() => {
     documentRegistry.clear()
     useEditorStore.getState().resetEditor()
+    useCompileStore.setState({ compileStatus: 'idle' })
     resetCompileTicketsForTests()
+    vi.mocked(window.api.cancelCompile).mockClear()
+  })
+
+  describe('cancelActiveCompile', () => {
+    it('stops the running compile and refuses its late result', async () => {
+      useEditorStore.getState().openFileInTab('/project/main.tex', 'body')
+      const snapshot = documentRegistry.snapshot('/project/main.tex')!
+      const ticket = beginCompileTicket('/project/main.tex', snapshot)
+      useCompileStore.getState().setCompileStatus('compiling')
+
+      await cancelActiveCompile()
+
+      expect(window.api.cancelCompile).toHaveBeenCalledWith(ticket.requestId)
+      expect(useCompileStore.getState().compileStatus).toBe('idle')
+      expect(isCompileTicketCancelled(ticket)).toBe(true)
+      expect(canPublishCompileTicket(ticket)).toBe(false)
+      expect(
+        canPublishCompileResponse(ticket, {
+          requestId: ticket.requestId,
+          documentId: snapshot.documentId,
+          documentRevision: snapshot.revision,
+          pdfPath: '/project/main.pdf',
+          compiledFilePath: '/project/main.tex'
+        })
+      ).toBe(false)
+    })
+
+    it('leaves a compile started after the cancellation publishable', async () => {
+      useEditorStore.getState().openFileInTab('/project/main.tex', 'body')
+      const snapshot = documentRegistry.snapshot('/project/main.tex')!
+      beginCompileTicket('/project/main.tex', snapshot)
+      useCompileStore.getState().setCompileStatus('compiling')
+      await cancelActiveCompile()
+
+      const next = beginCompileTicket('/project/main.tex', snapshot)
+      expect(isCompileTicketCancelled(next)).toBe(false)
+      expect(canPublishCompileTicket(next)).toBe(true)
+    })
+
+    it('does nothing when no compile is running', async () => {
+      useEditorStore.getState().openFileInTab('/project/main.tex', 'body')
+      const ticket = beginCompileTicket(
+        '/project/main.tex',
+        documentRegistry.snapshot('/project/main.tex')!
+      )
+      useCompileStore.getState().setCompileStatus('success')
+
+      await cancelActiveCompile()
+
+      expect(window.api.cancelCompile).not.toHaveBeenCalled()
+      expect(useCompileStore.getState().compileStatus).toBe('success')
+      expect(canPublishCompileTicket(ticket)).toBe(true)
+    })
+
+    it('still returns to idle when the native cancel call fails', async () => {
+      useEditorStore.getState().openFileInTab('/project/main.tex', 'body')
+      beginCompileTicket('/project/main.tex', documentRegistry.snapshot('/project/main.tex')!)
+      useCompileStore.getState().setCompileStatus('compiling')
+      vi.mocked(window.api.cancelCompile).mockRejectedValueOnce(new Error('gone'))
+
+      await expect(cancelActiveCompile()).resolves.toBeUndefined()
+      expect(useCompileStore.getState().compileStatus).toBe('idle')
+    })
   })
 
   it('publishes only the latest request for its exact source revision', () => {

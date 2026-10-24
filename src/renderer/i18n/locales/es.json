@@ -33,6 +33,7 @@
     "compile": "Compilar",
     "compiling": "Compilando...",
     "compileLaTeX": "Compilar LaTeX",
+    "cancelCompile": "Cancelar compilación",
     "log": "Registro",
     "aiDraft": "Borrador IA",
     "aiAssistant": "Asistente de IA",
@@ -61,6 +62,7 @@
   "statusBar": {
     "ready": "Listo",
     "compiling": "Compilando...",
+    "downloadingSupportFiles": "Descargando archivos de soporte ({{downloaded}}): {{file}}",
     "success": "Éxito",
     "error": "Error",
     "toggleLog": "Alternar panel de problemas",
@@ -1279,6 +1281,10 @@
   },
   "previewPane": {
     "compileFailed": "Falló la compilación. Revisa la pestaña Problemas.",
+    "compiling": "Compilando…",
+    "downloadingSupportFiles": "Descargando archivos de soporte ({{downloaded}} hasta ahora)",
+    "downloadingHint": "La primera compilación descarga los paquetes de LaTeX bajo demanda y puede tardar unos minutos.",
+    "cancelCompile": "Cancelar",
     "noPdf": "No hay PDF que mostrar",
     "noPdfHint": "Abre un archivo .tex y compílalo para ver la vista previa",
     "loadingPdf": "Cargando PDF…",
