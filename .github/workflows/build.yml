@@ -757,7 +757,7 @@ jobs:
           node -e "const p=require('./release-artifacts/latest.json').platforms; for (const k of ['linux-x86_64','linux-x86_64-appimage','linux-x86_64-deb','darwin-aarch64','windows-x86_64']) if (!p[k]) throw new Error('missing '+k)"
 
       - name: Publish GitHub Release
-        uses: softprops/action-gh-release@c12583777ecdfd3be55c69cf75464299dc01057e # v3
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3
         with:
           draft: false
           generate_release_notes: true
